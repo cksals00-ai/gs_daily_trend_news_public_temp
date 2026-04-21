@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Power BI 사업장별 실적·목표·달성률 자동 수집기
+Power BI 사업장별 실적·목표·달성률·YoY 자동 수집기
 ============================================================
-Power BI 공개 임베드 (Resource Key 인증)에서 사업장별로
-4/5/6월 RNS·ADR·REV·목표·달성률을 자동 추출
-
-기존 collect_powerbi.py(Ha Hyeoncheol)를 기반으로 확장:
-  - 사업장 grouping 추가
-  - 목표(Budget) 데이터 별도 쿼리
-  - 달성률 자동 계산
-  - 3개월 (4/5/6월) 일괄 수집
-  - daily_notes.json의 property_performance에 직접 반영
+BI 관리자 확인 스키마 반영 (2026-04-21):
+  - data_raw          : 당해년도 실적 (영업장변경 컬럼)
+  - data_lastraw      : 전년도 실적 (YoY 계산용)
+  - budget_RNS_2026   : 목표 객실수 (영업장 컬럼)
+  - budget_ADR_2026   : 목표 단가
+  - budget_REV_2026   : 목표 매출
+  - 사업장_static      : 영업장 ↔ 영업장변경 매핑 테이블
+  
+월/년도 필터: 월, 투숙년도
 
 © 2026 GS팀 · Haein Kim Manager
 """
@@ -45,9 +45,11 @@ STAY_MONTHS = ["202604", "202605", "202606"]
 
 # 권역 매핑 (사업장명 키워드 → 권역)
 REGION_MAP = {
+    # Vivaldi
     "비발디": "vivaldi",
     "소노펫": "vivaldi",
     "펠리체 빌리지": "vivaldi",
+    # Central
     "델피노": "central",
     "양평": "central",
     "양양": "central",
@@ -56,12 +58,15 @@ REGION_MAP = {
     "청송": "central",
     "천안": "central",
     "변산": "central",
+    "오크밸리": "central",
+    # South
     "여수": "south",
     "거제": "south",
     "남해": "south",
     "진도": "south",
     "경주": "south",
     "해운대": "south",
+    # APAC
     "제주": "apac",
     "고양": "apac",
     "하이퐁": "apac",
@@ -91,12 +96,20 @@ def _headers() -> dict:
 
 
 # ─────────────────────────────────────────────
-# 쿼리 생성
+# 쿼리 빌더
 # ─────────────────────────────────────────────
-def _build_property_actual_query(stay_month: str) -> dict:
-    """사업장별 실적 (RNS, REV) - 채널 무관 합산"""
+def _build_actual_query(stay_month: str, table_name: str = "data_raw") -> dict:
+    """
+    실적 쿼리 - data_raw (당해년도) 또는 data_lastraw (전년도)
+    영업장변경 컬럼으로 집계
+    """
     year = int(stay_month[:4])
     month = int(stay_month[4:6])
+    
+    # data_lastraw는 투숙년도에서 1 빼서 전년도 조회
+    if table_name == "data_lastraw":
+        year = year - 1
+    
     return {
         "version": "1.0.0",
         "queries": [{
@@ -105,18 +118,17 @@ def _build_property_actual_query(stay_month: str) -> dict:
                     "Query": {
                         "Version": 2,
                         "From": [
-                            {"Name": "d", "Entity": "data_raw", "Type": 0},
+                            {"Name": "d", "Entity": table_name, "Type": 0},
                         ],
                         "Select": [
-                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "영업장변경"}, "Name": "data_raw.영업장변경"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": "Sum(data_raw.RNS)"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "REV"}}, "Function": 0}, "Name": "Sum(data_raw.REV)"},
+                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "영업장변경"}, "Name": f"{table_name}.영업장변경"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum({table_name}.RNS)"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "REV"}}, "Function": 0}, "Name": f"Sum({table_name}.REV)"},
                         ],
                         "Where": [
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "투숙년도"}}, "Right": {"Literal": {"Value": f"{year}L"}}}}},
                         ],
-                        "OrderBy": [{"Direction": 2, "Expression": {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}}}],
                     },
                     "Binding": {
                         "Primary": {"Groupings": [{"Projections": [0, 1, 2]}]},
@@ -133,12 +145,14 @@ def _build_property_actual_query(stay_month: str) -> dict:
     }
 
 
-def _build_property_budget_query(stay_month: str) -> dict:
-    """사업장별 목표 (Budget RNS, Budget REV) - data_budget 또는 budget 테이블 시도"""
+def _build_budget_query(stay_month: str, budget_table: str, metric_column: str) -> dict:
+    """
+    목표 쿼리 - budget_RNS_2026, budget_ADR_2026, budget_REV_2026
+    '영업장' 컬럼으로 집계
+    """
     year = int(stay_month[:4])
     month = int(stay_month[4:6])
     
-    # 일반적인 Budget 테이블 후보들 - 첫 번째 테이블명으로 시도
     return {
         "version": "1.0.0",
         "queries": [{
@@ -147,20 +161,53 @@ def _build_property_budget_query(stay_month: str) -> dict:
                     "Query": {
                         "Version": 2,
                         "From": [
-                            {"Name": "b", "Entity": "data_budget", "Type": 0},
+                            {"Name": "b", "Entity": budget_table, "Type": 0},
                         ],
                         "Select": [
-                            {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "영업장변경"}, "Name": "data_budget.영업장변경"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "목표RNS"}}, "Function": 0}, "Name": "Sum(data_budget.목표RNS)"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "목표REV"}}, "Function": 0}, "Name": "Sum(data_budget.목표REV)"},
+                            {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "영업장"}, "Name": f"{budget_table}.영업장"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": metric_column}}, "Function": 0}, "Name": f"Sum({budget_table}.{metric_column})"},
                         ],
                         "Where": [
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
-                            {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "년도"}}, "Right": {"Literal": {"Value": f"{year}L"}}}}},
+                            {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "투숙년도"}}, "Right": {"Literal": {"Value": f"{year}L"}}}}},
                         ],
                     },
                     "Binding": {
-                        "Primary": {"Groupings": [{"Projections": [0, 1, 2]}]},
+                        "Primary": {"Groupings": [{"Projections": [0, 1]}]},
+                        "DataReduction": {"DataVolume": 4, "Primary": {"Window": {"Count": 500}}},
+                        "Version": 1,
+                    },
+                }
+            }]},
+            "QueryId": "",
+            "ApplicationContext": {"DatasetId": DATASET_ID, "Sources": [{"ReportId": REPORT_ID, "VisualId": ""}]},
+        }],
+        "cancelQueries": [],
+        "modelId": MODEL_ID,
+    }
+
+
+def _build_static_mapping_query() -> dict:
+    """
+    사업장_static 매핑 테이블 - 영업장 ↔ 영업장변경 매핑
+    """
+    return {
+        "version": "1.0.0",
+        "queries": [{
+            "Query": {"Commands": [{
+                "SemanticQueryDataShapeCommand": {
+                    "Query": {
+                        "Version": 2,
+                        "From": [
+                            {"Name": "s", "Entity": "사업장_static", "Type": 0},
+                        ],
+                        "Select": [
+                            {"Column": {"Expression": {"SourceRef": {"Source": "s"}}, "Property": "영업장"}, "Name": "사업장_static.영업장"},
+                            {"Column": {"Expression": {"SourceRef": {"Source": "s"}}, "Property": "영업장변경"}, "Name": "사업장_static.영업장변경"},
+                        ],
+                    },
+                    "Binding": {
+                        "Primary": {"Groupings": [{"Projections": [0, 1]}]},
                         "DataReduction": {"DataVolume": 4, "Primary": {"Window": {"Count": 500}}},
                         "Version": 1,
                     },
@@ -184,9 +231,8 @@ def execute_query(body: dict, query_label: str = "") -> dict | None:
         r = requests.post(url, headers=_headers(), json=body, timeout=30)
         r.raise_for_status()
         result = r.json()
-        # 에러 응답 체크
         if "error" in result:
-            logger.warning(f"  ⚠ {query_label} 쿼리 에러: {result.get('error', {}).get('message', 'unknown')}")
+            logger.warning(f"  ⚠ {query_label}: {result.get('error', {}).get('message', 'unknown error')}")
             return None
         return result
     except requests.RequestException as e:
@@ -195,7 +241,7 @@ def execute_query(body: dict, query_label: str = "") -> dict | None:
 
 
 def parse_dsr(result: dict, expected_cols: int = 3) -> list[list]:
-    """DSR (Data Shape Result) 파싱 - 가변 컬럼 수 지원"""
+    """DSR (Data Shape Result) 파싱"""
     if not result:
         return []
     try:
@@ -238,7 +284,7 @@ def parse_dsr(result: dict, expected_cols: int = 3) -> list[list]:
 
 
 # ─────────────────────────────────────────────
-# 데이터 정규화
+# 데이터 헬퍼
 # ─────────────────────────────────────────────
 def detect_region(property_name: str) -> str:
     for keyword, region in REGION_MAP.items():
@@ -247,20 +293,11 @@ def detect_region(property_name: str) -> str:
     return "unknown"
 
 
-def normalize_property_name(raw: str) -> str:
-    """사업장명 표준화 (BI 결과를 properties.json 기준에 맞춤)"""
-    raw = raw.strip()
-    
-    # 매핑 규칙 (BI 명칭 → 표준 명칭)
-    mapping = {
-        "비발디파크": "비발디파크 (통합)",
-        "소노벨비발디": "소노벨 비발디파크",
-        "소노캄비발디": "소노캄 비발디파크",
-        "소노펠리체비발디": "소노펠리체 비발디파크",
-        "펠리체빌리지": "펠리체 빌리지 비발디파크",
-        "소노펫비발디": "소노펫 비발디파크",
-    }
-    return mapping.get(raw, raw)
+def calculate_adr(rns: int, rev_won: int) -> int:
+    """ADR = REV / RNS (천원 단위)"""
+    if rns <= 0:
+        return 0
+    return round((rev_won / 1000) / rns)
 
 
 # ─────────────────────────────────────────────
@@ -268,137 +305,213 @@ def normalize_property_name(raw: str) -> str:
 # ─────────────────────────────────────────────
 def main():
     logger.info("=" * 60)
-    logger.info("Power BI 사업장별 실적·목표·달성률 자동 수집")
+    logger.info("Power BI 사업장별 실적·목표·YoY·달성률 자동 수집")
     logger.info("=" * 60)
     
-    # 결과 저장 구조: { region: [ { name, 2026-04: {...}, 2026-05: {...}, 2026-06: {...} } ] }
-    properties_by_region = {"vivaldi": {}, "central": {}, "south": {}, "apac": {}}
+    # Step 0: 사업장 매핑 테이블 먼저 로드 (영업장 ↔ 영업장변경)
+    logger.info("\n[Step 0] 사업장_static 매핑 로드")
+    static_result = execute_query(_build_static_mapping_query(), "사업장_static")
+    static_rows = parse_dsr(static_result, expected_cols=2) if static_result else []
+    
+    # 매핑: {영업장 → 영업장변경, 영업장변경 → 영업장}
+    budget_to_actual = {}  # 목표 측 이름 → 실적 측 이름 (표시명)
+    actual_to_budget = {}
+    for row in static_rows:
+        if len(row) < 2 or not row[0] or not row[1]:
+            continue
+        budget_name = str(row[0]).strip()   # 영업장 (목표 테이블)
+        actual_name = str(row[1]).strip()   # 영업장변경 (실적 테이블, 표시명)
+        budget_to_actual[budget_name] = actual_name
+        actual_to_budget[actual_name] = budget_name
+    logger.info(f"  ✓ 매핑 로드: {len(budget_to_actual)}개 사업장")
+    
+    if not budget_to_actual:
+        logger.warning("  ⚠ 매핑 테이블 로드 실패. 이름이 같다고 가정하고 진행")
+    
+    # 결과 저장 구조
+    # { property_name: { '2026-04': {...}, '2026-05': {...}, '2026-06': {...} } }
+    all_properties = {}
     
     for stay_month in STAY_MONTHS:
         month_label = f"{stay_month[:4]}-{stay_month[4:6]}"
-        logger.info(f"\n[{month_label}] 데이터 수집 중...")
+        logger.info(f"\n[{month_label}] 수집 시작")
         
-        # 1. 사업장별 실적 (RNS, REV)
-        actual_result = execute_query(_build_property_actual_query(stay_month), f"{month_label} 실적")
+        # 1. 실적 (RNS, REV) - data_raw
+        logger.info(f"  [1/4] data_raw (실적)")
+        actual_result = execute_query(_build_actual_query(stay_month, "data_raw"), f"{month_label} 실적")
         actual_rows = parse_dsr(actual_result, expected_cols=3) if actual_result else []
         
-        actual_dict = {}  # { property_name: { rns, rev } }
+        actual_dict = {}  # 표시명 → {rns, rev_won}
         for row in actual_rows:
             if len(row) < 3 or not row[0]:
                 continue
-            name = normalize_property_name(str(row[0]))
+            name = str(row[0]).strip()
             actual_dict[name] = {
                 "rns": int(row[1] or 0),
-                "rev_원": int(row[2] or 0),
+                "rev_won": int(row[2] or 0),
             }
-        logger.info(f"  ✓ 실적 수집: {len(actual_dict)}개 사업장")
+        logger.info(f"      ✓ 실적: {len(actual_dict)}개 사업장")
         
-        # 2. 사업장별 목표 (Budget)
-        budget_result = execute_query(_build_property_budget_query(stay_month), f"{month_label} 목표")
-        budget_rows = parse_dsr(budget_result, expected_cols=3) if budget_result else []
+        # 2. 전년도 실적 (YoY 계산용) - data_lastraw
+        logger.info(f"  [2/4] data_lastraw (전년도 실적)")
+        last_result = execute_query(_build_actual_query(stay_month, "data_lastraw"), f"{month_label} 전년실적")
+        last_rows = parse_dsr(last_result, expected_cols=3) if last_result else []
         
-        budget_dict = {}
-        for row in budget_rows:
+        last_dict = {}
+        for row in last_rows:
             if len(row) < 3 or not row[0]:
                 continue
-            name = normalize_property_name(str(row[0]))
-            budget_dict[name] = {
-                "target_rns": int(row[1] or 0),
-                "target_rev_원": int(row[2] or 0),
+            name = str(row[0]).strip()
+            last_dict[name] = {
+                "rns": int(row[1] or 0),
+                "rev_won": int(row[2] or 0),
             }
-        logger.info(f"  ✓ 목표 수집: {len(budget_dict)}개 사업장")
+        logger.info(f"      ✓ 전년도: {len(last_dict)}개 사업장")
         
-        # 3. 사업장별로 합쳐서 region에 저장
-        all_names = set(actual_dict.keys()) | set(budget_dict.keys())
-        for name in all_names:
-            region = detect_region(name)
-            if region == "unknown":
-                logger.debug(f"  ? 권역 미매핑: {name}")
+        # 3. 목표 RNS - budget_RNS_2026
+        logger.info(f"  [3/4] budget_RNS_2026 (목표 객실수)")
+        budget_rns_result = execute_query(
+            _build_budget_query(stay_month, "budget_RNS_2026", "budget_RNS"),
+            f"{month_label} 목표RNS"
+        )
+        budget_rns_rows = parse_dsr(budget_rns_result, expected_cols=2) if budget_rns_result else []
+        
+        budget_rns_dict = {}  # 영업장 → 목표RNS
+        for row in budget_rns_rows:
+            if len(row) < 2 or not row[0]:
                 continue
-            
+            budget_name = str(row[0]).strip()
+            # 매핑 적용: 목표측 '영업장' → 실적측 '영업장변경'
+            display_name = budget_to_actual.get(budget_name, budget_name)
+            budget_rns_dict[display_name] = int(row[1] or 0)
+        logger.info(f"      ✓ 목표RNS: {len(budget_rns_dict)}개 사업장")
+        
+        # 4. 목표 REV - budget_REV_2026
+        logger.info(f"  [4/4] budget_REV_2026 (목표 매출)")
+        budget_rev_result = execute_query(
+            _build_budget_query(stay_month, "budget_REV_2026", "budget_REV"),
+            f"{month_label} 목표REV"
+        )
+        budget_rev_rows = parse_dsr(budget_rev_result, expected_cols=2) if budget_rev_result else []
+        
+        budget_rev_dict = {}
+        for row in budget_rev_rows:
+            if len(row) < 2 or not row[0]:
+                continue
+            budget_name = str(row[0]).strip()
+            display_name = budget_to_actual.get(budget_name, budget_name)
+            budget_rev_dict[display_name] = int(row[1] or 0)
+        logger.info(f"      ✓ 목표REV: {len(budget_rev_dict)}개 사업장")
+        
+        # 5. 데이터 병합
+        all_names = (
+            set(actual_dict.keys()) | 
+            set(last_dict.keys()) | 
+            set(budget_rns_dict.keys()) | 
+            set(budget_rev_dict.keys())
+        )
+        
+        for name in all_names:
             actual = actual_dict.get(name, {})
-            budget = budget_dict.get(name, {})
+            last = last_dict.get(name, {})
             
             rns = actual.get("rns", 0)
-            rev_won = actual.get("rev_원", 0)
-            target_rns = budget.get("target_rns", 0)
+            rev_won = actual.get("rev_won", 0)
+            last_rns = last.get("rns", 0)
             
-            # 달성률
+            target_rns = budget_rns_dict.get(name, 0)
+            target_rev_won = budget_rev_dict.get(name, 0)
+            
+            # 계산
             achievement = round((rns / target_rns) * 100, 1) if target_rns > 0 else 0
-            # ADR (천원 단위) = REV / RNS
-            adr_thousand = round((rev_won / 1000) / rns, 0) if rns > 0 else 0
-            # REV (백만원 단위)
-            rev_million = round(rev_won / 1_000_000, 0)
+            yoy_pct = round(((rns - last_rns) / last_rns) * 100, 1) if last_rns > 0 else 0
+            adr = calculate_adr(rns, rev_won)
+            rev_million = round(rev_won / 1_000_000)
             
-            month_data = {
+            if name not in all_properties:
+                all_properties[name] = {"name": name}
+            
+            all_properties[name][month_label] = {
                 "rns": rns,
-                "adr": int(adr_thousand),
-                "rev": int(rev_million),
+                "adr": adr,
+                "rev": rev_million,
                 "target_rns": target_rns,
+                "target_rev": round(target_rev_won / 1_000_000),
                 "achievement": achievement,
+                "yoy_pct": yoy_pct,
+                "last_rns": last_rns,
             }
-            
-            if name not in properties_by_region[region]:
-                properties_by_region[region][name] = {"name": name}
-            properties_by_region[region][name][month_label] = month_data
     
-    # 4. dict → list 변환 + daily_notes.json 업데이트
+    # ─────────────────────────────────────────
+    # daily_notes.json 업데이트
+    # ─────────────────────────────────────────
     notes_path = Path(__file__).parent.parent / "data" / "daily_notes.json"
-    if notes_path.exists():
-        notes = json.loads(notes_path.read_text(encoding="utf-8"))
-    else:
-        notes = {}
+    notes = json.loads(notes_path.read_text(encoding="utf-8")) if notes_path.exists() else {}
     
-    if "property_performance" not in notes:
-        notes["property_performance"] = {}
+    # 권역별 분류
+    properties_by_region = {"vivaldi": [], "central": [], "south": [], "apac": [], "unknown": []}
+    for name, data in all_properties.items():
+        region = detect_region(name)
+        properties_by_region.setdefault(region, []).append(data)
     
-    # 모든 권역에 데이터 있을 때만 업데이트 (한 곳이라도 실패면 전체 보존)
-    total_updated = 0
-    for region in ("vivaldi", "central", "south", "apac"):
-        props_dict = properties_by_region[region]
-        if props_dict:
-            # 달성률 기준 정렬 (낮은 곳이 우선 모니터링 대상)
-            props_list = sorted(
-                props_dict.values(),
-                key=lambda p: p.get("2026-04", {}).get("achievement", 999)
-            )
-            notes["property_performance"][region] = props_list
-            total_updated += len(props_list)
-            logger.info(f"  ✓ {region}: {len(props_list)}개 사업장 갱신")
-        else:
-            logger.warning(f"  ⚠ {region}: 데이터 없음 (기존 데이터 유지)")
+    # 권역별로 4월 달성률 오름차순 정렬 (하위 사업장이 위)
+    for region in properties_by_region:
+        properties_by_region[region].sort(
+            key=lambda p: p.get("2026-04", {}).get("achievement", 999)
+        )
     
-    if total_updated == 0:
+    # 성공 여부 판정 (최소 하나의 권역에 데이터가 있어야)
+    total_props = sum(len(v) for k, v in properties_by_region.items() if k != "unknown")
+    
+    if total_props == 0:
         logger.error("=" * 60)
-        logger.error("⚠ Power BI 수집 완전 실패 - daily_notes.json 변경 안 함")
+        logger.error("⚠ Power BI 수집 완전 실패")
         logger.error("=" * 60)
-        # powerbi_latest.json에 메타 기록
         meta = {
             "_collected_at": datetime.now().isoformat(),
             "_status": "failed",
-            "_reason": "Power BI 쿼리 모두 실패 (스키마 변경 또는 인증 만료 가능성)",
-            "_action_required": "BI 관리자에게 테이블/컬럼명 확인 필요",
+            "_reason": "모든 쿼리 실패 - BI 관리자 확인 필요",
         }
-        meta_path = Path(__file__).parent.parent / "data" / "powerbi_latest.json"
-        meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        (Path(__file__).parent.parent / "data" / "powerbi_latest.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         sys.exit(1)
     
-    # 메타 정보
-    notes["_powerbi_last_sync"] = datetime.now().isoformat()
+    # daily_notes.json에 반영 (unknown 권역은 제외)
+    notes["property_performance"] = {
+        "_description": f"Power BI 자동 수집 ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+        "_status": "auto_synced",
+        "_last_sync": datetime.now().isoformat(),
+        "vivaldi": properties_by_region["vivaldi"],
+        "central": properties_by_region["central"],
+        "south": properties_by_region["south"],
+        "apac": properties_by_region["apac"],
+    }
+    
+    # Hero OTA 채널 데이터도 자동 수집 가능 (추후)
+    # 지금은 property_performance만
+    
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
     
-    # 별도 메타 파일
+    # 별도 메타 저장
     meta_path = Path(__file__).parent.parent / "data" / "powerbi_latest.json"
     meta_path.write_text(json.dumps({
         "_collected_at": datetime.now().isoformat(),
         "_status": "success",
-        "_total_properties": total_updated,
+        "_total_properties": total_props,
         "_months_collected": STAY_MONTHS,
+        "_by_region": {k: len(v) for k, v in properties_by_region.items() if k != "unknown"},
+        "_unknown_properties": [p["name"] for p in properties_by_region.get("unknown", [])],
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     
     logger.info("=" * 60)
     logger.info(f"✓ Power BI 자동 수집 완료")
-    logger.info(f"  사업장: {total_updated}개 × 3개월 = {total_updated*3}개 데이터 포인트")
+    logger.info(f"  총 사업장: {total_props}개")
+    for region in ("vivaldi", "central", "south", "apac"):
+        props = properties_by_region[region]
+        logger.info(f"    {region}: {len(props)}개")
+    if properties_by_region.get("unknown"):
+        logger.warning(f"    ⚠ 권역 미매핑 {len(properties_by_region['unknown'])}개: {[p['name'] for p in properties_by_region['unknown']]}")
     logger.info(f"  저장: {notes_path}")
     logger.info("=" * 60)
 

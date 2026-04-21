@@ -311,13 +311,97 @@ def render_property_matrix(properties: list, region_color: str) -> str:
 
 
 def inject_property_matrix(html: str, prop_data: dict) -> str:
-    """권역별 사업장 실적 매트릭스 주입"""
-    region_colors = {
-        "vivaldi": "#a83e4f",
-        "central": "#2c5f7c",
-        "south": "#2d7a3f",
-        "apac": "#5c4a7c",
-    }
+    """권역별 사업장 실적 매트릭스 주입 (구버전 - 매트릭스 UI 삭제됨, 사용 안 함)"""
+    return html
+
+
+def inject_signal_cards(html: str, prop_data: dict) -> str:
+    """
+    BI 자동 수집 데이터로 사업장 신호등 카드 자동 생성
+    → Power BI 성공 시 '데이터 추후 적용' → 실데이터로 교체
+    """
+    # _status 체크
+    status = prop_data.get("_status", "")
+    if status != "auto_synced":
+        logger.info(f"  신호등 주입 스킵 (status={status} - '데이터 추후 적용' 유지)")
+        return html
+    
+    import re
+    updated_regions = 0
+    
+    for region_key in ("vivaldi", "central", "south", "apac"):
+        properties = prop_data.get(region_key, [])
+        if not properties:
+            continue
+        
+        # 신호등 카드 HTML 생성
+        cards_html = []
+        for prop in properties:
+            name = escape_html(prop.get("name", ""))
+            m4 = prop.get("2026-04", {})
+            achievement = m4.get("achievement", 0)
+            yoy_pct = m4.get("yoy_pct", 0)
+            
+            # 달성률에 따른 색상
+            if achievement >= 100:
+                dot_color = "green"
+                value_class = "up"
+                value_color = "var(--positive)"
+            elif achievement >= 85:
+                dot_color = "yellow"
+                value_class = ""
+                value_color = "var(--warning)"
+            else:
+                dot_color = "red"
+                value_class = "down"
+                value_color = "var(--negative)"
+            
+            # YoY 표시
+            if yoy_pct > 0:
+                yoy_text = f"▲ 전년比 +{yoy_pct:.1f}%"
+                yoy_color = "var(--positive)"
+            elif yoy_pct < 0:
+                yoy_text = f"▼ 전년比 {yoy_pct:.1f}%"
+                yoy_color = "var(--negative)"
+            else:
+                yoy_text = "▬ 전년比 ±0%"
+                yoy_color = "var(--ink-faint)"
+            
+            cards_html.append(
+                f'    <div class="signal-card">\n'
+                f'      <div class="signal-dot {dot_color}"></div>\n'
+                f'      <div>\n'
+                f'        <div class="signal-name">{name}</div>\n'
+                f'        <div class="signal-sub" style="font-family:\'Pretendard Variable\',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 {achievement:.1f}%</div>\n'
+                f'        <div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;margin-top:2px;color:{yoy_color};">{yoy_text}</div>\n'
+                f'      </div>\n'
+                f'      <div class="signal-value {value_class}">{achievement:.1f}%</div>\n'
+                f'    </div>'
+            )
+        
+        cards_block = "\n".join(cards_html)
+        
+        # 마커 사이 영역 교체
+        pattern = re.compile(
+            f'(<!-- SIGNAL_INJECT_START_{region_key} -->)(.*?)(<!-- SIGNAL_INJECT_END_{region_key} -->)',
+            re.DOTALL
+        )
+        new_html, n = pattern.subn(
+            lambda m: m.group(1) + "\n" + cards_block + "\n    " + m.group(3),
+            html, count=1
+        )
+        if n > 0:
+            html = new_html
+            updated_regions += 1
+            logger.info(f"  ✓ {region_key}: {len(properties)}개 신호등 주입")
+    
+    if updated_regions > 0:
+        logger.info(f"✓ BI 자동 수집 데이터로 사업장 신호등 {updated_regions}개 권역 갱신")
+    
+    return html
+
+
+def _LEGACY_inject_property_matrix(html: str, prop_data: dict) -> str:
     for region_key, color in region_colors.items():
         properties = prop_data.get(region_key, [])
         matrix_html = render_property_matrix(properties, color)
@@ -688,6 +772,9 @@ def main():
     
     # OTA TOP 4
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
+    
+    # 사업장 신호등 (BI 자동 수집 데이터)
+    html = inject_signal_cards(html, notes.get("property_performance", {}))
     
     # 경쟁사
     html = inject_competitor_section(html, comp_data)
