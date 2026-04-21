@@ -360,24 +360,41 @@ def render_competitor_cards(comp_data: dict) -> str:
         cards.append(f'''
     <a href="{link}" target="_blank" rel="noopener noreferrer" 
        style="text-decoration:none;color:inherit;display:block;background:var(--bg-card);border:1px solid var(--rule);border-left:3px solid {r_color};border-radius:0 4px 4px 0;padding:16px 18px;transition:all 0.2s;"
-       onmouseover="this.style.boxShadow='0 8px 18px rgba(0,0,0,0.08)';this.style.transform='translateY(-2px)'" 
+       onmouseover="this.style.boxShadow='0 8px 18px rgba(0,0,0,0.4)';this.style.transform='translateY(-2px)'" 
        onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:8px;">
-        <div>
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:{r_color};font-weight:700;margin-bottom:2px;">● {r_label}</div>
-          <div style="font-family:var(--serif);font-size:16px;font-weight:800;color:var(--ink);">{brand}</div>
+      <!-- 헤더: 권역 + 브랜드 + 할인율 -->
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div style="font-family:'Noto Sans KR',sans-serif;font-size:11px;letter-spacing:0.1em;color:{r_color};font-weight:800;margin-bottom:3px;">● {r_label}</div>
+          <div style="font-family:'Noto Sans KR',sans-serif;font-size:17px;font-weight:800;color:var(--ink);line-height:1.3;">{brand}</div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-family:var(--serif);font-size:22px;font-weight:800;color:var(--negative);line-height:1;">-{discount}%</div>
-          <div style="font-family:var(--mono);font-size:8px;padding:2px 6px;background:{t_bg};color:{t_color};border-radius:2px;font-weight:700;margin-top:4px;display:inline-block;">{t_label}</div>
+        <!-- 할인율 박스 (의미 명확하게) -->
+        <div style="text-align:center;background:rgba(229,115,115,0.12);border:1px solid rgba(229,115,115,0.4);padding:6px 10px;border-radius:4px;min-width:80px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--negative);letter-spacing:0.1em;font-weight:700;margin-bottom:2px;">최대 할인율</div>
+          <div style="font-family:'Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:var(--negative);line-height:1;">{discount}<span style="font-size:13px;font-weight:700;">%</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;background:{t_bg};color:{t_color};border-radius:2px;font-weight:700;margin-top:4px;display:inline-block;">{t_label}</div>
         </div>
       </div>
-      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-soft);line-height:1.5;margin-bottom:8px;min-height:40px;">{title}</div>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-muted);margin-bottom:6px;">📅 {period}</div>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--ink-muted);line-height:1.4;padding:8px 10px;background:var(--bg-soft);border-radius:3px;margin-bottom:6px;">{detail}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:9px;color:var(--ink-faint);padding-top:6px;border-top:1px dashed var(--rule);">
-        <span>{channel}</span>
-        <span style="color:var(--gold);font-weight:700;">🔗 Link ↗</span>
+      
+      <!-- 프로모션 제목 -->
+      <div style="font-family:'Noto Sans KR',sans-serif;font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:10px;font-weight:600;">
+        🎯 {title}
+      </div>
+      
+      <!-- 기간 -->
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-muted);margin-bottom:8px;font-weight:700;">
+        📅 {period}
+      </div>
+      
+      <!-- 상세 내용 -->
+      <div style="font-family:'Noto Sans KR',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-soft);border-radius:3px;margin-bottom:8px;font-weight:500;">
+        💡 {detail}
+      </div>
+      
+      <!-- 푸터: 채널 + 링크 -->
+      <div style="display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);padding-top:8px;border-top:1px dashed var(--rule);font-weight:700;">
+        <span>📡 {channel}</span>
+        <span style="color:var(--gold);font-weight:800;">🔗 자사 사이트 ↗</span>
       </div>
     </a>''')
     return "\n".join(cards)
