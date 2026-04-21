@@ -86,6 +86,7 @@ def escape_html(text) -> str:
 def inject_external_links(html: str, links: dict) -> str:
     bi = links.get("bi_dashboard", {})
     monitor = links.get("gs_monitor", {})
+    palatium = links.get("palatium_dashboard", {})
     
     if bi.get("url"):
         html = re.sub(
@@ -97,6 +98,12 @@ def inject_external_links(html: str, links: dict) -> str:
         html = re.sub(
             r'(<a[^>]*data-tpl-link-monitor[^>]*href=")[^"]+(")',
             lambda m: m.group(1) + monitor["url"] + m.group(2),
+            html, count=1
+        )
+    if palatium.get("url"):
+        html = re.sub(
+            r'(<a[^>]*href=")[^"]+("[^>]*data-tpl-link-palatium)',
+            lambda m: m.group(1) + palatium["url"] + m.group(2),
             html, count=1
         )
     logger.info(f"✓ 외부 링크 주입")
