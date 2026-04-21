@@ -33,12 +33,12 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 # Power BI 공개 보고서 설정
 # ─────────────────────────────────────────────
-RESOURCE_KEY = "ec0be295-8880-42dd-b2ac-3217e9c42b24"
-TENANT_ID    = "2f8cc8a8-a9b0-4f8f-8f9f-fb7a7fd13ff4"
-MODEL_ID     = 902554
-DATASET_ID   = "8ee000d9-5efb-403f-83ad-9a8e3d3b80eb"
-REPORT_ID    = "846569"
-CLUSTER      = "https://wabi-korea-central-a-primary-redirect.analysis.windows.net"
+RESOURCE_KEY    = "ec0be295-8880-42dd-b2ac-3217e9c42b24"
+TENANT_ID       = "2f8cc8a8-a9b0-4f8f-8f9f-fb7a7fd13ff4"
+MODEL_ID        = 902554
+DATASET_ID      = "8ee000d9-5efb-403f-83ad-9a8e3d3b80eb"
+REPORT_ID       = "846569"
+_CLUSTER_FALLBACK = "https://wabi-korea-central-a-primary-redirect.analysis.windows.net"
 
 # 조회할 3개월
 STAY_MONTHS = ["202604", "202605", "202606"]
@@ -87,12 +87,47 @@ _BASE_HEADERS = {
 }
 
 
-def _headers() -> dict:
-    return {
+def _headers(content_type: bool = False) -> dict:
+    h = {
         **_BASE_HEADERS,
         "ActivityId": str(uuid.uuid4()),
         "RequestId": str(uuid.uuid4()),
     }
+    if content_type:
+        h["Content-Type"] = "application/json"
+    return h
+
+
+def _apim_url(cluster_uri: str) -> str:
+    """
+    cluster URI → APIM URL 변환 (Power BI JS getAPIMUrl 로직 재현)
+    예: https://wabi-korea-central-a-primary-redirect.analysis.windows.net
+      → https://wabi-korea-central-a-primary-api.analysis.windows.net
+    """
+    hostname = cluster_uri.rstrip("/").split("//")[-1]
+    parts = hostname.split(".")
+    parts[0] = parts[0].replace("-redirect", "").replace("global-", "") + "-api"
+    return "https://" + ".".join(parts)
+
+
+def get_cluster_uri() -> str:
+    """
+    라우팅 API로 테넌트의 클러스터 URI를 확인.
+    실패하면 하드코딩된 fallback 사용.
+    """
+    apim = _apim_url(_CLUSTER_FALLBACK)
+    url = f"{apim}/public/routing/cluster/{TENANT_ID}"
+    try:
+        r = requests.get(url, headers=_headers(), timeout=15)
+        if r.status_code == 200:
+            cluster = r.json().get("FixedClusterUri", "").rstrip("/")
+            if cluster:
+                logger.info(f"클러스터 URI: {cluster}")
+                return cluster
+    except Exception as e:
+        logger.warning(f"라우팅 API 실패: {e}")
+    logger.info(f"하드코딩된 클러스터 URI 사용: {_CLUSTER_FALLBACK}")
+    return _CLUSTER_FALLBACK
 
 
 # ─────────────────────────────────────────────
@@ -226,13 +261,19 @@ def _build_static_mapping_query() -> dict:
 # ─────────────────────────────────────────────
 def execute_query(body: dict, query_label: str = "") -> dict | None:
     """Power BI 쿼리 실행"""
-    url = f"{CLUSTER}/public/reports/querydata?synchronous=true"
+    cluster_uri = get_cluster_uri()
+    apim = _apim_url(cluster_uri)
+    url = f"{apim}/public/reports/querydata?synchronous=true"
     try:
-        r = requests.post(url, headers=_headers(), json=body, timeout=30)
+        r = requests.post(url, headers=_headers(content_type=True), json=body, timeout=30)
         r.raise_for_status()
         result = r.json()
         if "error" in result:
             logger.warning(f"  ⚠ {query_label}: {result.get('error', {}).get('message', 'unknown error')}")
+            return None
+        if result.get("results") and result["results"][0].get("result", {}).get("error"):
+            err = result["results"][0]["result"]["error"]
+            logger.warning(f"  ⚠ {query_label} 쿼리 오류: {err}")
             return None
         return result
     except requests.RequestException as e:
@@ -347,8 +388,8 @@ def main():
                 continue
             name = str(row[0]).strip()
             actual_dict[name] = {
-                "rns": int(row[1] or 0),
-                "rev_won": int(row[2] or 0),
+                "rns": round(float(row[1] or 0)),
+                "rev_won": round(float(row[2] or 0)),
             }
         logger.info(f"      ✓ 실적: {len(actual_dict)}개 사업장")
         
@@ -363,8 +404,8 @@ def main():
                 continue
             name = str(row[0]).strip()
             last_dict[name] = {
-                "rns": int(row[1] or 0),
-                "rev_won": int(row[2] or 0),
+                "rns": round(float(row[1] or 0)),
+                "rev_won": round(float(row[2] or 0)),
             }
         logger.info(f"      ✓ 전년도: {len(last_dict)}개 사업장")
         
@@ -383,7 +424,7 @@ def main():
             budget_name = str(row[0]).strip()
             # 매핑 적용: 목표측 '영업장' → 실적측 '영업장변경'
             display_name = budget_to_actual.get(budget_name, budget_name)
-            budget_rns_dict[display_name] = int(row[1] or 0)
+            budget_rns_dict[display_name] = round(float(row[1] or 0))
         logger.info(f"      ✓ 목표RNS: {len(budget_rns_dict)}개 사업장")
         
         # 4. 목표 REV - budget_REV_2026
@@ -400,7 +441,7 @@ def main():
                 continue
             budget_name = str(row[0]).strip()
             display_name = budget_to_actual.get(budget_name, budget_name)
-            budget_rev_dict[display_name] = int(row[1] or 0)
+            budget_rev_dict[display_name] = round(float(row[1] or 0))
         logger.info(f"      ✓ 목표REV: {len(budget_rev_dict)}개 사업장")
         
         # 5. 데이터 병합
