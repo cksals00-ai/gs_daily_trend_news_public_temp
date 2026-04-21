@@ -568,9 +568,6 @@ def main():
     # OTA TOP 4
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
     
-    # 사업장 실적 매트릭스 (NEW)
-    html = inject_property_matrix(html, notes.get("property_performance", {}))
-    
     # 경쟁사
     html = inject_competitor_section(html, comp_data)
     
