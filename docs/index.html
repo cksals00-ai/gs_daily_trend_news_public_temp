@@ -13,21 +13,21 @@
 <style>
   :root {
     /* ========== 다크모드 베이스 ========== */
-    --bg: #0d0d0d;                    /* 페이지 전체 배경 (검정) */
-    --bg-card: #1c1c1c;               /* 카드 배경 (진한 회색) */
-    --bg-deep: #0a0a0a;               /* 더 진한 배경 (헤더/푸터) */
-    --bg-soft: #2a2a2a;               /* 강조 박스 배경 */
-    --bg-hover: #333333;              /* hover 상태 */
+    --bg: #1a1d23;                    /* 페이지 전체 - 차콜 네이비 (부드러운 다크) */
+    --bg-card: #252932;               /* 카드 배경 - 미디엄 차콜 */
+    --bg-deep: #14171c;               /* 더 진한 배경 (헤더/푸터) */
+    --bg-soft: #2d3138;               /* 강조 박스 배경 */
+    --bg-hover: #353a44;              /* hover 상태 */
     
-    /* ========== 텍스트 색상 (밝게 변경) ========== */
-    --ink: #ffffff;                   /* 메인 텍스트 (흰색) */
-    --ink-soft: #f0f0f0;              /* 본문 텍스트 (밝은 회색) */
-    --ink-muted: #b8b8b8;             /* 보조 텍스트 */
-    --ink-faint: #888888;             /* 흐린 텍스트 */
+    /* ========== 텍스트 색상 (밝게 - 약간 톤 다운) ========== */
+    --ink: #f5f5f7;                   /* 메인 텍스트 (오프화이트) */
+    --ink-soft: #e0e0e3;              /* 본문 텍스트 */
+    --ink-muted: #a8acb3;             /* 보조 텍스트 */
+    --ink-faint: #7a7e85;             /* 흐린 텍스트 */
     
     /* ========== 액센트 색상 ========== */
-    --gold: #d4a455;                  /* 골드 (밝게) */
-    --gold-bright: #f2c94c;           /* 더 밝은 골드 */
+    --gold: #c9a063;                  /* 골드 (차분) */
+    --gold-bright: #e6b970;           /* 더 밝은 골드 (차분) */
     --positive: #4caf6f;              /* 녹색 (밝게) */
     --positive-bg: #1f3a28;           /* 다크 녹색 배경 */
     --warning: #e8a256;               /* 주황 (밝게) */
@@ -37,15 +37,15 @@
     --info: #5a9fc4;                  /* 파랑 (밝게) */
     --info-bg: #1a2e3d;               /* 다크 파랑 배경 */
     
-    /* 권역별 색상 (다크모드 - 액센트 밝게) */
-    --region-vivaldi: #e57373;       /* 비발디파크 - 밝은 와인 */
-    --region-vivaldi-bg: #3a1f23;    /* 다크 와인 배경 */
-    --region-apac: #b89dd9;          /* APAC - 밝은 퍼플 */
-    --region-apac-bg: #2a1f3d;       /* 다크 퍼플 배경 */
-    --region-center: #5a9fc4;        /* 한국중부 - 밝은 블루 */
-    --region-center-bg: #1a2e3d;     /* 다크 블루 배경 */
-    --region-south: #4caf6f;         /* 한국남부 - 밝은 그린 */
-    --region-south-bg: #1f3a28;      /* 다크 그린 배경 */
+    /* 권역별 색상 (차분한 다크모드) */
+    --region-vivaldi: #d97a7a;       /* 비발디파크 - 차분한 와인 */
+    --region-vivaldi-bg: #2e2228;    /* 와인 배경 */
+    --region-apac: #a892c8;          /* APAC - 차분한 퍼플 */
+    --region-apac-bg: #252035;       /* 퍼플 배경 */
+    --region-center: #6ba3c4;        /* 한국중부 - 차분한 블루 */
+    --region-center-bg: #1f2a35;     /* 블루 배경 */
+    --region-south: #6db58a;         /* 한국남부 - 차분한 그린 */
+    --region-south-bg: #1f2e28;      /* 그린 배경 */
     
     /* 세그 */
     --seg-ota: #2c5f7c;
@@ -179,8 +179,8 @@
   /* ============= HERO ============= */
   .hero {
     background:
-      radial-gradient(ellipse at top right, rgba(184,137,63,0.18), transparent 55%),
-      radial-gradient(ellipse at bottom left, rgba(45,93,94,0.12), transparent 50%),
+      radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
       var(--bg-deep);
     color: #fff;
     padding: 52px 28px 44px;
@@ -997,18 +997,24 @@
   /* ============= PROPERTY SIGNALS ============= */
   .signal-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
   }
   .signal-card {
     background: var(--bg-card);
     border: 1px solid var(--rule);
-    padding: 14px 18px;
-    border-radius: 4px;
+    padding: 16px 18px;
+    border-radius: 6px;
     display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 12px;
+    grid-template-columns: 12px 1fr auto;
+    gap: 14px;
     align-items: center;
+    min-height: 80px;
+    overflow: hidden;
+  }
+  .signal-card > div:nth-child(2) {
+    min-width: 0;
+    overflow: hidden;
   }
   .signal-dot {
     width: 10px;
@@ -1019,10 +1025,13 @@
   .signal-dot.yellow { background: var(--warning); }
   .signal-dot.red { background: var(--negative); }
   .signal-name {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .signal-sub {
     font-family: 'Noto Sans KR', var(--sans);
@@ -1033,11 +1042,14 @@
     font-weight: 700;
   }
   .signal-value {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 75px;
   }
   .signal-value.up { color: var(--positive); }
   .signal-value.down { color: var(--negative); }
@@ -1153,6 +1165,7 @@
     .top5-card:nth-child(n+4) { display: none; }
     .chain-flow { grid-template-columns: repeat(3, 1fr); gap: 20px 30px; }
     .chain-node:nth-child(3n)::after { display: none; }
+    .signal-grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 1024px) {
     .region-selector { grid-template-columns: 1fr; }
@@ -1164,6 +1177,7 @@
     .chain-node::after { display: none !important; }
     .region-header { grid-template-columns: auto 1fr; }
     .region-properties { display: none; }
+    .signal-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 768px) {
     body { font-size: 14px; }
@@ -2783,11 +2797,11 @@
   </div>
   <h3 class="subsection-title">Property <em>사업장 신호등</em> <span class="subsection-num">02</span></h3>
   <div class="signal-grid">
-    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노캄 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 47.6%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -41%</div></div><div class="signal-value down">47.6%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 109.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +10%</div></div><div class="signal-value up">109.5%</div></div>
-    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노펠리체 비발디</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 73.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 +3%</div></div><div class="signal-value">73.7%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">펠리체 빌리지 비발디</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 98.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +5%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노펫 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 104.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +8%</div></div><div class="signal-value up">104.8%</div></div><div class="signal-value up">98.5%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노캄 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 47.6%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -52%</div></div><div class="signal-value down">47.6%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 109.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +14%</div></div><div class="signal-value up">109.5%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노펠리체 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 73.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -26%</div></div><div class="signal-value down">73.7%</div></div>
+    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">펠리체 빌리지 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 98.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -1%</div></div><div class="signal-value ">98.5%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노펫 비발디파크</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 104.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +10%</div></div><div class="signal-value up">104.8%</div></div>
   </div>
 </section>
 
@@ -3170,68 +3184,13 @@
   <!-- 사업장 신호등 -->
   <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">04</span></h3>
   <div class="signal-grid">
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">소노벨 비발디파크</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 109.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +10%</div>
-      </div>
-      <div class="signal-value up">109.5%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot red"></div>
-      <div>
-        <div class="signal-name">소노캄 비발디파크</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 47.6%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -41%</div>
-      </div>
-      <div class="signal-value down">47.6%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">소노펠리체 비발디파크</div>
-        <div class="signal-sub">OTA 68% · GOTA 87%</div>
-      </div>
-      <div class="signal-value">73.7%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">소노벨 양평</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 103.6%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +22%</div>
-      </div>
-      <div class="signal-value up">103.6%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">쏠비치 양양</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 101.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +5%</div>
-      </div>
-      <div class="signal-value up">101.2%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">델피노</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 78.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -8%</div>
-      </div>
-      <div class="signal-value">78.5%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">소노벨 단양</div>
-        <div class="signal-sub">OTA 85% · GOTA 78%</div>
-      </div>
-      <div class="signal-value">82.1%</div>
-    </div>
-  
-    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노문 단양</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 80.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 -3%</div></div><div class="signal-value">80.4%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 청송</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 95.1%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +12%</div></div><div class="signal-value up">95.1%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 천안</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 100.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +6%</div></div><div class="signal-value up">100.2%</div></div>
-    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노벨 변산</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 81.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -5%</div></div><div class="signal-value">81.2%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노휴 양평</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 92.3%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +18%</div></div><div class="signal-value up">92.3%</div></div></div>
+    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">델피노 (통합)</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 92.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -4%</div></div><div class="signal-value ">92.8%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 양평</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 103.6%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +9%</div></div><div class="signal-value up">103.6%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">쏠비치 양양</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 101.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +6%</div></div><div class="signal-value up">101.2%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">쏠비치 삼척</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 48.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -51%</div></div><div class="signal-value down">48.7%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노문 단양</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 80.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -20%</div></div><div class="signal-value down">80.4%</div></div>
+    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노휴 양평</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 92.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -4%</div></div><div class="signal-value ">92.4%</div></div>
+  </div>
 </section>
 
 <!-- ============ REGION 03 — 한국남부 ============ -->
@@ -3612,57 +3571,12 @@
   <!-- 사업장 신호등 -->
   <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">04</span></h3>
   <div class="signal-grid">
-    <div class="signal-card">
-      <div class="signal-dot red"></div>
-      <div>
-        <div class="signal-name">쏠비치 삼척</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 48.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -32%</div>
-      </div>
-      <div class="signal-value down">48.7%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">쏠비치 진도</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 79.1%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 -2%</div>
-      </div>
-      <div class="signal-value">79.1%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">쏠비치 남해</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 98.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +4%</div>
-      </div>
-      <div class="signal-value up">98.7%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">소노캄 여수</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 114.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +14%</div>
-      </div>
-      <div class="signal-value up">114.5%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">소노캄 거제</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 76.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -12%</div>
-      </div>
-      <div class="signal-value">76.8%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">소노캄 경주</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 81.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -7%</div>
-      </div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 경주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 102.1%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +8%</div></div><div class="signal-value up">102.1%</div></div>
-    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노캄 경주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 81.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -7%</div></div><div class="signal-value">81.8%</div></div>
-    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노문 해운대</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 60.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -25%</div></div><div class="signal-value down">60.4%</div></div>
-      <div class="signal-value">78.2%</div>
-    </div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노캄 여수</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 114.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +14%</div></div><div class="signal-value up">114.5%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노캄 거제</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 76.8%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -23%</div></div><div class="signal-value down">76.8%</div></div>
+    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">쏠비치 남해</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 98.7%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -1%</div></div><div class="signal-value ">98.7%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">쏠비치 진도</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 79.1%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -21%</div></div><div class="signal-value down">79.1%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 경주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 102.1%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +7%</div></div><div class="signal-value up">102.1%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노문 해운대</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 60.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -40%</div></div><div class="signal-value down">60.4%</div></div>
   </div>
 </section>
 
@@ -3973,33 +3887,12 @@
   <!-- 사업장 신호등 -->
   <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">03</span></h3>
   <div class="signal-grid">
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노캄 고양</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 118.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +28%</div></div><div class="signal-value up">118.2%</div></div>
-    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 제주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 112.3%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +18%</div></div><div class="signal-value up">112.3%</div></div>
-    <div class="signal-card"><div class="signal-dot yellow"></div><div><div class="signal-name">소노캄 제주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 82.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -8%</div></div><div class="signal-value">82.4%</div></div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">하이퐁 베트남</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 83.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -10%</div>
-      </div>
-      <div class="signal-value">82.4%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot green"></div>
-      <div>
-        <div class="signal-name">괌 GSA</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 110.3%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +22%</div>
-      </div>
-      <div class="signal-value up">110.2%</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot red"></div>
-      <div>
-        <div class="signal-name">하와이</div>
-        <div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 57.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -38%</div>
-      </div>
-      <div class="signal-value down">57.5%</div>
-    </div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노벨 제주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 112.3%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +12%</div></div><div class="signal-value up">112.3%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">소노캄 제주</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 82.4%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -18%</div></div><div class="signal-value down">82.4%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">소노캄 고양</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 118.2%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +18%</div></div><div class="signal-value up">118.2%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">하이퐁 베트남</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 83.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -16%</div></div><div class="signal-value down">83.5%</div></div>
+    <div class="signal-card"><div class="signal-dot green"></div><div><div class="signal-name">괌 GSA</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 110.3%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--positive);">▲ 전년比 +10%</div></div><div class="signal-value up">110.3%</div></div>
+    <div class="signal-card"><div class="signal-dot red"></div><div><div class="signal-name">하와이 (오아후)</div><div class="signal-sub" style="font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 57.5%</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--negative);">▼ 전년比 -42%</div></div><div class="signal-value down">57.5%</div></div>
   </div>
 </section>
 
@@ -4148,7 +4041,7 @@
   <div style="font-family:var(--sans);font-size:12.5px;color:rgba(255,255,255,0.55);margin:8px 0 6px;">
     본 대시보드는 <strong style="color:rgba(255,255,255,0.75);">GS팀 내부 운영용</strong>이며, 무단 복제 및 외부 공유를 금지합니다.
   </div>
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-21 13:24 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-21 13:28 KST</span></div>
 </footer>
 
 <script>
