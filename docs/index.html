@@ -1239,6 +1239,8 @@
     .trend-now-value { font-size: 30px; }
     /* 주간 리포트: 1칼럼 */
     .weekly-grid { grid-template-columns: 1fr !important; }
+    /* OTB 월별 내부 그리드: 항상 3칼럼 유지 */
+    .otb-month-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 8px !important; }
     /* KPI 그리드: 1칼럼 세로 배치 */
     .hero-inner [style*="grid-template-columns:repeat(3,1fr)"],
     .hero-inner [style*="grid-template-columns: repeat(3, 1fr)"] {
@@ -1334,6 +1336,12 @@
     /* --- 주간 리포트 --- */
     .weekly-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
     .weekly-card { padding: 14px !important; }
+    /* OTB 월별 내부 그리드: 3칼럼 유지 + 폰트/여백 축소 */
+    .otb-month-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 5px !important; }
+    .otb-month-grid > div { padding-right: 5px !important; }
+    .otb-month-grid [style*="font-size:24px"] { font-size: 19px !important; }
+    .otb-month-grid [style*="font-size:20px"] { font-size: 17px !important; }
+    .otb-month-grid [style*="font-size:10px"] { font-size: 9px !important; }
 
     /* --- 시그널 카드 --- */
     .signal-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
@@ -1557,7 +1565,7 @@
         <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:16px 20px;" class="weekly-card">
           <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);margin-bottom:12px;">📊 DAILY OTB · <span data-tpl-otb-date>4/21</span> 예약 기준</div>
           <!-- 3개월 OTB 그리드 -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div class="otb-month-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
             <!-- 4월 (당월) -->
             <div style="border-right:1px solid rgba(255,255,255,0.1);padding-right:10px;">
               <div style="font-family:var(--mono);font-size:10px;color:var(--gold-bright);margin-bottom:4px;font-weight:700;">APR</div>
@@ -1568,21 +1576,23 @@
               </div>
             </div>
             <!-- 5월 -->
-            <div style="border-right:1px solid rgba(255,255,255,0.1);padding-right:10px;opacity:0.7;">
+            <div style="border-right:1px solid rgba(255,255,255,0.1);padding-right:10px;opacity:0.6;">
               <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px;">MAY</div>
-              <div style="font-family:var(--serif);font-size:20px;font-weight:700;color:#fff;line-height:1;margin-bottom:6px;" data-tpl-otb-m1-net>—</div>
+              <div style="font-family:var(--serif);font-size:22px;font-weight:700;color:#fff;line-height:1;margin-bottom:4px;" data-tpl-otb-m1-net>—</div>
+              <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:4px;">데이터 없음</div>
               <div style="display:flex;flex-direction:column;gap:2px;">
-                <div style="font-family:var(--mono);font-size:10px;color:#4ecdc4;">▲ <span data-tpl-otb-m1-booking>—</span></div>
-                <div style="font-family:var(--mono);font-size:10px;color:#ff6b6b;">▼ <span data-tpl-otb-m1-cancel>—</span></div>
+                <div style="font-family:var(--mono);font-size:10px;color:rgba(78,205,196,0.5);">▲ <span data-tpl-otb-m1-booking>—</span></div>
+                <div style="font-family:var(--mono);font-size:10px;color:rgba(255,107,107,0.5);">▼ <span data-tpl-otb-m1-cancel>—</span></div>
               </div>
             </div>
             <!-- 6월 -->
-            <div style="opacity:0.7;">
+            <div style="opacity:0.6;">
               <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px;">JUN</div>
-              <div style="font-family:var(--serif);font-size:20px;font-weight:700;color:#fff;line-height:1;margin-bottom:6px;" data-tpl-otb-m2-net>—</div>
+              <div style="font-family:var(--serif);font-size:22px;font-weight:700;color:#fff;line-height:1;margin-bottom:4px;" data-tpl-otb-m2-net>—</div>
+              <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:4px;">데이터 없음</div>
               <div style="display:flex;flex-direction:column;gap:2px;">
-                <div style="font-family:var(--mono);font-size:10px;color:#4ecdc4;">▲ <span data-tpl-otb-m2-booking>—</span></div>
-                <div style="font-family:var(--mono);font-size:10px;color:#ff6b6b;">▼ <span data-tpl-otb-m2-cancel>—</span></div>
+                <div style="font-family:var(--mono);font-size:10px;color:rgba(78,205,196,0.5);">▲ <span data-tpl-otb-m2-booking>—</span></div>
+                <div style="font-family:var(--mono);font-size:10px;color:rgba(255,107,107,0.5);">▼ <span data-tpl-otb-m2-cancel>—</span></div>
               </div>
             </div>
           </div>
