@@ -131,7 +131,12 @@ def inject_kpi_3months(html: str, kpi_data: dict) -> str:
 def render_ota_rows(ota_data: dict) -> str:
     channels = ota_data.get("channels", [])[:4]  # TOP 4만
     if not channels:
-        return '<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-faint);">데이터 없음</td></tr>'
+        return '''<tr>
+          <td colspan="9" style="padding:60px 40px;text-align:center;">
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;color:var(--ink-muted);font-weight:600;margin-bottom:6px;">⏳ 데이터 추후 적용</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-faint);">Power BI 자동 수집 작업 진행 중 · 완료 후 자동 표시</div>
+          </td>
+        </tr>'''
     
     rows = []
     for ch in channels:
