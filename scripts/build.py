@@ -731,6 +731,9 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     basis_date = f"{yesterday.month}/{yesterday.day}"
     basis_full = f"~ {yesterday.month}/{yesterday.day} 예약 기준"
 
+    # 섹션 헤더 예약 기준일
+    html = apply_tpl(html, "weekly-basis", basis_full)
+
     # Daily OTB (투숙월 기준 3개월)
     otb = weekly.get("daily_otb", {})
     if otb:
@@ -750,7 +753,6 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
         prefix = f"strategy{s_idx + 1}"
         html = apply_tpl(html, f"{prefix}-subtitle", strat.get("subtitle", ""))
         html = apply_tpl(html, f"{prefix}-rate", str(strat.get("achievement_rate", "-")))
-        html = apply_tpl(html, f"{prefix}-basis", basis_full)
 
         channels = strat.get("channels", [])
         for c_idx, ch in enumerate(channels[:3]):
