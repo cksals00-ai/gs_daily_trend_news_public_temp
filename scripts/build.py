@@ -832,16 +832,9 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
         rate = strat.get("achievement_rate", 0)
         html = apply_tpl(html, f"{prefix}-rate", f"{rate}%")
 
-        # 게이지 색상 및 오프셋 계산
-        if rate >= 100:
-            gauge_color = "#4ecdc4"
-        elif rate >= 85:
-            gauge_color = "#f0a500"
-        else:
-            gauge_color = "#ff6b6b"
-        arc_length = 125.66
+        # 게이지 오프셋 계산
+        arc_length = 135.09
         gauge_offset = arc_length * (1 - rate / 100)
-        html = html.replace(f"STRAT{n}_GCOLOR", gauge_color)
         html = html.replace(f"STRAT{n}_GOFFSET", f"{gauge_offset:.2f}")
 
         # KPI (객실수 / ADR / 매출)
