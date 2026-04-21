@@ -708,6 +708,47 @@ def inject_news_section(html: str, news_data: dict) -> str:
 # ─────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 주간 리포트 주입
+# ─────────────────────────────────────────────
+def inject_weekly_report(html: str, weekly: dict) -> str:
+    """data/weekly_report.json → 주간 리포트 카드 데이터 주입"""
+    if not weekly:
+        return html
+
+    # 주간 날짜
+    html = apply_tpl(html, "weekly-date", weekly.get("_week", ""))
+
+    # Daily OTB
+    otb = weekly.get("daily_otb", {})
+    if otb:
+        date_str = otb.get("date", "")
+        if date_str:
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d")
+                html = apply_tpl(html, "otb-date", f"{dt.month}/{dt.day}")
+            except ValueError:
+                html = apply_tpl(html, "otb-date", date_str)
+        html = apply_tpl(html, "otb-net", f'{otb.get("net_otb", 0):,}')
+        html = apply_tpl(html, "otb-booking", f'{otb.get("booking_rns", 0):,}')
+        html = apply_tpl(html, "otb-cancel", f'{otb.get("cancel_rns", 0):,}')
+
+    # 전략 카드 (최대 2개)
+    strategies = weekly.get("weekly_strategies", [])
+    for s_idx, strat in enumerate(strategies[:2]):
+        prefix = f"strategy{s_idx + 1}"
+        html = apply_tpl(html, f"{prefix}-subtitle", strat.get("subtitle", ""))
+        html = apply_tpl(html, f"{prefix}-rate", str(strat.get("achievement_rate", "-")))
+
+        channels = strat.get("channels", [])
+        for c_idx, ch in enumerate(channels[:3]):
+            html = apply_tpl(html, f"{prefix}-ch{c_idx}-rns", f'{ch.get("rns", 0):,}')
+            html = apply_tpl(html, f"{prefix}-ch{c_idx}-rate", f'{ch.get("achievement_rate", 0)}%')
+
+    logger.info("✓ 주간 리포트 주입")
+    return html
+
+
 def main():
     logger.info("=" * 60)
     logger.info("V7 대시보드 빌드 (TOP 4 + 사업장 매트릭스 + 뉴스 개선)")
@@ -717,6 +758,7 @@ def main():
     notes = load_json(DATA_DIR / "daily_notes.json")
     news_data = load_json(DATA_DIR / "news_latest.json")
     comp_data = load_json(DATA_DIR / "competitors.json")
+    weekly_data = load_json(DATA_DIR / "weekly_report.json")
     
     data = enriched if enriched else notes
     if not data:
@@ -779,6 +821,9 @@ def main():
     # 경쟁사
     html = inject_competitor_section(html, comp_data)
     
+    # 주간 리포트
+    html = inject_weekly_report(html, weekly_data)
+
     # 뉴스
     html = inject_news_section(html, news_data)
     

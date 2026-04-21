@@ -1233,6 +1233,8 @@
     .comp-summary-cell { border-right: none; padding-right: 0; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
     .comp-summary-cell:last-child { border-bottom: none; }
     .trend-now-value { font-size: 30px; }
+    /* 주간 리포트: 1칼럼 */
+    .weekly-grid { grid-template-columns: 1fr !important; }
     /* KPI 그리드: 1칼럼 세로 배치 */
     .hero-inner [style*="grid-template-columns:repeat(3,1fr)"],
     .hero-inner [style*="grid-template-columns: repeat(3, 1fr)"] {
@@ -1324,6 +1326,10 @@
       gap: 8px !important;
     }
     .region-selector { grid-template-columns: repeat(2, 1fr) !important; }
+
+    /* --- 주간 리포트 --- */
+    .weekly-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+    .weekly-card { padding: 14px !important; }
 
     /* --- 시그널 카드 --- */
     .signal-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
@@ -1495,16 +1501,6 @@
       </a>
     </div>
 
-    <!-- 데이터 출처 안내 배너 -->
-    <div style="background:rgba(201,160,99,0.08);border:1px solid rgba(201,160,99,0.3);border-radius:4px;padding:10px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-soft);font-weight:600;">
-        ⏳ <strong style="color:var(--gold);">Power BI 자동 수집 작업 중</strong> · 사업장별 세부 실적은 데이터 연동 완료 후 표시됩니다
-      </div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">
-        현재: KPI(수기) + 비발디 통합(BI) + 뉴스(자동) + 경쟁사(자동)
-      </div>
-    </div>
-    
     <!-- 임원 KPI 3개 × 3개월 병렬 표기 (4월 진하게, 5·6월 연하게) -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;">
 
@@ -1630,6 +1626,88 @@
         </div>
       </div>
     </div>
+
+    <!-- ============ WEEKLY REPORT — 주간 리포트 섹션 ============ -->
+    <div id="weekly-report" style="margin-top:24px;">
+      <div style="font-family:var(--mono);font-size:12px;letter-spacing:0.2em;color:var(--gold-bright);margin-bottom:14px;font-weight:700;">📋 WEEKLY REPORT · <span data-tpl-weekly-date>2026-W17</span></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;" class="weekly-grid">
+
+        <!-- 카드 1: Daily OTB -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:16px 20px;" class="weekly-card">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);margin-bottom:10px;">📊 DAILY OTB · <span data-tpl-otb-date>4/21</span></div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px;">
+            <div style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" data-tpl-otb-net>589</div>
+            <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);">순 OTB (RNs)</div>
+          </div>
+          <div style="display:flex;gap:16px;">
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:2px;">예약</div>
+              <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:#4ecdc4;" data-tpl-otb-booking>870</div>
+            </div>
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:2px;">취소</div>
+              <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:#ff6b6b;" data-tpl-otb-cancel>281</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 카드 2: OTA 비발디 전략 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(168,62,79,0.4);border-radius:4px;padding:16px 20px;border-top:3px solid #a83e4f;" class="weekly-card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);">🎯 OTA 비발디</div>
+            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);" data-tpl-strategy1-subtitle>쿠팡 + 인플루언서</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:12px;">
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#fff;line-height:1;" data-tpl-strategy1-rate>84.1</div>
+            <div style="font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.6);">%</div>
+            <div style="font-family:var(--mono);font-size:10px;color:#ff6b6b;margin-left:4px;">▼ 미달성</div>
+          </div>
+          <!-- 채널 실적 -->
+          <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;" data-tpl-strategy1-ch0>
+              <div style="font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.8);font-weight:600;">쿠팡</div>
+              <div style="display:flex;gap:12px;align-items:baseline;">
+                <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);"><span data-tpl-strategy1-ch0-rns>245</span> RNs</div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--gold);" data-tpl-strategy1-ch0-rate>72.3%</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;" data-tpl-strategy1-ch1>
+              <div style="font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.8);font-weight:600;">스마트인피니</div>
+              <div style="display:flex;gap:12px;align-items:baseline;">
+                <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);"><span data-tpl-strategy1-ch1-rns>128</span> RNs</div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--gold);" data-tpl-strategy1-ch1-rate>65.8%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 카드 3: GOTA 양양 전략 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:16px 20px;border-top:3px solid var(--gold);" class="weekly-card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);">🎯 GOTA 양양</div>
+            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);" data-tpl-strategy2-subtitle>인플루언서</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:12px;">
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#fff;line-height:1;" data-tpl-strategy2-rate>78.5</div>
+            <div style="font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.6);">%</div>
+            <div style="font-family:var(--mono);font-size:10px;color:#ff6b6b;margin-left:4px;">▼ 미달성</div>
+          </div>
+          <!-- 채널 실적 -->
+          <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;" data-tpl-strategy2-ch0>
+              <div style="font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.8);font-weight:600;">트립비토즈</div>
+              <div style="display:flex;gap:12px;align-items:baseline;">
+                <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);"><span data-tpl-strategy2-ch0-rns>89</span> RNs</div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--gold);" data-tpl-strategy2-ch0-rate>61.2%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </div>
 
