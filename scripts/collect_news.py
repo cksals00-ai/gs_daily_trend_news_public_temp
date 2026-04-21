@@ -322,12 +322,47 @@ def main():
         top_news.extend(by_region[region][:3])
     top_news = top_news[:12]
 
+    # build.py 호환: 카테고리별 그룹화 (by_category)
+    category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
+    by_category: dict = {}
+    for art in all_news:
+        cat = art.get("category", "기타")
+        if cat not in by_category:
+            by_category[cat] = {"emoji": art.get("category_emoji", "📰"), "articles": []}
+        entry = dict(art)
+        entry["tag"] = art.get("query", cat)  # build.py의 [tag] 표시용
+        by_category[cat]["articles"].append(entry)
+
+    # build.py 호환: featured 뉴스 (신규 기사 중 상위 2건)
+    image_emoji_map = {
+        "호텔/리조트": "🏨", "항공/공항": "✈️", "OTA/여행": "🌐",
+        "관광/지역": "🌸", "레저/휴양": "🏖️", "거시지표": "📊",
+    }
+    featured_candidates = [a for a in all_news if a.get("is_new")][:4] or all_news[:4]
+    featured = []
+    for art in featured_candidates[:2]:
+        featured.append({
+            "headline": art.get("title", ""),
+            "summary": art.get("title", ""),
+            "source": art.get("source", ""),
+            "link": art.get("link", "#"),
+            "category": art.get("category", ""),
+            "category_emoji": art.get("category_emoji", "📰"),
+            "region": art.get("region", "general"),
+            "tag": art.get("query", ""),
+            "image_emoji": image_emoji_map.get(art.get("category", ""), "📰"),
+            "impact": "high" if art.get("is_new") else "medium",
+            "is_new": art.get("is_new", False),
+        })
+
     output = {
         "collected_at": now_iso,
         "total_count": len(all_news),
         "new_count": len(new_news),
         "top_news": top_news,
         "by_region": by_region,
+        "by_category": by_category,
+        "featured": featured,
         "categories": list(KEYWORDS.keys()),
     }
 
@@ -356,6 +391,8 @@ if __name__ == "__main__":
                 "total_count": 0,
                 "top_news": [],
                 "by_region": {"vivaldi": [], "central": [], "south": [], "apac": [], "general": []},
+                "by_category": {},
+                "featured": [],
                 "error": str(e),
             }, f, ensure_ascii=False, indent=2)
         sys.exit(0)  # 빌드 계속 진행
