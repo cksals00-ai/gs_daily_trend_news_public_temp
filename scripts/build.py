@@ -131,7 +131,9 @@ def render_ota_rows(ota_data: dict) -> str:
         rank = ch.get("rank", "-")
         name = escape_html(ch.get("name", ""))
         tier = ch.get("tier", "")
-        tier_colors = {"글로벌": "#2d7a3f", "국내": "#b8332c", "신규": "#c9772c"}
+        # tier 변환: 글로벌→GOTA, 국내→OTA
+        tier_display = {"글로벌": "GOTA", "국내": "OTA", "신규": "NEW"}.get(tier, tier)
+        tier_colors = {"글로벌": "#6db58a", "국내": "#d97a7a", "신규": "#e6b970"}
         tier_color = tier_colors.get(tier, "#8a8a8a")
         
         def fmt_month(m_data):
@@ -158,7 +160,7 @@ def render_ota_rows(ota_data: dict) -> str:
             onmouseout="this.style.background='transparent'">
           <td style="padding:14px 14px;font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:700;">#{rank:02d}</td>
           <td style="padding:14px 14px;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--ink);">{name}</td>
-          <td style="padding:14px 14px;text-align:center;"><span style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:{tier_color}15;color:{tier_color};border-radius:2px;font-weight:700;letter-spacing:0.05em;">{tier}</span></td>
+          <td style="padding:14px 14px;text-align:center;"><span style="font-family:var(--mono);font-size:10px;padding:4px 10px;background:{tier_color}20;color:{tier_color};border-radius:3px;font-weight:800;letter-spacing:0.08em;border:1px solid {tier_color}40;">{tier_display}</span></td>
           <td style="padding:14px 10px;text-align:right;font-family:var(--mono);font-size:15px;color:var(--ink);font-weight:800;background:rgba(184,137,63,0.04);border-left:2px solid var(--gold);">{m0_rns}</td>
           <td style="padding:14px 10px;text-align:right;font-family:var(--mono);font-size:11px;font-weight:700;background:rgba(184,137,63,0.04);">{m0_yoy}</td>
           <td style="padding:14px 10px;text-align:right;font-family:var(--mono);font-size:13px;color:var(--ink-muted);opacity:0.75;">{m1_rns}</td>
