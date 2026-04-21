@@ -168,6 +168,13 @@ def main():
     ):
         logger.warning("⚠  뉴스 수집 실패 - 기존 데이터로 진행")
     
+    # STEP 2.5: GS Monitor 경쟁사 수집
+    if not run_step(
+        "경쟁사 동향 수집 (GS Monitor)",
+        "collect_gs_monitor.py",
+    ):
+        logger.warning("⚠  GS Monitor 수집 실패 - 기존 데이터로 진행")
+    
     # STEP 3: 인사이트 자동 생성
     if not run_step(
         "오늘의 한 줄 + 액션 자동 생성",
