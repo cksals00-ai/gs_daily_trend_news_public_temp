@@ -826,8 +826,28 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     strategies = weekly.get("weekly_strategies", [])
     for s_idx, strat in enumerate(strategies[:2]):
         prefix = f"strategy{s_idx + 1}"
+        n = s_idx + 1
         html = apply_tpl(html, f"{prefix}-subtitle", strat.get("subtitle", ""))
-        html = apply_tpl(html, f"{prefix}-rate", str(strat.get("achievement_rate", "-")))
+
+        rate = strat.get("achievement_rate", 0)
+        html = apply_tpl(html, f"{prefix}-rate", f"{rate}%")
+
+        # 게이지 색상 및 오프셋 계산
+        if rate >= 100:
+            gauge_color = "#4ecdc4"
+        elif rate >= 85:
+            gauge_color = "#f0a500"
+        else:
+            gauge_color = "#ff6b6b"
+        arc_length = 125.66
+        gauge_offset = arc_length * (1 - rate / 100)
+        html = html.replace(f"STRAT{n}_GCOLOR", gauge_color)
+        html = html.replace(f"STRAT{n}_GOFFSET", f"{gauge_offset:.2f}")
+
+        # KPI (객실수 / ADR / 매출)
+        html = apply_tpl(html, f"{prefix}-rns", f'{strat.get("rns", 0):,}')
+        html = apply_tpl(html, f"{prefix}-adr", str(strat.get("adr", 0)))
+        html = apply_tpl(html, f"{prefix}-rev", str(strat.get("rev", 0)))
 
         channels = strat.get("channels", [])
         for c_idx, ch in enumerate(channels[:3]):
