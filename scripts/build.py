@@ -434,74 +434,135 @@ def inject_competitor_section(html: str, comp_data: dict) -> str:
 # 뉴스 카드 (가독성 개선)
 # ─────────────────────────────────────────────
 def build_news_html(news_data: dict) -> str:
-    """가독성 좋은 뉴스 카드 - 카테고리/요약/태그/날짜/출처/링크 명확"""
-    top_news = news_data.get("top_news", [])
-    if not top_news:
-        return '<div style="padding:40px;text-align:center;color:var(--ink-faint);grid-column:1/-1;font-family:var(--mono);font-size:12px;">뉴스 수집 대기 중...</div>'
+    """Daily News Monitoring 형식 - 카테고리별 그룹 + Articles 카운트"""
+    by_category = news_data.get("by_category", {})
+    if not by_category:
+        return '<div style="padding:40px;text-align:center;color:var(--ink-faint);font-family:\'Pretendard Variable\',sans-serif;">카테고리별 뉴스 데이터 없음</div>'
     
-    region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC", "general": "전체"}
-    region_colors = {"vivaldi": "#a83e4f", "central": "#2c5f7c", "south": "#2d7a3f", "apac": "#5c4a7c", "general": "#8a8a8a"}
-    tier_colors = {"전문지": "#b8893f", "지역지": "#2d7a3f", "종합지": "#2c5f7c", "통신사": "#5c4a7c", "공공": "#7c5a2c"}
+    region_colors = {"vivaldi": "#d97a7a", "central": "#6ba3c4", "south": "#6db58a", "apac": "#a892c8", "general": "#7a7e85"}
+    region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC", "general": "일반"}
     
-    items = []
-    for item in top_news[:24]:  # 최대 24개
-        title = escape_html(item.get("title", ""))[:90]
-        summary = escape_html(item.get("summary", ""))[:140]
-        link = item.get("link", "#")
+    # 카테고리 순서
+    category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
+    
+    sections = []
+    for cat_name in category_order:
+        if cat_name not in by_category:
+            continue
+        cat_data = by_category[cat_name]
+        emoji = cat_data.get("emoji", "📰")
+        articles = cat_data.get("articles", [])
+        if not articles:
+            continue
+        
+        # 카테고리 헤더
+        article_count = len(articles)
+        section_html = f'''
+  <!-- ===== {cat_name} ===== -->
+  <div class="news-category-section" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">{emoji}</span>
+        <span style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-0.01em;">{escape_html(cat_name)}</span>
+      </div>
+      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">{article_count} Articles</span>
+    </div>
+    <div>'''
+        
+        for art in articles:
+            tag = escape_html(art.get("tag", ""))
+            title = escape_html(art.get("title", ""))
+            source = escape_html(art.get("source", ""))
+            link = art.get("link", "#")
+            region = art.get("region", "general")
+            r_color = region_colors.get(region, "#7a7e85")
+            r_label = region_labels.get(region, region)
+            
+            section_html += f'''
+      <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}" 
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:{r_color}22;color:{r_color};border-radius:2px;font-weight:800;letter-spacing:0.05em;">{r_label}</span>
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[{tag}]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">{title}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">{source}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>'''
+        
+        section_html += '\n    </div>\n  </div>'
+        sections.append(section_html)
+    
+    return "\n".join(sections)
+
+
+def render_featured_news(featured_list: list) -> str:
+    """오늘의 주요기사 - 큰 카드 2개"""
+    if not featured_list:
+        return '<div style="padding:30px;text-align:center;color:var(--ink-faint);grid-column:1/-1;">Featured 뉴스 없음</div>'
+    
+    region_colors = {"vivaldi": "#d97a7a", "central": "#6ba3c4", "south": "#6db58a", "apac": "#a892c8", "general": "#c9a063"}
+    impact_colors = {"high": "var(--negative)", "medium": "var(--warning)", "low": "var(--positive)"}
+    impact_labels = {"high": "🔴 HIGH IMPACT", "medium": "🟡 MED", "low": "🟢 LOW"}
+    
+    cards = []
+    for item in featured_list[:2]:
+        headline = escape_html(item.get("headline", ""))
+        summary = escape_html(item.get("summary", ""))[:200]
         source = escape_html(item.get("source", ""))
-        source_tier = item.get("source_tier", "")
+        link = item.get("link", "#")
         category = escape_html(item.get("category", ""))
         emoji = item.get("category_emoji", "📰")
         region = item.get("region", "general")
-        channel = escape_html(item.get("channel", ""))
+        tag = escape_html(item.get("tag", ""))
+        image_emoji = item.get("image_emoji", "📰")
+        impact = item.get("impact", "medium")
+        r_color = region_colors.get(region, "#c9a063")
+        i_color = impact_colors.get(impact, "var(--warning)")
+        i_label = impact_labels.get(impact, "")
         
-        r_label = region_labels.get(region, region)
-        r_color = region_colors.get(region, "#8a8a8a")
-        t_color = tier_colors.get(source_tier, "#8a8a8a")
-        
-        # 채널 배지 (있을 때만)
-        channel_badge = ""
-        if channel and channel != "-":
-            channel_badge = f'<span style="font-family:var(--mono);font-size:8px;padding:2px 6px;background:#f0f0f0;color:#5a5a5a;border-radius:2px;font-weight:700;margin-left:4px;">📡 {channel}</span>'
-        
-        items.append(f'''
+        cards.append(f'''
     <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}" 
-       style="text-decoration:none;color:inherit;display:flex;flex-direction:column;background:var(--bg-card);border:1px solid var(--rule);border-top:3px solid {r_color};border-radius:0 0 4px 4px;padding:14px 16px;transition:all 0.2s;height:100%;"
-       onmouseover="this.style.boxShadow='0 8px 18px rgba(0,0,0,0.08)';this.style.transform='translateY(-2px)'" 
+       style="text-decoration:none;color:inherit;display:flex;background:var(--bg-card);border:1px solid var(--rule);border-left:4px solid {r_color};border-radius:0 6px 6px 0;overflow:hidden;transition:all 0.2s;"
+       onmouseover="this.style.boxShadow='0 12px 24px rgba(0,0,0,0.4)';this.style.transform='translateY(-2px)'"
        onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
       
-      <!-- 헤더: 권역/카테고리/매체 티어 -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-family:var(--mono);font-size:9px;letter-spacing:0.05em;">
-        <div>
-          <span style="color:{r_color};font-weight:800;">● {r_label}</span>
-          <span style="color:var(--ink-faint);margin:0 4px;">·</span>
-          <span style="color:var(--ink-muted);font-weight:700;">{emoji} {category}</span>
-        </div>
-        <span style="padding:2px 6px;background:{t_color}15;color:{t_color};border-radius:2px;font-weight:700;font-size:8px;">{escape_html(source_tier)}</span>
+      <!-- 이미지 영역 (이모지 placeholder) -->
+      <div style="flex-shrink:0;width:130px;background:linear-gradient(135deg,{r_color}25,{r_color}08);display:flex;align-items:center;justify-content:center;font-size:60px;border-right:1px solid var(--rule);">
+        {image_emoji}
       </div>
       
-      <!-- 제목 -->
-      <div style="font-family:var(--serif);font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:10px;">{title}</div>
-      
-      <!-- 요약 -->
-      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);line-height:1.6;margin-bottom:10px;flex:1;">
-        {summary}
-      </div>
-      
-      <!-- 푸터: 출처 + 채널 + 링크 -->
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px dashed var(--rule);font-family:var(--mono);font-size:9px;">
+      <!-- 본문 -->
+      <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
         <div>
-          <strong style="color:var(--ink);">{source}</strong>
-          {channel_badge}
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:{r_color};color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">{emoji} {category}</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:9px;padding:3px 7px;background:{i_color}22;color:{i_color};border-radius:2px;font-weight:800;letter-spacing:0.05em;">{i_label}</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[{tag}]</span>
+          </div>
+          <div style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);line-height:1.4;letter-spacing:-0.01em;margin-bottom:8px;">{headline}</div>
+          <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.55;font-weight:500;">{summary}</div>
         </div>
-        <span style="color:var(--gold);font-weight:800;">🔗 원문 ↗</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px dashed var(--rule);">
+          <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;">📰 {source}</span>
+          <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">원문 보기 ↗</span>
+        </div>
       </div>
     </a>''')
     
-    return "\n".join(items)
+    return "\n".join(cards)
 
 
 def inject_news_section(html: str, news_data: dict) -> str:
+    # 1. 카테고리별 리스트 주입
     news_html = build_news_html(news_data)
     pattern = re.compile(r'(<!-- NEWS_INJECT_START -->)(.*?)(<!-- NEWS_INJECT_END -->)', re.DOTALL)
     new_html, n = pattern.subn(
@@ -509,19 +570,48 @@ def inject_news_section(html: str, news_data: dict) -> str:
         html, count=1
     )
     if n > 0:
-        logger.info(f"✓ 뉴스 섹션 주입: {len(news_data.get('top_news', []))}건")
+        total = sum(len(c.get("articles", [])) for c in news_data.get("by_category", {}).values())
+        logger.info(f"✓ 카테고리별 뉴스 주입: {len(news_data.get('by_category', {}))}개 카테고리, {total}건")
     
-    # 권역별 카운트
-    top_news = news_data.get("top_news", [])
+    # 2. Featured 뉴스 주입
+    featured_html = render_featured_news(news_data.get("featured", []))
+    feat_pattern = re.compile(
+        r'(<div\s+data-tpl-featured-news[^>]*>)(.*?)(</div>)',
+        re.DOTALL
+    )
+    new_html, fn = feat_pattern.subn(
+        lambda m: m.group(1) + "\n" + featured_html + "\n  ",
+        new_html, count=1
+    )
+    if fn > 0:
+        logger.info(f"✓ Featured 뉴스 주입: {len(news_data.get('featured', []))}건")
+    
+    # 3. 권역별 카운트 (모든 카테고리 합산)
     counts = {"vivaldi": 0, "central": 0, "south": 0, "apac": 0, "general": 0}
-    for item in top_news:
-        r = item.get("region", "general")
+    total_count = 0
+    for cat_data in news_data.get("by_category", {}).values():
+        for art in cat_data.get("articles", []):
+            r = art.get("region", "general")
+            if r in counts:
+                counts[r] += 1
+            total_count += 1
+    # Featured도 카운트에 포함
+    for f in news_data.get("featured", []):
+        r = f.get("region", "general")
         if r in counts:
             counts[r] += 1
+        total_count += 1
     
-    new_html = apply_tpl(new_html, "news-count-all", str(len(top_news)))
+    new_html = apply_tpl(new_html, "news-count-all", str(total_count))
     for k in counts:
         new_html = apply_tpl(new_html, f"news-count-{k}", str(counts[k]))
+    
+    # 4. 오늘 날짜
+    from datetime import datetime, timezone, timedelta
+    KST = timezone(timedelta(hours=9))
+    now = datetime.now(KST)
+    day_kr = ['월', '화', '수', '목', '금', '토', '일'][now.weekday()]
+    new_html = apply_tpl(new_html, "news-date", f"{now.strftime('%Y.%m.%d')} ({day_kr})")
     
     return new_html
 
