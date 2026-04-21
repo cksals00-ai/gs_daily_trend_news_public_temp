@@ -189,38 +189,100 @@ def detect_category_emoji(category: str) -> str:
     }.get(category, "📰")
 
 
+def load_existing_news() -> list:
+    """기존 news_latest.json에서 이전 기사 목록 로드"""
+    if not OUTPUT_FILE.exists():
+        return []
+    try:
+        data = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
+        # 모든 기사를 플랫 리스트로 수집
+        existing = []
+        for region_articles in data.get("by_region", {}).values():
+            existing.extend(region_articles)
+        for art in data.get("top_news", []):
+            existing.append(art)
+        for cat_data in data.get("by_category", {}).values():
+            existing.extend(cat_data.get("articles", []))
+        return existing
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
+def purge_old_articles(articles: list, max_hours: int = 48) -> list:
+    """collected_at 기준 48시간 초과 기사 삭제"""
+    now = datetime.now(KST)
+    cutoff = now - timedelta(hours=max_hours)
+    kept = []
+    removed = 0
+    for art in articles:
+        collected = art.get("collected_at", "")
+        if collected:
+            try:
+                dt = datetime.fromisoformat(collected)
+                if dt < cutoff:
+                    removed += 1
+                    continue
+            except (ValueError, TypeError):
+                pass
+        kept.append(art)
+    if removed:
+        logger.info(f"  🗑 {removed}건 삭제 (48시간 초과)")
+    return kept
+
+
+def is_new_article(collected_at: str) -> bool:
+    """오늘 00:00~11:00 KST 사이에 수집된 기사인지 판별"""
+    now = datetime.now(KST)
+    try:
+        dt = datetime.fromisoformat(collected_at)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_11am = now.replace(hour=11, minute=0, second=0, microsecond=0)
+        return today_start <= dt <= today_11am
+    except (ValueError, TypeError):
+        return False
+
+
 def main():
     logger.info("=" * 60)
     logger.info("뉴스 자동 수집 시작")
     logger.info("=" * 60)
-    
-    all_news = []
-    seen_titles = set()
-    
+
+    now = datetime.now(KST)
+    now_iso = now.isoformat()
+
+    # 기존 기사 로드 + 48시간 초과 삭제
+    existing_articles = load_existing_news()
+    existing_articles = purge_old_articles(existing_articles, max_hours=48)
+    existing_titles = {art.get("title", "")[:50] for art in existing_articles}
+    logger.info(f"기존 기사: {len(existing_articles)}건 (48시간 이내)")
+
+    new_news = []
+    seen_titles = set(existing_titles)
+
     for category, queries in KEYWORDS.items():
         logger.info(f"카테고리: {category} ({len(queries)}개 쿼리)")
         emoji = detect_category_emoji(category)
-        
+
         for query in queries:
             news_items = fetch_google_news(query, limit=3)
-            
+
             for item in news_items:
                 title = item["title"]
-                
-                # 중복 제거
+
+                # 중복 제거 (기존 + 신규 모두)
                 title_key = title[:50]
                 if title_key in seen_titles:
                     continue
                 seen_titles.add(title_key)
-                
+
                 # 자사 언급 제외
                 if is_excluded(title):
                     logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
                     continue
-                
+
                 region = detect_region(title)
-                
-                all_news.append({
+
+                new_news.append({
                     "title": title,
                     "link": item["link"],
                     "source": item["source"],
@@ -229,41 +291,52 @@ def main():
                     "category_emoji": emoji,
                     "region": region,
                     "query": query,
+                    "collected_at": now_iso,
+                    "is_new": True,
                 })
-        
-        logger.info(f"  → 누적 수집: {len(all_news)}건")
-    
-    # 권역별 정렬 (vivaldi → central → south → apac → general)
+
+        logger.info(f"  → 신규 수집: {len(new_news)}건")
+
+    # 기존 기사의 is_new 플래그 재계산 (오늘 00:00~11:00 수집분만 NEW)
+    for art in existing_articles:
+        art["is_new"] = is_new_article(art.get("collected_at", ""))
+
+    # 신규 + 기존 병합
+    all_news = new_news + existing_articles
+    logger.info(f"전체 기사: {len(all_news)}건 (신규 {len(new_news)} + 기존 {len(existing_articles)})")
+
+    # 권역별 정렬 (신규 먼저, 그 다음 권역순)
     region_order = {"vivaldi": 1, "central": 2, "south": 3, "apac": 4, "general": 5}
-    all_news.sort(key=lambda x: (region_order.get(x["region"], 9), x["category"]))
-    
-    # 권역별 그룹화 (각 권역 최대 6건)
+    all_news.sort(key=lambda x: (0 if x.get("is_new") else 1, region_order.get(x["region"], 9), x["category"]))
+
+    # 권역별 그룹화 (각 권역 최대 8건)
     by_region = {"vivaldi": [], "central": [], "south": [], "apac": [], "general": []}
     for item in all_news:
         region = item["region"]
-        if len(by_region[region]) < 6:
+        if len(by_region[region]) < 8:
             by_region[region].append(item)
-    
-    # 상단 노출용 TOP 12 (전체에서 골고루)
+
+    # 상단 노출용 TOP 12 (신규 우선, 전체에서 골고루)
     top_news = []
     for region in ["vivaldi", "central", "south", "apac", "general"]:
         top_news.extend(by_region[region][:3])
     top_news = top_news[:12]
-    
+
     output = {
-        "collected_at": datetime.now(KST).isoformat(),
+        "collected_at": now_iso,
         "total_count": len(all_news),
+        "new_count": len(new_news),
         "top_news": top_news,
         "by_region": by_region,
         "categories": list(KEYWORDS.keys()),
     }
-    
+
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
-    
+
     logger.info("=" * 60)
-    logger.info(f"✓ 뉴스 수집 완료: {len(all_news)}건 (TOP {len(top_news)} 선정)")
+    logger.info(f"✓ 뉴스 수집 완료: {len(all_news)}건 (신규 {len(new_news)}, TOP {len(top_news)} 선정)")
     logger.info(f"  권역별: 비발디={len(by_region['vivaldi'])}, 중부={len(by_region['central'])}, "
                 f"남부={len(by_region['south'])}, APAC={len(by_region['apac'])}, 일반={len(by_region['general'])}")
     logger.info(f"  저장: {OUTPUT_FILE}")

@@ -566,9 +566,11 @@ def build_news_html(news_data: dict) -> str:
             region = art.get("region", "general")
             r_color = region_colors.get(region, "#7a7e85")
             r_label = region_labels.get(region, region)
-            
+            is_new = art.get("is_new", False)
+            new_badge = '<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>' if is_new else ''
+
             section_html += f'''
-      <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}" 
+      <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -576,6 +578,7 @@ def build_news_html(news_data: dict) -> str:
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:{r_color}22;color:{r_color};border-radius:2px;font-weight:800;letter-spacing:0.05em;">{r_label}</span>
+              {new_badge}
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[{tag}]</span>
             </div>
             <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">{title}</div>
@@ -614,9 +617,11 @@ def render_featured_news(featured_list: list) -> str:
         tag = escape_html(item.get("tag", ""))
         image_emoji = item.get("image_emoji", "📰")
         impact = item.get("impact", "medium")
+        is_new = item.get("is_new", False)
         r_color = region_colors.get(region, "#c9a063")
         i_color = impact_colors.get(impact, "var(--warning)")
         i_label = impact_labels.get(impact, "")
+        new_badge_feat = '<span style="font-family:var(--mono);font-size:9px;padding:3px 7px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>' if is_new else ''
         
         cards.append(f'''
     <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}" 
@@ -636,6 +641,7 @@ def render_featured_news(featured_list: list) -> str:
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:{r_color};color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">{emoji} {category}</span>
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:9px;padding:3px 7px;background:{i_color}22;color:{i_color};border-radius:2px;font-weight:800;letter-spacing:0.05em;">{i_label}</span>
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[{tag}]</span>
+            {new_badge_feat}
           </div>
           <div style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);line-height:1.4;letter-spacing:-0.01em;margin-bottom:8px;">{headline}</div>
           <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.55;font-weight:500;">{summary}</div>
