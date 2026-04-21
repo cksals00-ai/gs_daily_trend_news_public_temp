@@ -1,0 +1,2593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SONO & TRINITY · GS팀 데일리 트렌드 리포트</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg: #fafaf7;
+    --bg-card: #ffffff;
+    --bg-deep: #1a1a1a;
+    --bg-soft: #f0ede4;
+    --bg-hover: #f5f2ea;
+    --ink: #0d0d0d;
+    --ink-soft: #2c2c2c;
+    --ink-muted: #5a5a5a;
+    --ink-faint: #8a8a8a;
+    --gold: #b8893f;
+    --gold-bright: #d4a455;
+    --positive: #2d7a3f;
+    --positive-bg: #e8f3eb;
+    --warning: #c9772c;
+    --warning-bg: #faf0e3;
+    --negative: #b8332c;
+    --negative-bg: #f5e7e6;
+    --info: #2c5f7c;
+    --info-bg: #e3edf3;
+    
+    /* 권역별 색상 */
+    --region-apac: #5c4a7c;     /* 아시아퍼시픽 - 퍼플 (해외) */
+    --region-apac-bg: #eeebf3;
+    --region-center: #2c5f7c;    /* 한국중부 - 블루 (산/강원) */
+    --region-center-bg: #e3edf3;
+    --region-south: #2d7a3f;     /* 한국남부 - 그린 (바다/제주) */
+    --region-south-bg: #e8f3eb;
+    
+    /* 세그 */
+    --seg-ota: #2c5f7c;
+    --seg-gota: #7c5a2c;
+    --seg-inbound: #5c4a7c;
+    
+    /* 전략 */
+    --strat-1: #b8332c;
+    --strat-2: #2d7a3f;
+    --strat-3: #c9772c;
+    
+    --rule: rgba(0,0,0,0.1);
+    --rule-strong: rgba(0,0,0,0.18);
+    
+    /* 폰트 */
+    --serif: 'Gowun Batang', 'Nanum Myeongjo', serif;  /* 흘림체 제목용 */
+    --script: 'Nanum Pen Script', cursive;              /* 스크립트 강조용 */
+    --sans: 'Noto Sans KR', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 15px;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ============= MASTHEAD ============= */
+  .masthead {
+    background: var(--bg-deep);
+    color: #fff;
+    padding: 16px 0;
+    border-bottom: 3px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .masthead-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .logo-mark {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--gold-bright);
+    letter-spacing: 0.01em;
+  }
+  .logo-mark .amp { 
+    color: #fff; 
+    font-family: var(--script);
+    font-weight: 400; 
+    padding: 0 6px;
+    font-size: 26px;
+  }
+  .team-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.65);
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding-left: 18px;
+    margin-left: 18px;
+  }
+  .masthead-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+  }
+  .live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    margin-right: 7px;
+    animation: pulse 2.4s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  /* ============= HERO ============= */
+  .hero {
+    background:
+      radial-gradient(ellipse at top right, rgba(184,137,63,0.18), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(45,93,94,0.12), transparent 50%),
+      var(--bg-deep);
+    color: #fff;
+    padding: 52px 28px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--gold-bright);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-bright), transparent);
+    max-width: 220px;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .hero-title em { 
+    font-family: var(--script);
+    font-weight: 400; 
+    color: var(--gold-bright); 
+    font-size: 1.1em;
+    font-style: normal;
+  }
+  
+  .hero-headline {
+    background: rgba(255,255,255,0.05);
+    border-left: 4px solid var(--gold-bright);
+    padding: 18px 24px;
+    margin: 24px 0 28px;
+    font-family: var(--sans);
+    font-size: clamp(15px, 1.6vw, 17px);
+    color: rgba(255,255,255,0.95);
+    line-height: 1.6;
+  }
+  .hero-headline strong { color: var(--gold-bright); font-weight: 700; }
+  
+  /* Region Selector */
+  .region-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .region-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 18px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-top: 3px solid transparent;
+  }
+  .region-card:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .region-card.apac { border-top-color: var(--region-apac); }
+  .region-card.center { border-top-color: var(--region-center); }
+  .region-card.south { border-top-color: var(--region-south); }
+  .region-card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .region-card-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .region-card-sub {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 10px;
+  }
+  .region-card-kpi {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255,255,255,0.15);
+  }
+  .region-card-kpi-value {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .region-card-kpi-delta {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .region-card-kpi-delta.up { color: #6dd396; }
+  .region-card-kpi-delta.down { color: #e08580; }
+
+  /* ============= REGION SECTION ============= */
+  .region-section {
+    padding: 48px 28px 56px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .region-section.region-apac { background: linear-gradient(180deg, var(--region-apac-bg) 0%, transparent 120px); }
+  .region-section.region-center { background: linear-gradient(180deg, var(--region-center-bg) 0%, transparent 120px); }
+  .region-section.region-south { background: linear-gradient(180deg, var(--region-south-bg) 0%, transparent 120px); }
+  
+  .region-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: end;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .region-section.region-apac .region-header { border-bottom-color: var(--region-apac); }
+  .region-section.region-center .region-header { border-bottom-color: var(--region-center); }
+  .region-section.region-south .region-header { border-bottom-color: var(--region-south); }
+  
+  .region-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .region-section.region-apac .region-badge { background: var(--region-apac); }
+  .region-section.region-center .region-badge { background: var(--region-center); }
+  .region-section.region-south .region-badge { background: var(--region-south); }
+  
+  .region-title-group h2 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .region-title-group h2 em {
+    font-family: var(--script);
+    font-weight: 400;
+    font-style: normal;
+    font-size: 1.15em;
+    padding-left: 8px;
+  }
+  .region-section.region-apac .region-title-group h2 em { color: var(--region-apac); }
+  .region-section.region-center .region-title-group h2 em { color: var(--region-center); }
+  .region-section.region-south .region-title-group h2 em { color: var(--region-south); }
+  
+  .region-tagline {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+  .region-tagline strong { color: var(--ink); font-weight: 600; }
+  
+  .region-properties {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+    text-align: right;
+    max-width: 260px;
+    line-height: 1.6;
+  }
+
+  /* ============= SUBSECTION ============= */
+  .subsection-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 40px 0 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .subsection-title em {
+    font-family: var(--script);
+    font-style: normal;
+    font-weight: 400;
+    font-size: 0.8em;
+    color: var(--gold);
+  }
+  .subsection-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-left: auto;
+  }
+
+  /* ============= TREND CARD (강화된) ============= */
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 18px;
+  }
+  .trend-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 22px 24px;
+    transition: all 0.2s;
+  }
+  .trend-card:hover {
+    border-color: var(--gold);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  }
+  
+  .trend-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .trend-card-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+  }
+  .trend-card-source {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+  }
+  
+  /* 현재값 + 델타 */
+  .trend-now {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 10px 0 16px;
+  }
+  .trend-now-value {
+    font-family: var(--serif);
+    font-size: 38px;
+    line-height: 1;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .trend-now-value .unit {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-weight: 400;
+    margin-left: 3px;
+  }
+  .trend-now-delta {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 2px;
+  }
+  .trend-now-delta.up { background: var(--negative-bg); color: var(--negative); }
+  .trend-now-delta.down { background: var(--positive-bg); color: var(--positive); }
+  .trend-now-delta.flat { background: var(--bg-soft); color: var(--ink-muted); }
+  
+  /* 8주 추이선 with 변곡점 */
+  .trend-timeline {
+    margin: 14px 0;
+  }
+  .trend-timeline-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .trend-timeline-inflection {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--warning);
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .trend-chart-wrap {
+    position: relative;
+    height: 68px;
+    margin-bottom: 4px;
+  }
+  
+  /* Context box - 2번 축 (맥락) */
+  .trend-context {
+    background: var(--bg-soft);
+    padding: 10px 14px;
+    border-radius: 3px;
+    margin: 14px 0;
+  }
+  .trend-context-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .trend-context-text {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .trend-context-text strong { color: var(--ink); font-weight: 600; }
+  
+  /* Forecast box - 1번 축 (시간/미래) */
+  .trend-forecast {
+    background: var(--info-bg);
+    border-left: 3px solid var(--info);
+    padding: 10px 14px;
+    margin: 14px 0;
+    border-radius: 0 3px 3px 0;
+  }
+  .trend-forecast-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--info);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .trend-forecast-text {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .trend-forecast-text strong { color: var(--info); font-weight: 700; }
+  
+  /* Impact/Connection - 3번 축 (연결) */
+  .trend-impact {
+    background: var(--warning-bg);
+    border-left: 3px solid var(--warning);
+    padding: 10px 14px;
+    margin-top: 14px;
+    border-radius: 0 3px 3px 0;
+  }
+  .trend-impact.positive { background: var(--positive-bg); border-left-color: var(--positive); }
+  .trend-impact.positive .trend-impact-label { color: var(--positive); }
+  .trend-impact-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--warning);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .trend-impact-text {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .trend-impact-text strong { color: var(--ink); font-weight: 600; }
+
+  /* ============= CAUSAL CHAIN 인과 체인 ============= */
+  .causal-chain {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin: 20px 0;
+  }
+  .causal-chain-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .causal-chain-title em {
+    font-family: var(--script);
+    font-style: normal;
+    font-weight: 400;
+    color: var(--gold);
+    font-size: 0.9em;
+  }
+  
+  .chain-flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    align-items: stretch;
+    position: relative;
+  }
+  .chain-node {
+    background: var(--bg-soft);
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+    border-radius: 3px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 78px;
+  }
+  .chain-node:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--gold);
+    font-weight: 700;
+    z-index: 2;
+    background: var(--bg-card);
+    padding: 2px 6px;
+  }
+  .chain-node-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .chain-node-text {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .chain-node.start { 
+    background: var(--warning-bg); 
+    border: 1px solid var(--warning);
+  }
+  .chain-node.start .chain-node-label { color: var(--warning); }
+  .chain-node.end { 
+    background: var(--positive-bg); 
+    border: 1px solid var(--positive);
+  }
+  .chain-node.end .chain-node-label { color: var(--positive); }
+
+  /* ============= ACTION ALERT ============= */
+  .action-alert {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    color: #fff;
+    padding: 20px 26px;
+    border-radius: 4px;
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: center;
+    border-left: 4px solid var(--gold-bright);
+  }
+  .action-alert-icon {
+    font-size: 32px;
+  }
+  .action-alert-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--gold-bright);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .action-alert-text {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: #fff;
+    line-height: 1.55;
+  }
+  .action-alert-text strong { color: var(--gold-bright); font-weight: 700; }
+
+  /* ============= CHANNEL TOP 5 ============= */
+  .top5-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .top5-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--info);
+    padding: 16px 16px 14px;
+    border-radius: 0 0 4px 4px;
+    transition: all 0.2s;
+  }
+  .top5-card:hover {
+    box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+  }
+  .top5-rank {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .top5-name {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .top5-big-value {
+    font-family: var(--serif);
+    font-size: 26px;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .top5-big-value .unit {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .top5-yoy {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding: 3px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+  .top5-yoy.up { color: var(--positive); }
+  .top5-yoy.down { color: var(--negative); }
+  .top5-substat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-muted);
+    padding: 3px 0;
+  }
+  .top5-substat-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight: 700;
+  }
+  .top5-micro-chart {
+    height: 26px;
+    margin: 6px 0;
+  }
+
+  /* ============= COMPETITOR ============= */
+  .comp-summary {
+    background: var(--bg-card);
+    padding: 16px 22px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .comp-summary-cell {
+    border-right: 1px solid var(--rule);
+    padding-right: 20px;
+  }
+  .comp-summary-cell:last-child { border-right: none; }
+  .comp-summary-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .comp-summary-value {
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--ink);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .comp-summary-value .unit {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .comp-summary-sub {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+  
+  .comp-table {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .comp-row {
+    display: grid;
+    grid-template-columns: 130px 80px 1fr 80px 120px;
+    gap: 16px;
+    padding: 14px 22px;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.15s;
+  }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-row:hover { background: var(--bg-hover); }
+  .comp-row.header {
+    background: var(--bg-soft);
+    padding: 10px 22px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .comp-brand {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .comp-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    text-align: center;
+    border-radius: 2px;
+    font-weight: 700;
+    width: fit-content;
+  }
+  .comp-status.new { background: var(--negative); color: #fff; }
+  .comp-status.update { background: var(--gold); color: #fff; }
+  .comp-status.ongoing { background: var(--bg-soft); color: var(--ink-muted); }
+  .comp-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .comp-discount {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--negative);
+    text-align: right;
+  }
+  .comp-link {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  /* ============= STRATEGY TRACKER ============= */
+  .strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .strategy-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .strategy-header {
+    padding: 20px 24px 16px;
+    color: #fff;
+  }
+  .strategy-1 .strategy-header { background: var(--strat-1); }
+  .strategy-2 .strategy-header { background: var(--strat-2); }
+  .strategy-3 .strategy-header { background: var(--strat-3); }
+  .strategy-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 8px;
+  }
+  .strategy-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .strategy-target {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.05em;
+  }
+  .strategy-body { padding: 18px 24px 0; }
+  .strategy-progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .strategy-progress-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+  }
+  .strategy-progress-pct {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .strategy-bar {
+    height: 6px;
+    background: var(--bg-soft);
+    border-radius: 1px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .strategy-bar-fill {
+    height: 100%;
+  }
+  .strategy-1 .strategy-bar-fill { background: var(--strat-1); }
+  .strategy-2 .strategy-bar-fill { background: var(--strat-2); }
+  .strategy-3 .strategy-bar-fill { background: var(--strat-3); }
+  .strategy-trend-link {
+    margin: 14px -24px 0;
+    padding: 14px 24px;
+    background: var(--bg-soft);
+    border-top: 1px dashed var(--rule);
+  }
+  .strategy-trend-link-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .strategy-trend-link-item {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+    padding-left: 12px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .strategy-trend-link-item::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-family: var(--mono);
+  }
+
+  /* ============= PROPERTY SIGNALS ============= */
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .signal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    padding: 14px 18px;
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .signal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .signal-dot.green { background: var(--positive); }
+  .signal-dot.yellow { background: var(--warning); }
+  .signal-dot.red { background: var(--negative); }
+  .signal-name {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .signal-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+  .signal-value {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .signal-value.up { color: var(--positive); }
+  .signal-value.down { color: var(--negative); }
+
+  /* ============= NEWS ============= */
+  .news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .news-item {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    padding: 14px 18px;
+    border-radius: 0 4px 4px 0;
+  }
+  .news-item-cat {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .news-item-text {
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .news-item-tags {
+    margin-top: 8px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .news-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    background: var(--bg-soft);
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    border-radius: 2px;
+  }
+  .news-tag.brand { background: var(--gold); color: #fff; font-weight: 700; }
+  .news-tag.relevant { background: var(--positive); color: #fff; font-weight: 700; }
+
+  /* ============= FOOTER ============= */
+  footer {
+    background: var(--bg-deep);
+    color: rgba(255,255,255,0.5);
+    padding: 36px 28px 28px;
+    border-top: 3px solid var(--gold);
+    text-align: center;
+  }
+  .footer-mark {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold-bright);
+    margin-bottom: 4px;
+  }
+  .footer-mark em {
+    font-family: var(--script);
+    font-weight: 400;
+    font-style: normal;
+    color: #fff;
+    padding: 0 4px;
+  }
+  .footer-copyright {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 6px;
+    margin-top: 8px;
+  }
+  .footer-copyright strong { color: var(--gold-bright); font-weight: 600; }
+  .footer-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .draft-banner {
+    background: var(--warning);
+    color: #fff;
+    text-align: center;
+    padding: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+  }
+
+  /* ============= RESPONSIVE ============= */
+  @media (max-width: 1200px) {
+    .top5-grid { grid-template-columns: repeat(3, 1fr); }
+    .top5-card:nth-child(n+4) { display: none; }
+    .chain-flow { grid-template-columns: repeat(3, 1fr); gap: 20px 30px; }
+    .chain-node:nth-child(3n)::after { display: none; }
+  }
+  @media (max-width: 1024px) {
+    .region-selector { grid-template-columns: 1fr; }
+    .strategy-grid { grid-template-columns: 1fr; }
+    .comp-summary { grid-template-columns: 1fr 1fr; }
+    .comp-summary-cell:nth-child(2) { border-right: none; }
+    .trend-grid { grid-template-columns: 1fr; }
+    .chain-flow { grid-template-columns: 1fr; }
+    .chain-node::after { display: none !important; }
+    .region-header { grid-template-columns: auto 1fr; }
+    .region-properties { display: none; }
+  }
+  @media (max-width: 768px) {
+    body { font-size: 14px; }
+    .hero { padding: 36px 20px; }
+    .region-section { padding: 36px 20px 44px; }
+    .region-header { grid-template-columns: 1fr; }
+    .top5-grid { grid-template-columns: 1fr 1fr; }
+    .top5-card:nth-child(n+3) { display: none; }
+    .comp-row { grid-template-columns: 1fr; gap: 6px; }
+    .team-tag { border-left: none; padding-left: 0; margin-left: 0; }
+    .comp-summary { grid-template-columns: 1fr; }
+    .comp-summary-cell { border-right: none; padding-right: 0; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+    .comp-summary-cell:last-child { border-bottom: none; }
+    .trend-now-value { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="draft-banner">⚠ 7-DAY PILOT · 2026.04.21 ~ 04.27 · 차주 보안 검토 예정</div>
+
+<!-- ============ MASTHEAD ============ -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div style="display:flex;align-items:baseline;flex-wrap:wrap;">
+      <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
+      <div class="team-tag">GS팀 · 데일리 트렌드 리포트</div>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="timestamp">2026.04.21 TUE 08:00 KST</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">EXECUTIVE SUMMARY · 2026.04.21</div>
+    <h1 class="hero-title">GS팀 <em>데일리 트렌드 리포트</em></h1>
+
+    <div class="hero-headline">
+      🔥 <strong>오늘의 한 줄</strong> — 3개 권역 모두 상이한 트렌드 신호:
+      <strong>아시아퍼시픽</strong>은 환율 호재(+Inbound),
+      <strong>한국중부</strong>는 국내 OTA 구조 재편 진행,
+      <strong>한국남부</strong>는 제주 노선 증편에 따른 수요 확장 국면.
+      권역별 차별화된 대응 필요.
+    </div>
+
+    <div class="region-selector">
+      <div class="region-card apac" onclick="location.hash='#region-apac'">
+        <div class="region-card-label">REGION 01</div>
+        <div class="region-card-name">아시아퍼시픽</div>
+        <div class="region-card-sub">하이퐁 · 괌 · 하와이 · GSA</div>
+        <div class="region-card-kpi">
+          <span class="region-card-kpi-value">83.4<span style="font-size:11px;color:rgba(255,255,255,0.6);font-family:var(--sans);font-weight:400;">%</span></span>
+          <span class="region-card-kpi-delta up">▲ 환율 호재</span>
+        </div>
+      </div>
+      <div class="region-card center" onclick="location.hash='#region-center'">
+        <div class="region-card-label">REGION 02</div>
+        <div class="region-card-name">한국중부</div>
+        <div class="region-card-sub">비발디권역 · 델피노 · 양평 · 고양</div>
+        <div class="region-card-kpi">
+          <span class="region-card-kpi-value">108.4<span style="font-size:11px;color:rgba(255,255,255,0.6);font-family:var(--sans);font-weight:400;">%</span></span>
+          <span class="region-card-kpi-delta up">▲ 8.4% vs 목표</span>
+        </div>
+      </div>
+      <div class="region-card south" onclick="location.hash='#region-south'">
+        <div class="region-card-label">REGION 03</div>
+        <div class="region-card-name">한국남부</div>
+        <div class="region-card-sub">제주 · 여수 · 거제 · 남해 · 진도</div>
+        <div class="region-card-kpi">
+          <span class="region-card-kpi-value">94.8<span style="font-size:11px;color:rgba(255,255,255,0.6);font-family:var(--sans);font-weight:400;">%</span></span>
+          <span class="region-card-kpi-delta up">▲ 제주노선 +12%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REGION 01 — ASIA PACIFIC ============ -->
+<section id="region-apac" class="region-section region-apac">
+  <div class="region-header">
+    <div class="region-badge">Region 01 · APAC</div>
+    <div class="region-title-group">
+      <h2>아시아퍼시픽 <em>Asia Pacific</em></h2>
+      <p class="region-tagline">해외 사업장 중심 · <strong>환율/유가/아웃바운드</strong> 영향권</p>
+    </div>
+    <div class="region-properties">
+      하이퐁 베트남<br>
+      괌 GSA<br>
+      하와이 오아후<br>
+      일본 GSA (추진중)
+    </div>
+  </div>
+
+  <!-- 매크로 트렌드 - 3축 강화 -->
+  <h3 class="subsection-title">매크로 트렌드 <em>Macro Signal</em> <span class="subsection-num">01</span></h3>
+
+  <div class="trend-grid">
+    <!-- 유가 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">📈 국제유가 (WTI)</div>
+        <div class="trend-card-source">NYMEX · Goldman Sachs</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">$92.4<span class="unit">/배럴</span></div>
+        <span class="trend-now-delta up">▲ 12.8%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 2월 중순 변곡점</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="oilTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>3개월 연속 상승</strong> · 90일 이동평균 ($82) 돌파 · 
+          2월 중순 OPEC+ 감산 결정 이후 상승 가속. 5년 평균 대비 +28%p
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>Goldman Sachs 5월 $95 전망</strong> · 여름 수요기 진입 시 $100 돌파 가능성.
+          유류할증료 2단계 추가 인상 임박 (항공사 공통)
+        </div>
+      </div>
+      <div class="trend-impact">
+        <div class="trend-impact-label">🔗 APAC 영향</div>
+        <div class="trend-impact-text">
+          하이퐁 노선 유류할증료 ₩38,000 → <strong>₩46,000 전망</strong> · 패키지 가격 경쟁력 약화 · 
+          괌·하와이 한국인 수요 위축 (OTB -6% 예상)
+        </div>
+      </div>
+    </div>
+
+    <!-- USD/KRW -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">💱 USD/KRW 환율</div>
+        <div class="trend-card-source">한국은행</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">1,452<span class="unit">원</span></div>
+        <span class="trend-now-delta up">▲ 3.2%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 3월 하순 변곡점</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="fxTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>12개월 최고치 근접</strong> · 미 연준 금리인하 지연 영향 ·
+          위안화/엔화 동반 약세 (한·중·일 모두 달러 강세 압력)
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 평균 1,440~1,470원 유지</strong> 예상 · 
+          한은 환율방어 신호 주시. Inbound 단가 경쟁력 유리
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 APAC 영향</div>
+        <div class="trend-impact-text">
+          <strong>Inbound 단가 경쟁력 ↑</strong> (Strategy 04 10개사 확대 호재) · 
+          한국인 아웃바운드 위축 → 국내 리조트 반사수요
+        </div>
+      </div>
+    </div>
+
+    <!-- VND/KRW -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🇻🇳 VND/KRW (하이퐁)</div>
+        <div class="trend-card-source">한국은행</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">0.058<span class="unit">원</span></div>
+        <span class="trend-now-delta flat">▬ 0.3%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span style="color:var(--positive);font-family:var(--sans);font-size:10px;font-weight:700;">● 안정화</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="vndTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          하이퐁 운영 원가 <strong>예측 가능 구간 진입</strong> · 
+          베트남 중앙은행 외환보유고 확대로 통화 안정세
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5~6월 안정 지속</strong> 예상 · 운영 비용 리스크 제한적.
+          베트남 관광 성수기(6~8월) 대비 적기
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 APAC 영향</div>
+        <div class="trend-impact-text">
+          하이퐁 사업장 <strong>원가 관리 용이</strong> · 성수기 수요 대응 집중 권장
+        </div>
+      </div>
+    </div>
+
+    <!-- 한국인 아웃바운드 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">✈️ 한국인 아웃바운드 (월)</div>
+        <div class="trend-card-source">KTO</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">238<span class="unit">만명</span></div>
+        <span class="trend-now-delta down">▼ 8.2%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 4월 초 감소 전환</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="outboundTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          환율 상승 + 유가 상승 이중 압력 · 
+          <strong>저가 동남아 대신 일본·베트남 선호</strong> 전환.
+          2019년 대비 92% 회복 수준
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 -10%, 6월 -12% 추가 감소</strong> 예상 · 
+          성수기 전까지 약세 지속. 가성비 동남아 선점 기회
+        </div>
+      </div>
+      <div class="trend-impact">
+        <div class="trend-impact-label">🔗 APAC 영향</div>
+        <div class="trend-impact-text">
+          하이퐁 <strong>한국발 수요 감소 압력</strong> · 
+          현지 GSA 확대로 베트남 로컬·제3국 유치 필요
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인과 체인 -->
+  <div class="causal-chain">
+    <div class="causal-chain-title">
+      🔗 인과 체인 <em>APAC Impact Flow</em>
+    </div>
+    <div class="chain-flow">
+      <div class="chain-node start">
+        <div class="chain-node-label">MACRO</div>
+        <div class="chain-node-text">유가 ↑<br>+12%</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">INDUSTRY</div>
+        <div class="chain-node-text">유류할증료<br>2단계 인상</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">DEMAND</div>
+        <div class="chain-node-text">아웃바운드<br>-8% (4월)</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">BUSINESS</div>
+        <div class="chain-node-text">하이퐁 OTB<br>-6% 예상</div>
+      </div>
+      <div class="chain-node end">
+        <div class="chain-node-label">ACTION</div>
+        <div class="chain-node-text">현지 GSA<br>확대 가속</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 액션 알림 -->
+  <div class="action-alert">
+    <div class="action-alert-icon">🎯</div>
+    <div>
+      <div class="action-alert-label">APAC 액션 알림</div>
+      <div class="action-alert-text">
+        환율·유가 동반 악화로 <strong>한국발 수요 둔화 지속</strong>. 
+        하이퐁 사업장은 <strong>Strategy 05 (해외마케팅 R&R)</strong> 가속 + 
+        현지 로컬 OTA 및 제3국(일본·중국) GSA 확대 최우선 권장.
+      </div>
+    </div>
+  </div>
+
+  <!-- 채널 TOP 5 - 글로벌 OTA -->
+  <h3 class="subsection-title">메이저 OTA <em>Top 5 Global</em> <span class="subsection-num">02</span></h3>
+
+  <div class="top5-grid">
+    <div class="top5-card">
+      <div class="top5-rank">#01 · GLOBAL</div>
+      <div class="top5-name">아고다</div>
+      <div class="top5-big-value">189<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +35%</div>
+      <div class="top5-micro-chart"><canvas id="agodaTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">하이퐁</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#02 · GLOBAL</div>
+      <div class="top5-name">Booking</div>
+      <div class="top5-big-value">142<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +18%</div>
+      <div class="top5-micro-chart"><canvas id="bookingTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">괌</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#03 · GLOBAL</div>
+      <div class="top5-name">Expedia</div>
+      <div class="top5-big-value">98<span class="unit">실</span></div>
+      <div class="top5-yoy down">▼ 전년 -12%</div>
+      <div class="top5-micro-chart"><canvas id="expediaTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">하와이</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#04 · GSA</div>
+      <div class="top5-name">괌 GSA</div>
+      <div class="top5-big-value">87<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +22%</div>
+      <div class="top5-micro-chart"><canvas id="gsaGuamTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">괌</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#05 · 트립닷컴</div>
+      <div class="top5-name">Trip.com</div>
+      <div class="top5-big-value">76<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +28%</div>
+      <div class="top5-micro-chart"><canvas id="tripcomApacTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">하이퐁</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사업장 신호등 -->
+  <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">03</span></h3>
+  <div class="signal-grid">
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">하이퐁 베트남</div>
+        <div class="signal-sub">OTA 78% · Inbound 92%</div>
+      </div>
+      <div class="signal-value">82.4%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">괌 GSA</div>
+        <div class="signal-sub">OTA 108% · GSA 112%</div>
+      </div>
+      <div class="signal-value up">110.2%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot red"></div>
+      <div>
+        <div class="signal-name">하와이</div>
+        <div class="signal-sub">OTA 62% · Expedia -12%</div>
+      </div>
+      <div class="signal-value down">57.5%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REGION 02 — 한국중부 ============ -->
+<section id="region-center" class="region-section region-center">
+  <div class="region-header">
+    <div class="region-badge">Region 02 · Central KR</div>
+    <div class="region-title-group">
+      <h2>한국중부 <em>Central Korea</em></h2>
+      <p class="region-tagline">비발디권역 중심 · <strong>국내 OTA/강원 경쟁권</strong> 영향권</p>
+    </div>
+    <div class="region-properties">
+      비발디파크 (4개 사업장)<br>
+      델피노 · 양평 · 고양<br>
+      양양 · 삼척 · 단양<br>
+      청송 · 변산 · 천안
+    </div>
+  </div>
+
+  <!-- 매크로 -->
+  <h3 class="subsection-title">매크로 트렌드 <em>Macro Signal</em> <span class="subsection-num">01</span></h3>
+
+  <div class="trend-grid">
+    <!-- 국내 여행수요 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🏔️ 5월 국내 여행수요</div>
+        <div class="trend-card-source">KTO</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">142<span class="unit">pt</span></div>
+        <span class="trend-now-delta down">▼ +18% (국내)</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 4월 상승 전환</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="demandKrTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>가정의 달 프리미엄</strong> · 해외여행 둔화로 국내 반사수요 · 
+          강원 1위(+23%), 제주 2위(+15%) 부동 · 6년 연속 최고치
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 첫째주 피크, 이후 안정</strong> · 
+          6월 초 비수기 진입 전까지 우상향. 조기 예약 증가 추세
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 중부 영향</div>
+        <div class="trend-impact-text">
+          <strong>비발디·델피노·양양 OTB +8% 가속</strong> · 
+          Strategy 03 Spot Sales 사전 물량 확보 적기
+        </div>
+      </div>
+    </div>
+
+    <!-- 고속도로 통행량 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🚗 고속도로 통행량 (강원행)</div>
+        <div class="trend-card-source">한국도로공사</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">112<span class="unit">만대/주</span></div>
+        <span class="trend-now-delta up">▲ 14%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 3월 말 가속</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="highwayTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>여행 수요 선행지표</strong> · 홍천IC·양양고속도로 증가율 최대 · 
+          주말 진출입 2시간 이상 정체 상습화
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 5일·11일 피크 예상</strong> (전년 대비 +18%) · 
+          워크인 수요도 동반 증가
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 중부 영향</div>
+        <div class="trend-impact-text">
+          비발디·양양 <strong>워크인 + 당일 예약 수요 증가</strong> · 
+          객실 타입별 가격 탄력 운영 검토
+        </div>
+      </div>
+    </div>
+
+    <!-- 날씨/계절 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🌸 강원 봄 축제 지수</div>
+        <div class="trend-card-source">강원관광재단</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">87<span class="unit">pt</span></div>
+        <span class="trend-now-delta up">▲ 22%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span style="color:var(--positive);font-family:var(--sans);font-size:10px;font-weight:700;">● 시즌 피크</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="festivalTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>홍천 벚꽃(4/26~5/5), 양양 연어(5/3~5/12), 평창 진달래 (진행중)</strong> · 
+          SNS 언급량 전년 대비 +38%
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>4/26~5/5 방문객 22만명 예상</strong> (전년 18만명) · 
+          주변 숙박 OTB 완매 가능성
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 중부 영향</div>
+        <div class="trend-impact-text">
+          <strong>비발디·소노캄고양·양양 워크인 수요 급증</strong> · 
+          축제 연계 상품 판매 전환 권장
+        </div>
+      </div>
+    </div>
+
+    <!-- 주요 경쟁 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🏆 강원권 경쟁 지수</div>
+        <div class="trend-card-source">GS Monitor · Competitor</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">78<span class="unit">pt</span></div>
+        <span class="trend-now-delta up">▲ 25%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 한화 대규모 프로모션</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="compKrTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>한화 설악·평창 -35% 출시 (4/15)</strong> · 
+          휘닉스·하이원·웰리힐리 동반 할인 시작. 
+          평균 할인율 24% → <strong>31% 상승</strong>
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 둘째주 경쟁 피크 예상</strong> · 
+          가정의달 + 연휴 집중 프로모션 지속
+        </div>
+      </div>
+      <div class="trend-impact">
+        <div class="trend-impact-label">🔗 중부 영향</div>
+        <div class="trend-impact-text">
+          <strong>비발디 취소율 증가 리스크</strong> (Strategy 01 주의) · 
+          Smart 요금제 적극 대응 + 멤버십 혜택 강화 필요
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인과 체인 -->
+  <div class="causal-chain">
+    <div class="causal-chain-title">
+      🔗 인과 체인 <em>Central KR Impact Flow</em>
+    </div>
+    <div class="chain-flow">
+      <div class="chain-node start">
+        <div class="chain-node-label">MACRO</div>
+        <div class="chain-node-text">해외여행<br>둔화 (-8%)</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">REBOUND</div>
+        <div class="chain-node-text">국내 반사<br>수요 ↑</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">DEMAND</div>
+        <div class="chain-node-text">5월 국내수요<br>+18%</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">BUSINESS</div>
+        <div class="chain-node-text">비발디 OTB<br>+8% 가속</div>
+      </div>
+      <div class="chain-node end">
+        <div class="chain-node-label">ACTION</div>
+        <div class="chain-node-text">Spot Sales<br>사전물량 확대</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 액션 알림 -->
+  <div class="action-alert">
+    <div class="action-alert-icon">🎯</div>
+    <div>
+      <div class="action-alert-label">한국중부 액션 알림</div>
+      <div class="action-alert-text">
+        국내 수요 호재 vs 경쟁사 공세 <strong>쌍방향 압력</strong>. 
+        Strategy 02 <strong>Mega Channel 시너지</strong> + Strategy 03 <strong>Spot Sales 5월 사전물량</strong> 동시 가속. 
+        취소율 관리(Strategy 01) 동시 대응 권장.
+      </div>
+    </div>
+  </div>
+
+  <!-- 채널 TOP 5 -->
+  <h3 class="subsection-title">메이저 OTA <em>Top 5 Domestic</em> <span class="subsection-num">02</span></h3>
+
+  <div class="top5-grid">
+    <div class="top5-card">
+      <div class="top5-rank">#01 · GLOBAL</div>
+      <div class="top5-name">아고다</div>
+      <div class="top5-big-value">701<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +35%</div>
+      <div class="top5-micro-chart"><canvas id="agodaKrTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 비발디</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#02 · DOMESTIC</div>
+      <div class="top5-name">야놀자</div>
+      <div class="top5-big-value">687<span class="unit">실</span></div>
+      <div class="top5-yoy down">▼ 전년 -19%</div>
+      <div class="top5-micro-chart"><canvas id="yanoljaTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 비발디</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#03 · DOMESTIC</div>
+      <div class="top5-name">여기어때</div>
+      <div class="top5-big-value">522<span class="unit">실</span></div>
+      <div class="top5-yoy down">▼ 전년 -22%</div>
+      <div class="top5-micro-chart"><canvas id="yogiyoTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 비발디</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#04 · GLOBAL</div>
+      <div class="top5-name">트립닷컴</div>
+      <div class="top5-big-value">189<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +12%</div>
+      <div class="top5-micro-chart"><canvas id="tripcomKrTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 양평</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#05 · NEW ⭐</div>
+      <div class="top5-name">스마트인피니</div>
+      <div class="top5-big-value">406<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +181%</div>
+      <div class="top5-micro-chart"><canvas id="smartInfiniTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">중부권 전체</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 경쟁사 -->
+  <h3 class="subsection-title">경쟁사 동향 <em>Competitors</em> <span class="subsection-num">03</span></h3>
+
+  <div class="comp-summary">
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">신규 프로모션</div>
+      <div class="comp-summary-value">4<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">한화 2 · 휘닉스 1 · 하이원 1</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">진행중</div>
+      <div class="comp-summary-value">9<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">평균 할인율 31%</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">직접 경쟁</div>
+      <div class="comp-summary-value">6<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">강원 권역</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">최대 할인율</div>
+      <div class="comp-summary-value">35<span class="unit"> %</span></div>
+      <div class="comp-summary-sub">한화 설악·평창</div>
+    </div>
+  </div>
+
+  <div class="comp-table">
+    <div class="comp-row header">
+      <div>브랜드</div>
+      <div>상태</div>
+      <div>프로모션 내용</div>
+      <div>할인율</div>
+      <div>영향도</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">한화리조트</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">설악·평창 봄 패키지 — 가족 트레킹 + 조식 + 업그레이드 (4/15~5/31)</div>
+      <div class="comp-discount">-35%</div>
+      <div class="comp-link" style="color:var(--negative);">▲ HIGH</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">휘닉스 평창</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">봄 스마일 얼리버드 (5~6월 투숙) — 조식 + 액티비티 1인 무료</div>
+      <div class="comp-discount">-28%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">하이원리조트</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">봄 힐링 + 워터월드 패키지 (4/20~5/31)</div>
+      <div class="comp-discount">-25%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">웰리힐리파크</div>
+      <span class="comp-status ongoing">ONGOING</span>
+      <div class="comp-title">특가 스탠다드 객실 (주중 할인) — ₩100,000부터</div>
+      <div class="comp-discount">-32%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">한화리조트</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">설악 봄꽃 트레킹 패키지 (1박 2식)</div>
+      <div class="comp-discount">-22%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+  </div>
+
+  <!-- 사업장 신호등 -->
+  <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">04</span></h3>
+  <div class="signal-grid">
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">소노벨 비발디파크</div>
+        <div class="signal-sub">OTA 114% · GOTA 110%</div>
+      </div>
+      <div class="signal-value up">109.5%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot red"></div>
+      <div>
+        <div class="signal-name">소노캄 비발디파크</div>
+        <div class="signal-sub">OTA 54% · GOTA 35%</div>
+      </div>
+      <div class="signal-value down">47.6%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">소노펠리체 비발디파크</div>
+        <div class="signal-sub">OTA 68% · GOTA 87%</div>
+      </div>
+      <div class="signal-value">73.7%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">소노벨 양평</div>
+        <div class="signal-sub">OTA 80% · GOTA 147%</div>
+      </div>
+      <div class="signal-value up">103.6%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">쏠비치 양양</div>
+        <div class="signal-sub">OTA 95% · GOTA 108%</div>
+      </div>
+      <div class="signal-value up">101.2%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">델피노</div>
+        <div class="signal-sub">OTA 82% · GOTA 71%</div>
+      </div>
+      <div class="signal-value">78.5%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">소노캄 고양</div>
+        <div class="signal-sub">OTA 113% · Inbound 128%</div>
+      </div>
+      <div class="signal-value up">118.2%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">소노벨 단양</div>
+        <div class="signal-sub">OTA 85% · GOTA 78%</div>
+      </div>
+      <div class="signal-value">82.1%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REGION 03 — 한국남부 ============ -->
+<section id="region-south" class="region-section region-south">
+  <div class="region-header">
+    <div class="region-badge">Region 03 · Southern KR</div>
+    <div class="region-title-group">
+      <h2>한국남부 <em>Southern Korea</em></h2>
+      <p class="region-tagline">제주·남해안 중심 · <strong>제주노선/글로벌 수요/로컬 축제</strong> 영향권</p>
+    </div>
+    <div class="region-properties">
+      제주 (벨제주·캄제주)<br>
+      경주 · 여수 · 거제<br>
+      남해 · 진도 · 변산<br>
+      해운대
+    </div>
+  </div>
+
+  <!-- 매크로 -->
+  <h3 class="subsection-title">매크로 트렌드 <em>Macro Signal</em> <span class="subsection-num">01</span></h3>
+
+  <div class="trend-grid">
+    <!-- 제주 노선 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">✈️ 제주 노선 공급량</div>
+        <div class="trend-card-source">제주관광공사</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">1,842<span class="unit">편/주</span></div>
+        <span class="trend-now-delta up">▲ 12%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 3월 말 증편</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="jejuFlightTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>대한항공·아시아나·LCC 일제 증편</strong> · 
+          평균 탑승률 <strong>87%</strong> 유지 · 제주항공 신규 노선 2개 추가
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 주간 2,000편 돌파 예상</strong> · 
+          공급 확대로 항공권 가격 -8% · 가족 여행 수요 폭증
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 남부 영향</div>
+        <div class="trend-impact-text">
+          <strong>소노벨·캄 제주 OTB +15% 가속</strong> · 
+          저가 항공권으로 수도권 가족 유입 기대
+        </div>
+      </div>
+    </div>
+
+    <!-- 제주 숙박 공급 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🏨 제주 숙박 공급 지수</div>
+        <div class="trend-card-source">제주관광공사</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">128<span class="unit">pt</span></div>
+        <span class="trend-now-delta up">▲ 9%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span style="color:var(--warning);font-family:var(--sans);font-size:10px;font-weight:700;">● 신규 호텔 오픈</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="jejuSupplyTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>해비치·히든클리프 + 신규 호텔 3개 오픈</strong> · 
+          제주 객실 공급 전년 대비 +12%. 공급 우위 구간 진입
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5~6월 공급 경쟁 심화</strong> · 
+          ADR 압박 예상. 차별화 전략 필수
+        </div>
+      </div>
+      <div class="trend-impact">
+        <div class="trend-impact-label">🔗 남부 영향</div>
+        <div class="trend-impact-text">
+          <strong>제주 사업장 ADR 방어 필요</strong> · 
+          가격보다 경험/서비스 차별화로 승부
+        </div>
+      </div>
+    </div>
+
+    <!-- 남해안 크루즈 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🚢 남해안 크루즈 지수</div>
+        <div class="trend-card-source">해양수산부</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">64<span class="unit">pt</span></div>
+        <span class="trend-now-delta up">▲ 28%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span class="trend-timeline-inflection">● 봄 시즌 진입</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="cruiseTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>여수·부산 입항 크루즈 +18%</strong> · 
+          중국·대만발 단체 관광 재개. 남해안 일주 상품 확대
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5~6월 주간 크루즈 14회 입항 예상</strong> · 
+          여수 객실 수요 +20% 가능
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 남부 영향</div>
+        <div class="trend-impact-text">
+          <strong>소노캄 여수 Inbound 수요 호재</strong> · 
+          크루즈 연계 패키지 개발 적기
+        </div>
+      </div>
+    </div>
+
+    <!-- 남부 축제 -->
+    <div class="trend-card">
+      <div class="trend-card-header">
+        <div class="trend-card-title">🌊 남부 축제 지수</div>
+        <div class="trend-card-source">한국관광공사</div>
+      </div>
+      <div class="trend-now">
+        <div class="trend-now-value">92<span class="unit">pt</span></div>
+        <span class="trend-now-delta up">▲ 18%</span>
+      </div>
+      <div class="trend-timeline">
+        <div class="trend-timeline-label">
+          <span>8주 추이</span>
+          <span style="color:var(--positive);font-family:var(--sans);font-size:10px;font-weight:700;">● 시즌 피크</span>
+        </div>
+        <div class="trend-chart-wrap"><canvas id="festivalSouthTrend"></canvas></div>
+      </div>
+      <div class="trend-context">
+        <div class="trend-context-label">🕐 맥락 (Context)</div>
+        <div class="trend-context-text">
+          <strong>제주 유채꽃(진행중), 여수 거북선(5/4), 남해 유자(5/10)</strong> · 
+          SNS 노출 전년 +52% · 가정의달 집객 효과
+        </div>
+      </div>
+      <div class="trend-forecast">
+        <div class="trend-forecast-label">🔮 전망 (Forecast)</div>
+        <div class="trend-forecast-text">
+          <strong>5월 중순 방문객 피크</strong> · 
+          가족 단위 수요 집중 · 객실 OTB 완매 가능성
+        </div>
+      </div>
+      <div class="trend-impact positive">
+        <div class="trend-impact-label">🔗 남부 영향</div>
+        <div class="trend-impact-text">
+          <strong>여수·남해·제주 워크인 증가</strong> · 
+          축제 연계 패키지 판매 적기
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인과 체인 -->
+  <div class="causal-chain">
+    <div class="causal-chain-title">
+      🔗 인과 체인 <em>Southern KR Impact Flow</em>
+    </div>
+    <div class="chain-flow">
+      <div class="chain-node start">
+        <div class="chain-node-label">MACRO</div>
+        <div class="chain-node-text">제주노선<br>+12% 증편</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">MARKET</div>
+        <div class="chain-node-text">항공권 가격<br>-8%</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">DEMAND</div>
+        <div class="chain-node-text">제주 수요<br>+15%</div>
+      </div>
+      <div class="chain-node">
+        <div class="chain-node-label">BUSINESS</div>
+        <div class="chain-node-text">제주 사업장<br>OTB +15%</div>
+      </div>
+      <div class="chain-node end">
+        <div class="chain-node-label">ACTION</div>
+        <div class="chain-node-text">ADR 방어 +<br>경험 차별화</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 액션 알림 -->
+  <div class="action-alert">
+    <div class="action-alert-icon">🎯</div>
+    <div>
+      <div class="action-alert-label">한국남부 액션 알림</div>
+      <div class="action-alert-text">
+        제주 노선 증편 <strong>수요 호재 + 공급 확대 압박</strong> 동시 진행. 
+        ADR 방어 + 경험/서비스 차별화 필수. 
+        여수는 <strong>크루즈 Inbound</strong>, 남해는 <strong>축제 연계</strong> 패키지 가속 권장.
+      </div>
+    </div>
+  </div>
+
+  <!-- 채널 TOP 5 -->
+  <h3 class="subsection-title">메이저 OTA <em>Top 5 South</em> <span class="subsection-num">02</span></h3>
+
+  <div class="top5-grid">
+    <div class="top5-card">
+      <div class="top5-rank">#01 · GLOBAL</div>
+      <div class="top5-name">아고다</div>
+      <div class="top5-big-value">318<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +42%</div>
+      <div class="top5-micro-chart"><canvas id="agodaSouthTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 제주</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#02 · DOMESTIC</div>
+      <div class="top5-name">야놀자</div>
+      <div class="top5-big-value">285<span class="unit">실</span></div>
+      <div class="top5-yoy down">▼ 전년 -12%</div>
+      <div class="top5-micro-chart"><canvas id="yanoljaSouthTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노캄 여수</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#03 · GLOBAL</div>
+      <div class="top5-name">Booking</div>
+      <div class="top5-big-value">214<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +38%</div>
+      <div class="top5-micro-chart"><canvas id="bookingSouthTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노캄 제주</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#04 · DOMESTIC</div>
+      <div class="top5-name">여기어때</div>
+      <div class="top5-big-value">167<span class="unit">실</span></div>
+      <div class="top5-yoy down">▼ 전년 -18%</div>
+      <div class="top5-micro-chart"><canvas id="yogiyoSouthTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노벨 제주</span>
+      </div>
+    </div>
+    <div class="top5-card">
+      <div class="top5-rank">#05 · 호텔스</div>
+      <div class="top5-name">Hotels.com</div>
+      <div class="top5-big-value">138<span class="unit">실</span></div>
+      <div class="top5-yoy up">▲ 전년 +22%</div>
+      <div class="top5-micro-chart"><canvas id="hotelsComTrend"></canvas></div>
+      <div class="top5-substat">
+        <span>주력</span>
+        <span class="top5-substat-val">소노캄 거제</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 경쟁사 -->
+  <h3 class="subsection-title">경쟁사 동향 <em>Competitors</em> <span class="subsection-num">03</span></h3>
+
+  <div class="comp-summary">
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">신규 프로모션</div>
+      <div class="comp-summary-value">5<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">롯데 3 · 신라 1 · 해비치 1</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">진행중</div>
+      <div class="comp-summary-value">11<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">평균 할인율 27%</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">직접 경쟁</div>
+      <div class="comp-summary-value">4<span class="unit"> 건</span></div>
+      <div class="comp-summary-sub">제주 권역</div>
+    </div>
+    <div class="comp-summary-cell">
+      <div class="comp-summary-label">최대 할인율</div>
+      <div class="comp-summary-value">38<span class="unit"> %</span></div>
+      <div class="comp-summary-sub">히든클리프 오픈 특가</div>
+    </div>
+  </div>
+
+  <div class="comp-table">
+    <div class="comp-row header">
+      <div>브랜드</div>
+      <div>상태</div>
+      <div>프로모션 내용</div>
+      <div>할인율</div>
+      <div>영향도</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">롯데호텔</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">제주 가족여행 얼리버드 (5~6월 투숙) — 조식 + 해변 액티비티</div>
+      <div class="comp-discount">-28%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">히든클리프</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">오픈 특가 — 인피니티 풀 + 올데이 다이닝 (4/25~5/31)</div>
+      <div class="comp-discount">-38%</div>
+      <div class="comp-link" style="color:var(--negative);">▲ HIGH</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">해비치 제주</div>
+      <span class="comp-status new">NEW</span>
+      <div class="comp-title">봄꽃 프로모션 — 골프 18H 1인 무료 (5월 주중)</div>
+      <div class="comp-discount">-25%</div>
+      <div class="comp-link" style="color:var(--warning);">▲ MED</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">신라호텔 제주</div>
+      <span class="comp-status ongoing">ONGOING</span>
+      <div class="comp-title">프리미엄 가족 패키지 — 쿠킹 클래스 + 애견 동반</div>
+      <div class="comp-discount">-20%</div>
+      <div class="comp-link" style="color:var(--info);">○ LOW</div>
+    </div>
+    <div class="comp-row">
+      <div class="comp-brand">롯데호텔 부산</div>
+      <span class="comp-status update">UPDATE</span>
+      <div class="comp-title">시그니엘 디너 패키지 (할인율 5%p 상향)</div>
+      <div class="comp-discount">-15%</div>
+      <div class="comp-link" style="color:var(--info);">○ LOW</div>
+    </div>
+  </div>
+
+  <!-- 사업장 신호등 -->
+  <h3 class="subsection-title">사업장 <em>Property Signals</em> <span class="subsection-num">04</span></h3>
+  <div class="signal-grid">
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">소노벨 제주</div>
+        <div class="signal-sub">OTA 108% · Inbound 118%</div>
+      </div>
+      <div class="signal-value up">112.3%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">소노캄 제주</div>
+        <div class="signal-sub">OTA 85% · GOTA 72%</div>
+      </div>
+      <div class="signal-value">82.4%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot red"></div>
+      <div>
+        <div class="signal-name">쏠비치 삼척</div>
+        <div class="signal-sub">OTA 42% · GOTA 58%</div>
+      </div>
+      <div class="signal-value down">48.7%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">쏠비치 진도</div>
+        <div class="signal-sub">OTA 78% · GOTA 82%</div>
+      </div>
+      <div class="signal-value">79.1%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">쏠비치 남해</div>
+        <div class="signal-sub">OTA 92% · GOTA 108%</div>
+      </div>
+      <div class="signal-value up">98.7%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot green"></div>
+      <div>
+        <div class="signal-name">소노캄 여수</div>
+        <div class="signal-sub">OTA 108% · Inbound 125%</div>
+      </div>
+      <div class="signal-value up">114.5%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">소노캄 거제</div>
+        <div class="signal-sub">OTA 74% · GOTA 82%</div>
+      </div>
+      <div class="signal-value">76.8%</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">소노캄 경주</div>
+        <div class="signal-sub">OTA 82% · GOTA 74%</div>
+      </div>
+      <div class="signal-value">78.2%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STRATEGY (공통) ============ -->
+<section style="max-width:1440px;margin:0 auto;padding:56px 28px;">
+  <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:32px;">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">STRATEGY TRACKER · 전 권역 공통</div>
+    <h2 style="font-family:var(--serif);font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.05;color:var(--ink);">사업계획 <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:8px;">3대 전략</em> 진척</h2>
+  </div>
+
+  <div class="strategy-grid">
+    <div class="strategy-card strategy-1">
+      <div class="strategy-header">
+        <div class="strategy-num">STRATEGY 01 · 매출 +66억</div>
+        <div class="strategy-name">취소율 관리</div>
+        <div class="strategy-target">목표: 38% → 28% · +3만실</div>
+      </div>
+      <div class="strategy-body">
+        <div class="strategy-progress-row">
+          <span class="strategy-progress-label">목표 진척률</span>
+          <span class="strategy-progress-pct">61%</span>
+        </div>
+        <div class="strategy-bar"><div class="strategy-bar-fill" style="width:61%"></div></div>
+        <div class="strategy-trend-link">
+          <div class="strategy-trend-link-label">권역별 관련 트렌드</div>
+          <div class="strategy-trend-link-item">APAC: 아웃바운드 둔화 → 해외사업장 취소율↑</div>
+          <div class="strategy-trend-link-item">중부: 한화 -35% 공세 → 비발디 취소 위험</div>
+          <div class="strategy-trend-link-item">남부: 제주 공급 확대 → ADR 방어 필요</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy-card strategy-2">
+      <div class="strategy-header">
+        <div class="strategy-num">STRATEGY 02 · 매출 +79억</div>
+        <div class="strategy-name">Mega Channel 시너지</div>
+        <div class="strategy-target">TOP 8 비중 82.1% · +4만실</div>
+      </div>
+      <div class="strategy-body">
+        <div class="strategy-progress-row">
+          <span class="strategy-progress-label">목표 진척률</span>
+          <span class="strategy-progress-pct">114%</span>
+        </div>
+        <div class="strategy-bar"><div class="strategy-bar-fill" style="width:100%"></div></div>
+        <div class="strategy-trend-link">
+          <div class="strategy-trend-link-label">권역별 관련 트렌드</div>
+          <div class="strategy-trend-link-item">APAC: 아고다 글로벌 베너 +35%</div>
+          <div class="strategy-trend-link-item">중부: 스마트인피니/타이드스퀘어 급성장</div>
+          <div class="strategy-trend-link-item">남부: Booking/Hotels.com 글로벌 유입</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy-card strategy-3">
+      <div class="strategy-header">
+        <div class="strategy-num">STRATEGY 03 · 매출 +43억</div>
+        <div class="strategy-name">전략적 Spot Sales</div>
+        <div class="strategy-target">시즌별 운영 · +2만실</div>
+      </div>
+      <div class="strategy-body">
+        <div class="strategy-progress-row">
+          <span class="strategy-progress-label">목표 진척률</span>
+          <span class="strategy-progress-pct">48%</span>
+        </div>
+        <div class="strategy-bar"><div class="strategy-bar-fill" style="width:48%"></div></div>
+        <div class="strategy-trend-link">
+          <div class="strategy-trend-link-label">권역별 관련 트렌드</div>
+          <div class="strategy-trend-link-item">APAC: 하이퐁 성수기(6~8월) 사전물량</div>
+          <div class="strategy-trend-link-item">중부: 5월 가정의달 물량 확대</div>
+          <div class="strategy-trend-link-item">남부: 제주 저가항공 맞물림 물량</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ NEWS (권역별 통합) ============ -->
+<section style="max-width:1440px;margin:0 auto;padding:20px 28px 56px;">
+  <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:24px;">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">DAILY NEWS · 키워드 매칭</div>
+    <h2 style="font-family:var(--serif);font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.05;color:var(--ink);">연관 <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:8px;">뉴스</em></h2>
+  </div>
+  
+  <div class="news-grid">
+    <div class="news-item">
+      <div class="news-item-cat">● APAC</div>
+      <p class="news-item-text">유가 상승 · 항공사 유류할증료 2단계 추가 인상 임박. 동남아 노선 직격</p>
+      <div class="news-item-tags">
+        <span class="news-tag relevant">★ APAC</span>
+        <span class="news-tag">유가</span>
+      </div>
+    </div>
+    <div class="news-item">
+      <div class="news-item-cat">● 중부 · 경쟁</div>
+      <p class="news-item-text">한화리조트 설악·평창, 봄 시즌 패키지 최대 35% 할인 (4/15~5/31)</p>
+      <div class="news-item-tags">
+        <span class="news-tag brand">한화리조트</span>
+        <span class="news-tag">강원경쟁</span>
+      </div>
+    </div>
+    <div class="news-item">
+      <div class="news-item-cat">● 남부 · 항공</div>
+      <p class="news-item-text">제주항공 신규 노선 2개 추가 · 대한항공·아시아나 일제 증편. 가격 -8% 전망</p>
+      <div class="news-item-tags">
+        <span class="news-tag relevant">★ 제주</span>
+        <span class="news-tag">항공</span>
+      </div>
+    </div>
+    <div class="news-item">
+      <div class="news-item-cat">● 중부 · 지역</div>
+      <p class="news-item-text">홍천군 봄꽃 축제 4/26~5/5 개최 · 작년 방문객 22만 명 기록</p>
+      <div class="news-item-tags">
+        <span class="news-tag relevant">★ 홍천</span>
+        <span class="news-tag">축제</span>
+      </div>
+    </div>
+    <div class="news-item">
+      <div class="news-item-cat">● APAC · 환율</div>
+      <p class="news-item-text">원/달러 환율 12개월 최고치 근접. 인바운드 경쟁력 반사 이익</p>
+      <div class="news-item-tags">
+        <span class="news-tag relevant">★ Inbound</span>
+        <span class="news-tag">환율</span>
+      </div>
+    </div>
+    <div class="news-item">
+      <div class="news-item-cat">● 남부 · 크루즈</div>
+      <p class="news-item-text">여수·부산 입항 크루즈 +18%. 중국·대만발 단체관광 재개</p>
+      <div class="news-item-tags">
+        <span class="news-tag relevant">★ 여수</span>
+        <span class="news-tag">크루즈</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-mark">SONO <em>&amp;</em> TRINITY</div>
+  <div class="footer-copyright">© 2026 <strong>GS팀 · Haein Kim Manager</strong> · All Rights Reserved</div>
+  <div class="footer-meta">Daily Trend Report · v6.0 · 3-Region Structure · 7-Day Pilot</div>
+</footer>
+
+<script>
+// ============ Mini Trend Charts ============
+function makeMini(id, data, color, showInflection) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const ctx = el.getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map((_,i) => i),
+      datasets: [{
+        data: data,
+        borderColor: color,
+        backgroundColor: color + '20',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+// APAC trends
+makeMini('oilTrend', [78, 80, 82, 81, 84, 88, 90, 92.4], '#b8332c');
+makeMini('fxTrend', [1410, 1418, 1425, 1430, 1435, 1442, 1448, 1452], '#b8332c');
+makeMini('vndTrend', [0.058, 0.058, 0.057, 0.058, 0.058, 0.058, 0.058, 0.058], '#2d7a3f');
+makeMini('outboundTrend', [268, 270, 265, 260, 255, 248, 242, 238], '#b8332c');
+
+// Central KR trends
+makeMini('demandKrTrend', [110, 115, 122, 128, 132, 138, 140, 142], '#2d7a3f');
+makeMini('highwayTrend', [92, 95, 98, 100, 104, 108, 110, 112], '#2d7a3f');
+makeMini('festivalTrend', [62, 65, 68, 72, 76, 82, 85, 87], '#2d7a3f');
+makeMini('compKrTrend', [55, 58, 60, 62, 65, 72, 76, 78], '#c9772c');
+
+// South KR trends
+makeMini('jejuFlightTrend', [1620, 1650, 1680, 1700, 1720, 1760, 1820, 1842], '#2d7a3f');
+makeMini('jejuSupplyTrend', [115, 118, 120, 122, 124, 126, 127, 128], '#c9772c');
+makeMini('cruiseTrend', [48, 50, 52, 54, 56, 58, 62, 64], '#2d7a3f');
+makeMini('festivalSouthTrend', [72, 75, 78, 82, 84, 88, 90, 92], '#2d7a3f');
+
+// Channel micro charts (APAC)
+makeMini('agodaTrend', [110, 125, 140, 150, 160, 175, 185, 189], '#2d7a3f');
+makeMini('bookingTrend', [105, 112, 118, 125, 130, 135, 140, 142], '#2d7a3f');
+makeMini('expediaTrend', [120, 115, 112, 108, 105, 102, 100, 98], '#b8332c');
+makeMini('gsaGuamTrend', [62, 68, 72, 75, 78, 82, 85, 87], '#2d7a3f');
+makeMini('tripcomApacTrend', [52, 58, 62, 65, 68, 72, 74, 76], '#2d7a3f');
+
+// Channel micro charts (Central)
+makeMini('agodaKrTrend', [450, 480, 520, 560, 600, 640, 680, 701], '#2d7a3f');
+makeMini('yanoljaTrend', [820, 790, 760, 740, 720, 710, 695, 687], '#b8332c');
+makeMini('yogiyoTrend', [650, 620, 590, 560, 545, 535, 528, 522], '#b8332c');
+makeMini('tripcomKrTrend', [165, 170, 175, 178, 182, 184, 187, 189], '#2d7a3f');
+makeMini('smartInfiniTrend', [150, 180, 220, 265, 310, 350, 385, 406], '#c9772c');
+
+// Channel micro charts (South)
+makeMini('agodaSouthTrend', [220, 240, 260, 280, 290, 302, 312, 318], '#2d7a3f');
+makeMini('yanoljaSouthTrend', [320, 315, 308, 302, 298, 292, 288, 285], '#b8332c');
+makeMini('bookingSouthTrend', [155, 168, 180, 190, 198, 205, 210, 214], '#2d7a3f');
+makeMini('yogiyoSouthTrend', [200, 195, 188, 182, 178, 172, 168, 167], '#b8332c');
+makeMini('hotelsComTrend', [110, 115, 120, 125, 128, 132, 135, 138], '#2d7a3f');
+
+// Region card click navigation (smooth scroll)
+document.querySelectorAll('.region-card').forEach(card => {
+  card.addEventListener('click', function(e) {
+    e.preventDefault();
+    const hash = this.getAttribute('onclick').match(/hash='([^']+)'/);
+    if (hash) {
+      const target = document.querySelector(hash[1]);
+      if (target) target.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+  });
+});
+
+// Update timestamp
+function updateTime() {
+  const now = new Date();
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const pad = n => String(n).padStart(2, '0');
+  const txt = `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${days[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())} KST`;
+  const el = document.getElementById('timestamp');
+  if (el) el.textContent = txt;
+}
+updateTime();
+setInterval(updateTime, 60000);
+</script>
+
+</body>
+</html>
