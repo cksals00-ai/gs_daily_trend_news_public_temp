@@ -725,19 +725,24 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     # 주간 날짜
     html = apply_tpl(html, "weekly-date", weekly.get("_week", ""))
 
-    # Daily OTB
+    # 예약 기준일 = 빌드 전날 (자동 갱신)
+    now = datetime.now(KST)
+    yesterday = now - timedelta(days=1)
+    basis_date = f"{yesterday.month}/{yesterday.day}"
+    basis_full = f"~ {yesterday.month}/{yesterday.day} 예약 기준"
+
+    # Daily OTB (투숙월 기준 3개월)
     otb = weekly.get("daily_otb", {})
     if otb:
-        date_str = otb.get("date", "")
-        if date_str:
-            try:
-                dt = datetime.strptime(date_str, "%Y-%m-%d")
-                html = apply_tpl(html, "otb-date", f"{dt.month}/{dt.day}")
-            except ValueError:
-                html = apply_tpl(html, "otb-date", date_str)
-        html = apply_tpl(html, "otb-net", f'{otb.get("net_otb", 0):,}')
-        html = apply_tpl(html, "otb-booking", f'{otb.get("booking_rns", 0):,}')
-        html = apply_tpl(html, "otb-cancel", f'{otb.get("cancel_rns", 0):,}')
+        html = apply_tpl(html, "otb-date", basis_date)
+        months = otb.get("months", [])
+        for m_idx, m_data in enumerate(months[:3]):
+            net = m_data.get("net_otb")
+            booking = m_data.get("booking_rns")
+            cancel = m_data.get("cancel_rns")
+            html = apply_tpl(html, f"otb-m{m_idx}-net", f"{net:,}" if net is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-booking", f"{booking:,}" if booking is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-cancel", f"{cancel:,}" if cancel is not None else "—")
 
     # 전략 카드 (최대 2개)
     strategies = weekly.get("weekly_strategies", [])
@@ -745,6 +750,7 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
         prefix = f"strategy{s_idx + 1}"
         html = apply_tpl(html, f"{prefix}-subtitle", strat.get("subtitle", ""))
         html = apply_tpl(html, f"{prefix}-rate", str(strat.get("achievement_rate", "-")))
+        html = apply_tpl(html, f"{prefix}-basis", basis_full)
 
         channels = strat.get("channels", [])
         for c_idx, ch in enumerate(channels[:3]):
