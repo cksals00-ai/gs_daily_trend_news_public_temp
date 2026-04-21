@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>SONO & TRINITY · GS팀 데일리 트렌드 리포트</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1221,7 +1221,7 @@
     .signal-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 768px) {
-    body { font-size: 14px; }
+    body { font-size: 14px; -webkit-text-size-adjust: 100%; }
     .hero { padding: 36px 20px; }
     .region-section { padding: 36px 20px 44px; }
     .region-header { grid-template-columns: 1fr; }
@@ -1252,82 +1252,51 @@
       justify-content: center;
     }
   }
+  /* ===== 모바일 (480px 이하) — 통합 블록 ===== */
   @media (max-width: 480px) {
-    body { font-size: 13px; }
-    .hero { padding: 24px 14px; }
-    .region-section { padding: 24px 14px 32px; }
-    /* Hero 제목 */
-    .hero-title { font-size: clamp(22px, 6vw, 32px) !important; }
-    /* KPI 그리드: 강제 1칼럼 */
-    .hero-inner [style*="grid-template-columns:repeat(3,1fr)"],
-    .hero-inner [style*="grid-template-columns: repeat(3, 1fr)"] {
-      grid-template-columns: 1fr !important;
-      gap: 10px !important;
-    }
-    /* KPI 내부 3개월 서브그리드: 3칼럼 유지하되 gap/padding 축소 */
-    [style*="grid-template-columns:1.2fr 0.9fr 0.9fr"],
-    [style*="grid-template-columns: 1.2fr 0.9fr 0.9fr"] {
-      gap: 4px !important;
-    }
-    /* KPI 값 폰트 축소 */
-    [style*="font-size:28px"] { font-size: 22px !important; }
-    [style*="font-size:18px"] { font-size: 15px !important; }
-    /* 권역 선택: 1칼럼 */
-    .region-selector { grid-template-columns: 1fr !important; }
-    /* 경쟁사 요약: 1칼럼 */
-    .comp-summary { grid-template-columns: 1fr !important; }
-    /* 트렌드 그리드: 1칼럼 */
-    .trend-grid { grid-template-columns: 1fr !important; }
-    /* Hero 버튼 영역: 세로 배치 */
-    .hero-inner [style*="display:flex"][style*="gap:10px"] {
-      flex-direction: column !important;
-    }
-    .hero-inner [style*="display:flex"][style*="gap:10px"] > a {
-      width: 100% !important;
-      box-sizing: border-box;
-      justify-content: center;
-      font-size: 12px !important;
-    }
-    /* 테이블 폰트 축소 */
-    table { font-size: 11px !important; }
-    td, th { padding: 6px 8px !important; }
-    /* masthead 패딩 축소 */
-    .masthead-inner { padding: 0 14px; flex-direction: column; gap: 6px; }
-    .masthead-right { font-size: 11px; }
-    /* 카드 패딩 축소 */
-    .hero-inner [style*="padding:16px 20px"] { padding: 12px 14px !important; }
-    /* trend-now-value */
-    .trend-now-value { font-size: 24px !important; }
-    /* comp-summary-cell 세로 배치 */
-    .comp-summary-cell { border-right: none; padding-right: 0; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
-    .comp-summary-cell:last-child { border-bottom: none; }
-    /* top5 그리드: 1칼럼 */
-    .top5-grid { grid-template-columns: 1fr !important; }
-    .top5-card:nth-child(n+3) { display: block; }
-    /* 모노 폰트 영역 */
-    [style*="font-size:12.5px"] { font-size: 11.5px !important; }
-  }
+    body { font-size: 13px; line-height: 1.55; -webkit-text-size-adjust: 100%; }
 
-  /* ===== 모바일 최적화 (480px 이하) ===== */
-  @media (max-width: 480px) {
-    body { font-size: 13px; line-height: 1.55; }
+    /* --- 터치 최적화 --- */
+    a, button, .region-btn, .masthead-right a,
+    .top5-card, .signal-card, .news-item {
+      touch-action: manipulation;
+    }
 
-    /* 헤더/히어로 */
-    .masthead-inner { flex-direction: column; gap: 6px; align-items: flex-start !important; }
+    /* --- 헤더/마스트헤드 --- */
+    .masthead-inner {
+      flex-direction: column; gap: 6px;
+      align-items: flex-start !important;
+      padding: 0 14px;
+    }
     .masthead-right { font-size: 10px !important; }
+
+    /* --- 히어로 --- */
     .hero { padding: 24px 16px !important; }
     .hero-eyebrow { font-size: 11px !important; }
-    .hero-title { font-size: 22px !important; }
+    .hero-title { font-size: clamp(20px, 5.5vw, 28px) !important; }
     .hero-headline { padding: 14px !important; font-size: 13px !important; }
 
     /* 히어로 버튼: 세로 스택 */
-    .hero-headline + div { flex-direction: column !important; }
-    .hero-headline + div a { width: 100% !important; justify-content: center !important; padding: 12px 16px !important; font-size: 11.5px !important; }
+    .hero-headline + div,
+    .hero-inner [style*="display:flex"][style*="gap:10px"] {
+      flex-direction: column !important;
+    }
+    .hero-headline + div a,
+    .hero-inner [style*="display:flex"][style*="gap:10px"] > a {
+      width: 100% !important;
+      box-sizing: border-box;
+      justify-content: center !important;
+      padding: 12px 16px !important;
+      font-size: 11.5px !important;
+    }
 
     /* 데이터 출처 배너 */
-    .hero-headline ~ div[style*="background:rgba(201,160,99"] { flex-direction: column !important; gap: 4px !important; padding: 8px 12px !important; }
+    .hero-headline ~ div[style*="background:rgba(201,160,99"] {
+      flex-direction: column !important; gap: 4px !important;
+      padding: 8px 12px !important;
+    }
 
-    /* KPI 그리드: 1칼럼 */
+    /* --- KPI 그리드: 3칼럼 → 1칼럼 --- */
     [style*="grid-template-columns:repeat(3,1fr)"],
     [style*="grid-template-columns: repeat(3,1fr)"],
     [style*="grid-template-columns: repeat(3, 1fr)"] {
@@ -1335,7 +1304,7 @@
       gap: 10px !important;
     }
 
-    /* KPI 내부 3개월 서브그리드: 간격 축소 */
+    /* KPI 내부 3개월 서브그리드: gap 축소 */
     [style*="grid-template-columns:1.2fr"],
     [style*="grid-template-columns: 1.2fr"] {
       gap: 4px !important;
@@ -1348,44 +1317,60 @@
       font-size: 15px !important;
     }
 
-    /* 권역 선택 4칼럼 → 2칼럼 */
+    /* --- 권역 선택: 4칼럼 → 2칼럼 --- */
     [style*="grid-template-columns:repeat(4"],
     [style*="grid-template-columns: repeat(4"] {
       grid-template-columns: repeat(2, 1fr) !important;
       gap: 8px !important;
     }
+    .region-selector { grid-template-columns: repeat(2, 1fr) !important; }
 
-    /* 시그널 카드 */
+    /* --- 시그널 카드 --- */
     .signal-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
     .signal-card { padding: 14px !important; }
     .signal-card .signal-value { font-size: 20px !important; }
 
-    /* 트렌드 카드 */
+    /* --- 트렌드 --- */
     .trend-grid { grid-template-columns: 1fr !important; }
     .trend-now-value { font-size: 24px !important; }
 
-    /* 권역 섹션 */
+    /* --- 권역 섹션 --- */
     .region-section { padding: 24px 14px 32px !important; }
+    .region-header { grid-template-columns: 1fr !important; }
     .region-header h2 { font-size: 18px !important; }
+    .region-properties { display: none; }
 
-    /* TOP5 그리드: 1칼럼 */
+    /* --- TOP5 --- */
     .top5-grid { grid-template-columns: 1fr !important; }
     .top5-card { padding: 12px !important; }
+    .top5-card:nth-child(n+3) { display: block !important; }
 
-    /* 경쟁사 요약 */
+    /* --- 경쟁사 요약 --- */
     .comp-summary { grid-template-columns: 1fr !important; }
+    .comp-summary-cell {
+      border-right: none; padding-right: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .comp-summary-cell:last-child { border-bottom: none; }
+    .comp-row { grid-template-columns: 1fr !important; gap: 6px !important; }
+    .team-tag { border-left: none; padding-left: 0; margin-left: 0; }
 
-    /* 테이블 */
+    /* --- 테이블 (가로 스크롤) --- */
+    .table-wrap, .region-section > div[style*="overflow"] {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     table { font-size: 11.5px !important; }
-    th, td { padding: 6px 8px !important; }
+    th, td { padding: 6px 8px !important; white-space: nowrap; }
 
-    /* 전략 그리드 */
+    /* --- 전략 그리드 --- */
     .strategy-grid { grid-template-columns: 1fr !important; }
 
-    /* 뉴스 섹션 */
+    /* --- 뉴스 섹션 --- */
     .news-grid { grid-template-columns: 1fr !important; }
 
-    /* ★ 주요기사 (Featured News) 2칼럼 → 1칼럼 */
+    /* 주요기사 (Featured): 2칼럼 → 1칼럼 */
     [data-tpl-featured-news],
     [style*="grid-template-columns:1fr 1fr"],
     [style*="grid-template-columns: 1fr 1fr"] {
@@ -1393,23 +1378,25 @@
       gap: 10px !important;
     }
 
-    /* ★ 뉴스 카드 내부: 이모지 영역 축소 + 세로 레이아웃 */
+    /* 뉴스 카드: 가로 → 세로 레이아웃 */
     .news-item[style*="display:flex"] {
       flex-direction: column !important;
     }
     .news-item [style*="width:130px"],
     .news-item [style*="flex-shrink:0"][style*="width:130px"] {
       width: 100% !important;
-      height: 60px !important;
-      font-size: 36px !important;
+      height: 56px !important;
+      font-size: 32px !important;
       border-right: none !important;
       border-bottom: 1px solid var(--rule) !important;
+      display: flex; align-items: center; justify-content: center;
     }
     .news-item [style*="padding:16px 20px"] {
       padding: 12px 14px !important;
     }
     .news-item [style*="font-size:15px"][style*="font-weight:900"] {
       font-size: 14px !important;
+      line-height: 1.4 !important;
     }
     .news-item [style*="font-size:12px"][style*="line-height:1.55"] {
       font-size: 11px !important;
@@ -1419,26 +1406,29 @@
       overflow: hidden !important;
     }
 
-    /* 체인 플로우 */
+    /* --- 체인 플로우 --- */
     .chain-flow { grid-template-columns: 1fr !important; }
     .chain-node::after { display: none !important; }
 
-    /* 일반 패딩/마진 축소 */
-    [style*="padding:16px 20px"] { padding: 12px 14px !important; }
-    [style*="padding:20px 24px"] { padding: 14px 16px !important; }
-    [style*="margin-bottom:24px"] { margin-bottom: 16px !important; }
-
-    /* ★ 권역 카드 내부 텍스트 축소 */
+    /* --- 권역 카드 --- */
     .region-card { padding: 14px 12px !important; }
     .region-card-label { font-size: 9px !important; }
     .region-card h4 { font-size: 14px !important; }
     .region-card [style*="font-size:11px"] { font-size: 10px !important; }
 
-    /* ★ 저작권 배너 축소 */
-    body > div:first-child { font-size: 8px !important; padding: 4px 10px !important; }
+    /* --- 공통 패딩/마진 축소 --- */
+    [style*="padding:16px 20px"] { padding: 12px 14px !important; }
+    [style*="padding:20px 24px"] { padding: 14px 16px !important; }
+    [style*="margin-bottom:24px"] { margin-bottom: 16px !important; }
 
-    /* 저작권 배너 */
-    [style*="font-size:12px"][style*="letter-spacing:0.12em"] { font-size: 9px !important; letter-spacing: 0.05em !important; }
+    /* --- 저작권 배너 --- */
+    body > div:first-child { font-size: 8px !important; padding: 4px 10px !important; }
+    [style*="font-size:12px"][style*="letter-spacing:0.12em"] {
+      font-size: 9px !important; letter-spacing: 0.05em !important;
+    }
+
+    /* --- 모노 폰트 영역 --- */
+    [style*="font-size:12.5px"] { font-size: 11.5px !important; }
   }
 </style>
 </head>
