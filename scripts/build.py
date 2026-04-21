@@ -455,10 +455,10 @@ def build_news_html(news_data: dict) -> str:
       </div>
       
       <!-- 제목 -->
-      <div style="font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink);line-height:1.4;margin-bottom:8px;">{title}</div>
+      <div style="font-family:var(--serif);font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:10px;">{title}</div>
       
       <!-- 요약 -->
-      <div style="font-family:var(--sans);font-size:11.5px;color:var(--ink-muted);line-height:1.55;margin-bottom:10px;flex:1;">
+      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);line-height:1.6;margin-bottom:10px;flex:1;">
         {summary}
       </div>
       
