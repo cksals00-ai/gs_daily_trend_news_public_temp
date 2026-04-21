@@ -105,8 +105,8 @@ def git_commit_push(dry_run: bool = False) -> bool:
     except Exception:
         pass
     
-    # 3) 파일 추가
-    run_cmd(["git", "add", "data/", "docs/"])
+    # 3) 파일 추가 - 모든 변경 사항 포함 (.github, scripts, data, docs 등)
+    run_cmd(["git", "add", "data/", "docs/", "scripts/", ".github/"])
     
     # 4) 커밋 메시지 생성
     now = datetime.now(KST)
