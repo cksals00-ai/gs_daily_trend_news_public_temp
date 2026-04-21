@@ -578,14 +578,14 @@ def inject_news_section(html: str, news_data: dict) -> str:
         total = sum(len(c.get("articles", [])) for c in news_data.get("by_category", {}).values())
         logger.info(f"✓ 카테고리별 뉴스 주입: {len(news_data.get('by_category', {}))}개 카테고리, {total}건")
     
-    # 2. Featured 뉴스 주입
+    # 2. Featured 뉴스 주입 (마커 기반 - 누적 방지)
     featured_html = render_featured_news(news_data.get("featured", []))
     feat_pattern = re.compile(
-        r'(<div\s+data-tpl-featured-news[^>]*>)(.*?)(</div>)',
+        r'(<!-- FEATURED_INJECT_START -->)(.*?)(<!-- FEATURED_INJECT_END -->)',
         re.DOTALL
     )
     new_html, fn = feat_pattern.subn(
-        lambda m: m.group(1) + "\n" + featured_html + "\n  ",
+        lambda m: m.group(1) + "\n" + featured_html + "\n" + m.group(3),
         new_html, count=1
     )
     if fn > 0:
