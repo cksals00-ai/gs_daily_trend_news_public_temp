@@ -43,6 +43,38 @@ _CLUSTER_FALLBACK = "https://wabi-korea-central-a-primary-redirect.analysis.wind
 # 조회할 3개월
 STAY_MONTHS = ["202604", "202605", "202606"]
 
+# 채널 구분 매핑 (거래처명 키워드 → 채널 티어)
+CHANNEL_TIER_MAP = {
+    # 국내 OTA
+    "야놀자": "국내",
+    "여기어때": "국내",
+    "네이버": "국내",
+    "카카오": "국내",
+    "쿠팡": "국내",
+    "트립비토즈": "국내",
+    "하나투어": "국내",
+    "모두투어": "국내",
+    "인터파크": "국내",
+    "티몬": "국내",
+    "위메프": "국내",
+    "GRT": "국내",
+    "GS샵": "국내",
+    "소노호텔": "국내",
+    # 글로벌 OTA
+    "익스피디아": "글로벌",
+    "에어비앤비": "글로벌",
+    "부킹닷컴": "글로벌",
+    "아고다": "글로벌",
+    "씨트립": "글로벌",
+    "트립닷컴": "글로벌",
+    "호텔스닷컴": "글로벌",
+    "Expedia": "글로벌",
+    "Booking": "글로벌",
+    "Agoda": "글로벌",
+    "Ctrip": "글로벌",
+    "Trip.com": "글로벌",
+}
+
 # 권역 매핑 (사업장명 키워드 → 권역)
 REGION_MAP = {
     # Vivaldi
@@ -256,6 +288,49 @@ def _build_static_mapping_query() -> dict:
     }
 
 
+def _build_channel_query(stay_month: str, table_name: str = "data_raw") -> dict:
+    """
+    거래처(채널)별 실적 쿼리 - OTA TOP 랭킹 수집용
+    data_raw 또는 data_lastraw에서 거래처별 RNS 합산
+    """
+    year = int(stay_month[:4])
+    month = int(stay_month[4:6])
+    if table_name == "data_lastraw":
+        year = year - 1
+    return {
+        "version": "1.0.0",
+        "queries": [{
+            "Query": {"Commands": [{
+                "SemanticQueryDataShapeCommand": {
+                    "Query": {
+                        "Version": 2,
+                        "From": [
+                            {"Name": "d", "Entity": table_name, "Type": 0},
+                        ],
+                        "Select": [
+                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "거래처"}, "Name": f"{table_name}.거래처"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum({table_name}.RNS)"},
+                        ],
+                        "Where": [
+                            {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
+                            {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "투숙년도"}}, "Right": {"Literal": {"Value": f"{year}L"}}}}},
+                        ],
+                    },
+                    "Binding": {
+                        "Primary": {"Groupings": [{"Projections": [0, 1]}]},
+                        "DataReduction": {"DataVolume": 4, "Primary": {"Window": {"Count": 200}}},
+                        "Version": 1,
+                    },
+                }
+            }]},
+            "QueryId": "",
+            "ApplicationContext": {"DatasetId": DATASET_ID, "Sources": [{"ReportId": REPORT_ID, "VisualId": ""}]},
+        }],
+        "cancelQueries": [],
+        "modelId": MODEL_ID,
+    }
+
+
 # ─────────────────────────────────────────────
 # 쿼리 실행 + 파싱
 # ─────────────────────────────────────────────
@@ -332,6 +407,13 @@ def detect_region(property_name: str) -> str:
         if keyword in property_name:
             return region
     return "unknown"
+
+
+def detect_channel_tier(name: str) -> str:
+    for keyword, tier in CHANNEL_TIER_MAP.items():
+        if keyword.lower() in name.lower():
+            return tier
+    return "신규"
 
 
 def calculate_adr(rns: int, rev_won: int) -> int:
@@ -528,10 +610,63 @@ def main():
         "south": properties_by_region["south"],
         "apac": properties_by_region["apac"],
     }
-    
-    # Hero OTA 채널 데이터도 자동 수집 가능 (추후)
-    # 지금은 property_performance만
-    
+
+    # ─────────────────────────────────────────
+    # 채널(거래처)별 실적 수집 — OTA TOP 랭킹
+    # ─────────────────────────────────────────
+    logger.info("\n[채널별 실적 수집]")
+    channel_monthly: dict[str, dict] = {}  # {채널명: {"2026-04": {rns, yoy_pct}, ...}}
+
+    for stay_month in STAY_MONTHS:
+        month_label = f"{stay_month[:4]}-{stay_month[4:6]}"
+
+        ch_result = execute_query(_build_channel_query(stay_month, "data_raw"), f"{month_label} 채널실적")
+        ch_rows = parse_dsr(ch_result, expected_cols=2) if ch_result else []
+        ch_dict: dict[str, int] = {}
+        for row in ch_rows:
+            if len(row) < 2 or not row[0]:
+                continue
+            ch_dict[str(row[0]).strip()] = round(float(row[1] or 0))
+
+        ch_last_result = execute_query(_build_channel_query(stay_month, "data_lastraw"), f"{month_label} 채널전년")
+        ch_last_rows = parse_dsr(ch_last_result, expected_cols=2) if ch_last_result else []
+        ch_last_dict: dict[str, int] = {}
+        for row in ch_last_rows:
+            if len(row) < 2 or not row[0]:
+                continue
+            ch_last_dict[str(row[0]).strip()] = round(float(row[1] or 0))
+
+        for name, rns in ch_dict.items():
+            if name not in channel_monthly:
+                channel_monthly[name] = {}
+            last_rns = ch_last_dict.get(name, 0)
+            yoy_pct = round(((rns - last_rns) / last_rns) * 100, 1) if last_rns > 0 else 0
+            channel_monthly[name][month_label] = {"rns": rns, "yoy_pct": yoy_pct}
+
+    # 4월 RNS 기준 TOP 10 정렬
+    ranked_channels = sorted(
+        channel_monthly.items(),
+        key=lambda x: x[1].get("2026-04", {}).get("rns", 0),
+        reverse=True,
+    )[:10]
+
+    channels_list = []
+    for rank, (name, monthly_data) in enumerate(ranked_channels, 1):
+        entry: dict = {"rank": rank, "name": name, "tier": detect_channel_tier(name)}
+        entry.update(monthly_data)
+        channels_list.append(entry)
+
+    if channels_list:
+        notes["major_ota_performance"] = {
+            "_description": f"Power BI 채널별 자동 수집 ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+            "_status": "auto_synced",
+            "_last_sync": datetime.now().isoformat(),
+            "channels": channels_list,
+        }
+        logger.info(f"  ✓ 채널별 실적 수집 완료: TOP {len(channels_list)}개")
+    else:
+        logger.warning("  ⚠ 채널별 실적 수집 실패 - 기존 데이터 유지")
+
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
     
     # 별도 메타 저장

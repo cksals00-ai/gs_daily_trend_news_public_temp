@@ -32,7 +32,7 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
 HTML_FILE = DOCS_DIR / "index.html"
-ADMIN_INPUT_FILE = DATA_DIR / "admin_input.json"
+OTB_FILE = DOCS_DIR / "otb.html"
 KST = timezone(timedelta(hours=9))
 STAY_MONTHS = ["2026-04", "2026-05", "2026-06"]
 MONTH_LABELS = {"2026-04": "4월", "2026-05": "5월", "2026-06": "6월"}
@@ -79,19 +79,6 @@ def replace_block(html: str, attr_name: str, inner_html: str) -> str:
 
 def escape_html(text) -> str:
     return html_module.escape(str(text), quote=True)
-
-
-def replace_tpl_html(html: str, selector: str, new_html: str) -> str:
-    """data-tpl-XXX 요소 내부를 HTML(멀티라인 포함) 통째 교체"""
-    pattern = re.compile(
-        rf'(<[^>]*\bdata-tpl-{re.escape(selector)}\b[^>]*>)(.*?)(</\w)',
-        re.DOTALL,
-    )
-    result, n = pattern.subn(
-        lambda m: m.group(1) + new_html + m.group(3),
-        html, count=1,
-    )
-    return result
 
 
 # ─────────────────────────────────────────────
@@ -430,9 +417,15 @@ def inject_signal_cards(html: str, prop_data: dict) -> str:
             m4 = prop.get("2026-04", {})
             achievement = m4.get("achievement", 0)
             yoy_pct = m4.get("yoy_pct", 0)
-            
-            # 달성률에 따른 색상
-            if achievement >= 100:
+            rns_check = m4.get("rns", 0)
+            target_check = m4.get("target_rns", 0)
+
+            # 달성률에 따른 색상 (목표 미입력 시 중립)
+            if target_check == 0 and rns_check > 0:
+                dot_color = "yellow"
+                value_class = ""
+                value_color = "var(--ink-muted)"
+            elif achievement >= 100:
                 dot_color = "green"
                 value_class = "up"
                 value_color = "var(--positive)"
@@ -456,15 +449,26 @@ def inject_signal_cards(html: str, prop_data: dict) -> str:
                 yoy_text = "▬ 전년比 ±0%"
                 yoy_color = "var(--ink-faint)"
             
+            # 목표 미입력 시 중립 표시 (achievement=0 but rns>0)
+            rns = m4.get("rns", 0)
+            target_rns = m4.get("target_rns", 0)
+            if target_rns == 0 and rns > 0:
+                sub_text = f"{rns:,}실 (목표 미입력)"
+                display_value = "—"
+                value_class = ""
+            else:
+                sub_text = f"4월 달성 {achievement:.1f}%"
+                display_value = f"{achievement:.1f}%"
+
             cards_html.append(
                 f'    <div class="signal-card">\n'
                 f'      <div class="signal-dot {dot_color}"></div>\n'
                 f'      <div>\n'
                 f'        <div class="signal-name">{name}</div>\n'
-                f'        <div class="signal-sub" style="font-family:\'Pretendard Variable\',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 {achievement:.1f}%</div>\n'
+                f'        <div class="signal-sub" style="font-family:\'Pretendard Variable\',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">{sub_text}</div>\n'
                 f'        <div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;margin-top:2px;color:{yoy_color};">{yoy_text}</div>\n'
                 f'      </div>\n'
-                f'      <div class="signal-value {value_class}">{achievement:.1f}%</div>\n'
+                f'      <div class="signal-value {value_class}">{display_value}</div>\n'
                 f'    </div>'
             )
         
@@ -641,12 +645,8 @@ def build_news_html(news_data: dict) -> str:
         if not articles:
             continue
 
-        NEWS_VISIBLE_LIMIT = 10
-        visible_articles = articles[:NEWS_VISIBLE_LIMIT]
-        hidden_articles = articles[NEWS_VISIBLE_LIMIT:]
+        # 카테고리 헤더
         article_count = len(articles)
-        section_id = "nm-" + cat_name.replace("/", "-").replace(" ", "")
-
         section_html = f'''
   <!-- ===== {cat_name} ===== -->
   <div class="news-category-section" style="margin-bottom:24px;">
@@ -658,8 +658,8 @@ def build_news_html(news_data: dict) -> str:
       <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">{article_count} Articles</span>
     </div>
     <div>'''
-
-        def render_article(art):
+        
+        for art in articles:
             tag = escape_html(art.get("tag", ""))
             title = escape_html(art.get("title", ""))
             source = escape_html(art.get("source", ""))
@@ -669,7 +669,8 @@ def build_news_html(news_data: dict) -> str:
             r_label = region_labels.get(region, region)
             is_new = art.get("is_new", False)
             new_badge = '<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>' if is_new else ''
-            return f'''
+
+            section_html += f'''
       <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -689,20 +690,8 @@ def build_news_html(news_data: dict) -> str:
           </div>
         </div>
       </a>'''
-
-        for art in visible_articles:
-            section_html += render_article(art)
-
-        if hidden_articles:
-            section_html += f'\n    </div>\n    <div id="{section_id}" class="news-more-wrap" style="display:none;">'
-            for art in hidden_articles:
-                section_html += render_article(art)
-            section_html += f'''\n    </div>
-    <button class="news-more-btn" onclick="toggleNewsMore(this,\'{section_id}\')" data-count="{len(hidden_articles)}">+ {len(hidden_articles)}개 더보기</button>'''
-        else:
-            section_html += '\n    </div>'
-
-        section_html += '\n  </div>'
+        
+        section_html += '\n    </div>\n  </div>'
         sections.append(section_html)
     
     return "\n".join(sections)
@@ -895,270 +884,8 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     return html
 
 
-def inject_admin_input(html: str, admin: dict) -> str:
-    """관리자 키인(admin_input.json) 데이터를 index.html에 주입 (모든 자동 주입 이후 마지막 실행).
-
-    주입 대상:
-      - data-tpl-headline        : 선택된 인사이트 or 직접 작성 헤드라인
-      - data-tpl-updated_by      : 작성자
-      - data-tpl-action-{region} : 권역별 액션 알림
-      - ADMIN_NOTICE_START/END   : 관리자 공지 배너
-      - data-tpl-strategy{1,2}-* : 선택된 전략 카드 데이터
-    """
-    if not admin:
-        return html
-
-    # ── 헤드라인: selected_insights 우선, 없으면 headline 텍스트 ──
-    type_colors = {
-        "positive": "#4caf6f",
-        "warning":  "#e8a256",
-        "negative": "#e57373",
-        "info":     "#5a9fc4",
-    }
-    selected = admin.get("selected_insights", [])
-    if selected:
-        parts = []
-        for ins in selected:
-            text  = escape_html(ins.get("text", "").strip())
-            color = type_colors.get(ins.get("type", "info"), "#5a9fc4")
-            src   = ins.get("source", "")
-            src_html = (
-                f'<span style="font-family:var(--mono);font-size:10.5px;'
-                f'letter-spacing:0.1em;color:{color};opacity:0.65;margin-right:6px;">'
-                f'[{src}]</span>'
-            ) if src else ""
-            parts.append(f'<div style="margin-bottom:4px;">{src_html}'
-                         f'<span style="color:{color};">{text}</span></div>')
-        html = replace_tpl_html(html, "headline", "\n".join(parts))
-    else:
-        headline = admin.get("headline", "").strip()
-        if headline:
-            html = replace_tpl_html(html, "headline", escape_html(headline))
-
-    # ── 작성자 ──
-    updated_by = admin.get("_updated_by", "").strip()
-    if updated_by:
-        html = apply_tpl(html, "updated_by", f"by {escape_html(updated_by)}")
-
-    # ── 권역별 액션 알림 ──
-    alerts = admin.get("action_alerts", {})
-    for region in ("vivaldi", "central", "south", "apac"):
-        text = alerts.get(region, "").strip()
-        if text:
-            html = apply_tpl(html, f"action-{region}", escape_html(text))
-
-    # ── 관리자 공지 배너 ──
-    html = re.sub(
-        r"<!-- ADMIN_NOTICE_START -->.*?<!-- ADMIN_NOTICE_END -->",
-        "<!-- ADMIN_NOTICE_START --><!-- ADMIN_NOTICE_END -->",
-        html, flags=re.DOTALL,
-    )
-    notice = admin.get("notices", "").strip()
-    if notice:
-        banner = (
-            "<!-- ADMIN_NOTICE_START -->"
-            '<div style="margin-bottom:16px;padding:12px 18px;'
-            "background:rgba(232,162,86,0.10);border:1px solid rgba(232,162,86,0.32);"
-            "border-left:3px solid #e8a256;border-radius:5px;"
-            'font-size:13.5px;color:#e0e0e3;line-height:1.65;">'
-            '<span style="font-family:var(--mono);font-size:10.5px;font-weight:800;'
-            'color:#e8a256;letter-spacing:0.2em;margin-right:10px;">📢 NOTICE</span>'
-            f"{escape_html(notice)}"
-            "</div>"
-            "<!-- ADMIN_NOTICE_END -->"
-        )
-        html = html.replace("<!-- ADMIN_NOTICE_START --><!-- ADMIN_NOTICE_END -->", banner, 1)
-
-    # ── 전략 카드 선택 주입 ──
-    for slot_data in admin.get("selected_strategies", []):
-        slot_num = slot_data.get("slot", 1)
-        prefix   = f"strategy{slot_num}"
-        if slot_data.get("subtitle"):
-            html = apply_tpl(html, f"{prefix}-subtitle", escape_html(slot_data["subtitle"]))
-        if slot_data.get("achievement_rate") is not None:
-            html = apply_tpl(html, f"{prefix}-rate", f'{slot_data["achievement_rate"]}%')
-        if slot_data.get("rns"):
-            html = apply_tpl(html, f"{prefix}-rns", f'{slot_data["rns"]:,}')
-        if slot_data.get("adr"):
-            html = apply_tpl(html, f"{prefix}-adr", str(slot_data["adr"]))
-        if slot_data.get("rev"):
-            html = apply_tpl(html, f"{prefix}-rev", str(slot_data["rev"]))
-        for c_idx, ch in enumerate(slot_data.get("channels", [])[:3]):
-            html = apply_tpl(html, f"{prefix}-ch{c_idx}-rns",  f'{ch.get("rns", 0):,}')
-            html = apply_tpl(html, f"{prefix}-ch{c_idx}-rate", f'{ch.get("achievement_rate", 0)}%')
-
-    logger.info("✓ 관리자 키인 데이터 주입")
-    return html
-
-
-def generate_admin_suggestions(
-    html_dir: Path,
-    data: dict,
-    news_data: dict,
-    comp_data: dict,
-    weekly_data: dict,
-) -> None:
-    """데이터 기반 인사이트·전략카드 제안을 docs/admin_suggestions.json으로 생성"""
-    insights = []
-
-    # ── 1) KPI 기반 ──────────────────────────────────────
-    kpi_map = {
-        "kpi_1": ("비발디 권역 달성률", "🍷"),
-        "kpi_2": ("중부권 Pacing",    "🏔️"),
-        "kpi_3": ("주의 사업장 수",   "🏨"),
-    }
-    for key, (label, emoji) in kpi_map.items():
-        kpi  = data.get("executive_kpi", {}).get(key, {})
-        m    = kpi.get("stay_months", {}).get("2026-04", {})
-        unit = m.get("unit", "")
-        delta = m.get("delta", "")
-        try:
-            val = float(str(m.get("value", "")).replace(",", "").replace("%", ""))
-        except ValueError:
-            continue
-        if unit == "%":
-            if val < 80:
-                insights.append({"id": f"kpi-{key}", "type": "negative", "source": "KPI",
-                    "text": f"{emoji} {label} {val}{unit} — 목표 대비 {100-val:.1f}%p 부진. {delta}. 즉각 점검."})
-            elif val < 90:
-                insights.append({"id": f"kpi-{key}", "type": "warning", "source": "KPI",
-                    "text": f"{emoji} {label} {val}{unit} — 목표 미달. {delta}. 채널 믹스 점검 권장."})
-            elif val >= 105:
-                insights.append({"id": f"kpi-{key}", "type": "positive", "source": "KPI",
-                    "text": f"{emoji} {label} {val}{unit} — 목표 초과. {delta}. 수익 최적화 기회."})
-
-    # ── 2) OTB 기반 ──────────────────────────────────────
-    for m in weekly_data.get("daily_otb", {}).get("months", []):
-        net     = m.get("net_otb")
-        booking = m.get("booking_rns") or 0
-        cancel  = m.get("cancel_rns")  or 0
-        lbl     = m.get("label", "")
-        if net is None:
-            continue
-        cancel_rate = round(cancel / booking * 100, 1) if booking > 0 else 0
-        if cancel_rate >= 28:
-            insights.append({"id": "otb-cancel", "type": "warning", "source": "OTB",
-                "text": f"📉 {lbl} 취소율 {cancel_rate}% (예약 {booking:,}실 / 취소 {cancel:,}실 / 순OTB {net:,}실). 선불 패키지·취소 정책 검토."})
-        elif net > 400:
-            insights.append({"id": "otb-net", "type": "positive", "source": "OTB",
-                "text": f"📈 {lbl} 순 OTB {net:,}실 — 예약 모멘텀 긍정적. 판매가 최적화 기회."})
-        break  # 첫 번째 월만
-
-    # ── 3) 경쟁사 기반 ───────────────────────────────────
-    region_kr = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC"}
-    for c in [x for x in comp_data.get("competitors", []) if x.get("threat_level") == "high"][:2]:
-        brand  = c.get("brand", "")
-        disc   = c.get("discount_pct", 0)
-        rlabel = region_kr.get(c.get("region", ""), c.get("region", ""))
-        insights.append({"id": f"comp-{brand}", "type": "negative", "source": "경쟁사",
-            "text": f"⚠️ {brand} -{disc}% 할인 공세 ({rlabel} 권역). 가격 격차 모니터링 및 차별화 강화 필요."})
-
-    # ── 4) 뉴스 기반 ─────────────────────────────────────
-    top_news = news_data.get("top_news", [])
-    candidates = [a for a in top_news if a.get("is_new")] or top_news
-    for art in candidates[:3]:
-        title = art.get("title", "").strip()
-        src   = art.get("source", "")
-        emoji = art.get("category_emoji", "📰")
-        if title:
-            clean = re.sub(r"\s*[-—]\s*[^-—]+$", "", title).strip()
-            insights.append({"id": f"news-{abs(hash(title)) % 10000}", "type": "info", "source": "뉴스",
-                "text": f"{emoji} [{src}] {clean}"})
-
-    # ── 전략 카드 옵션 생성 ──────────────────────────────
-    region_meta = {
-        "vivaldi": ("비발디파크", "🍷", "#d97a7a"),
-        "central": ("한국중부",   "🏔️", "#6ba3c4"),
-        "south":   ("한국남부",   "🌊", "#6db58a"),
-        "apac":    ("APAC",      "🌏", "#a892c8"),
-    }
-    strategy_options: list = []
-    seen_ids: set = set()
-
-    for s in weekly_data.get("weekly_strategies", []):
-        entry = {**s, "_current": True}
-        strategy_options.append(entry)
-        seen_ids.add(s.get("id", ""))
-
-    prop_perf = data.get("property_performance", {})
-    for region_key, (region_name, emoji, color) in region_meta.items():
-        props = prop_perf.get(region_key, [])
-        if not isinstance(props, list):
-            continue
-        for prop in props:
-            pname = prop.get("name", "")
-            if not pname:
-                continue
-            clean_name = re.sub(r"^\d+\.", "", pname).strip()
-            m_data = prop.get("2026-04", {})
-            rns    = m_data.get("rns", 0)
-            ach    = m_data.get("achievement", 0)
-            yoy    = m_data.get("yoy_pct", 0)
-            status = ("over" if ach >= 100 else "on" if ach >= 85 else
-                      "under" if ach > 0 else "no_data")
-            opt_id = f"{region_key}-{clean_name}"
-            if opt_id in seen_ids:
-                continue
-            strategy_options.append({
-                "id": opt_id,
-                "title": f"{emoji} {clean_name}",
-                "subtitle": region_name,
-                "property": pname,
-                "clean_name": clean_name,
-                "region": region_key,
-                "region_color": color,
-                "target_month": "5월",
-                "achievement_rate": ach,
-                "rns": rns,
-                "adr": m_data.get("adr", 0),
-                "rev": m_data.get("rev", 0),
-                "yoy_pct": yoy,
-                "status": status,
-                "channels": [],
-                "_current": False,
-            })
-            seen_ids.add(opt_id)
-
-    out = {
-        "generated_at": datetime.now(KST).isoformat(),
-        "insights": insights[:8],
-        "strategy_options": strategy_options,
-        "current_strategies": weekly_data.get("weekly_strategies", []),
-    }
-    out_path = html_dir / "admin_suggestions.json"
-    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info(f"✓ 관리자 제안 데이터: {len(insights)}개 인사이트, {len(strategy_options)}개 전략 옵션")
-
-
-def main():
-    logger.info("=" * 60)
-    logger.info("V7 대시보드 빌드 (TOP 4 + 사업장 매트릭스 + 뉴스 개선)")
-    logger.info("=" * 60)
-    
-    enriched = load_json(DATA_DIR / "enriched_notes.json")
-    notes = load_json(DATA_DIR / "daily_notes.json")
-    news_data = load_json(DATA_DIR / "news_latest.json")
-    comp_data = load_json(DATA_DIR / "competitors.json")
-    weekly_data = load_json(DATA_DIR / "weekly_report.json")
-    admin_data = load_json(ADMIN_INPUT_FILE)
-    
-    data = enriched if enriched else notes
-    if not data:
-        logger.error("데이터 없음")
-        sys.exit(1)
-    
-    if not HTML_FILE.exists():
-        logger.error(f"HTML 템플릿 없음: {HTML_FILE}")
-        sys.exit(1)
-    
-    html = HTML_FILE.read_text(encoding="utf-8")
-    logger.info(f"✓ HTML 로드 ({len(html):,} bytes)")
-
-    # 외부 링크
-    html = inject_external_links(html, notes.get("external_links", {}))
-    
-    # 날짜
-    now = datetime.now(KST)
+def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime) -> str:
+    """index.html과 otb.html 공통 주입 함수"""
     day_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
     report_date = data.get("report_date", now.strftime("%Y-%m-%d"))
     try:
@@ -1168,57 +895,73 @@ def main():
     except ValueError:
         display_date = report_date
         timestamp = now.strftime("%Y.%m.%d %H:%M KST")
-    
+
+    html = inject_external_links(html, notes.get("external_links", {}))
     html = apply_tpl(html, "date", display_date)
     html = apply_tpl(html, "timestamp", timestamp)
-    
     headline = data.get("today_headline", {})
     if headline.get("text"):
         html = apply_tpl(html, "headline", headline["text"])
     html = apply_tpl(html, "updated_by", f"by {data.get('_updated_by', 'GS팀 · Haein Kim Manager')}")
-    
-    # KPI
     html = inject_kpi_3months(html, notes.get("executive_kpi", {}))
-    
-    # 권역 카드 월별 실적/목표/달성률
     html = inject_region_monthly(html, notes.get("property_performance", {}))
-    
-    # 액션 알림
     actions = data.get("action_alerts", {})
     for key in ("vivaldi", "central", "south", "apac"):
         text = actions.get(key, "")
         if text:
             html = apply_tpl(html, f"action-{key}", text)
-    
-    # OTA TOP 4
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
-    
-    # 사업장 신호등 (BI 자동 수집 데이터)
     html = inject_signal_cards(html, notes.get("property_performance", {}))
-    
-    # 경쟁사
     html = inject_competitor_section(html, comp_data)
-    
-    # 주간 리포트
     html = inject_weekly_report(html, weekly_data)
-
-    # 뉴스
-    html = inject_news_section(html, news_data)
-    
-    # 빌드 메타
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     html = apply_tpl(html, "build", build_meta)
+    return html
 
-    # 관리자 키인 — 마지막에 실행하여 자동 수집 데이터를 덮어씀
-    html = inject_admin_input(html, admin_data)
 
-    HTML_FILE.write_text(html, encoding="utf-8")
-
-    # 관리자 키인 제안 데이터 생성 (admin.html용 suggestions.json)
-    generate_admin_suggestions(DOCS_DIR, data, news_data, comp_data, weekly_data)
-    
+def main():
     logger.info("=" * 60)
-    logger.info(f"✓ 빌드 완료 · 크기: {len(html):,} bytes · 시각: {build_meta}")
+    logger.info("V7 대시보드 빌드 (index.html + otb.html)")
+    logger.info("=" * 60)
+
+    enriched = load_json(DATA_DIR / "enriched_notes.json")
+    notes = load_json(DATA_DIR / "daily_notes.json")
+    news_data = load_json(DATA_DIR / "news_latest.json")
+    comp_data = load_json(DATA_DIR / "competitors.json")
+    weekly_data = load_json(DATA_DIR / "weekly_report.json")
+
+    data = enriched if enriched else notes
+    if not data:
+        logger.error("데이터 없음")
+        sys.exit(1)
+
+    if not HTML_FILE.exists():
+        logger.error(f"HTML 템플릿 없음: {HTML_FILE}")
+        sys.exit(1)
+
+    now = datetime.now(KST)
+
+    # ── index.html 빌드 ──
+    html = HTML_FILE.read_text(encoding="utf-8")
+    logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
+    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now)
+    html = inject_news_section(html, news_data)
+    HTML_FILE.write_text(html, encoding="utf-8")
+    logger.info(f"✓ index.html 빌드 완료 ({len(html):,} bytes)")
+
+    # ── otb.html 빌드 ──
+    if OTB_FILE.exists():
+        otb_html = OTB_FILE.read_text(encoding="utf-8")
+        logger.info(f"✓ otb.html 로드 ({len(otb_html):,} bytes)")
+        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now)
+        OTB_FILE.write_text(otb_html, encoding="utf-8")
+        logger.info(f"✓ otb.html 빌드 완료 ({len(otb_html):,} bytes)")
+    else:
+        logger.info("  otb.html 없음 - 스킵")
+
+    build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
+    logger.info("=" * 60)
+    logger.info(f"✓ 전체 빌드 완료 · {build_meta}")
     logger.info("=" * 60)
 
 
