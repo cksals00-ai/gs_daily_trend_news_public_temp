@@ -2,708 +2,927 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>관리자 키인 · GS팀 트렌드 리포트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
-  :root {
-    --bg: #1a1d23;
-    --bg-card: #252932;
-    --bg-deep: #14171c;
-    --bg-soft: #2d3138;
-    --bg-hover: #353a44;
-    --ink: #f5f5f7;
-    --ink-soft: #e0e0e3;
-    --ink-muted: #a8acb3;
-    --ink-faint: #7a7e85;
-    --gold: #c9a063;
-    --gold-bright: #e6b970;
-    --positive: #4caf6f;
-    --positive-bg: #1f3a28;
-    --warning: #e8a256;
-    --warning-bg: #3d2e1a;
-    --negative: #e57373;
-    --negative-bg: #3d1f1f;
-    --info: #5a9fc4;
-    --info-bg: #1a2e3d;
-    --region-vivaldi: #d97a7a;
-    --region-vivaldi-bg: #2e2228;
-    --region-apac: #a892c8;
-    --region-apac-bg: #252035;
-    --region-center: #6ba3c4;
-    --region-center-bg: #1f2a35;
-    --region-south: #6db58a;
-    --region-south-bg: #1f2e28;
-    --rule: rgba(255,255,255,0.12);
-    --rule-strong: rgba(255,255,255,0.22);
-    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-    --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--sans);
-    line-height: 1.65;
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    word-break: keep-all;
-    padding-bottom: 84px;
-    overflow-x: hidden;
-  }
-  *, *::before, *::after { font-family: inherit; }
-  input, button, textarea, select {
-    font-family: var(--sans) !important;
-  }
+/* ─── CSS Variables (identical to index.html) ─── */
+:root {
+  --bg:#1a1d23; --bg-card:#252932; --bg-deep:#14171c;
+  --bg-soft:#2d3138; --bg-hover:#353a44;
+  --ink:#f5f5f7; --ink-soft:#e0e0e3; --ink-muted:#a8acb3; --ink-faint:#7a7e85;
+  --gold:#c9a063; --gold-bright:#e6b970;
+  --positive:#4caf6f; --positive-bg:#1f3a28;
+  --warning:#e8a256;  --warning-bg:#3d2e1a;
+  --negative:#e57373; --negative-bg:#3d1f1f;
+  --info:#5a9fc4;     --info-bg:#1a2e3d;
+  --vivaldi:#d97a7a;  --vivaldi-bg:#2e2228;
+  --central:#6ba3c4;  --central-bg:#1f2a35;
+  --south:#6db58a;    --south-bg:#1f2e28;
+  --apac:#a892c8;     --apac-bg:#252035;
+  --rule:rgba(255,255,255,0.12); --rule-strong:rgba(255,255,255,0.22);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --radius:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.65;font-size:15px;font-weight:500;letter-spacing:-0.01em;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;
+  padding-bottom:80px;overflow-x:hidden;
+}
+*,*::before,*::after{font-family:inherit;}
+input,button,textarea,select{font-family:var(--sans)!important;}
 
-  /* ===== Masthead ===== */
-  .masthead {
-    background: var(--bg-deep);
-    border-bottom: 1px solid var(--rule-strong);
-    padding: 0 28px;
-    height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .logo { display: flex; align-items: baseline; gap: 12px; }
-  .logo-mark {
-    font-family: var(--mono);
-    font-size: 13.5px;
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    color: var(--gold-bright);
-  }
-  .logo-sub {
-    font-size: 12px;
-    color: var(--ink-muted);
-    letter-spacing: 0.04em;
-    font-weight: 600;
-  }
-  .masthead-right { display: flex; align-items: center; gap: 10px; }
-  .nav-link {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--ink-muted);
-    text-decoration: none;
-    letter-spacing: 0.1em;
-    padding: 6px 12px;
-    border: 1px solid var(--rule);
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-  .nav-link:hover { color: var(--gold); border-color: rgba(201,160,99,0.5); }
+/* ─── Masthead ─── */
+.mast{
+  background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);
+  padding:0 24px;height:54px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:200;
+}
+.mast-logo{display:flex;align-items:baseline;gap:10px;}
+.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright);}
+.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600;}
+.mast-nav{display:flex;align-items:center;gap:8px;}
+.nav-btn{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);
+  text-decoration:none;letter-spacing:.1em;padding:6px 11px;
+  border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer;
+}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5);}
 
-  /* ===== Page layout ===== */
-  .page-wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px; }
+/* ─── Layout ─── */
+.wrap{max-width:900px;margin:0 auto;padding:26px 18px 40px;}
 
-  .page-title {
-    margin-bottom: 26px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--rule);
-  }
-  .page-eyebrow {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.25em;
-    color: var(--ink-faint);
-    margin-bottom: 7px;
-    font-weight: 700;
-  }
-  .page-title h1 {
-    font-size: 21px;
-    font-weight: 800;
-    color: var(--ink);
-    margin-bottom: 7px;
-    letter-spacing: -0.02em;
-  }
-  .page-title p {
-    font-size: 13px;
-    color: var(--ink-muted);
-    line-height: 1.75;
-  }
-  .page-title code {
-    font-family: var(--mono);
-    font-size: 12px;
-    background: var(--bg-soft);
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: var(--gold);
-  }
+/* ─── Page Title ─── */
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700;}
+.page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em;}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.75;}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:1px 5px;border-radius:3px;color:var(--gold);}
 
-  /* ===== Form Card ===== */
-  .form-card {
-    background: var(--bg-card);
-    border: 1px solid var(--rule);
-    border-radius: 8px;
-    padding: 22px 24px;
-    margin-bottom: 14px;
-  }
-  .form-card-header {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--rule);
-  }
-  .card-icon { font-size: 15px; line-height: 1; }
-  .card-title {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    color: var(--gold-bright);
-  }
-  .card-desc {
-    font-size: 11.5px;
-    color: var(--ink-faint);
-    margin-left: auto;
-  }
+/* ─── Cards ─── */
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px;margin-bottom:12px;}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule);}
+.card-icon{font-size:14px;line-height:1;}
+.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright);}
+.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto;}
 
-  /* ===== Form elements ===== */
-  .form-group { margin-bottom: 15px; }
-  .form-group:last-child { margin-bottom: 0; }
-  .form-label {
-    display: block;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--ink-muted);
-    margin-bottom: 6px;
-    letter-spacing: 0.01em;
-  }
-  .form-label .hint {
-    color: var(--ink-faint);
-    font-weight: 400;
-    margin-left: 5px;
-    font-size: 11.5px;
-  }
-  input[type="text"] {
-    width: 100%;
-    background: var(--bg-soft);
-    border: 1px solid var(--rule);
-    border-radius: 5px;
-    color: var(--ink);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 9px 12px;
-    outline: none;
-    transition: border-color 0.18s, background 0.18s;
-  }
-  textarea {
-    width: 100%;
-    background: var(--bg-soft);
-    border: 1px solid var(--rule);
-    border-radius: 5px;
-    color: var(--ink);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 10px 12px;
-    outline: none;
-    resize: vertical;
-    min-height: 78px;
-    line-height: 1.65;
-    transition: border-color 0.18s, background 0.18s;
-  }
-  textarea.tall { min-height: 100px; }
-  select {
-    width: 100%;
-    background: var(--bg-soft);
-    border: 1px solid var(--rule);
-    border-radius: 5px;
-    color: var(--ink);
-    font-size: 13.5px;
-    font-weight: 600;
-    padding: 9px 12px;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.18s;
-    appearance: auto;
-  }
-  input[type="text"]:focus, textarea:focus, select:focus {
-    border-color: var(--gold);
-    background: var(--bg-hover);
-  }
-  select option { background: var(--bg-deep); }
+/* ─── Form fields ─── */
+.fg{margin-bottom:14px;}
+.fg:last-child{margin-bottom:0;}
+label.lbl{display:block;font-size:12px;font-weight:700;color:var(--ink-muted);margin-bottom:5px;}
+label.lbl .hint{color:var(--ink-faint);font-weight:400;margin-left:4px;font-size:11px;}
+input[type=text],textarea,select{
+  width:100%;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;
+  color:var(--ink);font-size:13.5px;font-weight:500;padding:9px 12px;outline:none;
+  transition:border-color .18s,background .18s;
+}
+textarea{resize:vertical;min-height:74px;line-height:1.6;}
+textarea.tall{min-height:96px;}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--gold);background:var(--bg-hover);}
+select option{background:var(--bg-deep);}
 
-  /* ===== Grids ===== */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
-  /* ===== Region badge ===== */
-  .region-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 3px;
-    margin-bottom: 7px;
-  }
-  .region-badge.vivaldi { background: var(--region-vivaldi-bg); color: var(--region-vivaldi); }
-  .region-badge.central { background: var(--region-center-bg); color: var(--region-center); }
-  .region-badge.south   { background: var(--region-south-bg);  color: var(--region-south);   }
-  .region-badge.apac    { background: var(--region-apac-bg);   color: var(--region-apac);    }
+/* ─── Region badge ─── */
+.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:3px;}
+.rbadge.v{background:var(--vivaldi-bg);color:var(--vivaldi);}
+.rbadge.c{background:var(--central-bg);color:var(--central);}
+.rbadge.s{background:var(--south-bg);  color:var(--south);}
+.rbadge.a{background:var(--apac-bg);   color:var(--apac);}
 
-  /* ===== Issue rows ===== */
-  .issue-row {
-    display: grid;
-    grid-template-columns: 120px 1fr 34px;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .issue-row:last-child { margin-bottom: 0; }
-  .btn-remove {
-    width: 32px;
-    height: 34px;
-    background: var(--bg-soft);
-    border: 1px solid var(--rule);
-    border-radius: 4px;
-    color: var(--ink-faint);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .btn-remove:hover { background: var(--negative-bg); color: var(--negative); border-color: var(--negative); }
-  .btn-add-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    margin-top: 10px;
-    padding: 8px 14px;
-    background: transparent;
-    border: 1px dashed var(--rule-strong);
-    border-radius: 5px;
-    color: var(--ink-muted);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s;
-  }
-  .btn-add-row:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,160,99,0.06); }
+/* ─── Type badge ─── */
+.tbadge{font-family:var(--mono);font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.04em;white-space:nowrap;}
+.tbadge.positive{background:var(--positive-bg);color:var(--positive);}
+.tbadge.warning {background:var(--warning-bg); color:var(--warning);}
+.tbadge.negative{background:var(--negative-bg);color:var(--negative);}
+.tbadge.info    {background:var(--info-bg);    color:var(--info);}
 
-  /* ===== Strategy radio ===== */
-  .strat-group { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
-  .strat-radio { display: none; }
-  .strat-opt {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    border-radius: 4px;
-    background: var(--bg-soft);
-    border: 1px solid var(--rule);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--ink-muted);
-    user-select: none;
-  }
-  .strat-radio:checked + .strat-opt {
-    background: rgba(201,160,99,0.14);
-    border-color: var(--gold);
-    color: var(--gold-bright);
-  }
-  .strat-opt:hover { border-color: var(--rule-strong); color: var(--ink-soft); }
+/* ─── Status dot ─── */
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;}
+.sdot.over  {background:var(--positive);}
+.sdot.on    {background:var(--gold);}
+.sdot.under {background:var(--warning);}
+.sdot.critical{background:var(--negative);}
+.sdot.no_data{background:var(--ink-faint);}
 
-  /* ===== Bottom action bar ===== */
-  .action-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--bg-deep);
-    border-top: 1px solid var(--rule-strong);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 100;
-  }
-  .bar-status {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--ink-faint);
-    margin-right: auto;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 18px;
-    border-radius: 5px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    transition: all 0.18s;
-    white-space: nowrap;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, #e6b970 0%, #c9a063 100%);
-    color: #0a0a0a;
-  }
-  .btn-primary:hover { filter: brightness(1.09); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(201,160,99,0.35); }
-  .btn-secondary {
-    background: var(--bg-soft);
-    color: var(--ink-muted);
-    border: 1px solid var(--rule);
-  }
-  .btn-secondary:hover { background: var(--bg-hover); color: var(--ink); }
-  .btn-ghost {
-    background: transparent;
-    color: var(--ink-faint);
-    border: 1px solid var(--rule);
-    cursor: pointer;
-  }
-  .btn-ghost:hover { color: var(--ink-muted); border-color: var(--rule-strong); }
+/* ─── Insight Cards ─── */
+.insight-loading{
+  display:flex;align-items:center;gap:10px;padding:20px;
+  background:var(--bg-soft);border-radius:5px;
+  font-size:13px;color:var(--ink-muted);
+}
+.insight-grid{display:flex;flex-direction:column;gap:8px;}
+.insight-card{
+  background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;
+  padding:12px 14px;cursor:pointer;transition:border-color .18s,background .18s;
+  position:relative;
+}
+.insight-card:hover{border-color:var(--rule-strong);background:var(--bg-hover);}
+.insight-card.selected{border-color:var(--gold);background:rgba(201,160,99,.07);}
+.insight-card-top{display:flex;align-items:flex-start;gap:10px;}
+.insight-cb{
+  width:18px;height:18px;flex-shrink:0;margin-top:2px;
+  accent-color:var(--gold);cursor:pointer;
+}
+.insight-meta{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;}
+.insight-text{font-size:13px;color:var(--ink-soft);line-height:1.55;}
+.insight-edit{
+  display:none;margin-top:10px;
+}
+.insight-card.selected .insight-edit{display:block;}
+.insight-edit textarea{
+  min-height:64px;font-size:13px;border-color:rgba(201,160,99,.4);
+}
+.insight-src{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+  padding:2px 6px;border-radius:3px;background:var(--bg-hover);color:var(--ink-faint);}
 
-  /* ===== Toast ===== */
-  .toast {
-    position: fixed;
-    top: 66px;
-    right: 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--rule-strong);
-    border-left: 3px solid var(--positive);
-    padding: 11px 16px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
-    opacity: 0;
-    transform: translateX(16px);
-    transition: all 0.28s;
-    pointer-events: none;
-    z-index: 200;
-    max-width: 320px;
-  }
-  .toast.show { opacity: 1; transform: translateX(0); }
-  .toast.error { border-left-color: var(--negative); }
+/* Headline preview */
+.headline-preview{
+  margin-top:14px;background:var(--bg-deep);border:1px solid var(--rule-strong);
+  border-radius:5px;overflow:hidden;
+}
+.headline-preview-label{
+  font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.2em;
+  color:var(--gold-bright);padding:8px 12px;border-bottom:1px solid var(--rule);
+  background:rgba(201,160,99,.07);
+}
+.headline-preview textarea{
+  border:none;background:transparent;border-radius:0;min-height:70px;
+  font-size:13.5px;padding:12px 14px;
+}
+.headline-preview textarea:focus{border:none;background:rgba(255,255,255,.04);}
 
-  /* ===== Char counter ===== */
-  .input-wrap { position: relative; }
-  .char-count {
-    position: absolute;
-    bottom: 8px;
-    right: 10px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--ink-faint);
-    pointer-events: none;
-    background: var(--bg-soft);
-    padding: 0 3px;
-  }
+/* Add custom insight */
+.btn-add-row{
+  display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  margin-top:10px;padding:9px 14px;
+  background:transparent;border:1px dashed var(--rule-strong);border-radius:5px;
+  color:var(--ink-muted);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;
+}
+.btn-add-row:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,160,99,.06);}
 
-  /* ===== Responsive ===== */
-  @media (max-width: 640px) {
-    .masthead { padding: 0 16px; }
-    .page-wrap { padding: 16px 14px; }
-    .form-card { padding: 16px 15px; }
-    .grid-2 { grid-template-columns: 1fr; }
-    .issue-row { grid-template-columns: 105px 1fr 32px; }
-    .action-bar { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
-    .bar-status { width: 100%; order: -1; margin-right: 0; }
-    .logo-sub { display: none; }
-    .btn { padding: 9px 13px; font-size: 12.5px; }
-  }
+/* ─── Issues ─── */
+.issue-row{display:grid;grid-template-columns:118px 1fr 34px;gap:7px;align-items:center;margin-bottom:7px;}
+.issue-row:last-child{margin-bottom:0;}
+.btn-rm{
+  width:32px;height:34px;min-height:34px;background:var(--bg-soft);border:1px solid var(--rule);
+  border-radius:4px;color:var(--ink-faint);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:13px;transition:all .15s;flex-shrink:0;
+}
+.btn-rm:hover{background:var(--negative-bg);color:var(--negative);border-color:var(--negative);}
+
+/* ─── Strategy Slots ─── */
+.slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.slot{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;position:relative;}
+.slot-num{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.2em;color:var(--ink-faint);margin-bottom:8px;}
+.slot-title{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:2px;}
+.slot-sub{font-size:12px;color:var(--ink-muted);margin-bottom:10px;}
+.slot-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.slot-stat{text-align:center;}
+.slot-stat-val{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--ink);}
+.slot-stat-lbl{font-size:9.5px;color:var(--ink-faint);font-family:var(--mono);}
+.slot-empty{text-align:center;padding:20px 0;color:var(--ink-faint);font-size:13px;}
+.slot-actions{display:flex;gap:7px;}
+.btn-slot-change{
+  flex:1;padding:7px 12px;background:rgba(201,160,99,.12);border:1px solid rgba(201,160,99,.3);
+  border-radius:4px;color:var(--gold-bright);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+}
+.btn-slot-change:hover{background:rgba(201,160,99,.22);}
+.btn-slot-reset{
+  padding:7px 10px;background:var(--bg-hover);border:1px solid var(--rule);
+  border-radius:4px;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;
+}
+.btn-slot-reset:hover{color:var(--negative);border-color:var(--negative);}
+
+/* Daily OTB readonly display */
+.otb-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.otb-month{
+  flex:1;min-width:90px;background:var(--bg-soft);border:1px solid var(--rule);
+  border-radius:5px;padding:10px 12px;text-align:center;
+}
+.otb-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--ink-faint);font-weight:700;margin-bottom:6px;}
+.otb-net{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--ink);}
+.otb-detail{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px;}
+.otb-null{color:var(--ink-faint);font-size:14px;}
+
+/* ─── Picker Panel ─── */
+.picker{
+  display:none;background:var(--bg-deep);border:1px solid var(--rule-strong);
+  border-radius:7px;margin-top:10px;overflow:hidden;
+}
+.picker.open{display:block;}
+.picker-head{
+  padding:12px 16px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.picker-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright);}
+.picker-close{
+  background:transparent;border:1px solid var(--rule);border-radius:4px;
+  color:var(--ink-faint);font-size:12px;padding:4px 8px;cursor:pointer;
+}
+.picker-close:hover{color:var(--ink-muted);}
+
+.picker-filters{
+  padding:10px 16px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.filter-tabs{display:flex;gap:5px;flex-wrap:wrap;}
+.ftab{
+  padding:5px 10px;border-radius:4px;border:1px solid var(--rule);
+  background:transparent;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;
+}
+.ftab.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright);}
+.picker-search{
+  flex:1;min-width:120px;
+  padding:6px 10px;background:var(--bg-soft);border:1px solid var(--rule);
+  border-radius:4px;color:var(--ink);font-size:13px;outline:none;
+}
+.picker-search:focus{border-color:var(--gold);}
+
+.picker-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:8px;padding:14px 16px;max-height:340px;overflow-y:auto;
+}
+.picker-card{
+  background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;
+  padding:12px;cursor:pointer;transition:all .18s;
+}
+.picker-card:hover{border-color:var(--gold);background:var(--bg-hover);}
+.picker-card.selected{border-color:var(--gold);background:rgba(201,160,99,.1);}
+.picker-card-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.picker-card-region{margin-bottom:8px;}
+.picker-card-stat{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-bottom:3px;}
+.picker-card-stat span:last-child{color:var(--ink);}
+
+.picker-confirm{
+  padding:12px 16px;border-top:1px solid var(--rule);display:flex;
+  align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.picker-selected-info{font-size:12.5px;color:var(--ink-muted);}
+.picker-selected-info strong{color:var(--gold-bright);}
+
+/* ─── Strategy direction radios ─── */
+.strat-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.sr{display:none;}
+.so{
+  display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:4px;
+  background:var(--bg-soft);border:1px solid var(--rule);font-size:12.5px;font-weight:600;
+  cursor:pointer;transition:all .15s;color:var(--ink-muted);user-select:none;min-height:36px;
+}
+.sr:checked+.so{background:rgba(201,160,99,.14);border-color:var(--gold);color:var(--gold-bright);}
+.so:hover{border-color:var(--rule-strong);color:var(--ink-soft);}
+
+/* ─── Bottom bar ─── */
+.bar{
+  position:fixed;bottom:0;left:0;right:0;background:var(--bg-deep);
+  border-top:1px solid var(--rule-strong);padding:11px 20px;
+  display:flex;align-items:center;gap:8px;z-index:200;
+}
+.bar-status{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-right:auto;white-space:nowrap;}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+  border-radius:5px;font-size:12.5px;font-weight:700;cursor:pointer;border:none;
+  transition:all .18s;white-space:nowrap;min-height:40px;
+}
+.btn-primary{background:linear-gradient(135deg,#e6b970,#c9a063);color:#0a0a0a;}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-secondary{background:var(--bg-soft);color:var(--ink-muted);border:1px solid var(--rule);}
+.btn-secondary:hover{background:var(--bg-hover);color:var(--ink);}
+.btn-ghost{background:transparent;color:var(--ink-faint);border:1px solid var(--rule);}
+.btn-ghost:hover{color:var(--ink-muted);border-color:var(--rule-strong);}
+
+/* ─── Toast ─── */
+.toast{
+  position:fixed;top:64px;right:16px;background:var(--bg-card);
+  border:1px solid var(--rule-strong);border-left:3px solid var(--positive);
+  padding:11px 15px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--ink);
+  box-shadow:0 8px 28px rgba(0,0,0,.45);opacity:0;transform:translateX(14px);
+  transition:all .26s;pointer-events:none;z-index:300;max-width:300px;
+}
+.toast.show{opacity:1;transform:translateX(0);}
+.toast.err{border-left-color:var(--negative);}
+
+/* ─── Responsive ─── */
+@media(max-width:640px){
+  .mast{padding:0 14px;}
+  .mast-sub{display:none;}
+  .wrap{padding:14px 12px 36px;}
+  .card{padding:14px;}
+  .g2{grid-template-columns:1fr;}
+  .slot-grid{grid-template-columns:1fr;}
+  .issue-row{grid-template-columns:104px 1fr 32px;}
+  .bar{padding:9px 12px;gap:6px;}
+  .bar-status{font-size:10px;}
+  .btn{padding:8px 12px;font-size:12px;}
+  .picker-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:380px){
+  .picker-grid{grid-template-columns:1fr;}
+  .strat-row{gap:4px;}
+  .so{padding:6px 8px;font-size:12px;}
+}
 </style>
 </head>
 <body>
 
-<!-- ===== Masthead ===== -->
-<header class="masthead">
-  <div class="logo">
-    <span class="logo-mark">SONO &amp; TRINITY</span>
-    <span class="logo-sub">관리자 키인 패널</span>
+<!-- Masthead -->
+<header class="mast">
+  <div class="mast-logo">
+    <span class="mast-name">SONO &amp; TRINITY</span>
+    <span class="mast-sub">관리자 키인 패널</span>
   </div>
-  <div class="masthead-right">
-    <a href="index.html" class="nav-link">↗ 트렌드 리포트</a>
-  </div>
+  <nav class="mast-nav">
+    <a href="index.html" class="nav-btn">↗ 트렌드 리포트</a>
+  </nav>
 </header>
 
 <div class="toast" id="toast"></div>
 
-<main class="page-wrap">
+<main class="wrap">
 
   <!-- Page title -->
   <div class="page-title">
-    <div class="page-eyebrow">ADMIN · KEY-IN PANEL</div>
+    <div class="eyebrow">ADMIN · KEY-IN PANEL v2</div>
     <h1>관리자 입력 패널</h1>
     <p>
-      입력 내용은 <strong>브라우저에 자동 저장</strong>됩니다.
-      완성 후 <strong>「JSON 내보내기」</strong>를 눌러 <code>admin_input.json</code>을 다운로드하고
-      <code>data/</code> 폴더에 커밋하면 다음 빌드 시 트렌드 리포트에 반영됩니다.
+      데이터 기반 인사이트 제안에서 선택·편집하고, 전략카드를 직접 지정하세요.
+      <strong>「JSON 내보내기」</strong>로 <code>admin_input.json</code>을 다운로드 →
+      <code>data/</code> 폴더에 커밋하면 다음 빌드 시 반영됩니다.
+      <br><em style="color:var(--ink-faint);font-size:11px;">
+      ※ build.py 실행 후 admin_suggestions.json이 생성되어야 자동 제안이 표시됩니다.</em>
     </p>
   </div>
 
   <!-- ① 기본 정보 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">📋</span>
-      <span class="card-title">기본 정보</span>
-      <span class="card-desc">작성자 · 기준일</span>
-    </div>
-    <div class="grid-2">
-      <div class="form-group">
-        <label class="form-label" for="updatedBy">작성자 <span class="hint">이름 또는 직책</span></label>
-        <input type="text" id="updatedBy" placeholder="예: GS팀 · Haein Kim Manager" />
+  <div class="card">
+    <div class="card-head"><span class="card-icon">📋</span><span class="card-title">기본 정보</span><span class="card-desc">작성자 · 기준일</span></div>
+    <div class="g2">
+      <div class="fg">
+        <label class="lbl" for="updatedBy">작성자 <span class="hint">이름 또는 직책</span></label>
+        <input type="text" id="updatedBy" placeholder="예: GS팀 · Haein Kim Manager">
       </div>
-      <div class="form-group">
-        <label class="form-label" for="reportDate">보고 기준일 <span class="hint">YYYY-MM-DD</span></label>
-        <input type="text" id="reportDate" placeholder="2026-04-22" />
+      <div class="fg">
+        <label class="lbl" for="reportDate">보고 기준일 <span class="hint">YYYY-MM-DD</span></label>
+        <input type="text" id="reportDate" placeholder="2026-04-22">
       </div>
     </div>
   </div>
 
-  <!-- ② 오늘의 인사이트 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">🔥</span>
-      <span class="card-title">오늘의 인사이트</span>
-      <span class="card-desc">HERO 섹션 헤드라인</span>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="headline">핵심 메시지 <span class="hint">data-tpl-headline 에 주입</span></label>
-      <div class="input-wrap">
-        <textarea id="headline" class="tall"
-          placeholder="예: 비발디 달성률 84% 위기 — 소노캄 집중 관리 필요. 중부권 아고다 +35% YoY 강세 지속."></textarea>
-        <span class="char-count" id="headline-count">0</span>
+  <!-- ② Today's Insight — 데이터 기반 제안 -->
+  <div class="card">
+    <div class="card-head"><span class="card-icon">🔥</span><span class="card-title">TODAY'S INSIGHT</span><span class="card-desc">제안 선택 · 인라인 편집</span></div>
+
+    <div id="insight-area">
+      <div class="insight-loading" id="insight-loading">
+        <span>⏳</span><span>admin_suggestions.json 로딩 중…</span>
       </div>
+      <div class="insight-grid" id="insight-grid" style="display:none;"></div>
+    </div>
+
+    <button class="btn-add-row" onclick="addCustomInsight()" style="margin-top:10px;">＋ 직접 작성 추가</button>
+
+    <!-- 최종 헤드라인 미리보기 -->
+    <div class="headline-preview" style="margin-top:14px;">
+      <div class="headline-preview-label">🔥 TODAY'S INSIGHT — 최종 헤드라인 미리보기 (편집 가능)</div>
+      <textarea id="headline" placeholder="위 제안 카드를 선택하거나 직접 작성하세요.&#10;여러 줄도 가능합니다."></textarea>
     </div>
   </div>
 
   <!-- ③ 관리자 공지 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">📢</span>
-      <span class="card-title">관리자 공지 · 특이사항</span>
-      <span class="card-desc">리포트 상단 배너</span>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="notices">공지 내용 <span class="hint">비워두면 배너 미표시</span></label>
-      <textarea id="notices"
-        placeholder="예: 5월 황금연휴 특가 프로모션 진행 중 — 할인율 상한 준수 요망. 신규 OTA 채널 온보딩 완료."></textarea>
+  <div class="card">
+    <div class="card-head"><span class="card-icon">📢</span><span class="card-title">관리자 공지 · 특이사항</span><span class="card-desc">리포트 상단 배너</span></div>
+    <div class="fg">
+      <label class="lbl" for="notices">공지 내용 <span class="hint">비워두면 배너 미표시</span></label>
+      <textarea id="notices" placeholder="예: 5월 황금연휴 특가 프로모션 진행 중 — 할인율 상한 준수 요망."></textarea>
     </div>
   </div>
 
   <!-- ④ 주간 핵심 이슈 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">📌</span>
-      <span class="card-title">주간 핵심 이슈</span>
-      <span class="card-desc">최대 5개</span>
-    </div>
+  <div class="card">
+    <div class="card-head"><span class="card-icon">📌</span><span class="card-title">주간 핵심 이슈</span><span class="card-desc">최대 5개</span></div>
     <div id="issues-list"></div>
-    <button class="btn-add-row" id="btn-add-issue" onclick="addIssueRow()">＋ 이슈 추가</button>
+    <button class="btn-add-row" onclick="addIssueRow()">＋ 이슈 추가</button>
   </div>
 
-  <!-- ⑤ 권역별 액션 알림 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">🎯</span>
-      <span class="card-title">권역별 액션 알림</span>
-      <span class="card-desc">각 권역 ACTION ALERT 텍스트</span>
+  <!-- ⑤ WEEKLY 전략카드 선택 -->
+  <div class="card">
+    <div class="card-head"><span class="card-icon">📊</span><span class="card-title">WEEKLY 전략카드 선택</span><span class="card-desc">Daily OTB 고정 · 전략카드 2개 선택</span></div>
+
+    <!-- Daily OTB (read-only) -->
+    <div style="margin-bottom:16px;">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ink-faint);font-weight:700;margin-bottom:8px;">📊 DAILY OTB <span style="color:rgba(255,255,255,.25);margin-left:6px;">고정값 (자동 수집)</span></div>
+      <div class="otb-row" id="otb-display">
+        <div class="otb-month"><div class="otb-label">로딩 중</div><div class="otb-null">—</div></div>
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">
-        <span class="region-badge vivaldi">🍷 Vivaldi Park</span>
-      </label>
-      <textarea id="action-vivaldi" class="tall"
-        placeholder="예: 비발디 달성률 84% — 소노캄 부진 집중 관리. Smart 요금제 + 멤버십 혜택 강화 필요."></textarea>
+
+    <div style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold-bright);font-weight:700;margin-bottom:10px;">⚙️ 전략카드 슬롯 (2개)</div>
+
+    <!-- Strategy slots -->
+    <div class="slot-grid" id="slot-grid">
+      <div class="slot" id="slot-1">
+        <div class="slot-num">슬롯 1</div>
+        <div class="slot-empty">로딩 중…</div>
+      </div>
+      <div class="slot" id="slot-2">
+        <div class="slot-num">슬롯 2</div>
+        <div class="slot-empty">로딩 중…</div>
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">
-        <span class="region-badge central">🏔️ 한국중부</span>
-      </label>
-      <textarea id="action-central" class="tall"
-        placeholder="예: 아고다 YoY +35% 호조. 델피노·양평 수요 견조. 글로벌 OTA 비중 확대 지속 검토."></textarea>
+
+    <!-- Picker panels (one per slot) -->
+    <div class="picker" id="picker-1"></div>
+    <div class="picker" id="picker-2"></div>
+  </div>
+
+  <!-- ⑥ 권역별 액션 알림 -->
+  <div class="card">
+    <div class="card-head"><span class="card-icon">🎯</span><span class="card-title">권역별 액션 알림</span><span class="card-desc">ACTION ALERT 텍스트</span></div>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge v">🍷 Vivaldi Park</span></label>
+      <textarea id="action-vivaldi" class="tall" placeholder="예: 비발디 달성률 84% — 소노캄 집중 관리. Smart 요금제 강화."></textarea>
     </div>
-    <div class="form-group">
-      <label class="form-label">
-        <span class="region-badge south">🌊 한국남부</span>
-      </label>
-      <textarea id="action-south" class="tall"
-        placeholder="예: 한화 -35% 경쟁 공세. 가성비 패키지 강화 및 멤버십 차별화 대응 필요."></textarea>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge c">🏔️ 한국중부</span></label>
+      <textarea id="action-central" class="tall" placeholder="예: 아고다 YoY +35% 호조. 글로벌 OTA 비중 확대 지속."></textarea>
     </div>
-    <div class="form-group">
-      <label class="form-label">
-        <span class="region-badge apac">🌏 APAC</span>
-      </label>
-      <textarea id="action-apac" class="tall"
-        placeholder="예: 동남아 인바운드 회복세. 일본·싱가포르 채널 점유율 확대 기회."></textarea>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge s">🌊 한국남부</span></label>
+      <textarea id="action-south" class="tall" placeholder="예: 한화 -35% 경쟁 공세. 가성비 패키지 강화 필요."></textarea>
+    </div>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge a">🌏 APAC</span></label>
+      <textarea id="action-apac" class="tall" placeholder="예: 동남아 인바운드 회복세. 일본·싱가포르 채널 확대 기회."></textarea>
     </div>
   </div>
 
-  <!-- ⑥ 사업장별 전략 방향 -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="card-icon">⚙️</span>
-      <span class="card-title">권역별 전략 방향</span>
-      <span class="card-desc">이번 주 방향 선택</span>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label"><span class="region-badge vivaldi">🍷 Vivaldi Park</span></label>
-      <div class="strat-group">
-        <input type="radio" name="sv" id="sv-push"    value="push_volume"     class="strat-radio"><label for="sv-push"    class="strat-opt">📈 물량 확대</label>
-        <input type="radio" name="sv" id="sv-hold"    value="hold"            class="strat-radio"><label for="sv-hold"    class="strat-opt">📊 현상 유지</label>
-        <input type="radio" name="sv" id="sv-yield"   value="yield_management" class="strat-radio"><label for="sv-yield"   class="strat-opt">💹 수익 관리</label>
-        <input type="radio" name="sv" id="sv-promo"   value="promotional"     class="strat-radio"><label for="sv-promo"   class="strat-opt">🎁 프로모션</label>
-        <input type="radio" name="sv" id="sv-defend"  value="defend_adr"      class="strat-radio"><label for="sv-defend"  class="strat-opt">🛡️ ADR 방어</label>
+  <!-- ⑦ 권역별 전략 방향 -->
+  <div class="card">
+    <div class="card-head"><span class="card-icon">⚙️</span><span class="card-title">권역별 전략 방향</span><span class="card-desc">이번 주 방향 선택</span></div>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge v">🍷 Vivaldi Park</span></label>
+      <div class="strat-row">
+        <input type="radio" name="sv" id="sv-push"   value="push_volume"      class="sr"><label for="sv-push"   class="so">📈 물량 확대</label>
+        <input type="radio" name="sv" id="sv-hold"   value="hold"             class="sr"><label for="sv-hold"   class="so">📊 현상 유지</label>
+        <input type="radio" name="sv" id="sv-yield"  value="yield_management" class="sr"><label for="sv-yield"  class="so">💹 수익 관리</label>
+        <input type="radio" name="sv" id="sv-promo"  value="promotional"      class="sr"><label for="sv-promo"  class="so">🎁 프로모션</label>
+        <input type="radio" name="sv" id="sv-defend" value="defend_adr"       class="sr"><label for="sv-defend" class="so">🛡️ ADR 방어</label>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label"><span class="region-badge central">🏔️ 한국중부</span></label>
-      <div class="strat-group">
-        <input type="radio" name="sc" id="sc-push"    value="push_volume"     class="strat-radio"><label for="sc-push"    class="strat-opt">📈 물량 확대</label>
-        <input type="radio" name="sc" id="sc-hold"    value="hold"            class="strat-radio"><label for="sc-hold"    class="strat-opt">📊 현상 유지</label>
-        <input type="radio" name="sc" id="sc-yield"   value="yield_management" class="strat-radio"><label for="sc-yield"   class="strat-opt">💹 수익 관리</label>
-        <input type="radio" name="sc" id="sc-promo"   value="promotional"     class="strat-radio"><label for="sc-promo"   class="strat-opt">🎁 프로모션</label>
-        <input type="radio" name="sc" id="sc-defend"  value="defend_adr"      class="strat-radio"><label for="sc-defend"  class="strat-opt">🛡️ ADR 방어</label>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge c">🏔️ 한국중부</span></label>
+      <div class="strat-row">
+        <input type="radio" name="sc" id="sc-push"   value="push_volume"      class="sr"><label for="sc-push"   class="so">📈 물량 확대</label>
+        <input type="radio" name="sc" id="sc-hold"   value="hold"             class="sr"><label for="sc-hold"   class="so">📊 현상 유지</label>
+        <input type="radio" name="sc" id="sc-yield"  value="yield_management" class="sr"><label for="sc-yield"  class="so">💹 수익 관리</label>
+        <input type="radio" name="sc" id="sc-promo"  value="promotional"      class="sr"><label for="sc-promo"  class="so">🎁 프로모션</label>
+        <input type="radio" name="sc" id="sc-defend" value="defend_adr"       class="sr"><label for="sc-defend" class="so">🛡️ ADR 방어</label>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label"><span class="region-badge south">🌊 한국남부</span></label>
-      <div class="strat-group">
-        <input type="radio" name="ss" id="ss-push"    value="push_volume"     class="strat-radio"><label for="ss-push"    class="strat-opt">📈 물량 확대</label>
-        <input type="radio" name="ss" id="ss-hold"    value="hold"            class="strat-radio"><label for="ss-hold"    class="strat-opt">📊 현상 유지</label>
-        <input type="radio" name="ss" id="ss-yield"   value="yield_management" class="strat-radio"><label for="ss-yield"   class="strat-opt">💹 수익 관리</label>
-        <input type="radio" name="ss" id="ss-promo"   value="promotional"     class="strat-radio"><label for="ss-promo"   class="strat-opt">🎁 프로모션</label>
-        <input type="radio" name="ss" id="ss-defend"  value="defend_adr"      class="strat-radio"><label for="ss-defend"  class="strat-opt">🛡️ ADR 방어</label>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge s">🌊 한국남부</span></label>
+      <div class="strat-row">
+        <input type="radio" name="ss" id="ss-push"   value="push_volume"      class="sr"><label for="ss-push"   class="so">📈 물량 확대</label>
+        <input type="radio" name="ss" id="ss-hold"   value="hold"             class="sr"><label for="ss-hold"   class="so">📊 현상 유지</label>
+        <input type="radio" name="ss" id="ss-yield"  value="yield_management" class="sr"><label for="ss-yield"  class="so">💹 수익 관리</label>
+        <input type="radio" name="ss" id="ss-promo"  value="promotional"      class="sr"><label for="ss-promo"  class="so">🎁 프로모션</label>
+        <input type="radio" name="ss" id="ss-defend" value="defend_adr"       class="sr"><label for="ss-defend" class="so">🛡️ ADR 방어</label>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label"><span class="region-badge apac">🌏 APAC</span></label>
-      <div class="strat-group">
-        <input type="radio" name="sa" id="sa-push"    value="push_volume"     class="strat-radio"><label for="sa-push"    class="strat-opt">📈 물량 확대</label>
-        <input type="radio" name="sa" id="sa-hold"    value="hold"            class="strat-radio"><label for="sa-hold"    class="strat-opt">📊 현상 유지</label>
-        <input type="radio" name="sa" id="sa-yield"   value="yield_management" class="strat-radio"><label for="sa-yield"   class="strat-opt">💹 수익 관리</label>
-        <input type="radio" name="sa" id="sa-promo"   value="promotional"     class="strat-radio"><label for="sa-promo"   class="strat-opt">🎁 프로모션</label>
-        <input type="radio" name="sa" id="sa-defend"  value="defend_adr"      class="strat-radio"><label for="sa-defend"  class="strat-opt">🛡️ ADR 방어</label>
+    <div class="fg">
+      <label class="lbl"><span class="rbadge a">🌏 APAC</span></label>
+      <div class="strat-row">
+        <input type="radio" name="sa" id="sa-push"   value="push_volume"      class="sr"><label for="sa-push"   class="so">📈 물량 확대</label>
+        <input type="radio" name="sa" id="sa-hold"   value="hold"             class="sr"><label for="sa-hold"   class="so">📊 현상 유지</label>
+        <input type="radio" name="sa" id="sa-yield"  value="yield_management" class="sr"><label for="sa-yield"  class="so">💹 수익 관리</label>
+        <input type="radio" name="sa" id="sa-promo"  value="promotional"      class="sr"><label for="sa-promo"  class="so">🎁 프로모션</label>
+        <input type="radio" name="sa" id="sa-defend" value="defend_adr"       class="sr"><label for="sa-defend" class="so">🛡️ ADR 방어</label>
       </div>
     </div>
   </div>
 
 </main>
 
-<!-- ===== Bottom action bar ===== -->
-<div class="action-bar">
+<!-- Bottom action bar -->
+<div class="bar">
   <span class="bar-status" id="bar-status">마지막 저장: —</span>
   <label class="btn btn-ghost" style="cursor:pointer;">
-    📂 JSON 불러오기
+    📂 불러오기
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
   </label>
   <button class="btn btn-secondary" onclick="saveToStorage()">💾 임시 저장</button>
-  <button class="btn btn-primary" onclick="exportJSON()">⬇ JSON 내보내기</button>
+  <button class="btn btn-primary"   onclick="exportJSON()">⬇ JSON 내보내기</button>
 </div>
 
 <script>
-const STORAGE_KEY = 'gs_admin_input_v1';
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+const STORAGE_KEY = 'gs_admin_v2';
+
+let suggestions = { insights: [], strategy_options: [], current_strategies: [] };
+// insightState: Map<id, {selected, text, type, source}>
+const insightState = new Map();
+// selectedStrategies: [slot1_option | null, slot2_option | null]
+let selectedStrategies = [null, null];
+let pickerActiveSlot = 0;
+let pickerSelectedId = null;
 let issueSeq = 0;
+let filterRegion = 'all';
+let filterSearch = '';
 
-// ===== Collect form data =====
-function getFormData() {
-  const issues = [];
-  document.querySelectorAll('.issue-row').forEach(row => {
-    const type = row.querySelector('select').value;
-    const text = row.querySelector('input[type="text"]').value.trim();
-    if (text) issues.push({ type, text });
-  });
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  // Date placeholder
+  const t = new Date();
+  document.getElementById('reportDate').placeholder =
+    `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`;
 
-  const radio = (name) => {
-    const el = document.querySelector(`input[name="${name}"]:checked`);
-    return el ? el.value : 'hold';
-  };
+  addIssueRow(); // default issue row
 
-  return {
-    _description: '관리자 키인 데이터. docs/admin.html에서 편집 후 JSON 내보내기.',
-    _updated_at: new Date().toISOString(),
-    _updated_by: document.getElementById('updatedBy').value.trim(),
-    report_date: document.getElementById('reportDate').value.trim(),
-    headline: document.getElementById('headline').value.trim(),
-    notices: document.getElementById('notices').value.trim(),
-    weekly_key_issues: issues,
-    action_alerts: {
-      vivaldi: document.getElementById('action-vivaldi').value.trim(),
-      central: document.getElementById('action-central').value.trim(),
-      south:   document.getElementById('action-south').value.trim(),
-      apac:    document.getElementById('action-apac').value.trim()
-    },
-    property_strategy: {
-      vivaldi: radio('sv'),
-      central: radio('sc'),
-      south:   radio('ss'),
-      apac:    radio('sa')
-    }
-  };
-}
+  // Restore saved state first (so UI is ready before suggestions load)
+  const saved = loadStorage();
+  if (saved) applyFormData(saved, false);
 
-// ===== Load form data =====
-function loadFormData(d) {
-  if (!d) return;
-  setValue('updatedBy', d._updated_by);
-  setValue('reportDate', d.report_date);
-  setValue('headline', d.headline);
-  setValue('notices', d.notices);
-  setValue('action-vivaldi', d.action_alerts?.vivaldi);
-  setValue('action-central', d.action_alerts?.central);
-  setValue('action-south',   d.action_alerts?.south);
-  setValue('action-apac',    d.action_alerts?.apac);
+  // Load suggestions
+  await loadSuggestions();
+});
 
-  if (d.property_strategy) {
-    const map = { vivaldi:'sv', central:'sc', south:'ss', apac:'sa' };
-    Object.entries(d.property_strategy).forEach(([region, val]) => {
-      const el = document.querySelector(`input[name="${map[region]}"][value="${val}"]`);
-      if (el) el.checked = true;
-    });
-  }
-
-  if (Array.isArray(d.weekly_key_issues)) {
-    document.getElementById('issues-list').innerHTML = '';
-    issueSeq = 0;
-    d.weekly_key_issues.forEach(item => addIssueRow(item.type, item.text));
-  }
-
-  updateCharCount(document.getElementById('headline'));
-}
-
-function setValue(id, val) {
-  const el = document.getElementById(id);
-  if (el && val) el.value = val;
-}
-
-// ===== Issue rows =====
-function addIssueRow(type = 'info', text = '') {
-  const list = document.getElementById('issues-list');
-  if (list.children.length >= 5) {
-    showToast('이슈는 최대 5개까지 입력할 수 있습니다.', 'error');
+/* ══════════════════════════════════════════════
+   SUGGESTIONS LOADER
+══════════════════════════════════════════════ */
+async function loadSuggestions() {
+  try {
+    const resp = await fetch('./admin_suggestions.json?t=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    suggestions = await resp.json();
+  } catch(e) {
+    document.getElementById('insight-loading').innerHTML =
+      '<span>⚠️</span><span style="color:var(--ink-faint)">admin_suggestions.json 없음 — build.py를 실행하면 자동 생성됩니다. 직접 작성은 가능합니다.</span>';
+    renderOTBDisplay([]);
+    renderStrategySlots();
     return;
   }
-  const id = `issue-${++issueSeq}`;
+  document.getElementById('insight-loading').style.display = 'none';
+  document.getElementById('insight-grid').style.display = 'flex';
+
+  // Init insight state from loaded suggestions (preserve already-saved selections)
+  const saved = loadStorage();
+  const savedInsights = (saved?.selected_insights || []);
+  const savedMap = Object.fromEntries(savedInsights.map(i => [i.id, i]));
+
+  for (const ins of suggestions.insights) {
+    if (!insightState.has(ins.id)) {
+      const existing = savedMap[ins.id];
+      insightState.set(ins.id, {
+        selected: !!existing,
+        text: existing?.text ?? ins.text,
+        type: ins.type,
+        source: ins.source,
+      });
+    }
+  }
+
+  renderInsightCards();
+
+  // OTB
+  renderOTBDisplay(suggestions.current_strategies);
+
+  // Strategy slots — init from saved or current strategies
+  if (saved?.selected_strategies?.length) {
+    selectedStrategies = [
+      saved.selected_strategies.find(s => s.slot === 1) || null,
+      saved.selected_strategies.find(s => s.slot === 2) || null,
+    ];
+  } else {
+    selectedStrategies = (suggestions.current_strategies || []).slice(0, 2).map(s => ({...s}));
+  }
+  renderStrategySlots();
+  syncHeadlinePreview();
+}
+
+/* ══════════════════════════════════════════════
+   INSIGHT CARDS
+══════════════════════════════════════════════ */
+function renderInsightCards() {
+  const grid = document.getElementById('insight-grid');
+  grid.innerHTML = '';
+
+  const all = [...suggestions.insights, ...getCustomInsights()];
+  for (const ins of all) {
+    if (!insightState.has(ins.id)) {
+      insightState.set(ins.id, { selected: false, text: ins.text, type: ins.type, source: ins.source });
+    }
+    const st = insightState.get(ins.id);
+    const card = document.createElement('div');
+    card.className = 'insight-card' + (st.selected ? ' selected' : '');
+    card.id = 'ic-' + ins.id;
+    card.innerHTML = `
+      <div class="insight-card-top">
+        <input type="checkbox" class="insight-cb" ${st.selected ? 'checked' : ''}
+          onchange="toggleInsight('${ins.id}', this.checked)">
+        <div style="flex:1;min-width:0;">
+          <div class="insight-meta">
+            <span class="tbadge ${ins.type}">${typeLabel(ins.type)}</span>
+            ${ins.source ? `<span class="insight-src">${ins.source}</span>` : ''}
+            ${ins.id.startsWith('custom-') ? `<button onclick="removeCustomInsight('${ins.id}')" style="margin-left:auto;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:12px;">✕</button>` : ''}
+          </div>
+          <div class="insight-text" id="it-text-${ins.id}">${esc(st.text)}</div>
+        </div>
+      </div>
+      <div class="insight-edit">
+        <textarea oninput="updateInsightText('${ins.id}', this.value)"
+          placeholder="내용 수정…">${esc(st.text)}</textarea>
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+function toggleInsight(id, checked) {
+  const st = insightState.get(id);
+  if (!st) return;
+  st.selected = checked;
+  const card = document.getElementById('ic-' + id);
+  if (card) card.classList.toggle('selected', checked);
+  syncHeadlinePreview();
+  autoSave();
+}
+
+function updateInsightText(id, text) {
+  const st = insightState.get(id);
+  if (!st) return;
+  st.text = text;
+  const el = document.getElementById('it-text-' + id);
+  if (el) el.textContent = text;
+  syncHeadlinePreview();
+  autoSave();
+}
+
+function syncHeadlinePreview() {
+  const selected = [...insightState.entries()]
+    .filter(([,s]) => s.selected)
+    .map(([,s]) => s.text);
+  const ta = document.getElementById('headline');
+  if (selected.length > 0) {
+    ta.value = selected.join('\n');
+  }
+}
+
+let customInsightSeq = 0;
+let customInsights = [];
+
+function addCustomInsight() {
+  const id = 'custom-' + (++customInsightSeq);
+  customInsights.push({ id, type: 'info', source: '', text: '' });
+  insightState.set(id, { selected: true, text: '', type: 'info', source: '' });
+  renderInsightCards();
+  // Focus the new textarea
+  setTimeout(() => {
+    const card = document.getElementById('ic-' + id);
+    if (card) {
+      card.classList.add('selected');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const ta = card.querySelector('.insight-edit textarea');
+      if (ta) ta.focus();
+    }
+  }, 50);
+}
+
+function removeCustomInsight(id) {
+  customInsights = customInsights.filter(i => i.id !== id);
+  insightState.delete(id);
+  renderInsightCards();
+  syncHeadlinePreview();
+  autoSave();
+}
+
+function getCustomInsights() { return customInsights; }
+
+/* ══════════════════════════════════════════════
+   DAILY OTB DISPLAY
+══════════════════════════════════════════════ */
+function renderOTBDisplay(currentStrategies) {
+  const container = document.getElementById('otb-display');
+  // Try to get OTB data from weekly_report (stored in suggestions)
+  const otbMonths = (suggestions.current_strategies?.[0]?.['_otb_months']) ||
+                     extractOTB();
+  if (!otbMonths?.length) {
+    container.innerHTML = '<div class="otb-month" style="opacity:.5"><div class="otb-label">NO DATA</div><div class="otb-null">build.py 실행 후 표시</div></div>';
+    return;
+  }
+  container.innerHTML = otbMonths.map(m => {
+    if (m.net_otb == null) return `
+      <div class="otb-month" style="opacity:.45">
+        <div class="otb-label">${m.label}</div>
+        <div class="otb-null">—</div>
+      </div>`;
+    return `
+      <div class="otb-month">
+        <div class="otb-label">${m.label}</div>
+        <div class="otb-net">${fmt(m.net_otb)}<span style="font-size:10px;opacity:.5;margin-left:2px;">실</span></div>
+        <div class="otb-detail">▲${fmt(m.booking_rns||0)} ▼${fmt(m.cancel_rns||0)}</div>
+      </div>`;
+  }).join('');
+}
+
+function extractOTB() {
+  // Fallback: if suggestions has an _otb field (not implemented yet, just return empty)
+  return null;
+}
+
+/* ══════════════════════════════════════════════
+   STRATEGY SLOTS
+══════════════════════════════════════════════ */
+function renderStrategySlots() {
+  for (let slot = 1; slot <= 2; slot++) {
+    renderSlot(slot, selectedStrategies[slot - 1]);
+  }
+}
+
+function renderSlot(slotNum, option) {
+  const el = document.getElementById('slot-' + slotNum);
+  if (!option) {
+    el.innerHTML = `
+      <div class="slot-num">슬롯 ${slotNum}</div>
+      <div class="slot-empty">비어 있음 — 아래 목록에서 선택하세요</div>
+      <div class="slot-actions" style="margin-top:10px;">
+        <button class="btn-slot-change" onclick="openPicker(${slotNum})">+ 전략 선택</button>
+      </div>`;
+    return;
+  }
+  const statusColor = { over:'var(--positive)', on:'var(--gold)', under:'var(--warning)', critical:'var(--negative)', no_data:'var(--ink-faint)' };
+  const statusLabel = { over:'목표 초과', on:'목표 달성', under:'목표 미달', critical:'위험', no_data:'데이터 없음' };
+  el.innerHTML = `
+    <div class="slot-num">슬롯 ${slotNum} ${option._current ? '<span style="font-size:9px;color:var(--gold);margin-left:4px;">현재 설정</span>' : ''}</div>
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
+      <div class="slot-title">${esc(option.title || option.clean_name || option.property || '—')}</div>
+      <span class="sdot ${option.status||'no_data'}"></span>
+    </div>
+    <div class="slot-sub">${esc(option.subtitle || '')}${option.target_month ? ' · ' + option.target_month : ''}</div>
+    <div class="slot-stats">
+      <div class="slot-stat">
+        <div class="slot-stat-val" style="color:${statusColor[option.status]||'var(--ink)'};">${option.achievement_rate ? option.achievement_rate + '%' : '—'}</div>
+        <div class="slot-stat-lbl">달성률</div>
+      </div>
+      <div class="slot-stat">
+        <div class="slot-stat-val">${option.rns ? fmt(option.rns) : '—'}</div>
+        <div class="slot-stat-lbl">RNS(실)</div>
+      </div>
+      <div class="slot-stat">
+        <div class="slot-stat-val">${option.adr || '—'}</div>
+        <div class="slot-stat-lbl">ADR(천원)</div>
+      </div>
+    </div>
+    ${option.channels?.length ? `<div style="font-size:11px;color:var(--ink-faint);margin-bottom:10px;">
+      ${option.channels.slice(0,2).map(c =>
+        `<span style="margin-right:8px;">${esc(c.name)} <span style="color:var(--gold);">${c.achievement_rate||0}%</span></span>`
+      ).join('')}
+    </div>` : ''}
+    <div class="slot-actions">
+      <button class="btn-slot-change" onclick="openPicker(${slotNum})">변경</button>
+      <button class="btn-slot-reset"  onclick="resetSlot(${slotNum})">초기화</button>
+    </div>`;
+}
+
+function resetSlot(slotNum) {
+  const current = (suggestions.current_strategies || [])[slotNum - 1] || null;
+  selectedStrategies[slotNum - 1] = current;
+  renderSlot(slotNum, current);
+  closePicker(slotNum);
+  autoSave();
+}
+
+/* ══════════════════════════════════════════════
+   PICKER
+══════════════════════════════════════════════ */
+function openPicker(slotNum) {
+  // Close other
+  for (let s = 1; s <= 2; s++) if (s !== slotNum) closePicker(s);
+  pickerActiveSlot = slotNum;
+  pickerSelectedId = selectedStrategies[slotNum - 1]?.id || null;
+  filterRegion = 'all';
+  filterSearch = '';
+  renderPicker(slotNum);
+  document.getElementById('picker-' + slotNum).classList.add('open');
+}
+
+function closePicker(slotNum) {
+  document.getElementById('picker-' + slotNum).classList.remove('open');
+}
+
+function renderPicker(slotNum) {
+  const panel = document.getElementById('picker-' + slotNum);
+  panel.innerHTML = `
+    <div class="picker-head">
+      <span class="picker-title">전략카드 선택 — 슬롯 ${slotNum}</span>
+      <button class="picker-close" onclick="closePicker(${slotNum})">✕ 닫기</button>
+    </div>
+    <div class="picker-filters">
+      <div class="filter-tabs" id="ft-${slotNum}">
+        ${['all','vivaldi','central','south','apac'].map(r =>
+          `<button class="ftab${filterRegion===r?' active':''}" onclick="setFilter(${slotNum},'${r}')">${regionLabel(r)}</button>`
+        ).join('')}
+      </div>
+      <input class="picker-search" id="ps-${slotNum}" placeholder="사업장 검색…"
+        oninput="setSearch(${slotNum}, this.value)" value="${esc(filterSearch)}">
+    </div>
+    <div class="picker-grid" id="pg-${slotNum}">
+      ${renderPickerCards(slotNum)}
+    </div>
+    <div class="picker-confirm">
+      <div class="picker-selected-info" id="psi-${slotNum}">
+        ${pickerSelectedId ? `선택됨: <strong>${esc(getOptionById(pickerSelectedId)?.title || pickerSelectedId)}</strong>` : '카드를 클릭하여 선택하세요.'}
+      </div>
+      <button class="btn btn-primary" style="padding:8px 18px;font-size:12.5px;"
+        onclick="confirmPicker(${slotNum})">✓ 이 카드로 확정</button>
+    </div>`;
+}
+
+function renderPickerCards(slotNum) {
+  const opts = (suggestions.strategy_options || []).filter(o => {
+    if (filterRegion !== 'all' && o.region !== filterRegion) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      if (!(o.clean_name || o.title || o.property || '').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  if (!opts.length) return '<div style="padding:20px;text-align:center;color:var(--ink-faint);font-size:13px;">검색 결과 없음</div>';
+  return opts.map(o => {
+    const isSel = o.id === pickerSelectedId;
+    const statusColor = { over:'var(--positive)', on:'var(--gold)', under:'var(--warning)', critical:'var(--negative)', no_data:'var(--ink-faint)' };
+    const regionCls = {vivaldi:'v',central:'c',south:'s',apac:'a'}[o.region]||'v';
+    return `<div class="picker-card${isSel?' selected':''}" onclick="selectPickerCard(${slotNum},'${o.id}')">
+      <div class="picker-card-name">${esc(o.clean_name || o.title || o.property)}</div>
+      <div class="picker-card-region"><span class="rbadge ${regionCls}">${esc(o.subtitle||o.region)}</span></div>
+      <div class="picker-card-stat"><span>달성률</span><span style="color:${statusColor[o.status]||'var(--ink)'};">${o.achievement_rate ? o.achievement_rate + '%' : '—'}</span></div>
+      <div class="picker-card-stat"><span>RNS</span><span>${o.rns ? fmt(o.rns) + '실' : '—'}</span></div>
+      ${o._current ? '<div style="font-size:10px;color:var(--gold);margin-top:4px;font-family:var(--mono);font-weight:700;">현재 활성</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function setFilter(slotNum, region) {
+  filterRegion = region;
+  const ft = document.getElementById('ft-' + slotNum);
+  if (ft) ft.querySelectorAll('.ftab').forEach(b => b.classList.toggle('active', b.textContent === regionLabel(region)));
+  const pg = document.getElementById('pg-' + slotNum);
+  if (pg) pg.innerHTML = renderPickerCards(slotNum);
+}
+
+function setSearch(slotNum, val) {
+  filterSearch = val;
+  const pg = document.getElementById('pg-' + slotNum);
+  if (pg) pg.innerHTML = renderPickerCards(slotNum);
+}
+
+function selectPickerCard(slotNum, id) {
+  pickerSelectedId = id;
+  const pg = document.getElementById('pg-' + slotNum);
+  if (pg) pg.querySelectorAll('.picker-card').forEach(c => c.classList.remove('selected'));
+  // Find card by onclick
+  if (pg) {
+    const all = pg.querySelectorAll('.picker-card');
+    all.forEach(c => {
+      if (c.getAttribute('onclick')?.includes(`'${id}'`)) c.classList.add('selected');
+    });
+  }
+  const info = document.getElementById('psi-' + slotNum);
+  const opt = getOptionById(id);
+  if (info && opt) info.innerHTML = `선택됨: <strong>${esc(opt.clean_name || opt.title)}</strong>`;
+}
+
+function confirmPicker(slotNum) {
+  if (!pickerSelectedId) { showToast('카드를 먼저 선택하세요.', 'err'); return; }
+  const opt = getOptionById(pickerSelectedId);
+  if (!opt) return;
+  selectedStrategies[slotNum - 1] = { ...opt, slot: slotNum };
+  renderSlot(slotNum, selectedStrategies[slotNum - 1]);
+  closePicker(slotNum);
+  showToast(`슬롯 ${slotNum}: "${opt.clean_name || opt.title}" 확정`);
+  autoSave();
+}
+
+function getOptionById(id) {
+  return (suggestions.strategy_options || []).find(o => o.id === id);
+}
+
+/* ══════════════════════════════════════════════
+   ISSUE ROWS
+══════════════════════════════════════════════ */
+function addIssueRow(type = 'info', text = '') {
+  const list = document.getElementById('issues-list');
+  if (list.children.length >= 5) { showToast('이슈는 최대 5개입니다.', 'err'); return; }
+  const id = `iss-${++issueSeq}`;
   const row = document.createElement('div');
   row.className = 'issue-row';
   row.id = id;
@@ -714,107 +933,173 @@ function addIssueRow(type = 'info', text = '') {
       <option value="warning"  ${type==='warning' ?'selected':''}>⚠️ 주의</option>
       <option value="negative" ${type==='negative'?'selected':''}>🚨 위험</option>
     </select>
-    <input type="text" placeholder="핵심 이슈 내용을 입력하세요" value="${escAttr(text)}">
-    <button class="btn-remove" onclick="document.getElementById('${id}').remove()" title="삭제">✕</button>
-  `;
+    <input type="text" placeholder="핵심 이슈 입력" value="${esca(text)}">
+    <button class="btn-rm" onclick="document.getElementById('${id}').remove()" title="삭제">✕</button>`;
   list.appendChild(row);
 }
 
-function escAttr(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+/* ══════════════════════════════════════════════
+   DATA COLLECTION
+══════════════════════════════════════════════ */
+function getFormData() {
+  const selectedInsights = [...insightState.entries()]
+    .filter(([,s]) => s.selected)
+    .map(([id, s]) => ({ id, type: s.type, source: s.source, text: s.text }));
+
+  const issues = [];
+  document.querySelectorAll('.issue-row').forEach(r => {
+    const type = r.querySelector('select')?.value;
+    const text = r.querySelector('input[type=text]')?.value.trim();
+    if (text) issues.push({ type, text });
+  });
+
+  const radio = n => document.querySelector(`input[name="${n}"]:checked`)?.value || 'hold';
+
+  const strategies = selectedStrategies
+    .map((s, i) => s ? { ...s, slot: i + 1 } : null)
+    .filter(Boolean);
+
+  return {
+    _description: '관리자 키인 데이터. docs/admin.html에서 편집 후 JSON 내보내기.',
+    _updated_at: new Date().toISOString(),
+    _updated_by: document.getElementById('updatedBy').value.trim(),
+    report_date:  document.getElementById('reportDate').value.trim(),
+    selected_insights: selectedInsights,
+    headline:     document.getElementById('headline').value.trim(),
+    notices:      document.getElementById('notices').value.trim(),
+    weekly_key_issues: issues,
+    selected_strategies: strategies,
+    action_alerts: {
+      vivaldi: document.getElementById('action-vivaldi').value.trim(),
+      central: document.getElementById('action-central').value.trim(),
+      south:   document.getElementById('action-south').value.trim(),
+      apac:    document.getElementById('action-apac').value.trim(),
+    },
+    property_strategy: {
+      vivaldi: radio('sv'), central: radio('sc'),
+      south:   radio('ss'), apac:    radio('sa'),
+    },
+  };
 }
 
-// ===== Storage =====
+/* ══════════════════════════════════════════════
+   APPLY FORM DATA (on load / import)
+══════════════════════════════════════════════ */
+function applyFormData(d, reRenderInsights = true) {
+  if (!d) return;
+  setVal('updatedBy',     d._updated_by);
+  setVal('reportDate',    d.report_date);
+  setVal('headline',      d.headline);
+  setVal('notices',       d.notices);
+  setVal('action-vivaldi', d.action_alerts?.vivaldi);
+  setVal('action-central', d.action_alerts?.central);
+  setVal('action-south',   d.action_alerts?.south);
+  setVal('action-apac',    d.action_alerts?.apac);
+
+  if (d.property_strategy) {
+    const m = { vivaldi:'sv', central:'sc', south:'ss', apac:'sa' };
+    Object.entries(d.property_strategy).forEach(([k,v]) => {
+      const el = document.querySelector(`input[name="${m[k]}"][value="${v}"]`);
+      if (el) el.checked = true;
+    });
+  }
+
+  if (Array.isArray(d.weekly_key_issues)) {
+    document.getElementById('issues-list').innerHTML = '';
+    issueSeq = 0;
+    d.weekly_key_issues.forEach(i => addIssueRow(i.type, i.text));
+  }
+
+  if (Array.isArray(d.selected_insights)) {
+    d.selected_insights.forEach(ins => {
+      insightState.set(ins.id, { selected: true, text: ins.text, type: ins.type, source: ins.source });
+    });
+    if (reRenderInsights) renderInsightCards();
+  }
+
+  if (Array.isArray(d.selected_strategies)) {
+    selectedStrategies = [
+      d.selected_strategies.find(s => s.slot === 1) || null,
+      d.selected_strategies.find(s => s.slot === 2) || null,
+    ];
+    if (reRenderInsights) renderStrategySlots();
+  }
+}
+
+/* ══════════════════════════════════════════════
+   STORAGE
+══════════════════════════════════════════════ */
 function saveToStorage() {
   const data = getFormData();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   const now = new Date();
-  document.getElementById('bar-status').textContent =
-    `마지막 저장: ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  showToast('브라우저에 임시 저장되었습니다.');
+  document.getElementById('bar-status').textContent = `마지막 저장: ${p2(now.getHours())}:${p2(now.getMinutes())}`;
+  showToast('임시 저장 완료');
+}
+function loadStorage() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+}
+let _autoTimer;
+function autoSave() {
+  clearTimeout(_autoTimer);
+  _autoTimer = setTimeout(saveToStorage, 1800);
 }
 
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) loadFormData(JSON.parse(raw));
-  } catch(e) {
-    console.warn('스토리지 복원 실패:', e);
-  }
-}
-
-function pad(n) { return String(n).padStart(2, '0'); }
-
-// ===== Export =====
+/* ══════════════════════════════════════════════
+   EXPORT / IMPORT
+══════════════════════════════════════════════ */
 function exportJSON() {
   const data = getFormData();
   const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   a.download = 'admin_input.json';
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
   localStorage.setItem(STORAGE_KEY, json);
-  showToast('admin_input.json 다운로드 완료 — data/ 폴더에 저장 후 커밋하세요.');
+  showToast('admin_input.json 다운로드 — data/ 폴더에 저장 후 커밋하세요.');
 }
 
-// ===== Import =====
 function importJSON(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      loadFormData(JSON.parse(ev.target.result));
+      applyFormData(JSON.parse(ev.target.result));
       showToast(`"${file.name}" 불러오기 성공`);
-    } catch(err) {
-      showToast('JSON 파싱 실패 — 파일을 확인하세요.', 'error');
-    }
+    } catch { showToast('JSON 파싱 실패', 'err'); }
   };
   reader.readAsText(file);
   e.target.value = '';
 }
 
-// ===== Toast =====
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function typeLabel(t) {
+  return { positive:'✅ 긍정', warning:'⚠️ 주의', negative:'🚨 위험', info:'ℹ️ 정보' }[t] || t;
+}
+function regionLabel(r) {
+  return { all:'전체', vivaldi:'비발디', central:'중부', south:'남부', apac:'APAC' }[r] || r;
+}
+function fmt(n) { return Number(n).toLocaleString(); }
+function p2(n)  { return String(n).padStart(2, '0'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esca(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function setVal(id, v) { const el = document.getElementById(id); if (el && v) el.value = v; }
+
 function showToast(msg, type = 'ok') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  t.className = 'toast show' + (type === 'err' ? ' err' : '');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 3400);
 }
 
-// ===== Char counter =====
-function updateCharCount(el) {
-  const c = document.getElementById(el.id + '-count');
-  if (c) c.textContent = el.value.length;
-}
-
-// ===== Auto-save =====
-document.addEventListener('input', e => {
-  if (!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  updateCharCount(e.target);
-  clearTimeout(window._as);
-  window._as = setTimeout(saveToStorage, 1600);
-});
-document.addEventListener('change', () => {
-  clearTimeout(window._as);
-  window._as = setTimeout(saveToStorage, 500);
-});
-
-// ===== Init =====
-document.addEventListener('DOMContentLoaded', () => {
-  const today = new Date();
-  const y = today.getFullYear();
-  const m = pad(today.getMonth() + 1);
-  const d = pad(today.getDate());
-  document.getElementById('reportDate').placeholder = `${y}-${m}-${d}`;
-
-  addIssueRow('info');
-  loadFromStorage();
-});
+/* Auto-save on any input */
+document.addEventListener('input',  e => { if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) autoSave(); });
+document.addEventListener('change', () => autoSave());
 </script>
 </body>
 </html>
