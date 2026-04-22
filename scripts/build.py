@@ -32,6 +32,7 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
 HTML_FILE = DOCS_DIR / "index.html"
+OTB_FILE = DOCS_DIR / "otb.html"
 KST = timezone(timedelta(hours=9))
 STAY_MONTHS = ["2026-04", "2026-05", "2026-06"]
 MONTH_LABELS = {"2026-04": "4월", "2026-05": "5월", "2026-06": "6월"}
@@ -416,9 +417,15 @@ def inject_signal_cards(html: str, prop_data: dict) -> str:
             m4 = prop.get("2026-04", {})
             achievement = m4.get("achievement", 0)
             yoy_pct = m4.get("yoy_pct", 0)
-            
-            # 달성률에 따른 색상
-            if achievement >= 100:
+            rns_check = m4.get("rns", 0)
+            target_check = m4.get("target_rns", 0)
+
+            # 달성률에 따른 색상 (목표 미입력 시 중립)
+            if target_check == 0 and rns_check > 0:
+                dot_color = "yellow"
+                value_class = ""
+                value_color = "var(--ink-muted)"
+            elif achievement >= 100:
                 dot_color = "green"
                 value_class = "up"
                 value_color = "var(--positive)"
@@ -442,15 +449,26 @@ def inject_signal_cards(html: str, prop_data: dict) -> str:
                 yoy_text = "▬ 전년比 ±0%"
                 yoy_color = "var(--ink-faint)"
             
+            # 목표 미입력 시 중립 표시 (achievement=0 but rns>0)
+            rns = m4.get("rns", 0)
+            target_rns = m4.get("target_rns", 0)
+            if target_rns == 0 and rns > 0:
+                sub_text = f"{rns:,}실 (목표 미입력)"
+                display_value = "—"
+                value_class = ""
+            else:
+                sub_text = f"4월 달성 {achievement:.1f}%"
+                display_value = f"{achievement:.1f}%"
+
             cards_html.append(
                 f'    <div class="signal-card">\n'
                 f'      <div class="signal-dot {dot_color}"></div>\n'
                 f'      <div>\n'
                 f'        <div class="signal-name">{name}</div>\n'
-                f'        <div class="signal-sub" style="font-family:\'Pretendard Variable\',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4월 달성 {achievement:.1f}%</div>\n'
+                f'        <div class="signal-sub" style="font-family:\'Pretendard Variable\',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">{sub_text}</div>\n'
                 f'        <div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;margin-top:2px;color:{yoy_color};">{yoy_text}</div>\n'
                 f'      </div>\n'
-                f'      <div class="signal-value {value_class}">{achievement:.1f}%</div>\n'
+                f'      <div class="signal-value {value_class}">{display_value}</div>\n'
                 f'    </div>'
             )
         
@@ -866,34 +884,8 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     return html
 
 
-def main():
-    logger.info("=" * 60)
-    logger.info("V7 대시보드 빌드 (TOP 4 + 사업장 매트릭스 + 뉴스 개선)")
-    logger.info("=" * 60)
-    
-    enriched = load_json(DATA_DIR / "enriched_notes.json")
-    notes = load_json(DATA_DIR / "daily_notes.json")
-    news_data = load_json(DATA_DIR / "news_latest.json")
-    comp_data = load_json(DATA_DIR / "competitors.json")
-    weekly_data = load_json(DATA_DIR / "weekly_report.json")
-    
-    data = enriched if enriched else notes
-    if not data:
-        logger.error("데이터 없음")
-        sys.exit(1)
-    
-    if not HTML_FILE.exists():
-        logger.error(f"HTML 템플릿 없음: {HTML_FILE}")
-        sys.exit(1)
-    
-    html = HTML_FILE.read_text(encoding="utf-8")
-    logger.info(f"✓ HTML 로드 ({len(html):,} bytes)")
-    
-    # 외부 링크
-    html = inject_external_links(html, notes.get("external_links", {}))
-    
-    # 날짜
-    now = datetime.now(KST)
+def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime) -> str:
+    """index.html과 otb.html 공통 주입 함수"""
     day_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
     report_date = data.get("report_date", now.strftime("%Y-%m-%d"))
     try:
@@ -903,51 +895,73 @@ def main():
     except ValueError:
         display_date = report_date
         timestamp = now.strftime("%Y.%m.%d %H:%M KST")
-    
+
+    html = inject_external_links(html, notes.get("external_links", {}))
     html = apply_tpl(html, "date", display_date)
     html = apply_tpl(html, "timestamp", timestamp)
-    
     headline = data.get("today_headline", {})
     if headline.get("text"):
         html = apply_tpl(html, "headline", headline["text"])
     html = apply_tpl(html, "updated_by", f"by {data.get('_updated_by', 'GS팀 · Haein Kim Manager')}")
-    
-    # KPI
     html = inject_kpi_3months(html, notes.get("executive_kpi", {}))
-    
-    # 권역 카드 월별 실적/목표/달성률
     html = inject_region_monthly(html, notes.get("property_performance", {}))
-    
-    # 액션 알림
     actions = data.get("action_alerts", {})
     for key in ("vivaldi", "central", "south", "apac"):
         text = actions.get(key, "")
         if text:
             html = apply_tpl(html, f"action-{key}", text)
-    
-    # OTA TOP 4
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
-    
-    # 사업장 신호등 (BI 자동 수집 데이터)
     html = inject_signal_cards(html, notes.get("property_performance", {}))
-    
-    # 경쟁사
     html = inject_competitor_section(html, comp_data)
-    
-    # 주간 리포트
     html = inject_weekly_report(html, weekly_data)
-
-    # 뉴스
-    html = inject_news_section(html, news_data)
-    
-    # 빌드 메타
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     html = apply_tpl(html, "build", build_meta)
-    
-    HTML_FILE.write_text(html, encoding="utf-8")
-    
+    return html
+
+
+def main():
     logger.info("=" * 60)
-    logger.info(f"✓ 빌드 완료 · 크기: {len(html):,} bytes · 시각: {build_meta}")
+    logger.info("V7 대시보드 빌드 (index.html + otb.html)")
+    logger.info("=" * 60)
+
+    enriched = load_json(DATA_DIR / "enriched_notes.json")
+    notes = load_json(DATA_DIR / "daily_notes.json")
+    news_data = load_json(DATA_DIR / "news_latest.json")
+    comp_data = load_json(DATA_DIR / "competitors.json")
+    weekly_data = load_json(DATA_DIR / "weekly_report.json")
+
+    data = enriched if enriched else notes
+    if not data:
+        logger.error("데이터 없음")
+        sys.exit(1)
+
+    if not HTML_FILE.exists():
+        logger.error(f"HTML 템플릿 없음: {HTML_FILE}")
+        sys.exit(1)
+
+    now = datetime.now(KST)
+
+    # ── index.html 빌드 ──
+    html = HTML_FILE.read_text(encoding="utf-8")
+    logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
+    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now)
+    html = inject_news_section(html, news_data)
+    HTML_FILE.write_text(html, encoding="utf-8")
+    logger.info(f"✓ index.html 빌드 완료 ({len(html):,} bytes)")
+
+    # ── otb.html 빌드 ──
+    if OTB_FILE.exists():
+        otb_html = OTB_FILE.read_text(encoding="utf-8")
+        logger.info(f"✓ otb.html 로드 ({len(otb_html):,} bytes)")
+        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now)
+        OTB_FILE.write_text(otb_html, encoding="utf-8")
+        logger.info(f"✓ otb.html 빌드 완료 ({len(otb_html):,} bytes)")
+    else:
+        logger.info("  otb.html 없음 - 스킵")
+
+    build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
+    logger.info("=" * 60)
+    logger.info(f"✓ 전체 빌드 완료 · {build_meta}")
     logger.info("=" * 60)
 
 

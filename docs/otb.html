@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>26OTB · GS팀 On-The-Books 대시보드</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+  :root {
+    --bg: #1a1d23;
+    --bg-card: #252932;
+    --bg-deep: #14171c;
+    --bg-soft: #2d3138;
+    --bg-hover: #353a44;
+    --ink: #f5f5f7;
+    --ink-soft: #e0e0e3;
+    --ink-muted: #a8acb3;
+    --ink-faint: #7a7e85;
+    --gold: #c9a063;
+    --gold-bright: #e6b970;
+    --positive: #4caf6f;
+    --positive-bg: #1f3a28;
+    --warning: #e8a256;
+    --warning-bg: #3d2e1a;
+    --negative: #e57373;
+    --negative-bg: #3d1f1f;
+    --region-vivaldi: #d97a7a;
+    --region-central: #6ba3c4;
+    --region-south: #6db58a;
+    --region-apac: #a892c8;
+    --rule: rgba(255,255,255,0.12);
+    --rule-strong: rgba(255,255,255,0.22);
+    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
+    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
+    --mono: 'JetBrains Mono', 'D2Coding', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.65;
+    font-size: 15px;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    word-break: keep-all;
+  }
+  .masthead {
+    background: var(--bg-deep);
+    border-bottom: 3px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .masthead-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo { font-family: var(--serif); font-weight: 800; font-size: 20px; color: var(--gold-bright); }
+  .logo .sep { color: rgba(255,255,255,0.3); margin: 0 8px; }
+  .logo .sub { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; font-family: var(--mono); }
+  .masthead-right {
+    display: flex; align-items: center; gap: 16px;
+    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.5);
+  }
+  .live-dot {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--gold-bright);
+    margin-right: 6px; animation: pulse 2.4s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .nav-link {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 6px 14px; border: 1px solid var(--rule); border-radius: 3px;
+    color: var(--ink-muted); text-decoration: none; letter-spacing: 0.08em;
+    transition: all 0.2s;
+  }
+  .nav-link:hover { border-color: var(--gold); color: var(--gold); }
+  .nav-link.active { border-color: var(--gold); color: var(--gold); background: rgba(201,160,99,0.08); }
+
+  .page-wrap { max-width: 1640px; margin: 0 auto; padding: 24px 28px 48px; }
+
+  /* Hero */
+  .hero {
+    background: radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+                radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
+                var(--bg-deep);
+    padding: 32px 28px 28px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 28px;
+  }
+  .hero-inner { max-width: 1640px; margin: 0 auto; }
+  .hero-eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+    color: var(--gold); font-weight: 700; margin-bottom: 10px;
+  }
+  .hero-title {
+    font-family: var(--serif); font-size: clamp(22px,3vw,32px);
+    font-weight: 900; color: #fff; letter-spacing: -0.02em; margin-bottom: 8px;
+  }
+  .hero-subtitle {
+    font-family: var(--sans); font-size: 14px; color: rgba(255,255,255,0.6);
+    line-height: 1.6; max-width: 800px;
+  }
+  .hero-meta {
+    margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.4);
+    letter-spacing: 0.1em;
+  }
+
+  /* Section */
+  .section { margin-bottom: 32px; }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 2px solid var(--rule-strong); padding-bottom: 10px; margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+    color: var(--gold); font-weight: 700;
+  }
+  .section-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+
+  /* OTB Summary Cards */
+  .otb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .otb-card {
+    background: var(--bg-card); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 20px 24px;
+    transition: all 0.2s;
+  }
+  .otb-card.primary { border-left: 4px solid var(--gold); }
+  .otb-card.secondary { border-left: 4px solid rgba(201,160,99,0.3); opacity: 0.75; }
+  .otb-month-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    color: var(--ink-faint); font-weight: 700; margin-bottom: 12px;
+  }
+  .otb-net {
+    font-family: var(--serif); font-size: 36px; font-weight: 900;
+    color: #fff; line-height: 1; margin-bottom: 4px;
+  }
+  .otb-net .unit { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-left: 4px; }
+  .otb-sub { display: flex; gap: 14px; margin-top: 10px; }
+  .otb-sub-item { font-family: var(--mono); font-size: 11px; font-weight: 700; }
+  .otb-sub-item .arrow { margin-right: 3px; }
+  .otb-sub-item.booking { color: #4ecdc4; }
+  .otb-sub-item.cancel { color: #ff6b6b; }
+
+  /* Channel Table */
+  .channel-table-wrap { overflow-x: auto; }
+  .channel-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--sans); font-size: 13px; min-width: 880px;
+  }
+  .channel-table th {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em;
+    color: var(--ink-faint); font-weight: 700; text-align: right;
+    padding: 10px 12px; border-bottom: 2px solid var(--rule-strong); white-space: nowrap;
+  }
+  .channel-table th:first-child, .channel-table th:nth-child(2), .channel-table th:nth-child(3) { text-align: left; }
+  .channel-table thead th:nth-child(4), .channel-table thead th:nth-child(5) {
+    background: rgba(201,160,99,0.06); border-left: 2px solid var(--gold);
+  }
+
+  /* Region grid */
+  .region-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .region-card {
+    padding: 20px 22px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .region-card.vivaldi { background: linear-gradient(135deg, #2e2228, #1a1d23); border-left: 4px solid var(--region-vivaldi); }
+  .region-card.central { background: linear-gradient(135deg, #1f2a35, #1a1d23); border-left: 4px solid var(--region-central); }
+  .region-card.south   { background: linear-gradient(135deg, #1f2e28, #1a1d23); border-left: 4px solid var(--region-south); }
+  .region-card.apac    { background: linear-gradient(135deg, #252035, #1a1d23); border-left: 4px solid var(--region-apac); }
+  .region-name {
+    font-family: var(--serif); font-size: 15px; font-weight: 800;
+    color: #fff; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .region-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    padding: 3px 8px; border-radius: 3px; letter-spacing: 0.1em;
+  }
+  .region-monthly-rows { display: flex; flex-direction: column; gap: 4px; }
+
+  /* Signal Cards (same class names as index.html) */
+  .signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .signal-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: var(--bg-card);
+    border: 1px solid var(--rule); border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .signal-card:hover { background: var(--bg-hover); }
+  .signal-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .signal-dot.green  { background: var(--positive); box-shadow: 0 0 6px rgba(76,175,111,0.5); }
+  .signal-dot.yellow { background: var(--warning);  box-shadow: 0 0 6px rgba(232,162,86,0.5); }
+  .signal-dot.red    { background: var(--negative); box-shadow: 0 0 6px rgba(229,115,115,0.5); }
+  .signal-name { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .signal-sub  { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
+  .signal-value {
+    margin-left: auto; font-family: var(--mono);
+    font-size: 13px; font-weight: 800; color: var(--ink-muted);
+  }
+  .signal-value.up   { color: var(--positive); }
+  .signal-value.down { color: var(--negative); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .otb-grid { grid-template-columns: 1fr; }
+    .region-grid { grid-template-columns: 1fr; }
+    .page-wrap { padding: 16px 16px 40px; }
+    .hero { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ MASTHEAD ══════════════════════ -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo">
+      26OTB
+      <span class="sep">·</span>
+      <span class="sub">ON THE BOOKS</span>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <a href="index.html" class="nav-link">트렌드 리포트 →</a>
+      <a href="https://app.powerbi.com/view?r=eyJrIjoiZWMwYmUyOTUtODg4MC00MmRkLWIyYWMtMzIxN2U5YzQyYjI0IiwidCI6IjJmOGNjOGE4LWE5YjAtNGY4Zi04ZjlmLWZiN2E3ZmQxM2ZmNCJ9" target="_blank" rel="noopener noreferrer" data-tpl-link-bi class="nav-link" style="color:var(--gold);border-color:var(--gold);">Power BI ↗</a>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">OTB DASHBOARD · <span data-tpl-date>2026.04.22</span></div>
+    <div class="hero-title">On-The-Books 현황판</div>
+    <div class="hero-subtitle" data-tpl-headline>비발디파크 권역 <strong>84.1%</strong> 달성으로 부진 · 중부권 <strong>+8.4%</strong> 목표 초과 · 주의 사업장 <strong>5/48곳</strong> 관찰 중.</div>
+    <div class="hero-meta">
+      <span class="hero-meta-item" data-tpl-updated_by>by GS팀 · Haein Kim Manager</span>
+      <span class="hero-meta-item">빌드: <span data-tpl-build>Auto-Built 2026-04-22 16:20 KST</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<div class="page-wrap">
+
+  <!-- DAILY OTB -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title">◈ DAILY OTB · <span data-tpl-weekly-basis>~ 4/21 예약 기준</span></div>
+      <div class="section-meta">신규·취소·순증 기준 / 투숙월별</div>
+    </div>
+    <div class="otb-grid">
+      <!-- 4월 -->
+      <div class="otb-card primary">
+        <div class="otb-month-label">APR 2026 · 당월</div>
+        <div class="otb-net"><span data-tpl-otb-m0-net>589</span><span class="unit">실</span></div>
+        <div class="otb-sub">
+          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m0-booking>870</span> 신규</span>
+          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m0-cancel>281</span> 취소</span>
+        </div>
+      </div>
+      <!-- 5월 -->
+      <div class="otb-card secondary">
+        <div class="otb-month-label">MAY 2026 · 전망</div>
+        <div class="otb-net"><span data-tpl-otb-m1-net>—</span><span class="unit">실</span></div>
+        <div class="otb-sub">
+          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m1-booking>—</span> 신규</span>
+          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m1-cancel>—</span> 취소</span>
+        </div>
+      </div>
+      <!-- 6월 -->
+      <div class="otb-card secondary">
+        <div class="otb-month-label">JUN 2026 · 전망</div>
+        <div class="otb-net"><span data-tpl-otb-m2-net>—</span><span class="unit">실</span></div>
+        <div class="otb-sub">
+          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m2-booking>—</span> 신규</span>
+          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m2-cancel>—</span> 취소</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHANNEL RANKING -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title">◈ 채널별 판매 실적 · OTA RANKING</div>
+      <div class="section-meta">Power BI 자동 수집 · 4월 RNS 기준 정렬</div>
+    </div>
+    <div class="channel-table-wrap">
+      <table class="channel-table" data-tpl-major-ota-table>
+        <thead>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <th style="text-align:left;padding:10px 14px;">#</th>
+            <th style="text-align:left;padding:10px 14px;">채널명</th>
+            <th style="text-align:left;padding:10px 14px;">구분</th>
+            <th style="padding:10px 10px;background:rgba(201,160,99,0.06);border-left:2px solid var(--gold);">4월 객실수</th>
+            <th style="padding:10px 10px;background:rgba(201,160,99,0.06);">4월 YoY</th>
+            <th style="padding:10px 10px;">5월 객실수</th>
+            <th style="padding:10px 10px;">5월 YoY</th>
+            <th style="padding:10px 10px;">6월 객실수</th>
+            <th style="padding:10px 10px;">6월 YoY</th>
+          </tr>
+        </thead>
+        <tbody data-tpl-major-ota-rows><tr>
+          <td colspan="9" style="padding:60px 40px;text-align:center;">
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;color:var(--ink-muted);font-weight:600;margin-bottom:6px;">⏳ 데이터 추후 적용</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-faint);">Power BI 자동 수집 작업 진행 중 · 완료 후 자동 표시</div>
+          </td>
+        </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- REGION MONTHLY -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title">◈ 권역별 월별 실적</div>
+      <div class="section-meta">실적(실) / 목표(실) / 달성률 · 4월 당월</div>
+    </div>
+    <div class="region-grid">
+
+      <!-- VIVALDI -->
+      <div class="region-card vivaldi">
+        <div class="region-name">
+          🍷 비발디파크 권역
+          <span class="region-badge" style="background:rgba(217,122,122,0.15);color:var(--region-vivaldi);">VIVALDI</span>
+        </div>
+        <div class="region-monthly-rows">
+          <!-- REGION_MONTHLY_VIVALDI_START -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">13,375<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">11,256<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">3,864<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <!-- REGION_MONTHLY_VIVALDI_END -->
+        </div>
+      </div>
+
+      <!-- CENTRAL -->
+      <div class="region-card central">
+        <div class="region-name">
+          🏔️ 한국 중부 권역
+          <span class="region-badge" style="background:rgba(107,163,196,0.15);color:var(--region-central);">CENTRAL</span>
+        </div>
+        <div class="region-monthly-rows">
+          <!-- REGION_MONTHLY_CENTRAL_START -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">37,576<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">24,759<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">10,620<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <!-- REGION_MONTHLY_CENTRAL_END -->
+        </div>
+      </div>
+
+      <!-- SOUTH -->
+      <div class="region-card south">
+        <div class="region-name">
+          🌊 한국 남부 권역
+          <span class="region-badge" style="background:rgba(109,181,138,0.15);color:var(--region-south);">SOUTH</span>
+        </div>
+        <div class="region-monthly-rows">
+          <!-- REGION_MONTHLY_SOUTH_START -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">24,910<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">13,979<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">7,341<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <!-- REGION_MONTHLY_SOUTH_END -->
+        </div>
+      </div>
+
+      <!-- APAC -->
+      <div class="region-card apac">
+        <div class="region-name">
+          🌏 APAC 권역
+          <span class="region-badge" style="background:rgba(168,146,200,0.15);color:var(--region-apac);">APAC</span>
+        </div>
+        <div class="region-monthly-rows">
+          <!-- REGION_MONTHLY_APAC_START -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">19,804<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">9,472<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">4,820<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
+          <!-- REGION_MONTHLY_APAC_END -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PROPERTY SIGNALS — VIVALDI -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title" style="color:var(--region-vivaldi);">◈ 비발디파크 권역 · 사업장 현황</div>
+      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
+    </div>
+    <div class="signal-grid">
+<!-- SIGNAL_INJECT_START_vivaldi -->
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">05.빌리지 비발디</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">611실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">03.펫비발디</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,270실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">01.벨비발디</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">9,331실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">04.캄비발디</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">620실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">04.펠리체 비발디</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,543실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <!-- SIGNAL_INJECT_END_vivaldi -->
+    </div>
+  </section>
+
+  <!-- PROPERTY SIGNALS — CENTRAL -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title" style="color:var(--region-central);">◈ 한국 중부 권역 · 사업장 현황</div>
+      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
+    </div>
+    <div class="signal-grid">
+<!-- SIGNAL_INJECT_START_central -->
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">07.델피노</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">8,526실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">14.변산</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,614실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">12.청송</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">2,239실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">13.천안</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4,682실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">08.양양</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,341실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">09.삼척</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">7,073실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">10.단양</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">6,662실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">06.양평</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,439실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <!-- SIGNAL_INJECT_END_central -->
+    </div>
+  </section>
+
+  <!-- PROPERTY SIGNALS — SOUTH -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title" style="color:var(--region-south);">◈ 한국 남부 권역 · 사업장 현황</div>
+      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
+    </div>
+    <div class="signal-grid">
+<!-- SIGNAL_INJECT_START_south -->
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">22.남해</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,285실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">16.거제</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,836실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">15.여수</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,799실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">17.진도</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">5,922실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">21.해운대</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,846실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">11.경주</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4,222실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <!-- SIGNAL_INJECT_END_south -->
+    </div>
+  </section>
+
+  <!-- PROPERTY SIGNALS — APAC -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title" style="color:var(--region-apac);">◈ APAC 권역 · 사업장 현황</div>
+      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
+    </div>
+    <div class="signal-grid">
+<!-- SIGNAL_INJECT_START_apac -->
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">19.캄제주</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,040실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">18.벨제주</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,178실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <div class="signal-card">
+      <div class="signal-dot yellow"></div>
+      <div>
+        <div class="signal-name">20.고양</div>
+        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">13,586실 (목표 미입력)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
+      </div>
+      <div class="signal-value ">—</div>
+    </div>
+    <!-- SIGNAL_INJECT_END_apac -->
+    </div>
+  </section>
+
+</div>
+
+<footer style="background:var(--bg-deep);border-top:1px solid var(--rule);padding:16px 28px;text-align:center;">
+  <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.15em;">
+    26OTB DASHBOARD · GS팀 · <span data-tpl-build>Auto-Built 2026-04-22 08:00 KST</span>
+  </div>
+</footer>
+
+</body>
+</html>
