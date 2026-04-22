@@ -610,15 +610,23 @@ def build_news_html(news_data: dict) -> str:
     category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
     
     sections = []
+    seen_titles: set[str] = set()
     for cat_name in category_order:
         if cat_name not in by_category:
             continue
         cat_data = by_category[cat_name]
         emoji = cat_data.get("emoji", "📰")
-        articles = cat_data.get("articles", [])
+        raw_articles = cat_data.get("articles", [])
+        # 제목 기준 최종 dedup (top_news/by_region 교차 중복 포함)
+        articles = []
+        for a in raw_articles:
+            key = a.get("title", "")[:50]
+            if key and key not in seen_titles:
+                seen_titles.add(key)
+                articles.append(a)
         if not articles:
             continue
-        
+
         # 카테고리 헤더
         article_count = len(articles)
         section_html = f'''
