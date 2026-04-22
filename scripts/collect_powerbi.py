@@ -167,16 +167,17 @@ def get_cluster_uri() -> str:
 # ─────────────────────────────────────────────
 def _build_actual_query(stay_month: str, table_name: str = "data_raw") -> dict:
     """
-    실적 쿼리 - data_raw (당해년도) 또는 data_lastraw (전년도)
-    영업장변경 컬럼으로 집계
+    실적 쿼리 - data_raw에서 투숙년도 필터로 당해/전년 모두 조회
+    data_lastraw는 RNS/REV/투숙년도 컬럼 없으므로 data_raw + year-1로 대체
     """
     year = int(stay_month[:4])
     month = int(stay_month[4:6])
-    
-    # data_lastraw는 투숙년도에서 1 빼서 전년도 조회
+
+    # 전년도는 data_raw에서 year-1로 조회 (data_lastraw 스키마 불일치)
     if table_name == "data_lastraw":
         year = year - 1
-    
+    actual_table = "data_raw"
+
     return {
         "version": "1.0.0",
         "queries": [{
@@ -185,12 +186,12 @@ def _build_actual_query(stay_month: str, table_name: str = "data_raw") -> dict:
                     "Query": {
                         "Version": 2,
                         "From": [
-                            {"Name": "d", "Entity": table_name, "Type": 0},
+                            {"Name": "d", "Entity": actual_table, "Type": 0},
                         ],
                         "Select": [
-                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "영업장변경"}, "Name": f"{table_name}.영업장변경"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum({table_name}.RNS)"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "REV"}}, "Function": 0}, "Name": f"Sum({table_name}.REV)"},
+                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "영업장변경"}, "Name": f"{actual_table}.영업장변경"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum({actual_table}.RNS)"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "REV"}}, "Function": 0}, "Name": f"Sum({actual_table}.REV)"},
                         ],
                         "Where": [
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
@@ -214,12 +215,11 @@ def _build_actual_query(stay_month: str, table_name: str = "data_raw") -> dict:
 
 def _build_budget_query(stay_month: str, budget_table: str, metric_column: str) -> dict:
     """
-    목표 쿼리 - budget_RNS_2026, budget_ADR_2026, budget_REV_2026
+    목표 쿼리 - budget_RNS, budget_ADR, budget_REV (투숙년도 컬럼 없음, 월 필터만)
     '영업장' 컬럼으로 집계
     """
-    year = int(stay_month[:4])
     month = int(stay_month[4:6])
-    
+
     return {
         "version": "1.0.0",
         "queries": [{
@@ -236,7 +236,6 @@ def _build_budget_query(stay_month: str, budget_table: str, metric_column: str) 
                         ],
                         "Where": [
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
-                            {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "b"}}, "Property": "투숙년도"}}, "Right": {"Literal": {"Value": f"{year}L"}}}}},
                         ],
                     },
                     "Binding": {
@@ -290,13 +289,15 @@ def _build_static_mapping_query() -> dict:
 
 def _build_channel_query(stay_month: str, table_name: str = "data_raw") -> dict:
     """
-    거래처(채널)별 실적 쿼리 - OTA TOP 랭킹 수집용
-    data_raw 또는 data_lastraw에서 거래처별 RNS 합산
+    채널명별 실적 쿼리 - OTA TOP 랭킹 수집용
+    data_lastraw는 채널 데이터 없으므로 data_raw + year-1로 대체
     """
     year = int(stay_month[:4])
     month = int(stay_month[4:6])
     if table_name == "data_lastraw":
         year = year - 1
+    actual_table = "data_raw"
+
     return {
         "version": "1.0.0",
         "queries": [{
@@ -305,11 +306,11 @@ def _build_channel_query(stay_month: str, table_name: str = "data_raw") -> dict:
                     "Query": {
                         "Version": 2,
                         "From": [
-                            {"Name": "d", "Entity": table_name, "Type": 0},
+                            {"Name": "d", "Entity": actual_table, "Type": 0},
                         ],
                         "Select": [
-                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "거래처"}, "Name": f"{table_name}.거래처"},
-                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum({table_name}.RNS)"},
+                            {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "채널명"}, "Name": f"data_raw.채널명"},
+                            {"Aggregation": {"Expression": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "RNS"}}, "Function": 0}, "Name": f"Sum(data_raw.RNS)"},
                         ],
                         "Where": [
                             {"Condition": {"Comparison": {"ComparisonKind": 0, "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "월"}}, "Right": {"Literal": {"Value": f"{month}L"}}}}},
@@ -366,6 +367,12 @@ def parse_dsr(result: dict, expected_cols: int = 3) -> list[list]:
         rows_raw = dsr["PH"][0]["DM0"]
         value_dicts = dsr.get("ValueDicts", {})
         col_defs = dsr.get("S", [])
+        # S 정의가 DS 레벨에 없으면 첫 번째 DM0 엔트리에서 가져옴
+        if not col_defs:
+            for entry in rows_raw:
+                if "S" in entry:
+                    col_defs = entry["S"]
+                    break
     except (KeyError, IndexError) as e:
         logger.debug(f"DSR 파싱 실패: {e}")
         return []
@@ -417,10 +424,10 @@ def detect_channel_tier(name: str) -> str:
 
 
 def calculate_adr(rns: int, rev_won: int) -> int:
-    """ADR = REV / RNS (천원 단위)"""
+    """ADR = REV(백만원) * 1000 / RNS → 천원 단위"""
     if rns <= 0:
         return 0
-    return round((rev_won / 1000) / rns)
+    return round((rev_won * 1000) / rns)
 
 
 # ─────────────────────────────────────────────
@@ -492,9 +499,9 @@ def main():
         logger.info(f"      ✓ 전년도: {len(last_dict)}개 사업장")
         
         # 3. 목표 RNS - budget_RNS_2026
-        logger.info(f"  [3/4] budget_RNS_2026 (목표 객실수)")
+        logger.info(f"  [3/4] budget_RNS (목표 객실수)")
         budget_rns_result = execute_query(
-            _build_budget_query(stay_month, "budget_RNS_2026", "budget_RNS"),
+            _build_budget_query(stay_month, "budget_RNS", "budget_RNS"),
             f"{month_label} 목표RNS"
         )
         budget_rns_rows = parse_dsr(budget_rns_result, expected_cols=2) if budget_rns_result else []
@@ -509,10 +516,10 @@ def main():
             budget_rns_dict[display_name] = round(float(row[1] or 0))
         logger.info(f"      ✓ 목표RNS: {len(budget_rns_dict)}개 사업장")
         
-        # 4. 목표 REV - budget_REV_2026
-        logger.info(f"  [4/4] budget_REV_2026 (목표 매출)")
+        # 4. 목표 REV - budget_REV
+        logger.info(f"  [4/4] budget_REV (목표 매출)")
         budget_rev_result = execute_query(
-            _build_budget_query(stay_month, "budget_REV_2026", "budget_REV"),
+            _build_budget_query(stay_month, "budget_REV", "budget_REV"),
             f"{month_label} 목표REV"
         )
         budget_rev_rows = parse_dsr(budget_rev_result, expected_cols=2) if budget_rev_result else []
@@ -545,21 +552,21 @@ def main():
             target_rns = budget_rns_dict.get(name, 0)
             target_rev_won = budget_rev_dict.get(name, 0)
             
-            # 계산
+            # 계산 (REV 단위: 백만원, ADR 단위: 천원)
             achievement = round((rns / target_rns) * 100, 1) if target_rns > 0 else 0
             yoy_pct = round(((rns - last_rns) / last_rns) * 100, 1) if last_rns > 0 else 0
-            adr = calculate_adr(rns, rev_won)
-            rev_million = round(rev_won / 1_000_000)
-            
+            adr = calculate_adr(rns, rev_won)  # rev_won은 백만원 단위
+            rev_million = round(rev_won)  # 이미 백만원 단위
+
             if name not in all_properties:
                 all_properties[name] = {"name": name}
-            
+
             all_properties[name][month_label] = {
                 "rns": rns,
                 "adr": adr,
                 "rev": rev_million,
                 "target_rns": target_rns,
-                "target_rev": round(target_rev_won / 1_000_000),
+                "target_rev": round(target_rev_won),  # 이미 백만원 단위
                 "achievement": achievement,
                 "yoy_pct": yoy_pct,
                 "last_rns": last_rns,
