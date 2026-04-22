@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>관리자 키인 · GS팀 트렌드 리포트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root {
+    --bg: #1a1d23;
+    --bg-card: #252932;
+    --bg-deep: #14171c;
+    --bg-soft: #2d3138;
+    --bg-hover: #353a44;
+    --ink: #f5f5f7;
+    --ink-soft: #e0e0e3;
+    --ink-muted: #a8acb3;
+    --ink-faint: #7a7e85;
+    --gold: #c9a063;
+    --gold-bright: #e6b970;
+    --positive: #4caf6f;
+    --positive-bg: #1f3a28;
+    --warning: #e8a256;
+    --warning-bg: #3d2e1a;
+    --negative: #e57373;
+    --negative-bg: #3d1f1f;
+    --info: #5a9fc4;
+    --info-bg: #1a2e3d;
+    --region-vivaldi: #d97a7a;
+    --region-vivaldi-bg: #2e2228;
+    --region-apac: #a892c8;
+    --region-apac-bg: #252035;
+    --region-center: #6ba3c4;
+    --region-center-bg: #1f2a35;
+    --region-south: #6db58a;
+    --region-south-bg: #1f2e28;
+    --rule: rgba(255,255,255,0.12);
+    --rule-strong: rgba(255,255,255,0.22);
+    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    word-break: keep-all;
+    padding-bottom: 84px;
+    overflow-x: hidden;
+  }
+  *, *::before, *::after { font-family: inherit; }
+  input, button, textarea, select {
+    font-family: var(--sans) !important;
+  }
+
+  /* ===== Masthead ===== */
+  .masthead {
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 0 28px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: baseline; gap: 12px; }
+  .logo-mark {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: var(--gold-bright);
+  }
+  .logo-sub {
+    font-size: 12px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .masthead-right { display: flex; align-items: center; gap: 10px; }
+  .nav-link {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .nav-link:hover { color: var(--gold); border-color: rgba(201,160,99,0.5); }
+
+  /* ===== Page layout ===== */
+  .page-wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px; }
+
+  .page-title {
+    margin-bottom: 26px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .page-eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.25em;
+    color: var(--ink-faint);
+    margin-bottom: 7px;
+    font-weight: 700;
+  }
+  .page-title h1 {
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 7px;
+    letter-spacing: -0.02em;
+  }
+  .page-title p {
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.75;
+  }
+  .page-title code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--gold);
+  }
+
+  /* ===== Form Card ===== */
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 22px 24px;
+    margin-bottom: 14px;
+  }
+  .form-card-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .card-icon { font-size: 15px; line-height: 1; }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--gold-bright);
+  }
+  .card-desc {
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    margin-left: auto;
+  }
+
+  /* ===== Form elements ===== */
+  .form-group { margin-bottom: 15px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .form-label .hint {
+    color: var(--ink-faint);
+    font-weight: 400;
+    margin-left: 5px;
+    font-size: 11.5px;
+  }
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  textarea {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 12px;
+    outline: none;
+    resize: vertical;
+    min-height: 78px;
+    line-height: 1.65;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  textarea.tall { min-height: 100px; }
+  select {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.18s;
+    appearance: auto;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--gold);
+    background: var(--bg-hover);
+  }
+  select option { background: var(--bg-deep); }
+
+  /* ===== Grids ===== */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ===== Region badge ===== */
+  .region-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 3px;
+    margin-bottom: 7px;
+  }
+  .region-badge.vivaldi { background: var(--region-vivaldi-bg); color: var(--region-vivaldi); }
+  .region-badge.central { background: var(--region-center-bg); color: var(--region-center); }
+  .region-badge.south   { background: var(--region-south-bg);  color: var(--region-south);   }
+  .region-badge.apac    { background: var(--region-apac-bg);   color: var(--region-apac);    }
+
+  /* ===== Issue rows ===== */
+  .issue-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 34px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .issue-row:last-child { margin-bottom: 0; }
+  .btn-remove {
+    width: 32px;
+    height: 34px;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink-faint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-remove:hover { background: var(--negative-bg); color: var(--negative); border-color: var(--negative); }
+  .btn-add-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 5px;
+    color: var(--ink-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-add-row:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,160,99,0.06); }
+
+  /* ===== Strategy radio ===== */
+  .strat-group { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
+  .strat-radio { display: none; }
+  .strat-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-muted);
+    user-select: none;
+  }
+  .strat-radio:checked + .strat-opt {
+    background: rgba(201,160,99,0.14);
+    border-color: var(--gold);
+    color: var(--gold-bright);
+  }
+  .strat-opt:hover { border-color: var(--rule-strong); color: var(--ink-soft); }
+
+  /* ===== Bottom action bar ===== */
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-deep);
+    border-top: 1px solid var(--rule-strong);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 100;
+  }
+  .bar-status {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    margin-right: auto;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #e6b970 0%, #c9a063 100%);
+    color: #0a0a0a;
+  }
+  .btn-primary:hover { filter: brightness(1.09); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(201,160,99,0.35); }
+  .btn-secondary {
+    background: var(--bg-soft);
+    color: var(--ink-muted);
+    border: 1px solid var(--rule);
+  }
+  .btn-secondary:hover { background: var(--bg-hover); color: var(--ink); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-faint);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .btn-ghost:hover { color: var(--ink-muted); border-color: var(--rule-strong); }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    top: 66px;
+    right: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--rule-strong);
+    border-left: 3px solid var(--positive);
+    padding: 11px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    opacity: 0;
+    transform: translateX(16px);
+    transition: all 0.28s;
+    pointer-events: none;
+    z-index: 200;
+    max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(0); }
+  .toast.error { border-left-color: var(--negative); }
+
+  /* ===== Char counter ===== */
+  .input-wrap { position: relative; }
+  .char-count {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    pointer-events: none;
+    background: var(--bg-soft);
+    padding: 0 3px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 640px) {
+    .masthead { padding: 0 16px; }
+    .page-wrap { padding: 16px 14px; }
+    .form-card { padding: 16px 15px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .issue-row { grid-template-columns: 105px 1fr 32px; }
+    .action-bar { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+    .bar-status { width: 100%; order: -1; margin-right: 0; }
+    .logo-sub { display: none; }
+    .btn { padding: 9px 13px; font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Masthead ===== -->
+<header class="masthead">
+  <div class="logo">
+    <span class="logo-mark">SONO &amp; TRINITY</span>
+    <span class="logo-sub">관리자 키인 패널</span>
+  </div>
+  <div class="masthead-right">
+    <a href="index.html" class="nav-link">↗ 트렌드 리포트</a>
+  </div>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main class="page-wrap">
+
+  <!-- Page title -->
+  <div class="page-title">
+    <div class="page-eyebrow">ADMIN · KEY-IN PANEL</div>
+    <h1>관리자 입력 패널</h1>
+    <p>
+      입력 내용은 <strong>브라우저에 자동 저장</strong>됩니다.
+      완성 후 <strong>「JSON 내보내기」</strong>를 눌러 <code>admin_input.json</code>을 다운로드하고
+      <code>data/</code> 폴더에 커밋하면 다음 빌드 시 트렌드 리포트에 반영됩니다.
+    </p>
+  </div>
+
+  <!-- ① 기본 정보 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">📋</span>
+      <span class="card-title">기본 정보</span>
+      <span class="card-desc">작성자 · 기준일</span>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="updatedBy">작성자 <span class="hint">이름 또는 직책</span></label>
+        <input type="text" id="updatedBy" placeholder="예: GS팀 · Haein Kim Manager" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="reportDate">보고 기준일 <span class="hint">YYYY-MM-DD</span></label>
+        <input type="text" id="reportDate" placeholder="2026-04-22" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 오늘의 인사이트 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">🔥</span>
+      <span class="card-title">오늘의 인사이트</span>
+      <span class="card-desc">HERO 섹션 헤드라인</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="headline">핵심 메시지 <span class="hint">data-tpl-headline 에 주입</span></label>
+      <div class="input-wrap">
+        <textarea id="headline" class="tall"
+          placeholder="예: 비발디 달성률 84% 위기 — 소노캄 집중 관리 필요. 중부권 아고다 +35% YoY 강세 지속."></textarea>
+        <span class="char-count" id="headline-count">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 관리자 공지 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">📢</span>
+      <span class="card-title">관리자 공지 · 특이사항</span>
+      <span class="card-desc">리포트 상단 배너</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="notices">공지 내용 <span class="hint">비워두면 배너 미표시</span></label>
+      <textarea id="notices"
+        placeholder="예: 5월 황금연휴 특가 프로모션 진행 중 — 할인율 상한 준수 요망. 신규 OTA 채널 온보딩 완료."></textarea>
+    </div>
+  </div>
+
+  <!-- ④ 주간 핵심 이슈 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">📌</span>
+      <span class="card-title">주간 핵심 이슈</span>
+      <span class="card-desc">최대 5개</span>
+    </div>
+    <div id="issues-list"></div>
+    <button class="btn-add-row" id="btn-add-issue" onclick="addIssueRow()">＋ 이슈 추가</button>
+  </div>
+
+  <!-- ⑤ 권역별 액션 알림 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">🎯</span>
+      <span class="card-title">권역별 액션 알림</span>
+      <span class="card-desc">각 권역 ACTION ALERT 텍스트</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">
+        <span class="region-badge vivaldi">🍷 Vivaldi Park</span>
+      </label>
+      <textarea id="action-vivaldi" class="tall"
+        placeholder="예: 비발디 달성률 84% — 소노캄 부진 집중 관리. Smart 요금제 + 멤버십 혜택 강화 필요."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">
+        <span class="region-badge central">🏔️ 한국중부</span>
+      </label>
+      <textarea id="action-central" class="tall"
+        placeholder="예: 아고다 YoY +35% 호조. 델피노·양평 수요 견조. 글로벌 OTA 비중 확대 지속 검토."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">
+        <span class="region-badge south">🌊 한국남부</span>
+      </label>
+      <textarea id="action-south" class="tall"
+        placeholder="예: 한화 -35% 경쟁 공세. 가성비 패키지 강화 및 멤버십 차별화 대응 필요."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">
+        <span class="region-badge apac">🌏 APAC</span>
+      </label>
+      <textarea id="action-apac" class="tall"
+        placeholder="예: 동남아 인바운드 회복세. 일본·싱가포르 채널 점유율 확대 기회."></textarea>
+    </div>
+  </div>
+
+  <!-- ⑥ 사업장별 전략 방향 -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="card-icon">⚙️</span>
+      <span class="card-title">권역별 전략 방향</span>
+      <span class="card-desc">이번 주 방향 선택</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><span class="region-badge vivaldi">🍷 Vivaldi Park</span></label>
+      <div class="strat-group">
+        <input type="radio" name="sv" id="sv-push"    value="push_volume"     class="strat-radio"><label for="sv-push"    class="strat-opt">📈 물량 확대</label>
+        <input type="radio" name="sv" id="sv-hold"    value="hold"            class="strat-radio"><label for="sv-hold"    class="strat-opt">📊 현상 유지</label>
+        <input type="radio" name="sv" id="sv-yield"   value="yield_management" class="strat-radio"><label for="sv-yield"   class="strat-opt">💹 수익 관리</label>
+        <input type="radio" name="sv" id="sv-promo"   value="promotional"     class="strat-radio"><label for="sv-promo"   class="strat-opt">🎁 프로모션</label>
+        <input type="radio" name="sv" id="sv-defend"  value="defend_adr"      class="strat-radio"><label for="sv-defend"  class="strat-opt">🛡️ ADR 방어</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><span class="region-badge central">🏔️ 한국중부</span></label>
+      <div class="strat-group">
+        <input type="radio" name="sc" id="sc-push"    value="push_volume"     class="strat-radio"><label for="sc-push"    class="strat-opt">📈 물량 확대</label>
+        <input type="radio" name="sc" id="sc-hold"    value="hold"            class="strat-radio"><label for="sc-hold"    class="strat-opt">📊 현상 유지</label>
+        <input type="radio" name="sc" id="sc-yield"   value="yield_management" class="strat-radio"><label for="sc-yield"   class="strat-opt">💹 수익 관리</label>
+        <input type="radio" name="sc" id="sc-promo"   value="promotional"     class="strat-radio"><label for="sc-promo"   class="strat-opt">🎁 프로모션</label>
+        <input type="radio" name="sc" id="sc-defend"  value="defend_adr"      class="strat-radio"><label for="sc-defend"  class="strat-opt">🛡️ ADR 방어</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><span class="region-badge south">🌊 한국남부</span></label>
+      <div class="strat-group">
+        <input type="radio" name="ss" id="ss-push"    value="push_volume"     class="strat-radio"><label for="ss-push"    class="strat-opt">📈 물량 확대</label>
+        <input type="radio" name="ss" id="ss-hold"    value="hold"            class="strat-radio"><label for="ss-hold"    class="strat-opt">📊 현상 유지</label>
+        <input type="radio" name="ss" id="ss-yield"   value="yield_management" class="strat-radio"><label for="ss-yield"   class="strat-opt">💹 수익 관리</label>
+        <input type="radio" name="ss" id="ss-promo"   value="promotional"     class="strat-radio"><label for="ss-promo"   class="strat-opt">🎁 프로모션</label>
+        <input type="radio" name="ss" id="ss-defend"  value="defend_adr"      class="strat-radio"><label for="ss-defend"  class="strat-opt">🛡️ ADR 방어</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><span class="region-badge apac">🌏 APAC</span></label>
+      <div class="strat-group">
+        <input type="radio" name="sa" id="sa-push"    value="push_volume"     class="strat-radio"><label for="sa-push"    class="strat-opt">📈 물량 확대</label>
+        <input type="radio" name="sa" id="sa-hold"    value="hold"            class="strat-radio"><label for="sa-hold"    class="strat-opt">📊 현상 유지</label>
+        <input type="radio" name="sa" id="sa-yield"   value="yield_management" class="strat-radio"><label for="sa-yield"   class="strat-opt">💹 수익 관리</label>
+        <input type="radio" name="sa" id="sa-promo"   value="promotional"     class="strat-radio"><label for="sa-promo"   class="strat-opt">🎁 프로모션</label>
+        <input type="radio" name="sa" id="sa-defend"  value="defend_adr"      class="strat-radio"><label for="sa-defend"  class="strat-opt">🛡️ ADR 방어</label>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== Bottom action bar ===== -->
+<div class="action-bar">
+  <span class="bar-status" id="bar-status">마지막 저장: —</span>
+  <label class="btn btn-ghost" style="cursor:pointer;">
+    📂 JSON 불러오기
+    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
+  </label>
+  <button class="btn btn-secondary" onclick="saveToStorage()">💾 임시 저장</button>
+  <button class="btn btn-primary" onclick="exportJSON()">⬇ JSON 내보내기</button>
+</div>
+
+<script>
+const STORAGE_KEY = 'gs_admin_input_v1';
+let issueSeq = 0;
+
+// ===== Collect form data =====
+function getFormData() {
+  const issues = [];
+  document.querySelectorAll('.issue-row').forEach(row => {
+    const type = row.querySelector('select').value;
+    const text = row.querySelector('input[type="text"]').value.trim();
+    if (text) issues.push({ type, text });
+  });
+
+  const radio = (name) => {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : 'hold';
+  };
+
+  return {
+    _description: '관리자 키인 데이터. docs/admin.html에서 편집 후 JSON 내보내기.',
+    _updated_at: new Date().toISOString(),
+    _updated_by: document.getElementById('updatedBy').value.trim(),
+    report_date: document.getElementById('reportDate').value.trim(),
+    headline: document.getElementById('headline').value.trim(),
+    notices: document.getElementById('notices').value.trim(),
+    weekly_key_issues: issues,
+    action_alerts: {
+      vivaldi: document.getElementById('action-vivaldi').value.trim(),
+      central: document.getElementById('action-central').value.trim(),
+      south:   document.getElementById('action-south').value.trim(),
+      apac:    document.getElementById('action-apac').value.trim()
+    },
+    property_strategy: {
+      vivaldi: radio('sv'),
+      central: radio('sc'),
+      south:   radio('ss'),
+      apac:    radio('sa')
+    }
+  };
+}
+
+// ===== Load form data =====
+function loadFormData(d) {
+  if (!d) return;
+  setValue('updatedBy', d._updated_by);
+  setValue('reportDate', d.report_date);
+  setValue('headline', d.headline);
+  setValue('notices', d.notices);
+  setValue('action-vivaldi', d.action_alerts?.vivaldi);
+  setValue('action-central', d.action_alerts?.central);
+  setValue('action-south',   d.action_alerts?.south);
+  setValue('action-apac',    d.action_alerts?.apac);
+
+  if (d.property_strategy) {
+    const map = { vivaldi:'sv', central:'sc', south:'ss', apac:'sa' };
+    Object.entries(d.property_strategy).forEach(([region, val]) => {
+      const el = document.querySelector(`input[name="${map[region]}"][value="${val}"]`);
+      if (el) el.checked = true;
+    });
+  }
+
+  if (Array.isArray(d.weekly_key_issues)) {
+    document.getElementById('issues-list').innerHTML = '';
+    issueSeq = 0;
+    d.weekly_key_issues.forEach(item => addIssueRow(item.type, item.text));
+  }
+
+  updateCharCount(document.getElementById('headline'));
+}
+
+function setValue(id, val) {
+  const el = document.getElementById(id);
+  if (el && val) el.value = val;
+}
+
+// ===== Issue rows =====
+function addIssueRow(type = 'info', text = '') {
+  const list = document.getElementById('issues-list');
+  if (list.children.length >= 5) {
+    showToast('이슈는 최대 5개까지 입력할 수 있습니다.', 'error');
+    return;
+  }
+  const id = `issue-${++issueSeq}`;
+  const row = document.createElement('div');
+  row.className = 'issue-row';
+  row.id = id;
+  row.innerHTML = `
+    <select>
+      <option value="info"     ${type==='info'    ?'selected':''}>ℹ️ 정보</option>
+      <option value="positive" ${type==='positive'?'selected':''}>✅ 긍정</option>
+      <option value="warning"  ${type==='warning' ?'selected':''}>⚠️ 주의</option>
+      <option value="negative" ${type==='negative'?'selected':''}>🚨 위험</option>
+    </select>
+    <input type="text" placeholder="핵심 이슈 내용을 입력하세요" value="${escAttr(text)}">
+    <button class="btn-remove" onclick="document.getElementById('${id}').remove()" title="삭제">✕</button>
+  `;
+  list.appendChild(row);
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// ===== Storage =====
+function saveToStorage() {
+  const data = getFormData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const now = new Date();
+  document.getElementById('bar-status').textContent =
+    `마지막 저장: ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  showToast('브라우저에 임시 저장되었습니다.');
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) loadFormData(JSON.parse(raw));
+  } catch(e) {
+    console.warn('스토리지 복원 실패:', e);
+  }
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// ===== Export =====
+function exportJSON() {
+  const data = getFormData();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'admin_input.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(STORAGE_KEY, json);
+  showToast('admin_input.json 다운로드 완료 — data/ 폴더에 저장 후 커밋하세요.');
+}
+
+// ===== Import =====
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      loadFormData(JSON.parse(ev.target.result));
+      showToast(`"${file.name}" 불러오기 성공`);
+    } catch(err) {
+      showToast('JSON 파싱 실패 — 파일을 확인하세요.', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ===== Toast =====
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+// ===== Char counter =====
+function updateCharCount(el) {
+  const c = document.getElementById(el.id + '-count');
+  if (c) c.textContent = el.value.length;
+}
+
+// ===== Auto-save =====
+document.addEventListener('input', e => {
+  if (!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  updateCharCount(e.target);
+  clearTimeout(window._as);
+  window._as = setTimeout(saveToStorage, 1600);
+});
+document.addEventListener('change', () => {
+  clearTimeout(window._as);
+  window._as = setTimeout(saveToStorage, 500);
+});
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = pad(today.getMonth() + 1);
+  const d = pad(today.getDate());
+  document.getElementById('reportDate').placeholder = `${y}-${m}-${d}`;
+
+  addIssueRow('info');
+  loadFromStorage();
+});
+</script>
+</body>
+</html>

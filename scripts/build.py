@@ -32,6 +32,7 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
 HTML_FILE = DOCS_DIR / "index.html"
+ADMIN_INPUT_FILE = DATA_DIR / "admin_input.json"
 KST = timezone(timedelta(hours=9))
 STAY_MONTHS = ["2026-04", "2026-05", "2026-06"]
 MONTH_LABELS = {"2026-04": "4월", "2026-05": "5월", "2026-06": "6월"}
@@ -866,6 +867,66 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     return html
 
 
+def inject_admin_input(html: str, admin: dict) -> str:
+    """관리자 키인(admin_input.json) 데이터를 index.html에 주입한다.
+
+    주입 대상:
+      - data-tpl-headline       : 오늘의 인사이트 한 줄
+      - data-tpl-updated_by     : 작성자
+      - data-tpl-action-{region}: 권역별 액션 알림 (vivaldi/central/south/apac)
+      - ADMIN_NOTICE_START/END  : 관리자 공지 배너 (비어 있으면 미표시)
+    """
+    if not admin:
+        return html
+
+    # 헤드라인
+    headline = admin.get("headline", "").strip()
+    if headline:
+        html = apply_tpl(html, "headline", escape_html(headline))
+
+    # 작성자
+    updated_by = admin.get("_updated_by", "").strip()
+    if updated_by:
+        html = apply_tpl(html, "updated_by", f"by {escape_html(updated_by)}")
+
+    # 권역별 액션 알림
+    alerts = admin.get("action_alerts", {})
+    for region in ("vivaldi", "central", "south", "apac"):
+        text = alerts.get(region, "").strip()
+        if text:
+            html = apply_tpl(html, f"action-{region}", escape_html(text))
+
+    # 관리자 공지 배너 — 매 빌드마다 초기화 후 재주입
+    html = re.sub(
+        r"<!-- ADMIN_NOTICE_START -->.*?<!-- ADMIN_NOTICE_END -->",
+        "<!-- ADMIN_NOTICE_START --><!-- ADMIN_NOTICE_END -->",
+        html,
+        flags=re.DOTALL,
+    )
+    notice = admin.get("notices", "").strip()
+    if notice:
+        banner = (
+            "<!-- ADMIN_NOTICE_START -->"
+            "<div style=\"margin-bottom:16px;padding:12px 18px;"
+            "background:rgba(232,162,86,0.10);border:1px solid rgba(232,162,86,0.32);"
+            "border-left:3px solid #e8a256;border-radius:5px;"
+            "font-size:13.5px;color:#e0e0e3;line-height:1.65;\">"
+            "<span style=\"font-family:var(--mono);font-size:10.5px;font-weight:800;"
+            "color:#e8a256;letter-spacing:0.2em;margin-right:10px;\">📢 NOTICE</span>"
+            f"{escape_html(notice)}"
+            "</div>"
+            "<!-- ADMIN_NOTICE_END -->"
+        )
+        html = html.replace(
+            "<!-- ADMIN_NOTICE_START --><!-- ADMIN_NOTICE_END -->",
+            banner,
+            1,
+        )
+
+    logger.info("✓ 관리자 키인 데이터 주입")
+    return html
+
+
 def main():
     logger.info("=" * 60)
     logger.info("V7 대시보드 빌드 (TOP 4 + 사업장 매트릭스 + 뉴스 개선)")
@@ -876,6 +937,7 @@ def main():
     news_data = load_json(DATA_DIR / "news_latest.json")
     comp_data = load_json(DATA_DIR / "competitors.json")
     weekly_data = load_json(DATA_DIR / "weekly_report.json")
+    admin_data = load_json(ADMIN_INPUT_FILE)
     
     data = enriched if enriched else notes
     if not data:
@@ -889,6 +951,9 @@ def main():
     html = HTML_FILE.read_text(encoding="utf-8")
     logger.info(f"✓ HTML 로드 ({len(html):,} bytes)")
     
+    # 관리자 키인 (가장 먼저 적용 — 헤드라인·액션알림 덮어쓰기 기준점)
+    html = inject_admin_input(html, admin_data)
+
     # 외부 링크
     html = inject_external_links(html, notes.get("external_links", {}))
     
