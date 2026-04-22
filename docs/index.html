@@ -9299,6 +9299,40 @@ function updateTime() {
 updateTime();
 setInterval(updateTime, 60000);
 
+// ============ News More Toggle ============
+function toggleNewsMore(btn, id) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = '';
+    btn.textContent = '접기 ▲';
+  } else {
+    wrap.style.display = 'none';
+    btn.textContent = '+ ' + btn.dataset.count + '개 더보기';
+  }
+}
+
+// 모바일(≤640px)에서 카테고리별 5개만 노출, 나머지는 더보기로 이동
+(function initMobileNewsLimit() {
+  if (!window.matchMedia('(max-width: 640px)').matches) return;
+  document.querySelectorAll('.news-category-section').forEach(function(section) {
+    var wrap = section.querySelector('.news-more-wrap');
+    var btn  = section.querySelector('.news-more-btn');
+    if (!wrap || !btn) return;
+    var directItems = Array.from(section.querySelectorAll('.news-item')).filter(function(item) {
+      return !wrap.contains(item);
+    });
+    var toMove = directItems.slice(5);
+    if (toMove.length === 0) return;
+    toMove.reverse().forEach(function(item) {
+      wrap.insertBefore(item, wrap.firstChild);
+    });
+    var newCount = parseInt(btn.dataset.count, 10) + toMove.length;
+    btn.dataset.count = newCount;
+    btn.textContent   = '+ ' + newCount + '개 더보기';
+  });
+})();
+
 // ============ News Tab Switcher ============
 function switchNewsTab(region) {
   // active 클래스만 토글
