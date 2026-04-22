@@ -656,7 +656,6 @@ def build_news_html(news_data: dict) -> str:
   <div class="news-category-section" id="{cat_id}" style="margin-bottom:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:18px;">{emoji}</span>
         <span style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-0.01em;">{escape_html(cat_name)}</span>
       </div>
       <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">{article_count} Articles</span>
@@ -733,17 +732,12 @@ def render_featured_news(featured_list: list) -> str:
        style="text-decoration:none;color:inherit;display:flex;background:var(--bg-card);border:1px solid var(--rule);border-left:4px solid {r_color};border-radius:0 6px 6px 0;overflow:hidden;transition:all 0.2s;"
        onmouseover="this.style.boxShadow='0 12px 24px rgba(0,0,0,0.4)';this.style.transform='translateY(-2px)'"
        onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
-      
-      <!-- 이미지 영역 (이모지 placeholder) -->
-      <div style="flex-shrink:0;width:130px;background:linear-gradient(135deg,{r_color}25,{r_color}08);display:flex;align-items:center;justify-content:center;font-size:60px;border-right:1px solid var(--rule);">
-        {image_emoji}
-      </div>
-      
+
       <!-- 본문 -->
       <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
         <div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:{r_color};color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">{emoji} {category}</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:{r_color};color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">{category}</span>
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:9px;padding:3px 7px;background:{i_color}22;color:{i_color};border-radius:2px;font-weight:800;letter-spacing:0.05em;">{i_label}</span>
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[{tag}]</span>
             {new_badge_feat}
