@@ -129,145 +129,96 @@ def detect_file_type(filename):
     return None
 
 
-def parse_file(filepath, file_type):
+def parse_and_aggregate(filepath, file_type, agg):
     """
-    단일 txt 파일 파싱 → 행 단위 딕셔너리 리스트
-    메모리 효율을 위해 필요한 컬럼만 추출
+    단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
+    agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
     """
-    rows = []
     encodings = ['cp949', 'euc-kr', 'utf-8']
+    is_cancel = file_type in ("28", "44")
+    btype = 'cancel' if is_cancel else 'booking'
 
     for enc in encodings:
         try:
             with open(filepath, 'r', encoding=enc) as f:
                 header_line = f.readline().strip()
                 headers = header_line.split(';')
-
-                # 컬럼 인덱스 매핑
                 col_map = {h.strip(): i for i, h in enumerate(headers)}
 
-                # 필요 컬럼
-                is_cancel = file_type in ("28", "44")
-
-                # 공통 필수 컬럼
-                required = ['영업장명', '입실일자']
-
-                # 변경사업장명 (있으면 사용)
                 has_change_prop = '변경사업장명' in col_map
-
-                # 예약집계코드명 컬럼 (27/43은 '변경예약집계코드명', 28/44는 '예약집계명')
                 code_col = '변경예약집계코드명' if '변경예약집계코드명' in col_map else '예약집계명'
 
+                # 컬럼 인덱스 사전 조회 (루프 최적화)
+                idx_prop = col_map.get('영업장명', -1)
+                idx_cprop = col_map.get('변경사업장명', -1) if has_change_prop else -1
+                idx_checkin = col_map.get('입실일자', -1)
+                idx_code = col_map.get(code_col, -1)
+                idx_agent = col_map.get('AGENT명', -1)
+                idx_nights = col_map.get('박수', -1)
+                idx_rooms = col_map.get('객실수', -1)
+                idx_price = col_map.get('판매가', -1)
+
                 line_count = 0
+                ok_count = 0
                 error_count = 0
 
                 for line in f:
                     line_count += 1
-                    parts = line.strip().split(';')
-
-                    if len(parts) < len(headers) - 2:  # 약간의 여유
-                        error_count += 1
-                        continue
+                    parts = line.split(';')
+                    plen = len(parts)
 
                     try:
-                        prop_raw = parts[col_map['영업장명']] if '영업장명' in col_map else ''
-                        change_prop = parts[col_map['변경사업장명']] if has_change_prop and col_map['변경사업장명'] < len(parts) else ''
-                        prop_name = normalize_property(change_prop) if change_prop.strip() else normalize_property(prop_raw)
+                        # 사업장명
+                        prop_raw = parts[idx_prop] if idx_prop >= 0 and idx_prop < plen else ''
+                        cprop = parts[idx_cprop].strip() if idx_cprop >= 0 and idx_cprop < plen else ''
+                        prop_name = normalize_property(cprop) if cprop else normalize_property(prop_raw)
 
-                        checkin = parts[col_map['입실일자']] if '입실일자' in col_map and col_map['입실일자'] < len(parts) else ''
+                        # 입실일자
+                        checkin = parts[idx_checkin].strip() if idx_checkin >= 0 and idx_checkin < plen else ''
+                        if len(checkin) < 6:
+                            continue
+                        stay_month = checkin[:6]
 
-                        code_name = ''
-                        if code_col in col_map and col_map[code_col] < len(parts):
-                            code_name = parts[col_map[code_col]]
+                        # 코드명, AGENT명
+                        code_name = parts[idx_code].strip() if idx_code >= 0 and idx_code < plen else ''
+                        agent_name = parts[idx_agent].strip() if idx_agent >= 0 and idx_agent < plen else ''
 
-                        agent_name = ''
-                        if 'AGENT명' in col_map and col_map['AGENT명'] < len(parts):
-                            agent_name = parts[col_map['AGENT명']]
-
-                        # 숫자 컬럼
-                        def safe_int(col):
-                            if col in col_map and col_map[col] < len(parts):
-                                val = parts[col_map[col]].strip()
-                                try:
-                                    return int(val) if val else 0
-                                except ValueError:
-                                    return 0
+                        # 숫자
+                        def _int(idx):
+                            if idx >= 0 and idx < plen:
+                                v = parts[idx].strip()
+                                return int(v) if v else 0
                             return 0
 
-                        nights = safe_int('박수')
-                        rooms = safe_int('객실수')
-                        rate_1night = safe_int('1박객실료')
-                        sale_price = safe_int('판매가')
+                        nights = _int(idx_nights)
+                        rooms = _int(idx_rooms)
+                        sale_price = _int(idx_price)
 
-                        # RN = 박수 × 객실수
                         rn = nights * rooms if nights > 0 and rooms > 0 else max(1, rooms)
-
-                        # REV = 판매가 (원 단위)
                         rev = sale_price
 
-                        # 입실월 추출 (YYYYMMDD → YYYYMM)
-                        if len(checkin) >= 6:
-                            stay_month = checkin[:6]
-                        else:
-                            continue
+                        region = get_region(prop_name)
+                        channel = extract_channel(agent_name)
+                        segment = classify_segment(code_name, agent_name, file_type)
 
-                        # 입실년도
-                        stay_year = checkin[:4] if len(checkin) >= 4 else ''
+                        key = (prop_name, region, stay_month, channel, segment, btype)
+                        agg[key]['rn'] += rn
+                        agg[key]['rev'] += rev
+                        agg[key]['count'] += 1
+                        ok_count += 1
 
-                        cancel_date = ''
-                        if is_cancel and '취소일자' in col_map and col_map['취소일자'] < len(parts):
-                            cancel_date = parts[col_map['취소일자']]
-
-                        row = {
-                            'prop': prop_name,
-                            'region': get_region(prop_name),
-                            'stay_month': stay_month,
-                            'stay_year': stay_year,
-                            'checkin': checkin,
-                            'code_name': code_name,
-                            'agent': agent_name,
-                            'channel': extract_channel(agent_name),
-                            'segment': classify_segment(code_name, agent_name, file_type),
-                            'rn': rn,
-                            'rev': rev,
-                            'rate': rate_1night,
-                            'type': 'cancel' if is_cancel else 'booking',
-                            'file_type': file_type,
-                        }
-                        if cancel_date:
-                            row['cancel_date'] = cancel_date
-
-                        rows.append(row)
-
-                    except (IndexError, ValueError) as e:
+                    except (IndexError, ValueError):
                         error_count += 1
                         continue
 
-                logger.info(f"  파싱 완료: {line_count:,}행 읽음, {len(rows):,}행 성공, {error_count:,}행 오류")
-                return rows
+                logger.info(f"  파싱 완료: {line_count:,}행 읽음, {ok_count:,}행 성공, {error_count:,}행 오류")
+                return ok_count
 
         except UnicodeDecodeError:
             continue
 
     logger.error(f"  인코딩 감지 실패: {filepath}")
-    return []
-
-
-def aggregate(rows):
-    """
-    행 단위 → 집계 딕셔너리
-    키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
-    값: RN합계, REV합계
-    """
-    agg = defaultdict(lambda: {'rn': 0, 'rev': 0, 'count': 0})
-
-    for r in rows:
-        key = (r['prop'], r['region'], r['stay_month'], r['channel'], r['segment'], r['type'])
-        agg[key]['rn'] += r['rn']
-        agg[key]['rev'] += r['rev']
-        agg[key]['count'] += 1
-
-    return agg
+    return 0
 
 
 def build_summary(agg):
@@ -406,8 +357,11 @@ def main():
     txt_files = sorted(RAW_DB_DIR.rglob("*.txt"))
     logger.info(f"총 {len(txt_files)}개 txt 파일 발견")
 
-    all_rows = []
+    agg = defaultdict(lambda: {'rn': 0, 'rev': 0, 'count': 0})
     file_stats = {}
+    total_rows = 0
+
+    type_labels = {"27": "FIT예약", "28": "FIT취소", "43": "IB예약", "44": "IB취소"}
 
     for fpath in txt_files:
         file_type = detect_file_type(fpath.name)
@@ -415,29 +369,20 @@ def main():
             logger.warning(f"  스킵 (타입 불명): {fpath.name}")
             continue
 
-        # 2023 폴더의 28번은 잘못 배치된 파일 → 스킵
         folder_name = fpath.parent.name
-        if folder_name == "2023" and file_type == "28":
-            logger.warning(f"  스킵 (2023/28번 = 잘못 배치): {fpath.name}")
-            continue
 
-        type_labels = {"27": "FIT예약", "28": "FIT취소", "43": "IB예약", "44": "IB취소"}
         logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
 
-        rows = parse_file(str(fpath), file_type)
-        all_rows.extend(rows)
+        row_count = parse_and_aggregate(str(fpath), file_type, agg)
+        total_rows += row_count
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
             'type': file_type,
             'label': type_labels.get(file_type, file_type),
-            'rows': len(rows),
+            'rows': row_count,
         }
 
-    logger.info(f"\n총 파싱 행 수: {len(all_rows):,}")
-
-    # 집계
-    logger.info("집계 중...")
-    agg = aggregate(all_rows)
+    logger.info(f"\n총 파싱 행 수: {total_rows:,}")
     logger.info(f"집계 키 수: {len(agg):,}")
 
     # 요약 생성
