@@ -190,19 +190,25 @@ def detect_category_emoji(category: str) -> str:
 
 
 def load_existing_news() -> list:
-    """기존 news_latest.json에서 이전 기사 목록 로드"""
+    """기존 news_latest.json에서 이전 기사 목록 로드 (중복 제거)"""
     if not OUTPUT_FILE.exists():
         return []
     try:
         data = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
-        # 모든 기사를 플랫 리스트로 수집
+        seen = set()
         existing = []
+        candidates = []
+        # by_region이 가장 정제된 소스 — 우선 사용
         for region_articles in data.get("by_region", {}).values():
-            existing.extend(region_articles)
-        for art in data.get("top_news", []):
-            existing.append(art)
+            candidates.extend(region_articles)
+        # by_category에서 by_region에 없는 기사 추가
         for cat_data in data.get("by_category", {}).values():
-            existing.extend(cat_data.get("articles", []))
+            candidates.extend(cat_data.get("articles", []))
+        for art in candidates:
+            key = art.get("title", "")[:50]
+            if key and key not in seen:
+                seen.add(key)
+                existing.append(art)
         return existing
     except (json.JSONDecodeError, KeyError):
         return []
