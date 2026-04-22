@@ -609,16 +609,24 @@ def build_news_html(news_data: dict) -> str:
     # 카테고리 순서
     category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
     
+    seen_titles: set = set()
     sections = []
     for cat_name in category_order:
         if cat_name not in by_category:
             continue
         cat_data = by_category[cat_name]
         emoji = cat_data.get("emoji", "📰")
-        articles = cat_data.get("articles", [])
+        raw_articles = cat_data.get("articles", [])
+        # 빌드 단계 이중 방어: 제목 기준 전역 중복 제거
+        articles = []
+        for art in raw_articles:
+            key = art.get("title", "")[:50]
+            if key and key not in seen_titles:
+                seen_titles.add(key)
+                articles.append(art)
         if not articles:
             continue
-        
+
         # 카테고리 헤더
         article_count = len(articles)
         section_html = f'''
