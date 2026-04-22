@@ -641,8 +641,12 @@ def build_news_html(news_data: dict) -> str:
         if not articles:
             continue
 
-        # 카테고리 헤더
+        NEWS_VISIBLE_LIMIT = 10
+        visible_articles = articles[:NEWS_VISIBLE_LIMIT]
+        hidden_articles = articles[NEWS_VISIBLE_LIMIT:]
         article_count = len(articles)
+        section_id = "nm-" + cat_name.replace("/", "-").replace(" ", "")
+
         section_html = f'''
   <!-- ===== {cat_name} ===== -->
   <div class="news-category-section" style="margin-bottom:24px;">
@@ -654,8 +658,8 @@ def build_news_html(news_data: dict) -> str:
       <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">{article_count} Articles</span>
     </div>
     <div>'''
-        
-        for art in articles:
+
+        def render_article(art):
             tag = escape_html(art.get("tag", ""))
             title = escape_html(art.get("title", ""))
             source = escape_html(art.get("source", ""))
@@ -665,8 +669,7 @@ def build_news_html(news_data: dict) -> str:
             r_label = region_labels.get(region, region)
             is_new = art.get("is_new", False)
             new_badge = '<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>' if is_new else ''
-
-            section_html += f'''
+            return f'''
       <a href="{link}" target="_blank" rel="noopener noreferrer" class="news-item" data-region="{region}"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -686,8 +689,20 @@ def build_news_html(news_data: dict) -> str:
           </div>
         </div>
       </a>'''
-        
-        section_html += '\n    </div>\n  </div>'
+
+        for art in visible_articles:
+            section_html += render_article(art)
+
+        if hidden_articles:
+            section_html += f'\n    </div>\n    <div id="{section_id}" class="news-more-wrap" style="display:none;">'
+            for art in hidden_articles:
+                section_html += render_article(art)
+            section_html += f'''\n    </div>
+    <button class="news-more-btn" onclick="toggleNewsMore(this,\'{section_id}\')" data-count="{len(hidden_articles)}">+ {len(hidden_articles)}개 더보기</button>'''
+        else:
+            section_html += '\n    </div>'
+
+        section_html += '\n  </div>'
         sections.append(section_html)
     
     return "\n".join(sections)
