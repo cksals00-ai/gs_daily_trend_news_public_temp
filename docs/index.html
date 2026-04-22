@@ -1448,6 +1448,29 @@
     /* --- 모노 폰트 영역 --- */
     [style*="font-size:12.5px"] { font-size: 11.5px !important; }
   }
+
+  /* ===== 뉴스 더보기 버튼 ===== */
+  .news-more-wrap {
+    text-align: center;
+    padding: 10px 0 4px;
+  }
+  .news-more-btn {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    padding: 5px 18px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background 0.15s, color 0.15s;
+  }
+  .news-more-btn:hover {
+    background: var(--gold);
+    color: #0d0d0d;
+  }
 </style>
 </head>
 <body>
@@ -9546,6 +9569,52 @@ function switchNewsTab(region) {
     emptyMsg.remove();
   }
 }
+
+// ===== 뉴스 더보기/접기 토글 =====
+function toggleNewsMore(btn, id) {
+  var section = document.getElementById(id);
+  if (!section) return;
+  var isMobile = window.matchMedia('(max-width:640px)').matches;
+  var limit = isMobile ? 5 : 10;
+  var items = section.querySelectorAll('a.news-item');
+  var expanded = btn.dataset.expanded === '1';
+  for (var i = limit; i < items.length; i++) {
+    items[i].style.display = expanded ? 'none' : '';
+  }
+  btn.dataset.expanded = expanded ? '0' : '1';
+  btn.textContent = expanded ? '더보기 (+' + (items.length - limit) + '개)' : '접기';
+}
+
+// ===== 페이지 로드 시 카테고리별 기사 제한 (모바일 5개 / PC 10개) =====
+(function () {
+  function applyNewsLimit() {
+    var isMobile = window.matchMedia('(max-width:640px)').matches;
+    var limit = isMobile ? 5 : 10;
+    document.querySelectorAll('.news-category-section').forEach(function (section, idx) {
+      if (!section.id) section.id = 'news-sec-' + idx;
+      var items = section.querySelectorAll('a.news-item');
+      if (items.length <= limit) return;
+      for (var i = limit; i < items.length; i++) items[i].style.display = 'none';
+      if (section.querySelector('.news-more-btn')) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'news-more-wrap';
+      var btn = document.createElement('button');
+      btn.className = 'news-more-btn';
+      btn.textContent = '더보기 (+' + (items.length - limit) + '개)';
+      btn.dataset.expanded = '0';
+      (function (sid) {
+        btn.onclick = function () { toggleNewsMore(this, sid); };
+      })(section.id);
+      wrap.appendChild(btn);
+      section.appendChild(wrap);
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyNewsLimit);
+  } else {
+    applyNewsLimit();
+  }
+})();
 </script>
 
 </body>

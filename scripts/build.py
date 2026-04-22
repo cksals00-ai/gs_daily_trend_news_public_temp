@@ -615,18 +615,21 @@ def inject_competitor_section(html: str, comp_data: dict) -> str:
 # ─────────────────────────────────────────────
 # 뉴스 카드 (가독성 개선)
 # ─────────────────────────────────────────────
+NEWS_VISIBLE_LIMIT = 10  # PC 기준 초기 노출 기사 수 (모바일은 클라이언트 JS에서 5개로 조정)
+
+
 def build_news_html(news_data: dict) -> str:
     """Daily News Monitoring 형식 - 카테고리별 그룹 + Articles 카운트"""
     by_category = news_data.get("by_category", {})
     if not by_category:
         return '<div style="padding:40px;text-align:center;color:var(--ink-faint);font-family:\'Pretendard Variable\',sans-serif;">카테고리별 뉴스 데이터 없음</div>'
-    
+
     region_colors = {"vivaldi": "#d97a7a", "central": "#6ba3c4", "south": "#6db58a", "apac": "#a892c8", "general": "#7a7e85"}
     region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC", "general": "일반"}
-    
+
     # 카테고리 순서
     category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
-    
+
     sections = []
     seen_titles: set[str] = set()
     for cat_name in category_order:
@@ -645,11 +648,12 @@ def build_news_html(news_data: dict) -> str:
         if not articles:
             continue
 
-        # 카테고리 헤더
+        # 카테고리 헤더 (id는 클라이언트 JS 더보기 토글에 사용)
+        cat_id = "cat-" + cat_name.replace("/", "-").replace(" ", "-")
         article_count = len(articles)
         section_html = f'''
   <!-- ===== {cat_name} ===== -->
-  <div class="news-category-section" style="margin-bottom:24px;">
+  <div class="news-category-section" id="{cat_id}" style="margin-bottom:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-soft);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:18px;">{emoji}</span>
