@@ -3,658 +3,1242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>26OTB · GS팀 On-The-Books 대시보드</title>
+<title>26OTB 당일 현황 · SONO & TRINITY GS팀</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 <style>
-  :root {
-    --bg: #1a1d23;
-    --bg-card: #252932;
-    --bg-deep: #14171c;
-    --bg-soft: #2d3138;
-    --bg-hover: #353a44;
-    --ink: #f5f5f7;
-    --ink-soft: #e0e0e3;
-    --ink-muted: #a8acb3;
-    --ink-faint: #7a7e85;
-    --gold: #c9a063;
-    --gold-bright: #e6b970;
-    --positive: #4caf6f;
-    --positive-bg: #1f3a28;
-    --warning: #e8a256;
-    --warning-bg: #3d2e1a;
-    --negative: #e57373;
-    --negative-bg: #3d1f1f;
-    --region-vivaldi: #d97a7a;
-    --region-central: #6ba3c4;
-    --region-south: #6db58a;
-    --region-apac: #a892c8;
-    --rule: rgba(255,255,255,0.12);
-    --rule-strong: rgba(255,255,255,0.22);
-    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
-    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
-    --mono: 'JetBrains Mono', 'D2Coding', Consolas, monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--serif);
-    line-height: 1.65;
-    font-size: 15px;
-    font-weight: 500;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-    word-break: keep-all;
-  }
-  .masthead {
-    background: var(--bg-deep);
-    border-bottom: 3px solid var(--gold);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .masthead-inner {
-    max-width: 1640px;
-    margin: 0 auto;
-    padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .logo { font-family: var(--serif); font-weight: 800; font-size: 20px; color: var(--gold-bright); }
-  .logo .sep { color: rgba(255,255,255,0.3); margin: 0 8px; }
-  .logo .sub { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; font-family: var(--mono); }
-  .masthead-right {
-    display: flex; align-items: center; gap: 16px;
-    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.5);
-  }
-  .live-dot {
-    display: inline-block; width: 7px; height: 7px;
-    border-radius: 50%; background: var(--gold-bright);
-    margin-right: 6px; animation: pulse 2.4s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-  .nav-link {
-    font-family: var(--mono); font-size: 11px; font-weight: 700;
-    padding: 6px 14px; border: 1px solid var(--rule); border-radius: 3px;
-    color: var(--ink-muted); text-decoration: none; letter-spacing: 0.08em;
-    transition: all 0.2s;
-  }
-  .nav-link:hover { border-color: var(--gold); color: var(--gold); }
-  .nav-link.active { border-color: var(--gold); color: var(--gold); background: rgba(201,160,99,0.08); }
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+input, button, select, table, th, td {
+  font-family: var(--sans) !important;
+}
 
-  .page-wrap { max-width: 1640px; margin: 0 auto; padding: 24px 28px 48px; }
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.masthead-inner {
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.logo-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+.logo-mark {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+.team-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.5);
+  border-left: 1px solid rgba(255,255,255,0.2);
+  padding-left: 14px;
+  margin-left: 14px;
+  white-space: nowrap;
+}
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(201,160,99,0.15);
+  border: 1px solid rgba(201,160,99,0.35);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  letter-spacing: 0.12em;
+}
+.masthead-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+.live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--positive);
+  margin-right: 5px;
+  animation: pulse 2.4s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  /* Hero */
-  .hero {
-    background: radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
-                radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
-                var(--bg-deep);
-    padding: 32px 28px 28px;
-    border-bottom: 1px solid var(--rule);
-    margin-bottom: 28px;
-  }
-  .hero-inner { max-width: 1640px; margin: 0 auto; }
-  .hero-eyebrow {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
-    color: var(--gold); font-weight: 700; margin-bottom: 10px;
-  }
-  .hero-title {
-    font-family: var(--serif); font-size: clamp(22px,3vw,32px);
-    font-weight: 900; color: #fff; letter-spacing: -0.02em; margin-bottom: 8px;
-  }
-  .hero-subtitle {
-    font-family: var(--sans); font-size: 14px; color: rgba(255,255,255,0.6);
-    line-height: 1.6; max-width: 800px;
-  }
-  .hero-meta {
-    margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;
-  }
-  .hero-meta-item {
-    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.4);
-    letter-spacing: 0.1em;
-  }
+/* ───── LAYOUT ───── */
+.app-shell {
+  display: flex;
+  min-height: calc(100vh - 52px);
+}
 
-  /* Section */
-  .section { margin-bottom: 32px; }
-  .section-header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    border-bottom: 2px solid var(--rule-strong); padding-bottom: 10px; margin-bottom: 16px;
-  }
-  .section-title {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
-    color: var(--gold); font-weight: 700;
-  }
-  .section-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-deep);
+  border-right: 1px solid var(--rule);
+  padding: 20px 16px;
+  position: sticky;
+  top: 52px;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.filter-section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+.chip:hover { background: var(--bg-soft); color: var(--ink); }
+.chip.active {
+  background: rgba(201,160,99,0.18);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+.sidebar-divider {
+  height: 1px;
+  background: var(--rule);
+}
+.refresh-info {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.refresh-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.refresh-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
 
-  /* OTB Summary Cards */
-  .otb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .otb-card {
-    background: var(--bg-card); border: 1px solid var(--rule);
-    border-radius: 6px; padding: 20px 24px;
-    transition: all 0.2s;
-  }
-  .otb-card.primary { border-left: 4px solid var(--gold); }
-  .otb-card.secondary { border-left: 4px solid rgba(201,160,99,0.3); opacity: 0.75; }
-  .otb-month-label {
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
-    color: var(--ink-faint); font-weight: 700; margin-bottom: 12px;
-  }
-  .otb-net {
-    font-family: var(--serif); font-size: 36px; font-weight: 900;
-    color: #fff; line-height: 1; margin-bottom: 4px;
-  }
-  .otb-net .unit { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-left: 4px; }
-  .otb-sub { display: flex; gap: 14px; margin-top: 10px; }
-  .otb-sub-item { font-family: var(--mono); font-size: 11px; font-weight: 700; }
-  .otb-sub-item .arrow { margin-right: 3px; }
-  .otb-sub-item.booking { color: #4ecdc4; }
-  .otb-sub-item.cancel { color: #ff6b6b; }
+/* MAIN */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  /* Channel Table */
-  .channel-table-wrap { overflow-x: auto; }
-  .channel-table {
-    width: 100%; border-collapse: collapse;
-    font-family: var(--sans); font-size: 13px; min-width: 880px;
-  }
-  .channel-table th {
-    font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em;
-    color: var(--ink-faint); font-weight: 700; text-align: right;
-    padding: 10px 12px; border-bottom: 2px solid var(--rule-strong); white-space: nowrap;
-  }
-  .channel-table th:first-child, .channel-table th:nth-child(2), .channel-table th:nth-child(3) { text-align: left; }
-  .channel-table thead th:nth-child(4), .channel-table thead th:nth-child(5) {
-    background: rgba(201,160,99,0.06); border-left: 2px solid var(--gold);
-  }
+/* Page title bar */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: clamp(20px, 2.2vw, 26px);
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-title .sub {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+}
+.base-date-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+.base-date-tag strong { color: var(--gold-bright); font-weight: 700; }
 
-  /* Region grid */
-  .region-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  .region-card {
-    padding: 20px 22px; border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .region-card.vivaldi { background: linear-gradient(135deg, #2e2228, #1a1d23); border-left: 4px solid var(--region-vivaldi); }
-  .region-card.central { background: linear-gradient(135deg, #1f2a35, #1a1d23); border-left: 4px solid var(--region-central); }
-  .region-card.south   { background: linear-gradient(135deg, #1f2e28, #1a1d23); border-left: 4px solid var(--region-south); }
-  .region-card.apac    { background: linear-gradient(135deg, #252035, #1a1d23); border-left: 4px solid var(--region-apac); }
-  .region-name {
-    font-family: var(--serif); font-size: 15px; font-weight: 800;
-    color: #fff; margin-bottom: 14px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .region-badge {
-    font-family: var(--mono); font-size: 9px; font-weight: 700;
-    padding: 3px 8px; border-radius: 3px; letter-spacing: 0.1em;
-  }
-  .region-monthly-rows { display: flex; flex-direction: column; gap: 4px; }
+/* ───── KPI CARDS STRIP ───── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.kpi-card.achievement::before { background: var(--gold); }
+.kpi-card.booking::before { background: var(--positive); }
+.kpi-card.cancel::before { background: var(--negative); }
+.kpi-card.net::before { background: var(--info); }
+.kpi-card.date::before { background: var(--ink-faint); }
+.kpi-card-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.kpi-card-value {
+  font-family: var(--mono);
+  font-size: clamp(22px, 2.5vw, 30px);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.kpi-card-value .unit {
+  font-size: 0.45em;
+  color: var(--ink-faint);
+  font-weight: 500;
+  margin-left: 2px;
+}
+.kpi-card-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.kpi-card-sub .pos { color: var(--positive); }
+.kpi-card-sub .neg { color: var(--negative); }
+.kpi-card-sub .warn { color: var(--warning); }
 
-  /* Signal Cards (same class names as index.html) */
-  .signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-  .signal-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; background: var(--bg-card);
-    border: 1px solid var(--rule); border-radius: 4px;
-    transition: all 0.15s;
-  }
-  .signal-card:hover { background: var(--bg-hover); }
-  .signal-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-  }
-  .signal-dot.green  { background: var(--positive); box-shadow: 0 0 6px rgba(76,175,111,0.5); }
-  .signal-dot.yellow { background: var(--warning);  box-shadow: 0 0 6px rgba(232,162,86,0.5); }
-  .signal-dot.red    { background: var(--negative); box-shadow: 0 0 6px rgba(229,115,115,0.5); }
-  .signal-name { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
-  .signal-sub  { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
-  .signal-value {
-    margin-left: auto; font-family: var(--mono);
-    font-size: 13px; font-weight: 800; color: var(--ink-muted);
-  }
-  .signal-value.up   { color: var(--positive); }
-  .signal-value.down { color: var(--negative); }
+/* ───── MIDDLE ROW ───── */
+.mid-row {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+}
 
-  /* Responsive */
-  @media (max-width: 900px) {
-    .otb-grid { grid-template-columns: 1fr; }
-    .region-grid { grid-template-columns: 1fr; }
-    .page-wrap { padding: 16px 16px 40px; }
-    .hero { padding: 24px 16px; }
-  }
+/* Gauge card */
+.gauge-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 20px 22px 16px;
+}
+.gauge-card-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.gauge-card-heading {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+.gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gauge-svg-wrap {
+  position: relative;
+  width: 220px;
+  height: 130px;
+}
+.gauge-svg-wrap svg {
+  width: 220px;
+  height: 130px;
+}
+.gauge-center-label {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.gauge-pct {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+.gauge-pct-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.12em;
+}
+.gauge-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.gauge-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gauge-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+}
+.gauge-stat-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.gauge-stat-value .unit { font-size: 10px; color: var(--ink-faint); margin-left: 1px; }
+
+/* KPI + Chart panel */
+.kpi-chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kpi-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.kpi-mini {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+.kpi-mini-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.kpi-mini-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.kpi-mini-value {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+.kpi-mini-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.kpi-mini-vs {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kpi-mini-vs .pos { color: var(--positive); }
+.kpi-mini-vs .neg { color: var(--negative); }
+.kpi-mini-vs .neu { color: var(--gold); }
+
+/* Chart card */
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 18px 20px;
+  flex: 1;
+}
+.chart-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.chart-card-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.chart-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chart-canvas-wrap {
+  height: 180px;
+  position: relative;
+}
+
+/* ───── PIVOT TABLE ───── */
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.table-card-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.table-card-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table.pivot {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+table.pivot thead tr {
+  background: var(--bg-deep);
+}
+table.pivot th {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  padding: 9px 12px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--rule-strong);
+  text-align: right;
+}
+table.pivot th:first-child { text-align: left; }
+table.pivot th.group-header {
+  text-align: center;
+  border-left: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+}
+table.pivot td {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 9px 12px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+  color: var(--ink-muted);
+}
+table.pivot td:first-child {
+  text-align: left;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+table.pivot td.region-cell {
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+table.pivot tr:hover td { background: var(--bg-soft); }
+table.pivot tr.total-row td {
+  background: rgba(201,160,99,0.07);
+  border-top: 1px solid var(--rule-strong);
+  color: var(--ink);
+  font-weight: 700;
+}
+table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
+.ach-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ach-high { background: var(--positive-bg); color: var(--positive); }
+.ach-mid { background: var(--warning-bg); color: var(--warning); }
+.ach-low { background: var(--negative-bg); color: var(--negative); }
+.net-pos { color: var(--positive); }
+.net-neg { color: var(--negative); }
+.border-left-group { border-left: 1px solid var(--rule); }
+
+/* ───── RESPONSIVE ───── */
+@media (max-width: 1100px) {
+  .mid-row { grid-template-columns: 1fr; }
+  .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 860px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .kpi-trio { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .main-content { padding: 16px 14px; }
+}
+
+/* ───── MOBILE FILTER BAR ───── */
+.mobile-filter-bar {
+  display: none;
+  padding: 12px 14px;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--rule);
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .mobile-filter-bar { display: flex; }
+}
+
+/* ───── NO DATA STATE ───── */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 12px;
+  gap: 8px;
+}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════ MASTHEAD ══════════════════════ -->
+<!-- ========== MASTHEAD ========== -->
 <header class="masthead">
   <div class="masthead-inner">
-    <div class="logo">
-      26OTB
-      <span class="sep">·</span>
-      <span class="sub">ON THE BOOKS</span>
+    <div class="logo-wrap">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · OTB 현황</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📊 26OTB · 당일현황</span>
+      <a href="index.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 트렌드 리포트</a>
     </div>
     <div class="masthead-right">
       <span><span class="live-dot"></span>LIVE</span>
-      <a href="index.html" class="nav-link">트렌드 리포트 →</a>
-      <a href="https://app.powerbi.com/view?r=eyJrIjoiZWMwYmUyOTUtODg4MC00MmRkLWIyYWMtMzIxN2U5YzQyYjI0IiwidCI6IjJmOGNjOGE4LWE5YjAtNGY4Zi04ZjlmLWZiN2E3ZmQxM2ZmNCJ9" target="_blank" rel="noopener noreferrer" data-tpl-link-bi class="nav-link" style="color:var(--gold);border-color:var(--gold);">Power BI ↗</a>
+      <span id="refresh-badge">—</span>
     </div>
   </div>
 </header>
 
-<!-- ══════════════════════ HERO ══════════════════════ -->
-<section class="hero">
-  <div class="hero-inner">
-    <div class="hero-eyebrow">OTB DASHBOARD · <span data-tpl-date>2026.04.22</span></div>
-    <div class="hero-title">On-The-Books 현황판</div>
-    <div class="hero-subtitle" data-tpl-headline>비발디파크 권역 <strong>84.1%</strong> 달성으로 부진 · 중부권 <strong>+8.4%</strong> 목표 초과 · 주의 사업장 <strong>5/48곳</strong> 관찰 중.</div>
-    <div class="hero-meta">
-      <span class="hero-meta-item" data-tpl-updated_by>by GS팀 · Haein Kim Manager</span>
-      <span class="hero-meta-item">빌드: <span data-tpl-build>Auto-Built 2026-04-22 16:20 KST</span></span>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════ MAIN ══════════════════════ -->
-<div class="page-wrap">
-
-  <!-- DAILY OTB -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title">◈ DAILY OTB · <span data-tpl-weekly-basis>~ 4/21 예약 기준</span></div>
-      <div class="section-meta">신규·취소·순증 기준 / 투숙월별</div>
-    </div>
-    <div class="otb-grid">
-      <!-- 4월 -->
-      <div class="otb-card primary">
-        <div class="otb-month-label">APR 2026 · 당월</div>
-        <div class="otb-net"><span data-tpl-otb-m0-net>589</span><span class="unit">실</span></div>
-        <div class="otb-sub">
-          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m0-booking>870</span> 신규</span>
-          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m0-cancel>281</span> 취소</span>
-        </div>
-      </div>
-      <!-- 5월 -->
-      <div class="otb-card secondary">
-        <div class="otb-month-label">MAY 2026 · 전망</div>
-        <div class="otb-net"><span data-tpl-otb-m1-net>—</span><span class="unit">실</span></div>
-        <div class="otb-sub">
-          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m1-booking>—</span> 신규</span>
-          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m1-cancel>—</span> 취소</span>
-        </div>
-      </div>
-      <!-- 6월 -->
-      <div class="otb-card secondary">
-        <div class="otb-month-label">JUN 2026 · 전망</div>
-        <div class="otb-net"><span data-tpl-otb-m2-net>—</span><span class="unit">실</span></div>
-        <div class="otb-sub">
-          <span class="otb-sub-item booking"><span class="arrow">▲</span><span data-tpl-otb-m2-booking>—</span> 신규</span>
-          <span class="otb-sub-item cancel"><span class="arrow">▼</span><span data-tpl-otb-m2-cancel>—</span> 취소</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CHANNEL RANKING -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title">◈ 채널별 판매 실적 · OTA RANKING</div>
-      <div class="section-meta">Power BI 자동 수집 · 4월 RNS 기준 정렬</div>
-    </div>
-    <div class="channel-table-wrap">
-      <table class="channel-table" data-tpl-major-ota-table>
-        <thead>
-          <tr style="border-bottom:1px solid var(--rule);">
-            <th style="text-align:left;padding:10px 14px;">#</th>
-            <th style="text-align:left;padding:10px 14px;">채널명</th>
-            <th style="text-align:left;padding:10px 14px;">구분</th>
-            <th style="padding:10px 10px;background:rgba(201,160,99,0.06);border-left:2px solid var(--gold);">4월 객실수</th>
-            <th style="padding:10px 10px;background:rgba(201,160,99,0.06);">4월 YoY</th>
-            <th style="padding:10px 10px;">5월 객실수</th>
-            <th style="padding:10px 10px;">5월 YoY</th>
-            <th style="padding:10px 10px;">6월 객실수</th>
-            <th style="padding:10px 10px;">6월 YoY</th>
-          </tr>
-        </thead>
-        <tbody data-tpl-major-ota-rows><tr>
-          <td colspan="9" style="padding:60px 40px;text-align:center;">
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;color:var(--ink-muted);font-weight:600;margin-bottom:6px;">⏳ 데이터 추후 적용</div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-faint);">Power BI 자동 수집 작업 진행 중 · 완료 후 자동 표시</div>
-          </td>
-        </tr></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- REGION MONTHLY -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title">◈ 권역별 월별 실적</div>
-      <div class="section-meta">실적(실) / 목표(실) / 달성률 · 4월 당월</div>
-    </div>
-    <div class="region-grid">
-
-      <!-- VIVALDI -->
-      <div class="region-card vivaldi">
-        <div class="region-name">
-          🍷 비발디파크 권역
-          <span class="region-badge" style="background:rgba(217,122,122,0.15);color:var(--region-vivaldi);">VIVALDI</span>
-        </div>
-        <div class="region-monthly-rows">
-          <!-- REGION_MONTHLY_VIVALDI_START -->
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">13,375<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">11,256<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">3,864<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <!-- REGION_MONTHLY_VIVALDI_END -->
-        </div>
-      </div>
-
-      <!-- CENTRAL -->
-      <div class="region-card central">
-        <div class="region-name">
-          🏔️ 한국 중부 권역
-          <span class="region-badge" style="background:rgba(107,163,196,0.15);color:var(--region-central);">CENTRAL</span>
-        </div>
-        <div class="region-monthly-rows">
-          <!-- REGION_MONTHLY_CENTRAL_START -->
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">37,576<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">24,759<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">10,620<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <!-- REGION_MONTHLY_CENTRAL_END -->
-        </div>
-      </div>
-
-      <!-- SOUTH -->
-      <div class="region-card south">
-        <div class="region-name">
-          🌊 한국 남부 권역
-          <span class="region-badge" style="background:rgba(109,181,138,0.15);color:var(--region-south);">SOUTH</span>
-        </div>
-        <div class="region-monthly-rows">
-          <!-- REGION_MONTHLY_SOUTH_START -->
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">24,910<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">13,979<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">7,341<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <!-- REGION_MONTHLY_SOUTH_END -->
-        </div>
-      </div>
-
-      <!-- APAC -->
-      <div class="region-card apac">
-        <div class="region-name">
-          🌏 APAC 권역
-          <span class="region-badge" style="background:rgba(168,146,200,0.15);color:var(--region-apac);">APAC</span>
-        </div>
-        <div class="region-monthly-rows">
-          <!-- REGION_MONTHLY_APAC_START -->
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:1;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:700;">4월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:700;">19,804<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">5월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">9,472<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:0.55;"><span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:400;">6월</span><span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;font-weight:400;">4,820<span style="font-size:9px;opacity:0.6;">실</span>&nbsp;/&nbsp;—<span style="font-size:9px;opacity:0.6;">실</span></span><span style="color:rgba(255,255,255,0.35);min-width:38px;text-align:right;font-weight:700;">—%</span></div>
-          <!-- REGION_MONTHLY_APAC_END -->
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- PROPERTY SIGNALS — VIVALDI -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title" style="color:var(--region-vivaldi);">◈ 비발디파크 권역 · 사업장 현황</div>
-      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
-    </div>
-    <div class="signal-grid">
-<!-- SIGNAL_INJECT_START_vivaldi -->
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">05.빌리지 비발디</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">611실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">03.펫비발디</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,270실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">01.벨비발디</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">9,331실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">04.캄비발디</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">620실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">04.펠리체 비발디</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,543실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <!-- SIGNAL_INJECT_END_vivaldi -->
-    </div>
-  </section>
-
-  <!-- PROPERTY SIGNALS — CENTRAL -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title" style="color:var(--region-central);">◈ 한국 중부 권역 · 사업장 현황</div>
-      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
-    </div>
-    <div class="signal-grid">
-<!-- SIGNAL_INJECT_START_central -->
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">07.델피노</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">8,526실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">14.변산</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,614실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">12.청송</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">2,239실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">13.천안</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4,682실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">08.양양</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,341실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">09.삼척</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">7,073실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">10.단양</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">6,662실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">06.양평</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">1,439실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <!-- SIGNAL_INJECT_END_central -->
-    </div>
-  </section>
-
-  <!-- PROPERTY SIGNALS — SOUTH -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title" style="color:var(--region-south);">◈ 한국 남부 권역 · 사업장 현황</div>
-      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
-    </div>
-    <div class="signal-grid">
-<!-- SIGNAL_INJECT_START_south -->
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">22.남해</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,285실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">16.거제</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,836실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">15.여수</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,799실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">17.진도</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">5,922실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">21.해운대</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,846실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">11.경주</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">4,222실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <!-- SIGNAL_INJECT_END_south -->
-    </div>
-  </section>
-
-  <!-- PROPERTY SIGNALS — APAC -->
-  <section class="section">
-    <div class="section-header">
-      <div class="section-title" style="color:var(--region-apac);">◈ APAC 권역 · 사업장 현황</div>
-      <div class="section-meta">4월 달성률 기준 · Power BI 자동</div>
-    </div>
-    <div class="signal-grid">
-<!-- SIGNAL_INJECT_START_apac -->
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">19.캄제주</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,040실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">18.벨제주</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">3,178실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <div class="signal-card">
-      <div class="signal-dot yellow"></div>
-      <div>
-        <div class="signal-name">20.고양</div>
-        <div class="signal-sub" style="font-family:'Pretendard Variable',sans-serif;font-weight:700;font-size:12px;color:var(--ink-muted);">13,586실 (목표 미입력)</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;color:var(--ink-faint);">▬ 전년比 ±0%</div>
-      </div>
-      <div class="signal-value ">—</div>
-    </div>
-    <!-- SIGNAL_INJECT_END_apac -->
-    </div>
-  </section>
-
+<!-- MOBILE FILTER BAR (visible < 860px) -->
+<div class="mobile-filter-bar" id="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">월:</span>
+  <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
+  <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
-<footer style="background:var(--bg-deep);border-top:1px solid var(--rule);padding:16px 28px;text-align:center;">
-  <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.15em;">
-    26OTB DASHBOARD · GS팀 · <span data-tpl-build>Auto-Built 2026-04-22 08:00 KST</span>
-  </div>
-</footer>
+<!-- ========== APP SHELL ========== -->
+<div class="app-shell">
 
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="filter-section-label">투숙월</div>
+      <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">세그먼트</div>
+      <div class="filter-chips" id="seg-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">데이터 소스</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;">
+        Power BI<br>GS_OTB_ver01<br>
+        <span style="color:var(--ink-muted);">나중에 Power BI API 연동</span>
+      </div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">LAST REFRESH</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-title">
+        2026 OTB 당일 현황
+        <span class="sub">ON THE BOOKS · DAILY SNAPSHOT</span>
+      </div>
+      <div class="base-date-tag">
+        기준일자 <strong id="base-date-display">—</strong>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpi-strip">
+      <!-- RNS 달성률 -->
+      <div class="kpi-card achievement">
+        <div class="kpi-card-label">RNS 달성률</div>
+        <div class="kpi-card-value" id="kpi-rns-ach">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub">예산 <span id="kpi-rns-budget-disp">—</span>실 대비</div>
+      </div>
+      <!-- 오늘 순증 -->
+      <div class="kpi-card net">
+        <div class="kpi-card-label">오늘 순증 RNS</div>
+        <div class="kpi-card-value" id="kpi-today-net">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub">예약 − 취소</div>
+      </div>
+      <!-- 오늘 예약 -->
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">오늘 예약 RNS</div>
+        <div class="kpi-card-value" id="kpi-today-booking">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub">신규 예약 입력</div>
+      </div>
+      <!-- 오늘 취소 -->
+      <div class="kpi-card cancel">
+        <div class="kpi-card-label">오늘 취소 RNS</div>
+        <div class="kpi-card-value" id="kpi-today-cancel">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub">당일 취소 처리</div>
+      </div>
+      <!-- REV 달성률 -->
+      <div class="kpi-card achievement" style="--card-top-color:var(--info)">
+        <div class="kpi-card-label">REV 달성률</div>
+        <div class="kpi-card-value" id="kpi-rev-ach">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub">예산 <span id="kpi-rev-budget-disp">—</span>억 대비</div>
+      </div>
+    </div>
+
+    <!-- MIDDLE ROW: GAUGE + KPIs + CHART -->
+    <div class="mid-row">
+
+      <!-- GAUGE CARD -->
+      <div class="gauge-card">
+        <div class="gauge-card-title">RNS 게이지</div>
+        <div class="gauge-card-heading">예산 대비 객실 달성 현황</div>
+        <div class="gauge-wrap">
+          <div class="gauge-svg-wrap">
+            <svg viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" id="gauge-svg">
+              <!-- track -->
+              <path d="M 20 115 A 90 90 0 0 1 200 115"
+                fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" stroke-linecap="round"/>
+              <!-- fill — updated by JS -->
+              <path id="gauge-fill"
+                d="M 20 115 A 90 90 0 0 1 200 115"
+                fill="none" stroke="var(--gold)" stroke-width="16" stroke-linecap="round"
+                stroke-dasharray="282.74" stroke-dashoffset="282.74"/>
+              <!-- tick marks -->
+              <text x="14" y="128" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(255,255,255,0.3)" text-anchor="middle">0%</text>
+              <text x="110" y="22" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(255,255,255,0.3)" text-anchor="middle">50%</text>
+              <text x="206" y="128" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(255,255,255,0.3)" text-anchor="middle">100%</text>
+            </svg>
+            <div class="gauge-center-label">
+              <div class="gauge-pct" id="gauge-pct-text">—</div>
+              <div class="gauge-pct-label">달성률</div>
+            </div>
+          </div>
+          <div class="gauge-stats">
+            <div class="gauge-stat">
+              <span class="gauge-stat-label">실적 RNS</span>
+              <span class="gauge-stat-value" id="gs-actual">—<span class="unit">실</span></span>
+            </div>
+            <div class="gauge-stat">
+              <span class="gauge-stat-label">예산 RNS</span>
+              <span class="gauge-stat-value" id="gs-budget">—<span class="unit">실</span></span>
+            </div>
+            <div class="gauge-stat">
+              <span class="gauge-stat-label">전년 RNS</span>
+              <span class="gauge-stat-value" id="gs-last">—<span class="unit">실</span></span>
+            </div>
+            <div class="gauge-stat">
+              <span class="gauge-stat-label">YOY 증감</span>
+              <span class="gauge-stat-value" id="gs-yoy">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI TRIO + CHART -->
+      <div class="kpi-chart-panel">
+        <div class="kpi-trio">
+          <!-- REV -->
+          <div class="kpi-mini">
+            <div class="kpi-mini-label">REV (매출)</div>
+            <div class="kpi-mini-main">
+              <span class="kpi-mini-value" id="km-rev">—</span>
+              <span class="kpi-mini-unit">억원</span>
+            </div>
+            <div class="kpi-mini-vs">
+              달성 <span id="km-rev-ach" class="neu">—%</span>
+              &nbsp;|&nbsp;예산 <span id="km-rev-bud">—</span>억
+            </div>
+          </div>
+          <!-- ADR -->
+          <div class="kpi-mini">
+            <div class="kpi-mini-label">ADR (평균단가)</div>
+            <div class="kpi-mini-main">
+              <span class="kpi-mini-value" id="km-adr">—</span>
+              <span class="kpi-mini-unit">천원</span>
+            </div>
+            <div class="kpi-mini-vs">
+              vs예산 <span id="km-adr-vs" class="neu">—%</span>
+            </div>
+          </div>
+          <!-- RNS 실적 -->
+          <div class="kpi-mini">
+            <div class="kpi-mini-label">RNS (객실수)</div>
+            <div class="kpi-mini-main">
+              <span class="kpi-mini-value" id="km-rns">—</span>
+              <span class="kpi-mini-unit">실</span>
+            </div>
+            <div class="kpi-mini-vs">
+              달성 <span id="km-rns-ach" class="neu">—%</span>
+              &nbsp;|&nbsp;전년 <span id="km-rns-yoy" class="neu">—%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MONTHLY BAR CHART -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">월별 RNS 실적 vs 예산 vs 전년</span>
+            <div class="chart-legend">
+              <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>예산</div>
+              <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>실적</div>
+              <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.25);"></div>전년</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="monthly-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIVOT TABLE -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">영업장별 OTB 현황 (피벗)</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-filter-label">전체 월 · 전체 세그</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot" id="pivot-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="text-align:left;min-width:120px;">영업장</th>
+              <th rowspan="2" style="min-width:70px;">권역</th>
+              <th colspan="4" class="group-header" style="border-left:1px solid var(--rule-strong);">RNS (객실수)</th>
+              <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">당일 현황</th>
+              <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">ADR (평균단가)</th>
+              <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">REV (매출)</th>
+            </tr>
+            <tr>
+              <th class="border-left-group">예산</th>
+              <th>실적</th>
+              <th>달성률</th>
+              <th>전년</th>
+              <th class="border-left-group">예약</th>
+              <th>취소</th>
+              <th>순증</th>
+              <th class="border-left-group">예산</th>
+              <th>실적</th>
+              <th>vs예산</th>
+              <th class="border-left-group">예산(억)</th>
+              <th>실적(억)</th>
+              <th>달성률</th>
+            </tr>
+          </thead>
+          <tbody id="pivot-tbody">
+            <tr><td colspan="15" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
+      DATA: <span id="footer-source">Power BI · GS_OTB_ver01</span> &nbsp;·&nbsp; 나중에 Power BI REST API 연동 예정 &nbsp;·&nbsp; <a href="index.html" style="color:var(--gold);text-decoration:none;">트렌드 리포트 ↗</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── STATE ───
+let rawData = null;
+let activeMonth = 0;
+let activeSeg = '전체';
+
+// ─── FORMAT HELPERS ───
+const fmt = {
+  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct: v => v == null ? '—' : v.toFixed(1),
+  won100m: v => v == null ? '—' : (v / 100000000).toFixed(1),
+  won1k: v => v == null ? '—' : Math.round(v / 1000).toLocaleString('ko-KR'),
+};
+
+function achClass(pct) {
+  if (pct >= 90) return 'ach-high';
+  if (pct >= 75) return 'ach-mid';
+  return 'ach-low';
+}
+
+// ─── GAUGE ───
+function updateGauge(pct) {
+  const circumference = 282.74; // π × r where r≈90, half-circle arc length
+  const fill = document.getElementById('gauge-fill');
+  const label = document.getElementById('gauge-pct-text');
+  if (!fill) return;
+  const clamped = Math.min(Math.max(pct, 0), 100);
+  const offset = circumference - (clamped / 100) * circumference;
+  fill.setAttribute('stroke-dashoffset', offset.toFixed(2));
+  // colour: green ≥90, gold ≥75, orange ≥60, red <60
+  const color = clamped >= 90 ? '#4caf6f' : clamped >= 75 ? '#e6b970' : clamped >= 60 ? '#e8a256' : '#e57373';
+  fill.setAttribute('stroke', color);
+  if (label) label.textContent = pct.toFixed(1) + '%';
+}
+
+// ─── CHART ───
+let monthlyChart = null;
+function buildMonthlyChart(data) {
+  const ctx = document.getElementById('monthly-chart');
+  if (!ctx) return;
+  if (monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
+
+  const labels = data.monthly.map(m => m.label);
+  const budgets = data.monthly.map(m => m.rns_budget);
+  const actuals = data.monthly.map(m => m.rns_actual);
+  const lasts   = data.monthly.map(m => m.rns_last);
+
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '전년 RNS',
+          data: lasts,
+          backgroundColor: 'rgba(255,255,255,0.12)',
+          borderColor: 'rgba(255,255,255,0.2)',
+          borderWidth: 1,
+          borderRadius: 2,
+          order: 3,
+        },
+        {
+          label: '예산',
+          data: budgets,
+          backgroundColor: 'rgba(230,185,112,0.25)',
+          borderColor: 'rgba(230,185,112,0.6)',
+          borderWidth: 1,
+          borderRadius: 2,
+          order: 2,
+        },
+        {
+          label: '실적',
+          data: actuals,
+          backgroundColor: ctx => {
+            const v = actuals[ctx.dataIndex];
+            const b = budgets[ctx.dataIndex];
+            if (b === 0) return 'rgba(90,159,196,0.7)';
+            return (v / b >= 0.9) ? 'rgba(76,175,111,0.75)' : (v / b >= 0.75) ? 'rgba(230,185,112,0.75)' : 'rgba(229,115,115,0.75)';
+          },
+          borderColor: 'transparent',
+          borderRadius: 3,
+          order: 1,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23',
+          borderColor: 'rgba(255,255,255,0.15)',
+          borderWidth: 1,
+          titleColor: '#e6b970',
+          bodyColor: '#e0e0e3',
+          padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ko-KR')}실`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: 'rgba(255,255,255,0.35)', font: { family: 'JetBrains Mono', size: 10 } },
+          border: { color: 'rgba(255,255,255,0.1)' },
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+          ticks: {
+            color: 'rgba(255,255,255,0.3)',
+            font: { family: 'JetBrains Mono', size: 10 },
+            callback: v => v.toLocaleString('ko-KR'),
+          },
+          border: { display: false },
+        }
+      }
+    }
+  });
+}
+
+// ─── PIVOT TABLE ───
+function renderPivot(data) {
+  const tbody = document.getElementById('pivot-tbody');
+  if (!tbody) return;
+
+  const props = data.byProperty;
+  let rows = '';
+
+  for (const p of props) {
+    const achPct = p.rns_achievement;
+    const netClass = p.today_net >= 0 ? 'net-pos' : 'net-neg';
+    const netSign = p.today_net >= 0 ? '+' : '';
+    const adrVsBudget = ((p.adr_actual - p.adr_budget) / p.adr_budget * 100);
+    const adrVsClass = adrVsBudget >= 0 ? 'net-pos' : 'net-neg';
+    const adrVsSign = adrVsBudget >= 0 ? '+' : '';
+
+    rows += `<tr>
+      <td>${p.name}</td>
+      <td class="region-cell">${p.region}</td>
+      <td class="border-left-group">${fmt.num(p.rns_budget)}</td>
+      <td>${fmt.num(p.rns_actual)}</td>
+      <td><span class="ach-pill ${achClass(achPct)}">${fmt.pct(achPct)}%</span></td>
+      <td>${fmt.num(p.rns_last)}</td>
+      <td class="border-left-group net-pos">+${fmt.num(p.today_booking)}</td>
+      <td class="net-neg">-${fmt.num(p.today_cancel)}</td>
+      <td class="${netClass}">${netSign}${fmt.num(p.today_net)}</td>
+      <td class="border-left-group">${fmt.num(p.adr_budget / 1000)}천</td>
+      <td>${fmt.num(p.adr_actual / 1000)}천</td>
+      <td class="${adrVsClass}">${adrVsSign}${adrVsBudget.toFixed(1)}%</td>
+      <td class="border-left-group">${fmt.won100m(p.rev_budget)}</td>
+      <td>${fmt.won100m(p.rev_actual)}</td>
+      <td><span class="ach-pill ${achClass(p.rev_achievement)}">${fmt.pct(p.rev_achievement)}%</span></td>
+    </tr>`;
+  }
+
+  // Total row
+  const tot = data.summary;
+  const totAdrVsBudget = (tot.adr_vs_budget || 0);
+  const totAdrVsSign = totAdrVsBudget >= 0 ? '+' : '';
+  const totNetSign = tot.today_net >= 0 ? '+' : '';
+  rows += `<tr class="total-row">
+    <td>합계</td>
+    <td class="region-cell">전체</td>
+    <td class="border-left-group">${fmt.num(tot.rns_budget)}</td>
+    <td>${fmt.num(tot.rns_actual)}</td>
+    <td><span class="ach-pill ${achClass(tot.rns_achievement)}">${fmt.pct(tot.rns_achievement)}%</span></td>
+    <td>${fmt.num(tot.rns_last)}</td>
+    <td class="border-left-group net-pos">+${fmt.num(tot.today_booking)}</td>
+    <td class="net-neg">-${fmt.num(tot.today_cancel)}</td>
+    <td class="${tot.today_net >= 0 ? 'net-pos' : 'net-neg'}">${totNetSign}${fmt.num(tot.today_net)}</td>
+    <td class="border-left-group">${fmt.num(tot.adr_budget / 1000)}천</td>
+    <td>${fmt.num(tot.adr_actual / 1000)}천</td>
+    <td class="${totAdrVsBudget >= 0 ? 'net-pos' : 'net-neg'}">${totAdrVsSign}${totAdrVsBudget.toFixed(1)}%</td>
+    <td class="border-left-group">${fmt.won100m(tot.rev_budget)}</td>
+    <td>${fmt.won100m(tot.rev_actual)}</td>
+    <td><span class="ach-pill ${achClass(tot.rev_achievement)}">${fmt.pct(tot.rev_achievement)}%</span></td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+}
+
+// ─── KPI UPDATER ───
+function updateKPIs(data) {
+  const s = data.summary;
+
+  // Strip KPIs
+  setText('kpi-rns-ach', fmt.pct(s.rns_achievement));
+  setText('kpi-rns-budget-disp', fmt.num(s.rns_budget));
+  setText('kpi-today-net', fmt.num(s.today_net));
+  setText('kpi-today-booking', fmt.num(s.today_booking));
+  setText('kpi-today-cancel', fmt.num(s.today_cancel));
+  setText('kpi-rev-ach', fmt.pct(s.rev_achievement));
+  setText('kpi-rev-budget-disp', fmt.won100m(s.rev_budget));
+
+  // Gauge
+  updateGauge(s.rns_achievement);
+  setText('gs-actual', fmt.num(s.rns_actual) + '<span class="unit">실</span>');
+  setText('gs-budget', fmt.num(s.rns_budget) + '<span class="unit">실</span>');
+  setText('gs-last', fmt.num(s.rns_last) + '<span class="unit">실</span>');
+  const yoyEl = document.getElementById('gs-yoy');
+  if (yoyEl) {
+    const yoy = s.rns_yoy;
+    yoyEl.innerHTML = `<span class="${yoy >= 0 ? 'net-pos' : 'net-neg'}" style="font-size:14px;font-weight:700;">${yoy >= 0 ? '+' : ''}${fmt.pct(yoy)}%</span>`;
+  }
+
+  // KPI Trio
+  setText('km-rev', fmt.won100m(s.rev_actual));
+  const revAchEl = document.getElementById('km-rev-ach');
+  if (revAchEl) {
+    revAchEl.textContent = fmt.pct(s.rev_achievement) + '%';
+    revAchEl.className = s.rev_achievement >= 90 ? 'pos' : s.rev_achievement >= 75 ? 'neu' : 'neg';
+  }
+  setText('km-rev-bud', fmt.won100m(s.rev_budget));
+  setText('km-adr', fmt.num(s.adr_actual / 1000));
+  const adrVsEl = document.getElementById('km-adr-vs');
+  if (adrVsEl) {
+    const adrVs = s.adr_vs_budget;
+    adrVsEl.textContent = (adrVs >= 0 ? '+' : '') + fmt.pct(adrVs) + '%';
+    adrVsEl.className = adrVs >= 0 ? 'pos' : 'neg';
+  }
+  setText('km-rns', fmt.num(s.rns_actual));
+  const rnsAchEl = document.getElementById('km-rns-ach');
+  if (rnsAchEl) {
+    rnsAchEl.textContent = fmt.pct(s.rns_achievement) + '%';
+    rnsAchEl.className = s.rns_achievement >= 90 ? 'pos' : s.rns_achievement >= 75 ? 'neu' : 'neg';
+  }
+  const rnsYoyEl = document.getElementById('km-rns-yoy');
+  if (rnsYoyEl) {
+    rnsYoyEl.textContent = (s.rns_yoy >= 0 ? '+' : '') + fmt.pct(s.rns_yoy) + '%';
+    rnsYoyEl.className = s.rns_yoy >= 0 ? 'pos' : 'neg';
+  }
+}
+
+function setText(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+
+// ─── FILTER UI ───
+function buildFilterChips(data) {
+  const monthContainer = document.getElementById('month-chips');
+  const segContainer   = document.getElementById('seg-chips');
+  const mMonthContainer = document.getElementById('mobile-month-chips');
+  const mSegContainer   = document.getElementById('mobile-seg-chips');
+
+  [monthContainer, mMonthContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    data.filters.months.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (m.value === activeMonth ? ' active' : '');
+      btn.textContent = m.label;
+      btn.dataset.value = m.value;
+      btn.addEventListener('click', () => {
+        activeMonth = parseInt(btn.dataset.value);
+        document.querySelectorAll('#month-chips .chip, #mobile-month-chips .chip').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.value) === activeMonth);
+        });
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+
+  [segContainer, mSegContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    data.filters.segments.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (s === activeSeg ? ' active' : '');
+      btn.textContent = s;
+      btn.dataset.value = s;
+      btn.addEventListener('click', () => {
+        activeSeg = btn.dataset.value;
+        document.querySelectorAll('#seg-chips .chip, #mobile-seg-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeSeg);
+        });
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
+function applyFilters() {
+  // In a real implementation this would refetch/filter data by month/segment.
+  // For sample data, we just refresh the label.
+  const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
+  const segLabel   = activeSeg === '전체' ? '전체 세그' : activeSeg;
+  setText('table-filter-label', monthLabel + ' · ' + segLabel);
+  // Re-render with existing data (no server round-trip yet)
+  if (rawData) {
+    renderPivot(rawData);
+    buildMonthlyChart(rawData);
+    updateKPIs(rawData);
+  }
+}
+
+// ─── MAIN LOAD ───
+async function loadData() {
+  try {
+    const res = await fetch('data/otb_data.json?t=' + Date.now());
+    if (!res.ok) throw new Error('fetch failed: ' + res.status);
+    rawData = await res.json();
+    render(rawData);
+  } catch (e) {
+    console.error('OTB data load failed:', e);
+    const tbody = document.getElementById('pivot-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패 (${e.message})</td></tr>`;
+  }
+}
+
+function render(data) {
+  // Metadata
+  const meta = data.meta;
+  setText('refresh-badge', meta.refreshTime || '—');
+  setText('sidebar-refresh', meta.refreshTime || '—');
+  setText('base-date-display', meta.baseDate || '—');
+  setText('footer-source', meta.dataSource || '—');
+
+  // Update timestamp in masthead
+  const ts = document.getElementById('refresh-badge');
+  if (ts) ts.textContent = meta.refreshTime;
+
+  buildFilterChips(data);
+  updateKPIs(data);
+  buildMonthlyChart(data);
+  renderPivot(data);
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
