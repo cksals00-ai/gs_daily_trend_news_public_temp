@@ -636,7 +636,6 @@ def build_news_html(news_data: dict) -> str:
         if cat_name not in by_category:
             continue
         cat_data = by_category[cat_name]
-        emoji = cat_data.get("emoji", "📰")
         raw_articles = cat_data.get("articles", [])
         # 제목 기준 최종 dedup (top_news/by_region 교차 중복 포함)
         articles = []
@@ -716,7 +715,6 @@ def render_featured_news(featured_list: list) -> str:
         source = escape_html(item.get("source", ""))
         link = item.get("link", "#")
         category = escape_html(item.get("category", ""))
-        emoji = item.get("category_emoji", "📰")
         region = item.get("region", "general")
         tag = escape_html(item.get("tag", ""))
         impact = item.get("impact", "medium")
