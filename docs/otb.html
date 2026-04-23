@@ -1229,17 +1229,24 @@ function buildFilterChips(data) {
 }
 
 function applyFilters() {
-  // In a real implementation this would refetch/filter data by month/segment.
-  // For sample data, we just refresh the label.
   const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
   const segLabel   = activeSeg === '전체' ? '전체 세그' : activeSeg;
   setText('table-filter-label', monthLabel + ' · ' + segLabel);
-  // Re-render with existing data (no server round-trip yet)
-  if (rawData) {
-    renderPivot(rawData);
-    buildMonthlyChart(rawData);
-    updateKPIs(rawData);
+
+  if (!rawData) return;
+
+  // allMonths 구조가 있으면 월별 필터링, 없으면 전체 데이터 사용
+  const snap = rawData.allMonths
+    ? rawData.allMonths[String(activeMonth)]
+    : rawData;
+
+  if (snap) {
+    const view = { ...rawData, summary: snap.summary, byProperty: snap.byProperty };
+    renderPivot(view);
+    updateKPIs(view);
   }
+  // Chart는 항상 전체 12개월 표시
+  buildMonthlyChart(rawData);
 }
 
 // ─── MAIN LOAD ───
