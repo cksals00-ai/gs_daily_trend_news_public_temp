@@ -719,7 +719,6 @@ def render_featured_news(featured_list: list) -> str:
         emoji = item.get("category_emoji", "📰")
         region = item.get("region", "general")
         tag = escape_html(item.get("tag", ""))
-        image_emoji = item.get("image_emoji", "📰")
         impact = item.get("impact", "medium")
         is_new = item.get("is_new", False)
         r_color = region_colors.get(region, "#c9a063")
