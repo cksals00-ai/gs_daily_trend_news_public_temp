@@ -180,10 +180,10 @@ def detect_region(title: str) -> str:
 def detect_category_emoji(category: str) -> str:
     """카테고리별 이모지"""
     return {
-        "호텔/리조트": "🏨",
+        "호텔/리조트": "📰",
         "항공/공항": "✈️",
         "OTA/여행": "🌐",
-        "관광/지역": "🌸",
+        "관광/지역": "📰",
         "레저/휴양": "🏖️",
         "거시지표": "📊",
     }.get(category, "📰")
