@@ -10277,26 +10277,70 @@ function switchNewsTab(region) {
       btn.classList.remove('active');
     }
   });
-  
-  // 뉴스 카드 필터링
+
+  // 뉴스 카드 필터링: 먼저 region 매칭 여부를 data-hidden 속성으로 관리
   const cards = document.querySelectorAll('#news-container .news-item');
   let visible = 0;
   cards.forEach(card => {
     const cardRegion = card.dataset.region || 'general';
     if (region === 'all' || cardRegion === region) {
-      card.style.display = 'block';
+      card.dataset.regionHidden = '0';
       visible++;
     } else {
+      card.dataset.regionHidden = '1';
       card.style.display = 'none';
     }
   });
-  
-  // 카테고리 섹션 단위 숨김 (그 안에 보이는 카드가 0개면 섹션 통째 숨김)
-  document.querySelectorAll('.news-category-section').forEach(section => {
-    const visibleCards = section.querySelectorAll('.news-item:not([style*="display: none"])');
-    section.style.display = visibleCards.length > 0 ? '' : 'none';
+
+  // 카테고리 섹션 단위 숨김 + 더보기 제한 재적용
+  var isMobile = window.matchMedia('(max-width:640px)').matches;
+  var limit = isMobile ? 5 : 10;
+  document.querySelectorAll('.news-category-section').forEach(function(section, idx) {
+    // region 필터 통과한 카드만 카운트
+    var allItems = section.querySelectorAll('a.news-item');
+    var regionItems = [];
+    allItems.forEach(function(item) {
+      if (item.dataset.regionHidden !== '1') regionItems.push(item);
+    });
+
+    if (regionItems.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+
+    // 더보기 제한 재적용: region 통과 카드 중 limit 초과분 숨김
+    regionItems.forEach(function(item, i) {
+      item.style.display = i < limit ? 'block' : 'none';
+    });
+
+    // 더보기 버튼 갱신
+    if (!section.id) section.id = 'news-sec-' + idx;
+    var existingBtn = section.querySelector('.news-more-btn');
+    var existingWrap = section.querySelector('.news-more-wrap');
+    if (regionItems.length > limit) {
+      if (!existingBtn) {
+        var wrap = document.createElement('div');
+        wrap.className = 'news-more-wrap';
+        var btn = document.createElement('button');
+        btn.className = 'news-more-btn';
+        btn.dataset.expanded = '0';
+        (function(sid) {
+          btn.onclick = function() { toggleNewsMore(this, sid); };
+        })(section.id);
+        wrap.appendChild(btn);
+        section.appendChild(wrap);
+        existingBtn = btn;
+      }
+      existingBtn.dataset.expanded = '0';
+      existingBtn.textContent = '더보기 (+' + (regionItems.length - limit) + '개)';
+      if (existingWrap) existingWrap.style.display = '';
+    } else {
+      // 카드가 limit 이하면 더보기 버튼 숨김
+      if (existingWrap) existingWrap.style.display = 'none';
+    }
   });
-  
+
   // 빈 상태 처리
   let emptyMsg = document.getElementById('news-empty-msg');
   if (visible === 0) {
@@ -10319,7 +10363,12 @@ function toggleNewsMore(btn, id) {
   if (!section) return;
   var isMobile = window.matchMedia('(max-width:640px)').matches;
   var limit = isMobile ? 5 : 10;
-  var items = section.querySelectorAll('a.news-item');
+  var allItems = section.querySelectorAll('a.news-item');
+  // region 필터 통과한 아이템만 대상
+  var items = [];
+  allItems.forEach(function(item) {
+    if (item.dataset.regionHidden !== '1') items.push(item);
+  });
   var expanded = btn.dataset.expanded === '1';
   for (var i = limit; i < items.length; i++) {
     items[i].style.display = expanded ? 'none' : 'block';
