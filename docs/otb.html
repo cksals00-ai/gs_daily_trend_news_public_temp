@@ -645,6 +645,48 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
   font-size: 12px;
   gap: 8px;
 }
+
+/* ───── YEAR CHIPS ───── */
+.year-chip {
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+.year-chip:hover { background: var(--bg-soft); color: var(--ink); }
+.year-chip.active {
+  background: rgba(90,159,196,0.18);
+  border-color: var(--info);
+  color: #7fc5e0;
+}
+
+/* ───── CUSTOM TOOLTIP ───── */
+#cell-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #1a1d23;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  max-width: 260px;
+  display: none;
+}
+#cell-tooltip strong { color: var(--gold-bright); display: block; margin-bottom: 4px; font-size: 12px; }
+#cell-tooltip .tip-row { display: flex; justify-content: space-between; gap: 16px; color: var(--ink-muted); line-height: 1.7; }
+#cell-tooltip .tip-val { color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -706,10 +748,10 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 
 <!-- MOBILE FILTER BAR (visible < 860px) -->
 <div class="mobile-filter-bar" id="mobile-filter-bar">
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">월:</span>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">연도:</span>
+  <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">월:</span>
   <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
-  <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
 <!-- ========== APP SHELL ========== -->
@@ -717,6 +759,11 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="filter-section-label">연도</div>
+      <div class="filter-chips" id="year-chips" style="gap:4px;"></div>
+    </div>
+    <div class="sidebar-divider"></div>
     <div>
       <div class="filter-section-label">투숙월</div>
       <div class="filter-chips" id="month-chips"></div>
@@ -730,8 +777,8 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
     <div>
       <div class="filter-section-label">데이터 소스</div>
       <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;">
-        Power BI<br>GS_OTB_ver01<br>
-        <span style="color:var(--ink-muted);">나중에 Power BI API 연동</span>
+        온북 DB 파싱<br>
+        <span style="color:var(--ink-muted);">parse_raw_db.py</span>
       </div>
     </div>
     <div class="refresh-info">
@@ -936,10 +983,19 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 
     <!-- FOOTER -->
     <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
-      DATA: <span id="footer-source">Power BI · GS_OTB_ver01</span> &nbsp;·&nbsp; 나중에 Power BI REST API 연동 예정 &nbsp;·&nbsp; <a href="index.html" style="color:var(--gold);text-decoration:none;">트렌드 리포트 ↗</a>
+      DATA: <span id="footer-source">온북 DB 파싱 · parse_raw_db.py</span> &nbsp;·&nbsp; <a href="index.html" style="color:var(--gold);text-decoration:none;">트렌드 리포트 ↗</a>
     </div>
-
   </main>
+</div>
+
+<!-- CELL TOOLTIP -->
+<div id="cell-tooltip">
+  <strong id="ct-title"></strong>
+  <div class="tip-row"><span>RNS 실적</span><span class="tip-val" id="ct-rns"></span></div>
+  <div class="tip-row"><span>전년 RNS</span><span class="tip-val" id="ct-last"></span></div>
+  <div class="tip-row"><span>YoY</span><span class="tip-val" id="ct-yoy"></span></div>
+  <div class="tip-row"><span>ADR</span><span class="tip-val" id="ct-adr"></span></div>
+  <div class="tip-row"><span>REV</span><span class="tip-val" id="ct-rev"></span></div>
 </div>
 
 <script>
@@ -947,13 +1003,16 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 let rawData = null;
 let activeMonth = 0;
 let activeSeg = '전체';
+let activeYear = '2026';
 
 // ─── FORMAT HELPERS ───
 const fmt = {
-  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-  pct: v => v == null ? '—' : v.toFixed(1),
-  won100m: v => v == null ? '—' : (v / 100000000).toFixed(1),
-  won1k: v => v == null ? '—' : Math.round(v / 1000).toLocaleString('ko-KR'),
+  rn:    v => (v == null || v === 0) ? '—' : Math.round(v).toLocaleString('ko-KR') + '실',
+  num:   v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct:   v => v == null ? '—' : v.toFixed(1),
+  rev:   v => v == null ? '—' : Math.round(v / 1_000_000).toLocaleString('ko-KR') + '백만원',
+  adr:   v => v == null ? '—' : Math.round(v / 1_000).toLocaleString('ko-KR') + '천원',
+  won100m: v => v == null ? '—' : (v / 100_000_000).toFixed(1),
 };
 
 function achClass(pct) {
@@ -962,18 +1021,22 @@ function achClass(pct) {
   return 'ach-low';
 }
 
+// ─── YEAR DATA SELECTOR ───
+function getYearData() {
+  if (!rawData) return null;
+  if (activeYear === '2026') return rawData;
+  return rawData.byYear && rawData.byYear[activeYear] ? rawData.byYear[activeYear] : rawData;
+}
+
 // ─── GAUGE ───
 function updateGauge(pct) {
-  const circumference = 282.74; // π × r where r≈90, half-circle arc length
-  const fill = document.getElementById('gauge-fill');
+  const circumference = 282.74;
+  const fill  = document.getElementById('gauge-fill');
   const label = document.getElementById('gauge-pct-text');
   if (!fill) return;
   const clamped = Math.min(Math.max(pct, 0), 100);
-  const offset = circumference - (clamped / 100) * circumference;
-  fill.setAttribute('stroke-dashoffset', offset.toFixed(2));
-  // colour: green ≥90, gold ≥75, orange ≥60, red <60
-  const color = clamped >= 90 ? '#4caf6f' : clamped >= 75 ? '#e6b970' : clamped >= 60 ? '#e8a256' : '#e57373';
-  fill.setAttribute('stroke', color);
+  fill.setAttribute('stroke-dashoffset', (circumference - (clamped / 100) * circumference).toFixed(2));
+  fill.setAttribute('stroke', clamped >= 90 ? '#4caf6f' : clamped >= 75 ? '#e6b970' : clamped >= 60 ? '#e8a256' : '#e57373');
   if (label) label.textContent = pct.toFixed(1) + '%';
 }
 
@@ -984,10 +1047,12 @@ function buildMonthlyChart(data) {
   if (!ctx) return;
   if (monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
 
-  const labels = data.monthly.map(m => m.label);
+  const labels  = data.monthly.map(m => m.label);
   const budgets = data.monthly.map(m => m.rns_budget);
   const actuals = data.monthly.map(m => m.rns_actual);
   const lasts   = data.monthly.map(m => m.rns_last);
+
+  const prevYear = String(parseInt(activeYear) - 1);
 
   monthlyChart = new Chart(ctx, {
     type: 'bar',
@@ -995,35 +1060,28 @@ function buildMonthlyChart(data) {
       labels,
       datasets: [
         {
-          label: '전년 RNS',
+          label: `전년(${prevYear}) RNS`,
           data: lasts,
           backgroundColor: 'rgba(255,255,255,0.12)',
           borderColor: 'rgba(255,255,255,0.2)',
-          borderWidth: 1,
-          borderRadius: 2,
-          order: 3,
+          borderWidth: 1, borderRadius: 2, order: 3,
         },
         {
-          label: '예산',
+          label: '예산 RNS',
           data: budgets,
           backgroundColor: 'rgba(230,185,112,0.25)',
           borderColor: 'rgba(230,185,112,0.6)',
-          borderWidth: 1,
-          borderRadius: 2,
-          order: 2,
+          borderWidth: 1, borderRadius: 2, order: 2,
         },
         {
-          label: '실적',
+          label: `${activeYear}년 실적`,
           data: actuals,
-          backgroundColor: ctx => {
-            const v = actuals[ctx.dataIndex];
-            const b = budgets[ctx.dataIndex];
+          backgroundColor: c => {
+            const v = actuals[c.dataIndex], b = budgets[c.dataIndex];
             if (b === 0) return 'rgba(90,159,196,0.7)';
-            return (v / b >= 0.9) ? 'rgba(76,175,111,0.75)' : (v / b >= 0.75) ? 'rgba(230,185,112,0.75)' : 'rgba(229,115,115,0.75)';
+            return v/b >= 0.9 ? 'rgba(76,175,111,0.75)' : v/b >= 0.75 ? 'rgba(230,185,112,0.75)' : 'rgba(229,115,115,0.75)';
           },
-          borderColor: 'transparent',
-          borderRadius: 3,
-          order: 1,
+          borderColor: 'transparent', borderRadius: 3, order: 1,
         },
       ]
     },
@@ -1034,13 +1092,35 @@ function buildMonthlyChart(data) {
         legend: { display: false },
         tooltip: {
           backgroundColor: '#1a1d23',
-          borderColor: 'rgba(255,255,255,0.15)',
+          borderColor: 'rgba(255,255,255,0.18)',
           borderWidth: 1,
           titleColor: '#e6b970',
           bodyColor: '#e0e0e3',
-          padding: 10,
+          padding: 12,
           callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ko-KR')}실`
+            title: items => `${activeYear}년 ${items[0].label}`,
+            label: c => {
+              const v = c.parsed.y;
+              const lbl = c.dataset.label;
+              const n = Math.round(v).toLocaleString('ko-KR');
+              if (lbl.includes('실적')) return ` 실적: ${n}실`;
+              if (lbl.includes('예산')) return ` 예산: ${n}실`;
+              return ` ${lbl}: ${n}실`;
+            },
+            afterBody: items => {
+              const i = items[0].dataIndex;
+              const a = actuals[i], b = budgets[i], l = lasts[i];
+              const lines = [];
+              if (l > 0) {
+                const yoy = ((a - l) / l * 100).toFixed(1);
+                lines.push(` YoY: ${yoy >= 0 ? '+' : ''}${yoy}%`);
+              }
+              if (b > 0) {
+                const ach = (a / b * 100).toFixed(1);
+                lines.push(` 달성률: ${ach}%`);
+              }
+              return lines;
+            }
           }
         }
       },
@@ -1051,7 +1131,7 @@ function buildMonthlyChart(data) {
           border: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+          grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: {
             color: 'rgba(255,255,255,0.3)',
             font: { family: 'JetBrains Mono', size: 10 },
@@ -1064,45 +1144,68 @@ function buildMonthlyChart(data) {
   });
 }
 
+// ─── CELL TOOLTIP ───
+const tip = document.getElementById('cell-tooltip');
+function showTip(e, p) {
+  if (!tip) return;
+  const yoy = p.rns_last > 0 ? ((p.rns_actual - p.rns_last) / p.rns_last * 100) : null;
+  document.getElementById('ct-title').textContent = p.name;
+  document.getElementById('ct-rns').textContent   = fmt.rn(p.rns_actual);
+  document.getElementById('ct-last').textContent  = fmt.rn(p.rns_last);
+  document.getElementById('ct-yoy').textContent   = yoy == null ? '—' : (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%';
+  document.getElementById('ct-adr').textContent   = fmt.adr(p.adr_actual);
+  document.getElementById('ct-rev').textContent   = fmt.rev(p.rev_actual);
+  tip.style.display = 'block';
+  moveTip(e);
+}
+function moveTip(e) {
+  if (!tip || tip.style.display === 'none') return;
+  const x = e.clientX + 14, y = e.clientY - 10;
+  const r = tip.getBoundingClientRect();
+  tip.style.left = (x + r.width > window.innerWidth ? x - r.width - 20 : x) + 'px';
+  tip.style.top  = (y + r.height > window.innerHeight ? y - r.height : y) + 'px';
+}
+function hideTip() { if (tip) tip.style.display = 'none'; }
+document.addEventListener('mousemove', moveTip);
+
 // ─── PIVOT TABLE ───
 function renderPivot(data) {
   const tbody = document.getElementById('pivot-tbody');
   if (!tbody) return;
 
-  const props = data.byProperty;
   let rows = '';
+  for (const p of data.byProperty) {
+    const netClass   = p.today_net >= 0 ? 'net-pos' : 'net-neg';
+    const netSign    = p.today_net >= 0 ? '+' : '';
+    const adrVs      = p.adr_budget > 0 ? (p.adr_actual - p.adr_budget) / p.adr_budget * 100 : 0;
+    const adrVsClass = adrVs >= 0 ? 'net-pos' : 'net-neg';
+    const adrVsSign  = adrVs >= 0 ? '+' : '';
 
-  for (const p of props) {
-    const achPct = p.rns_achievement;
-    const netClass = p.today_net >= 0 ? 'net-pos' : 'net-neg';
-    const netSign = p.today_net >= 0 ? '+' : '';
-    const adrVsBudget = ((p.adr_actual - p.adr_budget) / p.adr_budget * 100);
-    const adrVsClass = adrVsBudget >= 0 ? 'net-pos' : 'net-neg';
-    const adrVsSign = adrVsBudget >= 0 ? '+' : '';
-
-    rows += `<tr>
+    rows += `<tr data-prop='${JSON.stringify({
+      name: p.name,
+      rns_actual: p.rns_actual, rns_last: p.rns_last,
+      adr_actual: p.adr_actual, rev_actual: p.rev_actual
+    }).replace(/'/g,"&#39;")}'>
       <td>${p.name}</td>
       <td class="region-cell">${p.region}</td>
       <td class="border-left-group">${fmt.num(p.rns_budget)}</td>
       <td>${fmt.num(p.rns_actual)}</td>
-      <td><span class="ach-pill ${achClass(achPct)}">${fmt.pct(achPct)}%</span></td>
+      <td><span class="ach-pill ${achClass(p.rns_achievement)}">${fmt.pct(p.rns_achievement)}%</span></td>
       <td>${fmt.num(p.rns_last)}</td>
       <td class="border-left-group net-pos">+${fmt.num(p.today_booking)}</td>
       <td class="net-neg">-${fmt.num(p.today_cancel)}</td>
       <td class="${netClass}">${netSign}${fmt.num(p.today_net)}</td>
       <td class="border-left-group">${fmt.num(p.adr_budget / 1000)}천</td>
       <td>${fmt.num(p.adr_actual / 1000)}천</td>
-      <td class="${adrVsClass}">${adrVsSign}${adrVsBudget.toFixed(1)}%</td>
+      <td class="${adrVsClass}">${adrVsSign}${adrVs.toFixed(1)}%</td>
       <td class="border-left-group">${fmt.won100m(p.rev_budget)}</td>
       <td>${fmt.won100m(p.rev_actual)}</td>
       <td><span class="ach-pill ${achClass(p.rev_achievement)}">${fmt.pct(p.rev_achievement)}%</span></td>
     </tr>`;
   }
 
-  // Total row
   const tot = data.summary;
-  const totAdrVsBudget = (tot.adr_vs_budget || 0);
-  const totAdrVsSign = totAdrVsBudget >= 0 ? '+' : '';
+  const totAdrVs   = tot.adr_vs_budget || 0;
   const totNetSign = tot.today_net >= 0 ? '+' : '';
   rows += `<tr class="total-row">
     <td>합계</td>
@@ -1116,65 +1219,52 @@ function renderPivot(data) {
     <td class="${tot.today_net >= 0 ? 'net-pos' : 'net-neg'}">${totNetSign}${fmt.num(tot.today_net)}</td>
     <td class="border-left-group">${fmt.num(tot.adr_budget / 1000)}천</td>
     <td>${fmt.num(tot.adr_actual / 1000)}천</td>
-    <td class="${totAdrVsBudget >= 0 ? 'net-pos' : 'net-neg'}">${totAdrVsSign}${totAdrVsBudget.toFixed(1)}%</td>
+    <td class="${totAdrVs >= 0 ? 'net-pos' : 'net-neg'}">${totAdrVs >= 0 ? '+' : ''}${totAdrVs.toFixed(1)}%</td>
     <td class="border-left-group">${fmt.won100m(tot.rev_budget)}</td>
     <td>${fmt.won100m(tot.rev_actual)}</td>
     <td><span class="ach-pill ${achClass(tot.rev_achievement)}">${fmt.pct(tot.rev_achievement)}%</span></td>
   </tr>`;
 
   tbody.innerHTML = rows;
+
+  // 행 호버 툴팁 연결
+  tbody.querySelectorAll('tr[data-prop]').forEach(tr => {
+    const p = JSON.parse(tr.getAttribute('data-prop').replace(/&#39;/g, "'"));
+    tr.addEventListener('mouseenter', e => showTip(e, p));
+    tr.addEventListener('mouseleave', hideTip);
+  });
 }
 
 // ─── KPI UPDATER ───
 function updateKPIs(data) {
   const s = data.summary;
-
-  // Strip KPIs
-  setText('kpi-rns-ach', fmt.pct(s.rns_achievement));
+  setText('kpi-rns-ach',         fmt.pct(s.rns_achievement));
   setText('kpi-rns-budget-disp', fmt.num(s.rns_budget));
-  setText('kpi-today-net', fmt.num(s.today_net));
-  setText('kpi-today-booking', fmt.num(s.today_booking));
-  setText('kpi-today-cancel', fmt.num(s.today_cancel));
-  setText('kpi-rev-ach', fmt.pct(s.rev_achievement));
+  setText('kpi-today-net',       fmt.num(s.today_net));
+  setText('kpi-today-booking',   fmt.num(s.today_booking));
+  setText('kpi-today-cancel',    fmt.num(s.today_cancel));
+  setText('kpi-rev-ach',         fmt.pct(s.rev_achievement));
   setText('kpi-rev-budget-disp', fmt.won100m(s.rev_budget));
 
-  // Gauge
   updateGauge(s.rns_achievement);
   setText('gs-actual', fmt.num(s.rns_actual) + '<span class="unit">실</span>');
   setText('gs-budget', fmt.num(s.rns_budget) + '<span class="unit">실</span>');
-  setText('gs-last', fmt.num(s.rns_last) + '<span class="unit">실</span>');
-  const yoyEl = document.getElementById('gs-yoy');
-  if (yoyEl) {
-    const yoy = s.rns_yoy;
-    yoyEl.innerHTML = `<span class="${yoy >= 0 ? 'net-pos' : 'net-neg'}" style="font-size:14px;font-weight:700;">${yoy >= 0 ? '+' : ''}${fmt.pct(yoy)}%</span>`;
-  }
+  setText('gs-last',   fmt.num(s.rns_last)   + '<span class="unit">실</span>');
+  const yoy = s.rns_yoy;
+  setText('gs-yoy', `<span class="${yoy >= 0 ? 'net-pos' : 'net-neg'}" style="font-size:14px;font-weight:700;">${yoy >= 0 ? '+' : ''}${fmt.pct(yoy)}%</span>`);
 
-  // KPI Trio
   setText('km-rev', fmt.won100m(s.rev_actual));
   const revAchEl = document.getElementById('km-rev-ach');
-  if (revAchEl) {
-    revAchEl.textContent = fmt.pct(s.rev_achievement) + '%';
-    revAchEl.className = s.rev_achievement >= 90 ? 'pos' : s.rev_achievement >= 75 ? 'neu' : 'neg';
-  }
+  if (revAchEl) { revAchEl.textContent = fmt.pct(s.rev_achievement) + '%'; revAchEl.className = s.rev_achievement >= 90 ? 'pos' : s.rev_achievement >= 75 ? 'neu' : 'neg'; }
   setText('km-rev-bud', fmt.won100m(s.rev_budget));
   setText('km-adr', fmt.num(s.adr_actual / 1000));
   const adrVsEl = document.getElementById('km-adr-vs');
-  if (adrVsEl) {
-    const adrVs = s.adr_vs_budget;
-    adrVsEl.textContent = (adrVs >= 0 ? '+' : '') + fmt.pct(adrVs) + '%';
-    adrVsEl.className = adrVs >= 0 ? 'pos' : 'neg';
-  }
+  if (adrVsEl) { const v = s.adr_vs_budget; adrVsEl.textContent = (v >= 0 ? '+' : '') + fmt.pct(v) + '%'; adrVsEl.className = v >= 0 ? 'pos' : 'neg'; }
   setText('km-rns', fmt.num(s.rns_actual));
   const rnsAchEl = document.getElementById('km-rns-ach');
-  if (rnsAchEl) {
-    rnsAchEl.textContent = fmt.pct(s.rns_achievement) + '%';
-    rnsAchEl.className = s.rns_achievement >= 90 ? 'pos' : s.rns_achievement >= 75 ? 'neu' : 'neg';
-  }
+  if (rnsAchEl) { rnsAchEl.textContent = fmt.pct(s.rns_achievement) + '%'; rnsAchEl.className = s.rns_achievement >= 90 ? 'pos' : s.rns_achievement >= 75 ? 'neu' : 'neg'; }
   const rnsYoyEl = document.getElementById('km-rns-yoy');
-  if (rnsYoyEl) {
-    rnsYoyEl.textContent = (s.rns_yoy >= 0 ? '+' : '') + fmt.pct(s.rns_yoy) + '%';
-    rnsYoyEl.className = s.rns_yoy >= 0 ? 'pos' : 'neg';
-  }
+  if (rnsYoyEl) { rnsYoyEl.textContent = (yoy >= 0 ? '+' : '') + fmt.pct(yoy) + '%'; rnsYoyEl.className = yoy >= 0 ? 'pos' : 'neg'; }
 }
 
 function setText(id, html) {
@@ -1182,45 +1272,22 @@ function setText(id, html) {
   if (el) el.innerHTML = html;
 }
 
-// ─── FILTER UI ───
-function buildFilterChips(data) {
-  const monthContainer = document.getElementById('month-chips');
-  const segContainer   = document.getElementById('seg-chips');
-  const mMonthContainer = document.getElementById('mobile-month-chips');
-  const mSegContainer   = document.getElementById('mobile-seg-chips');
-
-  [monthContainer, mMonthContainer].forEach(c => {
+// ─── YEAR CHIPS ───
+function buildYearChips(data) {
+  const years = data.years || ['2026'];
+  ['year-chips', 'mobile-year-chips'].forEach(cid => {
+    const c = document.getElementById(cid);
     if (!c) return;
     c.innerHTML = '';
-    data.filters.months.forEach(m => {
+    years.forEach(y => {
       const btn = document.createElement('button');
-      btn.className = 'chip' + (m.value === activeMonth ? ' active' : '');
-      btn.textContent = m.label;
-      btn.dataset.value = m.value;
+      btn.className = 'chip year-chip' + (y === activeYear ? ' active' : '');
+      btn.textContent = y;
+      btn.dataset.year = y;
       btn.addEventListener('click', () => {
-        activeMonth = parseInt(btn.dataset.value);
-        document.querySelectorAll('#month-chips .chip, #mobile-month-chips .chip').forEach(b => {
-          b.classList.toggle('active', parseInt(b.dataset.value) === activeMonth);
-        });
-        applyFilters();
-      });
-      c.appendChild(btn);
-    });
-  });
-
-  [segContainer, mSegContainer].forEach(c => {
-    if (!c) return;
-    c.innerHTML = '';
-    data.filters.segments.forEach(s => {
-      const btn = document.createElement('button');
-      btn.className = 'chip' + (s === activeSeg ? ' active' : '');
-      btn.textContent = s;
-      btn.dataset.value = s;
-      btn.addEventListener('click', () => {
-        activeSeg = btn.dataset.value;
-        document.querySelectorAll('#seg-chips .chip, #mobile-seg-chips .chip').forEach(b => {
-          b.classList.toggle('active', b.dataset.value === activeSeg);
-        });
+        activeYear = y;
+        activeMonth = 0;
+        document.querySelectorAll('.year-chip').forEach(b => b.classList.toggle('active', b.dataset.year === activeYear));
         applyFilters();
       });
       c.appendChild(btn);
@@ -1228,18 +1295,59 @@ function buildFilterChips(data) {
   });
 }
 
-function applyFilters() {
-  // In a real implementation this would refetch/filter data by month/segment.
-  // For sample data, we just refresh the label.
-  const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
-  const segLabel   = activeSeg === '전체' ? '전체 세그' : activeSeg;
-  setText('table-filter-label', monthLabel + ' · ' + segLabel);
-  // Re-render with existing data (no server round-trip yet)
-  if (rawData) {
-    renderPivot(rawData);
-    buildMonthlyChart(rawData);
-    updateKPIs(rawData);
+// ─── FILTER CHIPS ───
+function buildFilterChips(data) {
+  const filters = data.filters || rawData.filters;
+  ['month-chips', 'mobile-month-chips'].forEach(cid => {
+    const c = document.getElementById(cid);
+    if (!c) return;
+    c.innerHTML = '';
+    filters.months.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (m.value === activeMonth ? ' active' : '');
+      btn.textContent = m.label;
+      btn.dataset.value = m.value;
+      btn.addEventListener('click', () => {
+        activeMonth = parseInt(btn.dataset.value);
+        document.querySelectorAll('#month-chips .chip, #mobile-month-chips .chip').forEach(b =>
+          b.classList.toggle('active', parseInt(b.dataset.value) === activeMonth));
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+
+  const segContainer  = document.getElementById('seg-chips');
+  if (segContainer) {
+    segContainer.innerHTML = '';
+    filters.segments.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (s === activeSeg ? ' active' : '');
+      btn.textContent = s;
+      btn.dataset.value = s;
+      btn.addEventListener('click', () => {
+        activeSeg = btn.dataset.value;
+        document.querySelectorAll('#seg-chips .chip').forEach(b => b.classList.toggle('active', b.dataset.value === activeSeg));
+        applyFilters();
+      });
+      segContainer.appendChild(btn);
+    });
   }
+}
+
+function applyFilters() {
+  const yd = getYearData();
+  if (!yd) return;
+  const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
+  setText('table-filter-label', `${activeYear}년 · ${monthLabel} · ${activeSeg === '전체' ? '전체 세그' : activeSeg}`);
+  // 연도 전환 시 월 필터 칩 재구성
+  buildFilterChips(yd);
+  updateKPIs(yd);
+  buildMonthlyChart(yd);
+  renderPivot(yd);
+  // 페이지 타이틀 동기화
+  const isOtb = activeYear === '2026';
+  setText('base-date-display', isOtb ? (rawData.meta.baseDate || '—') : activeYear + '년 연간');
 }
 
 // ─── MAIN LOAD ───
@@ -1257,24 +1365,19 @@ async function loadData() {
 }
 
 function render(data) {
-  // Metadata
   const meta = data.meta;
-  setText('refresh-badge', meta.refreshTime || '—');
-  setText('sidebar-refresh', meta.refreshTime || '—');
-  setText('base-date-display', meta.baseDate || '—');
-  setText('footer-source', meta.dataSource || '—');
+  setText('refresh-badge',    meta.refreshTime || '—');
+  setText('sidebar-refresh',  meta.refreshTime || '—');
+  setText('base-date-display', meta.baseDate   || '—');
+  setText('footer-source',    meta.dataSource  || '—');
 
-  // Update timestamp in masthead
-  const ts = document.getElementById('refresh-badge');
-  if (ts) ts.textContent = meta.refreshTime;
-
+  buildYearChips(data);
   buildFilterChips(data);
   updateKPIs(data);
   buildMonthlyChart(data);
   renderPivot(data);
 }
 
-// Boot
 document.addEventListener('DOMContentLoaded', loadData);
 </script>
 </body>
