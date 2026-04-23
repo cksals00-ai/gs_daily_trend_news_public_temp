@@ -917,6 +917,33 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     return html
 
 
+# ─────────────────────────────────────────────
+# 패키지 트렌드 데이터 주입
+# ─────────────────────────────────────────────
+def inject_package_data(html: str, pkg_data: dict) -> str:
+    """package_series_trend.json → <!-- PKG_DATA_START/END --> 사이에 주입"""
+    if not pkg_data:
+        logger.info("  패키지 데이터 없음 — 스킵")
+        return html
+    json_str = json.dumps(pkg_data, ensure_ascii=False, separators=(',', ':'))
+    script_tag = f"<script>const PKG_TREND_DATA = {json_str};</script>"
+    pattern = re.compile(
+        r'(<!-- PKG_DATA_START -->)(.*?)(<!-- PKG_DATA_END -->)',
+        re.DOTALL
+    )
+    new_html, n = pattern.subn(
+        lambda m: m.group(1) + "\n" + script_tag + "\n" + m.group(3),
+        html, count=1
+    )
+    if n > 0:
+        total = pkg_data.get("meta", {}).get("total_series", 0)
+        top = pkg_data.get("meta", {}).get("top_series_count", 0)
+        logger.info(f"✓ 패키지 트렌드 데이터 주입: 전체 {total:,}계열, TOP {top} 표시")
+    else:
+        logger.warning("✗ PKG_DATA 마커 미발견")
+    return new_html
+
+
 def main():
     logger.info("=" * 60)
     logger.info("V7 대시보드 빌드 (index.html + otb.html)")
@@ -927,6 +954,7 @@ def main():
     news_data = load_json(DATA_DIR / "news_latest.json")
     comp_data = load_json(DATA_DIR / "competitors.json")
     weekly_data = load_json(DATA_DIR / "weekly_report.json")
+    pkg_data = load_json(DATA_DIR / "package_series_trend.json")
 
     data = enriched if enriched else notes
     if not data:
@@ -944,6 +972,7 @@ def main():
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
     html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now)
     html = inject_news_section(html, news_data)
+    html = inject_package_data(html, pkg_data)
     HTML_FILE.write_text(html, encoding="utf-8")
     logger.info(f"✓ index.html 빌드 완료 ({len(html):,} bytes)")
 
