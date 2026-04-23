@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>26거래처 채널별 실적 · SONO & TRINITY GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
+  --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+  --gold:#c9a063;--gold-bright:#e6b970;
+  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
+  --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --sidebar-w:220px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
+.masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
+.masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
+.page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;}
+.masthead-right{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6);}
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--positive);margin-right:5px;animation:pulse 2.4s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.app-shell{display:flex;min-height:calc(100vh - 52px);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{padding:4px 10px;border-radius:3px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.04em;}
+.chip:hover{background:var(--bg-soft);color:var(--ink);}
+.chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);}
+.sidebar-divider{height:1px;background:var(--rule);}
+.otb-nav{display:flex;flex-direction:column;gap:2px;}
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
+.otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
+.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
+.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
+.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
+.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
+.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
+.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
+.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.achievement::before{background:var(--gold);}
+.kpi-card.booking::before{background:var(--positive);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-card.warning::before{background:var(--warning);}
+.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.kpi-card-value{font-family:var(--mono);font-size:clamp(22px,2.5vw,30px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
+.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
+.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.kpi-card-sub .pos{color:var(--positive);}
+.kpi-card-sub .neg{color:var(--negative);}
+.mid-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
+.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-canvas-wrap{height:260px;position:relative;}
+.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
+.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.pivot thead tr{background:var(--bg-deep);}
+table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;}
+table.pivot th:first-child{text-align:left;}
+table.pivot th.group-header{text-align:center;border-left:1px solid var(--rule);color:var(--ink-muted);font-size:9.5px;}
+table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
+table.pivot td:first-child{text-align:left;color:var(--ink-soft);font-weight:700;}
+table.pivot tr:hover td{background:var(--bg-soft);}
+table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
+table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
+.ach-pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700;white-space:nowrap;}
+.ach-high{background:var(--positive-bg);color:var(--positive);}
+.ach-mid{background:var(--warning-bg);color:var(--warning);}
+.ach-low{background:var(--negative-bg);color:var(--negative);}
+.net-pos{color:var(--positive);}
+.net-neg{color:var(--negative);}
+.border-left-group{border-left:1px solid var(--rule);}
+.rank-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;background:var(--bg-soft);color:var(--ink-faint);margin-right:6px;}
+@media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.main-content{padding:16px 14px;}}
+.mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
+@media(max-width:860px){.mobile-filter-bar{display:flex;}}
+</style>
+</head>
+<body>
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+</style>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/">트렌드 리포트</a>
+      <a class="gsn-item" href="otb.html">26 OTB</a>
+    </div>
+  </div>
+</nav>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div style="display:flex;align-items:baseline;gap:0;">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · OTB 리포트</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📊 26OTB · 거래처별</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">연도:</span>
+  <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div>
+      <div class="filter-section-label">OTB 리포트</div>
+      <div class="otb-nav">
+        <a href="otb.html" class="otb-nav-link">당일현황</a>
+        <a href="channel.html" class="otb-nav-link active">26거래처</a>
+        <a href="ytd.html" class="otb-nav-link">연간누계</a>
+        <a href="monthly.html" class="otb-nav-link">월별실적</a>
+        <a href="stay-date.html" class="otb-nav-link">투숙일기준</a>
+        <a href="booking-trend.html" class="otb-nav-link">예약추이</a>
+        <a href="ly-trend.html" class="otb-nav-link">전년추이</a>
+        <a href="product-detail.html" class="otb-nav-link">상품상세</a>
+        <a href="ly-product.html" class="otb-nav-link">전년상품</a>
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">연도</div>
+      <div class="filter-chips" id="year-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">월</div>
+      <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">DATA UPDATED</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">
+        거래처별 채널 실적
+        <span class="sub">CHANNEL PERFORMANCE · OTA &amp; SELF</span>
+      </div>
+      <div class="base-date-tag">
+        기준 <strong id="period-display">—</strong>
+      </div>
+    </div>
+
+    <div class="kpi-strip" id="kpi-strip">
+      <div class="kpi-card achievement">
+        <div class="kpi-card-label">총 RNS (순증)</div>
+        <div class="kpi-card-value" id="kpi-rns">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub" id="kpi-rns-sub">선택 기간</div>
+      </div>
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">총 매출 (REV)</div>
+        <div class="kpi-card-value" id="kpi-rev">—<span class="unit">억원</span></div>
+        <div class="kpi-card-sub" id="kpi-rev-sub">선택 기간</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-card-label">평균 ADR</div>
+        <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
+        <div class="kpi-card-sub">평균단가</div>
+      </div>
+      <div class="kpi-card warning">
+        <div class="kpi-card-label">활성 채널 수</div>
+        <div class="kpi-card-value" id="kpi-channels">—<span class="unit">개</span></div>
+        <div class="kpi-card-sub">실적 있는 채널</div>
+      </div>
+    </div>
+
+    <div class="mid-row">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">채널별 RNS 순위</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>RNS (순증)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="channel-rns-chart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">채널별 매출 순위</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>REV (억원)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="channel-rev-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">채널별 상세 실적</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot" id="channel-table">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:140px;">채널명</th>
+              <th>순위</th>
+              <th class="border-left-group">예약 RNS</th>
+              <th>취소 RNS</th>
+              <th>순증 RNS</th>
+              <th class="border-left-group">매출(억)</th>
+              <th>ADR(천원)</th>
+              <th class="border-left-group">RNS 비중</th>
+              <th>REV 비중</th>
+            </tr>
+          </thead>
+          <tbody id="channel-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
+      DATA: 온북 DB 파싱 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
+    </div>
+  </main>
+</div>
+
+<script>
+let db = null;
+let activeYear = '2026';
+let activeMonth = '0';
+
+const fmt = {
+  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  rev: v => v == null ? '—' : (v/100).toFixed(1),
+  adr: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct: v => v == null ? '—' : v.toFixed(1),
+};
+
+let rnsChart = null, revChart = null;
+
+function getMonthsForPeriod() {
+  const allMonths = db.meta.months;
+  if (activeMonth === '0') {
+    return allMonths.filter(m => m.startsWith(activeYear));
+  }
+  const key = activeYear + activeMonth.padStart(2,'0');
+  return allMonths.includes(key) ? [key] : [];
+}
+
+function aggregateChannels(months) {
+  const result = {};
+  for (const ch of db.meta.channels) {
+    const chData = db.by_channel[ch];
+    if (!chData) continue;
+    let booking_rn = 0, cancel_rn = 0, net_rn = 0, booking_rev = 0, net_rev = 0;
+    for (const m of months) {
+      if (chData[m]) {
+        booking_rn += chData[m].booking_rn || 0;
+        cancel_rn += chData[m].cancel_rn || 0;
+        net_rn += chData[m].net_rn || 0;
+        booking_rev += chData[m].booking_rev || 0;
+        net_rev += chData[m].net_rev || 0;
+      }
+    }
+    result[ch] = { booking_rn, cancel_rn, net_rn, booking_rev, net_rev,
+      adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0 };
+  }
+  return result;
+}
+
+function render() {
+  const months = getMonthsForPeriod();
+  if (months.length === 0) {
+    document.getElementById('channel-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">해당 기간 데이터 없음</td></tr>';
+    return;
+  }
+
+  const channelData = aggregateChannels(months);
+
+  // Sort by net_rn desc
+  const sorted = Object.entries(channelData)
+    .filter(([,d]) => d.net_rn > 0)
+    .sort(([,a],[,b]) => b.net_rn - a.net_rn);
+
+  const totalRNS = sorted.reduce((s,[,d]) => s + d.net_rn, 0);
+  const totalREV = sorted.reduce((s,[,d]) => s + d.net_rev, 0);
+  const totalBookRNS = sorted.reduce((s,[,d]) => s + d.booking_rn, 0);
+  const totalCancelRNS = sorted.reduce((s,[,d]) => s + d.cancel_rn, 0);
+  const avgADR = totalRNS > 0 ? totalREV * 1000 / totalRNS : 0;
+
+  // KPIs
+  setText('kpi-rns', fmt.num(totalRNS));
+  setText('kpi-rev', fmt.rev(totalREV));
+  setText('kpi-adr', fmt.adr(Math.round(avgADR)));
+  setText('kpi-channels', sorted.length.toString());
+
+  const periodLabel = activeMonth === '0' ? activeYear + '년 전체' : activeYear + '년 ' + activeMonth + '월';
+  setText('period-display', periodLabel);
+  setText('table-label', periodLabel + ' · ' + months.length + '개월');
+  setText('kpi-rns-sub', months.length + '개월 누계');
+  setText('kpi-rev-sub', months.length + '개월 누계');
+
+  // Charts (top 10)
+  const top10 = sorted.slice(0, 10);
+  buildBarChart('channel-rns-chart', top10.map(([ch]) => ch), top10.map(([,d]) => d.net_rn), '#5a9fc4', rnsChart, (c) => rnsChart = c, v => v.toLocaleString('ko-KR') + '실');
+  buildBarChart('channel-rev-chart', top10.map(([ch]) => ch), top10.map(([,d]) => parseFloat((d.net_rev/100).toFixed(1))), '#e6b970', revChart, (c) => revChart = c, v => v.toFixed(1) + '억');
+
+  // Table
+  let rows = '';
+  sorted.forEach(([ch, d], i) => {
+    const rnsPct = totalRNS > 0 ? (d.net_rn / totalRNS * 100) : 0;
+    const revPct = totalREV > 0 ? (d.net_rev / totalREV * 100) : 0;
+    rows += `<tr>
+      <td><span class="rank-num">${i+1}</span>${ch}</td>
+      <td>${i+1}</td>
+      <td class="border-left-group">${fmt.num(d.booking_rn)}</td>
+      <td>${d.cancel_rn > 0 ? '-'+fmt.num(d.cancel_rn) : '—'}</td>
+      <td class="net-pos">${fmt.num(d.net_rn)}</td>
+      <td class="border-left-group">${fmt.rev(d.net_rev)}</td>
+      <td>${fmt.adr(Math.round(d.adr))}</td>
+      <td class="border-left-group">${rnsPct.toFixed(1)}%</td>
+      <td>${revPct.toFixed(1)}%</td>
+    </tr>`;
+  });
+
+  // Total row
+  rows += `<tr class="total-row">
+    <td>합계</td>
+    <td>—</td>
+    <td class="border-left-group">${fmt.num(totalBookRNS)}</td>
+    <td>${totalCancelRNS > 0 ? '-'+fmt.num(totalCancelRNS) : '—'}</td>
+    <td class="net-pos">${fmt.num(totalRNS)}</td>
+    <td class="border-left-group">${fmt.rev(totalREV)}</td>
+    <td>${fmt.adr(Math.round(avgADR))}</td>
+    <td class="border-left-group">100.0%</td>
+    <td>100.0%</td>
+  </tr>`;
+  document.getElementById('channel-tbody').innerHTML = rows;
+}
+
+function buildBarChart(id, labels, data, color, oldChart, setter, formatter) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (oldChart) oldChart.destroy();
+  const c = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color+'bb', borderColor: color, borderWidth: 1, borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
+          callbacks: { label: ctx => ' ' + formatter(ctx.parsed.x) } }
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10},callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} },
+        y: { grid:{display:false}, ticks:{color:'rgba(255,255,255,0.5)',font:{family:'JetBrains Mono',size:10}}, border:{color:'rgba(255,255,255,0.1)'} }
+      }
+    }
+  });
+  setter(c);
+}
+
+function buildFilters() {
+  const years = db.meta.years.slice().reverse();
+  const yc = document.getElementById('year-chips');
+  const myc = document.getElementById('mobile-year-chips');
+  [yc, myc].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    years.forEach(y => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (y === activeYear ? ' active' : '');
+      btn.textContent = y;
+      btn.addEventListener('click', () => {
+        activeYear = y;
+        document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip').forEach(b => b.classList.toggle('active', b.textContent === activeYear));
+        buildMonthChips();
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+  buildMonthChips();
+}
+
+function buildMonthChips() {
+  const mc = document.getElementById('month-chips');
+  if (!mc) return;
+  const available = db.meta.months.filter(m => m.startsWith(activeYear)).map(m => m.slice(4));
+  mc.innerHTML = '';
+  [{ v: '0', l: '전체' }, ...available.map(m => ({ v: String(parseInt(m)), l: m.replace(/^0/,'') + '월' }))].forEach(({v,l}) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (v === activeMonth ? ' active' : '');
+    btn.textContent = l;
+    btn.addEventListener('click', () => {
+      activeMonth = v;
+      mc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent.replace('월','') === (v==='0'?'전체':parseInt(v).toString()+'') || (v==='0'&&b.textContent==='전체')));
+      render();
+    });
+    mc.appendChild(btn);
+  });
+}
+
+function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+async function loadData() {
+  try {
+    const res = await fetch('data/db_aggregated.json?t=' + Date.now());
+    db = await res.json();
+    setText('sidebar-refresh', db.generated_at || '—');
+    setText('refresh-badge', db.generated_at || '—');
+    buildFilters();
+    render();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('channel-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패</td></tr>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
