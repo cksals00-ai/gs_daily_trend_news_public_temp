@@ -374,8 +374,13 @@ def main():
         logger.error(f"데이터 디렉토리가 없습니다: {RAW_DB_DIR}")
         sys.exit(1)
 
-    # 모든 txt 파일 수집
-    txt_files = sorted(RAW_DB_DIR.rglob("*.txt"))
+    # 모든 txt 파일 수집 (symlink 폴더도 탐색)
+    txt_files = sorted(
+        Path(dirpath) / fname
+        for dirpath, dirnames, filenames in os.walk(RAW_DB_DIR, followlinks=True)
+        for fname in filenames
+        if fname.lower().endswith(".txt")
+    )
     logger.info(f"총 {len(txt_files)}개 txt 파일 발견")
 
     # 2026 파일 처리 전략:
