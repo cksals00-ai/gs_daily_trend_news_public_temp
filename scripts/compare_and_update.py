@@ -215,7 +215,7 @@ def task1_compare(db: dict, wb) -> None:
     print(f"  RN:  {db_ytd_rn:>12,}")
     print(f"  ADR: {db_ytd_adr:>12,}  천원")
     print(f"  REV: {db_ytd_rev:>12,.0f}  백만원")
-    print(f"  → 예산 대비 진행률: RN {db_ytd_rn/total_ann_bud_rn*100:.1f}% "
+    print(f"  → 목표 대비 진행률: RN {db_ytd_rn/total_ann_bud_rn*100:.1f}% "
           f"(1~4월 이론치 ~{(4/12)*100:.0f}%)")
     print("=" * 90)
 
