@@ -707,7 +707,7 @@ def render_featured_news(featured_list: list) -> str:
     
     region_colors = {"vivaldi": "#d97a7a", "central": "#6ba3c4", "south": "#6db58a", "apac": "#a892c8", "general": "#c9a063"}
     impact_colors = {"high": "var(--negative)", "medium": "var(--warning)", "low": "var(--positive)"}
-    impact_labels = {"high": "🔴 HIGH IMPACT", "medium": "🟡 MED", "low": "🟢 LOW"}
+    impact_labels = {"high": "HIGH IMPACT", "medium": "MED", "low": "LOW"}
     
     cards = []
     for item in featured_list[:2]:
@@ -746,7 +746,7 @@ def render_featured_news(featured_list: list) -> str:
           <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.55;font-weight:500;">{summary}</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px dashed var(--rule);">
-          <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;">📰 {source}</span>
+          <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;">{source}</span>
           <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">원문 보기 ↗</span>
         </div>
       </div>
