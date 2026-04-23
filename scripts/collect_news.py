@@ -339,10 +339,6 @@ def main():
         by_category[cat]["articles"].append(entry)
 
     # build.py 호환: featured 뉴스 (신규 기사 중 상위 2건)
-    image_emoji_map = {
-        "호텔/리조트": "🏨", "항공/공항": "✈️", "OTA/여행": "🌐",
-        "관광/지역": "🌸", "레저/휴양": "🏖️", "거시지표": "📊",
-    }
     featured_candidates = [a for a in all_news if a.get("is_new")][:4] or all_news[:4]
     featured = []
     for art in featured_candidates[:2]:
@@ -355,7 +351,6 @@ def main():
             "category_emoji": art.get("category_emoji", "📰"),
             "region": art.get("region", "general"),
             "tag": art.get("query", ""),
-            "image_emoji": image_emoji_map.get(art.get("category", ""), "📰"),
             "impact": "high" if art.get("is_new") else "medium",
             "is_new": art.get("is_new", False),
         })
