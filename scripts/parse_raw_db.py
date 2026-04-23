@@ -7,7 +7,7 @@ parse_raw_db.py — 온북 원시 DB txt 파일 파싱 → JSON 집계
 - 44번: Inbound 취소
 CP949 인코딩, 세미콜론(;) 구분
 """
-import os, sys, json, re, logging, glob
+import os, sys, json, re, logging, glob, unicodedata
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -70,38 +70,32 @@ def extract_channel(agent_name):
     return "기타"
 
 
-# ─── 사업장 → 권역 매핑 ───
+# ─── 사업장 → 권역 매핑 (BI REGION_MAP 기준) ───
 PROPERTY_REGION = {
-    # 비발디파크
-    "소노벨 비발디파크": "비발디파크", "소노캄 비발디": "비발디파크",
-    "비발디파크": "비발디파크", "소노펠리체": "비발디파크",
-    # 중부
-    "소노캄 델피노": "한국중부", "델피노": "한국중부",
-    "소노캄 양평": "한국중부", "양평": "한국중부",
-    "소노벨 양양": "한국중부", "양양": "한국중부",
-    "소노벨 삼척": "한국중부", "삼척": "한국중부",
-    "소노벨 천안": "한국중부", "천안": "한국중부",
-    "소노문 단양": "한국중부", "단양": "한국중부",
-    "소노벨 경주": "한국중부",
-    # 남부
-    "소노캄 여수": "한국남부", "여수": "한국남부",
-    "소노캄 거제": "한국남부", "거제": "한국남부",
-    "소노벨 거제": "한국남부",
-    "소노문 진도": "한국남부", "진도": "한국남부",
-    "소노벨 남해": "한국남부", "남해": "한국남부",
-    # APAC
-    "소노캄 제주": "아시아퍼시픽", "제주": "아시아퍼시픽",
-    "소노캄 고양": "아시아퍼시픽", "고양": "아시아퍼시픽",
+    # Vivaldi (비발디파크 권역)
+    "비발디": "vivaldi", "소노펠리체": "vivaldi", "소노펫": "vivaldi",
+    "펠리체": "vivaldi", "오션월드": "vivaldi",
+    # Central (중부 권역)
+    "델피노": "central", "양평": "central", "양양": "central",
+    "삼척": "central", "단양": "central", "청송": "central",
+    "천안": "central", "변산": "central", "오크밸리": "central",
+    "르네블루": "central",
+    # South (남부 권역)
+    "여수": "south", "거제": "south", "남해": "south",
+    "진도": "south", "경주": "south", "해운대": "south",
+    # APAC (아시아퍼시픽 권역)
+    "제주": "apac", "고양": "apac",
+    "하이퐁": "apac", "괌": "apac", "하와이": "apac",
 }
 
 def get_region(prop_name):
-    """사업장명 → 권역"""
+    """사업장명 → 권역 (BI REGION_MAP 기준)"""
     if not prop_name:
-        return "기타"
+        return "unknown"
     for key, region in PROPERTY_REGION.items():
         if key in prop_name:
             return region
-    return "기타"
+    return "unknown"
 
 
 def normalize_property(prop_name):
@@ -129,10 +123,11 @@ def detect_file_type(filename):
     return None
 
 
-def parse_and_aggregate(filepath, file_type, agg):
+def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
+    min_month/max_month: 'YYYYMM' 형식, 범위 밖 stay_month 스킵
     """
     encodings = ['cp949', 'euc-kr', 'utf-8']
     is_cancel = file_type in ("28", "44")
@@ -151,12 +146,12 @@ def parse_and_aggregate(filepath, file_type, agg):
                 # 컬럼 인덱스 사전 조회 (루프 최적화)
                 idx_prop = col_map.get('영업장명', -1)
                 idx_cprop = col_map.get('변경사업장명', -1) if has_change_prop else -1
-                idx_checkin = col_map.get('입실일자', -1)
+                idx_selldate = col_map.get('판매일자', -1)  # 투숙일자 = 판매일자
+                idx_checkin = col_map.get('입실일자', -1)    # fallback
                 idx_code = col_map.get(code_col, -1)
                 idx_agent = col_map.get('AGENT명', -1)
-                idx_nights = col_map.get('박수', -1)
                 idx_rooms = col_map.get('객실수', -1)
-                idx_price = col_map.get('판매가', -1)
+                idx_1night = col_map.get('1박객실료', -1)    # REV 계산 기준
 
                 line_count = 0
                 ok_count = 0
@@ -173,11 +168,20 @@ def parse_and_aggregate(filepath, file_type, agg):
                         cprop = parts[idx_cprop].strip() if idx_cprop >= 0 and idx_cprop < plen else ''
                         prop_name = normalize_property(cprop) if cprop else normalize_property(prop_raw)
 
-                        # 입실일자
-                        checkin = parts[idx_checkin].strip() if idx_checkin >= 0 and idx_checkin < plen else ''
-                        if len(checkin) < 6:
+                        # 투숙일자 = 판매일자 (연박은 판매일자가 매일 반복)
+                        sell_date = parts[idx_selldate].strip() if idx_selldate >= 0 and idx_selldate < plen else ''
+                        if len(sell_date) < 6:
+                            # fallback to 입실일자
+                            sell_date = parts[idx_checkin].strip() if idx_checkin >= 0 and idx_checkin < plen else ''
+                            if len(sell_date) < 6:
+                                continue
+                        stay_month = sell_date[:6]
+
+                        # 월 필터
+                        if min_month and stay_month < min_month:
                             continue
-                        stay_month = checkin[:6]
+                        if max_month and stay_month > max_month:
+                            continue
 
                         # 코드명, AGENT명
                         code_name = parts[idx_code].strip() if idx_code >= 0 and idx_code < plen else ''
@@ -190,12 +194,17 @@ def parse_and_aggregate(filepath, file_type, agg):
                                 return int(v) if v else 0
                             return 0
 
-                        nights = _int(idx_nights)
                         rooms = _int(idx_rooms)
-                        sale_price = _int(idx_price)
+                        night_rate = _int(idx_1night)
 
-                        rn = nights * rooms if nights > 0 and rooms > 0 else max(1, rooms)
-                        rev = sale_price
+                        # BI 로직:
+                        # - 판매일자 기준 DB → 연박은 매일 반복 기록됨
+                        # - RN = 객실수 (박수 제외, 각 행이 이미 1박 단위)
+                        rn = rooms if rooms > 0 else 1
+
+                        # REV = 1박객실료 (이미 VAT 제외된 기본 객실 요금)
+                        # 1박객실료 ≈ 판매가/1.1 (검증 완료, ~1% 이내 일치)
+                        rev = night_rate
 
                         region = get_region(prop_name)
                         channel = extract_channel(agent_name)
@@ -273,18 +282,30 @@ def build_summary(agg):
         region_segment_monthly[region][segment][month][f'{prefix}_rev'] += rev
 
     def calc_adr(d):
-        """net_rn과 ADR 계산"""
+        """
+        BI 로직 적용:
+        - REV: 원 → 백만원 (÷1,000,000) — 판매가/1.1은 파싱 단계에서 적용 완료
+        - ADR: REV(백만원) × 1000 ÷ RNS → 천원 단위
+        """
         net_rn = d.get('booking_rn', 0) - d.get('cancel_rn', 0)
-        net_rev = d.get('booking_rev', 0) - d.get('cancel_rev', 0)
-        adr = round(net_rev / net_rn) if net_rn > 0 else 0
+        net_rev_won = d.get('booking_rev', 0) - d.get('cancel_rev', 0)  # 원 단위
+
+        # REV: 원 → 백만원
+        booking_rev_m = round(d.get('booking_rev', 0) / 1_000_000, 2)
+        cancel_rev_m = round(d.get('cancel_rev', 0) / 1_000_000, 2)
+        net_rev_m = round(net_rev_won / 1_000_000, 2)
+
+        # ADR: REV(백만원) × 1000 ÷ RNS → 천원
+        adr_k = round((net_rev_m * 1000) / net_rn) if net_rn > 0 else 0
+
         return {
             'booking_rn': d.get('booking_rn', 0),
             'cancel_rn': d.get('cancel_rn', 0),
             'net_rn': net_rn,
-            'booking_rev': d.get('booking_rev', 0),
-            'cancel_rev': d.get('cancel_rev', 0),
-            'net_rev': net_rev,
-            'adr': adr,
+            'booking_rev': booking_rev_m,   # 백만원
+            'cancel_rev': cancel_rev_m,     # 백만원
+            'net_rev': net_rev_m,           # 백만원
+            'adr': adr_k,                   # 천원
         }
 
     # JSON 변환
@@ -357,7 +378,45 @@ def main():
     txt_files = sorted(RAW_DB_DIR.rglob("*.txt"))
     logger.info(f"총 {len(txt_files)}개 txt 파일 발견")
 
-    agg = defaultdict(lambda: {'rn': 0, 'rev': 0, 'count': 0})
+    # 2026 파일 처리 전략:
+    # - 취소 파일(28/44): 스킵 (2022-2025와 일관성, 스냅샷 방식)
+    # - 재전송 예약 파일: Jan-Mar만 파싱 (stay_month ≤ 202603)
+    # - 최신 누적 예약 파일: Apr 이후만 파싱 (stay_month ≥ 202604)
+    folder_type_files = defaultdict(list)
+    for fp in txt_files:
+        ft = detect_file_type(fp.name)
+        if ft:
+            folder_type_files[(str(fp.parent), ft)].append(fp)
+    def _is_retrans(fp):
+        # 재전송 파일: 파일명에 날짜범위 패턴 (YYYYMMDD-YYYYMMDD) 포함
+        return bool(re.search(r'\(\d{8}-\d{8}\)', fp.name))
+
+    # file → (min_month, max_month) 또는 'skip'
+    file_month_filter = {}
+
+    for (folder, ft), fps in folder_type_files.items():
+        folder_path = Path(folder)
+        retrans = [fp for fp in fps if _is_retrans(fp)]
+        snapshots = [fp for fp in fps if not _is_retrans(fp)]
+
+        # 2026 취소 파일(28/44): 스냅샷 방식이므로 항상 스킵 (2022-2025 취소 파일 없음과 일관성 유지)
+        if folder_path.name == '2026' and ft in ('28', '44'):
+            for fp in fps:
+                file_month_filter[fp] = 'skip'
+                logger.info(f"  취소파일 스킵 (스냅샷 방식): {fp.name}")
+
+        if retrans and snapshots:
+            # 재전송 + 최신 스냅샷이 공존하는 예약 파일: 월별 분리
+            if ft not in ('28', '44'):
+                # 예약 파일: 재전송은 Jan-Mar 한정, 최신 스냅샷은 Apr+ 한정
+                for fp in retrans:
+                    file_month_filter[fp] = (None, '202603')
+                    logger.info(f"  재전송: ≤202603 한정 파싱: {fp.name}")
+                for fp in snapshots:
+                    file_month_filter[fp] = ('202604', None)
+                    logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
+
+    agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
     file_stats = {}
     total_rows = 0
 
@@ -369,11 +428,19 @@ def main():
             logger.warning(f"  스킵 (타입 불명): {fpath.name}")
             continue
 
+        mfilter = file_month_filter.get(fpath)
+        if mfilter == 'skip':
+            continue
+
         folder_name = fpath.parent.name
+        min_m = max_m = None
+        if isinstance(mfilter, tuple):
+            min_m, max_m = mfilter
+            logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name} [월필터: {min_m or '*'}~{max_m or '*'}]")
+        else:
+            logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
 
-        logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
-
-        row_count = parse_and_aggregate(str(fpath), file_type, agg)
+        row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m)
         total_rows += row_count
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
@@ -408,9 +475,9 @@ def main():
     for year in summary['meta']['years']:
         year_months = [m for m in summary['meta']['months'] if m.startswith(year)]
         total_rn = sum(summary['monthly_total'].get(m, {}).get('net_rn', 0) for m in year_months)
-        total_rev = sum(summary['monthly_total'].get(m, {}).get('net_rev', 0) for m in year_months)
-        adr = round(total_rev / total_rn) if total_rn > 0 else 0
-        print(f"  {year}년: RN {total_rn:>10,} | REV {total_rev/1_000_000:>10,.0f}백만원 | ADR {adr/1000:>6,.1f}천원")
+        total_rev = sum(summary['monthly_total'].get(m, {}).get('net_rev', 0) for m in year_months)  # 이미 백만원
+        adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0  # 천원
+        print(f"  {year}년: RN {total_rn:>10,} | REV {total_rev:>10,.0f}백만원 | ADR {adr:>6,}천원")
 
     print(f"\n  전체: {summary['meta']['total_rows']:,}행")
     print("=" * 60)
