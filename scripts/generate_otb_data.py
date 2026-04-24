@@ -127,6 +127,32 @@ def sum_db(db_bp, prop_names, month_key):
     return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
 
 
+def sum_db_segments(db_bps, prop_names, month_key):
+    """by_property_segment에서 OTA+G-OTA+Inbound만 합산"""
+    total_rn  = 0
+    total_rev = 0.0
+    for pname in prop_names:
+        prop_segs = db_bps.get(pname, {})
+        for seg in SEGMENT_KEYS:
+            m = prop_segs.get(seg, {}).get(month_key, {})
+            total_rn  += m.get("net_rn",  0)
+            total_rev += m.get("net_rev", 0.0)
+    adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0
+    return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
+
+
+def sum_seg_budget(seg_budgets, display_name, bud_labels):
+    """seg_budgets에서 OTA+G-OTA+Inbound 합산 → budget rn/rev/adr"""
+    rn  = 0
+    rev = 0.0
+    for seg in SEGMENT_KEYS:
+        prop_seg = seg_budgets.get(display_name, {}).get(seg, {})
+        rn  += sum(prop_seg.get(l, {}).get("rn",    0)    for l in bud_labels)
+        rev += sum(prop_seg.get(l, {}).get("rev_m", 0.0)  for l in bud_labels)
+    adr = round(rev * 1_000_000 / rn) if rn > 0 else 0
+    return {"rn": rn, "rev_m": rev, "adr": adr}
+
+
 def build_segment_snapshot(db_seg, seg_budgets, month_idx):
     """OTA/G-OTA/Inbound 세그먼트별 budget vs actual 요약"""
     if month_idx == 0:
@@ -175,8 +201,10 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
     return result
 
 
-def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None):
-    """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환"""
+def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None):
+    """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
+    실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
+    """
     if month_idx == 0:
         target_keys = MONTHS_26
         last_keys   = MONTHS_25
@@ -191,22 +219,34 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     tot_bud_rev = tot_act_rev = 0.0
 
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
-        # Budget 합산
-        bud_monthly = budgets.get(display_name, {})
-        bud_rn  = sum(bud_monthly.get(l, {}).get("rn",    0) for l in bud_labels)
-        bud_adr = (sum(bud_monthly.get(l, {}).get("adr",   0) * bud_monthly.get(l, {}).get("rn", 0)
-                       for l in bud_labels) / bud_rn) if bud_rn > 0 else 0
-        bud_rev = sum(bud_monthly.get(l, {}).get("rev_m", 0) for l in bud_labels)
+        # Budget: OTA+G-OTA+Inbound 세그먼트만 합산
+        if seg_budgets:
+            b = sum_seg_budget(seg_budgets, display_name, bud_labels)
+            bud_rn  = b["rn"]
+            bud_adr = b["adr"]
+            bud_rev = b["rev_m"]
+        else:
+            bud_monthly = budgets.get(display_name, {})
+            bud_rn  = sum(bud_monthly.get(l, {}).get("rn",    0) for l in bud_labels)
+            bud_adr = (sum(bud_monthly.get(l, {}).get("adr",   0) * bud_monthly.get(l, {}).get("rn", 0)
+                           for l in bud_labels) / bud_rn) if bud_rn > 0 else 0
+            bud_rev = sum(bud_monthly.get(l, {}).get("rev_m", 0) for l in bud_labels)
 
-        # 실적 합산
+        # 실적: by_property_segment → OTA+G-OTA+Inbound만
         act_rn = act_rev = 0
-        for mk in target_keys:
-            d = sum_db(db_bp, db_props, mk)
-            act_rn  += d["rn"]
-            act_rev += d["rev_m"]
+        if db_bps is not None:
+            for mk in target_keys:
+                d = sum_db_segments(db_bps, db_props, mk)
+                act_rn  += d["rn"]
+                act_rev += d["rev_m"]
+        else:
+            for mk in target_keys:
+                d = sum_db(db_bp, db_props, mk)
+                act_rn  += d["rn"]
+                act_rev += d["rev_m"]
         act_adr = round((act_rev * 1000) / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산
+        # 전년 합산 (by_property 전체 기준 유지 — 전년도 세그먼트 구분 없음)
         lst_rn = 0
         for mk in last_keys:
             d = sum_db(db_bp, db_props, mk)
@@ -265,8 +305,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     return {"byProperty": props, "summary": summary, "segmentData": seg_data}
 
 
-def build_monthly_chart(db_bp, budgets):
-    """Chart용 월별 집계 (전체 사업장 합산)"""
+def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None):
+    """Chart용 월별 집계 (전체 사업장 합산, OTA+G-OTA+Inbound 기준)"""
     result = []
     for i, mk in enumerate(MONTHS_26):
         bud_label = BUDGET_MONTH_LABEL[i]
@@ -274,8 +314,14 @@ def build_monthly_chart(db_bp, budgets):
         act_rn = 0
         lst_rn = 0
         for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
-            bud_rn += budgets.get(display_name, {}).get(bud_label, {}).get("rn", 0)
-            d = sum_db(db_bp, db_props, mk)
+            if seg_budgets:
+                bud_rn += sum_seg_budget(seg_budgets, display_name, [bud_label])["rn"]
+            else:
+                bud_rn += budgets.get(display_name, {}).get(bud_label, {}).get("rn", 0)
+            if db_bps is not None:
+                d = sum_db_segments(db_bps, db_props, mk)
+            else:
+                d = sum_db(db_bp, db_props, mk)
             act_rn += d["rn"]
             d_last = sum_db(db_bp, db_props, MONTHS_25[i])
             lst_rn += d_last["rn"]
@@ -294,6 +340,7 @@ def main():
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
     db_bp  = db.get("by_property", {})
     db_seg = db.get("by_segment", {})
+    db_bps = db.get("by_property_segment", {})
 
     print("Budget XLSX 로드 중...")
     wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True, data_only=True)
@@ -304,10 +351,10 @@ def main():
     # 월별 스냅샷 (0=전체, 1~12=각 월)
     all_months = {}
     for m in range(0, 13):
-        all_months[str(m)] = build_month_snapshot(db_bp, budgets, m, db_seg=db_seg, seg_budgets=seg_budgets)
+        all_months[str(m)] = build_month_snapshot(db_bp, budgets, m, db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps)
 
     # Chart data
-    monthly_chart = build_monthly_chart(db_bp, budgets)
+    monthly_chart = build_monthly_chart(db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps)
 
     output = {
         "meta": {

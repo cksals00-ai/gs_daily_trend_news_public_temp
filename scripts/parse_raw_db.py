@@ -293,6 +293,9 @@ def build_summary(agg):
     # 7) 권역×세그먼트별 월별
     region_segment_monthly = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0})))
 
+    # 8) 사업장×세그먼트별 월별
+    prop_segment_monthly = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0})))
+
     for (prop, region, month, channel, segment, btype), vals in agg.items():
         rn = vals['rn']
         rev = vals['rev']
@@ -319,6 +322,9 @@ def build_summary(agg):
 
         region_segment_monthly[region][segment][month][f'{prefix}_rn'] += rn
         region_segment_monthly[region][segment][month][f'{prefix}_rev'] += rev
+
+        prop_segment_monthly[prop][segment][month][f'{prefix}_rn'] += rn
+        prop_segment_monthly[prop][segment][month][f'{prefix}_rev'] += rev
 
     def calc_adr(d):
         """
@@ -380,6 +386,13 @@ def build_summary(agg):
                 for s, months in sorted(segs.items())
             }
             for r, segs in sorted(region_segment_monthly.items())
+        },
+        'by_property_segment': {
+            p: {
+                s: {m: calc_adr(v) for m, v in sorted(months.items())}
+                for s, months in sorted(segs.items())
+            }
+            for p, segs in sorted(prop_segment_monthly.items())
         },
     }
 
