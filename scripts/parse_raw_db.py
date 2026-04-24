@@ -159,7 +159,8 @@ def detect_file_type(filename):
     return None
 
 
-def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None):
+def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None,
+                         cancel_daily_agg=None, pickup_daily_agg=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
@@ -190,6 +191,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                 idx_agent = col_map.get('AGENT명', -1)
                 idx_rooms = col_map.get('객실수', -1)
                 idx_1night = col_map.get('1박객실료', -1)    # REV 계산 기준
+                idx_cancel_date = col_map.get('취소일자', -1)      # col33: 28/44 파일
+                idx_pickup_date = col_map.get('최초입력일자', -1)  # col27: 27/43 파일
 
                 line_count = 0
                 ok_count = 0
@@ -255,6 +258,22 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         agg[key]['count'] += 1
                         ok_count += 1
 
+                        # 취소일자 기반 집계 (28/44)
+                        if is_cancel and cancel_daily_agg is not None and idx_cancel_date >= 0 and idx_cancel_date < plen:
+                            cancel_date_str = parts[idx_cancel_date].strip()
+                            if len(cancel_date_str) >= 8:
+                                ckey = (cancel_date_str[:8], prop_name, region, segment)
+                                cancel_daily_agg[ckey]['rn'] += rn
+                                cancel_daily_agg[ckey]['rev'] += rev
+
+                        # 최초입력일자 기반 픽업 집계 (27/43)
+                        if not is_cancel and pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
+                            pickup_date_str = parts[idx_pickup_date].strip()
+                            if len(pickup_date_str) >= 8:
+                                pkey = (pickup_date_str[:8], prop_name, region, segment)
+                                pickup_daily_agg[pkey]['rn'] += rn
+                                pickup_daily_agg[pkey]['rev'] += rev
+
                     except (IndexError, ValueError):
                         error_count += 1
                         continue
@@ -269,7 +288,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
     return 0
 
 
-def build_summary(agg):
+def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
     """집계 → JSON-serializable 구조"""
 
     # 1) 월별 총괄 (전체 사업장)
@@ -343,6 +362,10 @@ def build_summary(agg):
         # ADR: REV(백만원) × 1000 ÷ RNS → 천원
         adr_k = round((net_rev_m * 1000) / net_rn) if net_rn > 0 else 0
 
+        # 취소율: cancel_rn / (booking_rn + cancel_rn) * 100
+        gross_rn = d.get('booking_rn', 0) + d.get('cancel_rn', 0)
+        cancel_rate = round(d.get('cancel_rn', 0) / gross_rn * 100, 1) if gross_rn > 0 else 0.0
+
         return {
             'booking_rn': d.get('booking_rn', 0),
             'cancel_rn': d.get('cancel_rn', 0),
@@ -351,6 +374,7 @@ def build_summary(agg):
             'cancel_rev': cancel_rev_m,     # 백만원
             'net_rev': net_rev_m,           # 백만원
             'adr': adr_k,                   # 천원
+            'cancel_rate': cancel_rate,     # %
         }
 
     # JSON 변환
@@ -413,6 +437,52 @@ def build_summary(agg):
         'total_rows': sum(v['count'] for v in agg.values()),
     }
 
+    def _to_m(raw_won):
+        return round(raw_won / 1_000_000, 2)
+
+    # 3단계: 취소일자 기반 일별 취소 집계
+    if cancel_daily_agg:
+        _cd = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        _cd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        for (cday, prop, region, segment), vals in cancel_daily_agg.items():
+            _cd[cday]['rn'] += vals['rn']
+            _cd[cday]['rev'] += vals['rev']
+            _cd_seg[segment][cday]['rn'] += vals['rn']
+            _cd_seg[segment][cday]['rev'] += vals['rev']
+        result['cancel_daily'] = {
+            d: {'rn': v['rn'], 'rev': _to_m(v['rev'])}
+            for d, v in sorted(_cd.items())
+        }
+        result['cancel_daily_by_segment'] = {
+            s: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for s, days in sorted(_cd_seg.items())
+        }
+
+    # 4단계: 최초입력일자 기반 일별 픽업 집계
+    if pickup_daily_agg:
+        _pd = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        _pd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        _pd_prop = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        for (pday, prop, region, segment), vals in pickup_daily_agg.items():
+            _pd[pday]['rn'] += vals['rn']
+            _pd[pday]['rev'] += vals['rev']
+            _pd_seg[segment][pday]['rn'] += vals['rn']
+            _pd_seg[segment][pday]['rev'] += vals['rev']
+            _pd_prop[prop][pday]['rn'] += vals['rn']
+            _pd_prop[prop][pday]['rev'] += vals['rev']
+        result['pickup_daily'] = {
+            d: {'rn': v['rn'], 'rev': _to_m(v['rev'])}
+            for d, v in sorted(_pd.items())
+        }
+        result['pickup_daily_by_segment'] = {
+            s: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for s, days in sorted(_pd_seg.items())
+        }
+        result['pickup_daily_by_property'] = {
+            p: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for p, days in sorted(_pd_prop.items())
+        }
+
     return result
 
 
@@ -456,12 +526,6 @@ def main():
         retrans = [fp for fp in fps if _is_retrans(fp)]
         snapshots = [fp for fp in fps if not _is_retrans(fp)]
 
-        if folder_path.name == '2026' and ft in ('28', '44'):
-            for fp in fps:
-                file_month_filter[fp] = 'skip'
-            logger.info(f"  2026 취소파일({ft}) 전체 스킵")
-            continue
-
         if retrans and snapshots:
             # 재전송 + 최신 스냅샷이 공존: 월별 분리 (예약/취소 모두 동일 규칙)
             for fp in retrans:
@@ -472,6 +536,8 @@ def main():
                 logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
 
     agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
+    cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     file_stats = {}
     total_rows = 0
 
@@ -495,7 +561,8 @@ def main():
         else:
             logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
 
-        row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m)
+        row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m,
+                                         cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg)
         total_rows += row_count
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
@@ -508,7 +575,7 @@ def main():
     logger.info(f"집계 키 수: {len(agg):,}")
 
     # 요약 생성
-    summary = build_summary(agg)
+    summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg)
     summary['file_stats'] = file_stats
 
     # JSON 출력
