@@ -277,6 +277,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 let db = null;
 let activeYear = '2026';
 let activeMonth = '0';
+let showAllChannels = false;
+const CHANNEL_DEFAULT_ROWS = 10;
 
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
@@ -355,8 +357,10 @@ function render() {
   buildBarChart('channel-rev-chart', top10.map(([ch]) => ch), top10.map(([,d]) => parseFloat((d.net_rev/100).toFixed(1))), '#e6b970', revChart, (c) => revChart = c, v => v.toFixed(1) + '억');
 
   // Table
+  const displayCount = showAllChannels ? sorted.length : Math.min(CHANNEL_DEFAULT_ROWS, sorted.length);
   let rows = '';
-  sorted.forEach(([ch, d], i) => {
+  for (let i = 0; i < displayCount; i++) {
+    const [ch, d] = sorted[i];
     const rnsPct = totalRNS > 0 ? (d.net_rn / totalRNS * 100) : 0;
     const revPct = totalREV > 0 ? (d.net_rev / totalREV * 100) : 0;
     rows += `<tr>
@@ -370,7 +374,23 @@ function render() {
       <td class="border-left-group">${rnsPct.toFixed(1)}%</td>
       <td>${revPct.toFixed(1)}%</td>
     </tr>`;
-  });
+  }
+
+  // 더보기/접기 row
+  if (sorted.length > CHANNEL_DEFAULT_ROWS) {
+    const hidden = sorted.length - CHANNEL_DEFAULT_ROWS;
+    if (!showAllChannels) {
+      rows += `<tr><td colspan="9" style="text-align:center;padding:10px;">
+        <button onclick="showAllChannels=true;render();" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
+          더보기 (${hidden}개 채널 더 보기)
+        </button></td></tr>`;
+    } else {
+      rows += `<tr><td colspan="9" style="text-align:center;padding:10px;">
+        <button onclick="showAllChannels=false;render();" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
+          접기
+        </button></td></tr>`;
+    }
+  }
 
   // Total row
   rows += `<tr class="total-row">
@@ -424,6 +444,7 @@ function buildFilters() {
       btn.textContent = y;
       btn.addEventListener('click', () => {
         activeYear = y;
+        showAllChannels = false;
         document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip').forEach(b => b.classList.toggle('active', b.textContent === activeYear));
         buildMonthChips();
         render();
@@ -445,6 +466,7 @@ function buildMonthChips() {
     btn.textContent = l;
     btn.addEventListener('click', () => {
       activeMonth = v;
+      showAllChannels = false;
       mc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent.replace('월','') === (v==='0'?'전체':parseInt(v).toString()+'') || (v==='0'&&b.textContent==='전체')));
       render();
     });
