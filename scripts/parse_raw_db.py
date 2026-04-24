@@ -627,6 +627,9 @@ def main():
                 logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
 
     agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
+    # 28/44 취소 파일은 분석용(cancel_daily, lead_time 등)으로만 사용하고
+    # 메인 agg에는 포함하지 않음 — 27/43 예약 파일이 이미 순수 예약 데이터
+    cancel_agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
     cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     lead_time_agg = defaultdict(lambda: {'rn': 0})
@@ -654,7 +657,11 @@ def main():
         else:
             logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
 
-        row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m,
+        # 취소 파일(28/44)은 cancel_agg로 분리 — 메인 집계(monthly_total 등)에 미포함
+        is_cancel_file = file_type in ("28", "44")
+        target_agg = cancel_agg if is_cancel_file else agg
+
+        row_count = parse_and_aggregate(str(fpath), file_type, target_agg, min_month=min_m, max_month=max_m,
                                          cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
                                          lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg)
         total_rows += row_count
