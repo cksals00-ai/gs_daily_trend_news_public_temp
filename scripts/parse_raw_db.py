@@ -106,6 +106,25 @@ def extract_channel(agent_name):
     return "기타"
 
 
+# ─── 리드타임 구간 분류 ───
+LEAD_TIME_BUCKETS = ['same_day', '1_3d', '4_7d', '1_2w', '2_4w', '1_2m', '2m_plus']
+
+def _lead_time_bucket(days):
+    if days <= 0:  return 'same_day'
+    if days <= 3:  return '1_3d'
+    if days <= 7:  return '4_7d'
+    if days <= 14: return '1_2w'
+    if days <= 28: return '2_4w'
+    if days <= 60: return '1_2m'
+    return '2m_plus'
+
+def _parse_ymd(s):
+    try:
+        return datetime.strptime(s[:8], '%Y%m%d')
+    except (ValueError, TypeError):
+        return None
+
+
 # ─── 사업장 → 권역 매핑 (BI REGION_MAP 기준) ───
 PROPERTY_REGION = {
     # Vivaldi (비발디파크 권역)
@@ -160,7 +179,8 @@ def detect_file_type(filename):
 
 
 def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None,
-                         cancel_daily_agg=None, pickup_daily_agg=None):
+                         cancel_daily_agg=None, pickup_daily_agg=None,
+                         lead_time_agg=None, cancel_lead_agg=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
@@ -274,6 +294,29 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 pickup_daily_agg[pkey]['rn'] += rn
                                 pickup_daily_agg[pkey]['rev'] += rev
 
+                        # 리드타임 집계 (27/43): 판매일자 - 최초입력일자
+                        if not is_cancel and lead_time_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
+                            entry_str = parts[idx_pickup_date].strip()
+                            d_sell = _parse_ymd(sell_date)
+                            d_entry = _parse_ymd(entry_str)
+                            if d_sell and d_entry:
+                                lt_days = (d_sell - d_entry).days
+                                if lt_days >= 0:
+                                    lead_time_agg[(stay_month, _lead_time_bucket(lt_days))]['rn'] += rn
+
+                        # 취소 리드타임 집계 (28/44): 취소일자 - 최초입력일자
+                        if is_cancel and cancel_lead_agg is not None \
+                                and idx_cancel_date >= 0 and idx_cancel_date < plen \
+                                and idx_pickup_date >= 0 and idx_pickup_date < plen:
+                            cdate_str = parts[idx_cancel_date].strip()
+                            entry_str = parts[idx_pickup_date].strip()
+                            d_cancel = _parse_ymd(cdate_str)
+                            d_entry = _parse_ymd(entry_str)
+                            if d_cancel and d_entry:
+                                cl_days = (d_cancel - d_entry).days
+                                if cl_days >= 0:
+                                    cancel_lead_agg[(stay_month, _lead_time_bucket(cl_days))]['rn'] += rn
+
                     except (IndexError, ValueError):
                         error_count += 1
                         continue
@@ -288,7 +331,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
     return 0
 
 
-def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
+def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
+                  lead_time_agg=None, cancel_lead_agg=None):
     """집계 → JSON-serializable 구조"""
 
     # 1) 월별 총괄 (전체 사업장)
@@ -362,19 +406,23 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
         # ADR: REV(백만원) × 1000 ÷ RNS → 천원
         adr_k = round((net_rev_m * 1000) / net_rn) if net_rn > 0 else 0
 
-        # 취소율: cancel_rn / (booking_rn + cancel_rn) * 100
+        # 취소율 / Wash Rate: cancel_rn / (booking_rn + cancel_rn) * 100
         gross_rn = d.get('booking_rn', 0) + d.get('cancel_rn', 0)
-        cancel_rate = round(d.get('cancel_rn', 0) / gross_rn * 100, 1) if gross_rn > 0 else 0.0
+        wash_rate = round(d.get('cancel_rn', 0) / gross_rn * 100, 1) if gross_rn > 0 else 0.0
+        retention_rate = round(100 - wash_rate, 1)
 
         return {
             'booking_rn': d.get('booking_rn', 0),
             'cancel_rn': d.get('cancel_rn', 0),
+            'gross_rn': gross_rn,
             'net_rn': net_rn,
             'booking_rev': booking_rev_m,   # 백만원
             'cancel_rev': cancel_rev_m,     # 백만원
             'net_rev': net_rev_m,           # 백만원
             'adr': adr_k,                   # 천원
-            'cancel_rate': cancel_rate,     # %
+            'cancel_rate': wash_rate,       # % (= wash_rate)
+            'wash_rate': wash_rate,         # %
+            'retention_rate': retention_rate,  # %
         }
 
     # JSON 변환
@@ -441,9 +489,9 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
         return round(raw_won / 1_000_000, 2)
 
     # 3단계: 취소일자 기반 일별 취소 집계
+    _cd = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    _cd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
     if cancel_daily_agg:
-        _cd = defaultdict(lambda: {'rn': 0, 'rev': 0})
-        _cd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
         for (cday, prop, region, segment), vals in cancel_daily_agg.items():
             _cd[cday]['rn'] += vals['rn']
             _cd[cday]['rev'] += vals['rev']
@@ -459,10 +507,10 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
         }
 
     # 4단계: 최초입력일자 기반 일별 픽업 집계
+    _pd = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    _pd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+    _pd_prop = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
     if pickup_daily_agg:
-        _pd = defaultdict(lambda: {'rn': 0, 'rev': 0})
-        _pd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
-        _pd_prop = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
         for (pday, prop, region, segment), vals in pickup_daily_agg.items():
             _pd[pday]['rn'] += vals['rn']
             _pd[pday]['rev'] += vals['rev']
@@ -481,6 +529,49 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None):
         result['pickup_daily_by_property'] = {
             p: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
             for p, days in sorted(_pd_prop.items())
+        }
+
+    # 5단계: 순예약 (Net Booking) 일별 — pickup - cancel
+    if pickup_daily_agg or cancel_daily_agg:
+        all_nd = sorted(set(_pd.keys()) | set(_cd.keys()))
+        result['net_daily'] = {
+            d: {
+                'pickup_rn': _pd.get(d, {'rn': 0})['rn'],
+                'cancel_rn': _cd.get(d, {'rn': 0})['rn'],
+                'net_rn': _pd.get(d, {'rn': 0})['rn'] - _cd.get(d, {'rn': 0})['rn'],
+            }
+            for d in all_nd
+        }
+        all_nd_segs = sorted(set(_pd_seg.keys()) | set(_cd_seg.keys()))
+        result['net_daily_by_segment'] = {
+            seg: {
+                d: {
+                    'pickup_rn': _pd_seg.get(seg, {}).get(d, {'rn': 0})['rn'],
+                    'cancel_rn': _cd_seg.get(seg, {}).get(d, {'rn': 0})['rn'],
+                    'net_rn': (_pd_seg.get(seg, {}).get(d, {'rn': 0})['rn']
+                               - _cd_seg.get(seg, {}).get(d, {'rn': 0})['rn']),
+                }
+                for d in sorted(set(_pd_seg.get(seg, {}).keys()) | set(_cd_seg.get(seg, {}).keys()))
+            }
+            for seg in all_nd_segs
+        }
+
+    # 6단계: 리드타임 분포 (예약~투숙 간격)
+    if lead_time_agg:
+        monthly_lt = defaultdict(lambda: {b: 0 for b in LEAD_TIME_BUCKETS})
+        for (month, bucket), vals in lead_time_agg.items():
+            monthly_lt[month][bucket] += vals['rn']
+        result['lead_time_distribution'] = {
+            m: dict(v) for m, v in sorted(monthly_lt.items())
+        }
+
+    # 7단계: 취소 리드타임 (예약~취소 간격)
+    if cancel_lead_agg:
+        monthly_clt = defaultdict(lambda: {b: 0 for b in LEAD_TIME_BUCKETS})
+        for (month, bucket), vals in cancel_lead_agg.items():
+            monthly_clt[month][bucket] += vals['rn']
+        result['cancel_lead_time'] = {
+            m: dict(v) for m, v in sorted(monthly_clt.items())
         }
 
     return result
@@ -538,6 +629,8 @@ def main():
     agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
     cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    lead_time_agg = defaultdict(lambda: {'rn': 0})
+    cancel_lead_agg = defaultdict(lambda: {'rn': 0})
     file_stats = {}
     total_rows = 0
 
@@ -562,7 +655,8 @@ def main():
             logger.info(f"파싱: [{type_labels.get(file_type, file_type)}] {folder_name}/{fpath.name}")
 
         row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m,
-                                         cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg)
+                                         cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
+                                         lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg)
         total_rows += row_count
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
@@ -575,7 +669,8 @@ def main():
     logger.info(f"집계 키 수: {len(agg):,}")
 
     # 요약 생성
-    summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg)
+    summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
+                             lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg)
     summary['file_stats'] = file_stats
 
     # JSON 출력
