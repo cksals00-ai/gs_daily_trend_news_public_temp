@@ -423,9 +423,9 @@ def main():
     logger.info(f"총 {len(txt_files)}개 txt 파일 발견")
 
     # 2026 파일 처리 전략:
-    # - 취소 파일(28/44): 스킵 (2022-2025와 일관성, 스냅샷 방식)
-    # - 재전송 예약 파일: Jan-Mar만 파싱 (stay_month ≤ 202603)
-    # - 최신 누적 예약 파일: Apr 이후만 파싱 (stay_month ≥ 202604)
+    # - 재전송 파일(예약/취소): Jan-Mar만 파싱 (stay_month ≤ 202603)
+    # - 최신 누적 스냅샷(예약/취소): Apr 이후만 파싱 (stay_month ≥ 202604)
+    # - 재전송/스냅샷 중 하나만 있으면 월 필터 없이 전체 파싱
     folder_type_files = defaultdict(list)
     for fp in txt_files:
         ft = detect_file_type(fp.name)
@@ -443,22 +443,14 @@ def main():
         retrans = [fp for fp in fps if _is_retrans(fp)]
         snapshots = [fp for fp in fps if not _is_retrans(fp)]
 
-        # 2026 취소 파일(28/44): 스냅샷 방식이므로 항상 스킵 (2022-2025 취소 파일 없음과 일관성 유지)
-        if folder_path.name == '2026' and ft in ('28', '44'):
-            for fp in fps:
-                file_month_filter[fp] = 'skip'
-                logger.info(f"  취소파일 스킵 (스냅샷 방식): {fp.name}")
-
         if retrans and snapshots:
-            # 재전송 + 최신 스냅샷이 공존하는 예약 파일: 월별 분리
-            if ft not in ('28', '44'):
-                # 예약 파일: 재전송은 Jan-Mar 한정, 최신 스냅샷은 Apr+ 한정
-                for fp in retrans:
-                    file_month_filter[fp] = (None, '202603')
-                    logger.info(f"  재전송: ≤202603 한정 파싱: {fp.name}")
-                for fp in snapshots:
-                    file_month_filter[fp] = ('202604', None)
-                    logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
+            # 재전송 + 최신 스냅샷이 공존: 월별 분리 (예약/취소 모두 동일 규칙)
+            for fp in retrans:
+                file_month_filter[fp] = (None, '202603')
+                logger.info(f"  재전송: ≤202603 한정 파싱: {fp.name}")
+            for fp in snapshots:
+                file_month_filter[fp] = ('202604', None)
+                logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
 
     agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
     file_stats = {}
