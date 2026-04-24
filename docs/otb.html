@@ -973,7 +973,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 <script>
 // ─── STATE ───
 let rawData = null;
-let activeMonth = 0;
+let activeMonth = new Date().getMonth() + 1;
 let activeSeg = '전체';
 
 // ─── FORMAT HELPERS ───
@@ -1308,9 +1308,7 @@ function render(data) {
   if (ts) ts.textContent = meta.refreshTime;
 
   buildFilterChips(data);
-  updateKPIs(data);
-  buildMonthlyChart(data);
-  renderPivot(data);
+  applyFilters();
 }
 
 // Boot

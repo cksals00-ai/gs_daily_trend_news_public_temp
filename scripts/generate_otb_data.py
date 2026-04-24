@@ -335,6 +335,32 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None):
     return result
 
 
+def get_today_summary(db, now_kst):
+    """net_daily에서 오늘 데이터를 반환. 없거나 0이면 최근 날짜로 fallback."""
+    net_daily = db.get("net_daily", {})
+    for days_ago in range(0, 7):
+        date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
+        if date_str in net_daily:
+            entry = net_daily[date_str]
+            pickup = entry.get("pickup_rn", 0)
+            cancel = entry.get("cancel_rn", 0)
+            if pickup > 0 or cancel > 0:
+                return pickup, cancel, entry.get("net_rn", 0), date_str
+    if net_daily:
+        most_recent = max(net_daily.keys())
+        entry = net_daily[most_recent]
+        return entry.get("pickup_rn", 0), entry.get("cancel_rn", 0), entry.get("net_rn", 0), most_recent
+    return 0, 0, 0, None
+
+
+def get_today_booking_by_props(db, date_str, db_props):
+    """pickup_daily_by_property에서 특정 날짜의 사업장별 예약 RN 합산."""
+    if not date_str:
+        return 0
+    pdbp = db.get("pickup_daily_by_property", {})
+    return sum(pdbp.get(pname, {}).get(date_str, {}).get("rn", 0) for pname in db_props)
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -348,10 +374,27 @@ def main():
 
     now_kst = datetime.now(KST)
 
+    # 오늘(또는 가장 최근) 예약/취소/순증 데이터
+    today_booking, today_cancel, today_net, today_date = get_today_summary(db, now_kst)
+    print(f"  오늘 데이터 날짜: {today_date}")
+    print(f"  today_booking={today_booking}, today_cancel={today_cancel}, today_net={today_net}")
+
     # 월별 스냅샷 (0=전체, 1~12=각 월)
     all_months = {}
     for m in range(0, 13):
         all_months[str(m)] = build_month_snapshot(db_bp, budgets, m, db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps)
+
+    # today 데이터를 모든 월 스냅샷에 주입
+    for snap in all_months.values():
+        snap["summary"]["today_booking"] = today_booking
+        snap["summary"]["today_cancel"]  = today_cancel
+        snap["summary"]["today_net"]     = today_net
+        for prop in snap["byProperty"]:
+            db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
+            prop_booking = get_today_booking_by_props(db, today_date, db_props)
+            prop["today_booking"] = prop_booking
+            prop["today_cancel"]  = 0
+            prop["today_net"]     = prop_booking
 
     # Chart data
     monthly_chart = build_monthly_chart(db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps)
