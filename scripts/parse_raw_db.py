@@ -21,7 +21,7 @@ PROJECT_DIR = SCRIPT_DIR.parent
 RAW_DB_DIR = PROJECT_DIR / "data" / "raw_db"
 OUTPUT_DIR = PROJECT_DIR / "data"
 
-# ─── OTA 채널 매핑 (AGENT명 → 채널) ───
+# ─── OTA 채널 매핑 (AGENT명 키워드 → 채널명) ───
 OTA_CHANNEL_MAP = {
     "야놀자": "야놀자", "놀유니버스": "야놀자",
     "아고다": "아고다",
@@ -39,25 +39,61 @@ OTA_CHANNEL_MAP = {
     "인터파크": "인터파크",
     "티몬": "티몬",
     "위메프": "위메프",
+    "타이드스퀘어": "타이드스퀘어",
+    "웹투어": "웹투어",
+    "올마이투어": "올마이투어",
+    "코이스토리": "코이스토리",
+    "마이리얼트립": "마이리얼트립",
+    "온라인콘도": "온라인콘도",
+    "맥스모바일": "맥스모바일",
+    "트립토파즈": "트립토파즈",
+    "가자고투어": "가자고투어",
+    "플러스앤": "플러스앤",
+    "이참조은레저": "이참조은레저",
+    "아이러브레저": "아이러브레저",
+    "스테이원": "스테이원",
+    "새서울여행사": "새서울여행사",
+    "샬레코리아": "샬레코리아",
+    "웅진컴퍼스": "웅진컴퍼스",
+    "기븐존여행클럽": "기븐존여행클럽",
+    "레저프라자": "레저프라자",
+    "대원관광": "대원관광",
+    "다보": "다보",
+    "디다트래블": "디다트래블",
+    "가고파여행": "가고파여행",
+    "호텔패스": "호텔패스",
+    "호텔패키지": "호텔패키지",
+    "위더스컴즈": "위더스컴즈",
+    "콘도닷컴": "콘도닷컴",
+    "보군여행사": "보군여행사",
+    "이제너두": "이제너두",
+    "노랑풍선": "노랑풍선",
+    "제주닷컴": "제주닷컴",
+    "디어먼데이": "디어먼데이",
+    "탐나오": "탐나오",
+    "참좋은여행": "참좋은여행",
+    "하이월드투어": "하이월드투어",
 }
 
-# ─── 세그먼트 분류 (변경예약집계코드명 → 세그먼트) ───
-def classify_segment(code_name, agent_name, file_type):
-    """파일 타입 + 코드명 + AGENT명으로 세그먼트 결정"""
-    if file_type in ("43", "44"):
-        return "Inbound"
+# ─── 세그먼트 분류 ───
+def classify_segment(code_num, code_name, agent_name, file_type):
+    """변경예약집계코드(숫자/알파) 기준 세그먼트 결정
 
-    code_upper = (code_name or "").upper()
-    agent_upper = (agent_name or "").upper()
+    - A4, A5 → G-OTA
+    - 53, 72  → OTA
+    - 58      → Inbound
+    - 나머지  → 코드명 그대로 (회원PKG, D멤버스, 일반단체 등)
+    """
+    num = (code_num or "").strip()
+    name = (code_name or "").strip()
 
-    # GOTA 판별
-    if "GOTA" in code_upper or "GOTA" in agent_upper:
+    if num in ("A4", "A5"):
         return "G-OTA"
-    # OTA 판별
-    if "OTA" in agent_upper or "온라인" in code_upper or "사업장대매점" in code_name:
+    if num in ("53", "72"):
         return "OTA"
-
-    return "OTA"  # 27/28은 기본 OTA
+    if num == "58":
+        return "Inbound"
+    return name if name else "기타"
 
 
 def extract_channel(agent_name):
@@ -142,6 +178,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
 
                 has_change_prop = '변경사업장명' in col_map
                 code_col = '변경예약집계코드명' if '변경예약집계코드명' in col_map else '예약집계명'
+                code_num_col = '변경예약집계코드' if '변경예약집계코드' in col_map else '예약집계코드'
 
                 # 컬럼 인덱스 사전 조회 (루프 최적화)
                 idx_prop = col_map.get('영업장명', -1)
@@ -149,6 +186,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                 idx_selldate = col_map.get('판매일자', -1)  # 투숙일자 = 판매일자
                 idx_checkin = col_map.get('입실일자', -1)    # fallback
                 idx_code = col_map.get(code_col, -1)
+                idx_code_num = col_map.get(code_num_col, -1)
                 idx_agent = col_map.get('AGENT명', -1)
                 idx_rooms = col_map.get('객실수', -1)
                 idx_1night = col_map.get('1박객실료', -1)    # REV 계산 기준
@@ -183,7 +221,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         if max_month and stay_month > max_month:
                             continue
 
-                        # 코드명, AGENT명
+                        # 코드번호, 코드명, AGENT명
+                        code_num  = parts[idx_code_num].strip() if idx_code_num >= 0 and idx_code_num < plen else ''
                         code_name = parts[idx_code].strip() if idx_code >= 0 and idx_code < plen else ''
                         agent_name = parts[idx_agent].strip() if idx_agent >= 0 and idx_agent < plen else ''
 
@@ -208,7 +247,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
 
                         region = get_region(prop_name)
                         channel = extract_channel(agent_name)
-                        segment = classify_segment(code_name, agent_name, file_type)
+                        segment = classify_segment(code_num, code_name, agent_name, file_type)
 
                         key = (prop_name, region, stay_month, channel, segment, btype)
                         agg[key]['rn'] += rn

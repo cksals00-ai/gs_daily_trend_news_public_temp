@@ -1248,7 +1248,11 @@ function applyFilters() {
     : rawData;
 
   if (snap) {
-    const view = { ...rawData, summary: snap.summary, byProperty: snap.byProperty };
+    let summary = snap.summary;
+    if (activeSeg !== '전체' && snap.segmentData && snap.segmentData[activeSeg]) {
+      summary = snap.segmentData[activeSeg];
+    }
+    const view = { ...rawData, summary, byProperty: snap.byProperty };
     renderPivot(view);
     updateKPIs(view);
   }
