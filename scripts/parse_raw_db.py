@@ -443,6 +443,12 @@ def main():
         retrans = [fp for fp in fps if _is_retrans(fp)]
         snapshots = [fp for fp in fps if not _is_retrans(fp)]
 
+        if folder_path.name == '2026' and ft in ('28', '44'):
+            for fp in fps:
+                file_month_filter[fp] = 'skip'
+            logger.info(f"  2026 취소파일({ft}) 전체 스킵")
+            continue
+
         if retrans and snapshots:
             # 재전송 + 최신 스냅샷이 공존: 월별 분리 (예약/취소 모두 동일 규칙)
             for fp in retrans:
