@@ -286,8 +286,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 cancel_daily_agg[ckey]['rn'] += rn
                                 cancel_daily_agg[ckey]['rev'] += rev
 
-                        # 최초입력일자 기반 픽업 집계 (27/43)
-                        if not is_cancel and pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
+                        # 최초입력일자 기반 픽업 집계 (27/43 + 28/44): 취소파일도 포함해야 today_booking 정확
+                        if pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
                             pickup_date_str = parts[idx_pickup_date].strip()
                             if len(pickup_date_str) >= 8:
                                 pkey = (pickup_date_str[:8], prop_name, region, segment)

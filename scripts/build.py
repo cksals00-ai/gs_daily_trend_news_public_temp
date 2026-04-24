@@ -881,7 +881,8 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
         html = html.replace(f"STRAT{n}_GOFFSET", f"{gauge_offset:.2f}")
 
         # KPI (객실수 / ADR / 매출)
-        html = apply_tpl(html, f"{prefix}-rns", f'{strat.get("rns", 0):,}')
+        rns = strat.get("rns", 0)
+        html = apply_tpl(html, f"{prefix}-rns", f'{rns:,}')
         html = apply_tpl(html, f"{prefix}-adr", str(strat.get("adr", 0)))
         html = apply_tpl(html, f"{prefix}-rev", str(strat.get("rev", 0)))
 
@@ -889,6 +890,24 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
         for c_idx, ch in enumerate(channels[:3]):
             html = apply_tpl(html, f"{prefix}-ch{c_idx}-rns", f'{ch.get("rns", 0):,}')
             html = apply_tpl(html, f"{prefix}-ch{c_idx}-rate", f'{ch.get("achievement_rate", 0)}%')
+
+        # ── A안: 목표→현재→부족 진행바 ──
+        target_rns = round(rns * 100 / rate) if rate > 0 else rns
+        shortage_rns = max(0, target_rns - rns)
+        bar_pct = min(100, rate)
+        html = html.replace(f"STRAT{n}_TARGET_RNS", f"{target_rns:,}")
+        html = html.replace(f"STRAT{n}_CUR_RNS", f"{rns:,}")
+        html = html.replace(f"STRAT{n}_SHORTAGE_RNS", f"{shortage_rns:,}")
+        html = html.replace(f"STRAT{n}_BAR_PCT", f"{bar_pct:.1f}")
+
+        # ── B안: 워터폴 채널 흐름 ──
+        ch_rns = [ch.get("rns", 0) for ch in channels[:3]]
+        wf_final = rns + sum(ch_rns)
+        # flex 값: 최소 0 보장
+        wf_vals = [rns] + ch_rns + [0] * (3 - len(ch_rns))
+        for wi, wv in enumerate(wf_vals):
+            html = html.replace(f"STRAT{n}_WF{wi}", str(max(0, wv)))
+        html = html.replace(f"STRAT{n}_WF_FINAL", f"{wf_final:,}")
 
     logger.info("✓ 주간 리포트 주입")
     return html
