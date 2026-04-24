@@ -848,7 +848,7 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
             cancel = m_data.get("cancel_rns")
 
             if net is None:
-                net = agg_month.get("net_rn")
+                net = agg_month.get("booking_rn")
             if booking is None:
                 booking = agg_month.get("booking_rn")
             if cancel is None:

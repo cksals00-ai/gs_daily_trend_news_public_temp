@@ -3,7 +3,7 @@
 generate_otb_data.py
 BI 26OTB 시트 기준으로 docs/data/otb_data.json 생성
 - 사업장 순서: PROPERTY_DEFS (BI 시트 순서)
-- 실적: db_aggregated.json (net_rn, net_rev, adr)
+- 실적: db_aggregated.json (booking_rn, booking_rev, adr)
 - 목표: budget XLSX Grand Total
 - 전년 실적: db_aggregated.json 2025년 동월
 - 월별 분리 데이터 포함 (월 필터 작동용)
@@ -121,8 +121,8 @@ def sum_db(db_bp, prop_names, month_key):
     total_rev = 0.0
     for pname in prop_names:
         m = db_bp.get(pname, {}).get(month_key, {})
-        total_rn  += m.get("net_rn",  0)
-        total_rev += m.get("net_rev", 0.0)
+        total_rn  += m.get("booking_rn",  0)
+        total_rev += m.get("booking_rev", 0.0)
     adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0
     return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
 
@@ -135,8 +135,8 @@ def sum_db_segments(db_bps, prop_names, month_key):
         prop_segs = db_bps.get(pname, {})
         for seg in SEGMENT_KEYS:
             m = prop_segs.get(seg, {}).get(month_key, {})
-            total_rn  += m.get("net_rn",  0)
-            total_rev += m.get("net_rev", 0.0)
+            total_rn  += m.get("booking_rn",  0)
+            total_rev += m.get("booking_rev", 0.0)
     adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0
     return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
 
@@ -175,8 +175,8 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
 
         # Actual: db_seg 집계
         seg_db  = db_seg.get(seg, {})
-        act_rn  = sum(seg_db.get(mk, {}).get("net_rn",  0)   for mk in target_keys)
-        act_rev = sum(seg_db.get(mk, {}).get("net_rev", 0.0) for mk in target_keys)
+        act_rn  = sum(seg_db.get(mk, {}).get("booking_rn",  0)   for mk in target_keys)
+        act_rev = sum(seg_db.get(mk, {}).get("booking_rev", 0.0) for mk in target_keys)
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
         rns_ach = round(act_rn  / bud_rn  * 100, 1) if bud_rn  > 0 else 0.0
