@@ -28,6 +28,12 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 KST = timezone(timedelta(hours=9))
 
+MONTH_KR = {
+    "01": "1월", "02": "2월", "03": "3월", "04": "4월",
+    "05": "5월", "06": "6월", "07": "7월", "08": "8월",
+    "09": "9월", "10": "10월", "11": "11월", "12": "12월",
+}
+
 
 def parse_float(s):
     """'84.1' → 84.1, 실패시 None"""
@@ -233,6 +239,93 @@ def build_region_status(kpi: dict) -> dict:
     }
 
 
+def build_db_insights(agg_data: dict) -> list:
+    """db_aggregated.json 실데이터 기반 인사이트 3개 자동 생성
+
+    1. 전월 대비 OTB 증감률
+    2. 사업장별 온북 상위/하위
+    3. YoY 비교
+    """
+    now = datetime.now(KST)
+    monthly = agg_data.get("monthly_total", {})
+    by_property = agg_data.get("by_property", {})
+
+    year, month = now.year, now.month
+    cur_key = f"{year}{month:02d}"
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    prev_key = f"{prev_year}{prev_month:02d}"
+    yoy_key = f"{year - 1}{month:02d}"
+
+    cur_label = MONTH_KR.get(f"{month:02d}", f"{month}월")
+    prev_label = MONTH_KR.get(f"{prev_month:02d}", f"{prev_month}월")
+
+    cur_data = monthly.get(cur_key, {})
+    prev_data = monthly.get(prev_key, {})
+    yoy_data = monthly.get(yoy_key, {})
+
+    cur_net = cur_data.get("net_rn")
+    prev_net = prev_data.get("net_rn")
+    yoy_net = yoy_data.get("net_rn")
+
+    insights = []
+
+    # 인사이트 1: 전월 대비 OTB 증감률
+    if cur_net is not None and prev_net and prev_net > 0:
+        mom_pct = (cur_net - prev_net) / prev_net * 100
+        arrow = "▲" if mom_pct >= 0 else "▼"
+        trend = "증가" if mom_pct >= 0 else "감소"
+        text = (
+            f"{cur_label} 온북 <strong>{cur_net:,}RN</strong> · "
+            f"전월({prev_label} {prev_net:,}RN) 대비 {arrow} <strong>{abs(mom_pct):.1f}%</strong> {trend}."
+        )
+    elif cur_net is not None:
+        text = f"{cur_label} 온북 <strong>{cur_net:,}RN</strong> 집계 완료. 전월 비교 데이터 미확인."
+    else:
+        text = f"{cur_label} 온북 집계 중 — 데이터 확인 필요."
+    insights.append({"text": text, "auto": True, "source": "monthly_total/mom"})
+
+    # 인사이트 2: 사업장별 온북 상위/하위
+    prop_nets = {}
+    for prop_name, prop_monthly in by_property.items():
+        nd = prop_monthly.get(cur_key, {}).get("net_rn")
+        if nd is not None:
+            prop_nets[prop_name] = nd
+
+    if prop_nets:
+        sorted_props = sorted(prop_nets.items(), key=lambda x: x[1], reverse=True)
+        total_net = sum(prop_nets.values()) or 1
+        top_name, top_val = sorted_props[0]
+        bot_name, bot_val = sorted_props[-1]
+        top_share = top_val / total_net * 100
+        bot_share = bot_val / total_net * 100
+        text = (
+            f"사업장별 {cur_label} 온북 상위 <strong>{top_name} {top_val:,}RN</strong> ({top_share:.1f}%) · "
+            f"하위 <strong>{bot_name} {bot_val:,}RN</strong> ({bot_share:.1f}%) — "
+            f"전체 {len(prop_nets)}개 사업장 집계."
+        )
+    else:
+        text = f"{cur_label} 사업장별 온북 집계 중."
+    insights.append({"text": text, "auto": True, "source": "by_property"})
+
+    # 인사이트 3: YoY 비교
+    if cur_net is not None and yoy_net and yoy_net > 0:
+        yoy_pct = (cur_net - yoy_net) / yoy_net * 100
+        arrow = "▲" if yoy_pct >= 0 else "▼"
+        trend = "성장" if yoy_pct >= 0 else "감소"
+        text = (
+            f"전년 동월({year - 1}/{month:02d}) 대비 {arrow} <strong>{abs(yoy_pct):.1f}%</strong> {trend} · "
+            f"올해 {cur_net:,}RN vs 전년 {yoy_net:,}RN."
+        )
+    elif cur_net is not None:
+        text = f"{cur_label} 온북 {cur_net:,}RN · 전년 동월 데이터 미집계 또는 비교 불가."
+    else:
+        text = f"전년 동월 비교 불가 — 현재 데이터 수집 중."
+    insights.append({"text": text, "auto": True, "source": "monthly_total/yoy"})
+
+    return insights
+
+
 def main():
     logger.info("=" * 60)
     logger.info("인사이트 자동 생성 시작")
@@ -252,7 +345,17 @@ def main():
                 f"K2={kpi.get('kpi_2',{}).get('value')}, "
                 f"K3={kpi.get('kpi_3',{}).get('value')}")
     
-    # 2. news_latest.json 로드 (있으면)
+    # 2. db_aggregated.json 로드 (있으면)
+    agg_file = DATA_DIR / "db_aggregated.json"
+    agg_data = {}
+    if agg_file.exists():
+        with open(agg_file, "r", encoding="utf-8") as f:
+            agg_data = json.load(f)
+        logger.info(f"✓ db_aggregated 로드: monthly_total {len(agg_data.get('monthly_total', {}))}개월")
+    else:
+        logger.warning("db_aggregated.json 없음 - DB 인사이트 스킵")
+
+    # 3. news_latest.json 로드 (있으면)
     news_file = DATA_DIR / "news_latest.json"
     news_by_region = {"vivaldi": [], "central": [], "south": [], "apac": [], "general": []}
     news_top = []
@@ -265,34 +368,44 @@ def main():
     else:
         logger.warning("뉴스 파일 없음 - 기본값 사용")
     
-    # 3. 자동 생성
+    # 4. 자동 생성
     now = datetime.now(KST)
     day_map = {0: "월요일", 1: "화요일", 2: "수요일", 3: "목요일", 4: "금요일", 5: "토요일", 6: "일요일"}
-    
+
+    # db_aggregated 기반 인사이트 3개 생성
+    db_headlines = build_db_insights(agg_data) if agg_data else []
+    # KPI 기반 헤드라인 (fallback용)
+    kpi_headline = build_headline(kpi, news_top)
+    # today_headline.text = 첫 번째 DB 인사이트 (없으면 KPI 기반)
+    default_headline_text = db_headlines[0]["text"] if db_headlines else kpi_headline
+
     enriched = {
         "_generated_at": now.isoformat(),
-        "_generator": "scripts/generate_insights.py (auto-generated from KPI values)",
-        
+        "_generator": "scripts/generate_insights.py (auto-generated from db_aggregated + KPI)",
+
         "report_date": now.strftime("%Y-%m-%d"),
         "report_day_kst": day_map[now.weekday()],
-        
+
         "today_headline": {
-            "text": build_headline(kpi, news_top),
+            "text": default_headline_text,
         },
-        
+        "today_headlines": db_headlines,
+
         "executive_kpi": kpi,
         "region_status": build_region_status(kpi),
         "action_alerts": build_action_alerts(kpi, news_by_region),
     }
-    
-    # 4. enriched_notes.json 저장
+
+    # 5. enriched_notes.json 저장
     output_file = DATA_DIR / "enriched_notes.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(enriched, f, ensure_ascii=False, indent=2)
-    
+
     logger.info("=" * 60)
     logger.info(f"✓ 자동 생성 완료")
-    logger.info(f"  오늘의 한 줄: {enriched['today_headline']['text'][:80]}...")
+    logger.info(f"  DB 인사이트: {len(db_headlines)}개")
+    for i, h in enumerate(db_headlines, 1):
+        logger.info(f"  [{i}] {h['text'][:80]}...")
     logger.info(f"  저장: {output_file}")
     logger.info("=" * 60)
 

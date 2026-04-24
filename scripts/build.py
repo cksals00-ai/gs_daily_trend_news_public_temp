@@ -813,8 +813,10 @@ def inject_news_section(html: str, news_data: dict) -> str:
 # ─────────────────────────────────────────────
 # 주간 리포트 주입
 # ─────────────────────────────────────────────
-def inject_weekly_report(html: str, weekly: dict) -> str:
-    """data/weekly_report.json → 주간 리포트 카드 데이터 주입"""
+def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
+    """data/weekly_report.json → 주간 리포트 카드 데이터 주입
+    null 항목은 agg_data(db_aggregated.json)의 monthly_total로 자동 보완.
+    """
     if not weekly:
         return html
 
@@ -830,15 +832,28 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     # 섹션 헤더 예약 기준일
     html = apply_tpl(html, "weekly-basis", basis_full)
 
-    # Daily OTB (투숙월 기준 3개월)
+    # Daily OTB (투숙월 기준 3개월) — null 항목은 db_aggregated로 자동 보완
     otb = weekly.get("daily_otb", {})
     if otb:
         html = apply_tpl(html, "otb-date", basis_date)
         months = otb.get("months", [])
+        monthly_total = (agg_data or {}).get("monthly_total", {})
         for m_idx, m_data in enumerate(months[:3]):
+            stay_month = m_data.get("stay_month", "")
+            agg_key = stay_month.replace("-", "")  # "2026-05" → "202605"
+            agg_month = monthly_total.get(agg_key, {})
+
             net = m_data.get("net_otb")
             booking = m_data.get("booking_rns")
             cancel = m_data.get("cancel_rns")
+
+            if net is None:
+                net = agg_month.get("net_rn")
+            if booking is None:
+                booking = agg_month.get("booking_rn")
+            if cancel is None:
+                cancel = agg_month.get("cancel_rn")
+
             html = apply_tpl(html, f"otb-m{m_idx}-net", f"{net:,}" if net is not None else "—")
             html = apply_tpl(html, f"otb-m{m_idx}-booking", f"{booking:,}" if booking is not None else "—")
             html = apply_tpl(html, f"otb-m{m_idx}-cancel", f"{cancel:,}" if cancel is not None else "—")
@@ -879,7 +894,7 @@ def inject_weekly_report(html: str, weekly: dict) -> str:
     return html
 
 
-def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime) -> str:
+def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime, agg_data: dict = None, admin_data: dict = None) -> str:
     """index.html과 otb.html 공통 주입 함수"""
     day_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
     report_date = data.get("report_date", now.strftime("%Y-%m-%d"))
@@ -894,9 +909,18 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_external_links(html, notes.get("external_links", {}))
     html = apply_tpl(html, "date", display_date)
     html = apply_tpl(html, "timestamp", timestamp)
-    headline = data.get("today_headline", {})
-    if headline.get("text"):
-        html = apply_tpl(html, "headline", headline["text"])
+    # 헤드라인: admin_input.selected_headline(1-indexed)로 today_headlines 배열에서 선택
+    # 선택 없으면(0) today_headlines[0], 배열 없으면 today_headline.text fallback
+    headlines = data.get("today_headlines", [])
+    admin_sel = int((admin_data or {}).get("selected_headline", 0))
+    if headlines and 1 <= admin_sel <= len(headlines):
+        headline_text = headlines[admin_sel - 1].get("text", "")
+    elif headlines:
+        headline_text = headlines[0].get("text", "")
+    else:
+        headline_text = data.get("today_headline", {}).get("text", "")
+    if headline_text:
+        html = apply_tpl(html, "headline", headline_text)
     html = apply_tpl(html, "updated_by", f"by {data.get('_updated_by', 'GS팀 · Haein Kim Manager')}")
     html = inject_kpi_3months(html, notes.get("executive_kpi", {}))
     html = inject_region_monthly(html, notes.get("property_performance", {}))
@@ -908,7 +932,7 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
     html = inject_signal_cards(html, notes.get("property_performance", {}))
     html = inject_competitor_section(html, comp_data)
-    html = inject_weekly_report(html, weekly_data)
+    html = inject_weekly_report(html, weekly_data, agg_data)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     html = apply_tpl(html, "build", build_meta)
     return html
@@ -952,6 +976,8 @@ def main():
     comp_data = load_json(DATA_DIR / "competitors.json")
     weekly_data = load_json(DATA_DIR / "weekly_report.json")
     pkg_data = load_json(DATA_DIR / "package_series_trend.json")
+    agg_data = load_json(DATA_DIR / "db_aggregated.json")
+    admin_data = load_json(DATA_DIR / "admin_input.json")
 
     data = enriched if enriched else notes
     if not data:
@@ -967,7 +993,7 @@ def main():
     # ── index.html 빌드 ──
     html = HTML_FILE.read_text(encoding="utf-8")
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
-    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now)
+    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data)
     html = inject_news_section(html, news_data)
     html = inject_package_data(html, pkg_data)
     HTML_FILE.write_text(html, encoding="utf-8")
