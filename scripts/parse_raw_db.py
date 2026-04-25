@@ -302,7 +302,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                             if d_sell and d_entry:
                                 lt_days = (d_sell - d_entry).days
                                 if lt_days >= 0:
-                                    lead_time_agg[(stay_month, _lead_time_bucket(lt_days))]['rn'] += rn
+                                    lead_time_agg[(prop_name, stay_month, _lead_time_bucket(lt_days))]['rn'] += rn
 
                         # 취소 리드타임 집계 (28/44): 취소일자 - 최초입력일자
                         if is_cancel and cancel_lead_agg is not None \
@@ -658,13 +658,19 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             for seg in all_nd_segs
         }
 
-    # 6단계: 리드타임 분포 (예약~투숙 간격)
+    # 6단계: 리드타임 분포 (예약~투숙 간격) — 전체 + 사업장별
     if lead_time_agg:
         monthly_lt = defaultdict(lambda: {b: 0 for b in LEAD_TIME_BUCKETS})
-        for (month, bucket), vals in lead_time_agg.items():
+        prop_monthly_lt = defaultdict(lambda: defaultdict(lambda: {b: 0 for b in LEAD_TIME_BUCKETS}))
+        for (prop, month, bucket), vals in lead_time_agg.items():
             monthly_lt[month][bucket] += vals['rn']
+            prop_monthly_lt[prop][month][bucket] += vals['rn']
         result['lead_time_distribution'] = {
             m: dict(v) for m, v in sorted(monthly_lt.items())
+        }
+        result['lead_time_by_property'] = {
+            prop: {m: dict(v) for m, v in sorted(months.items())}
+            for prop, months in sorted(prop_monthly_lt.items())
         }
 
     # 7단계: 취소 리드타임 (예약~취소 간격)
