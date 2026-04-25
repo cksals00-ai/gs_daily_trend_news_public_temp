@@ -530,15 +530,51 @@ input, button, select, table, th, td {
 }
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 80vh;
   -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 table.pivot {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 12.5px;
 }
-table.pivot thead tr {
+/* ─── Sticky header rows ─── */
+table.pivot thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   background: var(--bg-deep);
+}
+table.pivot thead tr:nth-child(2) th { top: 29px; }
+table.pivot thead tr:nth-child(3) th { top: 58px; }
+/* ─── Sticky first 2 columns (구분, 권역) ─── */
+table.pivot th:first-child,
+table.pivot td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg-deep);
+}
+table.pivot td:first-child {
+  background: var(--bg);
+}
+table.pivot th:nth-child(2),
+table.pivot td:nth-child(2) {
+  position: sticky;
+  left: 120px;
+  z-index: 2;
+  background: var(--bg-deep);
+}
+table.pivot td:nth-child(2) {
+  background: var(--bg);
+}
+/* Corner cells: both sticky col + sticky row */
+table.pivot thead th:first-child,
+table.pivot thead th:nth-child(2) {
+  z-index: 5;
 }
 table.pivot th {
   font-family: var(--mono);
@@ -581,11 +617,17 @@ table.pivot td.region-cell {
   letter-spacing: 0.05em;
 }
 table.pivot tr:hover td { background: var(--bg-soft); }
+table.pivot tr:hover td:first-child,
+table.pivot tr:hover td:nth-child(2) { background: var(--bg-soft); }
 table.pivot tr.total-row td {
   background: rgba(201,160,99,0.07);
   border-top: 1px solid var(--rule-strong);
   color: var(--ink);
   font-weight: 700;
+}
+table.pivot tr.total-row td:first-child,
+table.pivot tr.total-row td:nth-child(2) {
+  background: rgba(201,160,99,0.12);
 }
 table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 .ach-pill {
@@ -1004,7 +1046,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 // ─── STATE ───
 let rawData = null;
 let activeMonth = new Date().getMonth() + 1;
-let activeSeg = '전체';
+let activeSegs = new Set(['전체']);
 
 // ─── FORMAT HELPERS ───
 const fmt = {
@@ -1018,6 +1060,53 @@ function achClass(pct) {
   if (pct >= 90) return 'ach-high';
   if (pct >= 75) return 'ach-mid';
   return 'ach-low';
+}
+
+// ─── MULTI-SEGMENT MERGE ───
+function addVal(a, b) { return (a || 0) + (b || 0); }
+
+function mergeSegSummaries(arr) {
+  if (!arr.length) return {};
+  const out = JSON.parse(JSON.stringify(arr[0]));
+  for (let i = 1; i < arr.length; i++) {
+    const s = arr[i];
+    for (const k of Object.keys(s)) {
+      if (typeof s[k] === 'number' && !k.includes('achievement') && !k.includes('yoy') && !k.includes('adr')) {
+        out[k] = addVal(out[k], s[k]);
+      }
+    }
+  }
+  // recalc derived
+  if (out.rns_actual > 0 && out.rev_actual != null) out.adr_actual = Math.round(out.rev_actual * 1000000 / out.rns_actual);
+  if (out.rns_budget > 0) out.rns_achievement = +(out.rns_actual / out.rns_budget * 100).toFixed(1);
+  if (out.adr_budget > 0 && out.adr_actual > 0) out.adr_achievement = +(out.adr_actual / out.adr_budget * 100).toFixed(1);
+  return out;
+}
+
+function mergeSegByProp(arrays) {
+  if (!arrays.length) return [];
+  // group by property name
+  const map = {};
+  for (const arr of arrays) {
+    for (const p of arr) {
+      if (!map[p.name]) {
+        map[p.name] = JSON.parse(JSON.stringify(p));
+      } else {
+        const m = map[p.name];
+        for (const k of Object.keys(p)) {
+          if (typeof p[k] === 'number' && !k.includes('achievement') && !k.includes('yoy') && !k.includes('adr')) {
+            m[k] = addVal(m[k], p[k]);
+          }
+        }
+      }
+    }
+  }
+  // recalc derived per property
+  return Object.values(map).map(m => {
+    if (m.rns_actual > 0 && m.rev_actual != null) m.adr_actual = Math.round(m.rev_actual * 1000000 / m.rns_actual);
+    if (m.rns_budget > 0) m.rns_achievement = +(m.rns_actual / m.rns_budget * 100).toFixed(1);
+    return m;
+  });
 }
 
 // ─── GAUGE ───
@@ -1367,13 +1456,24 @@ function buildFilterChips(data) {
     c.innerHTML = '';
     data.filters.segments.forEach(s => {
       const btn = document.createElement('button');
-      btn.className = 'chip' + (s === activeSeg ? ' active' : '');
+      btn.className = 'chip' + (activeSegs.has(s) ? ' active' : '');
       btn.textContent = s;
       btn.dataset.value = s;
       btn.addEventListener('click', () => {
-        activeSeg = btn.dataset.value;
+        const v = btn.dataset.value;
+        if (v === '전체') {
+          activeSegs = new Set(['전체']);
+        } else {
+          activeSegs.delete('전체');
+          if (activeSegs.has(v)) {
+            activeSegs.delete(v);
+            if (activeSegs.size === 0) activeSegs.add('전체');
+          } else {
+            activeSegs.add(v);
+          }
+        }
         document.querySelectorAll('#seg-chips .chip, #mobile-seg-chips .chip').forEach(b => {
-          b.classList.toggle('active', b.dataset.value === activeSeg);
+          b.classList.toggle('active', activeSegs.has(b.dataset.value));
         });
         applyFilters();
       });
@@ -1384,7 +1484,7 @@ function buildFilterChips(data) {
 
 function applyFilters() {
   const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
-  const segLabel   = activeSeg === '전체' ? '전체 세그' : activeSeg;
+  const segLabel   = activeSegs.has('전체') ? '전체 세그' : [...activeSegs].join('+');
   setText('table-filter-label', monthLabel + ' · ' + segLabel);
 
   if (!rawData) return;
@@ -1397,11 +1497,19 @@ function applyFilters() {
   if (snap) {
     let summary = snap.summary;
     let byProp = snap.byProperty;
-    if (activeSeg !== '전체' && snap.segmentData && snap.segmentData[activeSeg]) {
-      summary = snap.segmentData[activeSeg];
-    }
-    if (activeSeg !== '전체' && snap.byPropertySegment && snap.byPropertySegment[activeSeg]) {
-      byProp = snap.byPropertySegment[activeSeg];
+
+    if (!activeSegs.has('전체') && snap.segmentData && snap.byPropertySegment) {
+      const selectedSegs = [...activeSegs];
+      if (selectedSegs.length === 1) {
+        // 단일 세그먼트
+        const seg = selectedSegs[0];
+        if (snap.segmentData[seg]) summary = snap.segmentData[seg];
+        if (snap.byPropertySegment[seg]) byProp = snap.byPropertySegment[seg];
+      } else {
+        // 복수 세그먼트: 합산
+        summary = mergeSegSummaries(selectedSegs.map(s => snap.segmentData[s]).filter(Boolean));
+        byProp  = mergeSegByProp(selectedSegs.map(s => snap.byPropertySegment[s]).filter(Boolean));
+      }
     }
     const view = { ...rawData, summary, byProperty: byProp };
     renderPivot(view);
