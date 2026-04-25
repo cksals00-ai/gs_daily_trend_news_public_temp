@@ -3,19 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>투숙일기준 Stay Date · SONO & TRINITY GS팀</title>
+<title>투숙일기준 · SONO & TRINITY GS팀</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
   --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
   --gold:#c9a063;--gold-bright:#e6b970;
-  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
-  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
+  --positive:#4caf6f;--warning:#e8a256;--negative:#e57373;--info:#5a9fc4;
   --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
   --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
   --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
@@ -23,12 +21,11 @@
   --sidebar-w:220px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
-input,button,select,table,th,td{font-family:var(--sans)!important;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 .masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
 .masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
-.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);}
-.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
 .page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;}
 .masthead-right{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6);}
 .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--positive);margin-right:5px;animation:pulse 2.4s infinite;}
@@ -36,86 +33,31 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .app-shell{display:flex;min-height:calc(100vh - 52px);}
 .sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
 .filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
-.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
-.chip{padding:4px 10px;border-radius:3px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;}
-.chip:hover{background:var(--bg-soft);color:var(--ink);}
-.chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);}
-.sidebar-divider{height:1px;background:var(--rule);}
 .otb-nav{display:flex;flex-direction:column;gap:2px;}
-.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;}
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
 .otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
 .otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
-.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
-.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
-.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
-.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
-.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
-.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
-.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
-.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
-.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
-.kpi-card.gold::before{background:var(--gold);}
-.kpi-card.green::before{background:var(--positive);}
-.kpi-card.blue::before{background:var(--info);}
-.kpi-card.orange::before{background:var(--warning);}
-.kpi-card.gray::before{background:var(--ink-faint);}
-.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
-.kpi-card-value{font-family:var(--mono);font-size:clamp(20px,2vw,28px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
-.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
-.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
-.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
-.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
-.chart-legend{display:flex;gap:10px;flex-wrap:wrap;}
-.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
-.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.chart-canvas-wrap{height:200px;position:relative;}
-.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
-.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
-.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
-.table-wrap{overflow-x:auto;}
-table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
-table.pivot thead tr{background:var(--bg-deep);}
-table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;}
-table.pivot th:first-child{text-align:left;}
-table.pivot th.group-header{text-align:center;border-left:1px solid var(--rule);color:var(--ink-muted);font-size:9.5px;}
-table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
-table.pivot td:first-child{text-align:left;color:var(--ink-soft);font-weight:700;}
-table.pivot td.region-cell{font-size:10px;color:var(--ink-faint);}
-table.pivot tr:hover td{background:var(--bg-soft);}
-table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
-table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
-.ach-pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700;}
-.ach-high{background:var(--positive-bg);color:var(--positive);}
-.ach-mid{background:var(--warning-bg);color:var(--warning);}
-.ach-low{background:var(--negative-bg);color:var(--negative);}
-.net-pos{color:var(--positive);}
-.net-neg{color:var(--negative);}
-.border-left-group{border-left:1px solid var(--rule);}
-@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr);}}
-@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:560px){.main-content{padding:16px 14px;}}
+.main-content{flex:1;min-width:0;padding:24px 28px;}
 .mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
 .mobile-sheet-tabs::-webkit-scrollbar{display:none;}
-@media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.mobile-sheet-tabs{display:flex;}}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
 </style>
-</head>
-<body>
 <style>
-.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;position:relative;z-index:200}
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
 .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
 .gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
 .gsn-brand-dot{color:#58a6ff}
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 </style>
+</head>
+<body>
 <nav class="gsn">
   <div class="gsn-wrap">
     <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -125,25 +67,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
   </div>
 </nav>
-
 <header class="masthead">
   <div class="masthead-inner">
-    <div style="display:flex;align-items:baseline;">
+    <div style="display:flex;align-items:baseline;gap:0;">
       <div class="logo-mark">SONO &amp; TRINITY</div>
       <div class="team-tag">GS팀 · OTB 리포트</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span class="page-badge">📊 26OTB · 투숙일기준</span>
-      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
-    </div>
+    <span class="page-badge">📊 26OTB · 투숙일기준</span>
     <div class="masthead-right">
-      <span><span class="live-dot"></span>LIVE</span>
-      <span id="refresh-badge">—</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
     </div>
   </div>
 </header>
-
-<!-- MOBILE SHEET TABS (visible < 860px) -->
 <nav class="mobile-sheet-tabs">
   <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
   <a href="channel.html" class="mobile-sheet-tab">거래처</a>
@@ -155,14 +90,13 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <a href="product-detail.html" class="mobile-sheet-tab">상품상세</a>
   <a href="ly-product.html" class="mobile-sheet-tab">전년상품</a>
 </nav>
-
 <div class="app-shell">
   <aside class="sidebar">
     <div>
       <div class="filter-section-label">OTB 리포트</div>
       <div class="otb-nav">
         <a href="otb.html" class="otb-nav-link">당일현황</a>
-        <a href="channel.html" class="otb-nav-link">26거래처</a>
+        <a href="channel.html" class="otb-nav-link">거래처</a>
         <a href="ytd.html" class="otb-nav-link">연간누계</a>
         <a href="monthly.html" class="otb-nav-link">월별실적</a>
         <a href="stay-date.html" class="otb-nav-link active">투숙일기준</a>
@@ -172,279 +106,15 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <a href="ly-product.html" class="otb-nav-link">전년상품</a>
       </div>
     </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">투숙 월</div>
-      <div class="filter-chips" id="month-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;">
-      투숙일기준: 온북 OTB<br>
-      <span style="color:var(--ink-muted);">예약일 기준이 아닌<br>실제 투숙 월 기준 집계</span>
-    </div>
-    <div class="refresh-info">
-      <div class="refresh-label">DATA UPDATED</div>
-      <div class="refresh-time" id="sidebar-refresh">—</div>
-    </div>
   </aside>
-
   <main class="main-content">
-    <div class="page-header">
-      <div class="page-title">
-        투숙일 기준 OTB 현황
-        <span class="sub">STAY-DATE BASED · ON THE BOOKS</span>
-      </div>
-      <div class="base-date-tag">
-        기준 <strong id="period-display">—</strong>
-      </div>
-    </div>
-
-    <div class="kpi-strip">
-      <div class="kpi-card gold">
-        <div class="kpi-card-label">RNS 달성률</div>
-        <div class="kpi-card-value" id="kpi-ach">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">목표 대비</div>
-      </div>
-      <div class="kpi-card green">
-        <div class="kpi-card-label">실적 RNS</div>
-        <div class="kpi-card-value" id="kpi-actual">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub">목표 <span id="kpi-budget-rns">—</span>실</div>
-      </div>
-      <div class="kpi-card blue">
-        <div class="kpi-card-label">REV 달성률</div>
-        <div class="kpi-card-value" id="kpi-rev-ach">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">목표 대비</div>
-      </div>
-      <div class="kpi-card orange">
-        <div class="kpi-card-label">전년 RNS</div>
-        <div class="kpi-card-value" id="kpi-ly-rns">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub">YoY <span id="kpi-yoy">—</span></div>
-      </div>
-      <div class="kpi-card gray">
-        <div class="kpi-card-label">ADR (실적)</div>
-        <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
-        <div class="kpi-card-sub">목표 <span id="kpi-adr-bud">—</span>천</div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <span class="chart-card-title">월별 RNS 목표 vs 실적 (투숙일 기준)</span>
-        <div class="chart-legend">
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>목표</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>실적</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.2);"></div>전년</div>
-        </div>
-      </div>
-      <div class="chart-canvas-wrap" style="height:220px;">
-        <canvas id="stay-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-card-header">
-        <span class="table-card-title">영업장별 투숙일 기준 OTB</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
-      </div>
-      <div class="table-wrap">
-        <table class="pivot">
-          <thead>
-            <tr>
-              <th rowspan="2" style="text-align:left;min-width:130px;">영업장</th>
-              <th rowspan="2">권역</th>
-              <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">RNS (투숙일 기준)</th>
-              <th colspan="2" class="group-header" style="border-left:1px solid var(--rule);">ADR</th>
-              <th colspan="2" class="group-header" style="border-left:1px solid var(--rule);">REV</th>
-            </tr>
-            <tr>
-              <th class="border-left-group">목표</th>
-              <th>실적</th>
-              <th>달성률</th>
-              <th class="border-left-group">목표(천)</th>
-              <th>실적(천)</th>
-              <th class="border-left-group">목표(억)</th>
-              <th>실적(억)</th>
-            </tr>
-          </thead>
-          <tbody id="stay-tbody">
-            <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
-      DATA: 온북 OTB (otb_data.json) · 투숙일 기준 집계 &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
+    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:20px;color:var(--ink-faint);text-align:center;">
+      <div style="font-size:48px;">🚧</div>
+      <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.12em;color:var(--gold-bright);">투숙일기준</div>
+      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);">준비 중입니다 · 데이터 연동 작업 진행 중</div>
+      <a href="otb.html" style="margin-top:8px;padding:8px 20px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--gold-bright);text-decoration:none;">← 당일현황으로 돌아가기</a>
     </div>
   </main>
 </div>
-
-<script>
-let otb = null;
-let activeMonth = 0;
-let stayChart = null;
-
-const fmt = {
-  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-  pct: v => v == null ? '—' : v.toFixed(1),
-  won100m: v => v == null ? '—' : (v / 100000000).toFixed(1),
-  adr: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-};
-
-function achClass(pct) {
-  if (pct >= 90) return 'ach-high';
-  if (pct >= 75) return 'ach-mid';
-  return 'ach-low';
-}
-
-function getSnap() {
-  if (!otb) return null;
-  if (otb.allMonths) {
-    const snap = otb.allMonths[String(activeMonth)];
-    return snap || otb.allMonths['0'] || null;
-  }
-  return { summary: otb.summary, byProperty: otb.byProperty };
-}
-
-function render() {
-  const snap = getSnap();
-  if (!snap) return;
-
-  const s = snap.summary;
-  const monthLabel = activeMonth === 0 ? '전체' : activeMonth + '월';
-  setText('period-display', '2026년 ' + monthLabel);
-  setText('table-label', '투숙월: ' + monthLabel);
-
-  setText('kpi-ach', fmt.pct(s.rns_achievement));
-  setText('kpi-actual', fmt.num(s.rns_actual));
-  setText('kpi-budget-rns', fmt.num(s.rns_budget));
-  setText('kpi-rev-ach', fmt.pct(s.rev_achievement));
-  setText('kpi-ly-rns', fmt.num(s.rns_last));
-  setText('kpi-adr', fmt.adr(s.adr_actual));
-  setText('kpi-adr-bud', fmt.adr(s.adr_budget));
-
-  const yoy = s.rns_yoy;
-  const yoyEl = document.getElementById('kpi-yoy');
-  if (yoyEl) yoyEl.innerHTML = `<span style="color:${yoy>=0?'var(--positive)':'var(--negative)'}">${yoy>=0?'+':''}${fmt.pct(yoy)}%</span>`;
-
-  buildChart();
-  buildTable(snap.byProperty);
-}
-
-function buildChart() {
-  const ctx = document.getElementById('stay-chart');
-  if (!ctx || !otb.monthly) return;
-  if (stayChart) { stayChart.destroy(); stayChart = null; }
-
-  const labels = otb.monthly.map(m => m.label);
-  const budgets = otb.monthly.map(m => m.rns_budget);
-  const actuals = otb.monthly.map(m => m.rns_actual);
-  const lasts = otb.monthly.map(m => m.rns_last);
-
-  stayChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '전년', data: lasts, backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 2, order: 3 },
-        { label: '목표', data: budgets, backgroundColor: 'rgba(230,185,112,0.2)', borderColor: 'rgba(230,185,112,0.5)', borderWidth: 1, borderRadius: 2, order: 2 },
-        { label: '실적', data: actuals, backgroundColor: ctx => {
-          const v = actuals[ctx.dataIndex], b = budgets[ctx.dataIndex];
-          if (!b) return 'rgba(90,159,196,0.7)';
-          return (v/b >= 0.9) ? 'rgba(76,175,111,0.75)' : (v/b >= 0.75) ? 'rgba(230,185,112,0.75)' : 'rgba(229,115,115,0.75)';
-        }, borderRadius: 3, order: 1 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false },
-        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ko-KR')}실` }
-        }
-      },
-      scales: {
-        x: { grid:{display:false}, ticks:{color:'rgba(255,255,255,0.35)',font:{family:'JetBrains Mono',size:10}}, border:{color:'rgba(255,255,255,0.1)'} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10},callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} }
-      }
-    }
-  });
-}
-
-function buildTable(props) {
-  let rows = '';
-  const tot = { rns_budget:0, rns_actual:0, rev_budget:0, rev_actual:0 };
-
-  props.forEach(p => {
-    const achPct = p.rns_achievement;
-    tot.rns_budget += p.rns_budget || 0;
-    tot.rns_actual += p.rns_actual || 0;
-    tot.rev_budget += p.rev_budget || 0;
-    tot.rev_actual += p.rev_actual || 0;
-
-    rows += `<tr>
-      <td>${p.name}</td>
-      <td class="region-cell">${p.region}</td>
-      <td class="border-left-group">${fmt.num(p.rns_budget)}</td>
-      <td>${fmt.num(p.rns_actual)}</td>
-      <td><span class="ach-pill ${achClass(achPct)}">${fmt.pct(achPct)}%</span></td>
-      <td class="border-left-group">${fmt.adr(p.adr_budget)}</td>
-      <td>${fmt.adr(p.adr_actual)}</td>
-      <td class="border-left-group">${fmt.won100m(p.rev_budget)}</td>
-      <td>${fmt.won100m(p.rev_actual)}</td>
-    </tr>`;
-  });
-
-  const totAch = tot.rns_budget > 0 ? tot.rns_actual / tot.rns_budget * 100 : 0;
-  rows += `<tr class="total-row">
-    <td>합계</td>
-    <td class="region-cell">전체</td>
-    <td class="border-left-group">${fmt.num(tot.rns_budget)}</td>
-    <td>${fmt.num(tot.rns_actual)}</td>
-    <td><span class="ach-pill ${achClass(totAch)}">${fmt.pct(totAch)}%</span></td>
-    <td class="border-left-group">—</td>
-    <td>—</td>
-    <td class="border-left-group">${fmt.won100m(tot.rev_budget)}</td>
-    <td>${fmt.won100m(tot.rev_actual)}</td>
-  </tr>`;
-
-  document.getElementById('stay-tbody').innerHTML = rows;
-}
-
-function buildMonthChips() {
-  const mc = document.getElementById('month-chips');
-  mc.innerHTML = '';
-  const months = otb.filters ? otb.filters.months : [{value:0,label:'전체'}];
-  months.forEach(m => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (m.value === activeMonth ? ' active' : '');
-    btn.textContent = m.label;
-    btn.addEventListener('click', () => {
-      activeMonth = m.value;
-      mc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent === m.label));
-      render();
-    });
-    mc.appendChild(btn);
-  });
-}
-
-function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
-
-async function loadData() {
-  try {
-    const res = await fetch('data/otb_data.json?t=' + Date.now());
-    otb = await res.json();
-    const rt = otb.meta?.refreshTime || '—';
-    setText('sidebar-refresh', rt);
-    setText('refresh-badge', rt);
-    buildMonthChips();
-    render();
-  } catch(e) {
-    console.error(e);
-    document.getElementById('stay-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패</td></tr>`;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', loadData);
-</script>
 </body>
 </html>

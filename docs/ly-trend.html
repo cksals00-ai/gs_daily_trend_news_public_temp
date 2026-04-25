@@ -3,19 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>전년추이 LY Trend · SONO & TRINITY GS팀</title>
+<title>전년추이 · SONO & TRINITY GS팀</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
   --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
   --gold:#c9a063;--gold-bright:#e6b970;
-  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
-  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;
+  --positive:#4caf6f;--warning:#e8a256;--negative:#e57373;--info:#5a9fc4;
   --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
   --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
   --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
@@ -23,12 +21,11 @@
   --sidebar-w:220px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
-input,button,select,table,th,td{font-family:var(--sans)!important;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 .masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
 .masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
-.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);}
-.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
 .page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;}
 .masthead-right{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6);}
 .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--positive);margin-right:5px;animation:pulse 2.4s infinite;}
@@ -36,81 +33,31 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .app-shell{display:flex;min-height:calc(100vh - 52px);}
 .sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
 .filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
-.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
-.chip{padding:4px 10px;border-radius:3px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;}
-.chip:hover{background:var(--bg-soft);color:var(--ink);}
-.chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);}
-.sidebar-divider{height:1px;background:var(--rule);}
 .otb-nav{display:flex;flex-direction:column;gap:2px;}
-.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;}
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
 .otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
 .otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
-.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
-.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
-.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
-.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
-.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
-.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
-.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
-.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
-.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
-.kpi-card.gold::before{background:var(--gold);}
-.kpi-card.green::before{background:var(--positive);}
-.kpi-card.blue::before{background:var(--info);}
-.kpi-card.orange::before{background:var(--warning);}
-.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
-.kpi-card-value{font-family:var(--mono);font-size:clamp(20px,2vw,28px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
-.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
-.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
-.mid-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
-.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
-.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
-.chart-legend{display:flex;gap:10px;flex-wrap:wrap;}
-.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
-.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.chart-canvas-wrap{height:220px;position:relative;}
-.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
-.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
-.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
-.table-wrap{overflow-x:auto;}
-table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
-table.pivot thead tr{background:var(--bg-deep);}
-table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;}
-table.pivot th:first-child{text-align:left;}
-table.pivot th.group-header{text-align:center;border-left:1px solid var(--rule);color:var(--ink-muted);font-size:9.5px;}
-table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
-table.pivot td:first-child{text-align:left;color:var(--ink-soft);font-weight:700;}
-table.pivot tr:hover td{background:var(--bg-soft);}
-table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
-table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
-.net-pos{color:var(--positive);}
-.net-neg{color:var(--negative);}
-.border-left-group{border-left:1px solid var(--rule);}
-@media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}}
-@media(max-width:560px){.main-content{padding:16px 14px;}}
+.main-content{flex:1;min-width:0;padding:24px 28px;}
 .mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
 .mobile-sheet-tabs::-webkit-scrollbar{display:none;}
-@media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.mobile-sheet-tabs{display:flex;}}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
 </style>
-</head>
-<body>
 <style>
-.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;position:relative;z-index:200}
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
 .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
 .gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
 .gsn-brand-dot{color:#58a6ff}
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 </style>
+</head>
+<body>
 <nav class="gsn">
   <div class="gsn-wrap">
     <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -120,25 +67,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
   </div>
 </nav>
-
 <header class="masthead">
   <div class="masthead-inner">
-    <div style="display:flex;align-items:baseline;">
+    <div style="display:flex;align-items:baseline;gap:0;">
       <div class="logo-mark">SONO &amp; TRINITY</div>
       <div class="team-tag">GS팀 · OTB 리포트</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span class="page-badge">📊 26OTB · 전년추이</span>
-      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
-    </div>
+    <span class="page-badge">📊 26OTB · 전년추이</span>
     <div class="masthead-right">
-      <span><span class="live-dot"></span>LIVE</span>
-      <span id="refresh-badge">—</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
     </div>
   </div>
 </header>
-
-<!-- MOBILE SHEET TABS (visible < 860px) -->
 <nav class="mobile-sheet-tabs">
   <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
   <a href="channel.html" class="mobile-sheet-tab">거래처</a>
@@ -150,14 +90,13 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <a href="product-detail.html" class="mobile-sheet-tab">상품상세</a>
   <a href="ly-product.html" class="mobile-sheet-tab">전년상품</a>
 </nav>
-
 <div class="app-shell">
   <aside class="sidebar">
     <div>
       <div class="filter-section-label">OTB 리포트</div>
       <div class="otb-nav">
         <a href="otb.html" class="otb-nav-link">당일현황</a>
-        <a href="channel.html" class="otb-nav-link">26거래처</a>
+        <a href="channel.html" class="otb-nav-link">거래처</a>
         <a href="ytd.html" class="otb-nav-link">연간누계</a>
         <a href="monthly.html" class="otb-nav-link">월별실적</a>
         <a href="stay-date.html" class="otb-nav-link">투숙일기준</a>
@@ -167,355 +106,15 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <a href="ly-product.html" class="otb-nav-link">전년상품</a>
       </div>
     </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">비교 연도</div>
-      <div class="filter-chips" id="year-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">기준 월 범위</div>
-      <div class="filter-chips" id="month-chips"></div>
-    </div>
-    <div class="refresh-info">
-      <div class="refresh-label">DATA UPDATED</div>
-      <div class="refresh-time" id="sidebar-refresh">—</div>
-    </div>
   </aside>
-
   <main class="main-content">
-    <div class="page-header">
-      <div class="page-title">
-        전년 대비 추이
-        <span class="sub">LAST YEAR COMPARISON · YOY TREND</span>
-      </div>
-      <div class="base-date-tag">
-        <strong id="period-display">2026 vs 2025</strong>
-      </div>
-    </div>
-
-    <div class="kpi-strip">
-      <div class="kpi-card gold">
-        <div class="kpi-card-label">YTD RNS YoY</div>
-        <div class="kpi-card-value" id="kpi-ytd-rns-yoy">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">전년 <span id="kpi-ly-rns">—</span>실</div>
-      </div>
-      <div class="kpi-card green">
-        <div class="kpi-card-label">YTD REV YoY</div>
-        <div class="kpi-card-value" id="kpi-ytd-rev-yoy">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">전년 <span id="kpi-ly-rev">—</span>억</div>
-      </div>
-      <div class="kpi-card blue">
-        <div class="kpi-card-label">YTD ADR YoY</div>
-        <div class="kpi-card-value" id="kpi-ytd-adr-yoy">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">당해 <span id="kpi-ty-adr">—</span>천원</div>
-      </div>
-      <div class="kpi-card orange">
-        <div class="kpi-card-label">당해 YTD RNS</div>
-        <div class="kpi-card-value" id="kpi-ty-rns">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub">누계 집계</div>
-      </div>
-    </div>
-
-    <div class="mid-row">
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <span class="chart-card-title">월별 RNS: 당해 vs 전년</span>
-          <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>당해</div>
-            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.25);"></div>전년</div>
-          </div>
-        </div>
-        <div class="chart-canvas-wrap">
-          <canvas id="rns-compare-chart"></canvas>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <span class="chart-card-title">월별 YoY 증감률 (%)</span>
-          <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>증가</div>
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#e57373;"></div>감소</div>
-          </div>
-        </div>
-        <div class="chart-canvas-wrap">
-          <canvas id="yoy-chart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <span class="chart-card-title">월별 매출(억): 당해 vs 전년</span>
-        <div class="chart-legend">
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>당해</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.2);"></div>전년</div>
-        </div>
-      </div>
-      <div class="chart-canvas-wrap" style="height:180px;">
-        <canvas id="rev-compare-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-card-header">
-        <span class="table-card-title">월별 전년 대비 상세</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
-      </div>
-      <div class="table-wrap">
-        <table class="pivot">
-          <thead>
-            <tr>
-              <th style="text-align:left;">기간</th>
-              <th class="border-left-group">당해 RNS</th>
-              <th>전년 RNS</th>
-              <th>RNS YoY</th>
-              <th class="border-left-group">당해 REV</th>
-              <th>전년 REV</th>
-              <th>REV YoY</th>
-              <th class="border-left-group">당해 ADR</th>
-              <th>전년 ADR</th>
-              <th>ADR YoY</th>
-            </tr>
-          </thead>
-          <tbody id="ly-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
-      DATA: 온북 DB 파싱 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
+    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:20px;color:var(--ink-faint);text-align:center;">
+      <div style="font-size:48px;">🚧</div>
+      <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.12em;color:var(--gold-bright);">전년추이</div>
+      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);">준비 중입니다 · 데이터 연동 작업 진행 중</div>
+      <a href="otb.html" style="margin-top:8px;padding:8px 20px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--gold-bright);text-decoration:none;">← 당일현황으로 돌아가기</a>
     </div>
   </main>
 </div>
-
-<script>
-let db = null;
-let tyYear = '2026';
-let lyYear = '2025';
-let maxMonth = 12;
-let rnsChart = null, yoyChart = null, revChart = null;
-
-const fmt = {
-  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-  rev: v => v == null ? '—' : (v/100).toFixed(1),
-  adr: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-  pct: (v, colored=true) => {
-    if (v == null) return '—';
-    const s = v > 0 ? '+' : '';
-    return colored
-      ? `<span class="${v>=0?'net-pos':'net-neg'}">${s}${v.toFixed(1)}%</span>`
-      : `${s}${v.toFixed(1)}%`;
-  }
-};
-
-function getMonths() {
-  const months = [];
-  for (let m = 1; m <= maxMonth; m++) {
-    const k = tyYear + String(m).padStart(2,'0');
-    if (db.meta.months.includes(k)) months.push(m);
-  }
-  return months;
-}
-
-function render() {
-  const months = getMonths();
-  const labels = months.map(m => m + '월');
-
-  const tyData = months.map(m => db.monthly_total[tyYear + String(m).padStart(2,'0')] || {});
-  const lyData = months.map(m => db.monthly_total[lyYear + String(m).padStart(2,'0')] || {});
-
-  const tyRns = tyData.map(d => d.net_rn || 0);
-  const lyRns = lyData.map(d => d.net_rn || 0);
-  const tyRev = tyData.map(d => d.net_rev || 0);
-  const lyRev = lyData.map(d => d.net_rev || 0);
-
-  const totTyRns = tyRns.reduce((s,v)=>s+v,0);
-  const totLyRns = lyRns.reduce((s,v)=>s+v,0);
-  const totTyRev = tyRev.reduce((s,v)=>s+v,0);
-  const totLyRev = lyRev.reduce((s,v)=>s+v,0);
-
-  const totTyAdr = totTyRns > 0 ? totTyRev*1000/totTyRns : 0;
-  const totLyAdr = totLyRns > 0 ? totLyRev*1000/totLyRns : 0;
-
-  const yoyRns = totLyRns > 0 ? (totTyRns-totLyRns)/totLyRns*100 : null;
-  const yoyRev = totLyRev > 0 ? (totTyRev-totLyRev)/totLyRev*100 : null;
-  const yoyAdr = totLyAdr > 0 ? (totTyAdr-totLyAdr)/totLyAdr*100 : null;
-
-  const yoyRnsEl = document.getElementById('kpi-ytd-rns-yoy');
-  if (yoyRnsEl) yoyRnsEl.innerHTML = (yoyRns!=null?`<span style="color:${yoyRns>=0?'var(--positive)':'var(--negative)'}">${yoyRns>0?'+':''}${yoyRns.toFixed(1)}</span>`:'—') + '<span class="unit">%</span>';
-  const yoyRevEl = document.getElementById('kpi-ytd-rev-yoy');
-  if (yoyRevEl) yoyRevEl.innerHTML = (yoyRev!=null?`<span style="color:${yoyRev>=0?'var(--positive)':'var(--negative)'}">${yoyRev>0?'+':''}${yoyRev.toFixed(1)}</span>`:'—') + '<span class="unit">%</span>';
-  const yoyAdrEl = document.getElementById('kpi-ytd-adr-yoy');
-  if (yoyAdrEl) yoyAdrEl.innerHTML = (yoyAdr!=null?`<span style="color:${yoyAdr>=0?'var(--positive)':'var(--negative)'}">${yoyAdr>0?'+':''}${yoyAdr.toFixed(1)}</span>`:'—') + '<span class="unit">%</span>';
-
-  setText('kpi-ly-rns', fmt.num(totLyRns));
-  setText('kpi-ly-rev', fmt.rev(totLyRev));
-  setText('kpi-ty-adr', fmt.adr(Math.round(totTyAdr)));
-  setText('kpi-ty-rns', fmt.num(totTyRns));
-  setText('period-display', tyYear + ' vs ' + lyYear);
-  setText('table-label', tyYear + 'vs' + lyYear + ' · 1~' + maxMonth + '월');
-
-  // RNS compare chart
-  buildCompareChart('rns-compare-chart', labels, tyRns, lyRns, rnsChart, c => rnsChart=c, v => v.toLocaleString('ko-KR')+'실', tyYear, lyYear);
-
-  // YoY bar chart
-  buildYoYChart(labels, tyRns, lyRns);
-
-  // REV compare chart
-  buildCompareChart('rev-compare-chart', labels, tyRev.map(v=>(v/100).toFixed(1)*1), lyRev.map(v=>(v/100).toFixed(1)*1), revChart, c => revChart=c, v => v.toFixed(1)+'억', tyYear, lyYear);
-
-  // Table
-  let rows = '';
-  months.forEach((m, i) => {
-    const rns = tyRns[i], lyR = lyRns[i];
-    const rev = tyRev[i], lyV = lyRev[i];
-    const adr = rns > 0 ? tyRev[i]*1000/rns : 0;
-    const lyAdr = lyR > 0 ? lyRev[i]*1000/lyR : 0;
-    const rnsYoY = lyR > 0 ? (rns-lyR)/lyR*100 : null;
-    const revYoY = lyV > 0 ? (rev-lyV)/lyV*100 : null;
-    const adrYoY = lyAdr > 0 ? (adr-lyAdr)/lyAdr*100 : null;
-    rows += `<tr>
-      <td>${tyYear}년 ${m}월</td>
-      <td class="border-left-group">${fmt.num(rns)}</td>
-      <td>${fmt.num(lyR)}</td>
-      <td>${fmt.pct(rnsYoY)}</td>
-      <td class="border-left-group">${fmt.rev(rev)}</td>
-      <td>${fmt.rev(lyV)}</td>
-      <td>${fmt.pct(revYoY)}</td>
-      <td class="border-left-group">${fmt.adr(Math.round(adr))}</td>
-      <td>${fmt.adr(Math.round(lyAdr))}</td>
-      <td>${fmt.pct(adrYoY)}</td>
-    </tr>`;
-  });
-  const totRnsYoY = totLyRns > 0 ? (totTyRns-totLyRns)/totLyRns*100 : null;
-  const totRevYoY = totLyRev > 0 ? (totTyRev-totLyRev)/totLyRev*100 : null;
-  const totAdrYoY = totLyAdr > 0 ? (totTyAdr-totLyAdr)/totLyAdr*100 : null;
-  rows += `<tr class="total-row">
-    <td>합계/평균</td>
-    <td class="border-left-group">${fmt.num(totTyRns)}</td>
-    <td>${fmt.num(totLyRns)}</td>
-    <td>${fmt.pct(totRnsYoY)}</td>
-    <td class="border-left-group">${fmt.rev(totTyRev)}</td>
-    <td>${fmt.rev(totLyRev)}</td>
-    <td>${fmt.pct(totRevYoY)}</td>
-    <td class="border-left-group">${fmt.adr(Math.round(totTyAdr))}</td>
-    <td>${fmt.adr(Math.round(totLyAdr))}</td>
-    <td>${fmt.pct(totAdrYoY)}</td>
-  </tr>`;
-  document.getElementById('ly-tbody').innerHTML = rows;
-}
-
-function buildCompareChart(id, labels, tyData, lyData, old, setter, formatter, tyLabel, lyLabel) {
-  const ctx = document.getElementById(id);
-  if (!ctx) return;
-  if (old) old.destroy();
-  const c = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: lyLabel, data: lyData, backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 2, order: 2 },
-        { label: tyLabel, data: tyData, backgroundColor: 'rgba(230,185,112,0.6)', borderColor: '#e6b970', borderWidth: 1, borderRadius: 3, order: 1 },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend:{display:false},
-        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatter(ctx.parsed.y)}` }
-        }
-      },
-      scales: {
-        x: { grid:{display:false}, ticks:{color:'rgba(255,255,255,0.35)',font:{family:'JetBrains Mono',size:10}}, border:{color:'rgba(255,255,255,0.1)'} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10}}, border:{display:false} }
-      }
-    }
-  });
-  setter(c);
-}
-
-function buildYoYChart(labels, tyData, lyData) {
-  const ctx = document.getElementById('yoy-chart');
-  if (!ctx) return;
-  if (yoyChart) { yoyChart.destroy(); yoyChart = null; }
-  const yoyData = tyData.map((v,i) => lyData[i] > 0 ? parseFloat(((v-lyData[i])/lyData[i]*100).toFixed(1)) : null);
-  yoyChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: yoyData,
-        backgroundColor: yoyData.map(v => v == null ? 'transparent' : v >= 0 ? 'rgba(76,175,111,0.7)' : 'rgba(229,115,115,0.7)'),
-        borderColor: yoyData.map(v => v == null ? 'transparent' : v >= 0 ? '#4caf6f' : '#e57373'),
-        borderWidth: 1, borderRadius: 3,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend:{display:false},
-        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
-          callbacks: { label: ctx => ` YoY: ${ctx.parsed.y != null ? (ctx.parsed.y>0?'+':'') + ctx.parsed.y.toFixed(1)+'%' : '—'}` }
-        }
-      },
-      scales: {
-        x: { grid:{display:false}, ticks:{color:'rgba(255,255,255,0.35)',font:{family:'JetBrains Mono',size:10}}, border:{color:'rgba(255,255,255,0.1)'} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10},callback:v=>v+'%'}, border:{display:false} }
-      }
-    }
-  });
-}
-
-function buildFilterChips() {
-  // Year pairs
-  const yc = document.getElementById('year-chips');
-  const pairs = [['2026','2025'],['2025','2024'],['2024','2023'],['2023','2022']];
-  pairs.forEach(([ty,ly]) => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (ty===tyYear&&ly===lyYear?' active':'');
-    btn.textContent = ty+'vs'+ly;
-    btn.addEventListener('click', () => {
-      tyYear=ty; lyYear=ly;
-      yc.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',b.textContent===ty+'vs'+ly));
-      render();
-    });
-    yc.appendChild(btn);
-  });
-
-  const mc = document.getElementById('month-chips');
-  [3,6,9,12].forEach(m => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (m===maxMonth?' active':'');
-    btn.textContent = m+'월까지';
-    btn.addEventListener('click', () => {
-      maxMonth=m;
-      mc.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',b.textContent===m+'월까지'));
-      render();
-    });
-    mc.appendChild(btn);
-  });
-}
-
-function setText(id, v) { const el=document.getElementById(id); if(el) el.innerHTML=v; }
-
-async function loadData() {
-  try {
-    const res = await fetch('data/db_aggregated.json?t='+Date.now());
-    db = await res.json();
-    setText('sidebar-refresh', db.generated_at||'—');
-    setText('refresh-badge', db.generated_at||'—');
-    // Auto-detect max available 2026 month
-    const m26 = db.meta.months.filter(m=>m.startsWith('2026'));
-    if (m26.length) maxMonth = parseInt(m26[m26.length-1].slice(4));
-    buildFilterChips();
-    render();
-  } catch(e) {
-    console.error(e);
-    document.getElementById('ly-tbody').innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패</td></tr>`;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', loadData);
-</script>
 </body>
 </html>

@@ -248,7 +248,7 @@ def render_property_matrix(properties: list, region_color: str) -> str:
         <div style="padding:12px 14px;{border}opacity:{opacity};">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
             <div style="font-family:var(--mono);font-size:10px;color:var(--ink-muted);font-weight:{'800' if is_primary else '500'};letter-spacing:0.1em;">
-              {month_label} {'· 당월' if is_primary else '· 전망'}
+              {month_label} {'· 당월' if is_primary else '· FCST'}
             </div>
             <div style="font-family:var(--serif);font-size:{'18px' if is_primary else '14px'};font-weight:{'800' if is_primary else '600'};color:{ach_color};">
               {ach:.1f}%
@@ -515,136 +515,6 @@ def _LEGACY_inject_property_matrix(html: str, prop_data: dict) -> str:
             logger.warning(f"✗ {region_key} 매트릭스 마커 미발견")
     
     return html
-
-
-# ─────────────────────────────────────────────
-# 사업장별 YoY 추이 테이블 (동기간 보정)
-# ─────────────────────────────────────────────
-REGION_COLORS = {
-    "vivaldi": "#a83e4f",
-    "central": "#2c5f7c",
-    "south":   "#2d7a3f",
-    "apac":    "#5c4a7c",
-}
-REGION_LABELS = {
-    "vivaldi": "비발디",
-    "central": "중부",
-    "south":   "남부",
-    "apac":    "APAC",
-}
-
-
-def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
-    """사업장별 4·5·6월 달성률 + 전년 동기간 대비 ▲/→/↓ 테이블"""
-    if not yoy_table:
-        return ""
-
-    MONTH_LABELS = {"4": "4월", "5": "5월", "6": "6월"}
-    IND_STYLES = {
-        "▲": ("color:#2d7a3f;font-weight:800;", "▲"),
-        "→": ("color:#c9772c;font-weight:800;", "→"),
-        "↓": ("color:#b8332c;font-weight:800;", "↓"),
-    }
-
-    rows = []
-    for prop in yoy_table:
-        name   = escape_html(prop.get("name", ""))
-        region = prop.get("region", "general")
-        r_color = REGION_COLORS.get(region, "#8a8a8a")
-        r_label = escape_html(REGION_LABELS.get(region, region))
-        months  = prop.get("months", {})
-
-        cells = f'<td style="padding:10px 14px;font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;border-left:3px solid {r_color};">{name}</td>'
-        cells += f'<td style="padding:10px 10px;font-family:var(--mono);font-size:10px;color:{r_color};font-weight:700;text-align:center;">{r_label}</td>'
-
-        for m_num in ("4", "5", "6"):
-            m = months.get(m_num, {})
-            act_rn  = m.get("rns_actual", 0)
-            lst_rn  = m.get("rns_last",   0)
-            yoy_pct = m.get("yoy_pct",    0.0)
-            ind     = m.get("indicator",  "→")
-            ind_style, ind_char = IND_STYLES.get(ind, ("color:var(--ink-muted);", ind))
-
-            yoy_str = f"+{yoy_pct:.1f}%" if yoy_pct >= 0 else f"{yoy_pct:.1f}%"
-            opacity = "1" if m_num == "4" else "0.65"
-            cells += (
-                f'<td style="padding:10px 10px;font-family:var(--mono);font-size:12px;'
-                f'text-align:right;opacity:{opacity};">{act_rn:,}</td>'
-                f'<td style="padding:10px 8px;font-family:var(--mono);font-size:10px;'
-                f'text-align:right;color:var(--ink-muted);opacity:{opacity};">{lst_rn:,}</td>'
-                f'<td style="padding:10px 10px;font-family:var(--mono);font-size:11px;'
-                f'text-align:center;opacity:{opacity};">'
-                f'<span style="{ind_style}">{ind_char}</span>'
-                f'<span style="font-size:10px;color:var(--ink-muted);margin-left:3px;">{yoy_str}</span>'
-                f'</td>'
-            )
-        rows.append(f'<tr style="border-bottom:1px solid var(--rule);">{cells}</tr>')
-
-    base_disp = f"{base_date[:2]}/{base_date[2:]}" if len(base_date) == 4 else base_date
-    header = f"""
-  <thead>
-    <tr style="background:var(--bg-soft);">
-      <th rowspan="2" style="padding:10px 14px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--ink-muted);letter-spacing:0.08em;font-weight:700;">영업장</th>
-      <th rowspan="2" style="padding:10px 10px;font-family:var(--mono);font-size:10px;color:var(--ink-muted);">권역</th>
-      <th colspan="3" style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--gold);font-weight:800;letter-spacing:0.1em;border-left:2px solid var(--gold);">4월 · 당월</th>
-      <th colspan="3" style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);opacity:0.65;">5월 · 전망</th>
-      <th colspan="3" style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);opacity:0.65;">6월 · 전망</th>
-    </tr>
-    <tr style="background:var(--bg-soft);">
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);border-left:2px solid var(--gold);">실적</th>
-      <th style="padding:6px 8px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년*</th>
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년比</th>
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">실적</th>
-      <th style="padding:6px 8px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년*</th>
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년比</th>
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">실적</th>
-      <th style="padding:6px 8px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년*</th>
-      <th style="padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);">전년比</th>
-    </tr>
-  </thead>"""
-
-    legend = (
-        f'<div style="display:flex;gap:16px;align-items:center;padding:8px 14px;'
-        f'background:var(--bg-soft);border-radius:4px;margin-bottom:10px;'
-        f'font-family:var(--mono);font-size:10px;color:var(--ink-muted);flex-wrap:wrap;">'
-        f'<span style="font-weight:700;color:var(--ink);">▲</span> 전년 동기 대비 개선(+5%↑)&nbsp;&nbsp;'
-        f'<span style="font-weight:700;color:var(--gold);">→</span> 유사(±5%)&nbsp;&nbsp;'
-        f'<span style="font-weight:700;color:var(--negative);">↓</span> 부진(-5%↓)'
-        f'&nbsp;&nbsp;<span style="color:var(--ink-faint);">* 전년 = 동기간 보정값 (기준 {base_disp} 이후 취소 복원)</span>'
-        f'</div>'
-    )
-
-    return (
-        legend +
-        f'<div style="overflow-x:auto;">'
-        f'<table style="width:100%;border-collapse:collapse;">'
-        f'{header}'
-        f'<tbody>{"".join(rows)}</tbody>'
-        f'</table></div>'
-    )
-
-
-def inject_yoy_property_table(html: str, otb_data: dict) -> str:
-    """사업장별 YoY 추이 테이블을 <!-- YOY_PROP_TABLE_START/END --> 마커에 주입"""
-    yoy_table = otb_data.get("yoyTable", [])
-    base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
-    if not yoy_table:
-        return html
-
-    table_html = render_yoy_property_table(yoy_table, base_date)
-    pattern = re.compile(
-        r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
-        re.DOTALL
-    )
-    new_html, n = pattern.subn(
-        lambda m: m.group(1) + "\n" + table_html + "\n" + m.group(3),
-        html, count=1
-    )
-    if n > 0:
-        logger.info(f"✓ YoY 사업장 테이블 주입: {len(yoy_table)}개 사업장")
-    else:
-        logger.warning("✗ YOY_PROP_TABLE 마커 미발견")
-    return new_html
 
 
 # ─────────────────────────────────────────────
@@ -1090,6 +960,116 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
 
 
 # ─────────────────────────────────────────────
+# YoY 사업장별 추이 테이블
+# ─────────────────────────────────────────────
+REGION_COLORS = {
+    "vivaldi": "#d97a7a",
+    "central": "#6ba3c4",
+    "south":   "#7ab891",
+    "apac":    "#a892c8",
+}
+REGION_LABELS = {
+    "vivaldi": "비발디",
+    "central": "중부",
+    "south":   "남부",
+    "apac":    "APAC",
+}
+
+def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
+    if not yoy_table:
+        return "<p style='color:#888;font-size:12px;'>YoY 데이터 없음</p>"
+
+    base_disp = f"{base_date[:4]}.{base_date[4:6]}.{base_date[6:]}" if len(base_date) == 8 else base_date
+    months = [4, 5, 6]
+    month_labels = {4: "4월", 5: "5월", 6: "6월"}
+
+    def arrow(yoy):
+        if yoy is None:
+            return "—"
+        if yoy >= 3:
+            return f'<span style="color:#4caf89;font-weight:700;">▲ {yoy:+.1f}%</span>'
+        elif yoy <= -3:
+            return f'<span style="color:#e05555;font-weight:700;">↓ {yoy:+.1f}%</span>'
+        else:
+            return f'<span style="color:#b0a060;font-weight:700;">→ {yoy:+.1f}%</span>'
+
+    rows_html = ""
+    for row in yoy_table:
+        region = row.get("region", "")
+        color  = REGION_COLORS.get(region, "#888")
+        cells  = ""
+        for m in months:
+            md = row.get("months", {}).get(m, {})
+            act   = md.get("act_rn", 0)
+            last  = md.get("last_rn", 0)
+            yoy   = md.get("yoy")
+            fcst  = md.get("rns_fcst", act)
+            fach  = md.get("fcst_ach", 0.0)
+            bud   = md.get("bud_rn", 0)
+            arrow_html = arrow(yoy)
+            fcst_html = (
+                f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
+                f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
+            ) if bud > 0 else ""
+            cells += (
+                f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
+                f'<div style="font-size:12px;">{act:,}실</div>'
+                f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
+                f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
+                f'{fcst_html}'
+                f'</td>'
+            )
+        rows_html += (
+            f'<tr>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #333;white-space:nowrap;">'
+            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:{color};margin-right:6px;vertical-align:middle;"></span>'
+            f'<span style="font-size:12px;font-weight:600;">{row["name"]}</span>'
+            f'</td>'
+            f'{cells}</tr>'
+        )
+
+    header_cells = "".join(
+        f'<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;'
+        f'font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">'
+        f'{month_labels[m]}</th>'
+        for m in months
+    )
+
+    return (
+        f'<div style="overflow-x:auto;">'
+        f'<p style="font-family:monospace;font-size:10.5px;color:#888;margin-bottom:8px;">'
+        f'동기간 보정 기준일: {base_disp} &nbsp;·&nbsp; ▲ 전년 동기 대비 개선 / → 유사 / ↓ 부진</p>'
+        f'<table style="width:100%;border-collapse:collapse;font-family:var(--sans,sans-serif);">'
+        f'<thead><tr>'
+        f'<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;'
+        f'font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">사업장</th>'
+        f'{header_cells}'
+        f'</tr></thead>'
+        f'<tbody>{rows_html}</tbody>'
+        f'</table></div>'
+    )
+
+
+def inject_yoy_property_table(html: str, otb_data: dict) -> str:
+    yoy_table = otb_data.get("yoyTable", [])
+    base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
+    table_html = render_yoy_property_table(yoy_table, base_date)
+    pattern = re.compile(
+        r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
+        re.DOTALL
+    )
+    new_html, n = pattern.subn(
+        lambda m: m.group(1) + "\n" + table_html + "\n" + m.group(3),
+        html
+    )
+    if n > 0:
+        logger.info(f"✓ YoY 사업장별 추이 테이블 주입: {len(yoy_table)}개 사업장")
+    else:
+        logger.warning("✗ YOY_PROP_TABLE 마커 미발견")
+    return new_html
+
+
+# ─────────────────────────────────────────────
 # 패키지 트렌드 데이터 주입
 # ─────────────────────────────────────────────
 def inject_package_data(html: str, pkg_data: dict) -> str:
@@ -1145,7 +1125,7 @@ def main():
     # ── index.html 빌드 ──
     html = HTML_FILE.read_text(encoding="utf-8")
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
-    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data, otb_data)
+    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data, otb_data=otb_data)
     html = inject_news_section(html, news_data)
     html = inject_package_data(html, pkg_data)
     HTML_FILE.write_text(html, encoding="utf-8")
