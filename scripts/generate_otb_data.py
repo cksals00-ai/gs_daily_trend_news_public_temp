@@ -116,6 +116,14 @@ def load_budget(wb):
     return budgets, seg_budgets
 
 
+def get_adj_rn(adj_by_prop, prop_names, month_key):
+    """yoy_adjusted.by_property에서 해당 사업장들의 adjustment_rn 합산"""
+    total = 0
+    for pname in prop_names:
+        total += adj_by_prop.get(pname, {}).get(month_key, {}).get('adjustment_rn', 0)
+    return total
+
+
 def sum_db(db_bp, prop_names, month_key):
     total_rn  = 0
     total_rev = 0.0
@@ -201,7 +209,8 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
     return result
 
 
-def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None):
+def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
+                         adj_by_prop=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
     """
@@ -246,11 +255,13 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round((act_rev * 1000) / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 (by_property 전체 기준 유지 — 전년도 세그먼트 구분 없음)
+        # 전년 합산 + 동기간 보정
         lst_rn = 0
         for mk in last_keys:
             d = sum_db(db_bp, db_props, mk)
             lst_rn += d["rn"]
+            if adj_by_prop:
+                lst_rn += get_adj_rn(adj_by_prop, db_props, mk)
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
         rev_ach = round((act_rev / bud_rev * 100), 1) if bud_rev > 0 else 0.0
@@ -305,7 +316,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     return {"byProperty": props, "summary": summary, "segmentData": seg_data}
 
 
-def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None):
+def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_prop=None):
     """Chart용 월별 집계 (전체 사업장 합산, OTA+G-OTA+Inbound 기준)"""
     result = []
     for i, mk in enumerate(MONTHS_26):
@@ -325,6 +336,8 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None):
             act_rn += d["rn"]
             d_last = sum_db(db_bp, db_props, MONTHS_25[i])
             lst_rn += d_last["rn"]
+            if adj_by_prop:
+                lst_rn += get_adj_rn(adj_by_prop, db_props, MONTHS_25[i])
         result.append({
             "month": i + 1,
             "label": bud_label,
@@ -361,12 +374,62 @@ def get_today_booking_by_props(db, date_str, db_props):
     return sum(pdbp.get(pname, {}).get(date_str, {}).get("rn", 0) for pname in db_props)
 
 
+def build_yoy_table(db_bp, db_bps, adj_by_prop):
+    """사업장별 4·5·6월 실적 vs 전년(동기간 보정) 테이블 생성"""
+    TARGET_MONTHS = ["202604", "202605", "202606"]
+    LAST_MONTHS   = ["202504", "202505", "202506"]
+    MONTH_LABELS  = {4: "4월", 5: "5월", 6: "6월"}
+    YOY_THRESHOLD = 5.0  # ▲/→/↓ 판정 임계값 (%)
+
+    rows = []
+    for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
+        months_data = {}
+        for i, (mk, lk) in enumerate(zip(TARGET_MONTHS, LAST_MONTHS)):
+            month_num = i + 4
+            # 올해 실적 (OTB 세그먼트)
+            act_rn = sum_db_segments(db_bps, db_props, mk)["rn"] if db_bps else sum_db(db_bp, db_props, mk)["rn"]
+            # 작년 실적 + 동기간 보정
+            lst_rn = sum_db(db_bp, db_props, lk)["rn"]
+            if adj_by_prop:
+                lst_rn += get_adj_rn(adj_by_prop, db_props, lk)
+            # YoY%
+            if lst_rn > 0:
+                yoy_pct = round((act_rn / lst_rn - 1) * 100, 1)
+            else:
+                yoy_pct = 0.0
+            # ▲/→/↓ 판정
+            if yoy_pct > YOY_THRESHOLD:
+                indicator = "▲"
+            elif yoy_pct < -YOY_THRESHOLD:
+                indicator = "↓"
+            else:
+                indicator = "→"
+            months_data[str(month_num)] = {
+                "rns_actual": act_rn,
+                "rns_last":   lst_rn,
+                "yoy_pct":    yoy_pct,
+                "indicator":  indicator,
+            }
+        rows.append({
+            "name":    display_name,
+            "region":  region,
+            "months":  months_data,
+        })
+    return rows
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
     db_bp  = db.get("by_property", {})
     db_seg = db.get("by_segment", {})
     db_bps = db.get("by_property_segment", {})
+
+    # 동기간 보정 데이터 (2025년 기준)
+    yoy_adjusted = db.get("yoy_adjusted", {})
+    adj_2025 = yoy_adjusted.get("2025", {}).get("by_property", {})
+    adj_base_date = yoy_adjusted.get("2025", {}).get("base_date", "")
+    print(f"  YoY 보정 기준일: {adj_base_date} ({len(adj_2025)}개 사업장)")
 
     print("Budget XLSX 로드 중...")
     wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True, data_only=True)
@@ -382,7 +445,11 @@ def main():
     # 월별 스냅샷 (0=전체, 1~12=각 월)
     all_months = {}
     for m in range(0, 13):
-        all_months[str(m)] = build_month_snapshot(db_bp, budgets, m, db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps)
+        all_months[str(m)] = build_month_snapshot(
+            db_bp, budgets, m,
+            db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
+            adj_by_prop=adj_2025,
+        )
 
     # today 데이터를 모든 월 스냅샷에 주입
     for snap in all_months.values():
@@ -396,14 +463,19 @@ def main():
             prop["today_cancel"]  = 0
             prop["today_net"]     = prop_booking
 
-    # Chart data
-    monthly_chart = build_monthly_chart(db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps)
+    # Chart data (보정 적용)
+    monthly_chart = build_monthly_chart(db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps,
+                                        adj_by_prop=adj_2025)
+
+    # 사업장별 YoY 추이 테이블 (4·5·6월)
+    yoy_table = build_yoy_table(db_bp, db_bps, adj_2025)
 
     output = {
         "meta": {
-            "refreshTime":  now_kst.strftime("%Y-%m-%d %H:%M KST"),
-            "baseDate":     now_kst.strftime("%Y-%m-%d"),
-            "dataSource":   "온북 DB + 사업계획 Budget",
+            "refreshTime":   now_kst.strftime("%Y-%m-%d %H:%M KST"),
+            "baseDate":      now_kst.strftime("%Y-%m-%d"),
+            "dataSource":    "온북 DB + 사업계획 Budget",
+            "yoyBaseDate":   adj_base_date,  # 동기간 보정 기준 월일
         },
         "filters": {
             "months": [{"value": 0, "label": "전체"}] + [
@@ -418,6 +490,8 @@ def main():
         "allMonths":  all_months,
         # Chart
         "monthly":    monthly_chart,
+        # 사업장별 4·5·6월 YoY 추이 테이블 (동기간 보정 적용)
+        "yoyTable":   yoy_table,
     }
 
     DOCS_DATA_DIR.mkdir(parents=True, exist_ok=True)
