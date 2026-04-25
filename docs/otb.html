@@ -939,6 +939,9 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
               <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">당일 현황</th>
               <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">ADR (평균단가)</th>
               <th colspan="3" class="group-header" style="border-left:1px solid var(--rule-strong);">REV (매출)</th>
+              <th colspan="2" class="group-header" style="border-left:1px solid var(--rule-strong);background:rgba(255,200,60,0.08);">동기간 대비</th>
+              <th colspan="2" class="group-header" style="border-left:1px solid var(--rule-strong);background:rgba(80,180,255,0.08);">FCST</th>
+              <th colspan="7" class="group-header" style="border-left:1px solid var(--rule-strong);background:rgba(120,200,120,0.08);">리드타임 분포 (RN)</th>
             </tr>
             <tr>
               <th class="border-left-group">목표</th>
@@ -954,10 +957,21 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
               <th class="border-left-group">목표(억)</th>
               <th>실적(억)</th>
               <th>달성률</th>
+              <th class="border-left-group" style="background:rgba(255,200,60,0.05);">전년동기</th>
+              <th style="background:rgba(255,200,60,0.05);">YoY%</th>
+              <th class="border-left-group" style="background:rgba(80,180,255,0.05);">예측</th>
+              <th style="background:rgba(80,180,255,0.05);">달성률</th>
+              <th class="border-left-group" style="background:rgba(120,200,120,0.05);">당일</th>
+              <th style="background:rgba(120,200,120,0.05);">1-3일</th>
+              <th style="background:rgba(120,200,120,0.05);">4-7일</th>
+              <th style="background:rgba(120,200,120,0.05);">1-2주</th>
+              <th style="background:rgba(120,200,120,0.05);">2-4주</th>
+              <th style="background:rgba(120,200,120,0.05);">1-2월</th>
+              <th style="background:rgba(120,200,120,0.05);">2월+</th>
             </tr>
           </thead>
           <tbody id="pivot-tbody">
-            <tr><td colspan="15" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+            <tr><td colspan="26" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1106,6 +1120,16 @@ function buildMonthlyChart(data) {
 }
 
 // ─── PIVOT TABLE ───
+const LT_BUCKETS = ['same_day','1_3d','4_7d','1_2w','2_4w','1_2m','2m_plus'];
+
+function ltCell(lt, bucket, borderLeft) {
+  const v = lt && lt[bucket] != null ? lt[bucket] : null;
+  const cls = borderLeft ? 'border-left-group' : '';
+  const bg = 'background:rgba(120,200,120,0.05);';
+  if (v === null) return `<td class="${cls}" style="${bg}">—</td>`;
+  return `<td class="${cls}" style="${bg}">${fmt.num(v)}</td>`;
+}
+
 function renderPivot(data) {
   const tbody = document.getElementById('pivot-tbody');
   if (!tbody) return;
@@ -1120,6 +1144,10 @@ function renderPivot(data) {
     const adrVsBudget = ((p.adr_actual - p.adr_budget) / p.adr_budget * 100);
     const adrVsClass = adrVsBudget >= 0 ? 'net-pos' : 'net-neg';
     const adrVsSign = adrVsBudget >= 0 ? '+' : '';
+    const yoy = p.rns_yoy != null ? p.rns_yoy : (p.rns_last > 0 ? +((p.rns_actual / p.rns_last - 1) * 100).toFixed(1) : null);
+    const yoyClass = (yoy != null && yoy >= 0) ? 'net-pos' : 'net-neg';
+    const yoySign = (yoy != null && yoy >= 0) ? '+' : '';
+    const lt = p.lead_time || {};
 
     rows += `<tr>
       <td>${p.name}</td>
@@ -1137,6 +1165,11 @@ function renderPivot(data) {
       <td class="border-left-group">${fmt.won100m(p.rev_budget)}</td>
       <td>${fmt.won100m(p.rev_actual)}</td>
       <td><span class="ach-pill ${achClass(p.rev_achievement)}">${fmt.pct(p.rev_achievement)}%</span></td>
+      <td class="border-left-group" style="background:rgba(255,200,60,0.05);">${fmt.num(p.rns_last)}</td>
+      <td class="${yoyClass}" style="background:rgba(255,200,60,0.05);">${yoy != null ? yoySign + yoy.toFixed(1) + '%' : '—'}</td>
+      <td class="border-left-group" style="background:rgba(80,180,255,0.05);">${fmt.num(p.rns_fcst)}</td>
+      <td style="background:rgba(80,180,255,0.05);"><span class="ach-pill ${achClass(p.fcst_achievement)}">${fmt.pct(p.fcst_achievement)}%</span></td>
+      ${ltCell(lt,'same_day',true)}${ltCell(lt,'1_3d',false)}${ltCell(lt,'4_7d',false)}${ltCell(lt,'1_2w',false)}${ltCell(lt,'2_4w',false)}${ltCell(lt,'1_2m',false)}${ltCell(lt,'2m_plus',false)}
     </tr>`;
   }
 
@@ -1145,6 +1178,9 @@ function renderPivot(data) {
   const totAdrVsBudget = (tot.adr_vs_budget || 0);
   const totAdrVsSign = totAdrVsBudget >= 0 ? '+' : '';
   const totNetSign = tot.today_net >= 0 ? '+' : '';
+  const totYoy = tot.rns_yoy != null ? tot.rns_yoy : 0;
+  const totYoySign = totYoy >= 0 ? '+' : '';
+  const totYoyClass = totYoy >= 0 ? 'net-pos' : 'net-neg';
   rows += `<tr class="total-row">
     <td>합계</td>
     <td class="region-cell">전체</td>
@@ -1161,6 +1197,17 @@ function renderPivot(data) {
     <td class="border-left-group">${fmt.won100m(tot.rev_budget)}</td>
     <td>${fmt.won100m(tot.rev_actual)}</td>
     <td><span class="ach-pill ${achClass(tot.rev_achievement)}">${fmt.pct(tot.rev_achievement)}%</span></td>
+    <td class="border-left-group" style="background:rgba(255,200,60,0.05);">${fmt.num(tot.rns_last)}</td>
+    <td class="${totYoyClass}" style="background:rgba(255,200,60,0.05);">${totYoySign}${totYoy.toFixed(1)}%</td>
+    <td class="border-left-group" style="background:rgba(80,180,255,0.05);">—</td>
+    <td style="background:rgba(80,180,255,0.05);">—</td>
+    <td class="border-left-group" style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
+    <td style="background:rgba(120,200,120,0.05);">—</td>
   </tr>`;
 
   tbody.innerHTML = rows;
@@ -1283,10 +1330,14 @@ function applyFilters() {
 
   if (snap) {
     let summary = snap.summary;
+    let byProp = snap.byProperty;
     if (activeSeg !== '전체' && snap.segmentData && snap.segmentData[activeSeg]) {
       summary = snap.segmentData[activeSeg];
     }
-    const view = { ...rawData, summary, byProperty: snap.byProperty };
+    if (activeSeg !== '전체' && snap.byPropertySegment && snap.byPropertySegment[activeSeg]) {
+      byProp = snap.byPropertySegment[activeSeg];
+    }
+    const view = { ...rawData, summary, byProperty: byProp };
     renderPivot(view);
     updateKPIs(view);
   }
@@ -1304,7 +1355,7 @@ async function loadData() {
   } catch (e) {
     console.error('OTB data load failed:', e);
     const tbody = document.getElementById('pivot-tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패 (${e.message})</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="26" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패 (${e.message})</td></tr>`;
   }
 }
 

@@ -10,6 +10,7 @@ BI 26OTB 시트 기준으로 docs/data/otb_data.json 생성
 """
 import json
 import sys
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.request import urlopen
@@ -316,7 +317,7 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
 
 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
-                         adj_by_prop=None, holiday_factors=None):
+                         adj_by_prop=None, holiday_factors=None, lead_time_by_prop=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
     """
@@ -374,6 +375,19 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
         rev_ach = round((act_rev / bud_rev * 100), 1) if bud_rev > 0 else 0.0
+        rns_yoy = round((act_rn / lst_rn - 1) * 100, 1) if lst_rn > 0 else 0.0
+
+        # 리드타임 분포 (사업장별, 대상 월 합산)
+        lead_time = {}
+        if lead_time_by_prop:
+            lt_sum = defaultdict(int)
+            for pname in db_props:
+                prop_lt = lead_time_by_prop.get(pname, {})
+                for mk in target_keys:
+                    for bucket, cnt in prop_lt.get(mk, {}).items():
+                        lt_sum[bucket] += cnt
+            if lt_sum:
+                lead_time = dict(lt_sum)
 
         # FCST: 전년 비율 + 공휴일 보정
         if month_idx > 0 and adj_by_prop:
@@ -392,6 +406,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "rns_actual":      act_rn,
             "rns_achievement": rns_ach,
             "rns_last":        lst_rn,
+            "rns_yoy":         rns_yoy,
             "rns_fcst":        rns_fcst,
             "fcst_achievement": fcst_ach,
             "adr_budget":      round(bud_adr),
@@ -402,6 +417,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "today_booking":   0,
             "today_cancel":    0,
             "today_net":       0,
+            "lead_time":       lead_time,
         })
         tot_bud_rn  += bud_rn
         tot_act_rn  += act_rn
@@ -434,7 +450,50 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     seg_data = {}
     if db_seg is not None and seg_budgets is not None:
         seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx)
-    return {"byProperty": props, "summary": summary, "segmentData": seg_data}
+
+    # 세그먼트별 byProperty (각 세그먼트 단독 기준)
+    by_prop_seg = {}
+    if db_bps is not None and seg_budgets is not None:
+        for seg in SEGMENT_KEYS:
+            seg_props = []
+            for _, display_name, region, db_props in PROPERTY_DEFS:
+                sb = seg_budgets.get(display_name, {}).get(seg, {})
+                s_bud_rn  = sum(sb.get(l, {}).get("rn",    0) for l in bud_labels)
+                s_bud_rev = sum(sb.get(l, {}).get("rev_m", 0) for l in bud_labels)
+                s_bud_adr = (sum(sb.get(l, {}).get("adr", 0) * sb.get(l, {}).get("rn", 0)
+                                 for l in bud_labels) / s_bud_rn) if s_bud_rn > 0 else 0
+                s_act_rn = s_act_rev = 0
+                for mk in target_keys:
+                    for pname in db_props:
+                        m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
+                        s_act_rn  += m.get("booking_rn",  0)
+                        s_act_rev += m.get("booking_rev", 0.0)
+                s_rns_ach = round((s_act_rn / s_bud_rn * 100), 1) if s_bud_rn > 0 else 0.0
+                s_rev_ach = round((s_act_rev / s_bud_rev * 100), 1) if s_bud_rev > 0 else 0.0
+                s_act_adr = round((s_act_rev * 1000) / s_act_rn) if s_act_rn > 0 else 0
+                seg_props.append({
+                    "name": display_name,
+                    "region": region,
+                    "rns_budget":      s_bud_rn,
+                    "rns_actual":      s_act_rn,
+                    "rns_achievement": s_rns_ach,
+                    "rns_last":        0,
+                    "rns_yoy":         0.0,
+                    "rns_fcst":        s_act_rn,
+                    "fcst_achievement": s_rns_ach,
+                    "adr_budget":      round(s_bud_adr),
+                    "adr_actual":      s_act_adr,
+                    "rev_budget":      round(s_bud_rev * 1_000_000),
+                    "rev_actual":      round(s_act_rev * 1_000_000),
+                    "rev_achievement": s_rev_ach,
+                    "today_booking":   0,
+                    "today_cancel":    0,
+                    "today_net":       0,
+                    "lead_time":       {},
+                })
+            by_prop_seg[seg] = seg_props
+
+    return {"byProperty": props, "byPropertySegment": by_prop_seg, "summary": summary, "segmentData": seg_data}
 
 
 def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_prop=None):
@@ -521,6 +580,9 @@ def main():
         yoy_base_date = yoy_adj_section["2025"].get("base_date_full", "")
     print(f"  YoY 동기간 보정 로드: 사업장 수={len(adj_by_prop)}, base={yoy_base_date}")
 
+    # 사업장별 리드타임 분포
+    lead_time_by_prop = db.get("lead_time_by_property", {})
+
     # 공휴일 보정 계수 (4·5·6월)
     print("  공휴일 보정 계수 계산 중...")
     holiday_factors = build_holiday_factors(target_months=(4, 5, 6), cur_year=2026, base_year=2025)
@@ -538,6 +600,7 @@ def main():
             db_bp, budgets, m,
             db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
             adj_by_prop=adj_by_prop, holiday_factors=holiday_factors,
+            lead_time_by_prop=lead_time_by_prop,
         )
 
     # today 데이터를 모든 월 스냅샷에 주입
@@ -551,6 +614,13 @@ def main():
             prop["today_booking"] = prop_booking
             prop["today_cancel"]  = 0
             prop["today_net"]     = prop_booking
+        for seg_props in snap.get("byPropertySegment", {}).values():
+            for prop in seg_props:
+                db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
+                prop_booking = get_today_booking_by_props(db, today_date, db_props)
+                prop["today_booking"] = prop_booking
+                prop["today_cancel"]  = 0
+                prop["today_net"]     = prop_booking
 
     # Chart data (동기간 보정 반영)
     monthly_chart = build_monthly_chart(
