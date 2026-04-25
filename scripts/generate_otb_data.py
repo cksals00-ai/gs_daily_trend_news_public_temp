@@ -8,6 +8,7 @@ BI 26OTB 시트 기준으로 docs/data/otb_data.json 생성
 - 전년 실적: db_aggregated.json 2025년 동월
 - 월별 분리 데이터 포함 (월 필터 작동용)
 """
+import calendar
 import json
 import sys
 from collections import defaultdict
@@ -125,7 +126,7 @@ def sum_db(db_bp, prop_names, month_key):
         m = db_bp.get(pname, {}).get(month_key, {})
         total_rn  += m.get("booking_rn",  0)
         total_rev += m.get("booking_rev", 0.0)
-    adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0
+    adr = round((total_rev * 1_000_000) / total_rn) if total_rn > 0 else 0
     return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
 
 
@@ -139,7 +140,7 @@ def sum_db_segments(db_bps, prop_names, month_key):
             m = prop_segs.get(seg, {}).get(month_key, {})
             total_rn  += m.get("booking_rn",  0)
             total_rev += m.get("booking_rev", 0.0)
-    adr = round((total_rev * 1000) / total_rn) if total_rn > 0 else 0
+    adr = round((total_rev * 1_000_000) / total_rn) if total_rn > 0 else 0
     return {"rn": total_rn, "rev_m": round(total_rev, 2), "adr": adr}
 
 
@@ -199,30 +200,42 @@ def get_adj_rn(adj_by_prop, prop_names, month_key):
     return total
 
 
-def _calc_fcst(act_rn, db_props, last_month_key, adj_by_prop, bud_rn, holiday_factor=1.0):
-    """전년 비율 + 공휴일 보정 기반 월말 FCST 계산."""
-    if not adj_by_prop:
-        rns_fcst = act_rn
-        return rns_fcst, (round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0)
-    as_of_total = 0
-    orig_total  = 0
-    for pname in db_props:
-        adj_m = adj_by_prop.get(pname, {}).get(last_month_key, {})
-        bk_rn = adj_m.get("booking_rn", 0)
-        ad_rn = adj_m.get("adjustment_rn", 0)
-        as_of_total += bk_rn
-        orig_total  += (bk_rn - ad_rn)
-    if orig_total > 50 and as_of_total > 0:
-        ratio = as_of_total / orig_total
-        rns_fcst = round(act_rn / ratio * holiday_factor)
+def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
+    """elapsed_ratio 기반 월말 FCST 계산.
+    진행 중인 월: (오늘 일자 / 해당월 총일수)로 extrapolate
+    완료된 과거 월: ratio=1.0 (실적=FCST)
+    미래 월: elapsed_ratio=0 → 실적 그대로 반환
+    """
+    cur_year  = now_kst.year
+    cur_month = now_kst.month
+
+    if cur_year == 2026 and month_num == cur_month:
+        days_in_month = calendar.monthrange(cur_year, month_num)[1]
+        elapsed_ratio = now_kst.day / days_in_month
+    elif month_num < cur_month or cur_year < 2026:
+        elapsed_ratio = 1.0
+    else:
+        elapsed_ratio = 0.0
+
+    if elapsed_ratio > 0.1:
+        rns_fcst = round(act_rn / elapsed_ratio)
+        rev_fcst = act_rev / elapsed_ratio
     else:
         rns_fcst = act_rn
-    fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
-    return rns_fcst, fcst_ach
+        rev_fcst = act_rev
+
+    adr_fcst     = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
+    fcst_ach     = round(rns_fcst / bud_rn  * 100, 1) if bud_rn  > 0 else 0.0
+    rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+
+    return rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach
 
 
-def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors, months=(4, 5, 6)):
+def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
+                    months=(4, 5, 6), now_kst=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성."""
+    if now_kst is None:
+        now_kst = datetime.now(KST)
     rows = []
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         month_data = {}
@@ -244,7 +257,6 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 base_rn += adj_m.get("booking_rn", 0)
                 adj_rn  += adj_m.get("adjustment_rn", 0)
             if base_rn == 0:
-                # adj_by_prop에 없으면 db_bp에서 직접
                 base_rn = sum_db(db_bp, db_props, mk_25)["rn"]
 
             if seg_budgets:
@@ -252,8 +264,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
             else:
                 bud_rn = budgets.get(display_name, {}).get(bud_label, {}).get("rn", 0)
 
-            hf = holiday_factors.get(m, 1.0)
-            rns_fcst, fcst_ach = _calc_fcst(act_rn, db_props, mk_25, adj_by_prop, bud_rn, holiday_factor=hf)
+            rns_fcst, _, _, fcst_ach, _ = _calc_fcst(act_rn, 0, m, now_kst, bud_rn)
 
             yoy = round((act_rn / base_rn - 1) * 100, 1) if base_rn > 0 else None
             month_data[m] = {
@@ -317,10 +328,13 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
 
 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
-                         adj_by_prop=None, holiday_factors=None, lead_time_by_prop=None):
+                         adj_by_prop=None, holiday_factors=None, lead_time_by_prop=None, now_kst=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
     """
+    if now_kst is None:
+        now_kst = datetime.now(KST)
+
     if month_idx == 0:
         target_keys = MONTHS_26
         last_keys   = MONTHS_25
@@ -331,8 +345,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         bud_labels  = [BUDGET_MONTH_LABEL[month_idx - 1]]
 
     props = []
-    tot_bud_rn = tot_act_rn = tot_lst_rn = 0
-    tot_bud_rev = tot_act_rev = 0.0
+    tot_bud_rn = tot_act_rn = tot_lst_rn = tot_rns_fcst = 0
+    tot_bud_rev = tot_act_rev = tot_lst_rev = tot_rev_fcst = 0.0
 
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         # Budget: OTA+G-OTA+Inbound 세그먼트만 합산
@@ -360,7 +374,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 d = sum_db(db_bp, db_props, mk)
                 act_rn  += d["rn"]
                 act_rev += d["rev_m"]
-        act_adr = round((act_rev * 1000) / act_rn) if act_rn > 0 else 0
+        act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
         # 전년 합산 (동기간 보정 반영)
         lst_rn = 0
@@ -372,6 +386,12 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             else:
                 d = sum_db(db_bp, db_props, mk)
                 lst_rn += d["rn"]
+
+        # 전년 매출 (adj_by_prop에는 booking_rev 없으므로 by_property에서 직접)
+        lst_rev = 0.0
+        for mk in last_keys:
+            lst_rev += sum_db(db_bp, db_props, mk)["rev_m"]
+        lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
         rev_ach = round((act_rev / bud_rev * 100), 1) if bud_rev > 0 else 0.0
@@ -389,15 +409,36 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             if lt_sum:
                 lead_time = dict(lt_sum)
 
-        # FCST: 전년 비율 + 공휴일 보정
-        if month_idx > 0 and adj_by_prop:
-            lk = last_keys[0]
-            month_num = month_idx
-            hf = (holiday_factors or {}).get(month_num, 1.0)
-            rns_fcst, fcst_ach = _calc_fcst(act_rn, db_props, lk, adj_by_prop, bud_rn, holiday_factor=hf)
+        # FCST: elapsed_ratio 기반
+        if month_idx > 0:
+            rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach = _calc_fcst(
+                act_rn, act_rev, month_idx, now_kst, bud_rn, bud_rev
+            )
         else:
-            rns_fcst = act_rn
-            fcst_ach = rns_ach
+            # 전체 월: 개별 월(1~12월)별 FCST를 합산
+            rns_fcst = 0
+            rev_fcst = 0.0
+            for mi in range(1, 13):
+                mk_mi = f"2026{mi:02d}"
+                if db_bps is not None:
+                    mi_d = sum_db_segments(db_bps, db_props, mk_mi)
+                else:
+                    mi_d = sum_db(db_bp, db_props, mk_mi)
+                mi_rn = mi_d["rn"]
+                mi_rev = mi_d["rev_m"]
+                if seg_budgets:
+                    mi_bud = sum_seg_budget(seg_budgets, display_name, [BUDGET_MONTH_LABEL[mi - 1]])
+                    mi_bud_rn = mi_bud["rn"]
+                    mi_bud_rev = mi_bud["rev_m"]
+                else:
+                    mi_bud_rn = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
+                    mi_bud_rev = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rev_m", 0)
+                mi_rns_f, mi_rev_f, _, _, _ = _calc_fcst(mi_rn, mi_rev, mi, now_kst, mi_bud_rn, mi_bud_rev)
+                rns_fcst += mi_rns_f
+                rev_fcst += mi_rev_f
+            adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
+            fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+            rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
 
         props.append({
             "name":            display_name,
@@ -411,25 +452,43 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "fcst_achievement": fcst_ach,
             "adr_budget":      round(bud_adr),
             "adr_actual":      act_adr,
-            "rev_budget":      round(bud_rev * 1_000_000),   # 百万 → 원
+            "adr_last":        lst_adr,
+            "rev_budget":      round(bud_rev * 1_000_000),
             "rev_actual":      round(act_rev * 1_000_000),
+            "rev_last":        round(lst_rev * 1_000_000),
             "rev_achievement": rev_ach,
+            "adr_yoy":         round((act_adr / lst_adr - 1) * 100, 1) if lst_adr > 0 else 0.0,
+            "rev_yoy":         round((act_rev / lst_rev - 1) * 100, 1) if lst_rev > 0 else 0.0,
+            "adr_fcst":        adr_fcst,
+            "rev_fcst":        round(rev_fcst * 1_000_000),
+            "adr_fcst_achievement": round(adr_fcst / bud_adr * 100, 1) if bud_adr > 0 else 0.0,
+            "rev_fcst_achievement": rev_fcst_ach,
             "today_booking":   0,
             "today_cancel":    0,
             "today_net":       0,
+            "today_booking_rev": 0,
+            "today_cancel_rev":  0,
+            "today_net_rev":     0,
             "lead_time":       lead_time,
         })
-        tot_bud_rn  += bud_rn
-        tot_act_rn  += act_rn
-        tot_lst_rn  += lst_rn
-        tot_bud_rev += bud_rev
-        tot_act_rev += act_rev
+        tot_bud_rn   += bud_rn
+        tot_act_rn   += act_rn
+        tot_lst_rn   += lst_rn
+        tot_rns_fcst += rns_fcst
+        tot_bud_rev  += bud_rev
+        tot_act_rev  += act_rev
+        tot_lst_rev  += lst_rev
+        tot_rev_fcst += rev_fcst
 
-    tot_rns_ach = round(tot_act_rn / tot_bud_rn * 100, 1) if tot_bud_rn > 0 else 0.0
-    tot_rev_ach = round(tot_act_rev / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
-    tot_adr_act = round((tot_act_rev * 1_000_000) / tot_act_rn) if tot_act_rn > 0 else 0
-    tot_adr_bud = round((tot_bud_rev * 1_000_000) / tot_bud_rn) if tot_bud_rn > 0 else 0
-    tot_yoy = round((tot_act_rn / tot_lst_rn - 1) * 100, 1) if tot_lst_rn > 0 else 0.0
+    tot_rns_ach  = round(tot_act_rn  / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
+    tot_rev_ach  = round(tot_act_rev / tot_bud_rev  * 100, 1) if tot_bud_rev  > 0 else 0.0
+    tot_adr_act  = round(tot_act_rev * 1_000_000 / tot_act_rn)  if tot_act_rn  > 0 else 0
+    tot_adr_bud  = round(tot_bud_rev * 1_000_000 / tot_bud_rn)  if tot_bud_rn  > 0 else 0
+    tot_adr_lst  = round(tot_lst_rev * 1_000_000 / tot_lst_rn)  if tot_lst_rn  > 0 else 0
+    tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
+    tot_yoy      = round((tot_act_rn  / tot_lst_rn  - 1) * 100, 1) if tot_lst_rn  > 0 else 0.0
+    tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
+    tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
 
     summary = {
         "rns_budget":      tot_bud_rn,
@@ -437,14 +496,27 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "rns_achievement": tot_rns_ach,
         "rns_last":        tot_lst_rn,
         "rns_yoy":         tot_yoy,
+        "rns_fcst":        tot_rns_fcst,
+        "fcst_achievement": tot_fcst_ach,
         "today_booking":   0,
         "today_cancel":    0,
         "today_net":       0,
+        "today_booking_rev": 0,
+        "today_cancel_rev":  0,
+        "today_net_rev":     0,
         "rev_budget":      round(tot_bud_rev * 1_000_000),
         "rev_actual":      round(tot_act_rev * 1_000_000),
+        "rev_last":        round(tot_lst_rev * 1_000_000),
         "rev_achievement": tot_rev_ach,
+        "rev_yoy":         round((tot_act_rev / tot_lst_rev - 1) * 100, 1) if tot_lst_rev > 0 else 0.0,
+        "rev_fcst":        round(tot_rev_fcst * 1_000_000),
+        "rev_fcst_achievement": tot_rev_fcst_ach,
         "adr_budget":      tot_adr_bud,
         "adr_actual":      tot_adr_act,
+        "adr_last":        tot_adr_lst,
+        "adr_yoy":         round((tot_adr_act / tot_adr_lst - 1) * 100, 1) if tot_adr_lst > 0 else 0.0,
+        "adr_fcst":        tot_adr_fcst,
+        "adr_fcst_achievement": round(tot_adr_fcst / tot_adr_bud * 100, 1) if tot_adr_bud > 0 else 0.0,
         "adr_vs_budget":   round((tot_adr_act / tot_adr_bud - 1) * 100, 1) if tot_adr_bud > 0 else 0.0,
     }
     seg_data = {}
@@ -470,7 +542,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                         s_act_rev += m.get("booking_rev", 0.0)
                 s_rns_ach = round((s_act_rn / s_bud_rn * 100), 1) if s_bud_rn > 0 else 0.0
                 s_rev_ach = round((s_act_rev / s_bud_rev * 100), 1) if s_bud_rev > 0 else 0.0
-                s_act_adr = round((s_act_rev * 1000) / s_act_rn) if s_act_rn > 0 else 0
+                s_act_adr = round((s_act_rev * 1_000_000) / s_act_rn) if s_act_rn > 0 else 0
                 seg_props.append({
                     "name": display_name,
                     "region": region,
@@ -551,11 +623,13 @@ def get_today_summary(db, now_kst):
 
 
 def get_today_booking_by_props(db, date_str, db_props):
-    """pickup_daily_by_property에서 특정 날짜의 사업장별 예약 RN 합산."""
+    """pickup_daily_by_property에서 특정 날짜의 사업장별 예약 RN, REV 합산."""
     if not date_str:
-        return 0
+        return 0, 0
     pdbp = db.get("pickup_daily_by_property", {})
-    return sum(pdbp.get(pname, {}).get(date_str, {}).get("rn", 0) for pname in db_props)
+    rn  = sum(pdbp.get(pname, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
+    rev = sum(pdbp.get(pname, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    return rn, rev
 
 
 def main():
@@ -600,7 +674,7 @@ def main():
             db_bp, budgets, m,
             db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
             adj_by_prop=adj_by_prop, holiday_factors=holiday_factors,
-            lead_time_by_prop=lead_time_by_prop,
+            lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
         )
 
     # today 데이터를 모든 월 스냅샷에 주입
@@ -610,14 +684,17 @@ def main():
         snap["summary"]["today_net"]     = today_net
         for prop in snap["byProperty"]:
             db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
-            prop_booking = get_today_booking_by_props(db, today_date, db_props)
-            prop["today_booking"] = prop_booking
-            prop["today_cancel"]  = 0
-            prop["today_net"]     = prop_booking
+            prop_booking, prop_booking_rev = get_today_booking_by_props(db, today_date, db_props)
+            prop["today_booking"]     = prop_booking
+            prop["today_cancel"]      = 0
+            prop["today_net"]         = prop_booking
+            prop["today_booking_rev"] = round(prop_booking_rev * 1_000_000)
+            prop["today_cancel_rev"]  = 0
+            prop["today_net_rev"]     = round(prop_booking_rev * 1_000_000)
         for seg_props in snap.get("byPropertySegment", {}).values():
             for prop in seg_props:
                 db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
-                prop_booking = get_today_booking_by_props(db, today_date, db_props)
+                prop_booking, _ = get_today_booking_by_props(db, today_date, db_props)
                 prop["today_booking"] = prop_booking
                 prop["today_cancel"]  = 0
                 prop["today_net"]     = prop_booking
@@ -629,7 +706,8 @@ def main():
 
     # YoY 사업장별 추이 테이블 (4·5·6월)
     yoy_table = build_yoy_table(
-        db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors, months=(4, 5, 6)
+        db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
+        months=(4, 5, 6), now_kst=now_kst,
     )
 
     output = {
