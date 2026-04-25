@@ -199,26 +199,47 @@ def get_adj_rn(adj_by_prop, prop_names, month_key):
     return total
 
 
-def _calc_fcst(act_rn, db_props, last_month_key, adj_by_prop, bud_rn, holiday_factor=1.0):
-    """전년 비율 + 공휴일 보정 기반 월말 FCST 계산."""
-    if not adj_by_prop:
-        rns_fcst = act_rn
-        return rns_fcst, (round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0)
-    as_of_total = 0
-    orig_total  = 0
-    for pname in db_props:
-        adj_m = adj_by_prop.get(pname, {}).get(last_month_key, {})
-        bk_rn = adj_m.get("booking_rn", 0)
-        ad_rn = adj_m.get("adjustment_rn", 0)
-        as_of_total += bk_rn
-        orig_total  += (bk_rn - ad_rn)
-    if orig_total > 50 and as_of_total > 0:
-        ratio = as_of_total / orig_total
-        rns_fcst = round(act_rn / ratio * holiday_factor)
+def _calc_fcst_full(act_rn, act_rev_m, db_props, last_month_key, adj_by_prop, db_bp,
+                    bud_rn, bud_rev_m, holiday_factor=1.0):
+    """전년 전체 RN × YoY growth rate 기반 월말 FCST (RNS + REV).
+    공식: FCST = 전년전체 × (금년동기 / 전년동기) × holiday_factor
+    """
+    # 전년 동기간 RN/REV (adj_by_prop에서)
+    rns_last_adj = 0
+    rev_last_adj = 0.0
+    if adj_by_prop:
+        for pname in db_props:
+            adj_m = adj_by_prop.get(pname, {}).get(last_month_key, {})
+            if adj_m:
+                rns_last_adj += adj_m.get("booking_rn", 0)
+                bkrev = adj_m.get("booking_rev", None)
+                if bkrev is not None:
+                    rev_last_adj += bkrev
+                else:
+                    rev_last_adj += db_bp.get(pname, {}).get(last_month_key, {}).get("booking_rev", 0.0)
+
+    # 전년 전체 월 RN/REV (db_bp — 동기간 보정 전 원본)
+    d_last_full = sum_db(db_bp, db_props, last_month_key)
+    rns_last_full = d_last_full["rn"]
+    rev_last_full = d_last_full["rev_m"]
+
+    # RNS FCST
+    if rns_last_adj > 50 and rns_last_full > 0:
+        growth_rn = act_rn / rns_last_adj
+        rns_fcst = round(rns_last_full * growth_rn * holiday_factor)
     else:
         rns_fcst = act_rn
+
+    # REV FCST
+    if rev_last_adj > 0.5 and rev_last_full > 0:
+        growth_rev = act_rev_m / rev_last_adj
+        rev_fcst_m = round(rev_last_full * growth_rev * holiday_factor, 2)
+    else:
+        rev_fcst_m = act_rev_m
+
     fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
-    return rns_fcst, fcst_ach
+    rev_fcst_ach = round(rev_fcst_m / bud_rev_m * 100, 1) if bud_rev_m > 0 else 0.0
+    return rns_fcst, rev_fcst_m, fcst_ach, rev_fcst_ach
 
 
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors, months=(4, 5, 6)):
@@ -333,6 +354,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     props = []
     tot_bud_rn = tot_act_rn = tot_lst_rn = 0
     tot_bud_rev = tot_act_rev = 0.0
+    tot_lst_rev = 0.0
+    tot_fcst_rn = 0
+    tot_fcst_rev_m = 0.0
 
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         # Budget: OTA+G-OTA+Inbound 세그먼트만 합산
@@ -349,7 +373,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             bud_rev = sum(bud_monthly.get(l, {}).get("rev_m", 0) for l in bud_labels)
 
         # 실적: by_property_segment → OTA+G-OTA+Inbound만
-        act_rn = act_rev = 0
+        act_rn = 0
+        act_rev = 0.0
         if db_bps is not None:
             for mk in target_keys:
                 d = sum_db_segments(db_bps, db_props, mk)
@@ -362,22 +387,37 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round((act_rev * 1000) / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 (동기간 보정 반영)
+        # 전년 합산 (동기간 보정 반영, REV 포함)
         lst_rn = 0
+        lst_rev = 0.0
         for mk in last_keys:
             if adj_by_prop:
                 for pname in db_props:
                     adj_m = adj_by_prop.get(pname, {}).get(mk, {})
-                    lst_rn += adj_m.get("booking_rn", 0) if adj_m else sum_db(db_bp, [pname], mk)["rn"]
+                    if adj_m:
+                        lst_rn += adj_m.get("booking_rn", 0)
+                        bkrev = adj_m.get("booking_rev", None)
+                        if bkrev is not None:
+                            lst_rev += bkrev
+                        else:
+                            lst_rev += db_bp.get(pname, {}).get(mk, {}).get("booking_rev", 0.0)
+                    else:
+                        d = sum_db(db_bp, [pname], mk)
+                        lst_rn  += d["rn"]
+                        lst_rev += d["rev_m"]
             else:
                 d = sum_db(db_bp, db_props, mk)
-                lst_rn += d["rn"]
+                lst_rn  += d["rn"]
+                lst_rev += d["rev_m"]
+        lst_adr = round((lst_rev * 1000) / lst_rn) if lst_rn > 0 else 0
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
         rev_ach = round((act_rev / bud_rev * 100), 1) if bud_rev > 0 else 0.0
         rns_yoy = round((act_rn / lst_rn - 1) * 100, 1) if lst_rn > 0 else 0.0
+        adr_yoy = round((act_adr / lst_adr - 1) * 100, 1) if lst_adr > 0 else 0.0
+        rev_yoy = round((act_rev / lst_rev - 1) * 100, 1) if lst_rev > 0 else 0.0
 
-        # 리드타임 분포 (사업장별, 대상 월 합산)
+        # 리드타임 분포
         lead_time = {}
         if lead_time_by_prop:
             lt_sum = defaultdict(int)
@@ -389,63 +429,144 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             if lt_sum:
                 lead_time = dict(lt_sum)
 
-        # FCST: 전년 비율 + 공휴일 보정
-        if month_idx > 0 and adj_by_prop:
+        # FCST: 전년전체 × YoY growth rate
+        if month_idx == 0:
+            # 전체: 각 월 FCST 합산
+            rns_fcst = 0
+            rev_fcst_m = 0.0
+            for mi in range(1, 13):
+                mk26 = MONTHS_26[mi - 1]
+                mk25 = MONTHS_25[mi - 1]
+                if db_bps is not None:
+                    d26 = sum_db_segments(db_bps, db_props, mk26)
+                else:
+                    d26 = sum_db(db_bp, db_props, mk26)
+                a_rn = d26["rn"]
+                a_rev = d26["rev_m"]
+                if seg_budgets:
+                    bl = BUDGET_MONTH_LABEL[mi - 1]
+                    b_data = sum_seg_budget(seg_budgets, display_name, [bl])
+                    b_rn_m = b_data["rn"]
+                    b_rev_m = b_data["rev_m"]
+                else:
+                    bl = BUDGET_MONTH_LABEL[mi - 1]
+                    bm = budgets.get(display_name, {}).get(bl, {})
+                    b_rn_m = bm.get("rn", 0)
+                    b_rev_m = bm.get("rev_m", 0.0)
+                hf = (holiday_factors or {}).get(mi, 1.0)
+                r_fcst_m, r_rev_m, _, _ = _calc_fcst_full(
+                    a_rn, a_rev, db_props, mk25, adj_by_prop, db_bp, b_rn_m, b_rev_m, holiday_factor=hf
+                )
+                rns_fcst += r_fcst_m
+                rev_fcst_m += r_rev_m
+            rev_fcst_m = round(rev_fcst_m, 2)
+            fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+            rev_fcst_ach = round(rev_fcst_m / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+        elif adj_by_prop:
             lk = last_keys[0]
-            month_num = month_idx
-            hf = (holiday_factors or {}).get(month_num, 1.0)
-            rns_fcst, fcst_ach = _calc_fcst(act_rn, db_props, lk, adj_by_prop, bud_rn, holiday_factor=hf)
+            hf = (holiday_factors or {}).get(month_idx, 1.0)
+            rns_fcst, rev_fcst_m, fcst_ach, rev_fcst_ach = _calc_fcst_full(
+                act_rn, act_rev, db_props, lk, adj_by_prop, db_bp, bud_rn, bud_rev, holiday_factor=hf
+            )
         else:
             rns_fcst = act_rn
+            rev_fcst_m = act_rev
             fcst_ach = rns_ach
+            rev_fcst_ach = rev_ach
+
+        adr_fcst = round((rev_fcst_m * 1000) / rns_fcst) if rns_fcst > 0 else 0
+        bud_adr_int = round(bud_adr)
+        adr_ach = round(act_adr / bud_adr_int * 100, 1) if bud_adr_int > 0 else 0.0
+        adr_fcst_ach = round(adr_fcst / bud_adr_int * 100, 1) if bud_adr_int > 0 else 0.0
 
         props.append({
-            "name":            display_name,
-            "region":          region,
-            "rns_budget":      bud_rn,
-            "rns_actual":      act_rn,
-            "rns_achievement": rns_ach,
-            "rns_last":        lst_rn,
-            "rns_yoy":         rns_yoy,
-            "rns_fcst":        rns_fcst,
-            "fcst_achievement": fcst_ach,
-            "adr_budget":      round(bud_adr),
-            "adr_actual":      act_adr,
-            "rev_budget":      round(bud_rev * 1_000_000),   # 百万 → 원
-            "rev_actual":      round(act_rev * 1_000_000),
-            "rev_achievement": rev_ach,
-            "today_booking":   0,
-            "today_cancel":    0,
-            "today_net":       0,
-            "lead_time":       lead_time,
+            "name":                  display_name,
+            "region":                region,
+            "rns_budget":            bud_rn,
+            "rns_actual":            act_rn,
+            "rns_achievement":       rns_ach,
+            "rns_last":              lst_rn,
+            "rns_yoy":               rns_yoy,
+            "rns_fcst":              rns_fcst,
+            "fcst_achievement":      fcst_ach,
+            "adr_budget":            bud_adr_int,
+            "adr_actual":            act_adr,
+            "adr_achievement":       adr_ach,
+            "adr_last":              lst_adr,
+            "adr_yoy":               adr_yoy,
+            "adr_fcst":              adr_fcst,
+            "adr_fcst_achievement":  adr_fcst_ach,
+            "rev_budget":            round(bud_rev * 1_000_000),
+            "rev_actual":            round(act_rev * 1_000_000),
+            "rev_achievement":       rev_ach,
+            "rev_last":              round(lst_rev * 1_000_000),
+            "rev_yoy":               rev_yoy,
+            "rev_fcst":              round(rev_fcst_m * 1_000_000),
+            "rev_fcst_achievement":  rev_fcst_ach,
+            "today_booking":         0,
+            "today_cancel":          0,
+            "today_net":             0,
+            "today_booking_rev":     0,
+            "today_cancel_rev":      0,
+            "today_net_rev":         0,
+            "today_booking_adr":     0,
+            "today_cancel_adr":      0,
+            "today_net_adr":         0,
+            "lead_time":             lead_time,
         })
-        tot_bud_rn  += bud_rn
-        tot_act_rn  += act_rn
-        tot_lst_rn  += lst_rn
-        tot_bud_rev += bud_rev
-        tot_act_rev += act_rev
+        tot_bud_rn     += bud_rn
+        tot_act_rn     += act_rn
+        tot_lst_rn     += lst_rn
+        tot_bud_rev    += bud_rev
+        tot_act_rev    += act_rev
+        tot_lst_rev    += lst_rev
+        tot_fcst_rn    += rns_fcst
+        tot_fcst_rev_m += rev_fcst_m
 
-    tot_rns_ach = round(tot_act_rn / tot_bud_rn * 100, 1) if tot_bud_rn > 0 else 0.0
-    tot_rev_ach = round(tot_act_rev / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
-    tot_adr_act = round((tot_act_rev * 1_000_000) / tot_act_rn) if tot_act_rn > 0 else 0
-    tot_adr_bud = round((tot_bud_rev * 1_000_000) / tot_bud_rn) if tot_bud_rn > 0 else 0
-    tot_yoy = round((tot_act_rn / tot_lst_rn - 1) * 100, 1) if tot_lst_rn > 0 else 0.0
+    tot_rns_ach     = round(tot_act_rn / tot_bud_rn * 100, 1) if tot_bud_rn > 0 else 0.0
+    tot_rev_ach     = round(tot_act_rev / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
+    tot_adr_act     = round((tot_act_rev * 1_000_000) / tot_act_rn) if tot_act_rn > 0 else 0
+    tot_adr_bud     = round((tot_bud_rev * 1_000_000) / tot_bud_rn) if tot_bud_rn > 0 else 0
+    tot_adr_last    = round((tot_lst_rev * 1_000_000) / tot_lst_rn) if tot_lst_rn > 0 else 0
+    tot_yoy         = round((tot_act_rn / tot_lst_rn - 1) * 100, 1) if tot_lst_rn > 0 else 0.0
+    tot_adr_yoy     = round((tot_adr_act / tot_adr_last - 1) * 100, 1) if tot_adr_last > 0 else 0.0
+    tot_rev_yoy     = round((tot_act_rev / tot_lst_rev - 1) * 100, 1) if tot_lst_rev > 0 else 0.0
+    tot_fcst_ach    = round(tot_fcst_rn / tot_bud_rn * 100, 1) if tot_bud_rn > 0 else 0.0
+    tot_adr_fcst    = round((tot_fcst_rev_m * 1_000_000) / tot_fcst_rn) if tot_fcst_rn > 0 else 0
+    tot_rev_fcst_ach = round(tot_fcst_rev_m / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
+    tot_adr_fcst_ach = round(tot_adr_fcst / tot_adr_bud * 100, 1) if tot_adr_bud > 0 else 0.0
+    tot_adr_ach     = round(tot_adr_act / tot_adr_bud * 100, 1) if tot_adr_bud > 0 else 0.0
 
     summary = {
-        "rns_budget":      tot_bud_rn,
-        "rns_actual":      tot_act_rn,
-        "rns_achievement": tot_rns_ach,
-        "rns_last":        tot_lst_rn,
-        "rns_yoy":         tot_yoy,
-        "today_booking":   0,
-        "today_cancel":    0,
-        "today_net":       0,
-        "rev_budget":      round(tot_bud_rev * 1_000_000),
-        "rev_actual":      round(tot_act_rev * 1_000_000),
-        "rev_achievement": tot_rev_ach,
-        "adr_budget":      tot_adr_bud,
-        "adr_actual":      tot_adr_act,
-        "adr_vs_budget":   round((tot_adr_act / tot_adr_bud - 1) * 100, 1) if tot_adr_bud > 0 else 0.0,
+        "rns_budget":           tot_bud_rn,
+        "rns_actual":           tot_act_rn,
+        "rns_achievement":      tot_rns_ach,
+        "rns_last":             tot_lst_rn,
+        "rns_yoy":              tot_yoy,
+        "rns_fcst":             tot_fcst_rn,
+        "fcst_achievement":     tot_fcst_ach,
+        "adr_budget":           tot_adr_bud,
+        "adr_actual":           tot_adr_act,
+        "adr_achievement":      tot_adr_ach,
+        "adr_last":             tot_adr_last,
+        "adr_yoy":              tot_adr_yoy,
+        "adr_fcst":             tot_adr_fcst,
+        "adr_fcst_achievement": tot_adr_fcst_ach,
+        "adr_vs_budget":        round((tot_adr_act / tot_adr_bud - 1) * 100, 1) if tot_adr_bud > 0 else 0.0,
+        "today_booking":        0,
+        "today_cancel":         0,
+        "today_net":            0,
+        "today_booking_rev":    0,
+        "today_cancel_rev":     0,
+        "today_net_rev":        0,
+        "today_booking_adr":    0,
+        "rev_budget":           round(tot_bud_rev * 1_000_000),
+        "rev_actual":           round(tot_act_rev * 1_000_000),
+        "rev_achievement":      tot_rev_ach,
+        "rev_last":             round(tot_lst_rev * 1_000_000),
+        "rev_yoy":              tot_rev_yoy,
+        "rev_fcst":             round(tot_fcst_rev_m * 1_000_000),
+        "rev_fcst_achievement": tot_rev_fcst_ach,
     }
     seg_data = {}
     if db_seg is not None and seg_budgets is not None:
@@ -462,7 +583,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_bud_rev = sum(sb.get(l, {}).get("rev_m", 0) for l in bud_labels)
                 s_bud_adr = (sum(sb.get(l, {}).get("adr", 0) * sb.get(l, {}).get("rn", 0)
                                  for l in bud_labels) / s_bud_rn) if s_bud_rn > 0 else 0
-                s_act_rn = s_act_rev = 0
+                s_act_rn = 0
+                s_act_rev = 0.0
                 for mk in target_keys:
                     for pname in db_props:
                         m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
@@ -472,24 +594,39 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_rev_ach = round((s_act_rev / s_bud_rev * 100), 1) if s_bud_rev > 0 else 0.0
                 s_act_adr = round((s_act_rev * 1000) / s_act_rn) if s_act_rn > 0 else 0
                 seg_props.append({
-                    "name": display_name,
-                    "region": region,
-                    "rns_budget":      s_bud_rn,
-                    "rns_actual":      s_act_rn,
-                    "rns_achievement": s_rns_ach,
-                    "rns_last":        0,
-                    "rns_yoy":         0.0,
-                    "rns_fcst":        s_act_rn,
-                    "fcst_achievement": s_rns_ach,
-                    "adr_budget":      round(s_bud_adr),
-                    "adr_actual":      s_act_adr,
-                    "rev_budget":      round(s_bud_rev * 1_000_000),
-                    "rev_actual":      round(s_act_rev * 1_000_000),
-                    "rev_achievement": s_rev_ach,
-                    "today_booking":   0,
-                    "today_cancel":    0,
-                    "today_net":       0,
-                    "lead_time":       {},
+                    "name":                  display_name,
+                    "region":                region,
+                    "rns_budget":            s_bud_rn,
+                    "rns_actual":            s_act_rn,
+                    "rns_achievement":       s_rns_ach,
+                    "rns_last":              0,
+                    "rns_yoy":               0.0,
+                    "rns_fcst":              s_act_rn,
+                    "fcst_achievement":      s_rns_ach,
+                    "adr_budget":            round(s_bud_adr),
+                    "adr_actual":            s_act_adr,
+                    "adr_achievement":       0.0,
+                    "adr_last":              0,
+                    "adr_yoy":               0.0,
+                    "adr_fcst":              s_act_adr,
+                    "adr_fcst_achievement":  0.0,
+                    "rev_budget":            round(s_bud_rev * 1_000_000),
+                    "rev_actual":            round(s_act_rev * 1_000_000),
+                    "rev_achievement":       s_rev_ach,
+                    "rev_last":              0,
+                    "rev_yoy":               0.0,
+                    "rev_fcst":              round(s_act_rev * 1_000_000),
+                    "rev_fcst_achievement":  s_rev_ach,
+                    "today_booking":         0,
+                    "today_cancel":          0,
+                    "today_net":             0,
+                    "today_booking_rev":     0,
+                    "today_cancel_rev":      0,
+                    "today_net_rev":         0,
+                    "today_booking_adr":     0,
+                    "today_cancel_adr":      0,
+                    "today_net_adr":         0,
+                    "lead_time":             {},
                 })
             by_prop_seg[seg] = seg_props
 
@@ -558,6 +695,14 @@ def get_today_booking_by_props(db, date_str, db_props):
     return sum(pdbp.get(pname, {}).get(date_str, {}).get("rn", 0) for pname in db_props)
 
 
+def get_today_booking_rev_by_props(db, date_str, db_props):
+    """pickup_daily_by_property에서 특정 날짜의 사업장별 예약 REV 합산 (백만원)."""
+    if not date_str:
+        return 0.0
+    pdbp = db.get("pickup_daily_by_property", {})
+    return sum(pdbp.get(pname, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -608,19 +753,39 @@ def main():
         snap["summary"]["today_booking"] = today_booking
         snap["summary"]["today_cancel"]  = today_cancel
         snap["summary"]["today_net"]     = today_net
+        tot_today_rev = 0
         for prop in snap["byProperty"]:
             db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
             prop_booking = get_today_booking_by_props(db, today_date, db_props)
-            prop["today_booking"] = prop_booking
-            prop["today_cancel"]  = 0
-            prop["today_net"]     = prop_booking
+            prop_booking_rev_m = get_today_booking_rev_by_props(db, today_date, db_props)
+            prop_booking_rev = round(prop_booking_rev_m * 1_000_000)
+            prop["today_booking"]     = prop_booking
+            prop["today_cancel"]      = 0
+            prop["today_net"]         = prop_booking
+            prop["today_booking_rev"] = prop_booking_rev
+            prop["today_cancel_rev"]  = 0
+            prop["today_net_rev"]     = prop_booking_rev
+            prop["today_booking_adr"] = round((prop_booking_rev_m * 1000) / prop_booking) if prop_booking > 0 else 0
+            prop["today_cancel_adr"]  = 0
+            prop["today_net_adr"]     = round((prop_booking_rev_m * 1000) / prop_booking) if prop_booking > 0 else 0
+            tot_today_rev += prop_booking_rev
+        snap["summary"]["today_booking_rev"] = tot_today_rev
+        snap["summary"]["today_cancel_rev"]  = 0
+        snap["summary"]["today_net_rev"]     = tot_today_rev
+        snap["summary"]["today_booking_adr"] = round(tot_today_rev / today_booking / 1000) if today_booking > 0 else 0
         for seg_props in snap.get("byPropertySegment", {}).values():
             for prop in seg_props:
                 db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
                 prop_booking = get_today_booking_by_props(db, today_date, db_props)
-                prop["today_booking"] = prop_booking
-                prop["today_cancel"]  = 0
-                prop["today_net"]     = prop_booking
+                prop["today_booking"]     = prop_booking
+                prop["today_cancel"]      = 0
+                prop["today_net"]         = prop_booking
+                prop["today_booking_rev"] = 0
+                prop["today_cancel_rev"]  = 0
+                prop["today_net_rev"]     = 0
+                prop["today_booking_adr"] = 0
+                prop["today_cancel_adr"]  = 0
+                prop["today_net_adr"]     = 0
 
     # Chart data (동기간 보정 반영)
     monthly_chart = build_monthly_chart(
