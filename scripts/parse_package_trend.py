@@ -116,7 +116,10 @@ def classify_v4(series_name: str) -> str:
         return '조식패키지'
 
     # 세일/기획전
-    if any(k in s for k in ['얼리버드', '얼리바캉스', '얼리 바캉스', '빅세일', '기획전', '숙박세일', '세일페스타', '13%']):
+    if any(k in s for k in ['얼리버드', '얼리바캉스', '얼리 바캉스', '빅세일', '기획전', '숙박세일', '세일페스타',
+                             '13%', '당일특가', 'LATE HOLIDAY', '레이트 홀리데이', '특가', 'STEP2']):
+        return '세일/기획전'
+    if '세일' in series_name:
         return '세일/기획전'
 
     # 워터풀/오션
@@ -131,7 +134,7 @@ def classify_v4(series_name: str) -> str:
         return '동계/윈터'
 
     # 썸머패키지
-    if any(k in s for k in ['썸머', '블루데이즈', '바캉스', '베케이션', 'SUMMER', 'VACATION', 'BLUEDAYS']):
+    if any(k in s for k in ['썸머', '블루데이즈', '바캉스', '베케이션', 'SUMMER', 'VACATION', 'BLUEDAYS', '러브썸']):
         return '썸머패키지'
 
     # 스프링/가을
@@ -139,12 +142,17 @@ def classify_v4(series_name: str) -> str:
         return '스프링/가을'
 
     # 액티비티/레저
-    if any(k in s for k in ['온천', 'BBQ', '케이펫', '레저', '낚시', 'SPA', 'MOMENTS']):
+    if any(k in s for k in ['온천', 'BBQ', '케이펫', '레저', '낚시', 'SPA', 'MOMENTS',
+                             '투어 패키지', '투어패키지', '가족5', '가족 5']):
         return '액티비티/레저'
 
     # 브랜드/멤버스데이
     if any(k in s for k in ['브랜드데이', '멤버스데이', '소노브랜드']):
         return '브랜드/멤버스데이'
+
+    # 프로모션 (일반 프로모션 = 룸온니 계열)
+    if '프로모션' in series_name:
+        return '룸온니_프로모션'
 
     return '기타'
 
