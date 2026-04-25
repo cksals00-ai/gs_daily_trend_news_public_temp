@@ -41,23 +41,17 @@ CHANNEL_TOKENS = sorted([
 ], key=len, reverse=True)
 
 _CH_PAT = '|'.join(map(re.escape, CHANNEL_TOKENS))
-# 언더바/슬래시 + 채널토큰 + 나머지를 문자열 끝까지
 _SUFFIX_RE = re.compile(
     rf'\s*[_/\s]\s*(?:{_CH_PAT})\b.*$',
     flags=re.IGNORECASE
 )
-# 괄호 안 채널: (OTA), (회원/홈페이지), (후불), (직불)
 _PAREN_CH_RE = re.compile(
     rf'\s*\(\s*(?:{_CH_PAT}|회원[^)]*|후불|직불)\s*\)\s*$',
     flags=re.IGNORECASE
 )
-# 야간 박수 표기: (3박), (3박_HP)
 _NIGHT_RE = re.compile(r'\s*\(\d+박[^)]*\)')
-# 연도+사업장 접두사: "23쏠양", "19_델피노_", "21_단양_"
 _YEAR_PREFIX_RE = re.compile(r'^\d{2}[_가-힣]{0,15}')
-# G-OTA/ 접두사
 _GOTA_RE = re.compile(r'^G-OTA/', re.IGNORECASE)
-# 대괄호 접두사: [펫_비발디], [경주]
 _BRACKET_RE = re.compile(r'^\[[^\]]+\]\s*')
 
 
@@ -77,6 +71,72 @@ def normalize_series(name: str) -> str:
     return name if name else '기타'
 
 
+_OTA_NAMES = [
+    '야놀자', '아고다', '여기어때', '트립닷컴', '부킹닷컴', '부킹', '쿠팡',
+    '인터파크', '트립비토즈', '익스피디아', '네이버', '위메프', '티몬',
+    '호텔스닷컴', '11번가', '프리즘', '마이리얼트립', '온라인콘도',
+]
+
+
+def classify_v4(series_name: str) -> str:
+    s = series_name.upper()
+    # 룸온니_프로모션
+    if any(k in series_name for k in ['룸온리', '룸온니', 'R/O', 'RO']):
+        return '룸온니_프로모션'
+    if 'ROOM ONLY' in s:
+        return '룸온니_프로모션'
+    # 룸온니_OTA거래처
+    for ota in _OTA_NAMES:
+        if ota in series_name:
+            return '룸온니_OTA거래처'
+    if re.search(r'\bOTA\b|GOTA', s):
+        return '룸온니_OTA거래처'
+    # 연박/투나잇
+    if any(k in s for k in ['2 NIGHTS', '2NIGHTS', '2NIGHT', '2나잇', '연박', 'PRIVILEGE',
+                             'HOURS STAY', 'HOUR STAY', '스마트초이스', '스마트 초이스']):
+        return '연박/투나잇'
+    if re.search(r'\d박\s*(PKG|스테이)', s):
+        return '연박/투나잇'
+    # 올인클루시브
+    if any(k in s for k in ['ALL INCLUSIVE', 'ALLINCLUSIVE', '올인클루시브', '올클']):
+        return '올인클루시브'
+    # 조식패키지
+    if any(k in s for k in ['TASTY MORNING', '조식', 'MORNING', 'BREAKFAST']):
+        return '조식패키지'
+    # 세일/기획전
+    if any(k in s for k in ['얼리버드', '얼리바캉스', '얼리 바캉스', '빅세일', '기획전', '숙박세일', '세일페스타',
+                             '13%', '당일특가', 'LATE HOLIDAY', '레이트 홀리데이', '특가', 'STEP2']):
+        return '세일/기획전'
+    if '세일' in series_name:
+        return '세일/기획전'
+    # 워터풀/오션
+    if any(k in s for k in ['WATERFUL', 'WATER-FUL', '워터풀', '오션에빠지다',
+                             'BLUE COAST', 'BLUECOAST', 'SIMPLE OCEAN']):
+        return '워터풀/오션'
+    if '오션' in series_name:
+        return '워터풀/오션'
+    # 동계/윈터
+    if any(k in s for k in ['동계', '스키', 'WINTER', '윈터', '스노위', 'SNOWY', '겨울']):
+        return '동계/윈터'
+    # 썸머패키지
+    if any(k in s for k in ['썸머', '블루데이즈', '바캉스', '베케이션', 'SUMMER', 'VACATION', 'BLUEDAYS', '러브썸']):
+        return '썸머패키지'
+    # 스프링/가을
+    if any(k in s for k in ['스프링', '블룸', '추석', 'SPRING', '가을', '단풍', 'BLOOM']):
+        return '스프링/가을'
+    # 액티비티/레저
+    if any(k in s for k in ['온천', 'BBQ', '케이펫', '레저', '낚시', 'SPA', 'MOMENTS',
+                             '투어 패키지', '투어패키지', '가족5', '가족 5']):
+        return '액티비티/레저'
+    # 브랜드/멤버스데이
+    if any(k in s for k in ['브랜드데이', '멤버스데이', '소노브랜드']):
+        return '브랜드/멤버스데이'
+    # 룸온니_프로모션 폴백
+    if '프로모션' in series_name:
+        return '룸온니_프로모션'
+    return '기타'
+
+
 def parse_file(fpath: Path, is_cancel: bool, agg: dict):
     """type 27/28 파일 파싱 → agg[시리즈][YYYYMM] 집계"""
     try:
@@ -89,7 +149,6 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict):
     if not lines:
         return 0
 
-    # 컬럼 인덱스 동적 추출
     headers = [h.strip() for h in lines[0].strip().split(';')]
     col = {h: i for i, h in enumerate(headers)}
     idx_mem = col.get('회원번호', 5)
@@ -140,7 +199,6 @@ def main():
     logger.info(f"raw_db 경로: {RAW_DB_DIR}")
     years = ['2022', '2023', '2024', '2025', '2026']
 
-    # series → yyyymm → {booking_rn, booking_rev, cancel_rn, cancel_rev}
     def new_month():
         return {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}
     agg = defaultdict(lambda: defaultdict(new_month))
@@ -177,6 +235,12 @@ def main():
     top_names = [s[0] for s in sorted_series[:TOP_SERIES_LIMIT]]
     logger.info(f"총 상품계열 수: {len(series_totals):,}, TOP {len(top_names)} 추출")
 
+    # top_series에 category 추가
+    top_series_out = []
+    for s in top_names:
+        cat = classify_v4(s)
+        top_series_out.append({'name': s, 'category': cat, **series_totals[s]})
+
     # by_series: 시리즈별 연도×월 데이터
     by_series = {}
     for series in top_names:
@@ -190,7 +254,7 @@ def main():
             by_year[yyyymm[:4]][yyyymm] = {'rn': net_rn, 'rev': net_rev_m, 'adr': adr}
         by_series[series] = {yr: dict(months) for yr, months in by_year.items()}
 
-    # by_year_ranking: 연도별 TOP 20
+    # by_year_ranking: 연도별 TOP 20 (category 포함)
     by_year_ranking = {}
     for year in years:
         ranking = []
@@ -206,6 +270,7 @@ def main():
             if yr_rn > 0:
                 ranking.append({
                     'name': series,
+                    'category': classify_v4(series),
                     'rn': yr_rn,
                     'rev': round(yr_rev_won / 1_000_000, 1),
                     'adr': round(yr_rev_won / yr_rn / 1000) if yr_rn > 0 else 0,
@@ -213,9 +278,33 @@ def main():
         ranking.sort(key=lambda x: x['rn'], reverse=True)
         by_year_ranking[year] = ranking[:20]
 
+    # by_category: 카테고리별 연도×월 집계
+    cat_agg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev_won': 0}))
+    for series, months in agg.items():
+        cat = classify_v4(series)
+        for yyyymm, m in months.items():
+            net_rn = max(0, m['booking_rn'] - m['cancel_rn'])
+            net_rev_won = max(0, m['booking_rev'] - m['cancel_rev'])
+            cat_agg[cat][yyyymm]['rn'] += net_rn
+            cat_agg[cat][yyyymm]['rev_won'] += net_rev_won
+
+    by_category = {}
+    for cat, months in cat_agg.items():
+        by_yr = defaultdict(dict)
+        for yyyymm in sorted(months):
+            net_rn = months[yyyymm]['rn']
+            net_rev_won = months[yyyymm]['rev_won']
+            by_yr[yyyymm[:4]][yyyymm] = {
+                'rn': net_rn,
+                'rev': round(net_rev_won / 1_000_000, 1),
+                'adr': round(net_rev_won / net_rn / 1000) if net_rn > 0 else 0,
+            }
+        by_category[cat] = {yr: dict(ms) for yr, ms in by_yr.items()}
+
     output = {
-        'top_series': [{'name': s, **series_totals[s]} for s in top_names],
+        'top_series': top_series_out,
         'by_series': by_series,
+        'by_category': by_category,
         'by_year_ranking': by_year_ranking,
         'meta': {
             'years': years,

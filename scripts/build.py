@@ -1127,7 +1127,7 @@ def main():
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
     html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data, otb_data=otb_data)
     html = inject_news_section(html, news_data)
-    html = inject_package_data(html, pkg_data)
+    # html = inject_package_data(html, pkg_data)  # disabled: PKG section removed
     HTML_FILE.write_text(html, encoding="utf-8")
     logger.info(f"✓ index.html 빌드 완료 ({len(html):,} bytes)")
 
