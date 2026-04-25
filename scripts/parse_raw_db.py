@@ -537,6 +537,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         'by_channel': {
             c: {m: calc_adr(v) for m, v in sorted(months.items())}
             for c, months in sorted(channel_monthly.items())
+            if c != '기타'
         },
         'by_region': {
             r: {m: calc_adr(v) for m, v in sorted(months.items())}
