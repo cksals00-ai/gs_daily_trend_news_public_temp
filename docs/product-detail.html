@@ -8,12 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
   --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
   --gold:#c9a063;--gold-bright:#e6b970;
-  --positive:#4caf6f;--warning:#e8a256;--negative:#e57373;--info:#5a9fc4;
+  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
   --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
   --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
   --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
@@ -21,7 +23,9 @@
   --sidebar-w:220px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
 .masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
 .masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
@@ -33,18 +37,75 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .app-shell{display:flex;min-height:calc(100vh - 52px);}
 .sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
 .filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{padding:4px 10px;border-radius:3px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.04em;}
+.chip:hover{background:var(--bg-soft);color:var(--ink);}
+.chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);}
+.sidebar-divider{height:1px;background:var(--rule);}
 .otb-nav{display:flex;flex-direction:column;gap:2px;}
 .otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
 .otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
 .otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
-.main-content{flex:1;min-width:0;padding:24px 28px;}
+.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
+.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
+.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
+.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
+.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
+.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
+.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.achievement::before{background:var(--gold);}
+.kpi-card.booking::before{background:var(--positive);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-card.warning::before{background:var(--warning);}
+.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.kpi-card-value{font-family:var(--mono);font-size:clamp(22px,2.5vw,30px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
+.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
+.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.mid-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
+.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-canvas-wrap{height:320px;position:relative;}
+.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
+.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.pivot thead tr{background:var(--bg-deep);}
+table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;}
+table.pivot th:first-child{text-align:left;}
+table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
+table.pivot td:first-child{text-align:left;color:var(--ink-soft);font-weight:700;}
+table.pivot tr:hover td{background:var(--bg-soft);}
+table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
+table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
+.rank-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;background:var(--bg-soft);color:var(--ink-faint);margin-right:6px;}
+.rank-num.gold{background:rgba(201,160,99,0.2);color:var(--gold-bright);}
+.rank-num.silver{background:rgba(192,192,192,0.15);color:#c0c0c0;}
+.rank-num.bronze{background:rgba(205,127,50,0.15);color:#cd7f32;}
+.border-left-group{border-left:1px solid var(--rule);}
+@media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.main-content{padding:16px 14px;}}
+.mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
+@media(max-width:860px){.mobile-filter-bar{display:flex;}}
 .mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
 .mobile-sheet-tabs::-webkit-scrollbar{display:none;}
-@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.mobile-sheet-tabs{display:flex;}}
+@media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
 </style>
+</head>
+<body>
 <style>
 .gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
 .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
@@ -52,12 +113,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .gsn-brand:hover{color:#c9d1d9}
 .gsn-brand-dot{color:#58a6ff}
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
 .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 </style>
-</head>
-<body>
 <nav class="gsn">
   <div class="gsn-wrap">
     <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -67,18 +126,24 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
     </div>
   </div>
 </nav>
+
 <header class="masthead">
   <div class="masthead-inner">
     <div style="display:flex;align-items:baseline;gap:0;">
       <div class="logo-mark">SONO &amp; TRINITY</div>
       <div class="team-tag">GS팀 · GS 실적 리포트</div>
     </div>
-    <span class="page-badge">📊 팔라티움 · 상품상세</span>
-    <div class="masthead-right">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📊 GS실적 · 상품상세</span>
       <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
     </div>
   </div>
 </header>
+
 <nav class="mobile-sheet-tabs">
   <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
   <a href="channel.html" class="mobile-sheet-tab">채널별</a>
@@ -90,6 +155,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
   <a href="product-detail.html" class="mobile-sheet-tab active">상품상세</a>
   <a href="ly-product.html" class="mobile-sheet-tab">전년상품</a>
 </nav>
+
+<div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">연도:</span>
+  <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
 <div class="app-shell">
   <aside class="sidebar">
     <div>
@@ -106,15 +177,255 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
         <a href="ly-product.html" class="otb-nav-link">전년상품</a>
       </div>
     </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">연도</div>
+      <div class="filter-chips" id="year-chips"></div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">DATA UPDATED</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
   </aside>
+
   <main class="main-content">
-    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:20px;color:var(--ink-faint);text-align:center;">
-      <div style="font-size:48px;">🚧</div>
-      <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.12em;color:var(--gold-bright);">상품상세</div>
-      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);">준비 중입니다 · 데이터 연동 작업 진행 중</div>
-      <a href="otb.html" style="margin-top:8px;padding:8px 20px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--gold-bright);text-decoration:none;">← 당일현황으로 돌아가기</a>
+    <div class="page-header">
+      <div class="page-title">
+        상품 상세 실적
+        <span class="sub">PRODUCT · PACKAGE SERIES RANKING</span>
+      </div>
+      <div class="base-date-tag">
+        기준 <strong id="period-display">—</strong>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-card achievement">
+        <div class="kpi-card-label">총 RNS</div>
+        <div class="kpi-card-value" id="kpi-rns">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub" id="kpi-rns-sub">선택 연도</div>
+      </div>
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">총 매출</div>
+        <div class="kpi-card-value" id="kpi-rev">—<span class="unit">억원</span></div>
+        <div class="kpi-card-sub" id="kpi-rev-sub">선택 연도</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-card-label">평균 ADR</div>
+        <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
+        <div class="kpi-card-sub">상품 평균 단가</div>
+      </div>
+      <div class="kpi-card warning">
+        <div class="kpi-card-label">상품 수</div>
+        <div class="kpi-card-value" id="kpi-count">—<span class="unit">종</span></div>
+        <div class="kpi-card-sub">집계 상품 시리즈</div>
+      </div>
+    </div>
+
+    <div class="mid-row">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">상품별 RNS 순위 (Top 10)</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>RNS</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="prod-rns-chart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">상품별 매출 순위 (Top 10)</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>REV (억원)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="prod-rev-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">상품별 상세 실적</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:200px;">상품명</th>
+              <th>순위</th>
+              <th class="border-left-group">RNS</th>
+              <th>RNS 비중</th>
+              <th class="border-left-group">매출(억원)</th>
+              <th>REV 비중</th>
+              <th class="border-left-group">ADR(천원)</th>
+            </tr>
+          </thead>
+          <tbody id="prod-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
+      DATA: 상품 시리즈 트렌드 (package_series_trend.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
     </div>
   </main>
 </div>
+
+<script>
+let pkg = null;
+let activeYear = '2026';
+let rnsChart = null, revChart = null;
+let showAll = false;
+const DEFAULT_ROWS = 20;
+
+const fmt = {
+  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  rev: v => v == null ? '—' : (v / 100).toFixed(1),
+  adr: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+};
+
+function rankClass(i) {
+  if (i === 0) return 'gold';
+  if (i === 1) return 'silver';
+  if (i === 2) return 'bronze';
+  return '';
+}
+
+function render() {
+  const yearData = pkg.by_year_ranking[activeYear];
+  if (!yearData || !yearData.length) {
+    document.getElementById('prod-tbody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">해당 연도 데이터 없음</td></tr>';
+    return;
+  }
+
+  const totalRNS = yearData.reduce((s, d) => s + (d.rn || 0), 0);
+  const totalREV = yearData.reduce((s, d) => s + (d.rev || 0), 0);
+  const avgADR = totalRNS > 0 ? (totalREV / totalRNS) * 100 : 0;
+
+  setText('period-display', activeYear + '년');
+  setText('kpi-rns', fmt.num(totalRNS));
+  setText('kpi-rns-sub', yearData.length + '개 상품 합계');
+  setText('kpi-rev', fmt.rev(totalREV));
+  setText('kpi-rev-sub', yearData.length + '개 상품 합계');
+  setText('kpi-adr', fmt.adr(Math.round(avgADR)));
+  setText('kpi-count', yearData.length.toString());
+  setText('table-label', activeYear + '년 · 상위 ' + yearData.length + '개 시리즈');
+  setText('sidebar-refresh', pkg.meta ? (pkg.meta.years ? pkg.meta.years.join(', ') + '년 데이터' : '—') : '—');
+  setText('refresh-badge', activeYear + '년 기준');
+
+  const top10 = yearData.slice(0, 10);
+  buildBarChart('prod-rns-chart', top10.map(d => d.name), top10.map(d => d.rn || 0), '#5a9fc4',
+    rnsChart, c => rnsChart = c, v => v.toLocaleString('ko-KR') + '실');
+  buildBarChart('prod-rev-chart', top10.map(d => d.name), top10.map(d => parseFloat(((d.rev || 0) / 100).toFixed(1))), '#e6b970',
+    revChart, c => revChart = c, v => v.toFixed(1) + '억');
+
+  const displayCount = showAll ? yearData.length : Math.min(DEFAULT_ROWS, yearData.length);
+  let rows = '';
+  for (let i = 0; i < displayCount; i++) {
+    const d = yearData[i];
+    const rnsPct = totalRNS > 0 ? (d.rn / totalRNS * 100).toFixed(1) : '—';
+    const revPct = totalREV > 0 ? (d.rev / totalREV * 100).toFixed(1) : '—';
+    const rc = rankClass(i);
+    rows += `<tr>
+      <td><span class="rank-num ${rc}">${i + 1}</span>${d.name}</td>
+      <td>${i + 1}</td>
+      <td class="border-left-group">${fmt.num(d.rn)}</td>
+      <td>${rnsPct !== '—' ? rnsPct + '%' : '—'}</td>
+      <td class="border-left-group">${fmt.rev(d.rev)}</td>
+      <td>${revPct !== '—' ? revPct + '%' : '—'}</td>
+      <td class="border-left-group">${fmt.adr(d.adr || (d.rn > 0 ? Math.round((d.rev / d.rn) * 100) : 0))}</td>
+    </tr>`;
+  }
+  if (yearData.length > DEFAULT_ROWS) {
+    const hidden = yearData.length - DEFAULT_ROWS;
+    if (!showAll) {
+      rows += `<tr><td colspan="7" style="text-align:center;padding:10px;">
+        <button onclick="showAll=true;render();" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
+          더보기 (${hidden}개 상품 더 보기)
+        </button></td></tr>`;
+    } else {
+      rows += `<tr><td colspan="7" style="text-align:center;padding:10px;">
+        <button onclick="showAll=false;render();" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
+          접기
+        </button></td></tr>`;
+    }
+  }
+  rows += `<tr class="total-row">
+    <td>합계</td><td>—</td>
+    <td class="border-left-group">${fmt.num(totalRNS)}</td><td>100.0%</td>
+    <td class="border-left-group">${fmt.rev(totalREV)}</td><td>100.0%</td>
+    <td class="border-left-group">${fmt.adr(Math.round(avgADR))}</td>
+  </tr>`;
+  document.getElementById('prod-tbody').innerHTML = rows;
+}
+
+function buildBarChart(id, labels, data, color, oldChart, setter, formatter) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (oldChart) oldChart.destroy();
+  const c = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color + 'bb', borderColor: color, borderWidth: 1, borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: { label: ctx => ' ' + formatter(ctx.parsed.x) } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 9 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } },
+        y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 9 }, callback: v => v.length > 16 ? v.slice(0, 15) + '…' : v }, border: { color: 'rgba(255,255,255,0.1)' } }
+      }
+    }
+  });
+  setter(c);
+}
+
+function buildFilters() {
+  const years = pkg.meta && pkg.meta.years ? [...pkg.meta.years].reverse() : Object.keys(pkg.by_year_ranking).sort().reverse();
+  [document.getElementById('year-chips'), document.getElementById('mobile-year-chips')].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    years.forEach(y => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (y === activeYear ? ' active' : '');
+      btn.textContent = y;
+      btn.addEventListener('click', () => {
+        activeYear = y; showAll = false;
+        document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip')
+          .forEach(b => b.classList.toggle('active', b.textContent === activeYear));
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
+function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+async function loadData() {
+  try {
+    const res = await fetch('data/package_series_trend.json?t=' + Date.now());
+    pkg = await res.json();
+    buildFilters();
+    render();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('prod-tbody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패</td></tr>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
