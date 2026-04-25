@@ -248,7 +248,7 @@ def render_property_matrix(properties: list, region_color: str) -> str:
         <div style="padding:12px 14px;{border}opacity:{opacity};">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
             <div style="font-family:var(--mono);font-size:10px;color:var(--ink-muted);font-weight:{'800' if is_primary else '500'};letter-spacing:0.1em;">
-              {month_label} {'· 당월' if is_primary else '· 전망'}
+              {month_label} {'· 당월' if is_primary else '· FCST'}
             </div>
             <div style="font-family:var(--serif);font-size:{'18px' if is_primary else '14px'};font-weight:{'800' if is_primary else '600'};color:{ach_color};">
               {ach:.1f}%
@@ -913,7 +913,7 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
     return html
 
 
-def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime, agg_data: dict = None, admin_data: dict = None) -> str:
+def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime, agg_data: dict = None, admin_data: dict = None, otb_data: dict = None) -> str:
     """index.html과 otb.html 공통 주입 함수"""
     day_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
     report_date = data.get("report_date", now.strftime("%Y-%m-%d"))
@@ -952,9 +952,121 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_signal_cards(html, notes.get("property_performance", {}))
     html = inject_competitor_section(html, comp_data)
     html = inject_weekly_report(html, weekly_data, agg_data)
+    if otb_data:
+        html = inject_yoy_property_table(html, otb_data)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     html = apply_tpl(html, "build", build_meta)
     return html
+
+
+# ─────────────────────────────────────────────
+# YoY 사업장별 추이 테이블
+# ─────────────────────────────────────────────
+REGION_COLORS = {
+    "vivaldi": "#d97a7a",
+    "central": "#6ba3c4",
+    "south":   "#7ab891",
+    "apac":    "#a892c8",
+}
+REGION_LABELS = {
+    "vivaldi": "비발디",
+    "central": "중부",
+    "south":   "남부",
+    "apac":    "APAC",
+}
+
+def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
+    if not yoy_table:
+        return "<p style='color:#888;font-size:12px;'>YoY 데이터 없음</p>"
+
+    base_disp = f"{base_date[:4]}.{base_date[4:6]}.{base_date[6:]}" if len(base_date) == 8 else base_date
+    months = [4, 5, 6]
+    month_labels = {4: "4월", 5: "5월", 6: "6월"}
+
+    def arrow(yoy):
+        if yoy is None:
+            return "—"
+        if yoy >= 3:
+            return f'<span style="color:#4caf89;font-weight:700;">▲ {yoy:+.1f}%</span>'
+        elif yoy <= -3:
+            return f'<span style="color:#e05555;font-weight:700;">↓ {yoy:+.1f}%</span>'
+        else:
+            return f'<span style="color:#b0a060;font-weight:700;">→ {yoy:+.1f}%</span>'
+
+    rows_html = ""
+    for row in yoy_table:
+        region = row.get("region", "")
+        color  = REGION_COLORS.get(region, "#888")
+        cells  = ""
+        for m in months:
+            md = row.get("months", {}).get(m, {})
+            act   = md.get("act_rn", 0)
+            last  = md.get("last_rn", 0)
+            yoy   = md.get("yoy")
+            fcst  = md.get("rns_fcst", act)
+            fach  = md.get("fcst_ach", 0.0)
+            bud   = md.get("bud_rn", 0)
+            arrow_html = arrow(yoy)
+            fcst_html = (
+                f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
+                f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
+            ) if bud > 0 else ""
+            cells += (
+                f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
+                f'<div style="font-size:12px;">{act:,}실</div>'
+                f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
+                f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
+                f'{fcst_html}'
+                f'</td>'
+            )
+        rows_html += (
+            f'<tr>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #333;white-space:nowrap;">'
+            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:{color};margin-right:6px;vertical-align:middle;"></span>'
+            f'<span style="font-size:12px;font-weight:600;">{row["name"]}</span>'
+            f'</td>'
+            f'{cells}</tr>'
+        )
+
+    header_cells = "".join(
+        f'<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;'
+        f'font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">'
+        f'{month_labels[m]}</th>'
+        for m in months
+    )
+
+    return (
+        f'<div style="overflow-x:auto;">'
+        f'<p style="font-family:monospace;font-size:10.5px;color:#888;margin-bottom:8px;">'
+        f'동기간 보정 기준일: {base_disp} &nbsp;·&nbsp; ▲ 전년 동기 대비 개선 / → 유사 / ↓ 부진</p>'
+        f'<table style="width:100%;border-collapse:collapse;font-family:var(--sans,sans-serif);">'
+        f'<thead><tr>'
+        f'<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;'
+        f'font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">사업장</th>'
+        f'{header_cells}'
+        f'</tr></thead>'
+        f'<tbody>{rows_html}</tbody>'
+        f'</table></div>'
+    )
+
+
+def inject_yoy_property_table(html: str, otb_data: dict) -> str:
+    yoy_table = otb_data.get("yoyTable", [])
+    base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
+    table_html = render_yoy_property_table(yoy_table, base_date)
+    pattern = re.compile(
+        r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
+        re.DOTALL
+    )
+    new_html, n = pattern.subn(
+        lambda m: m.group(1) + "\n" + table_html + "\n" + m.group(3),
+        html
+    )
+    if n > 0:
+        logger.info(f"✓ YoY 사업장별 추이 테이블 주입: {len(yoy_table)}개 사업장")
+    else:
+        logger.warning("✗ YOY_PROP_TABLE 마커 미발견")
+    return new_html
 
 
 # ─────────────────────────────────────────────
@@ -997,6 +1109,7 @@ def main():
     pkg_data = load_json(DATA_DIR / "package_series_trend.json")
     agg_data = load_json(DATA_DIR / "db_aggregated.json")
     admin_data = load_json(DATA_DIR / "admin_input.json")
+    otb_data = load_json(DOCS_DIR / "data" / "otb_data.json")
 
     data = enriched if enriched else notes
     if not data:
@@ -1012,7 +1125,7 @@ def main():
     # ── index.html 빌드 ──
     html = HTML_FILE.read_text(encoding="utf-8")
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
-    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data)
+    html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data, otb_data=otb_data)
     html = inject_news_section(html, news_data)
     html = inject_package_data(html, pkg_data)
     HTML_FILE.write_text(html, encoding="utf-8")
@@ -1022,7 +1135,7 @@ def main():
     if OTB_FILE.exists():
         otb_html = OTB_FILE.read_text(encoding="utf-8")
         logger.info(f"✓ otb.html 로드 ({len(otb_html):,} bytes)")
-        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now)
+        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now, otb_data=otb_data)
         OTB_FILE.write_text(otb_html, encoding="utf-8")
         logger.info(f"✓ otb.html 빌드 완료 ({len(otb_html):,} bytes)")
     else:
