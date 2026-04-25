@@ -8,12 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
   --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
   --gold:#c9a063;--gold-bright:#e6b970;
-  --positive:#4caf6f;--warning:#e8a256;--negative:#e57373;--info:#5a9fc4;
+  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
   --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
   --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
   --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
@@ -21,7 +23,9 @@
   --sidebar-w:220px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
 .masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
 .masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
@@ -37,14 +41,67 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
 .otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
 .otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
-.main-content{flex:1;min-width:0;padding:24px 28px;}
+.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
+.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
+.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
+.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
+.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
+.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
+.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.achievement::before{background:var(--gold);}
+.kpi-card.booking::before{background:var(--positive);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-card.warning::before{background:var(--warning);}
+.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.kpi-card-value{font-family:var(--mono);font-size:clamp(22px,2.5vw,30px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
+.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
+.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.kpi-card-sub .pos{color:var(--positive);}
+.kpi-card-sub .neg{color:var(--negative);}
+.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
+.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-canvas-wrap{height:300px;position:relative;}
+.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
+.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.pivot thead tr{background:var(--bg-deep);}
+table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;}
+table.pivot th:first-child{text-align:left;}
+table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
+table.pivot td:first-child{text-align:left;color:var(--ink-soft);font-weight:700;}
+table.pivot tr:hover td{background:var(--bg-soft);}
+table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
+table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
+.ach-pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700;white-space:nowrap;}
+.ach-high{background:var(--positive-bg);color:var(--positive);}
+.ach-mid{background:var(--warning-bg);color:var(--warning);}
+.ach-low{background:var(--negative-bg);color:var(--negative);}
+.net-pos{color:var(--positive);}
+.net-neg{color:var(--negative);}
+.border-left-group{border-left:1px solid var(--rule);}
+@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.main-content{padding:16px 14px;}}
 .mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
 .mobile-sheet-tabs::-webkit-scrollbar{display:none;}
-@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.mobile-sheet-tabs{display:flex;}}
+@media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
 </style>
+</head>
+<body>
 <style>
 .gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
 .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
@@ -52,12 +109,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .gsn-brand:hover{color:#c9d1d9}
 .gsn-brand-dot{color:#58a6ff}
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
 .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 </style>
-</head>
-<body>
 <nav class="gsn">
   <div class="gsn-wrap">
     <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -67,18 +122,24 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
     </div>
   </div>
 </nav>
+
 <header class="masthead">
   <div class="masthead-inner">
     <div style="display:flex;align-items:baseline;gap:0;">
       <div class="logo-mark">SONO &amp; TRINITY</div>
       <div class="team-tag">GS팀 · GS 실적 리포트</div>
     </div>
-    <span class="page-badge">📊 GS실적 · 전년추이</span>
-    <div class="masthead-right">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📊 GS실적 · 전년추이</span>
       <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
     </div>
   </div>
 </header>
+
 <nav class="mobile-sheet-tabs">
   <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
   <a href="channel.html" class="mobile-sheet-tab">채널별</a>
@@ -90,6 +151,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
   <a href="product-detail.html" class="mobile-sheet-tab">상품상세</a>
   <a href="ly-product.html" class="mobile-sheet-tab">전년상품</a>
 </nav>
+
 <div class="app-shell">
   <aside class="sidebar">
     <div>
@@ -106,15 +168,208 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
         <a href="ly-product.html" class="otb-nav-link">전년상품</a>
       </div>
     </div>
+    <div class="refresh-info">
+      <div class="refresh-label">DATA UPDATED</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
   </aside>
+
   <main class="main-content">
-    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:20px;color:var(--ink-faint);text-align:center;">
-      <div style="font-size:48px;">🚧</div>
-      <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.12em;color:var(--gold-bright);">전년추이</div>
-      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-muted);">준비 중입니다 · 데이터 연동 작업 진행 중</div>
-      <a href="otb.html" style="margin-top:8px;padding:8px 20px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--gold-bright);text-decoration:none;">← 당일현황으로 돌아가기</a>
+    <div class="page-header">
+      <div class="page-title">
+        전년추이
+        <span class="sub">YEAR-OVER-YEAR · 2026 vs 2025</span>
+      </div>
+      <div class="base-date-tag">
+        기준 <strong id="period-display">—</strong>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-card achievement">
+        <div class="kpi-card-label">2026년 YTD RNS</div>
+        <div class="kpi-card-value" id="kpi-act">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub" id="kpi-act-sub">실적 누계</div>
+      </div>
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">2025년 동기 RNS</div>
+        <div class="kpi-card-value" id="kpi-ly">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub" id="kpi-ly-sub">전년 동기</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-card-label">YoY 증감률</div>
+        <div class="kpi-card-value" id="kpi-yoy">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub">전년 대비</div>
+      </div>
+      <div class="kpi-card warning">
+        <div class="kpi-card-label">예산 달성률</div>
+        <div class="kpi-card-value" id="kpi-ach">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub" id="kpi-ach-sub">YTD 누계 기준</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title">월별 RNS — 2026 vs 2025 vs 예산</span>
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>2026년 실적</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;opacity:0.7;"></div>2025년 실적</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div>2026년 예산</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:320px;">
+        <canvas id="ly-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">월별 전년 대비 상세</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);">2026년 기준</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot">
+          <thead>
+            <tr>
+              <th style="text-align:left;">월</th>
+              <th class="border-left-group">예산 RNS</th>
+              <th>2026 실적</th>
+              <th>달성률</th>
+              <th class="border-left-group">2025 실적</th>
+              <th>YoY%</th>
+            </tr>
+          </thead>
+          <tbody id="ly-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
+      DATA: 온북 DB + 사업계획 Budget (otb_data.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
     </div>
   </main>
 </div>
+
+<script>
+let otb = null;
+let lyChart = null;
+
+const fmt = {
+  num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct: v => v == null ? '—' : v.toFixed(1),
+};
+
+function achClass(v) {
+  if (v >= 100) return 'ach-high';
+  if (v >= 70) return 'ach-mid';
+  return 'ach-low';
+}
+
+function render() {
+  const monthly = otb.monthly;
+  if (!monthly || !monthly.length) return;
+
+  const actMonths = monthly.filter(m => m.rns_actual > 0);
+  const totalAct = actMonths.reduce((s, m) => s + (m.rns_actual || 0), 0);
+  const totalLy = actMonths.reduce((s, m) => s + (m.rns_last || 0), 0);
+  const totalBud = actMonths.reduce((s, m) => s + (m.rns_budget || 0), 0);
+  const yoy = totalLy > 0 ? ((totalAct - totalLy) / totalLy * 100) : null;
+  const ach = totalBud > 0 ? (totalAct / totalBud * 100) : null;
+
+  setText('period-display', '2026년 기준');
+  setText('refresh-badge', otb.meta.refreshTime || '—');
+  setText('sidebar-refresh', otb.meta.refreshTime || '—');
+  setText('kpi-act', fmt.num(totalAct));
+  setText('kpi-act-sub', actMonths.length + '개월 누계');
+  setText('kpi-ly', fmt.num(totalLy));
+  setText('kpi-ly-sub', '2025년 동기 ' + actMonths.length + '개월');
+  setText('kpi-yoy', yoy == null ? '—' : (yoy >= 0 ? '+' : '') + yoy.toFixed(1));
+  document.getElementById('kpi-yoy').closest('.kpi-card').querySelector('.kpi-card-value').style.color =
+    yoy == null ? '' : yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
+  setText('kpi-ach', ach == null ? '—' : ach.toFixed(1));
+  setText('kpi-ach-sub', '예산 ' + fmt.num(totalBud) + '실 대비');
+
+  const labels = monthly.map(m => m.label);
+  const actData = monthly.map(m => m.rns_actual || 0);
+  const lyData = monthly.map(m => m.rns_last || 0);
+  const budData = monthly.map(m => m.rns_budget || 0);
+
+  if (lyChart) lyChart.destroy();
+  const ctx = document.getElementById('ly-chart');
+  if (ctx) {
+    lyChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: '2026년 실적', data: actData, backgroundColor: '#e6b970bb', borderColor: '#e6b970', borderWidth: 1, borderRadius: 3 },
+          { label: '2025년 실적', data: lyData, backgroundColor: '#5a9fc466', borderColor: '#5a9fc4', borderWidth: 1, borderRadius: 3 },
+          { label: '2026년 예산', data: budData, backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 3, type: 'bar' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+            callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ko-KR') + '실' } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 10 } }, border: { display: false } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } }
+        }
+      }
+    });
+  }
+
+  let rows = '';
+  let totBud = 0, totAct = 0, totLy = 0;
+  for (const m of monthly) {
+    const act = m.rns_actual || 0;
+    const ly = m.rns_last || 0;
+    const bud = m.rns_budget || 0;
+    totBud += bud; totAct += act; totLy += ly;
+    const achV = bud > 0 ? (act / bud * 100) : null;
+    const yoyV = ly > 0 ? ((act - ly) / ly * 100) : null;
+    rows += `<tr>
+      <td>${m.label}</td>
+      <td class="border-left-group">${fmt.num(bud)}</td>
+      <td>${fmt.num(act)}</td>
+      <td>${achV == null ? '—' : '<span class="ach-pill ' + achClass(achV) + '">' + achV.toFixed(1) + '%</span>'}</td>
+      <td class="border-left-group">${fmt.num(ly)}</td>
+      <td>${yoyV == null ? '—' : '<span class="' + (yoyV >= 0 ? 'net-pos' : 'net-neg') + '">' + (yoyV >= 0 ? '+' : '') + yoyV.toFixed(1) + '%</span>'}</td>
+    </tr>`;
+  }
+  const totAchV = totBud > 0 ? (totAct / totBud * 100) : null;
+  const totYoyV = totLy > 0 ? ((totAct - totLy) / totLy * 100) : null;
+  rows += `<tr class="total-row">
+    <td>합계</td>
+    <td class="border-left-group">${fmt.num(totBud)}</td>
+    <td>${fmt.num(totAct)}</td>
+    <td>${totAchV == null ? '—' : '<span class="ach-pill ' + achClass(totAchV) + '">' + totAchV.toFixed(1) + '%</span>'}</td>
+    <td class="border-left-group">${fmt.num(totLy)}</td>
+    <td>${totYoyV == null ? '—' : '<span class="' + (totYoyV >= 0 ? 'net-pos' : 'net-neg') + '">' + (totYoyV >= 0 ? '+' : '') + totYoyV.toFixed(1) + '%</span>'}</td>
+  </tr>`;
+  document.getElementById('ly-tbody').innerHTML = rows;
+}
+
+function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+async function loadData() {
+  try {
+    const res = await fetch('data/otb_data.json?t=' + Date.now());
+    otb = await res.json();
+    render();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('ly-tbody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--negative);font-family:var(--mono);font-size:12px;">데이터 로드 실패</td></tr>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
