@@ -1015,10 +1015,13 @@ def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
             fach  = md.get("fcst_ach", 0.0)
             bud   = md.get("bud_rn", 0)
             arrow_html = arrow(yoy)
-            fcst_html = (
-                f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
-                f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
-            ) if bud > 0 else ""
+            if bud > 0 and fcst is not None and fach is not None:
+                fcst_html = (
+                    f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
+                    f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
+                )
+            else:
+                fcst_html = ""
             cells += (
                 f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
                 f'<div style="font-size:12px;">{act:,}실</div>'

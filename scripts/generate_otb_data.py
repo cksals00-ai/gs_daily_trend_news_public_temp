@@ -223,6 +223,9 @@ def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
     else:
         elapsed_ratio = 0.0
 
+    if elapsed_ratio == 0.0:
+        return None, None, None, None, None
+
     if elapsed_ratio > 0.1:
         rns_fcst = round(act_rn / elapsed_ratio)
         rev_fcst = act_rev / elapsed_ratio
@@ -250,10 +253,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
             mk_25 = f"2025{m:02d}"
             bud_label = BUDGET_MONTH_LABEL[m - 1]
 
-            if db_bps is not None:
-                act_rn = sum_db_segments(db_bps, db_props, mk_26)["rn"]
-            else:
-                act_rn = sum_db(db_bp, db_props, mk_26)["rn"]
+            act_rn = sum_db(db_bp, db_props, mk_26)["rn"]
 
             # 전년 보정값 포함
             base_rn = 0
@@ -446,8 +446,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     mi_bud_rn = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
                     mi_bud_rev = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rev_m", 0)
                 mi_rns_f, mi_rev_f, _, _, _ = _calc_fcst(mi_rn, mi_rev, mi, now_kst, mi_bud_rn, mi_bud_rev)
-                rns_fcst += mi_rns_f
-                rev_fcst += mi_rev_f
+                if mi_rns_f is not None:
+                    rns_fcst += mi_rns_f
+                    rev_fcst += mi_rev_f
             adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
             fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
             rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
@@ -472,8 +473,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "adr_yoy":         round((act_adr / lst_adr - 1) * 100, 1) if lst_adr > 0 else 0.0,
             "rev_yoy":         round((act_rev / lst_rev - 1) * 100, 1) if lst_rev > 0 else 0.0,
             "adr_fcst":        adr_fcst,
-            "rev_fcst":        round(rev_fcst * 1_000_000),
-            "adr_fcst_achievement": round(adr_fcst / bud_adr * 100, 1) if bud_adr > 0 else 0.0,
+            "rev_fcst":        round(rev_fcst * 1_000_000) if rev_fcst is not None else None,
+            "adr_fcst_achievement": round(adr_fcst / bud_adr * 100, 1) if (bud_adr > 0 and adr_fcst is not None) else None,
             "rev_fcst_achievement": rev_fcst_ach,
             "today_booking":   0,
             "today_cancel":    0,
@@ -487,11 +488,11 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         tot_bud_rn   += bud_rn
         tot_act_rn   += act_rn
         tot_lst_rn   += lst_rn
-        tot_rns_fcst += rns_fcst
+        tot_rns_fcst += rns_fcst if rns_fcst is not None else 0
         tot_bud_rev  += bud_rev
         tot_act_rev  += act_rev
         tot_lst_rev  += lst_rev
-        tot_rev_fcst += rev_fcst
+        tot_rev_fcst += rev_fcst if rev_fcst is not None else 0.0
 
     tot_rns_ach  = round(tot_act_rn  / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
     tot_rev_ach  = round(tot_act_rev / tot_bud_rev  * 100, 1) if tot_bud_rev  > 0 else 0.0
