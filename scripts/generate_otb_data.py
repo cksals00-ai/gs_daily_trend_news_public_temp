@@ -842,6 +842,8 @@ def main():
         "monthly":    monthly_chart,
         # YoY 사업장별 추이
         "yoyTable":   yoy_table,
+        # 투숙일별 일별 데이터 (stay-date.html 용)
+        "stayDateDaily": db.get("stay_date_daily", {}),
     }
 
     DOCS_DATA_DIR.mkdir(parents=True, exist_ok=True)

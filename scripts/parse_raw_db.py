@@ -180,7 +180,8 @@ def detect_file_type(filename):
 
 def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None,
                          cancel_daily_agg=None, pickup_daily_agg=None,
-                         lead_time_agg=None, cancel_lead_agg=None):
+                         lead_time_agg=None, cancel_lead_agg=None,
+                         stay_date_agg=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
@@ -277,6 +278,12 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         agg[key]['rev'] += rev
                         agg[key]['count'] += 1
                         ok_count += 1
+
+                        # 투숙일별 집계 (sell_date YYYYMMDD 단위)
+                        if stay_date_agg is not None and len(sell_date) >= 8:
+                            sd_key = (sell_date[:8], prop_name, segment, btype)
+                            stay_date_agg[sd_key]['rn'] += rn
+                            stay_date_agg[sd_key]['rev'] += rev
 
                         # 취소일자 기반 집계 (28/44)
                         if is_cancel and cancel_daily_agg is not None and idx_cancel_date >= 0 and idx_cancel_date < plen:
@@ -433,7 +440,8 @@ def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop):
 
 
 def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
-                  lead_time_agg=None, cancel_lead_agg=None):
+                  lead_time_agg=None, cancel_lead_agg=None,
+                  stay_date_agg=None):
     """집계 → JSON-serializable 구조"""
 
     # 1) 월별 총괄 (전체 사업장)
@@ -731,6 +739,50 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             m: dict(v) for m, v in sorted(monthly_clt.items())
         }
 
+    # 8단계: 투숙일별 일별 집계 (stay_date YYYYMMDD 단위 → YYYYMM 그룹)
+    if stay_date_agg:
+        # key: (sell_date, prop, segment, btype) → 투숙월별 → 일자별 세그먼트별 net
+        from collections import defaultdict as _dd
+        # booking (27/43) vs cancel (28/44) 분리 후 net 계산
+        sd_booking = _dd(lambda: _dd(lambda: _dd(lambda: {'rn': 0, 'rev': 0})))  # [month][day][segment]
+        sd_cancel = _dd(lambda: _dd(lambda: _dd(lambda: {'rn': 0, 'rev': 0})))
+        for (sell_date, prop, segment, btype), vals in stay_date_agg.items():
+            month = sell_date[:6]
+            day = int(sell_date[6:8])
+            if segment == '기타':
+                continue
+            target = sd_cancel if btype in ('cancel', 'ib_cancel') else sd_booking
+            target[month][day][segment]['rn'] += vals['rn']
+            target[month][day][segment]['rev'] += vals['rev']
+
+        stay_date_daily = {}
+        all_sd_months = sorted(set(sd_booking.keys()) | set(sd_cancel.keys()))
+        for month in all_sd_months:
+            all_days = sorted(set(sd_booking.get(month, {}).keys()) | set(sd_cancel.get(month, {}).keys()))
+            all_segs = set()
+            for d in all_days:
+                all_segs.update(sd_booking.get(month, {}).get(d, {}).keys())
+                all_segs.update(sd_cancel.get(month, {}).get(d, {}).keys())
+            all_segs.discard('기타')
+            seg_list = sorted(all_segs)
+            segments = {}
+            for seg in seg_list:
+                net_rn_list = []
+                net_rev_list = []
+                for d in all_days:
+                    b_rn = sd_booking.get(month, {}).get(d, {}).get(seg, {}).get('rn', 0)
+                    c_rn = sd_cancel.get(month, {}).get(d, {}).get(seg, {}).get('rn', 0)
+                    b_rev = sd_booking.get(month, {}).get(d, {}).get(seg, {}).get('rev', 0)
+                    c_rev = sd_cancel.get(month, {}).get(d, {}).get(seg, {}).get('rev', 0)
+                    net_rn_list.append(b_rn - c_rn)
+                    net_rev_list.append(round((b_rev - c_rev) / 1_000_000, 2))
+                segments[seg] = {'net_rn': net_rn_list, 'net_rev': net_rev_list}
+            stay_date_daily[month] = {
+                'days': all_days,
+                'segments': segments,
+            }
+        result['stay_date_daily'] = stay_date_daily
+
     return result
 
 
@@ -788,6 +840,7 @@ def main():
     pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     lead_time_agg = defaultdict(lambda: {'rn': 0})
     cancel_lead_agg = defaultdict(lambda: {'rn': 0})
+    stay_date_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     file_stats = {}
     total_rows = 0
 
@@ -813,7 +866,8 @@ def main():
 
         row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m,
                                          cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
-                                         lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg)
+                                         lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
+                                         stay_date_agg=stay_date_agg)
         total_rows += row_count
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
@@ -827,7 +881,8 @@ def main():
 
     # 요약 생성
     summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
-                             lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg)
+                             lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
+                             stay_date_agg=stay_date_agg)
     summary['file_stats'] = file_stats
 
     # ─── YoY 동기간 보정 (22~25년 취소파일 기반) ───

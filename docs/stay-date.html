@@ -196,8 +196,23 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
-    <div style="padding:10px 16px;background:rgba(90,159,196,0.1);border:1px solid rgba(90,159,196,0.3);border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--info);">
-      투숙일 기준 일별(1~31일) 데이터는 현재 집계 단위 미포함 · OTA / G-OTA / Inbound 세그먼트별 월별 현황으로 대체 표시
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;white-space:nowrap;">월 선택:</span>
+      <div id="month-chips" class="filter-chips"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title" id="daily-chart-title">일별 투숙 RNS</span>
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>OTA</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>G-OTA</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>Inbound</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:320px;">
+        <canvas id="daily-chart"></canvas>
+      </div>
     </div>
 
     <div class="kpi-strip">
@@ -283,16 +298,94 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 </div>
 
 <script>
-let db = null;
+let db = null;       // db_aggregated.json (월별 세그먼트)
+let otb = null;      // otb_data.json (stayDateDaily)
 let activeYear = '2026';
-let segChart = null, pieChart = null;
+let activeMonth = null; // 'YYYYMM' or null
+let segChart = null, pieChart = null, dailyChart = null;
 
 const SEGS = ['OTA', 'G-OTA', 'Inbound'];
 const SEG_COLORS = { 'OTA': '#e6b970', 'G-OTA': '#5a9fc4', 'Inbound': '#4caf6f' };
 
 const fmt = { num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR') };
 
+function renderDailyChart() {
+  const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
+  const monthKeys = Object.keys(stayDaily).filter(k => k.startsWith(activeYear)).sort();
+
+  const targetKey = activeMonth && stayDaily[activeMonth] ? activeMonth
+    : monthKeys.length > 0 ? monthKeys[monthKeys.length - 1] : null;
+
+  if (dailyChart) { dailyChart.destroy(); dailyChart = null; }
+  const ctx = document.getElementById('daily-chart');
+  if (!ctx || !targetKey) return;
+
+  const mdata = stayDaily[targetKey];
+  const days = mdata.days;
+  const labels = days.map(d => d + '일');
+  const segs = mdata.segments || {};
+
+  const mn = parseInt(targetKey.slice(4));
+  setText('daily-chart-title', mn + '월 · 일별 투숙 RNS (투숙일기준)');
+
+  dailyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: SEGS.map(seg => ({
+        label: seg,
+        data: (segs[seg] || {}).net_rn || days.map(() => 0),
+        backgroundColor: SEG_COLORS[seg] + 'bb',
+        borderColor: SEG_COLORS[seg],
+        borderWidth: 1, borderRadius: 2,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString('ko-KR') + '실' }
+        }
+      },
+      scales: {
+        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0 }, border: { display: false } },
+        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } }
+      }
+    }
+  });
+}
+
+function buildMonthChips() {
+  const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
+  const monthKeys = Object.keys(stayDaily).filter(k => k.startsWith(activeYear)).sort();
+  const container = document.getElementById('month-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  if (monthKeys.length === 0) return;
+
+  if (!activeMonth || !stayDaily[activeMonth]) {
+    activeMonth = monthKeys[monthKeys.length - 1];
+  }
+
+  monthKeys.forEach(ym => {
+    const mn = parseInt(ym.slice(4));
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (ym === activeMonth ? ' active' : '');
+    btn.textContent = mn + '월';
+    btn.addEventListener('click', () => {
+      activeMonth = ym;
+      container.querySelectorAll('.chip').forEach((b, i) => b.classList.toggle('active', monthKeys[i] === activeMonth));
+      renderDailyChart();
+    });
+    container.appendChild(btn);
+  });
+}
+
 function render() {
+  if (!db) return;
   const months = db.meta.months.filter(m => m.startsWith(activeYear));
   setText('period-display', activeYear + '년 세그먼트별');
   setText('table-label', activeYear + '년 · ' + months.length + '개월');
@@ -402,6 +495,9 @@ function render() {
     <td>${tTot > 0 ? (tGOTA / tTot * 100).toFixed(1) + '%' : '—'}</td>
   </tr>`;
   document.getElementById('seg-tbody').innerHTML = rows;
+
+  buildMonthChips();
+  renderDailyChart();
 }
 
 function buildFilters() {
@@ -415,6 +511,7 @@ function buildFilters() {
       btn.textContent = y;
       btn.addEventListener('click', () => {
         activeYear = y;
+        activeMonth = null;
         document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip')
           .forEach(b => b.classList.toggle('active', b.textContent === activeYear));
         render();
@@ -438,8 +535,12 @@ function setText(id, v) {
 
 async function loadData() {
   try {
-    const res = await fetch('data/db_aggregated.json?t=' + Date.now());
-    db = await res.json();
+    const [r1, r2] = await Promise.all([
+      fetch('data/db_aggregated.json?t=' + Date.now()),
+      fetch('data/otb_data.json?t=' + Date.now()),
+    ]);
+    db = await r1.json();
+    otb = await r2.json();
     buildFilters();
     render();
   } catch (e) {
