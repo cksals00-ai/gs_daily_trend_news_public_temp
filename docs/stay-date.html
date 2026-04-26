@@ -179,6 +179,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="filter-section-label">연도</div>
       <div class="filter-chips" id="year-chips"></div>
     </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">월</div>
+      <div class="filter-chips" id="sidebar-month-chips"></div>
+    </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA UPDATED</div>
       <div class="refresh-time" id="sidebar-refresh">—</div>
@@ -514,10 +519,35 @@ function buildFilters() {
         activeMonth = null;
         document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip')
           .forEach(b => b.classList.toggle('active', b.textContent === activeYear));
+        buildSidebarMonthChips();
         render();
       });
       c.appendChild(btn);
     });
+  });
+  buildSidebarMonthChips();
+}
+
+function buildSidebarMonthChips() {
+  const c = document.getElementById('sidebar-month-chips');
+  if (!c) return;
+  c.innerHTML = '';
+  const months = db.meta.months.filter(m => m.startsWith(activeYear)).sort();
+  months.forEach(m => {
+    const mn = parseInt(m.slice(4));
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (activeMonth === m ? ' active' : '');
+    btn.textContent = mn + '월';
+    btn.dataset.value = m;
+    btn.addEventListener('click', () => {
+      activeMonth = (activeMonth === m) ? null : m;
+      c.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.value === activeMonth));
+      // sync main content month chips too
+      const mainChips = document.getElementById('month-chips');
+      if (mainChips) mainChips.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset && b.dataset.value === activeMonth));
+      renderDailyChart();
+    });
+    c.appendChild(btn);
   });
 }
 
