@@ -546,6 +546,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         'by_segment': {
             s: {m: calc_adr(v) for m, v in sorted(months.items())}
             for s, months in sorted(segment_monthly.items())
+            if s != '기타'
         },
         'by_property_channel': {
             p: {
@@ -565,6 +566,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             p: {
                 s: {m: calc_adr(v) for m, v in sorted(months.items())}
                 for s, months in sorted(segs.items())
+                if s != '기타'
             }
             for p, segs in sorted(prop_segment_monthly.items())
         },
@@ -574,7 +576,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     all_months = sorted(monthly_total.keys())
     all_years = sorted(set(m[:4] for m in all_months))
     all_props = sorted(prop_monthly.keys())
-    all_channels = sorted(channel_monthly.keys())
+    all_channels = sorted(c for c in channel_monthly.keys() if c != '기타')
     all_regions = sorted(region_monthly.keys())
 
     result['meta'] = {
@@ -583,7 +585,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         'properties': all_props,
         'channels': all_channels,
         'regions': all_regions,
-        'segments': sorted(segment_monthly.keys()),
+        'segments': sorted(s for s in segment_monthly.keys() if s != '기타'),
         'total_rows': sum(v['count'] for v in agg.values()),
     }
 

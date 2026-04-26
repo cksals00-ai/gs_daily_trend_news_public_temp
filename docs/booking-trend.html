@@ -232,6 +232,23 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
+    <!-- 예약일자별 누적실적 비교 차트 -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title">예약 페이스 (투숙월별 예약일자 누적실적)</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="chart-legend" id="pace-legend"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;" id="pace-month-chips"></div>
+      <div class="chart-canvas-wrap" style="height:380px;">
+        <canvas id="pace-chart"></canvas>
+      </div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);">
+        X축 = 투숙월 1일 기준 D-일 (음수: 사전예약, 양수: 당월예약) · 취소 반영 순예약 누계
+      </div>
+    </div>
+
     <div class="table-card">
       <div class="table-card-header">
         <span class="table-card-title">월별 RNS 비교표</span>
@@ -287,7 +304,7 @@ function getYearTotal(year, months) {
       count++;
     }
   }
-  return { rns, rev, count, adr: rns > 0 ? (rev / rns) * 1000 * 100 : 0 };
+  return { rns, rev, count, adr: rns > 0 ? (rev / rns) * 1_000_000 : 0 };
 }
 
 function render() {
@@ -404,7 +421,147 @@ function buildFilters() {
   });
 }
 
-function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const unitSpan = el.querySelector('.unit');
+  if (unitSpan) {
+    el.childNodes.forEach(n => { if (n !== unitSpan) n.remove(); });
+    el.insertBefore(document.createTextNode(v), unitSpan);
+  } else {
+    el.innerHTML = v;
+  }
+}
+
+// ── 예약 페이스 차트 ──
+let paceChart = null;
+let activePaceMonth = new Date().getMonth() + 1; // 현재 월 기본
+
+function buildPaceMonthChips() {
+  const c = document.getElementById('pace-month-chips');
+  if (!c) return;
+  c.innerHTML = '';
+  for (let m = 1; m <= 12; m++) {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (m === activePaceMonth ? ' active' : '');
+    btn.textContent = m + '월';
+    btn.addEventListener('click', () => {
+      activePaceMonth = m;
+      c.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent === m + '월'));
+      renderPaceChart();
+    });
+    c.appendChild(btn);
+  }
+}
+
+function parseDate(s) {
+  // "20260401" → Date
+  return new Date(parseInt(s.slice(0,4)), parseInt(s.slice(4,6))-1, parseInt(s.slice(6,8)));
+}
+
+function daysDiff(d1, d2) {
+  return Math.round((d1 - d2) / 86400000);
+}
+
+function renderPaceChart() {
+  if (!db || !db.net_daily_by_month) return;
+  const years = db.meta.years;
+  const mm = String(activePaceMonth).padStart(2, '0');
+
+  const datasets = [];
+  const legendEl = document.getElementById('pace-legend');
+
+  years.forEach(y => {
+    const monthKey = y + mm;
+    const monthData = db.net_daily_by_month[monthKey];
+    if (!monthData) return;
+
+    // 투숙월 1일 기준
+    const monthStart = new Date(parseInt(y), activePaceMonth - 1, 1);
+    const sortedDates = Object.keys(monthData).sort();
+    if (sortedDates.length === 0) return;
+
+    // 누적 계산 (취소 반영 net_rn)
+    let cumulative = 0;
+    const points = [];
+    sortedDates.forEach(d => {
+      cumulative += monthData[d].net_rn || 0;
+      const bookDate = parseDate(d);
+      const dRel = daysDiff(bookDate, monthStart);
+      points.push({ x: dRel, y: cumulative });
+    });
+
+    const color = YEAR_COLORS[y] || '#888';
+    const isCur = y === activeYear;
+    datasets.push({
+      label: y + '년 ' + activePaceMonth + '월',
+      data: points,
+      borderColor: color,
+      backgroundColor: color + '22',
+      borderWidth: isCur ? 2.5 : 1.5,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0.2,
+      fill: false,
+      borderDash: isCur ? [] : [4, 3]
+    });
+  });
+
+  if (paceChart) paceChart.destroy();
+  const ctx = document.getElementById('pace-chart');
+  if (!ctx) return;
+
+  paceChart = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: {
+            title: items => {
+              if (!items.length) return '';
+              const d = items[0].parsed.x;
+              return d < 0 ? 'D' + d : d === 0 ? 'D-Day' : 'D+' + d;
+            },
+            label: ctx => ' ' + ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toLocaleString('ko-KR') + '실' : '—')
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: '투숙월 1일 기준 (일)', color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: 'rgba(255,255,255,0.4)', font: { family: 'JetBrains Mono', size: 10 },
+            callback: v => v === 0 ? 'D-Day' : v < 0 ? 'D' + v : 'D+' + v
+          },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 },
+            callback: v => v.toLocaleString('ko-KR')
+          },
+          border: { display: false }
+        }
+      }
+    }
+  });
+
+  // Legend
+  if (legendEl) {
+    legendEl.innerHTML = datasets.map(ds =>
+      `<div class="chart-legend-item"><div class="legend-dot" style="background:${ds.borderColor};${ds.borderDash.length ? 'opacity:0.6;' : ''}"></div>${ds.label.split(' ')[0]}</div>`
+    ).join('');
+  }
+}
 
 async function loadData() {
   try {
@@ -414,6 +571,8 @@ async function loadData() {
     setText('refresh-badge', db.generated_at || '—');
     buildFilters();
     render();
+    buildPaceMonthChips();
+    renderPaceChart();
   } catch (e) {
     console.error(e);
     document.getElementById('trend-tbody').innerHTML =

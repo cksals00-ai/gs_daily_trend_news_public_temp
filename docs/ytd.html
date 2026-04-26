@@ -470,7 +470,17 @@ function buildMonthChips() {
   });
 }
 
-function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const unitSpan = el.querySelector('.unit');
+  if (unitSpan) {
+    el.childNodes.forEach(n => { if (n !== unitSpan) n.remove(); });
+    el.insertBefore(document.createTextNode(v), unitSpan);
+  } else {
+    el.innerHTML = v;
+  }
+}
 
 async function loadData() {
   try {
