@@ -331,6 +331,7 @@ function getMonthsForPeriod() {
 function aggregateChannels(months) {
   const result = {};
   for (const ch of db.meta.channels) {
+    if (ch === '기타') continue;
     const chData = db.by_channel[ch];
     if (!chData) continue;
     let booking_rn = 0, cancel_rn = 0, net_rn = 0, booking_rev = 0, net_rev = 0;
@@ -479,6 +480,7 @@ function buildYoYChart() {
   // Get all months for selected month across all years
   const allChannelYearly = {};
   for (const ch of db.meta.channels) {
+    if (ch === '기타') continue;
     const chData = db.by_channel[ch];
     if (!chData) continue;
     allChannelYearly[ch] = {};
