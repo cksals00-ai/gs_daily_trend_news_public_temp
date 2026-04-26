@@ -259,6 +259,17 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- 연도별 추이 차트 -->
+    <div class="chart-card" style="margin-bottom:20px;">
+      <div class="chart-card-header">
+        <span class="chart-card-title">채널별 연도 추이 (Top 5 RNS)</span>
+        <div class="chart-legend" id="yoy-legend"></div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:280px;">
+        <canvas id="channel-yoy-chart"></canvas>
+      </div>
+    </div>
+
     <div class="table-card">
       <div class="table-card-header">
         <span class="table-card-title">채널별 상세 실적</span>
@@ -424,6 +435,9 @@ function render() {
     <td>100.0%</td>
   </tr>`;
   document.getElementById('channel-tbody').innerHTML = rows;
+
+  // 연도별 추이 차트
+  buildYoYChart();
 }
 
 function buildBarChart(id, labels, data, color, oldChart, setter, formatter) {
@@ -448,6 +462,71 @@ function buildBarChart(id, labels, data, color, oldChart, setter, formatter) {
     }
   });
   setter(c);
+}
+
+let yoyChart = null;
+const YOY_COLORS = ['#5a9fc4','#e6b970','#4caf6f','#e57373','#ab7ae0','#f0a500','#4ecdc4','#ff6b9d'];
+
+function buildYoYChart() {
+  const canvas = document.getElementById('channel-yoy-chart');
+  if (!canvas) return;
+  if (yoyChart) yoyChart.destroy();
+
+  // Get all years available
+  const years = db.meta.years.slice().sort();
+  if (years.length < 2) return;
+
+  // Get all months for selected month across all years
+  const allChannelYearly = {};
+  for (const ch of db.meta.channels) {
+    const chData = db.by_channel[ch];
+    if (!chData) continue;
+    allChannelYearly[ch] = {};
+    for (const yr of years) {
+      let total = 0;
+      const yrMonths = activeMonth === '0'
+        ? db.meta.months.filter(m => m.startsWith(yr))
+        : [yr + activeMonth.padStart(2,'0')];
+      for (const m of yrMonths) {
+        if (chData[m]) total += chData[m].net_rn || 0;
+      }
+      allChannelYearly[ch][yr] = total;
+    }
+  }
+
+  // Top 5 channels by latest year total
+  const latestYear = years[years.length - 1];
+  const top5 = Object.entries(allChannelYearly)
+    .sort(([,a],[,b]) => (b[latestYear]||0) - (a[latestYear]||0))
+    .slice(0, 5);
+
+  const datasets = top5.map(([ch, yearly], i) => ({
+    label: ch,
+    data: years.map(yr => yearly[yr] || 0),
+    borderColor: YOY_COLORS[i % YOY_COLORS.length],
+    backgroundColor: YOY_COLORS[i % YOY_COLORS.length] + '33',
+    borderWidth: 2,
+    pointRadius: 3,
+    tension: 0.3,
+    fill: false,
+  }));
+
+  yoyChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels: years.map(y => y + '년'), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: 'rgba(255,255,255,0.6)', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12, padding: 12 } },
+        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
+          callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ko-KR') + '실' } }
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.4)',font:{family:'JetBrains Mono',size:10}}, border:{display:false} },
+        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10},callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} }
+      }
+    }
+  });
 }
 
 function buildFilters() {
@@ -493,7 +572,17 @@ function buildMonthChips() {
   });
 }
 
-function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const unitSpan = el.querySelector('.unit');
+  if (unitSpan) {
+    el.childNodes.forEach(n => { if (n !== unitSpan) n.remove(); });
+    el.insertBefore(document.createTextNode(v), unitSpan);
+  } else {
+    el.innerHTML = v;
+  }
+}
 
 async function loadData() {
   try {
