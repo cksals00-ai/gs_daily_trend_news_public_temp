@@ -813,10 +813,8 @@ def inject_news_section(html: str, news_data: dict) -> str:
 # ─────────────────────────────────────────────
 # 주간 리포트 주입
 # ─────────────────────────────────────────────
-def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
-    """data/weekly_report.json → 주간 리포트 카드 데이터 주입
-    null 항목은 agg_data(db_aggregated.json)의 monthly_total로 자동 보완.
-    """
+def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_data: dict = None) -> str:
+    """data/weekly_report.json + otb_data.json → 주간 리포트 카드 데이터 주입"""
     if not weekly:
         return html
 
@@ -832,31 +830,41 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None) -> str:
     # 섹션 헤더 예약 기준일
     html = apply_tpl(html, "weekly-basis", basis_full)
 
-    # Daily OTB (투숙월 기준 3개월) — null 항목은 db_aggregated로 자동 보완
-    otb = weekly.get("daily_otb", {})
-    if otb:
-        html = apply_tpl(html, "otb-date", basis_date)
-        months = otb.get("months", [])
-        monthly_total = (agg_data or {}).get("monthly_total", {})
-        for m_idx, m_data in enumerate(months[:3]):
-            stay_month = m_data.get("stay_month", "")
-            agg_key = stay_month.replace("-", "")  # "2026-05" → "202605"
-            agg_month = monthly_total.get(agg_key, {})
+    # Daily OTB — otb_data.json의 allMonths에서 당월/익월/익익월 자동 추출
+    html = apply_tpl(html, "otb-date", basis_date)
+    if otb_data:
+        all_months = otb_data.get("allMonths", {})
+        cur_month = now.month
+        month_keys = [str(cur_month + i) for i in range(3)]
 
-            net = m_data.get("net_otb")
-            booking = m_data.get("booking_rns")
-            cancel = m_data.get("cancel_rns")
+        def _ach_class(v):
+            if v is None:
+                return "ach-low"
+            return "ach-high" if v >= 90 else "ach-mid" if v >= 75 else "ach-low"
 
-            if net is None:
-                net = agg_month.get("booking_rn")
-            if booking is None:
-                booking = agg_month.get("booking_rn")
-            if cancel is None:
-                cancel = agg_month.get("cancel_rn")
+        for m_idx, mkey in enumerate(month_keys):
+            s = all_months.get(mkey, {}).get("summary", {})
+            actual   = s.get("rns_actual")
+            ach      = s.get("rns_achievement")
+            fcst     = s.get("rns_fcst")
+            fcst_ach = s.get("fcst_achievement")
+            t_net    = s.get("today_net", 0) or 0
+            t_book   = s.get("today_booking", 0) or 0
+            t_cancel = s.get("today_cancel", 0) or 0
 
-            html = apply_tpl(html, f"otb-m{m_idx}-net", f"{net:,}" if net is not None else "—")
-            html = apply_tpl(html, f"otb-m{m_idx}-booking", f"{booking:,}" if booking is not None else "—")
-            html = apply_tpl(html, f"otb-m{m_idx}-cancel", f"{cancel:,}" if cancel is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-actual",   f"{actual:,}"         if actual   is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-ach",      f"{ach:.1f}%"         if ach      is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-fcst",     f"{fcst:,}"           if fcst     is not None else "—")
+            html = apply_tpl(html, f"otb-m{m_idx}-fcst-ach", f"{fcst_ach:.1f}%"    if fcst_ach is not None else "—")
+            net_sign = "+" if t_net >= 0 else ""
+            html = apply_tpl(html, f"otb-m{m_idx}-today-net", f"{net_sign}{t_net:,}")
+
+            html = html.replace(f"OTB_M{m_idx}_ACH_CLASS",  _ach_class(ach))
+            html = html.replace(f"OTB_M{m_idx}_FACH_CLASS", _ach_class(fcst_ach))
+            net_clr = "var(--positive)" if t_net >= 0 else "var(--negative)"
+            html = html.replace(f"OTB_M{m_idx}_NET_CLR", net_clr)
+
+        logger.info("✓ Daily OTB (otb_data.json allMonths) 주입")
 
     # 전략 카드 (최대 2개)
     strategies = weekly.get("weekly_strategies", [])
@@ -951,7 +959,7 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
     html = inject_signal_cards(html, notes.get("property_performance", {}))
     html = inject_competitor_section(html, comp_data)
-    html = inject_weekly_report(html, weekly_data, agg_data)
+    html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data)
     if otb_data:
         html = inject_yoy_property_table(html, otb_data)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
