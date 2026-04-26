@@ -864,6 +864,47 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             net_clr = "var(--positive)" if t_net >= 0 else "var(--negative)"
             html = html.replace(f"OTB_M{m_idx}_NET_CLR", net_clr)
 
+        # 당월 인사이트 주입
+        cur_snap = all_months.get(str(cur_month), {})
+        cur_s = cur_snap.get("summary", {})
+        cur_props = cur_snap.get("byProperty", [])
+
+        # YoY
+        yoy_val = cur_s.get("rns_yoy", 0) or 0
+        yoy_sign = "+" if yoy_val >= 0 else ""
+        yoy_clr = "var(--positive)" if yoy_val >= 0 else "var(--negative)"
+        html = apply_tpl(html, "otb-yoy", f"{yoy_sign}{yoy_val:.1f}%")
+        html = html.replace("OTB_YOY_CLR", yoy_clr)
+
+        # 목표 갭
+        gap = (cur_s.get("rns_budget", 0) or 0) - (cur_s.get("rns_actual", 0) or 0)
+        if gap > 0:
+            gap_txt = f"부족 {gap:,}실"
+            gap_clr = "var(--negative)"
+        else:
+            gap_txt = f"초과 {abs(gap):,}실"
+            gap_clr = "var(--positive)"
+        html = apply_tpl(html, "otb-gap", gap_txt)
+        html = html.replace("OTB_GAP_CLR", gap_clr)
+
+        # 매출 달성률
+        rev_ach = cur_s.get("rev_achievement")
+        html = apply_tpl(html, "otb-rev-ach", f"{rev_ach:.1f}%" if rev_ach is not None else "—")
+        html = html.replace("OTB_REVACH_CLASS", _ach_class(rev_ach))
+
+        # Top/Bottom 사업장
+        if cur_props:
+            sorted_props = sorted(cur_props, key=lambda x: x.get("rns_achievement", 0), reverse=True)
+            top3 = sorted_props[:3]
+            bot3 = [p for p in sorted_props[-3:] if p.get("rns_achievement", 0) < 100]
+            top_items = " / ".join(f'{p["name"].split(".",1)[-1]} {p["rns_achievement"]}%' for p in top3)
+            bot_items = " / ".join(f'{p["name"].split(".",1)[-1]} {p["rns_achievement"]}%' for p in bot3)
+            html = apply_tpl(html, "otb-top3", top_items)
+            html = apply_tpl(html, "otb-bot3", bot_items)
+        else:
+            html = apply_tpl(html, "otb-top3", "—")
+            html = apply_tpl(html, "otb-bot3", "—")
+
         logger.info("✓ Daily OTB (otb_data.json allMonths) 주입")
 
     # 전략 카드 (최대 2개)
