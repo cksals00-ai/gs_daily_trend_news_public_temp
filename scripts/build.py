@@ -1007,7 +1007,7 @@ def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
         color  = REGION_COLORS.get(region, "#888")
         cells  = ""
         for m in months:
-            md = row.get("months", {}).get(m, {})
+            md = row.get("months", {}).get(str(m), {})
             act   = md.get("act_rn", 0)
             last  = md.get("last_rn", 0)
             yoy   = md.get("yoy")
