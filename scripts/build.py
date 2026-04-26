@@ -892,18 +892,31 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         html = apply_tpl(html, "otb-rev-ach", f"{rev_ach:.1f}%" if rev_ach is not None else "—")
         html = html.replace("OTB_REVACH_CLASS", _ach_class(rev_ach))
 
-        # Top/Bottom 사업장
-        if cur_props:
-            sorted_props = sorted(cur_props, key=lambda x: x.get("rns_achievement", 0), reverse=True)
-            top3 = sorted_props[:3]
-            bot3 = [p for p in sorted_props[-3:] if p.get("rns_achievement", 0) < 100]
-            top_items = " / ".join(f'{p["name"].split(".",1)[-1]} {p["rns_achievement"]}%' for p in top3)
-            bot_items = " / ".join(f'{p["name"].split(".",1)[-1]} {p["rns_achievement"]}%' for p in bot3)
-            html = apply_tpl(html, "otb-top3", top_items)
-            html = apply_tpl(html, "otb-bot3", bot_items)
-        else:
-            html = apply_tpl(html, "otb-top3", "—")
-            html = apply_tpl(html, "otb-bot3", "—")
+        # Top/Bottom 사업장 — 3개월분 JSON 주입
+        import json as _json
+        tb_by_month = {}
+        for m_idx, mkey in enumerate(month_keys):
+            m_snap = all_months.get(mkey, {})
+            m_props = m_snap.get("byProperty", [])
+            if m_props:
+                s_props = sorted(m_props, key=lambda x: x.get("rns_achievement", 0), reverse=True)
+                t3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_achievement", 0)} for p in s_props[:3]]
+                b3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_achievement", 0)} for p in s_props[-3:] if p.get("rns_achievement", 0) < 100]
+                tb_by_month[mkey] = {"top": t3, "bot": b3}
+            else:
+                tb_by_month[mkey] = {"top": [], "bot": []}
+        # 당월 기본 표시
+        cur_tb = tb_by_month.get(str(cur_month), {"top": [], "bot": []})
+        top_items = " / ".join(f'{p["n"]} {p["a"]}%' for p in cur_tb["top"]) or "—"
+        bot_items = " / ".join(f'{p["n"]} {p["a"]}%' for p in cur_tb["bot"]) or "—"
+        html = apply_tpl(html, "otb-top3", top_items)
+        html = apply_tpl(html, "otb-bot3", bot_items)
+        # JSON 주입 (JS 토글용)
+        tb_json = _json.dumps(tb_by_month, ensure_ascii=False)
+        html = html.replace("/*__TB_BY_MONTH__*/", f"const TB_BY_MONTH = {tb_json};")
+        # 월 라벨 주입
+        month_labels_json = _json.dumps({mkey: f"{int(mkey)}월" for mkey in month_keys}, ensure_ascii=False)
+        html = html.replace("/*__TB_MONTH_LABELS__*/", f"const TB_MONTH_LABELS = {month_labels_json};")
 
         logger.info("✓ Daily OTB (otb_data.json allMonths) 주입")
 

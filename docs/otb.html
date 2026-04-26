@@ -1467,14 +1467,12 @@ function buildFilterChips(data) {
     });
   });
 
-  const VISIBLE_COUNT = 4; // 전체, OTA, G-OTA, Inbound 항상 표시
+  const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
   [segContainer, mSegContainer].forEach(c => {
     if (!c) return;
     c.innerHTML = '';
-    const segs = data.filters.segments;
-    let expanded = false;
 
-    const makeChip = (s) => {
+    ALLOWED_SEGS.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'chip' + (activeSegs.has(s) ? ' active' : '');
       btn.textContent = s;
@@ -1497,32 +1495,8 @@ function buildFilterChips(data) {
         });
         applyFilters();
       });
-      return btn;
-    };
-
-    // 항상 보이는 칩
-    segs.slice(0, VISIBLE_COUNT).forEach(s => c.appendChild(makeChip(s)));
-
-    if (segs.length > VISIBLE_COUNT) {
-      // 더보기 영역
-      const moreWrap = document.createElement('div');
-      moreWrap.style.cssText = 'display:none;flex-wrap:wrap;gap:4px;margin-top:4px;width:100%;';
-      segs.slice(VISIBLE_COUNT).forEach(s => moreWrap.appendChild(makeChip(s)));
-      c.appendChild(moreWrap);
-
-      // 더보기/접기 버튼
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'chip';
-      toggleBtn.style.cssText = 'font-size:10px;opacity:0.6;border-style:dashed;';
-      toggleBtn.textContent = `더보기 (+${segs.length - VISIBLE_COUNT})`;
-      toggleBtn.addEventListener('click', () => {
-        expanded = !expanded;
-        moreWrap.style.display = expanded ? 'flex' : 'none';
-        toggleBtn.textContent = expanded ? '접기' : `더보기 (+${segs.length - VISIBLE_COUNT})`;
-        toggleBtn.style.opacity = expanded ? '1' : '0.6';
-      });
-      c.appendChild(toggleBtn);
-    }
+      c.appendChild(btn);
+    });
   });
 }
 
