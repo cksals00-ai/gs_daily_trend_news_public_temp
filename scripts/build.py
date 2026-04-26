@@ -391,6 +391,107 @@ def inject_region_monthly(html: str, prop_data: dict) -> str:
     return html
 
 
+# ─────────────────────────────────────────────
+# 권역 카드 주간 온북 추이 (사업장별·월별)
+# ─────────────────────────────────────────────
+# PROPERTY_DEFS: (display_name, region, [db_property_names])
+_PROP_REGION_MAP = [
+    ("벨비발디",      "vivaldi", ["소노벨 비발디파크", "소노문 비발디파크"]),
+    ("캄비발디",      "vivaldi", ["소노캄 비발디파크"]),
+    ("펫비발디",      "vivaldi", ["소노펫 비발디파크"]),
+    ("펠리체비발디",  "vivaldi", ["소노펠리체 비발디파크"]),
+    ("빌리지비발디",  "vivaldi", ["소노펠리체 빌리지 비발디파크"]),
+    ("양평",          "central", ["소노휴 양평", "소노벨 양평"]),
+    ("델피노",        "central", ["델피노"]),
+    ("쏠비치양양",    "central", ["쏠비치 양양"]),
+    ("쏠비치삼척",    "central", ["쏠비치 삼척"]),
+    ("소노벨단양",    "central", ["소노문 단양", "소노벨 단양"]),
+    ("소노캄경주",    "south",   ["소노벨 경주", "소노캄 경주"]),
+    ("소노벨청송",    "central", ["소노벨 청송"]),
+    ("소노벨천안",    "central", ["소노벨 천안"]),
+    ("소노벨변산",    "central", ["소노벨 변산"]),
+    ("소노캄여수",    "south",   ["소노캄 여수"]),
+    ("소노캄거제",    "south",   ["소노캄 거제"]),
+    ("쏠비치진도",    "south",   ["쏠비치 진도"]),
+    ("소노벨제주",    "apac",    ["소노벨 제주"]),
+    ("소노캄제주",    "apac",    ["소노캄 제주"]),
+    ("소노캄고양",    "apac",    ["소노캄 고양"]),
+    ("소노문해운대",  "south",   ["소노문 해운대"]),
+    ("쏠비치남해",    "south",   ["쏠비치 남해"]),
+    ("르네블루",      "central", ["르네블루"]),
+]
+
+
+def build_weekly_onbook(db_agg: dict) -> dict:
+    """
+    db_aggregated.json에서 사업장별·투숙월별 주간 순예약(온북) 추이 계산.
+    반환: { region: { display_name: { "202604": [{"w":"4/7","rn":120}, ...], ... } } }
+    """
+    from datetime import datetime as _dt
+    pickup_pm = db_agg.get("pickup_daily_by_property_month", {})
+    cancel_pm = db_agg.get("cancel_daily_by_property_month", {})
+
+    result = {"vivaldi": {}, "central": {}, "south": {}, "apac": {}}
+
+    for disp, region, db_props in _PROP_REGION_MAP:
+        prop_months = {}
+        for stay_m in ["202604", "202605", "202606"]:
+            # 일별 net pickup 합산 (여러 db_prop 합산)
+            daily_net = {}
+            for dbp in db_props:
+                for d, v in pickup_pm.get(dbp, {}).get(stay_m, {}).items():
+                    daily_net[d] = daily_net.get(d, 0) + v.get("rn", 0)
+                for d, v in cancel_pm.get(dbp, {}).get(stay_m, {}).items():
+                    daily_net[d] = daily_net.get(d, 0) - v.get("rn", 0)
+
+            if not daily_net:
+                continue
+
+            # 주간 집계 (월~일 기준)
+            weekly = {}
+            for d_str, rn in sorted(daily_net.items()):
+                try:
+                    dt = _dt.strptime(d_str[:8], "%Y%m%d")
+                except ValueError:
+                    continue
+                iso_yr, iso_wk, _ = dt.isocalendar()
+                wk_key = f"{iso_yr}W{iso_wk:02d}"
+                # 주차 라벨: 해당 주의 월요일 날짜
+                mon = dt - timedelta(days=dt.weekday())
+                wk_label = f"{mon.month}/{mon.day}"
+                if wk_key not in weekly:
+                    weekly[wk_key] = {"l": wk_label, "rn": 0}
+                weekly[wk_key]["rn"] += rn
+
+            if weekly:
+                # 최근 8주만 표시
+                sorted_weeks = [
+                    {"w": v["l"], "rn": v["rn"]}
+                    for _, v in sorted(weekly.items())
+                ]
+                prop_months[stay_m] = sorted_weeks[-8:]
+
+        if prop_months:
+            result[region][disp] = prop_months
+
+    return result
+
+
+def inject_weekly_onbook(html: str, db_agg: dict) -> str:
+    """주간 온북 추이 JSON 주입 (이미 주입된 경우 교체)"""
+    weekly_data = build_weekly_onbook(db_agg)
+    weekly_json = json.dumps(weekly_data, ensure_ascii=False)
+    replacement = f"const WEEKLY_ONBOOK = {weekly_json};"
+    # 이미 주입된 경우 교체
+    pattern = re.compile(r'const WEEKLY_ONBOOK = \{.*?\};', re.DOTALL)
+    if pattern.search(html):
+        html = pattern.sub(replacement, html, count=1)
+    else:
+        html = html.replace("/*__WEEKLY_ONBOOK__*/", replacement)
+    logger.info(f"✓ 주간 온북 추이 주입: {sum(len(v) for v in weekly_data.values())}개 사업장")
+    return html
+
+
 def inject_signal_cards(html: str, prop_data: dict) -> str:
     """
     BI 자동 수집 데이터로 사업장 신호등 카드 자동 생성
@@ -1012,6 +1113,8 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
             html = apply_tpl(html, f"action-{key}", text)
     html = inject_ota_table(html, notes.get("major_ota_performance", {}))
     html = inject_signal_cards(html, notes.get("property_performance", {}))
+    if agg_data:
+        html = inject_weekly_onbook(html, agg_data)
     html = inject_competitor_section(html, comp_data)
     html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data)
     if otb_data:
