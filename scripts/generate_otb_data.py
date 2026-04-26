@@ -75,6 +75,12 @@ MONTH_LABEL = {
 }
 BUDGET_MONTH_LABEL = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"]
 
+# 리드타임 버킷 중간값 (가중평균 계산용)
+LEAD_TIME_MIDPOINTS = {
+    'same_day': 0, '1_3d': 2, '4_7d': 5.5, '1_2w': 10.5,
+    '2_4w': 21, '1_2m': 45, '2m_plus': 75,
+}
+
 
 def load_budget(wb):
     """사업장별 월별 budget 및 세그먼트별 budget 반환
@@ -399,6 +405,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
 
         # 리드타임 분포 (사업장별, 대상 월 합산)
         lead_time = {}
+        avg_lead_time = 0.0
         if lead_time_by_prop:
             lt_sum = defaultdict(int)
             for pname in db_props:
@@ -408,6 +415,11 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                         lt_sum[bucket] += cnt
             if lt_sum:
                 lead_time = dict(lt_sum)
+                total_rn = sum(lt_sum.values())
+                if total_rn > 0:
+                    avg_lead_time = round(
+                        sum(cnt * LEAD_TIME_MIDPOINTS.get(b, 0) for b, cnt in lt_sum.items()) / total_rn, 1
+                    )
 
         # FCST: elapsed_ratio 기반
         if month_idx > 0:
@@ -470,6 +482,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "today_cancel_rev":  0,
             "today_net_rev":     0,
             "lead_time":       lead_time,
+            "avg_lead_time":   avg_lead_time,
         })
         tot_bud_rn   += bud_rn
         tot_act_rn   += act_rn
@@ -632,6 +645,54 @@ def get_today_booking_by_props(db, date_str, db_props):
     return rn, rev
 
 
+def get_today_cancel_by_props(db, date_str, db_props):
+    """cancel_daily_by_property에서 특정 날짜의 사업장별 취소 RN, REV 합산."""
+    if not date_str:
+        return 0, 0
+    cdbp = db.get("cancel_daily_by_property", {})
+    rn  = sum(cdbp.get(pname, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
+    rev = sum(cdbp.get(pname, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    return rn, rev
+
+
+def get_today_booking_by_props_month(db, date_str, db_props, stay_month):
+    """pickup_daily_by_property_month에서 특정 날짜·투숙월의 사업장별 예약 합산."""
+    if not date_str:
+        return 0, 0
+    pdbpm = db.get("pickup_daily_by_property_month", {})
+    rn  = sum(pdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
+    rev = sum(pdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    return rn, rev
+
+
+def get_today_cancel_by_props_month(db, date_str, db_props, stay_month):
+    """cancel_daily_by_property_month에서 특정 날짜·투숙월의 사업장별 취소 합산."""
+    if not date_str:
+        return 0, 0
+    cdbpm = db.get("cancel_daily_by_property_month", {})
+    rn  = sum(cdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
+    rev = sum(cdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    return rn, rev
+
+
+def get_today_summary_by_month(db, now_kst, stay_month):
+    """net_daily_by_month에서 특정 투숙월의 오늘 데이터를 반환."""
+    net_daily_m = db.get("net_daily_by_month", {}).get(stay_month, {})
+    for days_ago in range(0, 7):
+        date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
+        if date_str in net_daily_m:
+            entry = net_daily_m[date_str]
+            pickup = entry.get("pickup_rn", 0)
+            cancel = entry.get("cancel_rn", 0)
+            if pickup > 0 or cancel > 0:
+                return pickup, cancel, entry.get("net_rn", 0)
+    if net_daily_m:
+        most_recent = max(net_daily_m.keys())
+        entry = net_daily_m[most_recent]
+        return entry.get("pickup_rn", 0), entry.get("cancel_rn", 0), entry.get("net_rn", 0)
+    return 0, 0, 0
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -677,27 +738,48 @@ def main():
             lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
         )
 
-    # today 데이터를 모든 월 스냅샷에 주입
-    for snap in all_months.values():
-        snap["summary"]["today_booking"] = today_booking
-        snap["summary"]["today_cancel"]  = today_cancel
-        snap["summary"]["today_net"]     = today_net
+    # today 데이터를 월 스냅샷에 주입 (월별로 stay_month 필터 적용)
+    for m_str, snap in all_months.items():
+        if m_str == "0":
+            snap["summary"]["today_booking"] = today_booking
+            snap["summary"]["today_cancel"]  = today_cancel
+            snap["summary"]["today_net"]     = today_net
+        else:
+            stay_month = f"2026{int(m_str):02d}"
+            m_booking, m_cancel, m_net = get_today_summary_by_month(db, now_kst, stay_month)
+            snap["summary"]["today_booking"] = m_booking
+            snap["summary"]["today_cancel"]  = m_cancel
+            snap["summary"]["today_net"]     = m_net
+
         for prop in snap["byProperty"]:
             db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
-            prop_booking, prop_booking_rev = get_today_booking_by_props(db, today_date, db_props)
+            if m_str == "0":
+                prop_booking, prop_booking_rev = get_today_booking_by_props(db, today_date, db_props)
+                prop_cancel,  prop_cancel_rev  = get_today_cancel_by_props(db, today_date, db_props)
+            else:
+                stay_month = f"2026{int(m_str):02d}"
+                prop_booking, prop_booking_rev = get_today_booking_by_props_month(db, today_date, db_props, stay_month)
+                prop_cancel,  prop_cancel_rev  = get_today_cancel_by_props_month(db, today_date, db_props, stay_month)
             prop["today_booking"]     = prop_booking
-            prop["today_cancel"]      = 0
-            prop["today_net"]         = prop_booking
+            prop["today_cancel"]      = prop_cancel
+            prop["today_net"]         = prop_booking - prop_cancel
             prop["today_booking_rev"] = round(prop_booking_rev * 1_000_000)
-            prop["today_cancel_rev"]  = 0
-            prop["today_net_rev"]     = round(prop_booking_rev * 1_000_000)
+            prop["today_cancel_rev"]  = round(prop_cancel_rev  * 1_000_000)
+            prop["today_net_rev"]     = round((prop_booking_rev - prop_cancel_rev) * 1_000_000)
+
         for seg_props in snap.get("byPropertySegment", {}).values():
             for prop in seg_props:
                 db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
-                prop_booking, _ = get_today_booking_by_props(db, today_date, db_props)
+                if m_str == "0":
+                    prop_booking, _ = get_today_booking_by_props(db, today_date, db_props)
+                    prop_cancel,  _ = get_today_cancel_by_props(db, today_date, db_props)
+                else:
+                    stay_month = f"2026{int(m_str):02d}"
+                    prop_booking, _ = get_today_booking_by_props_month(db, today_date, db_props, stay_month)
+                    prop_cancel,  _ = get_today_cancel_by_props_month(db, today_date, db_props, stay_month)
                 prop["today_booking"] = prop_booking
-                prop["today_cancel"]  = 0
-                prop["today_net"]     = prop_booking
+                prop["today_cancel"]  = prop_cancel
+                prop["today_net"]     = prop_booking - prop_cancel
 
     # Chart data (동기간 보정 반영)
     monthly_chart = build_monthly_chart(

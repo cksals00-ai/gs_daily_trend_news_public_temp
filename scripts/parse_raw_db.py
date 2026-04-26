@@ -282,7 +282,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         if is_cancel and cancel_daily_agg is not None and idx_cancel_date >= 0 and idx_cancel_date < plen:
                             cancel_date_str = parts[idx_cancel_date].strip()
                             if len(cancel_date_str) >= 8:
-                                ckey = (cancel_date_str[:8], prop_name, region, segment)
+                                ckey = (cancel_date_str[:8], prop_name, region, segment, stay_month)
                                 cancel_daily_agg[ckey]['rn'] += rn
                                 cancel_daily_agg[ckey]['rev'] += rev
 
@@ -290,7 +290,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         if pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
                             pickup_date_str = parts[idx_pickup_date].strip()
                             if len(pickup_date_str) >= 8:
-                                pkey = (pickup_date_str[:8], prop_name, region, segment)
+                                pkey = (pickup_date_str[:8], prop_name, region, segment, stay_month)
                                 pickup_daily_agg[pkey]['rn'] += rn
                                 pickup_daily_agg[pkey]['rev'] += rev
 
@@ -590,15 +590,24 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     def _to_m(raw_won):
         return round(raw_won / 1_000_000, 2)
 
-    # 3단계: 취소일자 기반 일별 취소 집계
+    # 3단계: 취소일자 기반 일별 취소 집계 (키: cday, prop, region, segment, stay_month)
     _cd = defaultdict(lambda: {'rn': 0, 'rev': 0})
     _cd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+    _cd_prop = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+    _cd_prop_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+    _cd_month = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
     if cancel_daily_agg:
-        for (cday, prop, region, segment), vals in cancel_daily_agg.items():
+        for (cday, prop, region, segment, stay_month), vals in cancel_daily_agg.items():
             _cd[cday]['rn'] += vals['rn']
             _cd[cday]['rev'] += vals['rev']
             _cd_seg[segment][cday]['rn'] += vals['rn']
             _cd_seg[segment][cday]['rev'] += vals['rev']
+            _cd_prop[prop][cday]['rn'] += vals['rn']
+            _cd_prop[prop][cday]['rev'] += vals['rev']
+            _cd_prop_month[prop][stay_month][cday]['rn'] += vals['rn']
+            _cd_prop_month[prop][stay_month][cday]['rev'] += vals['rev']
+            _cd_month[stay_month][cday]['rn'] += vals['rn']
+            _cd_month[stay_month][cday]['rev'] += vals['rev']
         result['cancel_daily'] = {
             d: {'rn': v['rn'], 'rev': _to_m(v['rev'])}
             for d, v in sorted(_cd.items())
@@ -607,19 +616,36 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             s: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
             for s, days in sorted(_cd_seg.items())
         }
+        result['cancel_daily_by_property'] = {
+            p: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for p, days in sorted(_cd_prop.items())
+        }
+        result['cancel_daily_by_property_month'] = {
+            p: {
+                m: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+                for m, days in sorted(months.items())
+            }
+            for p, months in sorted(_cd_prop_month.items())
+        }
 
-    # 4단계: 최초입력일자 기반 일별 픽업 집계
+    # 4단계: 최초입력일자 기반 일별 픽업 집계 (키: pday, prop, region, segment, stay_month)
     _pd = defaultdict(lambda: {'rn': 0, 'rev': 0})
     _pd_seg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
     _pd_prop = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+    _pd_prop_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+    _pd_month = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
     if pickup_daily_agg:
-        for (pday, prop, region, segment), vals in pickup_daily_agg.items():
+        for (pday, prop, region, segment, stay_month), vals in pickup_daily_agg.items():
             _pd[pday]['rn'] += vals['rn']
             _pd[pday]['rev'] += vals['rev']
             _pd_seg[segment][pday]['rn'] += vals['rn']
             _pd_seg[segment][pday]['rev'] += vals['rev']
             _pd_prop[prop][pday]['rn'] += vals['rn']
             _pd_prop[prop][pday]['rev'] += vals['rev']
+            _pd_prop_month[prop][stay_month][pday]['rn'] += vals['rn']
+            _pd_prop_month[prop][stay_month][pday]['rev'] += vals['rev']
+            _pd_month[stay_month][pday]['rn'] += vals['rn']
+            _pd_month[stay_month][pday]['rev'] += vals['rev']
         result['pickup_daily'] = {
             d: {'rn': v['rn'], 'rev': _to_m(v['rev'])}
             for d, v in sorted(_pd.items())
@@ -631,6 +657,13 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         result['pickup_daily_by_property'] = {
             p: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
             for p, days in sorted(_pd_prop.items())
+        }
+        result['pickup_daily_by_property_month'] = {
+            p: {
+                m: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+                for m, days in sorted(months.items())
+            }
+            for p, months in sorted(_pd_prop_month.items())
         }
 
     # 5단계: 순예약 (Net Booking) 일별 — pickup - cancel
@@ -656,6 +689,20 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
                 for d in sorted(set(_pd_seg.get(seg, {}).keys()) | set(_cd_seg.get(seg, {}).keys()))
             }
             for seg in all_nd_segs
+        }
+        # 투숙월별 순예약 집계
+        all_months_nd = sorted(set(_pd_month.keys()) | set(_cd_month.keys()))
+        result['net_daily_by_month'] = {
+            sm: {
+                d: {
+                    'pickup_rn': _pd_month.get(sm, {}).get(d, {'rn': 0})['rn'],
+                    'cancel_rn': _cd_month.get(sm, {}).get(d, {'rn': 0})['rn'],
+                    'net_rn': (_pd_month.get(sm, {}).get(d, {'rn': 0})['rn']
+                               - _cd_month.get(sm, {}).get(d, {'rn': 0})['rn']),
+                }
+                for d in sorted(set(_pd_month.get(sm, {}).keys()) | set(_cd_month.get(sm, {}).keys()))
+            }
+            for sm in all_months_nd
         }
 
     # 6단계: 리드타임 분포 (예약~투숙 간격) — 전체 + 사업장별
