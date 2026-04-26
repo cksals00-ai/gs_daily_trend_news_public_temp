@@ -768,6 +768,11 @@ def main():
             prop["today_cancel_rev"]  = round(prop_cancel_rev  * 1_000_000)
             prop["today_net_rev"]     = round((prop_booking_rev - prop_cancel_rev) * 1_000_000)
 
+        if m_str == "0":
+            snap["summary"]["today_booking_rev"] = sum(p["today_booking_rev"] for p in snap["byProperty"])
+            snap["summary"]["today_cancel_rev"]  = sum(p["today_cancel_rev"]  for p in snap["byProperty"])
+            snap["summary"]["today_net_rev"]     = sum(p["today_net_rev"]     for p in snap["byProperty"])
+
         for seg_props in snap.get("byPropertySegment", {}).values():
             for prop in seg_props:
                 db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
