@@ -974,13 +974,6 @@ def main():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
-    # docs/data/ 에도 복사 (프론트엔드에서 직접 로드)
-    import shutil
-    docs_data_path = BASE_DIR / "docs" / "data" / "db_aggregated.json"
-    docs_data_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(output_path, docs_data_path)
-    logger.info(f"✓ {docs_data_path} 복사 완료")
-
     logger.info(f"\n출력: {output_path}")
     logger.info(f"연도: {summary['meta']['years']}")
     logger.info(f"사업장: {len(summary['meta']['properties'])}개")
