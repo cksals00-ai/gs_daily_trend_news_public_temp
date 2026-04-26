@@ -1431,7 +1431,14 @@ function updateKPIs(data) {
 
 function setText(id, html) {
   const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
+  if (!el) return;
+  const unitSpan = el.querySelector('.unit');
+  if (unitSpan && !html.includes('class="unit"')) {
+    el.childNodes.forEach(n => { if (n !== unitSpan) n.remove(); });
+    el.insertBefore(document.createTextNode(html), unitSpan);
+  } else {
+    el.innerHTML = html;
+  }
 }
 
 // ─── FILTER UI ───
