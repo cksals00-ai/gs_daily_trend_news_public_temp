@@ -60,8 +60,9 @@ BUDGET_COL_RN  = 6
 BUDGET_COL_ADR = 8
 BUDGET_COL_REV = 10  # 千원 단위
 
-# 세그먼트별 행 오프셋 (Grand Total 행 기준 상대적 위치)
-SEGMENT_KEYS = ["OTA", "G-OTA", "Inbound"]
+# 세그먼트별 행 오프셋 (Grand Total 행 기준 상대적 위치) — 예산이 있는 세그먼트
+BUDGET_SEGMENT_KEYS = ["OTA", "G-OTA", "Inbound"]
+SEGMENT_KEYS = ["OTA", "G-OTA", "Inbound"]  # 초기값, main()에서 DB 기반 동적 확장
 SEGMENT_ROW_OFFSETS = {"OTA": -6, "G-OTA": -5, "Inbound": -9}
 
 MONTHS_26 = ["202601","202602","202603","202604","202605","202606",
@@ -137,12 +138,12 @@ def sum_db(db_bp, prop_names, month_key):
 
 
 def sum_db_segments(db_bps, prop_names, month_key):
-    """by_property_segment에서 OTA+G-OTA+Inbound만 합산"""
+    """by_property_segment에서 OTA+G-OTA+Inbound만 합산 (예산 세그먼트 기준)"""
     total_rn  = 0
     total_rev = 0.0
     for pname in prop_names:
         prop_segs = db_bps.get(pname, {})
-        for seg in SEGMENT_KEYS:
+        for seg in BUDGET_SEGMENT_KEYS:
             m = prop_segs.get(seg, {}).get(month_key, {})
             total_rn  += m.get("booking_rn",  0)
             total_rev += m.get("booking_rev", 0.0)
@@ -286,7 +287,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
 
 
 def build_segment_snapshot(db_seg, seg_budgets, month_idx):
-    """OTA/G-OTA/Inbound 세그먼트별 budget vs actual 요약"""
+    """전체 세그먼트별 budget vs actual 요약 (예산 없는 세그먼트는 budget=0)"""
     if month_idx == 0:
         target_keys = MONTHS_26
         bud_labels  = BUDGET_MONTH_LABEL
@@ -494,25 +495,15 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         tot_lst_rev  += lst_rev
         tot_rev_fcst += rev_fcst if rev_fcst is not None else 0.0
 
-    # 미래월 판별: month_idx가 단일 월이고 현재월보다 크면 FCST=None
-    is_future_month = (month_idx > 0 and month_idx > now_kst.month)
-
     tot_rns_ach  = round(tot_act_rn  / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
     tot_rev_ach  = round(tot_act_rev / tot_bud_rev  * 100, 1) if tot_bud_rev  > 0 else 0.0
     tot_adr_act  = round(tot_act_rev * 1_000_000 / tot_act_rn)  if tot_act_rn  > 0 else 0
     tot_adr_bud  = round(tot_bud_rev * 1_000_000 / tot_bud_rn)  if tot_bud_rn  > 0 else 0
     tot_adr_lst  = round(tot_lst_rev * 1_000_000 / tot_lst_rn)  if tot_lst_rn  > 0 else 0
-    if is_future_month:
-        tot_rns_fcst = None
-        tot_rev_fcst = None
-        tot_adr_fcst = None
-        tot_fcst_ach = None
-        tot_rev_fcst_ach = None
-    else:
-        tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
-        tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
-        tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
+    tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
     tot_yoy      = round((tot_act_rn  / tot_lst_rn  - 1) * 100, 1) if tot_lst_rn  > 0 else 0.0
+    tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
+    tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
 
     summary = {
         "rns_budget":      tot_bud_rn,
@@ -533,14 +524,14 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "rev_last":        round(tot_lst_rev * 1_000_000),
         "rev_achievement": tot_rev_ach,
         "rev_yoy":         round((tot_act_rev / tot_lst_rev - 1) * 100, 1) if tot_lst_rev > 0 else 0.0,
-        "rev_fcst":        round(tot_rev_fcst * 1_000_000) if tot_rev_fcst is not None else None,
+        "rev_fcst":        round(tot_rev_fcst * 1_000_000),
         "rev_fcst_achievement": tot_rev_fcst_ach,
         "adr_budget":      tot_adr_bud,
         "adr_actual":      tot_adr_act,
         "adr_last":        tot_adr_lst,
         "adr_yoy":         round((tot_adr_act / tot_adr_lst - 1) * 100, 1) if tot_adr_lst > 0 else 0.0,
         "adr_fcst":        tot_adr_fcst,
-        "adr_fcst_achievement": round(tot_adr_fcst / tot_adr_bud * 100, 1) if (tot_adr_bud > 0 and tot_adr_fcst is not None) else None,
+        "adr_fcst_achievement": round(tot_adr_fcst / tot_adr_bud * 100, 1) if tot_adr_bud > 0 else 0.0,
         "adr_vs_budget":   round((tot_adr_act / tot_adr_bud - 1) * 100, 1) if tot_adr_bud > 0 else 0.0,
     }
     seg_data = {}
@@ -711,6 +702,17 @@ def main():
     db_seg = db.get("by_segment", {})
     db_bps = db.get("by_property_segment", {})
 
+    # 전체 세그먼트 동적 탐색 (기타 제외, 예산 세그먼트 우선)
+    global SEGMENT_KEYS
+    all_segs_set = set()
+    for prop_segs in db_bps.values():
+        all_segs_set.update(prop_segs.keys())
+    all_segs_set.discard("기타")  # 기타 제거
+    # 예산 세그먼트 우선, 나머지 가나다 정렬
+    other_segs = sorted(all_segs_set - set(BUDGET_SEGMENT_KEYS))
+    SEGMENT_KEYS = BUDGET_SEGMENT_KEYS + other_segs
+    print(f"  세그먼트 탐색: {len(SEGMENT_KEYS)}개 (기타 제외)")
+
     print("Budget XLSX 로드 중...")
     wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True, data_only=True)
     budgets, seg_budgets = load_budget(wb)
@@ -819,7 +821,7 @@ def main():
             "months": [{"value": 0, "label": "전체"}] + [
                 {"value": i+1, "label": f"{i+1}월"} for i in range(12)
             ],
-            "segments": ["전체", "OTA", "G-OTA", "Inbound"],
+            "segments": ["전체"] + SEGMENT_KEYS,
         },
         # 전체(기본) 스냅샷 (월 필터=전체 상태)
         "summary":    all_months["0"]["summary"],
