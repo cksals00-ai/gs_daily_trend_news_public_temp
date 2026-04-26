@@ -494,15 +494,25 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         tot_lst_rev  += lst_rev
         tot_rev_fcst += rev_fcst if rev_fcst is not None else 0.0
 
+    # 미래월 판별: month_idx가 단일 월이고 현재월보다 크면 FCST=None
+    is_future_month = (month_idx > 0 and month_idx > now_kst.month)
+
     tot_rns_ach  = round(tot_act_rn  / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
     tot_rev_ach  = round(tot_act_rev / tot_bud_rev  * 100, 1) if tot_bud_rev  > 0 else 0.0
     tot_adr_act  = round(tot_act_rev * 1_000_000 / tot_act_rn)  if tot_act_rn  > 0 else 0
     tot_adr_bud  = round(tot_bud_rev * 1_000_000 / tot_bud_rn)  if tot_bud_rn  > 0 else 0
     tot_adr_lst  = round(tot_lst_rev * 1_000_000 / tot_lst_rn)  if tot_lst_rn  > 0 else 0
-    tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
+    if is_future_month:
+        tot_rns_fcst = None
+        tot_rev_fcst = None
+        tot_adr_fcst = None
+        tot_fcst_ach = None
+        tot_rev_fcst_ach = None
+    else:
+        tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
+        tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
+        tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
     tot_yoy      = round((tot_act_rn  / tot_lst_rn  - 1) * 100, 1) if tot_lst_rn  > 0 else 0.0
-    tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
-    tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
 
     summary = {
         "rns_budget":      tot_bud_rn,
@@ -523,14 +533,14 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "rev_last":        round(tot_lst_rev * 1_000_000),
         "rev_achievement": tot_rev_ach,
         "rev_yoy":         round((tot_act_rev / tot_lst_rev - 1) * 100, 1) if tot_lst_rev > 0 else 0.0,
-        "rev_fcst":        round(tot_rev_fcst * 1_000_000),
+        "rev_fcst":        round(tot_rev_fcst * 1_000_000) if tot_rev_fcst is not None else None,
         "rev_fcst_achievement": tot_rev_fcst_ach,
         "adr_budget":      tot_adr_bud,
         "adr_actual":      tot_adr_act,
         "adr_last":        tot_adr_lst,
         "adr_yoy":         round((tot_adr_act / tot_adr_lst - 1) * 100, 1) if tot_adr_lst > 0 else 0.0,
         "adr_fcst":        tot_adr_fcst,
-        "adr_fcst_achievement": round(tot_adr_fcst / tot_adr_bud * 100, 1) if tot_adr_bud > 0 else 0.0,
+        "adr_fcst_achievement": round(tot_adr_fcst / tot_adr_bud * 100, 1) if (tot_adr_bud > 0 and tot_adr_fcst is not None) else None,
         "adr_vs_budget":   round((tot_adr_act / tot_adr_bud - 1) * 100, 1) if tot_adr_bud > 0 else 0.0,
     }
     seg_data = {}
