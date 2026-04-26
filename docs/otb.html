@@ -1077,10 +1077,13 @@ function mergeSegSummaries(arr) {
       }
     }
   }
-  // recalc derived
-  if (out.rns_actual > 0 && out.rev_actual != null) out.adr_actual = Math.round(out.rev_actual * 1000000 / out.rns_actual);
+  // recalc derived — rev_actual은 이미 원 단위
+  if (out.rns_actual > 0 && out.rev_actual != null) out.adr_actual = Math.round(out.rev_actual / out.rns_actual);
+  if (out.rns_budget > 0 && out.rev_budget != null) out.adr_budget = Math.round(out.rev_budget / out.rns_budget);
+  if (out.rns_actual > 0 && out.rev_actual != null) out.adr_last = (out.rns_last > 0 && out.rev_last != null) ? Math.round(out.rev_last / out.rns_last) : null;
   if (out.rns_budget > 0) out.rns_achievement = +(out.rns_actual / out.rns_budget * 100).toFixed(1);
-  if (out.adr_budget > 0 && out.adr_actual > 0) out.adr_achievement = +(out.adr_actual / out.adr_budget * 100).toFixed(1);
+  if (out.rev_budget > 0) out.rev_achievement = +(out.rev_actual / out.rev_budget * 100).toFixed(1);
+  if (out.adr_budget > 0 && out.adr_actual > 0) out.adr_vs_budget = +((out.adr_actual / out.adr_budget - 1) * 100).toFixed(1);
   return out;
 }
 
@@ -1102,10 +1105,13 @@ function mergeSegByProp(arrays) {
       }
     }
   }
-  // recalc derived per property
+  // recalc derived per property — rev_actual은 이미 원 단위
   return Object.values(map).map(m => {
-    if (m.rns_actual > 0 && m.rev_actual != null) m.adr_actual = Math.round(m.rev_actual * 1000000 / m.rns_actual);
+    if (m.rns_actual > 0 && m.rev_actual != null) m.adr_actual = Math.round(m.rev_actual / m.rns_actual);
+    if (m.rns_budget > 0 && m.rev_budget != null) m.adr_budget = Math.round(m.rev_budget / m.rns_budget);
+    if (m.rns_last > 0 && m.rev_last != null) m.adr_last = Math.round(m.rev_last / m.rns_last);
     if (m.rns_budget > 0) m.rns_achievement = +(m.rns_actual / m.rns_budget * 100).toFixed(1);
+    if (m.rev_budget > 0) m.rev_achievement = +(m.rev_actual / m.rev_budget * 100).toFixed(1);
     return m;
   });
 }
