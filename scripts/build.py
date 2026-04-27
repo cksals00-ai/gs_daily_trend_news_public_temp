@@ -1309,6 +1309,27 @@ def main():
     else:
         logger.info("  otb.html 없음 - 스킵")
 
+    # ── docs/data/db_aggregated.json에 net_daily·monthly_total 동기화 ──
+    # 프론트엔드 JS가 docs/data/db_aggregated.json을 fetch하므로,
+    # 원본(data/db_aggregated.json)의 net_daily·monthly_total을 항상 동기화해야 함
+    docs_agg_path = DOCS_DIR / "data" / "db_aggregated.json"
+    if agg_data and docs_agg_path.exists():
+        try:
+            docs_agg = load_json(docs_agg_path)
+            synced_keys = []
+            for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month"):
+                if key in agg_data:
+                    docs_agg[key] = agg_data[key]
+                    synced_keys.append(key)
+            docs_agg["generated_at"] = agg_data.get("generated_at", "")
+            docs_agg_path.write_text(
+                json.dumps(docs_agg, ensure_ascii=False, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            logger.info(f"✓ docs/data/db_aggregated.json 동기화: {', '.join(synced_keys)}")
+        except Exception as e:
+            logger.warning(f"✗ docs/data 동기화 실패: {e}")
+
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)
     logger.info(f"✓ 전체 빌드 완료 · {build_meta}")

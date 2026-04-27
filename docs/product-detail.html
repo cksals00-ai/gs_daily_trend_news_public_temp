@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>상품상세 · SONO & TRINITY GS팀</title>
+<title>상품비교 · SONO & TRINITY GS팀</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -139,13 +139,9 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 <nav class="mobile-sheet-tabs">
   <a href="otb.html" class="mobile-sheet-tab">&#45813;&#51068;&#54788;&#54637;</a>
   <a href="channel.html" class="mobile-sheet-tab">&#52293;&#45768;&#48324;</a>
-  <a href="ytd.html" class="mobile-sheet-tab">&#50672;&#44036;&#45204;&#44228;</a>
-  <a href="monthly.html" class="mobile-sheet-tab">&#50900;&#48324;&#49892;&#51201;</a>
   <a href="stay-date.html" class="mobile-sheet-tab">&#53664;&#49707;&#51068;&#44592;&#51456;</a>
   <a href="booking-trend.html" class="mobile-sheet-tab">&#50696;&#50557;&#52628;&#51060;</a>
-  <a href="ly-trend.html" class="mobile-sheet-tab">&#51204;&#45380;&#52628;&#51060;</a>
-  <a href="product-detail.html" class="mobile-sheet-tab active">&#49345;&#54408;&#49345;&#49464;</a>
-  <a href="ly-product.html" class="mobile-sheet-tab">&#51204;&#45380;&#49345;&#54408;</a>
+  <a href="product-detail.html" class="mobile-sheet-tab active">상품비교</a>
 </nav>
 <div class="app-shell">
   <aside class="sidebar">
@@ -154,13 +150,9 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="otb-nav">
         <a href="otb.html" class="otb-nav-link">&#45813;&#51068;&#54788;&#54637;</a>
         <a href="channel.html" class="otb-nav-link">&#52293;&#45768;&#48324;</a>
-        <a href="ytd.html" class="otb-nav-link">&#50672;&#44036;&#45204;&#44228;</a>
-        <a href="monthly.html" class="otb-nav-link">&#50900;&#48324;&#49892;&#51201;</a>
         <a href="stay-date.html" class="otb-nav-link">&#53664;&#49707;&#51068;&#44592;&#51456;</a>
         <a href="booking-trend.html" class="otb-nav-link">&#50696;&#50557;&#52628;&#51060;</a>
-        <a href="ly-trend.html" class="otb-nav-link">&#51204;&#45380;&#52628;&#51060;</a>
-        <a href="product-detail.html" class="otb-nav-link active">&#49345;&#54408;&#49345;&#49464;</a>
-        <a href="ly-product.html" class="otb-nav-link">&#51204;&#45380;&#49345;&#54408;</a>
+        <a href="product-detail.html" class="otb-nav-link active">상품비교</a>
       </div>
     </div>
     <div class="sidebar-divider"></div>
@@ -259,9 +251,72 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- ======== 전년 상품 비교 섹션 (ly-product 통합) ======== -->
+    <div style="margin-top:12px;border-top:2px solid var(--gold);padding-top:18px;">
+      <div class="page-header" style="margin-bottom:14px;">
+        <div class="page-title" style="font-size:clamp(17px,1.8vw,22px);">전년 상품 비교 <span class="sub">YEAR-OVER-YEAR · PRODUCT</span></div>
+      </div>
+
+      <div class="kpi-strip" style="margin-bottom:16px;">
+        <div class="kpi-card achievement">
+          <div class="kpi-card-label" id="lyp-kpi-cy-label">금년 RNS</div>
+          <div class="kpi-card-value" id="lyp-kpi-cy-rns">&mdash;<span class="unit">실</span></div>
+          <div class="kpi-card-sub" id="lyp-kpi-cy-sub">&mdash;</div>
+        </div>
+        <div class="kpi-card booking">
+          <div class="kpi-card-label" id="lyp-kpi-ly-label">전년 RNS</div>
+          <div class="kpi-card-value" id="lyp-kpi-ly-rns">&mdash;<span class="unit">실</span></div>
+          <div class="kpi-card-sub" id="lyp-kpi-ly-sub">&mdash;</div>
+        </div>
+        <div class="kpi-card info">
+          <div class="kpi-card-label">YoY 증감률</div>
+          <div class="kpi-card-value" id="lyp-kpi-yoy">&mdash;<span class="unit">%</span></div>
+          <div class="kpi-card-sub">전년 대비</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-card-label">공통 상품 수</div>
+          <div class="kpi-card-value" id="lyp-kpi-common">&mdash;<span class="unit">종</span></div>
+          <div class="kpi-card-sub">양년도 모두 존재</div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:16px;">
+        <div class="chart-card-header">
+          <span class="chart-card-title" id="lyp-chart-title">상품별 RNS &mdash; 금년 vs 전년 (Top 15)</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div><span id="lyp-legend-cy">금년</span></div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;opacity:0.7;"></div><span id="lyp-legend-ly">전년</span></div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:400px;"><canvas id="lyp-chart"></canvas></div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">상품별 전년 대비 상세</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="lyp-table-label">&mdash;</span>
+        </div>
+        <div class="table-wrap">
+          <table class="pivot">
+            <thead>
+              <tr>
+                <th style="text-align:left;min-width:180px;">상품명</th>
+                <th>금년 순위</th>
+                <th class="border-left-group" id="lyp-th-cy-rns">금년 RNS</th>
+                <th id="lyp-th-cy-rev">금년 매출(억)</th>
+                <th class="border-left-group" id="lyp-th-ly-rns">전년 RNS</th>
+                <th>YoY%</th>
+                <th class="border-left-group">순위 변동</th>
+              </tr>
+            </thead>
+            <tbody id="lyp-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div style="padding:10px 0 2px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-align:center;border-top:1px solid var(--rule);">
-      DATA: package_series_trend.json &middot; &#50728;&#48513; DB 86&#48264; &#54364;&#53580;&#51648; (2022&#8211;2026) &nbsp;&middot;&nbsp;
-      <a href="ly-product.html" style="color:var(--gold);text-decoration:none;">&#51204;&#45380;&#48184;&#44368; &#8599;</a>
+      DATA: package_series_trend.json &middot; 온북 DB 86번 폰테지 (2022&ndash;2026)
     </div>
   </main>
 </div>
@@ -427,6 +482,91 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     .then(function(r){return r.json();})
     .then(function(d){ pkg = d; buildFilters(); render(); })
     .catch(function(e){ console.error(e); el('cat-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--negative);">데이터 로드 실패</td></tr>'; });
+  // ── 전년 비교 (ly-product) 섹션 렌더링 ──
+  var lypChart = null, lypShowAll = false, LYP_ROWS = 20;
+  function lypSet(id,v){var e=document.getElementById(id);if(!e)return;var u=e.querySelector('.unit');if(u){e.childNodes.forEach(function(n){if(n!==u)n.remove();});e.insertBefore(document.createTextNode(v),u);}else{e.innerHTML=v;}}
+
+  function renderLyp() {
+    if (!pkg) return;
+    var cy = selYear, ly = String(parseInt(cy)-1);
+    var cyData = pkg.by_year_ranking[cy]||[], lyData = pkg.by_year_ranking[ly]||[];
+    var cyTotal = cyData.reduce(function(s,d){return s+(d.rn||0);},0);
+    var lyTotal = lyData.reduce(function(s,d){return s+(d.rn||0);},0);
+    var yoy = lyTotal>0?((cyTotal-lyTotal)/lyTotal*100):null;
+
+    var lyRankMap = {};
+    lyData.forEach(function(d,i){lyRankMap[d.name]={rank:i+1,rn:d.rn||0,rev:d.rev||0};});
+    var common = cyData.filter(function(d){return lyRankMap[d.name];}).length;
+
+    lypSet('lyp-kpi-cy-label', cy+'년 RNS');
+    lypSet('lyp-kpi-cy-rns', fmtN(cyTotal));
+    lypSet('lyp-kpi-cy-sub', cy+'년 · '+cyData.length+'개 상품');
+    lypSet('lyp-kpi-ly-label', ly+'년 RNS');
+    lypSet('lyp-kpi-ly-rns', fmtN(lyTotal));
+    lypSet('lyp-kpi-ly-sub', ly+'년 · '+lyData.length+'개 상품');
+    lypSet('lyp-kpi-yoy', yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1));
+    var yoyEl = document.getElementById('lyp-kpi-yoy');
+    if(yoyEl) yoyEl.style.color = yoy==null?'':(yoy>=0?'var(--positive)':'var(--negative)');
+    lypSet('lyp-kpi-common', String(common));
+    lypSet('lyp-legend-cy', cy+'년');
+    lypSet('lyp-legend-ly', ly+'년');
+    lypSet('lyp-chart-title', '상품별 RNS — '+cy+'년 vs '+ly+'년 (Top 15)');
+    lypSet('lyp-table-label', cy+'년 기준 상위 '+cyData.length+'개');
+    lypSet('lyp-th-cy-rns', cy+'년 RNS');
+    lypSet('lyp-th-cy-rev', cy+'년 매출(억)');
+    lypSet('lyp-th-ly-rns', ly+'년 RNS');
+
+    // Chart
+    var top15 = cyData.slice(0,15);
+    var labels = top15.map(function(d){return d.name.length>18?d.name.slice(0,17)+'…':d.name;});
+    var cyRns = top15.map(function(d){return d.rn||0;});
+    var lyRns = top15.map(function(d){return lyRankMap[d.name]?lyRankMap[d.name].rn:0;});
+
+    if(lypChart) lypChart.destroy();
+    var ctx = document.getElementById('lyp-chart');
+    if(ctx) {
+      lypChart = new Chart(ctx, {
+        type:'bar', data:{labels:labels, datasets:[
+          {label:cy+'년',data:cyRns,backgroundColor:'#e6b970bb',borderColor:'#e6b970',borderWidth:1,borderRadius:3},
+          {label:ly+'년',data:lyRns,backgroundColor:'#5a9fc466',borderColor:'#5a9fc4',borderWidth:1,borderRadius:3}
+        ]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1d23',borderColor:'rgba(255,255,255,0.15)',borderWidth:1,titleColor:'#e6b970',bodyColor:'#e0e0e3',padding:10,
+            callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x.toLocaleString('ko-KR')+'실';}}}},
+          scales:{
+            x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},callback:function(v){return v.toLocaleString('ko-KR');}},border:{display:false}},
+            y:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.5)',font:{size:9}},border:{color:'rgba(255,255,255,0.1)'}}
+          }
+        }
+      });
+    }
+
+    // Table
+    var cnt = lypShowAll?cyData.length:Math.min(LYP_ROWS,cyData.length);
+    var rows = '';
+    for(var i=0;i<cnt;i++){
+      var d=cyData[i], lyInfo=lyRankMap[d.name], lyRn=lyInfo?lyInfo.rn:null;
+      var yoyV=lyRn!=null&&lyRn>0?((d.rn-lyRn)/lyRn*100):null;
+      var rc='';
+      if(!lyInfo){rc='<span style="color:var(--positive);font-weight:700;">NEW</span>';}
+      else{var diff=lyInfo.rank-(i+1);if(diff>0)rc='<span style="color:var(--positive);">▲'+diff+'</span>';else if(diff<0)rc='<span style="color:var(--negative);">▼'+Math.abs(diff)+'</span>';else rc='<span style="color:var(--ink-faint);">—</span>';}
+      var cls=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      rows+='<tr><td><span class="rank-num '+cls+'">'+(i+1)+'</span>'+d.name+'</td><td>'+(i+1)+'</td>'+
+        '<td class="border-left-group">'+fmtN(d.rn)+'</td><td>'+fmtR(d.rev/100)+'</td>'+
+        '<td class="border-left-group">'+(lyRn!=null?fmtN(lyRn):'<span style="color:var(--ink-faint)">—</span>')+'</td>'+
+        '<td>'+(yoyV==null?'—':'<span style="color:'+(yoyV>=0?'var(--positive)':'var(--negative)')+';">'+(yoyV>=0?'+':'')+yoyV.toFixed(1)+'%</span>')+'</td>'+
+        '<td class="border-left-group">'+rc+'</td></tr>';
+    }
+    if(cyData.length>LYP_ROWS){
+      rows+='<tr><td colspan="7" style="text-align:center;padding:10px;"><button onclick="window._lypToggle()" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">'+(lypShowAll?'접기':'더보기 ('+(cyData.length-LYP_ROWS)+'개)')+'</button></td></tr>';
+    }
+    document.getElementById('lyp-tbody').innerHTML = rows;
+  }
+  window._lypToggle = function(){lypShowAll=!lypShowAll;renderLyp();};
+
+  // 기존 render에 renderLyp 연결
+  var _origRender = render;
+  render = function(){ _origRender(); renderLyp(); };
 })();
 </script>
 </body>

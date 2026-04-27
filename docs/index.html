@@ -10691,7 +10691,7 @@
     본 대시보드는 <strong style="color:rgba(255,255,255,0.75);">GS팀 내부 운영용</strong>이며, 무단 복제 및 외부 공유를 금지합니다.
   </div>
 
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-27 07:53 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-27 11:22 KST</span></div>
 </footer>
 
 <script>
@@ -10940,13 +10940,18 @@ function toggleNewsMore(btn, id) {
       var pd = data.pickup_daily || {};
       var mt = data.monthly_total || {};
 
-      // ── 14일 net 픽업 데이터 ──
+      // ── 당일 미완성 데이터 제외 ──
+      // 오늘 날짜의 데이터는 아침 시점 미완성이므로 WoW/바차트에서 제외
       var allKeys = Object.keys(nd).sort();
-      var keys14 = allKeys.slice(-14);
+      var todayStr = (function(){var d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+m+dd;})();
+      var completedKeys = allKeys.filter(function(k){ return k < todayStr; });
+
+      // ── 14일 net 픽업 데이터 (완료일 기준) ──
+      var keys14 = completedKeys.slice(-14);
       var labels14 = keys14.map(function (k) { return (k.slice(4, 6) + '/' + k.slice(6, 8)); });
       var vals14 = keys14.map(function (k) { return (nd[k] || {}).net_rn || 0; });
 
-      // ── WoW 계산 ──
+      // ── WoW 계산 (완료일 기준) ──
       var thisWeekKeys = keys14.slice(-7);
       var lastWeekKeys = keys14.slice(0, 7);
       var thisWeekNet = thisWeekKeys.reduce(function (s, k) { return s + ((nd[k] || {}).net_rn || 0); }, 0);
@@ -11006,23 +11011,36 @@ function toggleNewsMore(btn, id) {
         });
       }
 
-      // ── 22~26년 동기간 OTB 추이 라인 차트 (누적 booking_rn 기준, 45일 전부터) ──
+      // ── 22~26년 동기간 OTB 추이 라인 차트 (booking_rn 기준, 데이터 있는 월만) ──
       var years = [2022, 2023, 2024, 2025, 2026];
       var allMonths = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-      // 45일 전 월부터 표시
+
+      // 2026년 데이터가 존재하는 월만 포함 (미래 빈 월 제외)
+      var curYr = new Date().getFullYear();
+      var curMo = new Date().getMonth(); // 0-indexed
+      // 45일 전 월부터 현재+1월까지
       var today45 = new Date();
       today45.setDate(today45.getDate() - 45);
-      var startMoIdx = today45.getMonth(); // 0-indexed
-      var months = allMonths.slice(startMoIdx);
+      var startMoIdx = today45.getMonth();
+      var endMoIdx = Math.min(curMo + 1, 11); // 현재월+1까지만 (0-indexed)
+      var months = allMonths.slice(startMoIdx, endMoIdx + 1);
       var monthLabels = months.map(function(m){ return parseInt(m) + '월'; });
+
+      // 연도별 차별화된 색상·두께·스타일
       var colors = [
-        'rgba(201,160,99,0.35)', 'rgba(201,160,99,0.5)',
-        'rgba(201,160,99,0.65)', 'rgba(255,255,255,0.45)', '#4ecdc4'
+        '#8B7355',    // 2022: 브라운
+        '#D4A574',    // 2023: 살몬 골드
+        '#7BA7CC',    // 2024: 스카이블루
+        '#E8E8E8',    // 2025: 밝은 그레이
+        '#4ecdc4'     // 2026: 틸 (현재년도 강조)
       ];
-      var widths = [1, 1, 1, 1.5, 2.5];
+      var widths = [1.5, 1.5, 2, 2, 3];
+      var dashes = [[6, 3], [4, 2], [2, 2], [], []]; // 2022-2024 점선, 2025-2026 실선
+      var radii = [0, 0, 0, 2, 4];
       var yoyCtx = document.getElementById('chart-yoy');
       if (yoyCtx && window.Chart) {
         var datasets = years.map(function (yr, i) {
+          var isCurrent = (i === years.length - 1);
           return {
             label: yr + '년',
             data: months.map(function (mo) {
@@ -11030,11 +11048,18 @@ function toggleNewsMore(btn, id) {
               return (v !== undefined && v !== 0) ? v : null;
             }),
             borderColor: colors[i],
-            backgroundColor: 'transparent',
+            backgroundColor: isCurrent ? 'rgba(78,205,196,0.08)' : 'transparent',
+            fill: isCurrent,
             borderWidth: widths[i],
-            pointRadius: i === years.length - 1 ? 2 : 0,
+            borderDash: dashes[i],
+            pointRadius: radii[i],
+            pointHoverRadius: 6,
+            pointBackgroundColor: colors[i],
+            pointBorderColor: isCurrent ? '#fff' : colors[i],
+            pointBorderWidth: isCurrent ? 2 : 1,
             tension: 0.3,
-            spanGaps: true
+            spanGaps: true,
+            order: years.length - i // 2026이 맨 위에 그려지도록
           };
         });
         new Chart(yoyCtx, {
@@ -11042,16 +11067,59 @@ function toggleNewsMore(btn, id) {
           data: { labels: monthLabels, datasets: datasets },
           options: {
             responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
               legend: {
                 display: true, position: 'bottom',
-                labels: { color: 'rgba(255,255,255,0.4)', font: { size: 8 }, boxWidth: 12, padding: 5 }
+                labels: {
+                  color: 'rgba(255,255,255,0.6)', font: { size: 9, weight: '500' },
+                  boxWidth: 18, boxHeight: 2, padding: 10,
+                  usePointStyle: false,
+                  generateLabels: function(chart) {
+                    return chart.data.datasets.map(function(ds, i) {
+                      return {
+                        text: ds.label,
+                        strokeStyle: ds.borderColor,
+                        fillStyle: 'transparent',
+                        lineWidth: ds.borderWidth,
+                        lineDash: ds.borderDash || [],
+                        hidden: !chart.isDatasetVisible(i),
+                        datasetIndex: i,
+                        fontColor: i === years.length - 1 ? '#4ecdc4' : 'rgba(255,255,255,0.5)'
+                      };
+                    });
+                  }
+                }
               },
-              tooltip: { callbacks: { label: function (c) { return c.dataset.label + ' ' + (c.raw || 0).toLocaleString() + '실'; } } }
+              tooltip: {
+                backgroundColor: 'rgba(30,33,40,0.95)',
+                titleColor: '#fff', titleFont: { size: 11, weight: '700' },
+                bodyColor: 'rgba(255,255,255,0.85)', bodyFont: { size: 10 },
+                borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+                padding: 10, cornerRadius: 6,
+                callbacks: {
+                  title: function(items) { return items[0].label; },
+                  label: function(c) {
+                    if (c.raw === null || c.raw === undefined) return null;
+                    var icon = c.datasetIndex === years.length - 1 ? ' ◀ 현재' : '';
+                    return ' ' + c.dataset.label + '  ' + c.raw.toLocaleString() + '실' + icon;
+                  }
+                }
+              }
             },
             scales: {
-              x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 8 } } },
-              y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.25)', font: { size: 7 }, callback: function(v) { return (v/1000).toFixed(0) + 'k'; } } }
+              x: {
+                grid: { color: 'rgba(255,255,255,0.06)' },
+                ticks: { color: 'rgba(255,255,255,0.45)', font: { size: 9, weight: '500' } }
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.06)' },
+                ticks: {
+                  color: 'rgba(255,255,255,0.35)', font: { size: 8 },
+                  callback: function(v) { return (v/1000).toFixed(0) + 'k'; }
+                },
+                suggestedMin: 0
+              }
             }
           }
         });
