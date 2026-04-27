@@ -809,6 +809,22 @@ def main():
                 prop["today_cancel"]  = prop_cancel
                 prop["today_net"]     = prop_booking - prop_cancel
 
+        # ── segmentData에 today 주입 (net_daily_by_segment 기반) ──
+        nds = db.get("net_daily_by_segment", {})
+        pds = db.get("pickup_daily_by_segment", {})
+        cds = db.get("cancel_daily_by_segment", {})
+        for seg, seg_summary in snap.get("segmentData", {}).items():
+            if today_date:
+                nd_entry = nds.get(seg, {}).get(today_date, {})
+                seg_summary["today_booking"] = nd_entry.get("pickup_rn", 0)
+                seg_summary["today_cancel"]  = nd_entry.get("cancel_rn", 0)
+                seg_summary["today_net"]     = nd_entry.get("net_rn", 0)
+                pd_entry = pds.get(seg, {}).get(today_date, {})
+                cd_entry = cds.get(seg, {}).get(today_date, {})
+                seg_summary["today_booking_rev"] = round(pd_entry.get("rev", 0.0) * 1_000_000)
+                seg_summary["today_cancel_rev"]  = round(cd_entry.get("rev", 0.0) * 1_000_000)
+                seg_summary["today_net_rev"]     = seg_summary["today_booking_rev"] - seg_summary["today_cancel_rev"]
+
     # Chart data (동기간 보정 반영)
     monthly_chart = build_monthly_chart(
         db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps, adj_by_prop=adj_by_prop
