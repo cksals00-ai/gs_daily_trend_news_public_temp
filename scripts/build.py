@@ -1187,6 +1187,60 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                     yoy_summary[str(yr)] = {}
                 yoy_summary[str(yr)][f"{mo}월"] = mt[mkey].get("booking_rn", 0)
 
+    # ── 5) 당일 분석: 사업장별·채널별 전일 숫자 (투숙월 4/5/6 탭용) ──
+    pdbp = agg_data.get("pickup_daily_by_property", {})
+    cdbp = agg_data.get("cancel_daily_by_property", {})
+    pdbpm = agg_data.get("pickup_daily_by_property_month", {})
+    cdbpm = agg_data.get("cancel_daily_by_property_month", {})
+    pds = agg_data.get("pickup_daily_by_segment", {})
+    cds = agg_data.get("cancel_daily_by_segment", {})
+
+    # 전일 = today_date (빌드 기준일)
+    daily_analysis = {"byProperty": {}, "bySegment": {}, "byPropertyMonth": {}, "bySegmentMonth": {}}
+
+    # (a) 사업장별 전일 전체
+    for prop in sorted(pdbp.keys()):
+        p_val = pdbp[prop].get(today_date, {})
+        c_val = cdbp.get(prop, {}).get(today_date, {})
+        p_rn = p_val.get("rn", 0) or 0
+        c_rn = c_val.get("rn", 0) or 0
+        p_rev = p_val.get("rev", 0) or 0
+        c_rev = c_val.get("rev", 0) or 0
+        if p_rn or c_rn:
+            daily_analysis["byProperty"][prop] = {
+                "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
+                "rev": round(p_rev - c_rev, 1),
+            }
+
+    # (b) 세그먼트별 전일 전체
+    for seg in sorted(pds.keys()):
+        p_val = pds[seg].get(today_date, {})
+        c_val = cds.get(seg, {}).get(today_date, {})
+        p_rn = p_val.get("rn", 0) or 0
+        c_rn = c_val.get("rn", 0) or 0
+        if p_rn or c_rn:
+            daily_analysis["bySegment"][seg] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
+
+    # (c) 사업장별 × 투숙월 전일
+    for mi in compare_months:
+        mkey = f"{now.year}{mi:02d}"
+        mlabel = f"{mi}월"
+        month_props = {}
+        for prop in sorted(pdbpm.keys()):
+            p_val = pdbpm[prop].get(mkey, {}).get(today_date, {})
+            c_val = cdbpm.get(prop, {}).get(mkey, {}).get(today_date, {})
+            p_rn = p_val.get("rn", 0) or 0
+            c_rn = c_val.get("rn", 0) or 0
+            p_rev = p_val.get("rev", 0) or 0
+            c_rev = c_val.get("rev", 0) or 0
+            if p_rn or c_rn:
+                month_props[prop] = {
+                    "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
+                    "rev": round(p_rev - c_rev, 1),
+                }
+        if month_props:
+            daily_analysis["byPropertyMonth"][mlabel] = month_props
+
     insight_blob = {
         "todayDate": today_date,
         "todayLabel": f"{today_date[4:6]}/{today_date[6:]}" if len(today_date) == 8 else "",
@@ -1198,6 +1252,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "yearsCompare": years_compare,
         "yoySummary": yoy_summary,
         "compareMonths": [f"{m}월" for m in compare_months],
+        "dailyAnalysis": daily_analysis,
     }
 
     js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"
