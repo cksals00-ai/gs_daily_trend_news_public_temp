@@ -7,7 +7,7 @@ parse_raw_db.py — 온북 원시 DB txt 파일 파싱 → JSON 집계
 - 44번: Inbound 취소
 CP949 인코딩, 세미콜론(;) 구분
 """
-import os, sys, json, re, logging, glob, unicodedata
+import os, sys, json, re, logging, glob, unicodedata, pickle
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -214,13 +214,24 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                 idx_1night = col_map.get('1박객실료', -1)    # REV 계산 기준
                 idx_cancel_date = col_map.get('취소일자', -1)      # col33: 28/44 파일
                 idx_pickup_date = col_map.get('최초입력일자', -1)  # col27: 27/43 파일
+                idx_member = col_map.get('회원명', -1)            # 거래처명
+                idx_user = col_map.get('이용자명', -1)            # 예약자명
+                idx_rsv_status = col_map.get('예약상태', -1)      # 노쇼 필터
 
                 line_count = 0
                 ok_count = 0
                 error_count = 0
+                seen_hashes = set()                              # 행 단위 중복 제거 (해시 기반, 메모리 절약)
 
                 for line in f:
                     line_count += 1
+
+                    # ── 행 단위 중복 제거 (해시) ──
+                    line_stripped = line.rstrip('\n\r')
+                    h = hash(line_stripped)
+                    if h in seen_hashes:
+                        continue
+                    seen_hashes.add(h)
                     parts = line.split(';')
                     plen = len(parts)
 
@@ -259,6 +270,25 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
 
                         rooms = _int(idx_rooms)
                         night_rate = _int(idx_1night)
+
+                        # ── 노쇼 제거 ──
+                        if idx_rsv_status >= 0 and idx_rsv_status < plen:
+                            rsv_status = parts[idx_rsv_status].strip()
+                            if rsv_status == '노쇼':
+                                continue
+
+                        # ── 거래처 제거: 예약자명 == 거래처명(회원명) ──
+                        if idx_member >= 0 and idx_user >= 0 and idx_member < plen and idx_user < plen:
+                            member_name = parts[idx_member].strip()
+                            user_name = parts[idx_user].strip()
+                            if member_name and user_name and member_name == user_name:
+                                continue
+
+                        # ── 매출조정 제거 ──
+                        if idx_member >= 0 and idx_member < plen and '매출조정' in parts[idx_member]:
+                            continue
+                        if idx_user >= 0 and idx_user < plen and '매출조정' in parts[idx_user]:
+                            continue
 
                         # BI 로직:
                         # - 판매일자 기준 DB → 연박은 매일 반복 기록됨
@@ -602,6 +632,9 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     all_channels = sorted(c for c in channel_monthly.keys() if c != '기타')
     all_regions = sorted(region_monthly.keys())
 
+    # 사업장→권역 매핑 (HTML 필터에서 사용)
+    prop_region_map = {p: get_region(p) for p in all_props}
+
     result['meta'] = {
         'years': all_years,
         'months': all_months,
@@ -610,6 +643,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         'regions': all_regions,
         'segments': sorted(s for s in segment_monthly.keys() if s != '기타'),
         'total_rows': sum(v['count'] for v in agg.values()),
+        'property_region_map': prop_region_map,
     }
 
     def _to_m(raw_won):
@@ -755,43 +789,42 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         }
 
     # 8단계: 투숙일별 일별 집계 (stay_date YYYYMMDD 단위 → YYYYMM 그룹)
+    # ★ 투숙일 기준 = 27번(FIT예약) + 43번(IB예약)만 사용
+    # ★ 28번(FIT취소) / 44번(IB취소)는 절대 사용하지 않음 (투숙 실적은 마이너스 불가)
     if stay_date_agg:
-        # key: (sell_date, prop, segment, btype) → 투숙월별 → 일자별 세그먼트별 net
         from collections import defaultdict as _dd
-        # booking (27/43) vs cancel (28/44) 분리 후 net 계산
+        # booking (27/43)만 집계 — 취소(28/44)는 완전히 제외
         sd_booking = _dd(lambda: _dd(lambda: _dd(lambda: {'rn': 0, 'rev': 0})))  # [month][day][segment]
-        sd_cancel = _dd(lambda: _dd(lambda: _dd(lambda: {'rn': 0, 'rev': 0})))
         for (sell_date, prop, segment, btype), vals in stay_date_agg.items():
+            # 취소 데이터 완전 제외
+            if btype in ('cancel', 'ib_cancel'):
+                continue
             month = sell_date[:6]
             day = int(sell_date[6:8])
             if segment == '기타':
                 continue
-            target = sd_cancel if btype in ('cancel', 'ib_cancel') else sd_booking
-            target[month][day][segment]['rn'] += vals['rn']
-            target[month][day][segment]['rev'] += vals['rev']
+            sd_booking[month][day][segment]['rn'] += vals['rn']
+            sd_booking[month][day][segment]['rev'] += vals['rev']
 
         stay_date_daily = {}
-        all_sd_months = sorted(set(sd_booking.keys()) | set(sd_cancel.keys()))
+        all_sd_months = sorted(sd_booking.keys())
         for month in all_sd_months:
-            all_days = sorted(set(sd_booking.get(month, {}).keys()) | set(sd_cancel.get(month, {}).keys()))
+            all_days = sorted(sd_booking[month].keys())
             all_segs = set()
             for d in all_days:
-                all_segs.update(sd_booking.get(month, {}).get(d, {}).keys())
-                all_segs.update(sd_cancel.get(month, {}).get(d, {}).keys())
+                all_segs.update(sd_booking[month][d].keys())
             all_segs.discard('기타')
             seg_list = sorted(all_segs)
             segments = {}
             for seg in seg_list:
-                net_rn_list = []
-                net_rev_list = []
+                rn_list = []
+                rev_list = []
                 for d in all_days:
-                    b_rn = sd_booking.get(month, {}).get(d, {}).get(seg, {}).get('rn', 0)
-                    c_rn = sd_cancel.get(month, {}).get(d, {}).get(seg, {}).get('rn', 0)
-                    b_rev = sd_booking.get(month, {}).get(d, {}).get(seg, {}).get('rev', 0)
-                    c_rev = sd_cancel.get(month, {}).get(d, {}).get(seg, {}).get('rev', 0)
-                    net_rn_list.append(b_rn - c_rn)
-                    net_rev_list.append(round((b_rev - c_rev) / 1_000_000, 2))
-                segments[seg] = {'net_rn': net_rn_list, 'net_rev': net_rev_list}
+                    rn = sd_booking[month][d].get(seg, {}).get('rn', 0)
+                    rev = sd_booking[month][d].get(seg, {}).get('rev', 0)
+                    rn_list.append(rn)
+                    rev_list.append(round(rev / 1_000_000, 2))
+                segments[seg] = {'net_rn': rn_list, 'net_rev': rev_list}
             stay_date_daily[month] = {
                 'days': all_days,
                 'segments': segments,
@@ -801,9 +834,72 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     return result
 
 
+CHECKPOINT_PATH = OUTPUT_DIR / "_parse_checkpoint.pkl"
+
+
+def _save_checkpoint(data, done_indices):
+    """체크포인트 저장 (분할 실행용, 원자적 쓰기)"""
+    payload = {
+        'agg': dict(data['agg']),
+        'cancel_daily_agg': dict(data['cancel_daily_agg']),
+        'pickup_daily_agg': dict(data['pickup_daily_agg']),
+        'lead_time_agg': dict(data['lead_time_agg']),
+        'cancel_lead_agg': dict(data['cancel_lead_agg']),
+        'stay_date_agg': dict(data['stay_date_agg']),
+        'file_stats': data['file_stats'],
+        'total_rows': data['total_rows'],
+        'done_indices': done_indices,
+    }
+    tmp_path = str(CHECKPOINT_PATH) + '.tmp'
+    with open(tmp_path, 'wb') as f:
+        pickle.dump(payload, f)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, str(CHECKPOINT_PATH))
+    logger.info(f"  체크포인트 저장: {len(done_indices)}개 파일 완료")
+
+
+def _load_checkpoint():
+    """체크포인트 로드"""
+    if not CHECKPOINT_PATH.exists():
+        return None
+    with open(CHECKPOINT_PATH, 'rb') as f:
+        payload = pickle.load(f)
+    # defaultdict 복원
+    agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
+    agg.update(payload['agg'])
+    cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    cancel_daily_agg.update(payload['cancel_daily_agg'])
+    pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    pickup_daily_agg.update(payload['pickup_daily_agg'])
+    lead_time_agg = defaultdict(lambda: {'rn': 0})
+    lead_time_agg.update(payload['lead_time_agg'])
+    cancel_lead_agg = defaultdict(lambda: {'rn': 0})
+    cancel_lead_agg.update(payload['cancel_lead_agg'])
+    stay_date_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    stay_date_agg.update(payload['stay_date_agg'])
+    return {
+        'agg': agg,
+        'cancel_daily_agg': cancel_daily_agg,
+        'pickup_daily_agg': pickup_daily_agg,
+        'lead_time_agg': lead_time_agg,
+        'cancel_lead_agg': cancel_lead_agg,
+        'stay_date_agg': stay_date_agg,
+        'file_stats': payload['file_stats'],
+        'total_rows': payload['total_rows'],
+        'done_indices': payload['done_indices'],
+    }
+
+
 def main():
+    # --phase 인수: 분할 실행 (1=파싱시작, 2=이어서파싱, 3=마무리+JSON생성)
+    phase = None
+    if '--phase' in sys.argv:
+        idx = sys.argv.index('--phase')
+        phase = int(sys.argv[idx + 1])
+
     logger.info("=" * 60)
-    logger.info("온북 원시 DB 파싱 시작")
+    logger.info("온북 원시 DB 파싱 시작" + (f" [phase={phase}]" if phase else ""))
     logger.info(f"데이터 디렉토리: {RAW_DB_DIR}")
     logger.info("=" * 60)
 
@@ -850,18 +946,40 @@ def main():
                 file_month_filter[fp] = ('202604', None)
                 logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
 
-    agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
-    cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
-    pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
-    lead_time_agg = defaultdict(lambda: {'rn': 0})
-    cancel_lead_agg = defaultdict(lambda: {'rn': 0})
-    stay_date_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
-    file_stats = {}
-    total_rows = 0
+    # 체크포인트 복원
+    checkpoint = None
+    done_indices = set()
+    if phase and phase >= 2:
+        checkpoint = _load_checkpoint()
+        if checkpoint:
+            logger.info(f"체크포인트 로드: {len(checkpoint['done_indices'])}개 파일 완료됨, 이어서 진행")
+            done_indices = checkpoint['done_indices']
+
+    if checkpoint:
+        agg = checkpoint['agg']
+        cancel_daily_agg = checkpoint['cancel_daily_agg']
+        pickup_daily_agg = checkpoint['pickup_daily_agg']
+        lead_time_agg = checkpoint['lead_time_agg']
+        cancel_lead_agg = checkpoint['cancel_lead_agg']
+        stay_date_agg = checkpoint['stay_date_agg']
+        file_stats = checkpoint['file_stats']
+        total_rows = checkpoint['total_rows']
+    else:
+        agg = defaultdict(lambda: {'rn': 0, 'rev': 0.0, 'count': 0})
+        cancel_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        pickup_daily_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        lead_time_agg = defaultdict(lambda: {'rn': 0})
+        cancel_lead_agg = defaultdict(lambda: {'rn': 0})
+        stay_date_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        file_stats = {}
+        total_rows = 0
 
     type_labels = {"27": "FIT예약", "28": "FIT취소", "43": "IB예약", "44": "IB취소"}
 
-    for fpath in txt_files:
+    for fi, fpath in enumerate(txt_files):
+        if fi in done_indices:
+            continue  # 이미 처리된 파일 스킵
+
         file_type = detect_file_type(fpath.name)
         if not file_type:
             logger.warning(f"  스킵 (타입 불명): {fpath.name}")
@@ -884,6 +1002,7 @@ def main():
                                          lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
                                          stay_date_agg=stay_date_agg)
         total_rows += row_count
+        done_indices.add(fi)
 
         file_stats[f"{folder_name}/{fpath.name}"] = {
             'type': file_type,
@@ -891,8 +1010,30 @@ def main():
             'rows': row_count,
         }
 
+        # 파일마다 체크포인트 저장 (phase 모드, 타임아웃 대비)
+        if phase:
+            _save_checkpoint({
+                'agg': agg, 'cancel_daily_agg': cancel_daily_agg,
+                'pickup_daily_agg': pickup_daily_agg, 'lead_time_agg': lead_time_agg,
+                'cancel_lead_agg': cancel_lead_agg, 'stay_date_agg': stay_date_agg,
+                'file_stats': file_stats, 'total_rows': total_rows,
+            }, done_indices)
+
     logger.info(f"\n총 파싱 행 수: {total_rows:,}")
     logger.info(f"집계 키 수: {len(agg):,}")
+    logger.info(f"처리 파일: {len(done_indices)}/{len(txt_files)}")
+
+    if phase and len(done_indices) < len(txt_files):
+        logger.info("파싱 미완료 — 다음 phase로 이어서 실행 필요")
+        return
+
+    # 체크포인트 파일 정리
+    if CHECKPOINT_PATH.exists():
+        try:
+            CHECKPOINT_PATH.unlink()
+            logger.info("체크포인트 파일 정리 완료")
+        except PermissionError:
+            logger.info("체크포인트 파일 정리 스킵 (권한 없음, 수동 삭제 필요)")
 
     # 요약 생성
     summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,

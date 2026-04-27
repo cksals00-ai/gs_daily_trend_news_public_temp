@@ -102,6 +102,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .seg-tag.ota{background:rgba(230,185,112,0.15);color:#e6b970;}
 .seg-tag.gota{background:rgba(90,159,196,0.15);color:#5a9fc4;}
 .seg-tag.inbound{background:rgba(76,175,111,0.15);color:#4caf6f;}
+.prop-chips .chip{font-size:9px;padding:3px 7px;}
 @media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.main-content{padding:16px 14px;}}
@@ -168,6 +169,16 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
+<div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
+<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
+  <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
 <div class="app-shell">
   <aside class="sidebar">
     <div>
@@ -194,6 +205,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div>
       <div class="filter-section-label">세그먼트</div>
       <div class="filter-chips" id="segment-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">권역</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div id="prop-filter-wrap" style="display:none;">
+      <div class="sidebar-divider"></div>
+      <div>
+        <div class="filter-section-label">사업장 <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
+        <div class="filter-chips prop-chips" id="prop-chips"></div>
+      </div>
     </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA UPDATED</div>
@@ -330,6 +353,18 @@ let activeMonth = String(new Date().getMonth() + 1); // 당월 기본
 let activeSegment = 'ALL'; // ALL / OTA / G-OTA
 let showAllChannels = false;
 
+let activeRegion = '전체';
+let activeProps = new Set();
+
+const REGION_DEFS = [
+  { key: '전체', label: '전체' },
+  { key: 'vivaldi', label: '비발디' },
+  { key: 'central', label: '중부' },
+  { key: 'south', label: '남부' },
+  { key: 'apac', label: 'APAC' },
+];
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
   rev: v => v == null ? '—' : (v/100).toFixed(1),
@@ -364,24 +399,64 @@ function getMonthsForPeriod() {
 
 function aggregateChannels(months) {
   const result = {};
-  for (const ch of db.meta.channels) {
-    if (ch === '기타') continue;
-    const chData = db.by_channel[ch];
-    if (!chData) continue;
-    let booking_rn = 0, cancel_rn = 0, net_rn = 0, booking_rev = 0, net_rev = 0;
-    for (const m of months) {
-      if (chData[m]) {
-        booking_rn += chData[m].booking_rn || 0;
-        cancel_rn += chData[m].cancel_rn || 0;
-        net_rn += chData[m].net_rn || 0;
-        booking_rev += chData[m].booking_rev || 0;
-        net_rev += chData[m].net_rev || 0;
+  const prm = db.meta.property_region_map || {};
+
+  // Determine which properties to include
+  let targetProps = null; // null = all
+  if (activeRegion !== '전체') {
+    if (activeProps.size > 0) {
+      targetProps = [...activeProps];
+    } else {
+      targetProps = db.meta.properties.filter(p => prm[p] === activeRegion);
+    }
+  }
+
+  if (targetProps && db.by_property_channel) {
+    // Filter by property: aggregate from by_property_channel
+    for (const prop of targetProps) {
+      const propChannels = db.by_property_channel[prop];
+      if (!propChannels) continue;
+      for (const ch of Object.keys(propChannels)) {
+        if (ch === '기타') continue;
+        if (!result[ch]) result[ch] = { booking_rn: 0, cancel_rn: 0, net_rn: 0, booking_rev: 0, net_rev: 0, adr: 0, segment: null };
+        const chData = propChannels[ch];
+        for (const m of months) {
+          if (chData[m]) {
+            result[ch].booking_rn += chData[m].booking_rn || 0;
+            result[ch].cancel_rn += chData[m].cancel_rn || 0;
+            result[ch].net_rn += chData[m].net_rn || 0;
+            result[ch].booking_rev += chData[m].booking_rev || 0;
+            result[ch].net_rev += chData[m].net_rev || 0;
+          }
+        }
       }
     }
-    const seg = getChannelSegment(ch);
-    result[ch] = { booking_rn, cancel_rn, net_rn, booking_rev, net_rev,
-      adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0,
-      segment: seg };
+    // Compute ADR and segment
+    for (const [ch, d] of Object.entries(result)) {
+      d.adr = d.net_rn > 0 ? d.net_rev * 1000 / d.net_rn : 0;
+      d.segment = getChannelSegment(ch);
+    }
+  } else {
+    // Original logic: all properties
+    for (const ch of db.meta.channels) {
+      if (ch === '기타') continue;
+      const chData = db.by_channel[ch];
+      if (!chData) continue;
+      let booking_rn = 0, cancel_rn = 0, net_rn = 0, booking_rev = 0, net_rev = 0;
+      for (const m of months) {
+        if (chData[m]) {
+          booking_rn += chData[m].booking_rn || 0;
+          cancel_rn += chData[m].cancel_rn || 0;
+          net_rn += chData[m].net_rn || 0;
+          booking_rev += chData[m].booking_rev || 0;
+          net_rev += chData[m].net_rev || 0;
+        }
+      }
+      const seg = getChannelSegment(ch);
+      result[ch] = { booking_rn, cancel_rn, net_rn, booking_rev, net_rev,
+        adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0,
+        segment: seg };
+    }
   }
   return result;
 }
@@ -424,8 +499,11 @@ function render() {
 
   const periodLabel = activeMonth === '0' ? activeYear + '년 전체' : activeYear + '년 ' + activeMonth + '월';
   const segLabel = activeSegment === 'ALL' ? '' : ' · ' + activeSegment;
-  setText('period-display', periodLabel + segLabel);
-  setText('table-label', periodLabel + segLabel + ' · ' + months.length + '개월');
+  const regionLabel = activeRegion !== '전체'
+    ? ' · ' + (activeProps.size > 0 ? [...activeProps].join('+') : REGION_LABEL[activeRegion] + ' 전체')
+    : '';
+  setText('period-display', periodLabel + segLabel + regionLabel);
+  setText('table-label', periodLabel + segLabel + regionLabel + ' · ' + months.length + '개월');
   setText('kpi-rns-sub', months.length + '개월 누계');
   setText('kpi-rev-sub', months.length + '개월 누계');
 
@@ -809,6 +887,7 @@ function buildFilters() {
   });
   buildMonthChips();
   buildSegmentChips();
+  buildRegionChips();
 }
 
 function buildMonthChips() {
@@ -858,6 +937,92 @@ function buildSegmentChips() {
       render();
     });
     sc.appendChild(btn);
+  });
+}
+
+function buildRegionChips() {
+  const regionContainer = document.getElementById('region-chips');
+  const mRegionContainer = document.getElementById('mobile-region-chips');
+  [regionContainer, mRegionContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    REGION_DEFS.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.textContent = r.label;
+      btn.dataset.value = r.key;
+      btn.addEventListener('click', () => {
+        activeRegion = btn.dataset.value;
+        activeProps = new Set();
+        document.querySelectorAll('#region-chips .chip, #mobile-region-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeRegion);
+        });
+        buildPropChips();
+        showAllChannels = false;
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+  buildPropChips();
+}
+
+function buildPropChips() {
+  const propWrap = document.getElementById('prop-filter-wrap');
+  const mPropBar = document.getElementById('mobile-prop-bar');
+  const propContainer = document.getElementById('prop-chips');
+  const mPropContainer = document.getElementById('mobile-prop-chips');
+  const propLabel = document.getElementById('prop-region-label');
+
+  if (activeRegion === '전체') {
+    if (propWrap) propWrap.style.display = 'none';
+    if (mPropBar) mPropBar.style.display = 'none';
+    return;
+  }
+
+  if (propWrap) propWrap.style.display = '';
+  if (mPropBar) mPropBar.style.display = '';
+  if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
+
+  // Get properties for this region from meta.property_region_map
+  const prm = db.meta.property_region_map || {};
+  const regionProps = db.meta.properties.filter(p => prm[p] === activeRegion);
+
+  [propContainer, mPropContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+
+    const allBtn = document.createElement('button');
+    allBtn.className = 'chip' + (activeProps.size === 0 ? ' active' : '');
+    allBtn.textContent = '전체';
+    allBtn.dataset.value = '__all__';
+    allBtn.addEventListener('click', () => {
+      activeProps = new Set();
+      document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+        b.classList.toggle('active', b.dataset.value === '__all__');
+      });
+      showAllChannels = false;
+      render();
+    });
+    c.appendChild(allBtn);
+
+    regionProps.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (activeProps.has(p) ? ' active' : '');
+      btn.textContent = p;
+      btn.dataset.value = p;
+      btn.addEventListener('click', () => {
+        if (activeProps.has(p)) activeProps.delete(p);
+        else activeProps.add(p);
+        document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+          if (b.dataset.value === '__all__') b.classList.toggle('active', activeProps.size === 0);
+          else b.classList.toggle('active', activeProps.has(b.dataset.value));
+        });
+        showAllChannels = false;
+        render();
+      });
+      c.appendChild(btn);
+    });
   });
 }
 

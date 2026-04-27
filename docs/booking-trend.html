@@ -103,6 +103,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
+.prop-chips .chip{font-size:9px;padding:3px 7px;}
 </style>
 </head>
 <body>
@@ -155,6 +156,14 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 <div class="mobile-filter-bar">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">기준연도:</span>
   <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
+  <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
+  <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
 <div class="app-shell">
@@ -173,6 +182,23 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     <div>
       <div class="filter-section-label">기준 연도</div>
       <div class="filter-chips" id="year-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">세그먼트</div>
+      <div class="filter-chips" id="seg-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">권역</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div id="prop-filter-wrap" style="display:none;">
+      <div class="sidebar-divider"></div>
+      <div>
+        <div class="filter-section-label">사업장 <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
+        <div class="filter-chips prop-chips" id="prop-chips"></div>
+      </div>
     </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA UPDATED</div>
@@ -266,22 +292,49 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 let db = null;
 let activeYear = new Date().getFullYear().toString();
 let trendChart = null;
+let activeSegment = '전체';
+let activeRegion = '전체';
+let activeProps = new Set();
 
 const YEAR_COLORS = {
   '2022': '#8b7355', '2023': '#9b59b6', '2024': '#5a9fc4',
   '2025': '#4caf6f', '2026': '#e6b970'
 };
 
+const REGION_DEFS = [
+  { key: '전체', label: '전체' },
+  { key: 'vivaldi', label: '비발디' },
+  { key: 'central', label: '중부' },
+  { key: 'south', label: '남부' },
+  { key: 'apac', label: 'APAC' },
+];
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
+
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
   adr: v => v == null ? '—' : Math.round(v / 1000).toLocaleString('ko-KR'),
 };
 
+function getMonthData(key) {
+  if (activeRegion !== '전체' && activeSegment !== '전체') {
+    return ((db.by_region_segment[activeRegion] || {})[activeSegment] || {})[key] || null;
+  }
+  if (activeRegion !== '전체') {
+    return (db.by_region[activeRegion] || {})[key] || null;
+  }
+  if (activeSegment !== '전체') {
+    return (db.by_segment[activeSegment] || {})[key] || null;
+  }
+  return db.monthly_total[key] || null;
+}
+
 function getYearData(year) {
   const result = new Array(12).fill(null);
   for (let m = 1; m <= 12; m++) {
     const key = year + String(m).padStart(2, '0');
-    if (db.monthly_total[key]) result[m - 1] = db.monthly_total[key].net_rn || 0;
+    const data = getMonthData(key);
+    if (data) result[m - 1] = data.net_rn || 0;
   }
   return result;
 }
@@ -290,9 +343,10 @@ function getYearTotal(year, months) {
   let rns = 0, rev = 0, count = 0;
   for (let m = 1; m <= (months || 12); m++) {
     const key = year + String(m).padStart(2, '0');
-    if (db.monthly_total[key]) {
-      rns += db.monthly_total[key].net_rn || 0;
-      rev += db.monthly_total[key].net_rev || 0;
+    const data = getMonthData(key);
+    if (data) {
+      rns += data.net_rn || 0;
+      rev += data.net_rev || 0;
       count++;
     }
   }
@@ -310,7 +364,12 @@ function render() {
   const curData = getYearTotal(activeYear, curMonths);
   const lyData = getYearTotal(prevYear, curMonths);
 
-  setText('period-display', activeYear + '년 기준');
+  // Build period display with filters
+  let periodStr = activeYear + '년 기준';
+  if (activeSegment !== '전체') periodStr += ' · ' + activeSegment;
+  if (activeRegion !== '전체') periodStr += ' · ' + REGION_LABEL[activeRegion];
+  setText('period-display', periodStr);
+
   setText('kpi-cur', fmt.num(curData.rns));
   setText('kpi-cur-sub', activeYear + '년 ' + curData.count + '개월 누계');
   setText('kpi-ly', fmt.num(lyData.rns));
@@ -378,7 +437,8 @@ function render() {
   for (let m = 1; m <= 12; m++) {
     const cells = years.map((y, i) => {
       const key = y + String(m).padStart(2, '0');
-      const val = db.monthly_total[key] ? db.monthly_total[key].net_rn : null;
+      const data = getMonthData(key);
+      const val = data ? data.net_rn : null;
       if (val != null) yearTotals[i] += val;
       const cls = y === activeYear ? ' class="this-year"' : '';
       return `<td${cls}>${val != null ? val.toLocaleString('ko-KR') : '—'}</td>`;
@@ -391,6 +451,90 @@ function render() {
       return `<td${cls}>${yearTotals[i].toLocaleString('ko-KR')}</td>`;
     }).join('') + '</tr>';
   tbody.innerHTML = trows;
+}
+
+function buildSegChips() {
+  [document.getElementById('seg-chips'), document.getElementById('mobile-seg-chips')].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    ALLOWED_SEGS.forEach(seg => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (seg === activeSegment ? ' active' : '');
+      btn.textContent = seg;
+      btn.addEventListener('click', () => {
+        activeSegment = seg;
+        document.querySelectorAll('#seg-chips .chip,#mobile-seg-chips .chip')
+          .forEach(b => b.classList.toggle('active', b.textContent === activeSegment));
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
+function buildRegionChips() {
+  [document.getElementById('region-chips'), document.getElementById('mobile-region-chips')].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    REGION_DEFS.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.textContent = r.label;
+      btn.addEventListener('click', () => {
+        activeRegion = r.key;
+        document.querySelectorAll('#region-chips .chip,#mobile-region-chips .chip')
+          .forEach(b => b.classList.toggle('active', b.textContent === r.label));
+        buildPropChips();
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
+function buildPropChips() {
+  const propWrap = document.getElementById('prop-filter-wrap');
+  const mobileBar = document.getElementById('mobile-prop-bar');
+  const propLabel = document.getElementById('prop-region-label');
+
+  if (activeRegion === '전체') {
+    if (propWrap) propWrap.style.display = 'none';
+    if (mobileBar) mobileBar.style.display = 'none';
+    return;
+  }
+
+  if (propWrap) propWrap.style.display = 'block';
+  if (mobileBar) mobileBar.style.display = 'flex';
+  if (propLabel) propLabel.textContent = '(' + REGION_LABEL[activeRegion] + ')';
+
+  const props = db.meta.property_region_map && db.meta.property_region_map[activeRegion]
+    ? Object.keys(db.meta.property_region_map[activeRegion])
+    : [];
+
+  [document.getElementById('prop-chips'), document.getElementById('mobile-prop-chips')].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    props.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (activeProps.has(p) ? ' active' : '');
+      btn.textContent = p;
+      btn.addEventListener('click', () => {
+        if (activeProps.has(p)) {
+          activeProps.delete(p);
+        } else {
+          activeProps.add(p);
+        }
+        document.querySelectorAll('#prop-chips .chip,#mobile-prop-chips .chip')
+          .forEach(b => {
+            if (props.includes(b.textContent)) {
+              b.classList.toggle('active', activeProps.has(b.textContent));
+            }
+          });
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
 }
 
 function buildFilters() {
@@ -411,6 +555,9 @@ function buildFilters() {
       c.appendChild(btn);
     });
   });
+  buildSegChips();
+  buildRegionChips();
+  buildPropChips();
 }
 
 function setText(id, v) {

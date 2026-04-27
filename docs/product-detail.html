@@ -100,6 +100,9 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
+.mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
+@media(max-width:860px){.mobile-filter-bar{display:flex;}}
+.prop-chips .chip{font-size:9px;padding:3px 7px;}
 </style>
 <style>
 .gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
@@ -143,6 +146,14 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <a href="booking-trend.html" class="mobile-sheet-tab">&#50696;&#50557;&#52628;&#51060;</a>
   <a href="product-detail.html" class="mobile-sheet-tab active">상품비교</a>
 </nav>
+<div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">&#44341;&#50868;:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">&#49324;&#50582;&#51109;:</span>
+  <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
 <div class="app-shell">
   <aside class="sidebar">
     <div>
@@ -164,6 +175,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div>
       <div class="filter-section-label">&#52852;&#53580;&#44256;&#47532;</div>
       <div class="filter-chips" id="cat-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">&#44341;&#50868;</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div id="prop-filter-wrap" style="display:none;">
+      <div class="sidebar-divider"></div>
+      <div>
+        <div class="filter-section-label">&#49324;&#50582;&#51109; <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
+        <div class="filter-chips prop-chips" id="prop-chips"></div>
+      </div>
     </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA SOURCE</div>
@@ -327,6 +350,22 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
                    '세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
   var YEAR_COLORS = {'2022':'#9e9e9e','2023':'#6ba3c4','2024':'#e6b970','2025':'#d97a7a','2026':'#6db58a'};
   var pkg = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', chart = null;
+  var activeRegion = '전체';
+  var activePropsSet = new Set();
+  var REGION_DEFS = [
+    { key: '전체', label: '전체' },
+    { key: 'vivaldi', label: '비발디' },
+    { key: 'central', label: '중부' },
+    { key: 'south', label: '남부' },
+    { key: 'apac', label: 'APAC' },
+  ];
+  var REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+  var PROPERTY_REGION = {
+    vivaldi: ['소노벨 비발디파크','소노캄 비발디파크','소노펠리체 비발디파크','소노펠리체 빌리지 비발디파크','소노펫 비발디파크','소노문 비발디파크','오션월드빌리지'],
+    central: ['델피노','르네블루','소노문 단양','소노벨 변산','소노벨 천안','소노벨 청송','소노휴 양평','쏠비치 삼척','쏠비치 양양'],
+    south: ['소노벨 경주','소노캄 거제','소노캄 여수','소노문 해운대','쏠비치 남해','쏠비치 진도'],
+    apac: ['소노벨 제주','소노캄 제주','소노캄 고양']
+  };
   function el(id){return document.getElementById(id);}
   function set(id,v){var e=el(id);if(e)e.innerHTML=v;}
   function fmtN(v){return Math.round(v).toLocaleString('ko-KR');}
@@ -445,6 +484,113 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     }).join('');
   }
 
+  function buildRegionChips() {
+    var rc = el('region-chips');
+    if (!rc) return;
+    rc.innerHTML = '';
+    REGION_DEFS.forEach(function(r) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      b.textContent = r.label;
+      b.onclick = function() {
+        activeRegion = r.key;
+        activePropsSet.clear();
+        rc.querySelectorAll('.chip').forEach(function(x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        updatePropFilterVisibility();
+        buildPropChips();
+        buildMobileRegionChips();
+        buildMobilePropChips();
+      };
+      rc.appendChild(b);
+    });
+  }
+
+  function updatePropFilterVisibility() {
+    var pfw = el('prop-filter-wrap');
+    var mpb = el('mobile-prop-bar');
+    if (activeRegion === '전체') {
+      if (pfw) pfw.style.display = 'none';
+      if (mpb) mpb.style.display = 'none';
+    } else {
+      if (pfw) pfw.style.display = 'block';
+      if (mpb) mpb.style.display = 'flex';
+    }
+  }
+
+  function buildPropChips() {
+    var pc = el('prop-chips');
+    if (!pc) return;
+    pc.innerHTML = '';
+    if (activeRegion === '전체') return;
+    var props = PROPERTY_REGION[activeRegion] || [];
+    el('prop-region-label').textContent = '(' + REGION_LABEL[activeRegion] + ')';
+    props.forEach(function(prop) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (activePropsSet.has(prop) ? ' active' : '');
+      b.textContent = prop;
+      b.onclick = function() {
+        if (activePropsSet.has(prop)) {
+          activePropsSet.delete(prop);
+          b.classList.remove('active');
+        } else {
+          activePropsSet.add(prop);
+          b.classList.add('active');
+        }
+        buildMobilePropChips();
+      };
+      pc.appendChild(b);
+    });
+  }
+
+  function buildMobileRegionChips() {
+    var mrc = el('mobile-region-chips');
+    if (!mrc) return;
+    mrc.innerHTML = '';
+    REGION_DEFS.forEach(function(r) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      b.textContent = r.label;
+      b.style.flexShrink = '0';
+      b.onclick = function() {
+        activeRegion = r.key;
+        activePropsSet.clear();
+        mrc.querySelectorAll('.chip').forEach(function(x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        updatePropFilterVisibility();
+        buildPropChips();
+        buildRegionChips();
+        buildMobilePropChips();
+      };
+      mrc.appendChild(b);
+    });
+  }
+
+  function buildMobilePropChips() {
+    var mpc = el('mobile-prop-chips');
+    if (!mpc) return;
+    mpc.innerHTML = '';
+    if (activeRegion === '전체') return;
+    var props = PROPERTY_REGION[activeRegion] || [];
+    props.forEach(function(prop) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (activePropsSet.has(prop) ? ' active' : '');
+      b.textContent = prop;
+      b.style.flexShrink = '0';
+      b.onclick = function() {
+        if (activePropsSet.has(prop)) {
+          activePropsSet.delete(prop);
+          b.classList.remove('active');
+        } else {
+          activePropsSet.add(prop);
+          b.classList.add('active');
+        }
+        buildPropChips();
+      };
+      mpc.appendChild(b);
+    });
+  }
+
   function buildFilters() {
     var years = (pkg.meta && pkg.meta.years ? pkg.meta.years.slice() : Object.keys(pkg.by_year_ranking).sort()).reverse();
     var yc = el('year-chips'); yc.innerHTML = '';
@@ -470,6 +616,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       b.onclick = function() { selCat=cat; cc.querySelectorAll('.chip').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); render(); };
       cc.appendChild(b);
     });
+
+    buildRegionChips();
+    buildMobileRegionChips();
+    updatePropFilterVisibility();
   }
 
   window._pd_selCat = function(cat) {
