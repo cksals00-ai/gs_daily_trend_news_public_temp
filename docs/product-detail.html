@@ -183,15 +183,15 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <div class="kpi-card-value" id="kpi-rn">&mdash;<span class="unit">&#49892;</span></div>
         <div class="kpi-card-sub" id="kpi-rn-sub">&mdash;</div>
       </div>
-      <div class="kpi-card booking">
-        <div class="kpi-card-label">&#47588;&#52636; &#54633;&#44228;</div>
-        <div class="kpi-card-value" id="kpi-rev">&mdash;<span class="unit">&#48177;&#47564;</span></div>
-        <div class="kpi-card-sub" id="kpi-rev-sub">&mdash;</div>
-      </div>
       <div class="kpi-card info">
         <div class="kpi-card-label">&#54217;&#44400; ADR</div>
         <div class="kpi-card-value" id="kpi-adr">&mdash;<span class="unit">&#52380;&#50896;</span></div>
         <div class="kpi-card-sub">1&#48149; &#54217;&#44400; &#44368;&#49892;&#47308;</div>
+      </div>
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">&#47588;&#52636; &#54633;&#44228;</div>
+        <div class="kpi-card-value" id="kpi-rev">&mdash;<span class="unit">&#48177;&#47564;</span></div>
+        <div class="kpi-card-sub" id="kpi-rev-sub">&mdash;</div>
       </div>
       <div class="kpi-card warning">
         <div class="kpi-card-label">&#52852;&#53580;&#44256;&#47532; / &#49345;&#54408; &#49688;</div>
@@ -212,8 +212,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th style="text-align:left;">&#52852;&#53580;&#44256;&#47532;</th>
               <th>RN</th>
               <th>RN &#48204;&#51473;</th>
-              <th>&#47588;&#52636;(&#48177;&#47564;)</th>
               <th>ADR(&#52380;&#50896;)</th>
+              <th>&#47588;&#52636;(&#48177;&#47564;)</th>
               <th class="border-left-group">&#51204;&#45380; RN</th>
               <th>YoY RN%</th>
             </tr>
@@ -241,8 +241,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <tr>
                 <th style="text-align:left;min-width:180px;">&#49345;&#54408;&#47749;</th>
                 <th>RN</th>
-                <th>&#47588;&#52636;(&#48177;&#47564;)</th>
                 <th>ADR(&#52380;)</th>
+                <th>&#47588;&#52636;(&#48177;&#47564;)</th>
               </tr>
             </thead>
             <tbody id="series-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink-faint);">&#47196;&#46377; &#51473;...</td></tr></tbody>
@@ -326,7 +326,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   var CAT_ORDER = ['룸온니/프로모션','연박/투나잇','올인클루시브','조식패키지',
                    '세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
   var YEAR_COLORS = {'2022':'#9e9e9e','2023':'#6ba3c4','2024':'#e6b970','2025':'#d97a7a','2026':'#6db58a'};
-  var pkg = null, selYear = '2026', selCat = 'ALL', chart = null;
+  var pkg = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', chart = null;
   function el(id){return document.getElementById(id);}
   function set(id,v){var e=el(id);if(e)e.innerHTML=v;}
   function fmtN(v){return Math.round(v).toLocaleString('ko-KR');}
@@ -400,8 +400,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         '<td>' + cat + '</td>' +
         '<td>' + fmtN(cur.rn) + '</td>' +
         '<td>' + pct + '%</td>' +
-        '<td>' + fmtR(cur.rev_m) + '</td>' +
         '<td>' + fmtN(cur.adr) + '</td>' +
+        '<td>' + fmtR(cur.rev_m) + '</td>' +
         '<td class="border-left-group">' + fmtN(ly.rn) + '</td>' +
         '<td><span style="color:' + yoyCol + '">' + (yoy !== null ? (parseFloat(yoy) >= 0 ? '+' : '') + yoy + '%' : '—') + '</span></td>' +
         '</tr>';
@@ -409,7 +409,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     });
     var totYoy = totLy > 0 ? ((totRn - totLy) / totLy * 100).toFixed(1) : null;
     var totCol = totYoy !== null ? (parseFloat(totYoy) >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-faint)';
-    rows += '<tr class="total-row"><td>합계</td><td>' + fmtN(totRn) + '</td><td>100.0%</td><td>' + fmtR(totRev) + '</td><td>—</td><td class="border-left-group">' + fmtN(totLy) + '</td><td><span style="color:' + totCol + '">' + (totYoy !== null ? (parseFloat(totYoy) >= 0 ? '+' : '') + totYoy + '%' : '—') + '</span></td></tr>';
+    rows += '<tr class="total-row"><td>합계</td><td>' + fmtN(totRn) + '</td><td>100.0%</td><td>—</td><td>' + fmtR(totRev) + '</td><td class="border-left-group">' + fmtN(totLy) + '</td><td><span style="color:' + totCol + '">' + (totYoy !== null ? (parseFloat(totYoy) >= 0 ? '+' : '') + totYoy + '%' : '—') + '</span></td></tr>';
     el('cat-tbody').innerHTML = rows;
   }
 
@@ -441,7 +441,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     if (!rank.length) { el('series-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--ink-faint);">데이터 없음</td></tr>'; return; }
     el('series-tbody').innerHTML = rank.slice(0, 20).map(function(r, i) {
       var cls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
-      return '<tr><td><span class="rank-num ' + cls + '">' + (i+1) + '</span>' + r.name + '</td><td>' + fmtN(r.rn) + '</td><td>' + fmtR(r.rev) + '</td><td>' + fmtN(r.adr) + '</td></tr>';
+      return '<tr><td><span class="rank-num ' + cls + '">' + (i+1) + '</span>' + r.name + '</td><td>' + fmtN(r.rn) + '</td><td>' + fmtN(r.adr) + '</td><td>' + fmtR(r.rev) + '</td></tr>';
     }).join('');
   }
 

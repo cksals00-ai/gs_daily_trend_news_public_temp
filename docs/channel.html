@@ -70,7 +70,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .kpi-card-sub .neg{color:var(--negative);}
 .mid-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
 .chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
-.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
 .chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
 .chart-legend{display:flex;gap:12px;flex-wrap:wrap;}
 .chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
@@ -98,6 +98,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .net-neg{color:var(--negative);}
 .border-left-group{border-left:1px solid var(--rule);}
 .rank-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;background:var(--bg-soft);color:var(--ink-faint);margin-right:6px;}
+.seg-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.05em;margin-left:6px;}
+.seg-tag.ota{background:rgba(230,185,112,0.15);color:#e6b970;}
+.seg-tag.gota{background:rgba(90,159,196,0.15);color:#5a9fc4;}
+.seg-tag.inbound{background:rgba(76,175,111,0.15);color:#4caf6f;}
 @media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.main-content{padding:16px 14px;}}
@@ -186,6 +190,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="filter-section-label">월</div>
       <div class="filter-chips" id="month-chips"></div>
     </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">세그먼트</div>
+      <div class="filter-chips" id="segment-chips"></div>
+    </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA UPDATED</div>
       <div class="refresh-time" id="sidebar-refresh">—</div>
@@ -203,21 +212,22 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- KPI: 객실수 → ADR → 매출 → 활성채널 -->
     <div class="kpi-strip" id="kpi-strip">
       <div class="kpi-card achievement">
         <div class="kpi-card-label">총 RNS (순증)</div>
         <div class="kpi-card-value" id="kpi-rns">—<span class="unit">실</span></div>
         <div class="kpi-card-sub" id="kpi-rns-sub">선택 기간</div>
       </div>
-      <div class="kpi-card booking">
-        <div class="kpi-card-label">총 매출 (REV)</div>
-        <div class="kpi-card-value" id="kpi-rev">—<span class="unit">억원</span></div>
-        <div class="kpi-card-sub" id="kpi-rev-sub">선택 기간</div>
-      </div>
       <div class="kpi-card info">
         <div class="kpi-card-label">평균 ADR</div>
         <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
         <div class="kpi-card-sub">평균단가</div>
+      </div>
+      <div class="kpi-card booking">
+        <div class="kpi-card-label">총 매출 (REV)</div>
+        <div class="kpi-card-value" id="kpi-rev">—<span class="unit">억원</span></div>
+        <div class="kpi-card-sub" id="kpi-rev-sub">선택 기간</div>
       </div>
       <div class="kpi-card warning">
         <div class="kpi-card-label">활성 채널 수</div>
@@ -226,27 +236,44 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- 통합 차트: RNS 바 + ADR 도트 (전체 채널) -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title">채널별 RNS · ADR 통합 순위</span>
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>RNS (순증)</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;border-radius:0;width:10px;height:3px;"></div>ADR (천원)</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" id="unified-chart-wrap" style="height:auto;min-height:260px;">
+        <canvas id="unified-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- 인사이트 차트: YoY 변화율 + ADR 비교 -->
     <div class="mid-row">
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title">채널별 RNS 순위</span>
+          <span class="chart-card-title">채널별 YoY RNS 변화율</span>
           <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>RNS (순증)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:var(--positive);"></div>증가</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:var(--negative);"></div>감소</div>
           </div>
         </div>
-        <div class="chart-canvas-wrap">
-          <canvas id="channel-rns-chart"></canvas>
+        <div class="chart-canvas-wrap" style="height:280px;">
+          <canvas id="yoy-change-chart"></canvas>
         </div>
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title">채널별 매출 순위</span>
+          <span class="chart-card-title">채널별 ADR 비교</span>
           <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>REV (억원)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>ADR (천원)</div>
+            <div class="chart-legend-item" style="font-size:9px;color:var(--ink-faint);">점선=전체평균</div>
           </div>
         </div>
-        <div class="chart-canvas-wrap">
-          <canvas id="channel-rev-chart"></canvas>
+        <div class="chart-canvas-wrap" style="height:280px;">
+          <canvas id="adr-compare-chart"></canvas>
         </div>
       </div>
     </div>
@@ -262,6 +289,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- 상세 테이블: 객실수 → ADR → 매출 순서 -->
     <div class="table-card">
       <div class="table-card-header">
         <span class="table-card-title">채널별 상세 실적</span>
@@ -271,13 +299,13 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <table class="pivot" id="channel-table">
           <thead>
             <tr>
-              <th style="text-align:left;min-width:140px;">채널명</th>
+              <th style="text-align:left;min-width:160px;">채널명</th>
               <th>순위</th>
               <th class="border-left-group">예약 RNS</th>
               <th>취소 RNS</th>
               <th>순증 RNS</th>
+              <th class="border-left-group">ADR(천원)</th>
               <th class="border-left-group">매출(억)</th>
-              <th>ADR(천원)</th>
               <th class="border-left-group">RNS 비중</th>
               <th>REV 비중</th>
             </tr>
@@ -297,10 +325,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
 <script>
 let db = null;
-let activeYear = '2026';
-let activeMonth = '0';
+let activeYear = new Date().getFullYear().toString();
+let activeMonth = String(new Date().getMonth() + 1); // 당월 기본
+let activeSegment = 'ALL'; // ALL / OTA / G-OTA
 let showAllChannels = false;
-const CHANNEL_DEFAULT_ROWS = 10;
 
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
@@ -309,7 +337,21 @@ const fmt = {
   pct: v => v == null ? '—' : v.toFixed(1),
 };
 
-let rnsChart = null, revChart = null;
+let unifiedChart = null, yoyChangeChart = null, adrCompareChart = null, yoyChart = null;
+
+// 채널 → 세그먼트 매핑 (by_channel_segment 데이터 기반)
+function getChannelSegment(ch) {
+  if (!db || !db.by_channel_segment || !db.by_channel_segment[ch]) return null;
+  const segs = db.by_channel_segment[ch];
+  // 가장 RNS가 많은 세그먼트로 분류
+  let maxSeg = null, maxRn = 0;
+  for (const [seg, months] of Object.entries(segs)) {
+    let totalRn = 0;
+    for (const m of Object.values(months)) totalRn += (m.net_rn || 0);
+    if (totalRn > maxRn) { maxRn = totalRn; maxSeg = seg; }
+  }
+  return maxSeg;
+}
 
 function getMonthsForPeriod() {
   const allMonths = db.meta.months;
@@ -336,10 +378,21 @@ function aggregateChannels(months) {
         net_rev += chData[m].net_rev || 0;
       }
     }
+    const seg = getChannelSegment(ch);
     result[ch] = { booking_rn, cancel_rn, net_rn, booking_rev, net_rev,
-      adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0 };
+      adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0,
+      segment: seg };
   }
   return result;
+}
+
+function filterBySegment(channelData) {
+  if (activeSegment === 'ALL') return channelData;
+  const filtered = {};
+  for (const [ch, d] of Object.entries(channelData)) {
+    if (d.segment === activeSegment) filtered[ch] = d;
+  }
+  return filtered;
 }
 
 function render() {
@@ -349,7 +402,8 @@ function render() {
     return;
   }
 
-  const channelData = aggregateChannels(months);
+  const allChannelData = aggregateChannels(months);
+  const channelData = filterBySegment(allChannelData);
 
   // Sort by net_rn desc
   const sorted = Object.entries(channelData)
@@ -362,46 +416,49 @@ function render() {
   const totalCancelRNS = sorted.reduce((s,[,d]) => s + d.cancel_rn, 0);
   const avgADR = totalRNS > 0 ? totalREV * 1000 / totalRNS : 0;
 
-  // KPIs
+  // KPIs: 객실수 → ADR → 매출 → 활성채널
   setText('kpi-rns', fmt.num(totalRNS));
-  setText('kpi-rev', fmt.rev(totalREV));
   setText('kpi-adr', fmt.adr(Math.round(avgADR)));
+  setText('kpi-rev', fmt.rev(totalREV));
   setText('kpi-channels', sorted.length.toString());
 
   const periodLabel = activeMonth === '0' ? activeYear + '년 전체' : activeYear + '년 ' + activeMonth + '월';
-  setText('period-display', periodLabel);
-  setText('table-label', periodLabel + ' · ' + months.length + '개월');
+  const segLabel = activeSegment === 'ALL' ? '' : ' · ' + activeSegment;
+  setText('period-display', periodLabel + segLabel);
+  setText('table-label', periodLabel + segLabel + ' · ' + months.length + '개월');
   setText('kpi-rns-sub', months.length + '개월 누계');
   setText('kpi-rev-sub', months.length + '개월 누계');
 
-  // Charts (top 10)
-  const top10 = sorted.slice(0, 10);
-  buildBarChart('channel-rns-chart', top10.map(([ch]) => ch), top10.map(([,d]) => d.net_rn), '#5a9fc4', rnsChart, (c) => rnsChart = c, v => v.toLocaleString('ko-KR') + '실');
-  buildBarChart('channel-rev-chart', top10.map(([ch]) => ch), top10.map(([,d]) => parseFloat((d.net_rev/100).toFixed(1))), '#e6b970', revChart, (c) => revChart = c, v => v.toFixed(1) + '억');
+  // ─── 통합 차트: 전체 채널 RNS 바 + ADR 도트 ───
+  buildUnifiedChart(sorted, avgADR);
 
-  // Table
-  const displayCount = showAllChannels ? sorted.length : Math.min(CHANNEL_DEFAULT_ROWS, sorted.length);
+  // ─── 인사이트 차트들 ───
+  buildYoYChangeChart(allChannelData, months);
+  buildADRCompareChart(sorted, avgADR);
+
+  // ─── 테이블 (전체 채널, 더보기/접기) ───
+  const displayCount = showAllChannels ? sorted.length : Math.min(10, sorted.length);
   let rows = '';
   for (let i = 0; i < displayCount; i++) {
     const [ch, d] = sorted[i];
     const rnsPct = totalRNS > 0 ? (d.net_rn / totalRNS * 100) : 0;
     const revPct = totalREV > 0 ? (d.net_rev / totalREV * 100) : 0;
+    const segTag = d.segment ? `<span class="seg-tag ${d.segment === 'OTA' ? 'ota' : d.segment === 'G-OTA' ? 'gota' : 'inbound'}">${d.segment}</span>` : '';
     rows += `<tr>
-      <td><span class="rank-num">${i+1}</span>${ch}</td>
+      <td><span class="rank-num">${i+1}</span>${ch}${segTag}</td>
       <td>${i+1}</td>
       <td class="border-left-group">${fmt.num(d.booking_rn)}</td>
       <td>${d.cancel_rn > 0 ? '-'+fmt.num(d.cancel_rn) : '—'}</td>
       <td class="net-pos">${fmt.num(d.net_rn)}</td>
+      <td class="border-left-group">${fmt.adr(Math.round(d.adr))}</td>
       <td class="border-left-group">${fmt.rev(d.net_rev)}</td>
-      <td>${fmt.adr(Math.round(d.adr))}</td>
       <td class="border-left-group">${rnsPct.toFixed(1)}%</td>
       <td>${revPct.toFixed(1)}%</td>
     </tr>`;
   }
 
-  // 더보기/접기 row
-  if (sorted.length > CHANNEL_DEFAULT_ROWS) {
-    const hidden = sorted.length - CHANNEL_DEFAULT_ROWS;
+  if (sorted.length > 10) {
+    const hidden = sorted.length - 10;
     if (!showAllChannels) {
       rows += `<tr><td colspan="9" style="text-align:center;padding:10px;">
         <button onclick="showAllChannels=true;render();" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
@@ -422,57 +479,261 @@ function render() {
     <td class="border-left-group">${fmt.num(totalBookRNS)}</td>
     <td>${totalCancelRNS > 0 ? '-'+fmt.num(totalCancelRNS) : '—'}</td>
     <td class="net-pos">${fmt.num(totalRNS)}</td>
+    <td class="border-left-group">${fmt.adr(Math.round(avgADR))}</td>
     <td class="border-left-group">${fmt.rev(totalREV)}</td>
-    <td>${fmt.adr(Math.round(avgADR))}</td>
     <td class="border-left-group">100.0%</td>
     <td>100.0%</td>
   </tr>`;
   document.getElementById('channel-tbody').innerHTML = rows;
 
   // 연도별 추이 차트
-  buildYoYChart();
+  buildYoYTrendChart();
 }
 
-function buildBarChart(id, labels, data, color, oldChart, setter, formatter) {
-  const ctx = document.getElementById(id);
+function buildUnifiedChart(sorted, avgADR) {
+  const ctx = document.getElementById('unified-chart');
   if (!ctx) return;
-  if (oldChart) oldChart.destroy();
-  const c = new Chart(ctx, {
+  if (unifiedChart) unifiedChart.destroy();
+
+  // 전체 채널 표시
+  const all = sorted;
+  const chartHeight = Math.max(260, all.length * 28 + 60);
+  document.getElementById('unified-chart-wrap').style.height = chartHeight + 'px';
+
+  const labels = all.map(([ch]) => ch);
+  const rnsData = all.map(([,d]) => d.net_rn);
+  const adrData = all.map(([,d]) => Math.round(d.adr));
+  // 채널별 색상: 세그먼트 기반
+  const barColors = all.map(([,d]) => {
+    if (d.segment === 'OTA') return '#e6b970bb';
+    if (d.segment === 'G-OTA') return '#5a9fc4bb';
+    if (d.segment === 'Inbound') return '#4caf6fbb';
+    return '#888888bb';
+  });
+  const borderColors = all.map(([,d]) => {
+    if (d.segment === 'OTA') return '#e6b970';
+    if (d.segment === 'G-OTA') return '#5a9fc4';
+    if (d.segment === 'Inbound') return '#4caf6f';
+    return '#888888';
+  });
+
+  unifiedChart = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: color+'bb', borderColor: color, borderWidth: 1, borderRadius: 3 }] },
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'RNS',
+          data: rnsData,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'ADR',
+          data: adrData,
+          type: 'line',
+          borderColor: '#e6b970',
+          backgroundColor: '#e6b970',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#e6b970',
+          pointBorderColor: '#1a1d23',
+          pointBorderWidth: 1,
+          yAxisID: 'y1',
+          tension: 0.1,
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: {
+            label: c => {
+              if (c.dataset.label === 'RNS') return ' RNS: ' + c.parsed.x.toLocaleString('ko-KR') + '실';
+              return ' ADR: ' + c.parsed.x.toLocaleString('ko-KR') + '천원';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          position: 'left',
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 10 } },
+          border: { color: 'rgba(255,255,255,0.1)' }
+        },
+        x: {
+          position: 'bottom',
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') },
+          border: { display: false }
+        },
+        y1: {
+          position: 'right',
+          display: false,
+          grid: { display: false },
+        }
+      }
+    }
+  });
+}
+
+function buildYoYChangeChart(allChannelData, months) {
+  const ctx = document.getElementById('yoy-change-chart');
+  if (!ctx) return;
+  if (yoyChangeChart) yoyChangeChart.destroy();
+
+  // 전년 동기 데이터 계산
+  const prevYear = String(parseInt(activeYear) - 1);
+  const prevMonths = months.map(m => prevYear + m.slice(4)).filter(m => db.meta.months.includes(m));
+
+  if (prevMonths.length === 0) {
+    yoyChangeChart = new Chart(ctx, { type: 'bar', data: { labels: ['전년 데이터 없음'], datasets: [{ data: [0] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    return;
+  }
+
+  const prevChannelData = {};
+  for (const ch of db.meta.channels) {
+    if (ch === '기타') continue;
+    const chData = db.by_channel[ch];
+    if (!chData) continue;
+    let net_rn = 0;
+    for (const m of prevMonths) {
+      if (chData[m]) net_rn += chData[m].net_rn || 0;
+    }
+    prevChannelData[ch] = net_rn;
+  }
+
+  // 현재 필터된 채널 중 전년 데이터도 있는 채널만
+  const filtered = filterBySegment(allChannelData);
+  const yoyData = [];
+  for (const [ch, d] of Object.entries(filtered)) {
+    if (d.net_rn <= 0) continue;
+    const prevRn = prevChannelData[ch] || 0;
+    if (prevRn > 0) {
+      const change = ((d.net_rn - prevRn) / prevRn * 100);
+      yoyData.push({ ch, change, curRn: d.net_rn, prevRn });
+    }
+  }
+  yoyData.sort((a, b) => b.change - a.change);
+
+  // Top 10 + Bottom 5 (most interesting)
+  const display = yoyData.length <= 15 ? yoyData : [...yoyData.slice(0, 10), ...yoyData.slice(-5)];
+
+  yoyChangeChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: display.map(d => d.ch),
+      datasets: [{
+        data: display.map(d => Math.round(d.change * 10) / 10),
+        backgroundColor: display.map(d => d.change >= 0 ? 'rgba(76,175,111,0.7)' : 'rgba(229,115,115,0.7)'),
+        borderColor: display.map(d => d.change >= 0 ? '#4caf6f' : '#e57373'),
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
     options: {
       indexAxis: 'y',
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10,
-          callbacks: { label: ctx => ' ' + formatter(ctx.parsed.x) } }
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: {
+            label: c => {
+              const d = display[c.dataIndex];
+              return ` YoY: ${c.parsed.x >= 0 ? '+' : ''}${c.parsed.x}% (${d.prevRn.toLocaleString()}→${d.curRn.toLocaleString()})`;
+            }
+          }
+        }
       },
       scales: {
-        x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.3)',font:{family:'JetBrains Mono',size:10},callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} },
-        y: { grid:{display:false}, ticks:{color:'rgba(255,255,255,0.5)',font:{family:'JetBrains Mono',size:10}}, border:{color:'rgba(255,255,255,0.1)'} }
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v + '%' }, border: { display: false } },
+        y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 10 } }, border: { color: 'rgba(255,255,255,0.1)' } }
       }
     }
   });
-  setter(c);
 }
 
-let yoyChart = null;
+function buildADRCompareChart(sorted, avgADR) {
+  const ctx = document.getElementById('adr-compare-chart');
+  if (!ctx) return;
+  if (adrCompareChart) adrCompareChart.destroy();
+
+  // 상위 채널 ADR 비교
+  const topN = sorted.slice(0, Math.min(15, sorted.length));
+  const labels = topN.map(([ch]) => ch);
+  const adrValues = topN.map(([,d]) => Math.round(d.adr));
+
+  adrCompareChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: adrValues,
+        backgroundColor: adrValues.map(v => v >= avgADR ? 'rgba(230,185,112,0.7)' : 'rgba(168,172,179,0.5)'),
+        borderColor: adrValues.map(v => v >= avgADR ? '#e6b970' : '#a8acb3'),
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: {
+            label: c => ` ADR: ${c.parsed.x.toLocaleString('ko-KR')}천원 (평균: ${Math.round(avgADR).toLocaleString('ko-KR')}천원)`
+          }
+        },
+        annotation: undefined // annotation plugin not loaded
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') },
+          border: { display: false }
+        },
+        y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 10 } }, border: { color: 'rgba(255,255,255,0.1)' } }
+      }
+    }
+  });
+}
+
+let yoyTrendChart = null;
 const YOY_COLORS = ['#5a9fc4','#e6b970','#4caf6f','#e57373','#ab7ae0','#f0a500','#4ecdc4','#ff6b9d'];
 
-function buildYoYChart() {
+function buildYoYTrendChart() {
   const canvas = document.getElementById('channel-yoy-chart');
   if (!canvas) return;
-  if (yoyChart) yoyChart.destroy();
+  if (yoyTrendChart) yoyTrendChart.destroy();
 
-  // Get all years available
   const years = db.meta.years.slice().sort();
   if (years.length < 2) return;
 
-  // Get all months for selected month across all years
   const allChannelYearly = {};
   for (const ch of db.meta.channels) {
     if (ch === '기타') continue;
+    // 세그먼트 필터 적용
+    if (activeSegment !== 'ALL') {
+      const seg = getChannelSegment(ch);
+      if (seg !== activeSegment) continue;
+    }
     const chData = db.by_channel[ch];
     if (!chData) continue;
     allChannelYearly[ch] = {};
@@ -488,7 +749,6 @@ function buildYoYChart() {
     }
   }
 
-  // Top 5 channels by latest year total
   const latestYear = years[years.length - 1];
   const top5 = Object.entries(allChannelYearly)
     .sort(([,a],[,b]) => (b[latestYear]||0) - (a[latestYear]||0))
@@ -505,7 +765,7 @@ function buildYoYChart() {
     fill: false,
   }));
 
-  yoyChart = new Chart(canvas, {
+  yoyTrendChart = new Chart(canvas, {
     type: 'line',
     data: { labels: years.map(y => y + '년'), datasets },
     options: {
@@ -525,6 +785,9 @@ function buildYoYChart() {
 
 function buildFilters() {
   const years = db.meta.years.slice().reverse();
+  // 데이터에 현재 연도가 없으면 가장 최근 연도로
+  if (!years.includes(activeYear)) activeYear = years[0];
+
   const yc = document.getElementById('year-chips');
   const myc = document.getElementById('mobile-year-chips');
   [yc, myc].forEach(c => {
@@ -545,6 +808,7 @@ function buildFilters() {
     });
   });
   buildMonthChips();
+  buildSegmentChips();
 }
 
 function buildMonthChips() {
@@ -552,6 +816,13 @@ function buildMonthChips() {
   if (!mc) return;
   const available = db.meta.months.filter(m => m.startsWith(activeYear)).map(m => m.slice(4));
   mc.innerHTML = '';
+
+  // 현재 월이 데이터에 없으면 '전체'로 fallback
+  const curMonthPad = String(parseInt(activeMonth)).padStart(2, '0');
+  if (activeMonth !== '0' && !available.includes(curMonthPad)) {
+    activeMonth = available.length > 0 ? String(parseInt(available[available.length - 1])) : '0';
+  }
+
   [{ v: '0', l: '전체' }, ...available.map(m => ({ v: String(parseInt(m)), l: m.replace(/^0/,'') + '월' }))].forEach(({v,l}) => {
     const btn = document.createElement('button');
     btn.className = 'chip' + (v === activeMonth ? ' active' : '');
@@ -563,6 +834,30 @@ function buildMonthChips() {
       render();
     });
     mc.appendChild(btn);
+  });
+}
+
+function buildSegmentChips() {
+  const sc = document.getElementById('segment-chips');
+  if (!sc) return;
+  sc.innerHTML = '';
+  const segments = [
+    { v: 'ALL', l: '전체' },
+    { v: 'OTA', l: 'OTA' },
+    { v: 'G-OTA', l: 'G-OTA' },
+    { v: 'Inbound', l: 'Inbound' },
+  ];
+  segments.forEach(({v, l}) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (v === activeSegment ? ' active' : '');
+    btn.textContent = l;
+    btn.addEventListener('click', () => {
+      activeSegment = v;
+      showAllChannels = false;
+      sc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent === l));
+      render();
+    });
+    sc.appendChild(btn);
   });
 }
 

@@ -297,8 +297,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 <script>
 let db = null;       // db_aggregated.json (월별 세그먼트)
 let otb = null;      // otb_data.json (stayDateDaily)
-let activeYear = '2026';
-let activeMonth = null; // 'YYYYMM' or null
+let activeYear = new Date().getFullYear().toString();
+let activeMonth = null; // 'YYYYMM' or null — will be set to current month in loadData
 let segChart = null, pieChart = null, dailyChart = null;
 
 const SEGS = ['OTA', 'G-OTA', 'Inbound'];
@@ -364,7 +364,9 @@ function buildMonthChips() {
   if (monthKeys.length === 0) return;
 
   if (!activeMonth || !stayDaily[activeMonth]) {
-    activeMonth = monthKeys[monthKeys.length - 1];
+    // 당월 우선, 없으면 가장 최근 월
+    const curMonthKey = activeYear + String(new Date().getMonth() + 1).padStart(2, '0');
+    activeMonth = stayDaily[curMonthKey] ? curMonthKey : monthKeys[monthKeys.length - 1];
   }
 
   monthKeys.forEach(ym => {
