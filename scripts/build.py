@@ -1138,9 +1138,31 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
             arr = sdd_seg.get(seg, {}).get("net_rn", [])
             seg_weekly[seg] = arr[-14:] if len(arr) >= 14 else arr
 
+    # ── 3b) 투숙월별 주간 픽업 트렌드 (4/5/6월 탭용) ──
+    compare_months = list(range(cur_month, min(cur_month + 3, 13)))
+    ndm = agg_data.get("net_daily_by_month", {})
+    daily_trend_by_month = {}
+    for mi in compare_months:
+        mkey = f"{now.year}{mi:02d}"
+        md = ndm.get(mkey, {})
+        if not md:
+            continue
+        mkeys = sorted(md.keys())
+        mkeys14 = mkeys[-14:] if len(mkeys) >= 14 else mkeys
+        mtrend = []
+        for k in mkeys14:
+            v = md.get(k, {})
+            mtrend.append({
+                "date": k,
+                "label": f"{k[4:6]}/{k[6:8]}",
+                "pickup": v.get("pickup_rn", 0) or 0,
+                "cancel": v.get("cancel_rn", 0) or 0,
+                "net": v.get("net_rn", 0) or 0,
+            })
+        daily_trend_by_month[f"{mi}월"] = mtrend
+
     # ── 4) 4개년 동기간 비교 (월별 OTB) ──
     years_compare = {}
-    compare_months = list(range(cur_month, min(cur_month + 3, 13)))
     for yr in [2022, 2023, 2024, 2025, 2026]:
         yr_data = {}
         for mo in compare_months:
@@ -1171,6 +1193,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "segToday": seg_today,
         "stayMonthToday": stay_month_today,
         "dailyTrend": daily_trend,
+        "dailyTrendByMonth": daily_trend_by_month,
         "segWeekly": seg_weekly,
         "yearsCompare": years_compare,
         "yoySummary": yoy_summary,
