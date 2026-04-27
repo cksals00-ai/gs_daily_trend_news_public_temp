@@ -1064,6 +1064,18 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 let rawData = null;
 let activeMonth = new Date().getMonth() + 1;
 let activeSegs = new Set(['전체']);
+let activeRegion = '전체';
+let activeProps = new Set();  // empty = 전체 (no filter)
+
+// ─── REGION MAPPING ───
+const REGION_DEFS = [
+  { key: '전체', label: '전체' },
+  { key: 'vivaldi', label: '비발디' },
+  { key: 'central', label: '중부' },
+  { key: 'south', label: '남부' },
+  { key: 'apac', label: 'APAC' },
+];
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
 
 // ─── FORMAT HELPERS ───
 const fmt = {
@@ -1514,12 +1526,146 @@ function buildFilterChips(data) {
       c.appendChild(btn);
     });
   });
+
+  // ─── 권역 칩 ───
+  const regionContainer = document.getElementById('region-chips');
+  const mRegionContainer = document.getElementById('mobile-region-chips');
+  [regionContainer, mRegionContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    REGION_DEFS.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.textContent = r.label;
+      btn.dataset.value = r.key;
+      btn.addEventListener('click', () => {
+        activeRegion = btn.dataset.value;
+        activeProps = new Set();  // 권역 변경 시 사업장 선택 초기화
+        document.querySelectorAll('#region-chips .chip, #mobile-region-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeRegion);
+        });
+        buildPropChips(data);
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+
+  buildPropChips(data);
+}
+
+function buildPropChips(data) {
+  const propWrap = document.getElementById('prop-filter-wrap');
+  const mPropBar = document.getElementById('mobile-prop-bar');
+  const propContainer = document.getElementById('prop-chips');
+  const mPropContainer = document.getElementById('mobile-prop-chips');
+  const propLabel = document.getElementById('prop-region-label');
+
+  if (activeRegion === '전체') {
+    if (propWrap) propWrap.style.display = 'none';
+    if (mPropBar) mPropBar.style.display = 'none';
+    return;
+  }
+
+  if (propWrap) propWrap.style.display = '';
+  if (mPropBar) mPropBar.style.display = '';
+  if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
+
+  // 해당 권역의 사업장 목록 가져오기
+  const allProps = (data.allMonths ? data.allMonths['0'].byProperty : data.byProperty) || [];
+  const regionProps = allProps.filter(p => p.region === activeRegion);
+
+  [propContainer, mPropContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+
+    // "전체" 칩
+    const allBtn = document.createElement('button');
+    allBtn.className = 'chip' + (activeProps.size === 0 ? ' active' : '');
+    allBtn.textContent = '전체';
+    allBtn.dataset.value = '__all__';
+    allBtn.addEventListener('click', () => {
+      activeProps = new Set();
+      document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+        b.classList.toggle('active', b.dataset.value === '__all__');
+      });
+      applyFilters();
+    });
+    c.appendChild(allBtn);
+
+    regionProps.forEach(p => {
+      const btn = document.createElement('button');
+      // 사업장명에서 번호 접두어 제거 (예: "01.벨비발디" → "벨비발디")
+      const shortName = p.name.replace(/^\d+\./, '');
+      btn.className = 'chip' + (activeProps.has(p.name) ? ' active' : '');
+      btn.textContent = shortName;
+      btn.dataset.value = p.name;
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.value;
+        if (activeProps.has(v)) {
+          activeProps.delete(v);
+        } else {
+          activeProps.add(v);
+        }
+        // 아무것도 선택 안 되면 전체
+        document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+          if (b.dataset.value === '__all__') {
+            b.classList.toggle('active', activeProps.size === 0);
+          } else {
+            b.classList.toggle('active', activeProps.has(b.dataset.value));
+          }
+        });
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
+function summaryFromProps(props) {
+  // byProperty 배열로부터 summary 재계산
+  if (!props.length) return {};
+  const s = {};
+  const sumKeys = [
+    'rns_budget','rns_actual','rns_last','rns_fcst',
+    'rev_budget','rev_actual','rev_last','rev_fcst',
+    'today_booking','today_cancel','today_net',
+    'today_booking_rev','today_cancel_rev','today_net_rev'
+  ];
+  sumKeys.forEach(k => { s[k] = 0; });
+  for (const p of props) {
+    sumKeys.forEach(k => { s[k] += (p[k] || 0); });
+  }
+  // derived
+  s.rns_achievement = s.rns_budget > 0 ? +(s.rns_actual / s.rns_budget * 100).toFixed(1) : 0;
+  s.rev_achievement = s.rev_budget > 0 ? +(s.rev_actual / s.rev_budget * 100).toFixed(1) : 0;
+  s.fcst_achievement = s.rns_budget > 0 ? +(s.rns_fcst / s.rns_budget * 100).toFixed(1) : 0;
+  s.rev_fcst_achievement = s.rev_budget > 0 ? +(s.rev_fcst / s.rev_budget * 100).toFixed(1) : 0;
+  s.adr_actual = s.rns_actual > 0 ? Math.round(s.rev_actual / s.rns_actual) : 0;
+  s.adr_budget = s.rns_budget > 0 ? Math.round(s.rev_budget / s.rns_budget) : 0;
+  s.adr_last   = s.rns_last > 0 ? Math.round(s.rev_last / s.rns_last) : null;
+  s.adr_fcst   = s.rns_fcst > 0 ? Math.round(s.rev_fcst / s.rns_fcst) : 0;
+  s.adr_fcst_achievement = s.adr_budget > 0 ? +(s.adr_fcst / s.adr_budget * 100).toFixed(1) : 0;
+  s.adr_vs_budget = s.adr_budget > 0 ? +((s.adr_actual / s.adr_budget - 1) * 100).toFixed(1) : 0;
+  s.rns_yoy = s.rns_last > 0 ? +((s.rns_actual / s.rns_last - 1) * 100).toFixed(1) : null;
+  s.rev_yoy = s.rev_last > 0 ? +((s.rev_actual / s.rev_last - 1) * 100).toFixed(1) : null;
+  s.adr_yoy = s.adr_last > 0 ? +((s.adr_actual / s.adr_last - 1) * 100).toFixed(1) : null;
+  return s;
 }
 
 function applyFilters() {
   const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
   const segLabel   = activeSegs.has('전체') ? '전체 세그' : [...activeSegs].join('+');
-  setText('table-filter-label', monthLabel + ' · ' + segLabel);
+  let propLabel = '';
+  if (activeRegion !== '전체') {
+    const rLabel = REGION_LABEL[activeRegion] || activeRegion;
+    if (activeProps.size > 0) {
+      propLabel = ' · ' + [...activeProps].map(n => n.replace(/^\d+\./, '')).join('+');
+    } else {
+      propLabel = ' · ' + rLabel + ' 전체';
+    }
+  }
+  setText('table-filter-label', monthLabel + ' · ' + segLabel + propLabel);
 
   if (!rawData) return;
 
@@ -1545,6 +1691,20 @@ function applyFilters() {
         byProp  = mergeSegByProp(selectedSegs.map(s => snap.byPropertySegment[s]).filter(Boolean));
       }
     }
+
+    // ─── 권역/사업장 필터 적용 ───
+    if (activeRegion !== '전체') {
+      if (activeProps.size > 0) {
+        // 개별 사업장 선택
+        byProp = byProp.filter(p => activeProps.has(p.name));
+      } else {
+        // 해당 권역 전체
+        byProp = byProp.filter(p => p.region === activeRegion);
+      }
+      // 필터된 사업장 기준으로 summary 재계산
+      summary = summaryFromProps(byProp);
+    }
+
     const view = { ...rawData, summary, byProperty: byProp };
     renderPivot(view);
     updateKPIs(view);
