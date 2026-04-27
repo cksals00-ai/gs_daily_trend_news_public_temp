@@ -59,19 +59,61 @@ _YEAR_PREFIX_RE = re.compile(r'^\d{2}[_가-힣]{0,15}')
 _GOTA_RE = re.compile(r'^G-OTA/', re.IGNORECASE)
 # 대괄호 접두사: [펫_비발디], [경주]
 _BRACKET_RE = re.compile(r'^\[[^\]]+\]\s*')
+# 해시태그 블록: #변산#, #RO#, #B# 등
+_HASH_TAG_RE = re.compile(r'#[^#]+#')
 
+# ── 사업장/리조트 식별자 (길이 내림차순 → 긴 것 먼저 매칭) ──
+_SITE_WORDS = [
+    '소노캄거제', '소노캄고양', '소노캄 고양', '소노캄 거제',
+    '소노벨변산', '소노벨 변산', '소노벨천안', '소노벨 천안',
+    '쏠비치 양양', '쏠비치양양', '쏠비치 삼척', '쏠비치삼척', '쏠비치 진도', '쏠비치진도',
+    '소노캄', '캄여수', '캄고양', '캄거제', '벨제주', '벨변산', '벨천안', '벨거제',
+    '델피노', '비발디', '쏠비치',
+    '단양', '진도', '삼척', '양양', '고양', '천안', '거제', '여수', '제주', '변산',
+]
+# 괄호 안 사업장/약어 + 독립 사업장 + 대매점 + 연도토큰 → 단일 정규식 (성능 최적화)
+_SITE_ALL_PAT = '|'.join(re.escape(w) for w in sorted(_SITE_WORDS, key=len, reverse=True))
+_CLEANUP_RE = re.compile(
+    r'\s*\(\s*(?:단양|델|대매|대|O|Step\s*\d*)\s*\)'    # 괄호 사업장
+    r'|(?:' + _SITE_ALL_PAT + r')'                       # 독립 사업장 단어
+    r'|\b대매점?\b'                                       # 대매점
+    r'|\b\d{2,4}Y\b|\b\d{2}/\d{2}\b|\b\d{2,4}년\b'      # 연도토큰
+    r'|\s+일반\s*$',                                      # trailing 일반
+    flags=re.IGNORECASE
+)
+
+
+_normalize_cache: dict[str, str] = {}
 
 def normalize_series(name: str) -> str:
-    """패키지명(회원명) → 상품계열명 (채널·연도·박수 제거)"""
+    """패키지명(회원명) → 상품계열명 (채널·연도·사업장·박수 제거) — 캐싱"""
+    cached = _normalize_cache.get(name)
+    if cached is not None:
+        return cached
+    result = _normalize_series_impl(name)
+    _normalize_cache[name] = result
+    return result
+
+def _normalize_series_impl(name: str) -> str:
     if not name:
         return '기타'
+    # 1) 해시태그 블록 먼저, 그 다음 대괄호 제거
+    name = _HASH_TAG_RE.sub('', name)
     name = _BRACKET_RE.sub('', name)
+    # 2) G-OTA/ 접두사 제거
     name = _GOTA_RE.sub('', name)
+    # 3) 연도+사업장 접두사 제거
     name = _YEAR_PREFIX_RE.sub('', name)
-    name = _NIGHT_RE.sub('', name)
-    name = _SUFFIX_RE.sub('', name)
+    # 4) 괄호 안 채널 제거
     name = _PAREN_CH_RE.sub('', name)
-    name = re.sub(r'^[\s_]+|[\s_]+$', '', name)
+    # 5) 야간 박수 표기 제거
+    name = _NIGHT_RE.sub('', name)
+    # 6) 채널 접미사 제거
+    name = _SUFFIX_RE.sub('', name)
+    # 7) 통합 정리: 사업장·대매점·연도토큰 한방에 제거
+    name = _CLEANUP_RE.sub(' ', name)
+    # 8) 정리
+    name = re.sub(r'^[\s_/]+|[\s_/]+$', '', name)
     name = re.sub(r'_+', ' ', name)
     name = re.sub(r'\s+', ' ', name).strip()
     return name if name else '기타'
@@ -84,21 +126,31 @@ _OTA_NAMES = [
 ]
 
 def classify_v4(series_name: str) -> str:
-    """상품계열명 → 패키지 분류 카테고리 v4"""
+    """상품계열명 → 패키지 분류 카테고리 v4 (9개 카테고리)
+    1. 룸온니/프로모션  — 룸온리, 룸온니, R/O, OTA거래처, 일반 프로모션
+    2. 연박/투나잇      — 2Nights, Hours Stay, 스마트초이스
+    3. 올인클루시브      — All Inclusive
+    4. 조식패키지       — Tasty Morning, 조식
+    5. 세일/기획전      — 얼리버드, 빅세일, 기획전, 브랜드데이, 멤버스데이
+    6. 워터풀/오션      — Waterful, Simple Ocean
+    7. 시즌패키지       — 동계/윈터 + 썸머 + 스프링/가을 통합
+    8. 액티비티/레저     — 온천, BBQ, 투어, 가족
+    9. 기타
+    """
     s = series_name.upper()
 
-    # 룸온니_프로모션: 룸온리/룸온니/R/O 명시 (OTA 이름보다 우선)
+    # 룸온니/프로모션: 룸온리/룸온니/R/O 명시 (OTA보다 우선)
     if any(k in series_name for k in ['룸온리', '룸온니', 'R/O', 'RO']):
-        return '룸온니_프로모션'
+        return '룸온니/프로모션'
     if 'ROOM ONLY' in s:
-        return '룸온니_프로모션'
+        return '룸온니/프로모션'
 
-    # 룸온니_OTA거래처: OTA 거래처명이 시리즈명
+    # 룸온니/프로모션: OTA 거래처명이 시리즈명
     for ota in _OTA_NAMES:
         if ota in series_name:
-            return '룸온니_OTA거래처'
+            return '룸온니/프로모션'
     if re.search(r'\bOTA\b|GOTA', s):
-        return '룸온니_OTA거래처'
+        return '룸온니/프로모션'
 
     # 연박/투나잇
     if any(k in s for k in ['2 NIGHTS', '2NIGHTS', '2NIGHT', '2나잇', '연박', 'PRIVILEGE',
@@ -108,16 +160,18 @@ def classify_v4(series_name: str) -> str:
         return '연박/투나잇'
 
     # 올인클루시브
-    if any(k in s for k in ['ALL INCLUSIVE', 'ALLINCLUSIVE', '올인클루시브', '올클']):
+    if any(k in s for k in ['ALL INCLUSIVE', 'ALLINCLUSIVE', '올인클루시브', '올클',
+                             '썸머클루시브']):
         return '올인클루시브'
 
     # 조식패키지
     if any(k in s for k in ['TASTY MORNING', '조식', 'MORNING', 'BREAKFAST']):
         return '조식패키지'
 
-    # 세일/기획전
+    # 세일/기획전 (+ 브랜드/멤버스데이 통합)
     if any(k in s for k in ['얼리버드', '얼리바캉스', '얼리 바캉스', '빅세일', '기획전', '숙박세일', '세일페스타',
-                             '13%', '당일특가', 'LATE HOLIDAY', '레이트 홀리데이', '특가', 'STEP2']):
+                             '13%', '당일특가', 'LATE HOLIDAY', '레이트 홀리데이', '특가', 'STEP2',
+                             '브랜드데이', '멤버스데이', '소노브랜드', '숙박대전']):
         return '세일/기획전'
     if '세일' in series_name:
         return '세일/기획전'
@@ -129,30 +183,20 @@ def classify_v4(series_name: str) -> str:
     if '오션' in series_name:
         return '워터풀/오션'
 
-    # 동계/윈터
-    if any(k in s for k in ['동계', '스키', 'WINTER', '윈터', '스노위', 'SNOWY', '겨울']):
-        return '동계/윈터'
-
-    # 썸머패키지
-    if any(k in s for k in ['썸머', '블루데이즈', '바캉스', '베케이션', 'SUMMER', 'VACATION', 'BLUEDAYS', '러브썸']):
-        return '썸머패키지'
-
-    # 스프링/가을
-    if any(k in s for k in ['스프링', '블룸', '추석', 'SPRING', '가을', '단풍', 'BLOOM']):
-        return '스프링/가을'
+    # 시즌패키지 (동계/윈터 + 썸머 + 스프링/가을 통합)
+    if any(k in s for k in ['동계', '스키', 'WINTER', '윈터', '스노위', 'SNOWY', '겨울',
+                             '썸머', '블루데이즈', '바캉스', '베케이션', 'SUMMER', 'VACATION', 'BLUEDAYS', '러브썸',
+                             '스프링', '블룸', '추석', 'SPRING', '가을', '단풍', 'BLOOM']):
+        return '시즌패키지'
 
     # 액티비티/레저
     if any(k in s for k in ['온천', 'BBQ', '케이펫', '레저', '낚시', 'SPA', 'MOMENTS',
-                             '투어 패키지', '투어패키지', '가족5', '가족 5']):
+                             '투어 패키지', '투어패키지', '가족5', '가족 5', '투어']):
         return '액티비티/레저'
-
-    # 브랜드/멤버스데이
-    if any(k in s for k in ['브랜드데이', '멤버스데이', '소노브랜드']):
-        return '브랜드/멤버스데이'
 
     # 프로모션 (일반 프로모션 = 룸온니 계열)
     if '프로모션' in series_name:
-        return '룸온니_프로모션'
+        return '룸온니/프로모션'
 
     return '기타'
 

@@ -630,9 +630,12 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_pr
 
 
 def get_today_summary(db, now_kst):
-    """net_daily에서 오늘 데이터를 반환. 없거나 0이면 최근 날짜로 fallback."""
+    """net_daily에서 전일(빌드일-1) 데이터를 반환.
+    빌드 시점(now_kst)의 당일 데이터는 아직 미완성이므로
+    가장 최근 완성된 날짜 = 전일(days_ago=1)부터 탐색.
+    없거나 0이면 더 이전 날짜로 fallback."""
     net_daily = db.get("net_daily", {})
-    for days_ago in range(0, 7):
+    for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
         if date_str in net_daily:
             entry = net_daily[date_str]
@@ -688,9 +691,10 @@ def get_today_cancel_by_props_month(db, date_str, db_props, stay_month):
 
 
 def get_today_summary_by_month(db, now_kst, stay_month):
-    """net_daily_by_month에서 특정 투숙월의 오늘 데이터를 반환."""
+    """net_daily_by_month에서 특정 투숙월의 전일(빌드일-1) 데이터를 반환.
+    당일 데이터는 미완성이므로 전일부터 탐색."""
     net_daily_m = db.get("net_daily_by_month", {}).get(stay_month, {})
-    for days_ago in range(0, 7):
+    for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
         if date_str in net_daily_m:
             entry = net_daily_m[date_str]
@@ -840,6 +844,7 @@ def main():
         "meta": {
             "refreshTime":  now_kst.strftime("%Y-%m-%d %H:%M KST"),
             "baseDate":     now_kst.strftime("%Y-%m-%d"),
+            "todayDate":    today_date,
             "yoyBaseDate":  yoy_base_date,
             "dataSource":   "온북 DB + 사업계획 Budget",
         },

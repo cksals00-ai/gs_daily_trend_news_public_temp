@@ -1076,6 +1076,118 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
     return html
 
 
+# ─────────────────────────────────────────────
+# 인사이트 패널 데이터 주입
+# ─────────────────────────────────────────────
+def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: datetime) -> str:
+    """전일 픽업 상세 / 주간 픽업 트렌드 / 4개년 비교 데이터를 JS 상수로 주입"""
+    import json as _json
+    from datetime import timedelta as _td
+
+    cur_month = now.month
+    all_months = otb_data.get("allMonths", {})
+    nd = agg_data.get("net_daily", {})
+    mt = agg_data.get("monthly_total", {})
+    today_date = otb_data.get("meta", {}).get("todayDate", "")  # e.g. "20260426"
+
+    # ── 1) 세그먼트별 전일 픽업 ──
+    main_segs = ["OTA", "G-OTA", "Inbound"]
+    seg_today = {}
+    full_seg = all_months.get("0", {}).get("segmentData", {})
+    for seg in main_segs:
+        s = full_seg.get(seg, {})
+        seg_today[seg] = {
+            "booking": s.get("today_booking", 0) or 0,
+            "cancel": s.get("today_cancel", 0) or 0,
+            "net": s.get("today_net", 0) or 0,
+            "net_rev": round((s.get("today_net_rev", 0) or 0) / 1e8, 1),  # 억 단위
+        }
+
+    # ── 2) 투숙월별 전일 픽업 분포 ──
+    stay_month_today = {}
+    for mi in range(cur_month, min(cur_month + 4, 13)):
+        mkey = str(mi)
+        ms = all_months.get(mkey, {}).get("summary", {})
+        t_net = ms.get("today_net", 0) or 0
+        t_book = ms.get("today_booking", 0) or 0
+        t_cancel = ms.get("today_cancel", 0) or 0
+        if t_book != 0 or t_cancel != 0 or t_net != 0:
+            stay_month_today[f"{mi}월"] = {"booking": t_book, "cancel": t_cancel, "net": t_net}
+
+    # ── 3) 주간 픽업 트렌드 (일별 net_rn, 14일) ──
+    all_keys = sorted(nd.keys())
+    keys14 = all_keys[-14:] if len(all_keys) >= 14 else all_keys
+    daily_trend = []
+    for k in keys14:
+        v = nd.get(k, {})
+        daily_trend.append({
+            "date": k,
+            "label": f"{k[4:6]}/{k[6:8]}",
+            "pickup": v.get("pickup_rn", 0) or 0,
+            "cancel": v.get("cancel_rn", 0) or 0,
+            "net": v.get("net_rn", 0) or 0,
+        })
+
+    # 주간 세그먼트 추이 (stayDateDaily에서 당월 세그먼트별 최근 14일 net_rn)
+    sdd = otb_data.get("stayDateDaily", {})
+    cur_month_key = f"{now.year}{cur_month:02d}"
+    seg_weekly = {}
+    if cur_month_key in sdd:
+        sdd_seg = sdd[cur_month_key].get("segments", {})
+        for seg in main_segs:
+            arr = sdd_seg.get(seg, {}).get("net_rn", [])
+            seg_weekly[seg] = arr[-14:] if len(arr) >= 14 else arr
+
+    # ── 4) 4개년 동기간 비교 (월별 OTB) ──
+    years_compare = {}
+    compare_months = list(range(cur_month, min(cur_month + 3, 13)))
+    for yr in [2022, 2023, 2024, 2025, 2026]:
+        yr_data = {}
+        for mo in compare_months:
+            key = f"{yr}{mo:02d}"
+            if key in mt:
+                v = mt[key]
+                yr_data[f"{mo}월"] = {
+                    "booking_rn": v.get("booking_rn", 0),
+                    "net_rn": v.get("net_rn", 0),
+                    "net_rev": round(v.get("net_rev", 0), 1),
+                }
+        if yr_data:
+            years_compare[str(yr)] = yr_data
+
+    # 4개년 동기간 — OTB 스냅샷 (otb_data의 yoyTable에서 사업장별 수치)
+    yoy_summary = {}
+    for yr in [2022, 2023, 2024, 2025, 2026]:
+        for mo in compare_months:
+            mkey = f"{yr}{mo:02d}"
+            if mkey in mt:
+                if str(yr) not in yoy_summary:
+                    yoy_summary[str(yr)] = {}
+                yoy_summary[str(yr)][f"{mo}월"] = mt[mkey].get("booking_rn", 0)
+
+    insight_blob = {
+        "todayDate": today_date,
+        "todayLabel": f"{today_date[4:6]}/{today_date[6:]}" if len(today_date) == 8 else "",
+        "segToday": seg_today,
+        "stayMonthToday": stay_month_today,
+        "dailyTrend": daily_trend,
+        "segWeekly": seg_weekly,
+        "yearsCompare": years_compare,
+        "yoySummary": yoy_summary,
+        "compareMonths": [f"{m}월" for m in compare_months],
+    }
+
+    js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"
+    pattern = re.compile(r'const INSIGHT_DATA = \{.*?\};', re.DOTALL)
+    if pattern.search(html):
+        html = pattern.sub(js_const, html)
+    else:
+        html = html.replace("/*__INSIGHT_DATA__*/", js_const)
+
+    logger.info(f"✓ 인사이트 패널 데이터 주입 (seg={len(seg_today)}, daily={len(daily_trend)}, years={len(years_compare)})")
+    return html
+
+
 def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict, weekly_data: dict, now: datetime, agg_data: dict = None, admin_data: dict = None, otb_data: dict = None) -> str:
     """index.html과 otb.html 공통 주입 함수"""
     day_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
@@ -1119,6 +1231,8 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data)
     if otb_data:
         html = inject_yoy_property_table(html, otb_data)
+    if otb_data and agg_data:
+        html = inject_insight_panel_data(html, otb_data, agg_data, now)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     html = apply_tpl(html, "build", build_meta)
     return html

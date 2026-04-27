@@ -1,25 +1,24 @@
-#!/bin/bash
-set -e
-cd /sessions/happy-trusting-cray/mnt/gs_daily_trend_news_public_temp
+#\!/bin/bash
+cd /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp
+echo "=== Step 1: parse_raw_db.py ===" > /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+python3 scripts/parse_raw_db.py >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt 2>&1
+echo "RC1=$?" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
 
-echo "===== STEP 1: parse_raw_db.py ====="
-python scripts/parse_raw_db.py 2>&1 | tail -20
-echo "STEP1_DONE"
+echo "=== Step 2: compare_and_update.py ===" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+python3 scripts/compare_and_update.py >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt 2>&1
+echo "RC2=$?" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
 
-echo "===== STEP 2: compare_and_update.py ====="
-python scripts/compare_and_update.py 2>&1 | tail -20
-echo "STEP2_DONE"
+echo "=== Step 3: generate_otb_data.py ===" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+python3 scripts/generate_otb_data.py >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt 2>&1
+echo "RC3=$?" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
 
-echo "===== STEP 3: generate_otb_data.py ====="
-python scripts/generate_otb_data.py 2>&1 | tail -20
-echo "STEP3_DONE"
+echo "=== Step 4: generate_insights.py ===" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+python3 scripts/generate_insights.py >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt 2>&1
+echo "RC4=$?" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
 
-echo "===== STEP 4: generate_insights.py ====="
-python scripts/generate_insights.py 2>&1 | tail -30
-echo "STEP4_DONE"
+echo "=== Step 5: build.py ===" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+python3 scripts/build.py >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt 2>&1
+echo "RC5=$?" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
 
-echo "===== STEP 5: build.py ====="
-python scripts/build.py 2>&1 | tail -20
-echo "STEP5_DONE"
-
-echo "===== ALL PIPELINE DONE ====="
+echo "=== DONE ===" >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
+date >> /sessions/zealous-inspiring-dijkstra/mnt/gs_daily_trend_news_public_temp/pipeline_log.txt
