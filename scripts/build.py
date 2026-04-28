@@ -720,6 +720,28 @@ def inject_competitor_section(html: str, comp_data: dict) -> str:
 NEWS_VISIBLE_LIMIT = 10  # PC 기준 초기 노출 기사 수 (모바일은 클라이언트 JS에서 5개로 조정)
 
 
+def _is_stale_by_pub_date(pub_date_str: str) -> bool:
+    """pub_date(RFC 2822) 기준 오래된 기사 여부 (빌드 단계 필터).
+
+    제외 조건:
+      1. 발행 연도가 현재 연도와 다름
+      2. 발행일이 현재 날짜 기준 3개월(90일) 이전
+    """
+    if not pub_date_str:
+        return False
+    from email.utils import parsedate_to_datetime
+    try:
+        pub_dt = parsedate_to_datetime(pub_date_str)
+        now = datetime.now(KST)
+        if pub_dt.year != now.year:
+            return True
+        if (now - pub_dt).days > 90:
+            return True
+        return False
+    except (ValueError, TypeError):
+        return False
+
+
 def build_news_html(news_data: dict) -> str:
     """Daily News Monitoring 형식 - 카테고리별 그룹 + Articles 카운트"""
     by_category = news_data.get("by_category", {})
@@ -745,6 +767,9 @@ def build_news_html(news_data: dict) -> str:
             key = a.get("title", "")[:50]
             if key and key not in seen_titles:
                 seen_titles.add(key)
+                # 오래된 기사 제외 (연도 불일치 또는 3개월 이전)
+                if _is_stale_by_pub_date(a.get("pub_date", "")):
+                    continue
                 articles.append(a)
         if not articles:
             continue
@@ -803,6 +828,8 @@ def build_news_html(news_data: dict) -> str:
 
 def render_featured_news(featured_list: list) -> str:
     """오늘의 주요기사 - 큰 카드 2개"""
+    # 오래된 기사 필터링
+    featured_list = [f for f in featured_list if not _is_stale_by_pub_date(f.get("pub_date", ""))]
     if not featured_list:
         return '<div style="padding:30px;text-align:center;color:var(--ink-faint);grid-column:1/-1;">Featured 뉴스 없음</div>'
     
@@ -879,17 +906,21 @@ def inject_news_section(html: str, news_data: dict) -> str:
     if fn > 0:
         logger.info(f"✓ Featured 뉴스 주입: {len(news_data.get('featured', []))}건")
     
-    # 3. 권역별 카운트 (모든 카테고리 합산)
+    # 3. 권역별 카운트 (모든 카테고리 합산, 오래된 기사 제외)
     counts = {"vivaldi": 0, "central": 0, "south": 0, "apac": 0, "general": 0}
     total_count = 0
     for cat_data in news_data.get("by_category", {}).values():
         for art in cat_data.get("articles", []):
+            if _is_stale_by_pub_date(art.get("pub_date", "")):
+                continue
             r = art.get("region", "general")
             if r in counts:
                 counts[r] += 1
             total_count += 1
-    # Featured도 카운트에 포함
+    # Featured도 카운트에 포함 (오래된 기사 제외)
     for f in news_data.get("featured", []):
+        if _is_stale_by_pub_date(f.get("pub_date", "")):
+            continue
         r = f.get("region", "general")
         if r in counts:
             counts[r] += 1
@@ -1202,6 +1233,50 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 "net": v.get("net_rn", 0) or 0,
             })
         daily_trend_by_month[f"{mi}월"] = mtrend
+
+    # ── 3c) 전년 동기간(YoY) 일별 픽업 트렌드 ──
+    # 같은 요일 매칭: 52주(364일) 전 날짜를 전년 동기간으로 사용
+    def _ly_date(dt_str: str) -> str:
+        """YYYYMMDD → 364일(52주) 전 날짜 (같은 요일 보장)"""
+        from datetime import datetime as _dt
+        d = _dt.strptime(dt_str, "%Y%m%d")
+        ly = d - _td(days=364)
+        return ly.strftime("%Y%m%d")
+
+    # 전체 일별 트렌드 전년 매칭
+    daily_trend_ly = []
+    for item in daily_trend:
+        ly_key = _ly_date(item["date"])
+        ly_val = nd.get(ly_key, {})
+        daily_trend_ly.append({
+            "date": ly_key,
+            "label": f"{ly_key[4:6]}/{ly_key[6:8]}",
+            "pickup": ly_val.get("pickup_rn", 0) or 0,
+            "cancel": ly_val.get("cancel_rn", 0) or 0,
+            "net": ly_val.get("net_rn", 0) or 0,
+        })
+
+    # 투숙월별 전년 매칭
+    daily_trend_by_month_ly = {}
+    for mi in compare_months:
+        mlabel = f"{mi}월"
+        cur_mtrend = daily_trend_by_month.get(mlabel, [])
+        if not cur_mtrend:
+            continue
+        ly_mkey = f"{now.year - 1}{mi:02d}"  # 전년 같은 투숙월
+        ly_md = ndm.get(ly_mkey, {})
+        mtrend_ly = []
+        for item in cur_mtrend:
+            ly_bk_date = _ly_date(item["date"])  # 같은 요일 매칭
+            ly_val = ly_md.get(ly_bk_date, {})
+            mtrend_ly.append({
+                "date": ly_bk_date,
+                "label": f"{ly_bk_date[4:6]}/{ly_bk_date[6:8]}",
+                "pickup": ly_val.get("pickup_rn", 0) or 0,
+                "cancel": ly_val.get("cancel_rn", 0) or 0,
+                "net": ly_val.get("net_rn", 0) or 0,
+            })
+        daily_trend_by_month_ly[mlabel] = mtrend_ly
 
     # ── 4) 4개년 동기간 비교 (월별 OTB) ──
     years_compare = {}
@@ -1544,7 +1619,9 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "segToday": seg_today,
         "stayMonthToday": stay_month_today,
         "dailyTrend": daily_trend,
+        "dailyTrendLY": daily_trend_ly,
         "dailyTrendByMonth": daily_trend_by_month,
+        "dailyTrendByMonthLY": daily_trend_by_month_ly,
         "segWeekly": seg_weekly,
         "yearsCompare": years_compare,
         "yoySummary": yoy_summary,
@@ -1849,6 +1926,21 @@ def main():
             logger.info(f"✓ docs/data/package_series_trend.json 동기화 완료")
         except Exception as e:
             logger.warning(f"✗ package_series_trend.json 동기화 실패: {e}")
+
+    # ── 해외사업장 데이터 파싱 (overseas_data.json) ──
+    overseas_script = Path(__file__).resolve().parent / "parse_overseas.py"
+    if overseas_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(overseas_script)],
+                capture_output=True, text=True, timeout=60,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ parse_overseas 완료")
+            else:
+                logger.warning(f"✗ parse_overseas 실패: {result.stderr.strip()}")
+        except Exception as e:
+            logger.warning(f"✗ parse_overseas 실행 오류: {e}")
 
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)

@@ -164,6 +164,30 @@ def fetch_google_news(query: str, limit: int = 5) -> list[dict]:
         return []
 
 
+def is_stale_by_pub_date(pub_date_str: str, ref: datetime | None = None) -> bool:
+    """pub_date(RFC 2822) 기준으로 오래된 기사인지 판별.
+
+    제외 조건 (하나라도 해당되면 True):
+      1. 발행 연도가 현재 연도와 다름
+      2. 발행일이 현재 날짜 기준 3개월(90일) 이전
+    """
+    if not pub_date_str:
+        return False  # 날짜 없으면 일단 통과
+    from email.utils import parsedate_to_datetime
+    try:
+        pub_dt = parsedate_to_datetime(pub_date_str)
+        now = ref or datetime.now(KST)
+        # 조건 1: 연도 불일치
+        if pub_dt.year != now.year:
+            return True
+        # 조건 2: 3개월(90일) 이전
+        if (now - pub_dt).days > 90:
+            return True
+        return False
+    except (ValueError, TypeError):
+        return False  # 파싱 실패 시 통과
+
+
 def is_excluded(title: str) -> bool:
     """자사/소노 언급 여부 검사"""
     return any(kw in title for kw in EXCLUDE_KEYWORDS)
@@ -258,8 +282,14 @@ def main():
     # 기존 기사 로드 + 48시간 초과 삭제
     existing_articles = load_existing_news()
     existing_articles = purge_old_articles(existing_articles, max_hours=48)
+    # 기존 기사 중 pub_date 기준 오래된 기사도 제거
+    before_stale = len(existing_articles)
+    existing_articles = [a for a in existing_articles if not is_stale_by_pub_date(a.get("pub_date", ""), now)]
+    stale_removed = before_stale - len(existing_articles)
+    if stale_removed:
+        logger.info(f"  ⏳ 기존 기사 중 {stale_removed}건 제거 (pub_date 오래됨)")
     existing_titles = {art.get("title", "")[:50] for art in existing_articles}
-    logger.info(f"기존 기사: {len(existing_articles)}건 (48시간 이내)")
+    logger.info(f"기존 기사: {len(existing_articles)}건 (48시간 이내, 최신)")
 
     new_news = []
     seen_titles = set(existing_titles)
@@ -283,6 +313,11 @@ def main():
                 # 자사 언급 제외
                 if is_excluded(title):
                     logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
+                    continue
+
+                # 오래된 기사 제외 (연도 불일치 또는 3개월 이전)
+                if is_stale_by_pub_date(item.get("pub_date", ""), now):
+                    logger.info(f"  ⏳ 제외 (오래된 기사): {title[:50]} | pub_date={item.get('pub_date','')}")
                     continue
 
                 region = detect_region(title)

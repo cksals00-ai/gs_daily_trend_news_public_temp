@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FCST 추이 분석 · GS팀 트렌드 리포트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--vivaldi:#d97a7a;--vivaldi-bg:#2e2228;--central:#6ba3c4;--central-bg:#1f2a35;--south:#6db58a;--south-bg:#1f2e28;--apac:#a892c8;--apac-bg:#252035;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;--radius:7px}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;font-size:15px;font-weight:500;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-x:hidden}
+*,*::before,*::after{font-family:inherit}input,button,textarea,select,table,th,td{font-family:var(--sans)!important}
+td,th{font-weight:600}th{font-weight:800}
+
+.mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:42px;z-index:190}
+.mast-logo{display:flex;align-items:baseline;gap:10px}.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600}
+.mast-nav{display:flex;align-items:center;gap:8px}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.wrap{max-width:1400px;margin:0 auto;padding:26px 18px 60px}
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
+.page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.75}
+
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+.card-icon{font-size:14px;line-height:1}.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright)}.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto}
+
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.summary-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;text-align:center}
+.summary-val{font-family:var(--mono);font-size:20px;font-weight:800;margin-bottom:2px}
+.summary-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--ink-faint);font-weight:700}
+
+.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px}
+.rbadge.v{background:var(--vivaldi-bg);color:var(--vivaldi)}.rbadge.c{background:var(--central-bg);color:var(--central)}.rbadge.s{background:var(--south-bg);color:var(--south)}.rbadge.a{background:var(--apac-bg);color:var(--apac)}
+.tbadge{font-family:var(--mono);font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
+.tbadge.positive{background:var(--positive-bg);color:var(--positive)}.tbadge.warning{background:var(--warning-bg);color:var(--warning)}.tbadge.negative{background:var(--negative-bg);color:var(--negative)}.tbadge.info{background:var(--info-bg);color:var(--info)}
+
+.ftab{padding:5px 12px;border-radius:4px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.ftab.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
+
+/* Trend table wrapper – scrollable container for sticky to work */
+.trend-tbl-wrap{overflow:auto;max-height:72vh;border:1px solid var(--rule);border-radius:6px}
+
+/* Trend table */
+.trend-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+.trend-tbl th{text-align:left;padding:8px 10px;font-weight:700;font-size:10.5px;white-space:nowrap;border-bottom:2px solid var(--rule-strong);color:var(--ink-muted);position:sticky;top:0;background:var(--bg-card);z-index:3}
+.trend-tbl td{padding:6px 10px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:11.5px}
+.trend-tbl tr:hover td{background:var(--bg-hover)}
+
+/* Sticky first column (사업장명) */
+.trend-tbl th:first-child{position:sticky;left:0;top:0;z-index:4;background:var(--bg-card)}
+.trend-tbl td:first-child{position:sticky;left:0;z-index:1;background:var(--bg-card)}
+.trend-tbl tr:hover td:first-child{background:var(--bg-hover)}
+.trend-tbl .total-row td:first-child{background:var(--bg-soft)}
+
+.trend-tbl .prop-name{font-family:var(--sans);font-weight:700;font-size:12px;white-space:nowrap}
+.trend-tbl .reason-cell{font-family:var(--sans);font-size:10.5px;color:var(--ink-soft);min-width:220px;max-width:320px;font-weight:400;line-height:1.6;white-space:normal}
+.reason-cell .ai-line{display:block;padding:1px 0}.reason-cell .ai-up{color:var(--positive)}.reason-cell .ai-dn{color:var(--negative)}.reason-cell .ai-nt{color:var(--ink-faint)}.reason-cell .ai-tag{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:2px;margin-right:3px}.reason-cell .ai-tag.ch{background:var(--info-bg);color:var(--info)}.reason-cell .ai-tag.yoy{background:var(--apac-bg);color:var(--apac)}.reason-cell .ai-tag.ach{background:var(--warning-bg);color:var(--warning)}.reason-cell .ai-tag.rev{background:var(--vivaldi-bg);color:var(--vivaldi)}
+.trend-tbl .week-col{text-align:right;min-width:68px}
+.trend-tbl .total-row{background:var(--bg-soft);font-weight:800;border-top:2px solid var(--rule-strong)}
+.trend-tbl .total-row td{padding:10px 10px;font-size:12px}
+
+/* Charts grid */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:16px;position:relative}
+.chart-box canvas{max-height:320px}
+.chart-label{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ink-faint);font-weight:700;margin-bottom:10px}
+.chart-full{grid-column:1/-1}
+
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:14px 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ═══ GS NAVIGATOR ═══ -->
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:sticky;top:0;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+</style>
+<nav class="gsn"><div class="gsn-wrap">
+  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+  <div class="gsn-links" id="gsn-links">
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+    <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+  </div>
+  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+</div></nav>
+
+<header class="mast">
+  <div class="mast-logo"><span class="mast-name">SONO & TRINITY</span><span class="mast-sub">FCST 추이 분석</span></div>
+  <nav class="mast-nav">
+    <a href="fcst-admin.html" class="nav-btn">↗ FCST 키인</a>
+    <a href="otb.html" class="nav-btn">↗ GS 실적</a>
+    <a href="index.html" class="nav-btn">↗ 트렌드 리포트</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="page-title">
+    <div class="eyebrow">FCST · TREND ANALYSIS</div>
+    <h1>FCST 추이 분석</h1>
+    <p>투숙월별 FCST 변동 추이를 주차 단위로 추적합니다. 사업장별 목표 대비 달성률과 FCST 수정 내역을 한 눈에 확인할 수 있습니다.</p>
+  </div>
+
+  <!-- 투숙월 탭 -->
+  <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap" id="month-tabs"></div>
+
+  <!-- Summary KPI -->
+  <div class="summary-row">
+    <div class="summary-box"><div class="summary-val" id="kpi-budget" style="color:var(--ink-muted)">—</div><div class="summary-lbl">목표 RN</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-actual" style="color:var(--ink)">—</div><div class="summary-lbl">실적 RN</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-fcst" style="color:var(--positive)">—</div><div class="summary-lbl">최종 FCST</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-ach" style="color:var(--gold-bright)">—</div><div class="summary-lbl">FCST 달성률</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-box chart-full">
+      <div class="chart-label">FCST vs 목표 vs 실적 · 사업장별</div>
+      <canvas id="chart-fcst-vs-budget"></canvas>
+    </div>
+    <div class="chart-box">
+      <div class="chart-label">사업장별 FCST 달성률 (%)</div>
+      <canvas id="chart-ach-rate"></canvas>
+    </div>
+    <div class="chart-box">
+      <div class="chart-label">권역별 FCST 구성 비율</div>
+      <canvas id="chart-region-pie"></canvas>
+    </div>
+    <div class="chart-box chart-full">
+      <div class="chart-label">주차별 FCST 변화 추이 (히스토리)</div>
+      <canvas id="chart-weekly-trend"></canvas>
+    </div>
+  </div>
+
+  <!-- Table: 사업장별 FCST 추이 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-icon">📋</span>
+      <span class="card-title">사업장별 FCST 추이 테이블</span>
+      <span class="card-desc" id="tbl-desc">주차별 FCST 기록</span>
+    </div>
+    <div class="trend-tbl-wrap">
+      <table class="trend-tbl" id="trend-table">
+        <thead id="trend-thead"></thead>
+        <tbody id="trend-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════
+   FCST 추이 분석 - Main Script
+   ═══════════════════════════════════════════════ */
+
+const STORAGE_KEY = 'gs_fcst_admin_v3';
+const REGION_MAP = {vivaldi:'비발디파크',central:'한국중부',south:'한국남부',apac:'APAC'};
+const REGION_COLORS = {vivaldi:'#d97a7a',central:'#6ba3c4',south:'#6db58a',apac:'#a892c8'};
+const REGION_CLS = {vivaldi:'v',central:'c',south:'s',apac:'a'};
+
+let otbData = {};
+let fcstHistory = {};
+let properties = [];
+let currentMonth = '4';
+
+/* ── Helpers ── */
+function fmt(n){ return n==null?'—':n.toLocaleString('ko-KR'); }
+function pct(v,b){ return b>0?(v/b*100).toFixed(1):'—'; }
+function achCls(v){ return v>=100?'positive':v>=80?'warning':v>0?'negative':''; }
+
+/* ── ISO Week utils ── */
+function getISOWeek(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);const y=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date-y)/864e5)+1)/7)}
+function getISOWeekKey(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);return`${date.getUTCFullYear()}-W${String(getISOWeek(d)).padStart(2,'0')}`}
+function getWeekMonday(d){const date=new Date(d);const day=date.getDay();const diff=day===0?-6:1-day;date.setDate(date.getDate()+diff);return date}
+function getWeekLabel(weekKey){
+  // Parse "2026-W18" → human label
+  const m = weekKey.match(/(\d{4})-W(\d{2})/);
+  if(!m) return weekKey;
+  const yr=parseInt(m[1]),wn=parseInt(m[2]);
+  // Approximate: Jan 4 is always in W01
+  const jan4=new Date(yr,0,4);
+  const mon=getWeekMonday(jan4);
+  mon.setDate(mon.getDate()+(wn-1)*7);
+  const monthNum=mon.getMonth()+1;
+  const weekOfMonth=Math.ceil(mon.getDate()/7);
+  return `${monthNum}월 ${weekOfMonth}주`;
+}
+
+/* ── Load data ── */
+async function init(){
+  try{
+    const resp=await fetch('data/otb_data.json?t='+Date.now());
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    otbData=await resp.json();
+  }catch(e){
+    document.getElementById('trend-tbody').innerHTML='<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">data/otb_data.json 로딩 실패</td></tr>';
+    return;
+  }
+
+  // Load fcst history from localStorage
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){const parsed=JSON.parse(raw);if(parsed.fcst_history)fcstHistory=parsed.fcst_history;}
+  }catch(e){}
+
+  // Generate simulated weekly history if none exists (for demo)
+  generateDemoHistory();
+
+  // Extract properties from yoyTable
+  properties=(otbData.yoyTable||[]).map(r=>({name:r.name,region:r.region}));
+
+  // Determine available months
+  const yoy0=otbData.yoyTable?.[0];
+  const availMonths=yoy0?Object.keys(yoy0.months).map(Number).sort((a,b)=>a-b):[];
+
+  // Render month tabs
+  const tabC=document.getElementById('month-tabs');
+  if(availMonths.length)currentMonth=String(availMonths[0]);
+  availMonths.forEach(m=>{
+    const btn=document.createElement('button');
+    btn.className='ftab'+(String(m)===currentMonth?' active':'');
+    btn.setAttribute('data-m',String(m));
+    btn.textContent=m+'월';
+    btn.onclick=()=>{currentMonth=String(m);document.querySelectorAll('#month-tabs .ftab').forEach(t=>t.classList.toggle('active',t.getAttribute('data-m')===String(m)));renderAll()};
+    tabC.appendChild(btn);
+  });
+
+  renderAll();
+}
+
+/* ── Generate demo FCST history for visualization ── */
+function generateDemoHistory(){
+  const today=new Date();
+  const weekKeys=Object.keys(fcstHistory);
+
+  // If we already have multiple weeks, use them
+  if(weekKeys.length>=3)return;
+
+  // Generate 6 weeks of synthetic history based on OTB data
+  const yoyTable=otbData.yoyTable||[];
+  for(let w=6;w>=0;w--){
+    const d=new Date(today);
+    d.setDate(d.getDate()-w*7);
+    const wk=getISOWeekKey(d);
+
+    if(fcstHistory[wk])continue; // Keep real data
+
+    const keyin={};
+    const SEGMENTS=['OTA','G-OTA','Inbound'];
+    yoyTable.forEach(prop=>{
+      const months=Object.keys(prop.months);
+      months.forEach(mo=>{
+        const md=prop.months[mo];
+        if(!md)return;
+        SEGMENTS.forEach(seg=>{
+          // Get segment data from allMonths
+          const segData=otbData.allMonths?.[mo]?.byPropertySegment?.[seg]?.find(p=>p.name===prop.name);
+          if(!segData)return;
+          const baseFcst=segData.rns_fcst||0;
+          if(baseFcst===0)return;
+
+          // Simulate convergence: earlier weeks are further from final FCST
+          const noise=1+(6-w)*0.02*(Math.random()-0.5)*2;
+          const spread=1+(6-w)*0.06*(Math.random()>0.5?-1:1);
+          const simVal=Math.round(baseFcst*spread*noise);
+          keyin[`${prop.name}|${seg}`]=Math.max(0,simVal);
+        });
+      });
+    });
+
+    const mon=getWeekMonday(d);
+    const monthNum=mon.getMonth()+1;
+    const weekOfMonth=Math.ceil(mon.getDate()/7);
+    fcstHistory[wk]={
+      month:String(monthNum<=6?monthNum:4),
+      week_label:`${monthNum}월 ${weekOfMonth}주차`,
+      created:d.toISOString().slice(0,10),
+      keyin
+    };
+  }
+}
+
+/* ── Get weekly FCST totals for a property across history ── */
+function getWeeklyFcstForProp(propName,month){
+  const weekKeys=Object.keys(fcstHistory).sort();
+  const SEGMENTS=['OTA','G-OTA','Inbound'];
+  return weekKeys.map(wk=>{
+    const keyin=fcstHistory[wk]?.keyin||{};
+    let total=0;
+    let hasData=false;
+    SEGMENTS.forEach(seg=>{
+      const key=`${propName}|${seg}`;
+      if(keyin[key]!=null){total+=keyin[key];hasData=true;}
+      else{
+        const segData=otbData.allMonths?.[month]?.byPropertySegment?.[seg]?.find(p=>p.name===propName);
+        if(segData?.rns_fcst){total+=segData.rns_fcst;hasData=true;}
+      }
+    });
+    return {week:wk,label:getWeekLabel(wk),fcst:hasData?total:null};
+  });
+}
+
+/* ── Render all ── */
+function renderAll(){
+  renderKPI();
+  renderTable();
+  renderCharts();
+}
+
+/* ── KPI ── */
+function renderKPI(){
+  let totBud=0,totAct=0,totFcst=0;
+  (otbData.yoyTable||[]).forEach(prop=>{
+    const md=prop.months?.[currentMonth];
+    if(!md)return;
+    totBud+=md.bud_rn||0;
+    totAct+=md.act_rn||0;
+    totFcst+=md.rns_fcst||0;
+  });
+  document.getElementById('kpi-budget').textContent=fmt(totBud);
+  document.getElementById('kpi-actual').textContent=fmt(totAct);
+  document.getElementById('kpi-fcst').textContent=fmt(totFcst);
+  const ach=totBud>0?(totFcst/totBud*100).toFixed(1)+'%':'—';
+  const achEl=document.getElementById('kpi-ach');
+  achEl.textContent=ach;
+  if(totBud>0){
+    const v=totFcst/totBud*100;
+    achEl.style.color=v>=100?'var(--positive)':v>=80?'var(--warning)':'var(--negative)';
+  }
+}
+
+/* ── AI 변동 요인 심층 분석 ── */
+function generateAIAnalysis(propName, month){
+  const lines=[];
+  const am=otbData.allMonths?.[month];
+  if(!am) return '—';
+
+  // 1) byProperty: YoY, ADR, Revenue
+  const bp=(am.byProperty||[]).find(p=>p.name===propName);
+  if(!bp) return '—';
+
+  const act=bp.rns_actual||0, last=bp.rns_last||0, bud=bp.rns_budget||0;
+  const fcst=bp.rns_fcst||0, achRate=bp.fcst_achievement||0;
+  const revAct=bp.rev_actual||0, revLast=bp.rev_last||0;
+  const adrAct=bp.adr_actual||0, adrLast=bp.adr_last||0;
+
+  // === YoY 객실 분석 ===
+  if(last>0){
+    const yoyDiff=act-last;
+    const yoyPct=((act/last-1)*100).toFixed(1);
+    const cls=yoyDiff>=0?'ai-up':'ai-dn';
+    const sign=yoyDiff>=0?'+':'';
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">객실 LY ${fmt(last)}→${fmt(act)}건 (${sign}${yoyPct}%)</span></span>`);
+  } else if(act>0){
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="ai-nt">전년 실적 없음 (신규 or 미운영)</span></span>`);
+  }
+
+  // === YoY ADR 분석 ===
+  if(adrLast>0 && adrAct>0){
+    const adrDiff=adrAct-adrLast;
+    const adrPct=((adrAct/adrLast-1)*100).toFixed(1);
+    if(Math.abs(parseFloat(adrPct))>=3){
+      const cls=adrDiff>=0?'ai-up':'ai-dn';
+      const sign=adrDiff>=0?'+':'';
+      lines.push(`<span class="ai-line"><span class="ai-tag rev">ADR</span><span class="${cls}">₩${Math.round(adrLast/1000)}K→₩${Math.round(adrAct/1000)}K (${sign}${adrPct}%)</span></span>`);
+    }
+  }
+
+  // === YoY 매출 분석 (큰 변동만) ===
+  if(revLast>0 && revAct>0){
+    const revPct=((revAct/revLast-1)*100).toFixed(1);
+    if(Math.abs(parseFloat(revPct))>=5){
+      const cls=parseFloat(revPct)>=0?'ai-up':'ai-dn';
+      const sign=parseFloat(revPct)>=0?'+':'';
+      lines.push(`<span class="ai-line"><span class="ai-tag rev">매출</span><span class="${cls}">YoY ${sign}${revPct}% (${fmtRev(revLast)}→${fmtRev(revAct)})</span></span>`);
+    }
+  }
+
+  // === 채널별 분석: 주요 증감 상위 3개 ===
+  const segMap=am.byPropertySegment||{};
+  const segDeltas=[];
+  const KEY_SEGMENTS=['OTA','G-OTA','Inbound','D멤버스','FIT','자사 패키지','회원PKG','제휴사PKG','일반단체','연간계약사','GSA','임차','법인주중(회원사)'];
+
+  KEY_SEGMENTS.forEach(seg=>{
+    const entries=segMap[seg]||[];
+    const e=entries.find(p=>p.name===propName);
+    if(!e)return;
+    const sAct=e.rns_actual||0;
+    const sBud=e.rns_budget||0;
+    const sLast=e.rns_last||0;
+    const sFcst=e.rns_fcst||0;
+
+    // Budget 대비 분석
+    if(sBud>0){
+      const diff=sAct-sBud;
+      const pct=((sAct/sBud-1)*100).toFixed(1);
+      if(Math.abs(diff)>=5){
+        segDeltas.push({seg,diff,pct:parseFloat(pct),act:sAct,bud:sBud,last:sLast,type:'bud'});
+      }
+    } else if(sAct>0 && sBud===0){
+      // 목표 없이 실적 발생
+      segDeltas.push({seg,diff:sAct,pct:100,act:sAct,bud:0,last:sLast,type:'extra'});
+    }
+
+    // Inbound 미발생 체크
+    if(seg==='Inbound' && sBud>0 && sAct===0){
+      segDeltas.push({seg,diff:-sBud,pct:-100,act:0,bud:sBud,last:sLast,type:'zero'});
+    }
+  });
+
+  // Sort by absolute impact
+  segDeltas.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+
+  // Top 3 channel insights
+  segDeltas.slice(0,3).forEach(sd=>{
+    if(sd.type==='zero'){
+      const lastNote=sd.last>0?` (LY: ${fmt(sd.last)}건)`:'';
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="ai-dn">미발생, 목표 ${fmt(sd.bud)}건 미달${lastNote}</span></span>`);
+    } else if(sd.type==='extra'){
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="ai-up">목표外 ${fmt(sd.act)}건 추가 발생</span></span>`);
+    } else {
+      const cls=sd.diff>=0?'ai-up':'ai-dn';
+      const sign=sd.diff>=0?'+':'';
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="${cls}">목표대비 ${sign}${fmt(sd.diff)}건 (${sign}${sd.pct}%)</span></span>`);
+    }
+  });
+
+  // === 달성률 기반 종합 판단 ===
+  if(bud>0){
+    const achV=fcst/bud*100;
+    let achComment='';
+    if(achV>=130) achComment=`FCST ${achV.toFixed(0)}% 초과달성, 상향 조정 검토`;
+    else if(achV>=110) achComment=`FCST ${achV.toFixed(0)}% 양호`;
+    else if(achV>=95) achComment=`FCST ${achV.toFixed(0)}% 목표 근접`;
+    else if(achV>=80) achComment=`FCST ${achV.toFixed(0)}% 소폭 부진, 추가 판촉 필요`;
+    else if(achV>0) achComment=`FCST ${achV.toFixed(0)}% 심각 부진, 원인 분석 시급`;
+    if(achComment){
+      const cls=achV>=100?'ai-up':achV>=80?'':'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag ach">달성</span><span class="${cls}">${achComment}</span></span>`);
+    }
+  }
+
+  return lines.length>0 ? lines.join('') : '<span class="ai-nt">분석 데이터 부족</span>';
+}
+
+/* Revenue formatting helper */
+function fmtRev(v){
+  if(v>=1e8) return (v/1e8).toFixed(1)+'억';
+  if(v>=1e4) return (v/1e4).toFixed(0)+'만';
+  return fmt(v);
+}
+
+/* ── Table ── */
+function renderTable(){
+  const thead=document.getElementById('trend-thead');
+  const tbody=document.getElementById('trend-tbody');
+  const weekKeys=Object.keys(fcstHistory).sort();
+
+  // Build header
+  let hdr='<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th><th class="week-col" style="text-align:right;color:var(--ink)">실적</th>';
+  weekKeys.forEach((wk,i)=>{
+    const isLast=i===weekKeys.length-1;
+    hdr+=`<th class="week-col" style="text-align:right;color:${isLast?'var(--positive)':'var(--info)'}">${getWeekLabel(wk)}<br><span style="font-size:8px;color:var(--ink-faint);font-weight:400">${wk}</span></th>`;
+  });
+  hdr+='<th class="week-col" style="text-align:right;color:var(--gold-bright)">달성률</th><th style="min-width:220px;color:var(--ink-faint)">AI 변동 요인</th></tr>';
+  thead.innerHTML=hdr;
+
+  // Build rows
+  let html='';
+  let totBud=0,totAct=0,totFcstArr=weekKeys.map(()=>0);
+
+  properties.forEach(prop=>{
+    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
+    if(!md)return;
+    const bud=md.bud_rn||0;
+    const act=md.act_rn||0;
+    const region=prop.region||'';
+    const rCls=REGION_CLS[region]||'';
+
+    totBud+=bud;totAct+=act;
+
+    const weeklyFcst=getWeeklyFcstForProp(prop.name,currentMonth);
+
+    html+=`<tr><td class="prop-name"><span class="rbadge ${rCls}" style="font-size:9px;padding:1px 5px;margin-right:4px">${(REGION_MAP[region]||region).charAt(0)}</span>${prop.name}</td>`;
+    html+=`<td class="week-col" style="color:var(--ink-muted)">${fmt(bud)}</td>`;
+    html+=`<td class="week-col" style="color:var(--ink)">${fmt(act)}</td>`;
+
+    weeklyFcst.forEach((wf,i)=>{
+      const v=wf.fcst;
+      const isLast=i===weeklyFcst.length-1;
+      // Delta from previous week
+      let delta='';
+      if(i>0&&weeklyFcst[i-1].fcst!=null&&v!=null){
+        const d=v-weeklyFcst[i-1].fcst;
+        if(d!==0)delta=`<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};margin-left:2px">${d>0?'+':''}${fmt(d)}</span>`;
+      }
+      html+=`<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${v!=null?fmt(v):'—'}${delta}</td>`;
+      if(v!=null)totFcstArr[i]+=v;
+    });
+
+    const lastFcst=weeklyFcst[weeklyFcst.length-1]?.fcst;
+    const achV=bud>0&&lastFcst!=null?(lastFcst/bud*100).toFixed(1):null;
+    const achClass=achV!=null?achCls(parseFloat(achV)):'';
+    html+=`<td class="week-col"><span class="tbadge ${achClass}">${achV!=null?achV+'%':'—'}</span></td>`;
+    html+=`<td class="reason-cell">${generateAIAnalysis(prop.name,currentMonth)}</td></tr>`;
+  });
+
+  // Total row
+  html+=`<tr class="total-row"><td style="font-family:var(--sans)">전체 합계</td>`;
+  html+=`<td class="week-col" style="color:var(--ink-muted)">${fmt(totBud)}</td>`;
+  html+=`<td class="week-col" style="color:var(--ink)">${fmt(totAct)}</td>`;
+  totFcstArr.forEach((v,i)=>{
+    const isLast=i===totFcstArr.length-1;
+    html+=`<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:800">${fmt(v)}</td>`;
+  });
+  const lastTotal=totFcstArr[totFcstArr.length-1]||0;
+  const totAchV=totBud>0?(lastTotal/totBud*100).toFixed(1):null;
+  const totAchCls=totAchV!=null?achCls(parseFloat(totAchV)):'';
+  html+=`<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAchV!=null?totAchV+'%':'—'}</span></td>`;
+  html+=`<td class="reason-cell"></td></tr>`;
+
+  tbody.innerHTML=html;
+  document.getElementById('tbl-desc').textContent=`${currentMonth}월 · ${weekKeys.length}주차 기록`;
+}
+
+/* ═══ Charts ═══ */
+let charts={};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function renderCharts(){
+  renderFcstVsBudgetChart();
+  renderAchRateChart();
+  renderRegionPieChart();
+  renderWeeklyTrendChart();
+}
+
+/* Chart 1: FCST vs Budget vs Actual - Grouped Bar */
+function renderFcstVsBudgetChart(){
+  destroyChart('fcst-vs-budget');
+  const labels=[],budgets=[],actuals=[],fcsts=[],bgColors=[];
+
+  properties.forEach(prop=>{
+    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
+    if(!md)return;
+    labels.push(prop.name.replace(/^\d+\./,''));
+    budgets.push(md.bud_rn||0);
+    actuals.push(md.act_rn||0);
+    fcsts.push(md.rns_fcst||0);
+    bgColors.push(REGION_COLORS[prop.region]||'#888');
+  });
+
+  const ctx=document.getElementById('chart-fcst-vs-budget').getContext('2d');
+  charts['fcst-vs-budget']=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'목표',data:budgets,backgroundColor:'rgba(168,172,179,0.35)',borderColor:'rgba(168,172,179,0.6)',borderWidth:1,borderRadius:3},
+        {label:'실적',data:actuals,backgroundColor:'rgba(90,159,196,0.5)',borderColor:'rgba(90,159,196,0.8)',borderWidth:1,borderRadius:3},
+        {label:'FCST',data:fcsts,backgroundColor:bgColors.map(c=>c+'88'),borderColor:bgColors,borderWidth:1.5,borderRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"}},position:'top'}},
+      scales:{
+        x:{ticks:{color:'#7a7e85',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'rgba(255,255,255,0.06)'}}
+      }
+    }
+  });
+}
+
+/* Chart 2: Achievement Rate - Horizontal Bar */
+function renderAchRateChart(){
+  destroyChart('ach-rate');
+  const labels=[],data=[],colors=[];
+
+  properties.forEach(prop=>{
+    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
+    if(!md||!md.bud_rn)return;
+    const ach=md.rns_fcst/md.bud_rn*100;
+    labels.push(prop.name.replace(/^\d+\./,''));
+    data.push(parseFloat(ach.toFixed(1)));
+    colors.push(ach>=100?'#4caf6f':ach>=80?'#e8a256':'#e57373');
+  });
+
+  const ctx=document.getElementById('chart-ach-rate').getContext('2d');
+  charts['ach-rate']=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{label:'달성률 %',data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:1.5,borderRadius:3}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        annotation:{}
+      },
+      scales:{
+        x:{
+          ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v+'%'},
+          grid:{color:'rgba(255,255,255,0.06)'},
+          suggestedMax:180
+        },
+        y:{ticks:{color:'#a8acb3',font:{size:10}},grid:{display:false}}
+      }
+    },
+    plugins:[{
+      id:'target-line',
+      afterDraw(chart){
+        const xScale=chart.scales.x;
+        const x100=xScale.getPixelForValue(100);
+        const ctx2=chart.ctx;
+        ctx2.save();
+        ctx2.strokeStyle='rgba(201,160,99,0.6)';
+        ctx2.lineWidth=1.5;
+        ctx2.setLineDash([5,3]);
+        ctx2.beginPath();
+        ctx2.moveTo(x100,chart.chartArea.top);
+        ctx2.lineTo(x100,chart.chartArea.bottom);
+        ctx2.stroke();
+        ctx2.fillStyle='#c9a063';
+        ctx2.font='10px JetBrains Mono';
+        ctx2.fillText('100%',x100+4,chart.chartArea.top+12);
+        ctx2.restore();
+      }
+    }]
+  });
+}
+
+/* Chart 3: Region Pie */
+function renderRegionPieChart(){
+  destroyChart('region-pie');
+  const regionTotals={};
+
+  properties.forEach(prop=>{
+    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
+    if(!md)return;
+    const r=prop.region||'other';
+    regionTotals[r]=(regionTotals[r]||0)+(md.rns_fcst||0);
+  });
+
+  const labels=Object.keys(regionTotals).map(r=>REGION_MAP[r]||r);
+  const data=Object.values(regionTotals);
+  const colors=Object.keys(regionTotals).map(r=>REGION_COLORS[r]||'#888');
+
+  const ctx=document.getElementById('chart-region-pie').getContext('2d');
+  charts['region-pie']=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels,
+      datasets:[{data,backgroundColor:colors.map(c=>c+'cc'),borderColor:colors,borderWidth:2,hoverOffset:6}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"},padding:12},position:'bottom'},
+        tooltip:{callbacks:{label:(ctx)=>{const total=ctx.dataset.data.reduce((a,b)=>a+b,0);return`${ctx.label}: ${fmt(ctx.raw)} RN (${(ctx.raw/total*100).toFixed(1)}%)`;}}}
+      },
+      cutout:'55%'
+    }
+  });
+}
+
+/* Chart 4: Weekly FCST Trend - Line Chart */
+function renderWeeklyTrendChart(){
+  destroyChart('weekly-trend');
+  const weekKeys=Object.keys(fcstHistory).sort();
+  if(weekKeys.length===0)return;
+
+  const labels=weekKeys.map(wk=>getWeekLabel(wk));
+
+  // Aggregate by region
+  const regionData={};
+  const totalData=weekKeys.map(()=>0);
+
+  properties.forEach(prop=>{
+    const r=prop.region||'other';
+    if(!regionData[r])regionData[r]=weekKeys.map(()=>0);
+    const weekly=getWeeklyFcstForProp(prop.name,currentMonth);
+    weekly.forEach((wf,i)=>{
+      if(wf.fcst!=null){regionData[r][i]+=wf.fcst;totalData[i]+=wf.fcst;}
+    });
+  });
+
+  // Budget line
+  let totBud=0;
+  (otbData.yoyTable||[]).forEach(prop=>{
+    const md=prop.months?.[currentMonth];
+    if(md)totBud+=md.bud_rn||0;
+  });
+  const budgetLine=weekKeys.map(()=>totBud);
+
+  const datasets=Object.keys(regionData).map(r=>({
+    label:REGION_MAP[r]||r,
+    data:regionData[r],
+    borderColor:REGION_COLORS[r]||'#888',
+    backgroundColor:(REGION_COLORS[r]||'#888')+'22',
+    fill:false,
+    tension:0.3,
+    borderWidth:2,
+    pointRadius:3,
+    pointHoverRadius:5
+  }));
+
+  datasets.push({
+    label:'전체 합계',
+    data:totalData,
+    borderColor:'#e6b970',
+    backgroundColor:'rgba(230,185,112,0.08)',
+    fill:true,
+    tension:0.3,
+    borderWidth:2.5,
+    pointRadius:4,
+    pointHoverRadius:6,
+    borderDash:[]
+  });
+
+  datasets.push({
+    label:'목표',
+    data:budgetLine,
+    borderColor:'rgba(168,172,179,0.5)',
+    backgroundColor:'transparent',
+    fill:false,
+    tension:0,
+    borderWidth:1.5,
+    pointRadius:0,
+    borderDash:[6,4]
+  });
+
+  const ctx=document.getElementById('chart-weekly-trend').getContext('2d');
+  charts['weekly-trend']=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"},usePointStyle:true,pointStyle:'circle'},position:'top'},
+        tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${fmt(ctx.raw)} RN`}}
+      },
+      scales:{
+        x:{ticks:{color:'#7a7e85',font:{size:10}},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'rgba(255,255,255,0.06)'}}
+      }
+    }
+  });
+}
+
+/* ═══ INIT ═══ */
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

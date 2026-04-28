@@ -537,11 +537,15 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     def calc_adr(d):
         """
         BI 로직 적용:
+        - 27/43 예약파일 = 확정(active) 예약만 포함 (취소건 미포함)
+        - 28/44 취소파일 = 취소건만 별도 기록
+        - 따라서 net_rn = booking_rn (이미 순수 확정 RNS)
         - REV: 원 → 백만원 (÷1,000,000) — 판매가/1.1은 파싱 단계에서 적용 완료
         - ADR: REV(백만원) × 1000 ÷ RNS → 천원 단위
         """
-        net_rn = d.get('booking_rn', 0) - d.get('cancel_rn', 0)
-        net_rev_won = d.get('booking_rev', 0) - d.get('cancel_rev', 0)  # 원 단위
+        # 예약파일(27/43)은 확정건만 포함 → booking_rn이 곧 Net RNS
+        net_rn = d.get('booking_rn', 0)
+        net_rev_won = d.get('booking_rev', 0)  # 원 단위
 
         # REV: 원 → 백만원
         booking_rev_m = round(d.get('booking_rev', 0) / 1_000_000, 2)
