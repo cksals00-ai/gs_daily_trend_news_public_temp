@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
-EXCEL_FILE = DATA_DIR / "overseas_2026.xlsx"
+EXCEL_FILE = DATA_DIR / "overseas" / "overseas_2026.xlsx"
 
 
 def sv(v):

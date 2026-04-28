@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>담당자 분석 · SONO & TRINITY GS팀</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+input, button, select, table, th, td { font-family: var(--sans) !important; }
+
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.masthead-inner {
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.logo-wrap { display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap; }
+.logo-mark { font-family: var(--serif); font-weight: 800; font-size: 18px; color: var(--gold-bright); white-space: nowrap; }
+.team-tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.5); border-left: 1px solid rgba(255,255,255,0.2); padding-left: 14px; margin-left: 14px; white-space: nowrap; }
+.page-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(201,160,99,0.15); border: 1px solid rgba(201,160,99,0.35); border-radius: 3px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.12em; }
+.masthead-right { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.6); }
+.live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--positive); margin-right: 5px; animation: pulse 2.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ───── LAYOUT ───── */
+.app-shell { display: flex; min-height: calc(100vh - 52px); }
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0; background: var(--bg-deep); border-right: 1px solid var(--rule);
+  padding: 20px 16px; position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.filter-section-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-faint); margin-bottom: 8px; text-transform: uppercase; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  padding: 4px 10px; border-radius: 3px; border: 1px solid var(--rule-strong); background: transparent;
+  color: var(--ink-muted); font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.04em;
+}
+.chip:hover { background: var(--bg-soft); color: var(--ink); }
+.chip.active { background: rgba(201,160,99,0.18); border-color: var(--gold); color: var(--gold-bright); }
+.sidebar-divider { height: 1px; background: var(--rule); }
+.refresh-info { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule); }
+.refresh-label { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.1em; margin-bottom: 4px; }
+.refresh-time { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); font-weight: 600; }
+
+/* MAIN */
+.main-content { flex: 1; min-width: 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.page-title { font-family: var(--serif); font-weight: 800; font-size: clamp(20px, 2.2vw, 26px); color: var(--ink); letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.page-title .sub { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--ink-faint); letter-spacing: 0.08em; }
+.base-date-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--bg-soft); border: 1px solid var(--rule-strong); border-radius: 3px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-muted); }
+.base-date-tag strong { color: var(--gold-bright); font-weight: 700; }
+
+/* ───── SECTION CARD ───── */
+.section-card {
+  background: var(--bg-card); border: 1px solid var(--rule); border-radius: 6px; padding: 20px 22px; position: relative;
+}
+.section-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:6px 6px 0 0; }
+.section-card.gold::before { background: var(--gold); }
+.section-card.info::before { background: var(--info); }
+.section-card.warn::before { background: var(--warning); }
+.section-card.neg::before { background: var(--negative); }
+.section-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 4px; }
+.section-heading { font-family: var(--serif); font-size: 16px; font-weight: 700; color: var(--ink-soft); margin-bottom: 16px; }
+
+/* ───── CHART CONTAINERS ───���─ */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.chart-wrap { position: relative; height: 300px; }
+.chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+/* ───── HEATMAP TABLE ───── */
+.hm-wrap { overflow-x: auto; }
+.hm-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+.hm-table th { padding: 8px 10px; background: var(--bg-deep); color: var(--ink-faint); font-weight: 600; letter-spacing: 0.1em; text-align: center; border-bottom: 2px solid var(--rule-strong); white-space: nowrap; }
+.hm-table td { padding: 6px 10px; text-align: center; border-bottom: 1px solid var(--rule); font-weight: 600; white-space: nowrap; }
+.hm-table td.prop-name { text-align: left; color: var(--ink-muted); font-weight: 500; min-width: 140px; }
+.hm-table tr.region-header td { background: rgba(201,160,99,0.08); color: var(--gold-bright); font-weight: 700; letter-spacing: 0.08em; border-bottom: 2px solid var(--gold); padding: 10px; }
+.hm-table tr.subtotal td { background: var(--bg-deep); font-weight: 700; border-top: 2px solid var(--rule-strong); }
+.hm-table tr.subtotal td.prop-name { color: var(--ink); }
+.hm-cell-green { background: rgba(76,175,111,0.20); color: var(--positive); }
+.hm-cell-yellow { background: rgba(232,162,86,0.15); color: var(--warning); }
+.hm-cell-red { background: rgba(229,115,115,0.18); color: var(--negative); }
+.top5 { box-shadow: inset 0 0 0 2px var(--positive); }
+.bottom5 { box-shadow: inset 0 0 0 2px var(--negative); }
+
+/* ───── TIMING TABLE ───── */
+.timing-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+.timing-table th { padding: 8px 10px; background: var(--bg-deep); color: var(--ink-faint); font-weight: 600; letter-spacing: 0.08em; text-align: center; border-bottom: 2px solid var(--rule-strong); white-space: nowrap; }
+.timing-table td { padding: 6px 10px; text-align: center; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.timing-table td.prop-name { text-align: left; color: var(--ink-muted); font-weight: 500; min-width: 130px; }
+.timing-table tr.region-sub td { background: rgba(90,159,196,0.08); font-weight: 700; color: var(--info); border-top: 2px solid rgba(90,159,196,0.3); }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+.badge-up { background: var(--positive-bg); color: var(--positive); }
+.badge-ok { background: rgba(90,159,196,0.15); color: var(--info); }
+.badge-down { background: var(--warning-bg); color: var(--warning); }
+.badge-bad { background: var(--negative-bg); color: var(--negative); }
+
+/* ───── DISPATCH CARDS ───── */
+.dispatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.dispatch-card {
+  background: var(--bg-soft); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px;
+  border-left: 4px solid var(--ink-faint); transition: border-color 0.2s;
+}
+.dispatch-card.positive { border-left-color: var(--positive); }
+.dispatch-card.warning { border-left-color: var(--warning); }
+.dispatch-card.negative { border-left-color: var(--negative); }
+.dispatch-cat { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ink-faint); margin-bottom: 6px; text-transform: uppercase; }
+.dispatch-title { font-family: var(--serif); font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.4; }
+.dispatch-detail { font-size: 12px; color: var(--ink-muted); line-height: 1.6; }
+
+/* ───── DATA TABLE (OTB Trend) ───── */
+.data-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; margin-top: 16px; }
+.data-table th { padding: 8px 10px; background: var(--bg-deep); color: var(--ink-faint); font-weight: 600; text-align: center; border-bottom: 2px solid var(--rule-strong); white-space: nowrap; }
+.data-table td { padding: 6px 10px; text-align: center; border-bottom: 1px solid var(--rule); }
+.data-table th.ch-ota { border-top: 3px solid #5a9fc4; }
+.data-table th.ch-gota { border-top: 3px solid #e6b970; }
+.data-table th.ch-inbound { border-top: 3px solid #4caf6f; }
+
+/* ───── RESPONSIVE ───── */
+@media (max-width: 1100px) { .chart-row { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .dispatch-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) { .main-content { padding: 16px 14px; } }
+
+/* ───── MOBILE FILTER BAR ───── */
+.mobile-filter-bar { display: none; padding: 12px 14px; background: var(--bg-deep); border-bottom: 1px solid var(--rule); gap: 8px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 860px) { .mobile-filter-bar { display: flex; } }
+
+/* ───── MOBILE SHEET TAB BAR ───── */
+.mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
+.mobile-sheet-tabs::-webkit-scrollbar{display:none;}
+@media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
+.mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.mobile-sheet-tab:hover{color:var(--ink);}
+.mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
+
+/* NAV LINK STYLE */
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;}
+.otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
+
+/* LOADING */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: var(--ink-faint); font-family: var(--mono); font-size: 12px; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- GS Suite Navigation -->
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-soon{pointer-events:none;opacity:.4}
+.gsn-badge{background:#2d3a48;color:#7d8590;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;letter-spacing:.3px}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:640px){
+  .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+  .gsn-links.open{display:flex}
+  .gsn-item{padding:8px 12px}
+  .gsn-toggle{display:flex;align-items:center;justify-content:center}
+}
+</style>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn');if(k==='otb'&&h.indexOf('gs_daily_trend_news_public_temp')!==-1&&h.indexOf('index.html')===-1&&!h.match(/gs_daily_trend_news_public_temp\/?$/)){a.classList.add('active');}else if(k==='trend'&&(h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)))){a.classList.add('active');}else if(k==='monitor'&&h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1){a.classList.add('active');}else if(k==='overseas'&&h.indexOf('overseas')!==-1){a.classList.add('active');}else if(k==='palatium'&&h.indexOf('palatium')!==-1){a.classList.add('active');}});}());</script>
+
+<!-- ========== MASTHEAD ========== -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · 담당자 분석</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">담당자 분석</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- MOBILE SHEET TABS -->
+<nav class="mobile-sheet-tabs">
+  <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
+  <a href="channel.html" class="mobile-sheet-tab">채널별</a>
+  <a href="stay-date.html" class="mobile-sheet-tab">투숙일기준</a>
+  <a href="booking-trend.html" class="mobile-sheet-tab">예약추이</a>
+  <a href="product-detail.html" class="mobile-sheet-tab">상품비교</a>
+  <a href="booking-status.html" class="mobile-sheet-tab">Booking Status</a>
+  <a href="manager-analysis.html" class="mobile-sheet-tab active">담당자 분석</a>
+</nav>
+
+<!-- MOBILE FILTER BAR -->
+<div class="mobile-filter-bar" id="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">보고월:</span>
+  <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
+<!-- ========== APP SHELL ========== -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="filter-section-label">GS 실적 리포트</div>
+      <nav style="display:flex;flex-direction:column;gap:2px;">
+        <a href="otb.html" class="otb-nav-link">당일현황</a>
+        <a href="channel.html" class="otb-nav-link">채널별</a>
+        <a href="stay-date.html" class="otb-nav-link">투숙일기준</a>
+        <a href="booking-trend.html" class="otb-nav-link">예약추이</a>
+        <a href="product-detail.html" class="otb-nav-link">상품비교</a>
+        <a href="booking-status.html" class="otb-nav-link">Booking Status</a>
+        <a href="manager-analysis.html" class="otb-nav-link active">담당자 분석</a>
+      </nav>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">보고월</div>
+      <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">권역</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">섹션 이동</div>
+      <nav style="display:flex;flex-direction:column;gap:2px;">
+        <a href="#sec-channel-trend" class="otb-nav-link" style="font-size:10px;">A. 채널별 OTB 트렌드</a>
+        <a href="#sec-heatmap" class="otb-nav-link" style="font-size:10px;">B. 6개월 달성률</a>
+        <a href="#sec-timing" class="otb-nav-link" style="font-size:10px;">C. 주간 픽업 타이밍</a>
+        <a href="#sec-dispatch" class="otb-nav-link" style="font-size:10px;">D. Revenue Dispatch</a>
+      </nav>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">LAST REFRESH</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-title">담당자 분석 <span class="sub">MANAGER ANALYSIS</span></div>
+      <div class="base-date-tag">기준일 <strong id="report-date">—</strong></div>
+    </div>
+
+    <!-- ═══ A) 채널별 월간 OTB 트��드 ═══ -->
+    <div class="section-card gold" id="sec-channel-trend">
+      <div class="section-title">SECTION A</div>
+      <div class="section-heading">채널별 월간 OTB 트렌드</div>
+      <div class="chart-row">
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-bottom:8px;">OTB 추이 (RN)</div>
+          <div class="chart-wrap"><canvas id="otb-line-chart"></canvas></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-bottom:8px;">YoY 변동률 (%)</div>
+          <div class="chart-wrap"><canvas id="yoy-bar-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="hm-wrap" style="margin-top:16px;">
+        <table class="data-table" id="channel-data-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ B) 사업장별 6개월 달성률 히트맵 ���══ -->
+    <div class="section-card info" id="sec-heatmap">
+      <div class="section-title">SECTION B</div>
+      <div class="section-heading">사업장별 6개월 달성��� 히트맵</div>
+      <div class="hm-wrap">
+        <table class="hm-table" id="heatmap-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ C) 주��� 픽업 타이밍 분석 ═══ -->
+    <div class="section-card warn" id="sec-timing">
+      <div class="section-title">SECTION C</div>
+      <div class="section-heading">주간 픽업 타이밍 분석</div>
+      <div class="chart-row">
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-bottom:8px;">Late Pickup % (사업장별)</div>
+          <div class="chart-wrap" style="height:400px;"><canvas id="late-bar-chart"></canvas></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-bottom:8px;">채널별 Late% 비교</div>
+          <div class="chart-wrap" style="height:400px;"><canvas id="channel-late-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="hm-wrap" style="margin-top:16px;">
+        <table class="timing-table" id="timing-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ D) Revenue Dispatch 요약 ═══ -->
+    <div class="section-card neg" id="sec-dispatch">
+      <div class="section-title">SECTION D</div>
+      <div class="section-heading">Revenue Dispatch 요약</div>
+      <div class="dispatch-grid" id="dispatch-grid"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align:center;padding:24px 0 12px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;border-top:1px solid var(--rule);margin-top:8px;">
+      DATA: manager_analysis_data.json &nbsp;&middot;&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 &nearr;</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══ LOAD DATA ═══
+let DATA = null;
+let selectedRegion = '전체';
+
+async function init() {
+  try {
+    const res = await fetch('manager_analysis_data.json');
+    DATA = await res.json();
+  } catch(e) {
+    document.querySelector('.main-content').innerHTML = '<div class="loading-state">데이터 로드 실패. manager_analysis_data.json 확인 ���요.</div>';
+    return;
+  }
+
+  document.getElementById('report-date').textContent = DATA.meta.last_updated;
+  document.getElementById('refresh-badge').textContent = DATA.meta.last_updated;
+  document.getElementById('sidebar-refresh').textContent = DATA.meta.last_updated;
+
+  buildFilters();
+  renderAll();
+}
+
+function buildFilters() {
+  const months = DATA.channel_monthly_trend.map(d => d.month);
+  const regions = ['전체', ...Object.keys(DATA.property_6month_status.regions)];
+
+  // Sidebar month chips
+  const mc = document.getElementById('month-chips');
+  const mmc = document.getElementById('mobile-month-chips');
+  months.forEach((m, i) => {
+    const active = i === months.length - 1 ? ' active' : '';
+    mc.innerHTML += `<button class="chip${active}" data-month="${m}">${m}</button>`;
+    mmc.innerHTML += `<button class="chip${active}" data-month="${m}">${m}</button>`;
+  });
+
+  // Region chips
+  const rc = document.getElementById('region-chips');
+  const mrc = document.getElementById('mobile-region-chips');
+  regions.forEach(r => {
+    const active = r === '전체' ? ' active' : '';
+    rc.innerHTML += `<button class="chip${active}" data-region="${r}">${r}</button>`;
+    mrc.innerHTML += `<button class="chip${active}" data-region="${r}">${r}</button>`;
+  });
+
+  // Event delegation
+  document.addEventListener('click', e => {
+    if (e.target.dataset.region) {
+      document.querySelectorAll('[data-region]').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll(`[data-region="${e.target.dataset.region}"]`).forEach(c => c.classList.add('active'));
+      selectedRegion = e.target.dataset.region;
+      renderHeatmap();
+      renderTiming();
+    }
+  });
+}
+
+function renderAll() {
+  renderOTBCharts();
+  renderChannelTable();
+  renderHeatmap();
+  renderTiming();
+  renderDispatch();
+}
+
+// ═══ A) OTB CHARTS ═══
+let otbLineChart = null, yoyBarChart = null;
+
+function renderOTBCharts() {
+  const trend = DATA.channel_monthly_trend;
+  const labels = trend.map(d => d.month);
+
+  // Line chart - OTB
+  const ctx1 = document.getElementById('otb-line-chart');
+  if (otbLineChart) otbLineChart.destroy();
+  otbLineChart = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'OTA', data: trend.map(d => d.channels.OTA.otb), borderColor: '#5a9fc4', backgroundColor: 'rgba(90,159,196,0.1)', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#5a9fc4', borderWidth: 2 },
+        { label: 'G-OTA', data: trend.map(d => d.channels['G-OTA'].otb), borderColor: '#e6b970', backgroundColor: 'rgba(230,185,112,0.1)', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#e6b970', borderWidth: 2 },
+        { label: 'Inbound', data: trend.map(d => d.channels.Inbound.otb), borderColor: '#4caf6f', backgroundColor: 'rgba(76,175,111,0.1)', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#4caf6f', borderWidth: 2 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#a8acb3', font: { family: "'JetBrains Mono'", size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 }, callback: v => v.toLocaleString() }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+
+  // Bar chart - YoY
+  const ctx2 = document.getElementById('yoy-bar-chart');
+  if (yoyBarChart) yoyBarChart.destroy();
+  yoyBarChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'OTA YoY%', data: trend.map(d => d.channels.OTA.yoy), backgroundColor: 'rgba(90,159,196,0.7)', borderRadius: 3 },
+        { label: 'G-OTA YoY%', data: trend.map(d => d.channels['G-OTA'].yoy), backgroundColor: 'rgba(230,185,112,0.7)', borderRadius: 3 },
+        { label: 'Inbound YoY%', data: trend.map(d => d.channels.Inbound.yoy), backgroundColor: 'rgba(76,175,111,0.7)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#a8acb3', font: { family: "'JetBrains Mono'", size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+}
+
+function renderChannelTable() {
+  const trend = DATA.channel_monthly_trend;
+  const thead = document.querySelector('#channel-data-table thead');
+  const tbody = document.querySelector('#channel-data-table tbody');
+
+  let hdr = '<tr><th>보고일</th><th>월</th><th class="ch-ota">OTA OTB</th><th class="ch-ota">OTA 전년</th><th class="ch-ota">OTA YoY</th><th class="ch-gota">G-OTA OTB</th><th class="ch-gota">G-OTA 전년</th><th class="ch-gota">G-OTA YoY</th><th class="ch-inbound">Inbound OTB</th><th class="ch-inbound">Inbound 전년</th><th class="ch-inbound">Inbound YoY</th></tr>';
+  thead.innerHTML = hdr;
+
+  let rows = '';
+  trend.forEach(d => {
+    const ota = d.channels.OTA, gota = d.channels['G-OTA'], inb = d.channels.Inbound;
+    rows += `<tr>
+      <td>${d.report_date}</td><td style="font-weight:700;">${d.month}</td>
+      <td>${ota.otb.toLocaleString()}</td><td style="color:var(--ink-faint)">${ota.ly.toLocaleString()}</td><td style="color:${ota.yoy >= 0 ? 'var(--positive)' : 'var(--negative)'}">${ota.yoy > 0 ? '+' : ''}${ota.yoy}%</td>
+      <td>${gota.otb.toLocaleString()}</td><td style="color:var(--ink-faint)">${gota.ly.toLocaleString()}</td><td style="color:${gota.yoy >= 0 ? 'var(--positive)' : 'var(--negative)'}">${gota.yoy > 0 ? '+' : ''}${gota.yoy}%</td>
+      <td>${inb.otb.toLocaleString()}</td><td style="color:var(--ink-faint)">${inb.ly.toLocaleString()}</td><td style="color:${inb.yoy >= 0 ? 'var(--positive)' : 'var(--negative)'}">${inb.yoy > 0 ? '+' : ''}${inb.yoy}%</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows;
+}
+
+// ═══ B) HEATMAP ═══
+function renderHeatmap() {
+  const ps = DATA.property_6month_status;
+  const months = ps.months;
+  const thead = document.querySelector('#heatmap-table thead');
+  const tbody = document.querySelector('#heatmap-table tbody');
+
+  thead.innerHTML = `<tr><th style="text-align:left;">사업장</th>${months.map(m => `<th>${m}</th>`).join('')}<th>평균</th></tr>`;
+
+  // Determine top5/bottom5 by avg
+  const allProps = ps.properties.slice().sort((a, b) => b.avg - a.avg);
+  const top5Names = allProps.slice(0, 5).map(p => p.name);
+  const bottom5Names = allProps.slice(-5).map(p => p.name);
+
+  let html = '';
+  const regionOrder = Object.keys(ps.regions);
+
+  regionOrder.forEach(region => {
+    if (selectedRegion !== '전체' && selectedRegion !== region) return;
+    html += `<tr class="region-header"><td colspan="${months.length + 2}">${region}</td></tr>`;
+    const props = ps.properties.filter(p => p.region === region);
+    props.forEach(p => {
+      html += `<tr>`;
+      html += `<td class="prop-name">${p.name.replace(/_/g, ' ')}</td>`;
+      p.rates.forEach(r => {
+        const cls = r >= 100 ? 'hm-cell-green' : r >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+        html += `<td class="${cls}">${r.toFixed(1)}%</td>`;
+      });
+      const avgCls = p.avg >= 100 ? 'hm-cell-green' : p.avg >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+      const highlight = top5Names.includes(p.name) ? ' top5' : bottom5Names.includes(p.name) ? ' bottom5' : '';
+      html += `<td class="${avgCls}${highlight}" style="font-weight:800;">${p.avg.toFixed(1)}%</td>`;
+      html += `</tr>`;
+    });
+
+    // Region subtotal
+    const sub = ps.subtotals.find(s => s.name === region || s.name === region + '_권역');
+    if (sub) {
+      html += `<tr class="subtotal"><td class="prop-name">${sub.name}</td>`;
+      sub.rates.forEach(r => {
+        const cls = r >= 100 ? 'hm-cell-green' : r >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+        html += `<td class="${cls}">${r.toFixed(1)}%</td>`;
+      });
+      const avgCls = sub.avg >= 100 ? 'hm-cell-green' : sub.avg >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+      html += `<td class="${avgCls}" style="font-weight:800;">${sub.avg.toFixed(1)}%</td></tr>`;
+    }
+  });
+
+  // Grand total
+  if (selectedRegion === '전체') {
+    const total = ps.subtotals.find(s => s.name === '전체');
+    if (total) {
+      html += `<tr class="subtotal" style="border-top:3px solid var(--gold);"><td class="prop-name" style="color:var(--gold-bright);font-weight:800;">전체</td>`;
+      total.rates.forEach(r => {
+        const cls = r >= 100 ? 'hm-cell-green' : r >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+        html += `<td class="${cls}">${r.toFixed(1)}%</td>`;
+      });
+      const avgCls = total.avg >= 100 ? 'hm-cell-green' : total.avg >= 90 ? 'hm-cell-yellow' : 'hm-cell-red';
+      html += `<td class="${avgCls}" style="font-weight:800;">${total.avg.toFixed(1)}%</td></tr>`;
+    }
+  }
+
+  tbody.innerHTML = html;
+}
+
+// ═══ C) TIMING ═══
+let lateBarChart = null, channelLateChart = null;
+
+function getYoYBadge(yoy) {
+  if (yoy >= 20) return `<span class="badge badge-up">▲호조 ${yoy > 0 ? '+' : ''}${yoy}%</span>`;
+  if (yoy >= 0)  return `<span class="badge badge-ok">△양호 ${yoy > 0 ? '+' : ''}${yoy}%</span>`;
+  if (yoy >= -10) return `<span class="badge badge-down">▽소폭↓ ${yoy}%</span>`;
+  return `<span class="badge badge-bad">▼부진 ${yoy}%</span>`;
+}
+
+function renderTiming() {
+  const timing = DATA.timing_property_channel;
+  const regions = DATA.property_6month_status.regions;
+
+  // Filter by region
+  let filtered = timing;
+  if (selectedRegion !== '전체') {
+    const regionProps = regions[selectedRegion] || [];
+    const regionTotal = selectedRegion === '비발디파크' ? '비발디_Total' : selectedRegion + '_Total';
+    filtered = timing.filter(t => regionProps.includes(t.property) || t.property === regionTotal || t.property === '전체');
+  }
+
+  // Build timing table
+  const thead = document.querySelector('#timing-table thead');
+  const tbody = document.querySelector('#timing-table tbody');
+  thead.innerHTML = '<tr><th style="text-align:left;">사업장</th><th>채널</th><th>W-4 RN</th><th>W RN</th><th>Late Pickup</th><th>Late%</th><th>YoY%</th></tr>';
+
+  let html = '';
+  // Group by property
+  const propMap = new Map();
+  filtered.forEach(t => {
+    if (!propMap.has(t.property)) propMap.set(t.property, []);
+    propMap.get(t.property).push(t);
+  });
+
+  // Totals first
+  const totalRows = propMap.get('전체') || [];
+  if (totalRows.length) {
+    html += `<tr class="region-sub"><td colspan="7">전체</td></tr>`;
+    totalRows.forEach(t => {
+      const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
+      html += `<tr><td class="prop-name"></td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
+    });
+  }
+
+  // Region totals then individual properties
+  const regionTotalKeys = ['비발디_Total','한국중부_Total','아시아퍼시픽_Total','한국남부_Total'];
+  const regionDisplayNames = { '비발디_Total':'비발디파크', '한국중부_Total':'한국중부', '아시아퍼시픽_Total':'아시아퍼시��', '한국남부_Total':'한국남부' };
+
+  const regionPropMap = {};
+  Object.entries(regions).forEach(([rName, rProps]) => {
+    const rKey = rName === '비발디파크' ? '비발디_Total' : rName + '_Total';
+    regionPropMap[rKey] = { name: rName, props: rProps };
+  });
+
+  regionTotalKeys.forEach(rtk => {
+    const info = regionPropMap[rtk];
+    if (!info) return;
+    if (selectedRegion !== '전체' && selectedRegion !== info.name) return;
+
+    const rtRows = propMap.get(rtk) || [];
+    if (rtRows.length) {
+      html += `<tr class="region-sub"><td colspan="7">${regionDisplayNames[rtk]}</td></tr>`;
+      rtRows.forEach(t => {
+        const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
+        html += `<tr><td class="prop-name" style="font-weight:700;">${regionDisplayNames[rtk]} 소계</td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
+      });
+    }
+
+    // Individual properties in this region
+    info.props.forEach(pName => {
+      const pRows = propMap.get(pName) || [];
+      pRows.forEach(t => {
+        const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
+        html += `<tr><td class="prop-name">${pName.replace(/_/g, ' ')}</td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
+      });
+    });
+  });
+
+  tbody.innerHTML = html;
+
+  // Charts
+  renderLateBarChart(filtered);
+  renderChannelLateChart();
+}
+
+function renderLateBarChart(filtered) {
+  // Get unique properties (not totals) with their max late%
+  const propLate = new Map();
+  filtered.forEach(t => {
+    if (t.property.includes('Total') || t.property === '전���') return;
+    const existing = propLate.get(t.property) || 0;
+    if (t.late_pct > existing) propLate.set(t.property, t.late_pct);
+  });
+  const sorted = [...propLate.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+  const ctx = document.getElementById('late-bar-chart');
+  if (lateBarChart) lateBarChart.destroy();
+  lateBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s => s[0].replace(/_/g, ' ')),
+      datasets: [{
+        label: 'Late%',
+        data: sorted.map(s => s[1]),
+        backgroundColor: sorted.map(s => s[1] > 15 ? 'rgba(229,115,115,0.7)' : s[1] > 10 ? 'rgba(232,162,86,0.7)' : 'rgba(90,159,196,0.5)'),
+        borderRadius: 3
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#a8acb3', font: { family: "'Noto Sans KR'", size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderChannelLateChart() {
+  // Compare OTA / G-OTA / Inbound late% totals
+  const totals = DATA.timing_property_channel.filter(t => t.property === '전체');
+  const ctx = document.getElementById('channel-late-chart');
+  if (channelLateChart) channelLateChart.destroy();
+
+  const colors = { 'OTA': 'rgba(90,159,196,0.7)', 'G-OTA': 'rgba(230,185,112,0.7)', 'Inbound': 'rgba(76,175,111,0.7)' };
+
+  channelLateChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: totals.map(t => t.channel),
+      datasets: [
+        {
+          label: 'Late%',
+          data: totals.map(t => t.late_pct),
+          backgroundColor: totals.map(t => colors[t.channel] || 'rgba(168,172,179,0.5)'),
+          borderRadius: 4
+        },
+        {
+          label: 'YoY%',
+          data: totals.map(t => t.yoy_pct),
+          backgroundColor: totals.map(t => t.yoy_pct >= 0 ? 'rgba(76,175,111,0.4)' : 'rgba(229,115,115,0.4)'),
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#a8acb3', font: { family: "'JetBrains Mono'", size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#a8acb3', font: { family: "'JetBrains Mono'", size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#7a7e85', font: { family: "'JetBrains Mono'", size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+}
+
+// ═══ D) DISPATCH ═══
+function renderDispatch() {
+  const grid = document.getElementById('dispatch-grid');
+  const issues = DATA.revenue_dispatch.issues;
+  grid.innerHTML = issues.map(iss => `
+    <div class="dispatch-card ${iss.priority}">
+      <div class="dispatch-cat">${iss.category}</div>
+      <div class="dispatch-title">${iss.title}</div>
+      <div class="dispatch-detail">${iss.detail}</div>
+    </div>
+  `).join('');
+}
+
+init();
+</script>
+</body>
+</html>

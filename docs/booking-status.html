@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Booking Status Report_GS · SONO & TRINITY GS팀</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+input, button, select, table, th, td { font-family: var(--sans) !important; }
+
+/* ───── GSN NAV BAR ───── */
+.gsn{background:#0d0f12;border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:300;font-family:var(--mono);}
+.gsn-wrap{max-width:1640px;margin:0 auto;padding:0 20px;height:38px;display:flex;align-items:center;gap:24px;}
+.gsn-brand{font-size:12px;font-weight:700;color:var(--gold-bright);text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.gsn-brand-dot{font-size:14px;}
+.gsn-links{display:flex;gap:4px;}
+.gsn-item{font-size:11px;padding:4px 10px;border-radius:3px;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.15s;white-space:nowrap;}
+.gsn-item:hover{color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.05);}
+.gsn-item.active{color:var(--gold-bright);background:rgba(201,160,99,0.12);}
+.gsn-toggle{display:none;background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;padding:4px;}
+@media(max-width:860px){
+  .gsn-links{display:none;position:absolute;top:38px;left:0;right:0;background:#0d0f12;border-bottom:1px solid rgba(255,255,255,0.08);flex-direction:column;padding:8px 16px;gap:2px;z-index:301;}
+  .gsn-links.open{display:flex;}
+  .gsn-toggle{display:block;}
+}
+
+/* ───── MASTHEAD ───── */
+.masthead { background: var(--bg-deep); border-bottom: 3px solid var(--gold); position: sticky; top: 38px; z-index: 200; }
+.masthead-inner { max-width: 1640px; margin: 0 auto; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.logo-wrap { display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap; }
+.logo-mark { font-family: var(--serif); font-weight: 800; font-size: 18px; color: var(--gold-bright); white-space: nowrap; }
+.team-tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.5); border-left: 1px solid rgba(255,255,255,0.2); padding-left: 14px; margin-left: 14px; white-space: nowrap; }
+.page-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(201,160,99,0.15); border: 1px solid rgba(201,160,99,0.35); border-radius: 3px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.12em; }
+.masthead-right { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.6); }
+.live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--positive); margin-right: 5px; animation: pulse 2.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ───── LAYOUT ───── */
+.app-shell { display: flex; min-height: calc(100vh - 90px); }
+.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--bg-deep); border-right: 1px solid var(--rule); padding: 20px 16px; position: sticky; top: 90px; height: calc(100vh - 90px); overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+.filter-section-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-faint); margin-bottom: 8px; text-transform: uppercase; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { padding: 4px 10px; border-radius: 3px; border: 1px solid var(--rule-strong); background: transparent; color: var(--ink-muted); font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
+.chip:hover { background: var(--bg-soft); color: var(--ink); }
+.chip.active { background: rgba(201,160,99,0.18); border-color: var(--gold); color: var(--gold-bright); }
+.sidebar-divider { height: 1px; background: var(--rule); }
+.refresh-info { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule); }
+.refresh-label { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.1em; margin-bottom: 4px; }
+.refresh-time { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); font-weight: 600; }
+
+/* ───── MAIN ───── */
+.main-content { flex: 1; min-width: 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.page-title { font-family: var(--serif); font-weight: 800; font-size: clamp(20px, 2.2vw, 26px); color: var(--ink); letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.page-title .sub { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--ink-faint); letter-spacing: 0.08em; }
+.base-date-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--bg-soft); border: 1px solid var(--rule-strong); border-radius: 3px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-muted); }
+.base-date-tag strong { color: var(--gold-bright); font-weight: 700; }
+
+/* ───── KPI STRIP ───── */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi-card { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-card.gold::before { background: var(--gold); }
+.kpi-card.blue::before { background: var(--info); }
+.kpi-card.green::before { background: var(--positive); }
+.kpi-card.red::before { background: var(--negative); }
+.kpi-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; color: var(--ink-faint); margin-bottom: 8px; text-transform: uppercase; }
+.kpi-value { font-family: var(--mono); font-size: clamp(22px, 2.5vw, 30px); font-weight: 700; color: var(--ink); line-height: 1; margin-bottom: 6px; }
+.kpi-value .unit { font-size: 0.45em; color: var(--ink-faint); font-weight: 500; margin-left: 2px; }
+.kpi-sub { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.kpi-sub .pos { color: var(--positive); }
+.kpi-sub .neg { color: var(--negative); }
+
+/* ───── EXCEL-STYLE TABLE ───── */
+.section-card { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.section-header { padding: 14px 18px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; }
+.section-title { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--gold-bright); text-transform: uppercase; }
+.section-sub { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+.tbl-wrap { overflow-x: auto; }
+table.bs { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10.5px; line-height: 1.3; }
+table.bs th, table.bs td { padding: 4px 8px; border: 1px solid rgba(255,255,255,0.06); white-space: nowrap; text-align: right; }
+table.bs th { background: var(--bg-deep); color: var(--ink-muted); font-weight: 600; font-size: 10px; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 2; }
+table.bs td { color: var(--ink-soft); }
+table.bs .row-label { text-align: left; font-weight: 600; color: var(--ink); background: rgba(255,255,255,0.02); min-width: 100px; position: sticky; left: 0; z-index: 1; }
+table.bs .sep { border-left: 2px solid var(--gold) !important; }
+table.bs .grp-sep { border-left: 2px solid rgba(90,159,196,0.5) !important; }
+table.bs .total-row td { background: rgba(201,160,99,0.08); font-weight: 700; color: var(--ink); border-top: 2px solid var(--gold); }
+table.bs .sub-header td, table.bs .sub-header th { background: rgba(201,160,99,0.05); color: var(--gold-bright); font-weight: 700; text-align: center; font-size: 10px; }
+table.bs .neg-val { color: var(--negative); }
+table.bs .pos-val { color: var(--positive); }
+table.bs .warn-val { color: var(--warning); }
+table.bs .muted { color: var(--ink-faint); }
+.arrow-up { color: var(--positive); font-size: 9px; }
+.arrow-down { color: var(--negative); font-size: 9px; }
+
+/* ───── MOBILE ───── */
+.mobile-sheet-tabs { display: none; background: var(--bg-deep); border-bottom: 1px solid var(--rule); overflow-x: auto; white-space: nowrap; padding: 0 12px; }
+.mobile-sheet-tab { display: inline-block; padding: 10px 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.mobile-sheet-tab:hover { color: var(--ink); }
+.mobile-sheet-tab.active { color: var(--gold-bright); border-bottom-color: var(--gold); }
+.mobile-filter-bar { display: none; background: var(--bg-deep); border-bottom: 1px solid var(--rule); padding: 8px 12px; overflow-x: auto; align-items: center; gap: 8px; }
+
+@media(max-width:860px) {
+  .sidebar { display: none; }
+  .mobile-sheet-tabs { display: flex; }
+  .mobile-filter-bar { display: flex; }
+  .masthead-inner { padding: 0 12px; }
+  .main-content { padding: 16px 12px; }
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ───── FOOTER ───── */
+.footer-bar { padding: 12px 0 4px; font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; text-align: center; border-top: 1px solid var(--rule); }
+</style>
+
+<!-- GSN -->
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn');if(k==='otb'&&h.indexOf('gs_daily_trend_news_public_temp')!==-1&&h.indexOf('index.html')===-1&&!h.match(/gs_daily_trend_news_public_temp\/?$/)){a.classList.add('active');}else if(k==='trend'&&(h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)))){a.classList.add('active');}else if(k==='monitor'&&h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1){a.classList.add('active');}else if(k==='palatium'&&h.indexOf('palatium')!==-1){a.classList.add('active');}});}());</script>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · Booking Status</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📋 Booking Status Report</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- MOBILE SHEET TABS -->
+<nav class="mobile-sheet-tabs">
+  <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
+  <a href="channel.html" class="mobile-sheet-tab">채널별</a>
+  <a href="ytd.html" class="mobile-sheet-tab">연간누계</a>
+  <a href="monthly.html" class="mobile-sheet-tab">월별실적</a>
+  <a href="stay-date.html" class="mobile-sheet-tab">투숙일기준</a>
+  <a href="booking-trend.html" class="mobile-sheet-tab">예약추이</a>
+  <a href="ly-trend.html" class="mobile-sheet-tab">전년추이</a>
+  <a href="product-detail.html" class="mobile-sheet-tab">상품상세</a>
+  <a href="ly-product.html" class="mobile-sheet-tab">전년상품</a>
+  <a href="booking-status.html" class="mobile-sheet-tab active">Booking Status</a>
+  <a href="manager-analysis.html" class="mobile-sheet-tab">담당자 분석</a>
+</nav>
+
+<!-- MOBILE FILTER -->
+<div class="mobile-filter-bar" id="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">권역:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="filter-section-label">GS 실적 리포트</div>
+      <nav style="display:flex;flex-direction:column;gap:2px;">
+        <a href="otb.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">당일현황</a>
+        <a href="channel.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">채널별</a>
+        <a href="ytd.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">연간누계</a>
+        <a href="monthly.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">월별실적</a>
+        <a href="stay-date.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">투숙일기준</a>
+        <a href="booking-trend.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">예약추이</a>
+        <a href="ly-trend.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">전년추이</a>
+        <a href="product-detail.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">상품상세</a>
+        <a href="ly-product.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">전년상품</a>
+        <a href="booking-status.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;background:rgba(201,160,99,0.18);color:var(--gold-bright);text-decoration:none;">Booking Status</a>
+        <a href="manager-analysis.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">담당자 분석</a>
+      </nav>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">권역</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div id="prop-filter-wrap" style="display:none;">
+      <div class="filter-section-label">사업장 <span id="prop-region-label" style="color:var(--gold);"></span></div>
+      <div class="filter-chips" id="prop-chips"></div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">LAST REFRESH</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-title">
+        Booking Status Report _ Y2026
+        <span class="sub" id="property-name-display">전체</span>
+      </div>
+      <div class="base-date-tag">
+        Issue Date: <strong id="issue-date">—</strong>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip">
+      <div class="kpi-card gold">
+        <div class="kpi-label">TOTAL RN (OTB)</div>
+        <div class="kpi-value" id="kpi-rn">—</div>
+        <div class="kpi-sub" id="kpi-rn-sub">—</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">ADR</div>
+        <div class="kpi-value" id="kpi-adr">—</div>
+        <div class="kpi-sub" id="kpi-adr-sub">—</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">REVENUE (OTB)</div>
+        <div class="kpi-value" id="kpi-rev">—</div>
+        <div class="kpi-sub" id="kpi-rev-sub">—</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">LY REVENUE</div>
+        <div class="kpi-value" id="kpi-ly-rev">—</div>
+        <div class="kpi-sub" id="kpi-ly-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Monthly 실적 (2026 OTB vs LY) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">1. Monthly OTB (2026 vs 2025)</div>
+        <div class="section-sub">월별 RN / ADR / Revenue + 전년비교 + Pick Up</div>
+      </div>
+      <div class="tbl-wrap"><table class="bs" id="tbl-monthly"><tbody></tbody></table></div>
+    </div>
+
+    <!-- Section 2: 2026 Budget Comparison -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">2. 2026 Budget vs OTB</div>
+        <div class="section-sub">Budget 대비 Variance · 달성률</div>
+      </div>
+      <div class="tbl-wrap"><table class="bs" id="tbl-budget"><tbody></tbody></table></div>
+    </div>
+
+    <!-- Section 3: vs. 2025 Actual -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">3. vs. 2025 Actual</div>
+        <div class="section-sub">전년 실적 대비 Variance</div>
+      </div>
+      <div class="tbl-wrap"><table class="bs" id="tbl-vs2025"><tbody></tbody></table></div>
+    </div>
+
+    <!-- Section 4: Segment (OTA / G-OTA / Inbound) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">4. Segment — OTA / G-OTA / Inbound</div>
+        <div class="section-sub">세그먼트별 RN / ADR / Revenue + Budget 대비</div>
+      </div>
+      <div class="tbl-wrap"><table class="bs" id="tbl-segment"><tbody></tbody></table></div>
+    </div>
+
+    <!-- Section 5: 2Q26 vs 2025 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">5. 2Q26 vs 2Q25</div>
+        <div class="section-sub">2분기 비교 (4~6월)</div>
+      </div>
+      <div class="tbl-wrap"><table class="bs" id="tbl-quarter"><tbody></tbody></table></div>
+    </div>
+
+    <div class="footer-bar">
+      DATA: 온북 DB (otb_data.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── CONSTANTS ───
+const REGION_DEFS = [
+  { key: '전체', label: '전체' },
+  { key: 'vivaldi', label: '비발디' },
+  { key: 'central', label: '중부' },
+  { key: 'south', label: '남부' },
+  { key: 'apac', label: 'APAC' },
+];
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
+const MONTHS_DISPLAY = [4, 5, 6, 7]; // 현재 분기 + 직후 월
+const Q2_MONTHS = [4, 5, 6];
+
+let data = null;
+let activeRegion = '전체';
+let activeProps = new Set();
+
+// ─── FORMAT HELPERS ───
+const fmt = {
+  num: v => v == null || isNaN(v) ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  won: v => v == null || isNaN(v) ? '—' : (v / 100000000).toFixed(1) + '억',
+  wonFull: v => v == null || isNaN(v) ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  adr: v => v == null || isNaN(v) || v === 0 ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct: v => v == null || isNaN(v) ? '—' : v.toFixed(1) + '%',
+};
+
+function arrow(val) {
+  if (val == null || isNaN(val) || val === 0) return '';
+  return val > 0 ? '<span class="arrow-up">▲</span>' : '<span class="arrow-down">▼</span>';
+}
+
+function valClass(val) {
+  if (val == null || isNaN(val) || val === 0) return 'muted';
+  return val > 0 ? 'pos-val' : 'neg-val';
+}
+
+function setText(id, v) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+// ─── DATA HELPERS ───
+function getMonthData(monthNum) {
+  if (!data || !data.allMonths) return null;
+  return data.allMonths[String(monthNum)] || null;
+}
+
+function getSummaryForMonth(monthNum) {
+  const md = getMonthData(monthNum);
+  if (!md) return null;
+  // If filtering by region/prop, aggregate from byProperty
+  if (activeRegion !== '전체' || activeProps.size > 0) {
+    return aggregateProps(md.byProperty || []);
+  }
+  return md.summary || null;
+}
+
+function getSegmentForMonth(monthNum, segName) {
+  const md = getMonthData(monthNum);
+  if (!md || !md.segmentData) return null;
+  return md.segmentData[segName] || null;
+}
+
+function aggregateProps(props) {
+  let filtered = props;
+  if (activeRegion !== '전체') {
+    filtered = filtered.filter(p => p.region === activeRegion);
+  }
+  if (activeProps.size > 0) {
+    filtered = filtered.filter(p => activeProps.has(p.name));
+  }
+  if (filtered.length === 0) return null;
+
+  const out = {};
+  const sumKeys = ['rns_budget','rns_actual','rns_last','rev_budget','rev_actual','rev_last',
+    'today_booking','today_cancel','today_net','today_booking_rev','today_cancel_rev','today_net_rev',
+    'rns_fcst','rev_fcst'];
+  sumKeys.forEach(k => out[k] = 0);
+  filtered.forEach(p => { sumKeys.forEach(k => { out[k] += (p[k] || 0); }); });
+
+  // Derived
+  out.adr_actual = out.rns_actual > 0 ? Math.round(out.rev_actual / out.rns_actual) : 0;
+  out.adr_budget = out.rns_budget > 0 ? Math.round(out.rev_budget / out.rns_budget) : 0;
+  out.adr_last = out.rns_last > 0 ? Math.round(out.rev_last / out.rns_last) : 0;
+  out.rns_achievement = out.rns_budget > 0 ? +(out.rns_actual / out.rns_budget * 100).toFixed(1) : 0;
+  out.rev_achievement = out.rev_budget > 0 ? +(out.rev_actual / out.rev_budget * 100).toFixed(1) : 0;
+  out.rns_yoy = out.rns_last > 0 ? +((out.rns_actual / out.rns_last - 1) * 100).toFixed(1) : 0;
+  out.rev_yoy = out.rev_last > 0 ? +((out.rev_actual / out.rev_last - 1) * 100).toFixed(1) : 0;
+  out.adr_yoy = out.adr_last > 0 ? +((out.adr_actual / out.adr_last - 1) * 100).toFixed(1) : 0;
+  out.adr_vs_budget = out.adr_budget > 0 ? +((out.adr_actual / out.adr_budget - 1) * 100).toFixed(1) : 0;
+  return out;
+}
+
+function getOverallSummary() {
+  if (!data) return null;
+  if (activeRegion !== '전체' || activeProps.size > 0) {
+    const allProps = (data.allMonths && data.allMonths['0']) ? data.allMonths['0'].byProperty : (data.byProperty || []);
+    return aggregateProps(allProps);
+  }
+  return (data.allMonths && data.allMonths['0']) ? data.allMonths['0'].summary : data.summary;
+}
+
+// ─── RENDER ───
+function render() {
+  if (!data) return;
+  const overall = getOverallSummary();
+  if (!overall) return;
+
+  // Issue date
+  const today = new Date();
+  setText('issue-date', today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0'));
+  setText('refresh-badge', data.meta?.refreshTime || '—');
+  setText('sidebar-refresh', data.meta?.refreshTime || '—');
+
+  // Property name
+  if (activeProps.size > 0) {
+    const names = [...activeProps].map(n => n.replace(/^\d+\./, '')).join(' · ');
+    setText('property-name-display', names);
+  } else if (activeRegion !== '전체') {
+    setText('property-name-display', REGION_LABEL[activeRegion] || activeRegion);
+  } else {
+    setText('property-name-display', '전체');
+  }
+
+  // KPIs
+  setText('kpi-rn', fmt.num(overall.rns_actual) + '<span class="unit">실</span>');
+  setText('kpi-rn-sub', 'Budget ' + fmt.num(overall.rns_budget) + ' · 달성 ' + fmt.pct(overall.rns_achievement));
+  setText('kpi-adr', fmt.adr(overall.adr_actual) + '<span class="unit">원</span>');
+  setText('kpi-adr-sub', 'Budget ' + fmt.adr(overall.adr_budget) + ' · ' + (overall.adr_vs_budget > 0 ? '+' : '') + fmt.pct(overall.adr_vs_budget));
+  setText('kpi-rev', fmt.won(overall.rev_actual));
+  setText('kpi-rev-sub', 'Budget ' + fmt.won(overall.rev_budget) + ' · 달성 ' + fmt.pct(overall.rev_achievement));
+  setText('kpi-ly-rev', fmt.won(overall.rev_last || 0));
+  const revDiff = (overall.rev_actual || 0) - (overall.rev_last || 0);
+  setText('kpi-ly-sub', (revDiff >= 0 ? '+' : '') + fmt.won(revDiff) + ' vs LY');
+
+  renderMonthlyTable();
+  renderBudgetTable();
+  renderVs2025Table();
+  renderSegmentTable();
+  renderQuarterTable();
+}
+
+function renderMonthlyTable() {
+  const months = MONTHS_DISPLAY;
+  let html = '<thead><tr>';
+  html += '<th class="row-label">구분</th>';
+  months.forEach(m => {
+    html += '<th colspan="3" class="sep" style="text-align:center;">2026 ' + m + '월 OTB</th>';
+    html += '<th colspan="3" class="grp-sep" style="text-align:center;">2025 ' + m + '월 (LY)</th>';
+    html += '<th colspan="2" class="grp-sep" style="text-align:center;">Pick Up</th>';
+  });
+  html += '</tr><tr><th class="row-label"></th>';
+  months.forEach(() => {
+    html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>';
+    html += '<th class="grp-sep">RN</th><th>ADR</th><th>Revenue</th>';
+    html += '<th class="grp-sep">RN ±</th><th>ADR ±</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  // Single row with data
+  html += '<tr>';
+  html += '<td class="row-label">실적</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s ? s.rns_actual : 0;
+    const adr = s ? s.adr_actual : 0;
+    const rev = s ? s.rev_actual : 0;
+    const lyRn = s ? (s.rns_last || 0) : 0;
+    const lyAdr = s ? (s.adr_last || 0) : 0;
+    const lyRev = s ? (s.rev_last || 0) : 0;
+    const pickRn = rn - lyRn;
+    const pickAdr = adr - lyAdr;
+
+    html += '<td class="sep">' + fmt.num(rn) + '</td>';
+    html += '<td>' + fmt.adr(adr) + '</td>';
+    html += '<td>' + fmt.won(rev) + '</td>';
+    html += '<td class="grp-sep">' + fmt.num(lyRn) + '</td>';
+    html += '<td>' + fmt.adr(lyAdr) + '</td>';
+    html += '<td>' + fmt.won(lyRev) + '</td>';
+    html += '<td class="grp-sep ' + valClass(pickRn) + '">' + arrow(pickRn) + ' ' + fmt.num(Math.abs(pickRn)) + '</td>';
+    html += '<td class="' + valClass(pickAdr) + '">' + arrow(pickAdr) + ' ' + fmt.adr(Math.abs(pickAdr)) + '</td>';
+  });
+  html += '</tr>';
+
+  // Total row
+  html += '<tr class="total-row">';
+  html += '<td class="row-label">합계</td>';
+  let totRn=0, totRev=0, totLyRn=0, totLyRev=0;
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    totRn += s ? (s.rns_actual||0) : 0;
+    totRev += s ? (s.rev_actual||0) : 0;
+    totLyRn += s ? (s.rns_last||0) : 0;
+    totLyRev += s ? (s.rev_last||0) : 0;
+  });
+  const totAdr = totRn > 0 ? Math.round(totRev/totRn) : 0;
+  const totLyAdr = totLyRn > 0 ? Math.round(totLyRev/totLyRn) : 0;
+  // Fill each month column in total
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s ? (s.rns_actual||0) : 0;
+    const rev = s ? (s.rev_actual||0) : 0;
+    const lyRn = s ? (s.rns_last||0) : 0;
+    const lyRev = s ? (s.rev_last||0) : 0;
+    const adr = rn > 0 ? Math.round(rev/rn) : 0;
+    const lyAdr = lyRn > 0 ? Math.round(lyRev/lyRn) : 0;
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(adr) + '</td><td>' + fmt.won(rev) + '</td>';
+    html += '<td class="grp-sep">' + fmt.num(lyRn) + '</td><td>' + fmt.adr(lyAdr) + '</td><td>' + fmt.won(lyRev) + '</td>';
+    const pr = rn - lyRn; const pa = adr - lyAdr;
+    html += '<td class="grp-sep ' + valClass(pr) + '">' + arrow(pr) + ' ' + fmt.num(Math.abs(pr)) + '</td>';
+    html += '<td class="' + valClass(pa) + '">' + arrow(pa) + ' ' + fmt.adr(Math.abs(pa)) + '</td>';
+  });
+  html += '</tr>';
+  html += '</tbody>';
+  document.getElementById('tbl-monthly').innerHTML = html;
+}
+
+function renderBudgetTable() {
+  const months = MONTHS_DISPLAY;
+  let html = '<thead><tr>';
+  html += '<th class="row-label">구분</th>';
+  months.forEach(m => {
+    html += '<th colspan="3" class="sep" style="text-align:center;">' + m + '월</th>';
+  });
+  html += '<th colspan="3" class="sep" style="text-align:center;">합계</th>';
+  html += '</tr><tr><th class="row-label"></th>';
+  months.forEach(() => { html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>'; });
+  html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '</tr></thead><tbody>';
+
+  // Budget row
+  let tBudRn=0, tBudRev=0;
+  html += '<tr><td class="row-label">Budget</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s ? (s.rns_budget||0) : 0;
+    const rev = s ? (s.rev_budget||0) : 0;
+    const adr = rn > 0 ? Math.round(rev/rn) : 0;
+    tBudRn += rn; tBudRev += rev;
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(adr) + '</td><td>' + fmt.won(rev) + '</td>';
+  });
+  html += '<td class="sep">' + fmt.num(tBudRn) + '</td><td>' + fmt.adr(tBudRn>0?Math.round(tBudRev/tBudRn):0) + '</td><td>' + fmt.won(tBudRev) + '</td>';
+  html += '</tr>';
+
+  // OTB row
+  let tOtbRn=0, tOtbRev=0;
+  html += '<tr><td class="row-label">OTB (Today)</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s ? (s.rns_actual||0) : 0;
+    const rev = s ? (s.rev_actual||0) : 0;
+    const adr = rn > 0 ? Math.round(rev/rn) : 0;
+    tOtbRn += rn; tOtbRev += rev;
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(adr) + '</td><td>' + fmt.won(rev) + '</td>';
+  });
+  html += '<td class="sep">' + fmt.num(tOtbRn) + '</td><td>' + fmt.adr(tOtbRn>0?Math.round(tOtbRev/tOtbRn):0) + '</td><td>' + fmt.won(tOtbRev) + '</td>';
+  html += '</tr>';
+
+  // Variance row
+  html += '<tr><td class="row-label">Variance</td>';
+  let tvRn = tOtbRn - tBudRn, tvRev = tOtbRev - tBudRev;
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = (s?(s.rns_actual||0):0) - (s?(s.rns_budget||0):0);
+    const rev = (s?(s.rev_actual||0):0) - (s?(s.rev_budget||0):0);
+    const budAdr = (s&&s.rns_budget>0) ? Math.round((s.rev_budget||0)/(s.rns_budget)) : 0;
+    const actAdr = (s&&s.rns_actual>0) ? Math.round((s.rev_actual||0)/(s.rns_actual)) : 0;
+    const adrDiff = actAdr - budAdr;
+    html += '<td class="sep ' + valClass(rn) + '">' + arrow(rn) + ' ' + fmt.num(Math.abs(rn)) + '</td>';
+    html += '<td class="' + valClass(adrDiff) + '">' + arrow(adrDiff) + ' ' + fmt.adr(Math.abs(adrDiff)) + '</td>';
+    html += '<td class="' + valClass(rev) + '">' + arrow(rev) + ' ' + fmt.won(Math.abs(rev)) + '</td>';
+  });
+  const tvAdr = (tOtbRn>0?Math.round(tOtbRev/tOtbRn):0) - (tBudRn>0?Math.round(tBudRev/tBudRn):0);
+  html += '<td class="sep ' + valClass(tvRn) + '">' + arrow(tvRn) + ' ' + fmt.num(Math.abs(tvRn)) + '</td>';
+  html += '<td class="' + valClass(tvAdr) + '">' + arrow(tvAdr) + ' ' + fmt.adr(Math.abs(tvAdr)) + '</td>';
+  html += '<td class="' + valClass(tvRev) + '">' + arrow(tvRev) + ' ' + fmt.won(Math.abs(tvRev)) + '</td>';
+  html += '</tr>';
+
+  // 달성률 row
+  html += '<tr class="total-row"><td class="row-label">달성률</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rnAch = (s&&s.rns_budget>0) ? ((s.rns_actual||0)/(s.rns_budget)*100) : 0;
+    const revAch = (s&&s.rev_budget>0) ? ((s.rev_actual||0)/(s.rev_budget)*100) : 0;
+    html += '<td class="sep">' + fmt.pct(rnAch) + '</td><td>—</td><td>' + fmt.pct(revAch) + '</td>';
+  });
+  const totRnAch = tBudRn>0 ? (tOtbRn/tBudRn*100) : 0;
+  const totRevAch = tBudRev>0 ? (tOtbRev/tBudRev*100) : 0;
+  html += '<td class="sep">' + fmt.pct(totRnAch) + '</td><td>—</td><td>' + fmt.pct(totRevAch) + '</td>';
+  html += '</tr></tbody>';
+  document.getElementById('tbl-budget').innerHTML = html;
+}
+
+function renderVs2025Table() {
+  const months = MONTHS_DISPLAY;
+  let html = '<thead><tr>';
+  html += '<th class="row-label">구분</th>';
+  months.forEach(m => {
+    html += '<th colspan="3" class="sep" style="text-align:center;">' + m + '월</th>';
+  });
+  html += '<th colspan="3" class="sep" style="text-align:center;">합계</th>';
+  html += '</tr><tr><th class="row-label"></th>';
+  months.forEach(() => { html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>'; });
+  html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '</tr></thead><tbody>';
+
+  // 2026 OTB
+  let t26Rn=0, t26Rev=0;
+  html += '<tr><td class="row-label">2026 OTB</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s?(s.rns_actual||0):0, rev = s?(s.rev_actual||0):0;
+    t26Rn += rn; t26Rev += rev;
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(rn>0?Math.round(rev/rn):0) + '</td><td>' + fmt.won(rev) + '</td>';
+  });
+  html += '<td class="sep">' + fmt.num(t26Rn) + '</td><td>' + fmt.adr(t26Rn>0?Math.round(t26Rev/t26Rn):0) + '</td><td>' + fmt.won(t26Rev) + '</td>';
+  html += '</tr>';
+
+  // 2025 Actual
+  let t25Rn=0, t25Rev=0;
+  html += '<tr><td class="row-label">2025 Actual</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s?(s.rns_last||0):0, rev = s?(s.rev_last||0):0;
+    t25Rn += rn; t25Rev += rev;
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(rn>0?Math.round(rev/rn):0) + '</td><td>' + fmt.won(rev) + '</td>';
+  });
+  html += '<td class="sep">' + fmt.num(t25Rn) + '</td><td>' + fmt.adr(t25Rn>0?Math.round(t25Rev/t25Rn):0) + '</td><td>' + fmt.won(t25Rev) + '</td>';
+  html += '</tr>';
+
+  // Variance
+  html += '<tr><td class="row-label">Variance</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = (s?(s.rns_actual||0):0) - (s?(s.rns_last||0):0);
+    const rev = (s?(s.rev_actual||0):0) - (s?(s.rev_last||0):0);
+    const a26 = (s&&s.rns_actual>0) ? Math.round((s.rev_actual||0)/s.rns_actual) : 0;
+    const a25 = (s&&s.rns_last>0) ? Math.round((s.rev_last||0)/s.rns_last) : 0;
+    const adrD = a26 - a25;
+    html += '<td class="sep ' + valClass(rn) + '">' + arrow(rn) + ' ' + fmt.num(Math.abs(rn)) + '</td>';
+    html += '<td class="' + valClass(adrD) + '">' + arrow(adrD) + ' ' + fmt.adr(Math.abs(adrD)) + '</td>';
+    html += '<td class="' + valClass(rev) + '">' + arrow(rev) + ' ' + fmt.won(Math.abs(rev)) + '</td>';
+  });
+  const tvRn = t26Rn - t25Rn, tvRev = t26Rev - t25Rev;
+  const tvAdr = (t26Rn>0?Math.round(t26Rev/t26Rn):0) - (t25Rn>0?Math.round(t25Rev/t25Rn):0);
+  html += '<td class="sep ' + valClass(tvRn) + '">' + arrow(tvRn) + ' ' + fmt.num(Math.abs(tvRn)) + '</td>';
+  html += '<td class="' + valClass(tvAdr) + '">' + arrow(tvAdr) + ' ' + fmt.adr(Math.abs(tvAdr)) + '</td>';
+  html += '<td class="' + valClass(tvRev) + '">' + arrow(tvRev) + ' ' + fmt.won(Math.abs(tvRev)) + '</td>';
+  html += '</tr>';
+
+  // YoY %
+  html += '<tr class="total-row"><td class="row-label">YoY %</td>';
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn26 = s?(s.rns_actual||0):0, rn25 = s?(s.rns_last||0):0;
+    const rev26 = s?(s.rev_actual||0):0, rev25 = s?(s.rev_last||0):0;
+    const rnYoy = rn25>0 ? ((rn26/rn25-1)*100) : 0;
+    const revYoy = rev25>0 ? ((rev26/rev25-1)*100) : 0;
+    html += '<td class="sep ' + valClass(rnYoy) + '">' + (rnYoy>0?'+':'') + fmt.pct(rnYoy) + '</td>';
+    html += '<td>—</td>';
+    html += '<td class="' + valClass(revYoy) + '">' + (revYoy>0?'+':'') + fmt.pct(revYoy) + '</td>';
+  });
+  const totRnYoy = t25Rn>0 ? ((t26Rn/t25Rn-1)*100) : 0;
+  const totRevYoy = t25Rev>0 ? ((t26Rev/t25Rev-1)*100) : 0;
+  html += '<td class="sep ' + valClass(totRnYoy) + '">' + (totRnYoy>0?'+':'') + fmt.pct(totRnYoy) + '</td><td>—</td>';
+  html += '<td class="' + valClass(totRevYoy) + '">' + (totRevYoy>0?'+':'') + fmt.pct(totRevYoy) + '</td>';
+  html += '</tr></tbody>';
+  document.getElementById('tbl-vs2025').innerHTML = html;
+}
+
+function renderSegmentTable() {
+  const months = MONTHS_DISPLAY;
+  let html = '<thead><tr>';
+  html += '<th class="row-label">Segment</th>';
+  html += '<th class="row-label">구분</th>';
+  months.forEach(m => {
+    html += '<th colspan="3" class="sep" style="text-align:center;">' + m + '월</th>';
+  });
+  html += '<th colspan="3" class="sep" style="text-align:center;">합계</th>';
+  html += '</tr><tr><th class="row-label"></th><th class="row-label"></th>';
+  months.forEach(() => { html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>'; });
+  html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '</tr></thead><tbody>';
+
+  SEGMENTS.forEach((seg, si) => {
+    // Budget row
+    let tBudRn=0, tBudRev=0;
+    html += '<tr' + (si>0?' style="border-top:2px solid var(--rule-strong);"':'') + '>';
+    html += '<td class="row-label" rowspan="4" style="vertical-align:middle;font-weight:700;color:var(--gold-bright);font-size:11px;">' + seg + '</td>';
+    html += '<td class="row-label">Budget</td>';
+    months.forEach(m => {
+      const sd = getSegmentForMonth(m, seg);
+      const rn = sd?(sd.rns_budget||0):0, rev = sd?(sd.rev_budget||0):0;
+      tBudRn += rn; tBudRev += rev;
+      html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(rn>0?Math.round(rev/rn):0) + '</td><td>' + fmt.won(rev) + '</td>';
+    });
+    html += '<td class="sep">' + fmt.num(tBudRn) + '</td><td>' + fmt.adr(tBudRn>0?Math.round(tBudRev/tBudRn):0) + '</td><td>' + fmt.won(tBudRev) + '</td>';
+    html += '</tr>';
+
+    // OTB row
+    let tActRn=0, tActRev=0;
+    html += '<tr><td class="row-label">OTB</td>';
+    months.forEach(m => {
+      const sd = getSegmentForMonth(m, seg);
+      const rn = sd?(sd.rns_actual||0):0, rev = sd?(sd.rev_actual||0):0;
+      tActRn += rn; tActRev += rev;
+      html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(rn>0?Math.round(rev/rn):0) + '</td><td>' + fmt.won(rev) + '</td>';
+    });
+    html += '<td class="sep">' + fmt.num(tActRn) + '</td><td>' + fmt.adr(tActRn>0?Math.round(tActRev/tActRn):0) + '</td><td>' + fmt.won(tActRev) + '</td>';
+    html += '</tr>';
+
+    // Variance row
+    html += '<tr><td class="row-label">Variance</td>';
+    months.forEach(m => {
+      const sd = getSegmentForMonth(m, seg);
+      const actRn = sd?(sd.rns_actual||0):0, budRn = sd?(sd.rns_budget||0):0;
+      const actRev = sd?(sd.rev_actual||0):0, budRev = sd?(sd.rev_budget||0):0;
+      const rn = actRn - budRn, rev = actRev - budRev;
+      const adrAct = actRn>0?Math.round(actRev/actRn):0, adrBud = budRn>0?Math.round(budRev/budRn):0;
+      const adrD = adrAct - adrBud;
+      html += '<td class="sep ' + valClass(rn) + '">' + arrow(rn) + ' ' + fmt.num(Math.abs(rn)) + '</td>';
+      html += '<td class="' + valClass(adrD) + '">' + arrow(adrD) + ' ' + fmt.adr(Math.abs(adrD)) + '</td>';
+      html += '<td class="' + valClass(rev) + '">' + arrow(rev) + ' ' + fmt.won(Math.abs(rev)) + '</td>';
+    });
+    const svRn = tActRn - tBudRn, svRev = tActRev - tBudRev;
+    const svAdr = (tActRn>0?Math.round(tActRev/tActRn):0) - (tBudRn>0?Math.round(tBudRev/tBudRn):0);
+    html += '<td class="sep ' + valClass(svRn) + '">' + arrow(svRn) + ' ' + fmt.num(Math.abs(svRn)) + '</td>';
+    html += '<td class="' + valClass(svAdr) + '">' + arrow(svAdr) + ' ' + fmt.adr(Math.abs(svAdr)) + '</td>';
+    html += '<td class="' + valClass(svRev) + '">' + arrow(svRev) + ' ' + fmt.won(Math.abs(svRev)) + '</td>';
+    html += '</tr>';
+
+    // 달성률 row
+    html += '<tr class="total-row"><td class="row-label">달성률</td>';
+    months.forEach(m => {
+      const sd = getSegmentForMonth(m, seg);
+      const rnAch = (sd&&sd.rns_budget>0) ? ((sd.rns_actual||0)/(sd.rns_budget)*100) : 0;
+      const revAch = (sd&&sd.rev_budget>0) ? ((sd.rev_actual||0)/(sd.rev_budget)*100) : 0;
+      html += '<td class="sep">' + fmt.pct(rnAch) + '</td><td>—</td><td>' + fmt.pct(revAch) + '</td>';
+    });
+    const totRnAch = tBudRn>0?(tActRn/tBudRn*100):0;
+    const totRevAch = tBudRev>0?(tActRev/tBudRev*100):0;
+    html += '<td class="sep">' + fmt.pct(totRnAch) + '</td><td>—</td><td>' + fmt.pct(totRevAch) + '</td>';
+    html += '</tr>';
+  });
+
+  // SEGMENT TOTAL
+  html += '<tr style="border-top:3px solid var(--gold);"><td class="row-label" style="font-weight:700;">합계</td><td class="row-label">OTB</td>';
+  let gtRn=0, gtRev=0;
+  months.forEach(m => {
+    let mRn=0, mRev=0;
+    SEGMENTS.forEach(seg => {
+      const sd = getSegmentForMonth(m, seg);
+      mRn += sd?(sd.rns_actual||0):0;
+      mRev += sd?(sd.rev_actual||0):0;
+    });
+    gtRn += mRn; gtRev += mRev;
+    html += '<td class="sep">' + fmt.num(mRn) + '</td><td>' + fmt.adr(mRn>0?Math.round(mRev/mRn):0) + '</td><td>' + fmt.won(mRev) + '</td>';
+  });
+  html += '<td class="sep">' + fmt.num(gtRn) + '</td><td>' + fmt.adr(gtRn>0?Math.round(gtRev/gtRn):0) + '</td><td>' + fmt.won(gtRev) + '</td>';
+  html += '</tr>';
+
+  html += '</tbody>';
+  document.getElementById('tbl-segment').innerHTML = html;
+}
+
+function renderQuarterTable() {
+  const months = Q2_MONTHS;
+  let html = '<thead><tr>';
+  html += '<th class="row-label">구분</th>';
+  html += '<th colspan="3" class="sep" style="text-align:center;">2Q26 OTB</th>';
+  html += '<th colspan="3" class="grp-sep" style="text-align:center;">2Q25 (LY)</th>';
+  html += '<th colspan="3" class="grp-sep" style="text-align:center;">Variance</th>';
+  html += '<th class="grp-sep" style="text-align:center;">YoY%</th>';
+  html += '</tr><tr><th class="row-label"></th>';
+  html += '<th class="sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '<th class="grp-sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '<th class="grp-sep">RN</th><th>ADR</th><th>Revenue</th>';
+  html += '<th class="grp-sep">Revenue</th>';
+  html += '</tr></thead><tbody>';
+
+  let q26Rn=0, q26Rev=0, q25Rn=0, q25Rev=0;
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    q26Rn += s?(s.rns_actual||0):0;
+    q26Rev += s?(s.rev_actual||0):0;
+    q25Rn += s?(s.rns_last||0):0;
+    q25Rev += s?(s.rev_last||0):0;
+  });
+  const q26Adr = q26Rn>0?Math.round(q26Rev/q26Rn):0;
+  const q25Adr = q25Rn>0?Math.round(q25Rev/q25Rn):0;
+  const vRn = q26Rn-q25Rn, vRev = q26Rev-q25Rev, vAdr = q26Adr-q25Adr;
+  const yoyRev = q25Rev>0 ? ((q26Rev/q25Rev-1)*100) : 0;
+
+  html += '<tr class="total-row">';
+  html += '<td class="row-label">2Q 합계</td>';
+  html += '<td class="sep">' + fmt.num(q26Rn) + '</td><td>' + fmt.adr(q26Adr) + '</td><td>' + fmt.won(q26Rev) + '</td>';
+  html += '<td class="grp-sep">' + fmt.num(q25Rn) + '</td><td>' + fmt.adr(q25Adr) + '</td><td>' + fmt.won(q25Rev) + '</td>';
+  html += '<td class="grp-sep ' + valClass(vRn) + '">' + arrow(vRn) + ' ' + fmt.num(Math.abs(vRn)) + '</td>';
+  html += '<td class="' + valClass(vAdr) + '">' + arrow(vAdr) + ' ' + fmt.adr(Math.abs(vAdr)) + '</td>';
+  html += '<td class="' + valClass(vRev) + '">' + arrow(vRev) + ' ' + fmt.won(Math.abs(vRev)) + '</td>';
+  html += '<td class="grp-sep ' + valClass(yoyRev) + '">' + (yoyRev>0?'+':'') + fmt.pct(yoyRev) + '</td>';
+  html += '</tr>';
+
+  // Per month detail
+  months.forEach(m => {
+    const s = getSummaryForMonth(m);
+    const rn = s?(s.rns_actual||0):0, rev = s?(s.rev_actual||0):0;
+    const lyRn = s?(s.rns_last||0):0, lyRev = s?(s.rev_last||0):0;
+    const adr = rn>0?Math.round(rev/rn):0, lyAdr = lyRn>0?Math.round(lyRev/lyRn):0;
+    const dr = rn-lyRn, da = adr-lyAdr, dv = rev-lyRev;
+    const yoy = lyRev>0?((rev/lyRev-1)*100):0;
+    html += '<tr>';
+    html += '<td class="row-label" style="padding-left:20px;">' + m + '월</td>';
+    html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(adr) + '</td><td>' + fmt.won(rev) + '</td>';
+    html += '<td class="grp-sep">' + fmt.num(lyRn) + '</td><td>' + fmt.adr(lyAdr) + '</td><td>' + fmt.won(lyRev) + '</td>';
+    html += '<td class="grp-sep ' + valClass(dr) + '">' + arrow(dr) + ' ' + fmt.num(Math.abs(dr)) + '</td>';
+    html += '<td class="' + valClass(da) + '">' + arrow(da) + ' ' + fmt.adr(Math.abs(da)) + '</td>';
+    html += '<td class="' + valClass(dv) + '">' + arrow(dv) + ' ' + fmt.won(Math.abs(dv)) + '</td>';
+    html += '<td class="grp-sep ' + valClass(yoy) + '">' + (yoy>0?'+':'') + fmt.pct(yoy) + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody>';
+  document.getElementById('tbl-quarter').innerHTML = html;
+}
+
+// ─── FILTERS ───
+function buildFilters() {
+  const regionContainer = document.getElementById('region-chips');
+  const mRegionContainer = document.getElementById('mobile-region-chips');
+  [regionContainer, mRegionContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    REGION_DEFS.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.textContent = r.label;
+      btn.dataset.value = r.key;
+      btn.addEventListener('click', () => {
+        activeRegion = btn.dataset.value;
+        activeProps = new Set();
+        document.querySelectorAll('#region-chips .chip, #mobile-region-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeRegion);
+        });
+        buildPropChips();
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+  buildPropChips();
+}
+
+function buildPropChips() {
+  const propWrap = document.getElementById('prop-filter-wrap');
+  const propContainer = document.getElementById('prop-chips');
+  const propLabel = document.getElementById('prop-region-label');
+
+  if (activeRegion === '전체') {
+    if (propWrap) propWrap.style.display = 'none';
+    return;
+  }
+  if (propWrap) propWrap.style.display = '';
+  if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
+
+  const allProps = (data.allMonths ? data.allMonths['0'].byProperty : data.byProperty) || [];
+  const regionProps = allProps.filter(p => p.region === activeRegion);
+
+  if (!propContainer) return;
+  propContainer.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'chip' + (activeProps.size === 0 ? ' active' : '');
+  allBtn.textContent = '전체';
+  allBtn.dataset.value = '__all__';
+  allBtn.addEventListener('click', () => {
+    activeProps = new Set();
+    propContainer.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.value === '__all__'));
+    render();
+  });
+  propContainer.appendChild(allBtn);
+
+  regionProps.forEach(p => {
+    const btn = document.createElement('button');
+    const shortName = p.name.replace(/^\d+\./, '');
+    btn.className = 'chip' + (activeProps.has(p.name) ? ' active' : '');
+    btn.textContent = shortName;
+    btn.dataset.value = p.name;
+    btn.addEventListener('click', () => {
+      if (activeProps.has(p.name)) activeProps.delete(p.name);
+      else activeProps.add(p.name);
+      propContainer.querySelectorAll('.chip').forEach(b => {
+        if (b.dataset.value === '__all__') b.classList.toggle('active', activeProps.size === 0);
+        else b.classList.toggle('active', activeProps.has(b.dataset.value));
+      });
+      render();
+    });
+    propContainer.appendChild(btn);
+  });
+}
+
+// ─── LOAD ───
+async function loadData() {
+  try {
+    const res = await fetch('data/otb_data.json?t=' + Date.now());
+    data = await res.json();
+    buildFilters();
+    render();
+  } catch(e) {
+    console.error('Data load failed:', e);
+    document.querySelector('.main-content').innerHTML = '<div style="padding:60px;text-align:center;font-family:var(--mono);color:var(--negative);">데이터 로드 실패: ' + e.message + '</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>

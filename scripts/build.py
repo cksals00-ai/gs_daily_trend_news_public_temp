@@ -1236,6 +1236,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
 
     # ── 3c) 전년 동기간(YoY) 일별 픽업 트렌드 ──
     # 같은 요일 매칭: 52주(364일) 전 날짜를 전년 동기간으로 사용
+    # + 공휴일/연휴 제외 + 시즌 매칭 검증
     def _ly_date(dt_str: str) -> str:
         """YYYYMMDD → 364일(52주) 전 날짜 (같은 요일 보장)"""
         from datetime import datetime as _dt
@@ -1243,21 +1244,101 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         ly = d - _td(days=364)
         return ly.strftime("%Y%m%d")
 
-    # 전체 일별 트렌드 전년 매칭
+    # 한국 공휴일 데이터 로드
+    holidays_path = DATA_DIR / "holidays_kr.json"
+    holidays_data = load_json(holidays_path, {})
+    kr_holidays = holidays_data.get("holidays", {})
+    season_cfg = holidays_data.get("seasons", {})
+
+    def _is_holiday(dt_str: str) -> tuple:
+        """공휴일 여부 판별. (True/False, 공휴일명)"""
+        h = kr_holidays.get(dt_str)
+        if h:
+            return True, h.get("name", "공휴일")
+        return False, ""
+
+    def _parse_period(period_str: str) -> tuple:
+        """'YYYYMMDD-YYYYMMDD' → (start_date, end_date)"""
+        from datetime import datetime as _dt
+        parts = period_str.split("-")
+        return _dt.strptime(parts[0], "%Y%m%d"), _dt.strptime(parts[1], "%Y%m%d")
+
+    def _get_season(dt_str: str) -> str:
+        """날짜의 시즌 판별: 'peak', 'shoulder', 'off'"""
+        from datetime import datetime as _dt
+        dt = _dt.strptime(dt_str, "%Y%m%d")
+        yr = dt.year
+        for season_type in ["peak", "shoulder"]:
+            scfg = season_cfg.get(season_type, {})
+            for yr_check in [yr - 1, yr, yr + 1]:
+                periods = scfg.get(f"periods_{yr_check}", [])
+                for p in periods:
+                    try:
+                        s, e = _parse_period(p)
+                        if s <= dt <= e:
+                            return season_type
+                    except Exception:
+                        continue
+        return "off"
+
+    _season_label = {"peak": "성수기", "shoulder": "준성수기", "off": "비수기"}
+
+    def _check_yoy_match(cur_date: str, ly_date: str) -> tuple:
+        """
+        YoY 매칭 유효성 검사.
+        Returns: (is_valid, exclusion_reason)
+        - is_valid=True: 매칭 가능
+        - is_valid=False, exclusion_reason: 제외 사유 문자열
+        """
+        # 1) 올해 날짜가 공휴일/연휴인지 확인
+        cur_is_hol, cur_hol_name = _is_holiday(cur_date)
+        if cur_is_hol:
+            return False, f"{cur_hol_name}"
+
+        # 2) 전년 매칭 날짜가 공휴일/연휴인지 확인
+        ly_is_hol, ly_hol_name = _is_holiday(ly_date)
+        if ly_is_hol:
+            return False, f"전년 동기간 {ly_hol_name}"
+
+        # 3) 시즌 매칭 확인
+        cur_season = _get_season(cur_date)
+        ly_season = _get_season(ly_date)
+        if cur_season != ly_season:
+            return False, f"시즌 불일치 (금년 {_season_label[cur_season]} ↔ 전년 {_season_label[ly_season]})"
+
+        return True, ""
+
+    # 전체 일별 트렌드 전년 매칭 (공휴일/시즌 제외 적용)
     daily_trend_ly = []
+    yoy_exclusions_all = []  # 전체 기간 제외 사유
     for item in daily_trend:
         ly_key = _ly_date(item["date"])
-        ly_val = nd.get(ly_key, {})
-        daily_trend_ly.append({
-            "date": ly_key,
-            "label": f"{ly_key[4:6]}/{ly_key[6:8]}",
-            "pickup": ly_val.get("pickup_rn", 0) or 0,
-            "cancel": ly_val.get("cancel_rn", 0) or 0,
-            "net": ly_val.get("net_rn", 0) or 0,
-        })
+        is_valid, reason = _check_yoy_match(item["date"], ly_key)
+        if is_valid:
+            ly_val = nd.get(ly_key, {})
+            daily_trend_ly.append({
+                "date": ly_key,
+                "label": f"{ly_key[4:6]}/{ly_key[6:8]}",
+                "pickup": ly_val.get("pickup_rn", 0) or 0,
+                "cancel": ly_val.get("cancel_rn", 0) or 0,
+                "net": ly_val.get("net_rn", 0) or 0,
+            })
+        else:
+            # 제외 시 null 데이터로 표시
+            daily_trend_ly.append({
+                "date": ly_key,
+                "label": f"{ly_key[4:6]}/{ly_key[6:8]}",
+                "pickup": None,
+                "cancel": None,
+                "net": None,
+                "excluded": True,
+            })
+            day_label = f"{item['date'][4:6]}/{item['date'][6:8]}"
+            yoy_exclusions_all.append(f"{day_label} - {reason}으로 제외")
 
-    # 투숙월별 전년 매칭
+    # 투숙월별 전년 매칭 (공휴일/시즌 제외 적용)
     daily_trend_by_month_ly = {}
+    yoy_exclusions_by_month = {}  # 월별 제외 사유
     for mi in compare_months:
         mlabel = f"{mi}월"
         cur_mtrend = daily_trend_by_month.get(mlabel, [])
@@ -1266,17 +1347,33 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         ly_mkey = f"{now.year - 1}{mi:02d}"  # 전년 같은 투숙월
         ly_md = ndm.get(ly_mkey, {})
         mtrend_ly = []
+        month_exclusions = []
         for item in cur_mtrend:
             ly_bk_date = _ly_date(item["date"])  # 같은 요일 매칭
-            ly_val = ly_md.get(ly_bk_date, {})
-            mtrend_ly.append({
-                "date": ly_bk_date,
-                "label": f"{ly_bk_date[4:6]}/{ly_bk_date[6:8]}",
-                "pickup": ly_val.get("pickup_rn", 0) or 0,
-                "cancel": ly_val.get("cancel_rn", 0) or 0,
-                "net": ly_val.get("net_rn", 0) or 0,
-            })
+            is_valid, reason = _check_yoy_match(item["date"], ly_bk_date)
+            if is_valid:
+                ly_val = ly_md.get(ly_bk_date, {})
+                mtrend_ly.append({
+                    "date": ly_bk_date,
+                    "label": f"{ly_bk_date[4:6]}/{ly_bk_date[6:8]}",
+                    "pickup": ly_val.get("pickup_rn", 0) or 0,
+                    "cancel": ly_val.get("cancel_rn", 0) or 0,
+                    "net": ly_val.get("net_rn", 0) or 0,
+                })
+            else:
+                mtrend_ly.append({
+                    "date": ly_bk_date,
+                    "label": f"{ly_bk_date[4:6]}/{ly_bk_date[6:8]}",
+                    "pickup": None,
+                    "cancel": None,
+                    "net": None,
+                    "excluded": True,
+                })
+                day_label = f"{item['date'][4:6]}/{item['date'][6:8]}"
+                month_exclusions.append(f"{day_label} - {reason}으로 제외")
         daily_trend_by_month_ly[mlabel] = mtrend_ly
+        if month_exclusions:
+            yoy_exclusions_by_month[mlabel] = month_exclusions
 
     # ── 4) 4개년 동기간 비교 (월별 OTB) ──
     years_compare = {}
@@ -1628,6 +1725,8 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "compareMonths": [f"{m}월" for m in compare_months],
         "dailyAnalysis": daily_analysis,
         "channelWeeklyShare": channel_weekly_share,
+        "yoyExclusions": yoy_exclusions_all,
+        "yoyExclusionsByMonth": yoy_exclusions_by_month,
     }
 
     js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"

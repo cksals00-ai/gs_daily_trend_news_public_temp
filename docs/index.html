@@ -1606,11 +1606,11 @@
       margin-top: 1px !important;
     }
 
-    /* --- WoW + 차트 + TOP/BOTTOM 영역 --- */
+    /* --- YoY + 차트 + TOP/BOTTOM 영역 --- */
     .otb-hero-grid .weekly-card [style*="border-top:1px solid"][style*="padding-top:10px"] {
       padding-top: 6px !important;
     }
-    /* WoW 행 간격 축소 */
+    /* YoY 행 간격 축소 */
     .otb-hero-grid .weekly-card [style*="border-top:1px solid"] > div:first-child {
       margin-bottom: 4px !important;
       gap: 6px !important;
@@ -1713,6 +1713,56 @@
   .news-more-btn:hover {
     background: var(--gold);
     color: #0d0d0d;
+  }
+
+  /* ───── SECTION MENU BAR ───── */
+  .section-menu-bar {
+    position: sticky;
+    top: 52px; /* masthead height */
+    z-index: 190;
+    background: var(--bg-deep);
+    border-bottom: 1px solid rgba(184,137,63,0.25);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .section-menu-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .section-menu-inner::-webkit-scrollbar { display: none; }
+  .section-menu-btn {
+    flex-shrink: 0;
+    padding: 12px 18px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+    position: relative;
+  }
+  .section-menu-btn:hover {
+    color: var(--ink-soft);
+    background: rgba(255,255,255,0.04);
+  }
+  .section-menu-btn.active {
+    color: var(--gold-bright);
+    border-bottom-color: var(--gold-bright);
+  }
+  @media (max-width: 768px) {
+    .section-menu-bar { top: 0; }
+    .section-menu-btn { padding: 10px 14px; font-size: 11px; }
   }
 </style>
 </head>
@@ -1817,8 +1867,8 @@
       </a>
     </div>
 
-    <!-- 섹션 바로가기 -->
-    <div id="quick-nav" style="display:flex;align-items:center;gap:6px;margin-bottom:16px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;flex-wrap:wrap;">
+    <!-- 섹션 바로가기 (hidden — replaced by section menu bar) -->
+    <div id="quick-nav" style="display:none;align-items:center;gap:6px;margin-bottom:16px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;flex-wrap:wrap;">
       <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--ink-faint);font-weight:700;margin-right:6px;white-space:nowrap;">JUMP TO</span>
       <a href="#news-vivaldi" class="qnav-btn" style="padding:6px 14px;background:rgba(255,255,255,0.06);color:var(--ink-soft);text-decoration:none;border-radius:4px;font-family:var(--sans);font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,0.10);transition:all 0.15s;white-space:nowrap;"
          onmouseover="this.style.background='rgba(255,255,255,0.14)';this.style.color='#fff'"
@@ -2003,21 +2053,20 @@
             <div id="pickup-month-tabs" style="display:flex;gap:4px;margin-bottom:8px;">
               <button class="pickup-month-tab active" data-month="all" onclick="switchPickupMonth('all')" style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(107,163,196,0.25);color:#6ba3c4;cursor:pointer;font-weight:700;">전체</button>
             </div>
+            <!-- YoY 제외 사유 표시 영역 -->
+            <div id="yoy-exclusion-notice" style="display:none;margin-bottom:6px;padding:4px 8px;background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.15);border-radius:4px;max-height:48px;overflow-y:auto;">
+            </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;display:none;">
             </div>
-            <!-- 이번주 vs 전주 비교 요약 -->
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:10px;">
+            <!-- 금주 vs 전년 동기간 비교 요약 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px;">
               <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 3px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">이번주 Net</div>
+                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">금주 Net</div>
                 <div id="insight-this-week" style="font-family:var(--mono);font-size:13px;font-weight:800;color:#4ecdc4;">—</div>
               </div>
               <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 3px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">전주 Net</div>
+                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">전년 동기 Net</div>
                 <div id="insight-last-week" style="font-family:var(--mono);font-size:13px;font-weight:800;color:rgba(255,255,255,0.5);">—</div>
-              </div>
-              <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 3px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">WoW</div>
-                <div id="insight-wow-change" style="font-family:var(--mono);font-size:13px;font-weight:800;">—</div>
               </div>
               <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 3px;border:1px solid rgba(240,165,0,0.2);">
                 <div style="font-family:var(--mono);font-size:8px;color:rgba(240,165,0,0.6);letter-spacing:0.05em;">YoY</div>
@@ -2186,6 +2235,20 @@
   </div>
 </div>
 
+
+<!-- ============ SECTION MENU BAR ============ -->
+<nav class="section-menu-bar" id="section-menu-bar">
+  <div class="section-menu-inner">
+    <button class="section-menu-btn active" data-section="daily">당일분석</button>
+    <button class="section-menu-btn" data-section="news">업계 뉴스</button>
+    <button class="section-menu-btn" data-section="ota">주요 OTA</button>
+    <button class="section-menu-btn" data-section="comp">경쟁사 동향</button>
+    <button class="section-menu-btn" data-section="regions">권역별 현황</button>
+    <button class="section-menu-btn" data-section="yoy">YoY 추이</button>
+    <button class="section-menu-btn" data-section="strategy">3대 전략</button>
+    <button class="section-menu-btn" data-section="pkg">상품 트렌드</button>
+  </div>
+</nav>
 
 <!-- ============ NEWS SECTION (TOP) — Daily News Monitoring 형식 ============ -->
 <section id="news-vivaldi" style="max-width:1640px;margin:0 auto;padding:28px 28px 12px;">
@@ -12754,7 +12817,7 @@
 
 
 <!-- ============ YOY 사업장별 추이 ============ -->
-<section style="max-width:1640px;margin:0 auto;padding:32px 28px 16px;">
+<section id="sec-yoy" style="max-width:1640px;margin:0 auto;padding:32px 28px 16px;">
   <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:16px;">
     <div style="font-family:var(--mono);font-size:12.5px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">YOY COMPARISON · 동기간 보정 기반</div>
     <h2 style="font-family:var(--serif);font-weight:700;font-size:clamp(24px,3.5vw,36px);line-height:1.05;color:var(--ink);">사업장별 <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:8px;">4·5·6월 추이</em></h2>
@@ -12765,7 +12828,7 @@
 </section>
 
 <!-- ============ STRATEGY (공통) ============ -->
-<section style="max-width:1640px;margin:0 auto;padding:56px 28px;">
+<section id="sec-strategy" style="max-width:1640px;margin:0 auto;padding:56px 28px;">
   <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:32px;">
     <div style="font-family:var(--mono);font-size:12.5px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">STRATEGY TRACKER · 전 권역 공통</div>
     <h2 style="font-family:var(--serif);font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.05;color:var(--ink);">사업계획 <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:8px;">3대 전략</em> 진척</h2>
@@ -12841,7 +12904,7 @@
 
 
 <!-- ============ DATA SOURCES ============ -->
-<section style="max-width:1640px;margin:0 auto;padding:40px 28px 20px;">
+<section id="sec-datasources" style="max-width:1640px;margin:0 auto;padding:40px 28px 20px;">
   <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:20px;">
     <div style="font-family:var(--mono);font-size:12.5px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">DATA SOURCES · 출처 명시</div>
     <h2 style="font-family:var(--serif);font-weight:800;font-size:clamp(22px,2.8vw,28px);line-height:1.05;color:var(--ink);">Sources <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:10px;">데이터 출처</em></h2>
@@ -13426,17 +13489,18 @@ function toggleNewsMore(btn, id) {
         return ndm['2026' + _pad2(+mk)] || {};
       }
 
-      // ── 주간 OTB 차트 + WoW ──
+      // ── 주간 OTB 차트 + YoY ──
       var _weeklyChart = null;
       var _activeChartMonth = 'all';
 
-      // 금주/전주 기준: 오늘(4/28) 기준 마지막 완료 주 = 4/21~27, 전주 = 4/14~20
+      // 금주 기준: 오늘(4/28) 기준 마지막 완료 주 = 4/21~27
       var _todayDt = new Date(2026, 3, 28);
       var _todayMon = _getMonday(_dateKey(_todayDt));
       var _thisWeekMon = new Date(_todayMon); _thisWeekMon.setDate(_thisWeekMon.getDate() - 7);
-      var _lastWeekMon = new Date(_thisWeekMon); _lastWeekMon.setDate(_lastWeekMon.getDate() - 7);
       var _thisWeekKey = _dateKey(_thisWeekMon);
-      var _lastWeekKey = _dateKey(_lastWeekMon);
+      // 전년 동기간: 52주(364일) 전 같은 요일
+      var _lyWeekMon = new Date(_thisWeekMon); _lyWeekMon.setDate(_lyWeekMon.getDate() - 364);
+      var _lyWeekKey = _dateKey(_lyWeekMon);
 
       window._renderWeeklyOTB = function(monthKey) {
         _activeChartMonth = monthKey || 'all';
@@ -13448,37 +13512,42 @@ function toggleNewsMore(btn, id) {
         var labels = lastN.map(function(k) { return g.weeks[k].label; });
         var vals = lastN.map(function(k) { return g.weeks[k].net; });
 
-        // WoW 계산
+        // YoY 계산: 금주 vs 전년 동기간(52주 전)
         var thisWk = g.weeks[_thisWeekKey];
-        var lastWk = g.weeks[_lastWeekKey];
+        var lyWk = g.weeks[_lyWeekKey];
         var thisWeekNet = thisWk ? thisWk.net : 0;
-        var lastWeekNet = lastWk ? lastWk.net : 0;
-        var wowDelta = thisWeekNet - lastWeekNet;
-        var wowPct = lastWeekNet !== 0 ? Math.round(wowDelta / Math.abs(lastWeekNet) * 100) : 0;
+        var lyWeekNet = lyWk ? lyWk.net : 0;
+        var yoyDelta = thisWeekNet - lyWeekNet;
+        var yoyPct = lyWeekNet !== 0 ? Math.round(yoyDelta / Math.abs(lyWeekNet) * 100) : 0;
 
-        // WoW 표시
+        // YoY 표시
         var thisEl = document.getElementById('wow-this-week');
         var deltaEl = document.getElementById('wow-delta-val');
         if (thisEl) {
-          thisEl.textContent = '이번주 ' + thisWeekNet.toLocaleString() + '실';
+          thisEl.textContent = '금주 ' + thisWeekNet.toLocaleString() + '실';
           thisEl.style.color = thisWeekNet >= 0 ? '#4ecdc4' : '#ff6b6b';
         }
         if (deltaEl) {
-          var sign = wowDelta >= 0 ? '+' : '';
-          deltaEl.textContent = sign + wowDelta.toLocaleString() + ' (' + sign + wowPct + '%)';
-          deltaEl.style.color = wowDelta >= 0 ? '#4ecdc4' : '#ff6b6b';
+          var sign = yoyDelta >= 0 ? '+' : '';
+          if (lyWeekNet !== 0) {
+            deltaEl.textContent = sign + yoyDelta.toLocaleString() + ' (' + sign + yoyPct + '%)';
+            deltaEl.style.color = yoyDelta >= 0 ? '#4ecdc4' : '#ff6b6b';
+          } else {
+            deltaEl.textContent = '전년 데이터 없음';
+            deltaEl.style.color = 'rgba(255,255,255,0.3)';
+          }
         }
 
-        // 이상징후 배너 (감소 시 중립 표현)
-        var isAnomaly = Math.abs(wowPct) >= 20;
+        // 이상징후 배너 (전년 동기간 대비)
+        var isAnomaly = lyWeekNet !== 0 && Math.abs(yoyPct) >= 20;
         var banner = document.getElementById('anomaly-banner');
         if (banner) {
           if (isAnomaly) {
             banner.style.display = 'block';
-            var isPos = wowDelta >= 0;
+            var isPos = yoyDelta >= 0;
             banner.textContent = isPos
-              ? '\u26A1 전주 대비 큰 폭 증가 (' + sign + wowPct + '%)'
-              : '\u26A0 전주 대비 감소 (' + wowPct + '%)';
+              ? '\u26A1 전년 동기간 대비 큰 폭 증가 (' + sign + yoyPct + '%)'
+              : '\u26A0 전년 동기간 대비 감소 (' + yoyPct + '%)';
             banner.style.background = isPos ? 'rgba(78,205,196,0.2)' : 'rgba(255,107,107,0.2)';
             banner.style.color = isPos ? '#4ecdc4' : '#ff6b6b';
           } else {
@@ -13743,35 +13812,42 @@ function toggleNewsMore(btn, id) {
     });
   })();
 
-  function renderPickupTrend(trend, trendLY) {
+  function renderPickupTrend(trend, trendLY, exclusions) {
     if (!trend || trend.length === 0) return;
     trendLY = trendLY || [];
-    var thisWeek = trend.slice(-7);
-    var lastWeek = trend.length >= 14 ? trend.slice(-14, -7) : trend.slice(0, Math.max(0, trend.length - 7));
-    var thisSum = thisWeek.reduce(function(s,d){ return s + d.net; }, 0);
-    var lastSum = lastWeek.reduce(function(s,d){ return s + d.net; }, 0);
-    var wowDelta = thisSum - lastSum;
-    var wowPct = lastSum !== 0 ? Math.round(wowDelta / Math.abs(lastSum) * 100) : 0;
+    exclusions = exclusions || [];
 
-    // YoY 계산: 이번주 7일 vs 전년 동기간 7일
+    // 제외 사유 표시
+    var exNotice = document.getElementById('yoy-exclusion-notice');
+    if (exNotice) {
+      if (exclusions.length > 0) {
+        exNotice.style.display = 'block';
+        exNotice.innerHTML = exclusions.map(function(e) {
+          return '<div style="font-family:var(--mono);font-size:7.5px;color:rgba(240,165,0,0.75);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⚠ ' + e + '</div>';
+        }).join('');
+      } else {
+        exNotice.style.display = 'none';
+        exNotice.innerHTML = '';
+      }
+    }
+
+    var thisWeek = trend.slice(-7);
+    var thisSum = thisWeek.reduce(function(s,d){ return s + d.net; }, 0);
+
+    // YoY 계산: 금주 7일 vs 전년 동기간 7일 (제외 항목은 skip)
     var lyThisWeek = trendLY.slice(-7);
-    var lySum = lyThisWeek.reduce(function(s,d){ return s + d.net; }, 0);
+    var lySum = lyThisWeek.reduce(function(s,d){ return s + (d.excluded ? 0 : (d.net || 0)); }, 0);
+    var validLyCount = lyThisWeek.filter(function(d){ return !d.excluded; }).length;
     var yoyDelta = thisSum - lySum;
     var yoyPct = lySum !== 0 ? Math.round(yoyDelta / Math.abs(lySum) * 100) : 0;
 
     var twEl = document.getElementById('insight-this-week');
     var lwEl = document.getElementById('insight-last-week');
-    var wcEl = document.getElementById('insight-wow-change');
     var yoyEl = document.getElementById('insight-yoy-change');
     if (twEl) { twEl.textContent = thisSum.toLocaleString() + '실'; twEl.style.color = thisSum >= 0 ? '#4ecdc4' : '#ff6b6b'; }
-    if (lwEl) { lwEl.textContent = lastSum.toLocaleString() + '실'; lwEl.style.color = lastSum >= 0 ? 'rgba(255,255,255,0.6)' : '#ff6b6b'; }
-    if (wcEl) {
-      var sign = wowDelta >= 0 ? '+' : '';
-      wcEl.textContent = sign + wowDelta.toLocaleString() + ' (' + sign + wowPct + '%)';
-      wcEl.style.color = wowDelta >= 0 ? '#4ecdc4' : '#ff6b6b';
-    }
+    if (lwEl) { lwEl.textContent = lySum.toLocaleString() + '실'; lwEl.style.color = lySum >= 0 ? 'rgba(255,255,255,0.6)' : '#ff6b6b'; }
     if (yoyEl) {
-      if (trendLY.length > 0 && lySum !== 0) {
+      if (validLyCount > 0 && lySum !== 0) {
         var ySign = yoyDelta >= 0 ? '+' : '';
         yoyEl.textContent = ySign + yoyDelta.toLocaleString() + ' (' + ySign + yoyPct + '%)';
         yoyEl.style.color = yoyDelta >= 0 ? '#f0a500' : '#ff6b6b';
@@ -13789,20 +13865,21 @@ function toggleNewsMore(btn, id) {
         { label: 'Booking', data: trend.map(function(d){ return d.pickup; }), backgroundColor: 'rgba(78,205,196,0.65)', borderWidth: 0, borderRadius: 2, order: 2 },
         { label: 'Cancel', data: trend.map(function(d){ return -d.cancel; }), backgroundColor: 'rgba(255,107,107,0.65)', borderWidth: 0, borderRadius: 2, order: 2 }
       ];
-      // 전년 Net 점선 라인 오버레이
+      // 전년 Net 점선 라인 오버레이 (제외된 날짜는 null 처리 → 선이 끊김)
       if (trendLY.length > 0) {
         datasets.push({
           label: 'LY Net',
           type: 'line',
-          data: trendLY.map(function(d){ return d.net; }),
+          data: trendLY.map(function(d){ return d.excluded ? null : d.net; }),
           borderColor: 'rgba(240,165,0,0.7)',
           backgroundColor: 'rgba(240,165,0,0.08)',
           borderWidth: 1.5,
           borderDash: [4, 3],
-          pointRadius: 1.5,
+          pointRadius: trendLY.map(function(d){ return d.excluded ? 0 : 1.5; }),
           pointBackgroundColor: 'rgba(240,165,0,0.8)',
           fill: false,
           tension: 0.3,
+          spanGaps: false,
           order: 1,
           yAxisID: 'yLine'
         });
@@ -13826,7 +13903,10 @@ function toggleNewsMore(btn, id) {
               }
             } },
             tooltip: { callbacks: { label: function(c){
-              if (c.dataset.label === 'LY Net') return 'LY Net ' + c.raw.toLocaleString() + '실';
+              if (c.dataset.label === 'LY Net') {
+                if (c.raw === null || c.raw === undefined) return 'LY Net: 제외 (공휴일/시즌 불일치)';
+                return 'LY Net ' + c.raw.toLocaleString() + '실';
+              }
               return c.dataset.label + ' ' + Math.abs(c.raw).toLocaleString() + '실';
             } } }
           },
@@ -13840,6 +13920,9 @@ function toggleNewsMore(btn, id) {
     }
   }
 
+  var _yoyExclusions = D.yoyExclusions || [];
+  var _yoyExclusionsByMonth = D.yoyExclusionsByMonth || {};
+
   window.switchPickupMonth = function(month) {
     var tabs = document.querySelectorAll('.pickup-month-tab');
     tabs.forEach(function(t) {
@@ -13851,7 +13934,8 @@ function toggleNewsMore(btn, id) {
     });
     var trend = month === 'all' ? D.dailyTrend : (_pickupMonthData[month] || D.dailyTrend);
     var trendLY = month === 'all' ? (D.dailyTrendLY || []) : (_pickupMonthDataLY[month] || D.dailyTrendLY || []);
-    renderPickupTrend(trend, trendLY);
+    var exclusions = month === 'all' ? _yoyExclusions : (_yoyExclusionsByMonth[month] || []);
+    renderPickupTrend(trend, trendLY, exclusions);
     // 거래처별 점유율 차트도 월 필터 연동
     if (typeof renderChannelWeeklyShare === 'function') {
       renderChannelWeeklyShare(month);
@@ -13860,7 +13944,7 @@ function toggleNewsMore(btn, id) {
 
   // 초기 렌더링
   if (D.dailyTrend && D.dailyTrend.length > 0) {
-    renderPickupTrend(D.dailyTrend, D.dailyTrendLY || []);
+    renderPickupTrend(D.dailyTrend, D.dailyTrendLY || [], _yoyExclusions);
   }
 
   // 거래처별 점유율 추이 주간 누적 바차트
@@ -14292,7 +14376,7 @@ function toggleNewsMore(btn, id) {
       console.warn('당일분석 테이블 렌더링 오류:', e);
     }
 
-    // WoW 주간차트 + TOP/BOTTOM 연동: "4월"→"4", "5월"→"5", "6월"→"6", "all"→"all"
+    // YoY 주간차트 + TOP/BOTTOM 연동: "4월"→"4", "5월"→"5", "6월"→"6", "all"→"all"
     var tbMonthKey = month === 'all' ? 'all' : month.replace('월', '');
     if (window._syncTbMonth) window._syncTbMonth(tbMonthKey);
   };
@@ -14325,5 +14409,95 @@ function toggleNewsMore(btn, id) {
 })();
 </script>
 
+<script>
+// ============ Section Menu Bar — Tab Switching ============
+(function() {
+  var menuBar = document.getElementById('section-menu-bar');
+  if (!menuBar) return;
+
+  // Section mapping: menu key → array of element IDs to show/hide
+  var sectionMap = {
+    daily:    ['weekly-report'],
+    news:     ['news-vivaldi'],
+    ota:      ['sec-ota'],
+    comp:     ['sec-comp'],
+    regions:  ['region-vivaldi','region-central','region-south','region-apac'],
+    yoy:      ['sec-yoy'],
+    strategy: ['sec-strategy'],
+    pkg:      ['pkg-trend-section']
+  };
+
+  // Elements that are always visible (never hidden)
+  var alwaysVisible = ['sec-datasources'];
+
+  // Collect ALL section element references
+  var allSectionEls = [];
+  Object.keys(sectionMap).forEach(function(key) {
+    sectionMap[key].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) allSectionEls.push({ key: key, id: id, el: el });
+    });
+  });
+
+  function activateSection(key, pushState) {
+    // Update buttons
+    menuBar.querySelectorAll('.section-menu-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-section') === key);
+    });
+
+    // Hide all sections
+    allSectionEls.forEach(function(item) {
+      item.el.style.display = 'none';
+    });
+
+    // Show target sections
+    var targets = sectionMap[key];
+    if (targets) {
+      targets.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = '';
+      });
+    }
+
+    // Scroll to top of content (just below menu bar)
+    window.scrollTo({ top: menuBar.offsetTop - 52, behavior: 'instant' });
+
+    // Update URL hash
+    if (pushState !== false) {
+      history.replaceState(null, '', '#' + key);
+    }
+  }
+
+  // Click handler
+  menuBar.addEventListener('click', function(e) {
+    var btn = e.target.closest('.section-menu-btn');
+    if (!btn) return;
+    var key = btn.getAttribute('data-section');
+    if (key) activateSection(key, true);
+  });
+
+  // Hash → section key mapping
+  var hashMap = {
+    '#daily': 'daily',
+    '#news': 'news',
+    '#ota': 'ota',
+    '#comp': 'comp',
+    '#regions': 'regions',
+    '#yoy': 'yoy',
+    '#strategy': 'strategy',
+    '#pkg': 'pkg'
+  };
+
+  // Determine initial section from URL hash
+  var initialKey = hashMap[location.hash] || 'daily';
+  activateSection(initialKey, false);
+
+  // Handle browser back/forward
+  window.addEventListener('hashchange', function() {
+    var key = hashMap[location.hash] || 'daily';
+    activateSection(key, false);
+  });
+})();
+</script>
 </body>
 </html>

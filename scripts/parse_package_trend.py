@@ -314,11 +314,12 @@ def main():
             by_year[yyyymm[:4]][yyyymm] = {'rn': net_rn, 'rev': net_rev_m, 'adr': adr}
         by_series[series] = {yr: dict(months) for yr, months in by_year.items()}
 
-    # by_year_ranking: 연도별 TOP 20
+    # by_year_ranking: 연도별 TOP 20 (카테고리 기준 합산)
     by_year_ranking = {}
     for year in years:
-        ranking = []
+        cat_totals = defaultdict(lambda: {'rn': 0, 'rev_won': 0})
         for series, months in agg.items():
+            cat = classify_v4(series)
             yr_rn = sum(
                 max(0, m['booking_rn'] - m['cancel_rn'])
                 for ym, m in months.items() if ym.startswith(year)
@@ -328,12 +329,17 @@ def main():
                 for ym, m in months.items() if ym.startswith(year)
             )
             if yr_rn > 0:
-                ranking.append({
-                    'name': series,
-                    'rn': yr_rn,
-                    'rev': round(yr_rev_won / 1_000_000, 1),
-                    'adr': round(yr_rev_won / yr_rn / 1000) if yr_rn > 0 else 0,
-                })
+                cat_totals[cat]['rn'] += yr_rn
+                cat_totals[cat]['rev_won'] += yr_rev_won
+        ranking = []
+        for cat, v in cat_totals.items():
+            ranking.append({
+                'name': cat,
+                'category': cat,
+                'rn': v['rn'],
+                'rev': round(v['rev_won'] / 1_000_000, 1),
+                'adr': round(v['rev_won'] / v['rn'] / 1000) if v['rn'] > 0 else 0,
+            })
         ranking.sort(key=lambda x: x['rn'], reverse=True)
         by_year_ranking[year] = ranking[:20]
 
@@ -366,10 +372,7 @@ def main():
             }
         by_category[cat] = {yr: dict(ms) for yr, ms in by_yr.items()}
 
-    # by_year_ranking에 category 추가
-    for year, ranking in by_year_ranking.items():
-        for item in ranking:
-            item['category'] = classify_v4(item['name'])
+    # by_year_ranking은 이미 카테고리 기준으로 합산되어 category 필드 포함됨
 
     output = {
         'top_series': top_series_out,
