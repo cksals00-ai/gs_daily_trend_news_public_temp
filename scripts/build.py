@@ -1238,7 +1238,8 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
             }
 
-    # (a-2) 사업장×세그먼트별 전일 전체
+    # (a-2) 사업장×세그먼트별 전일 전체 — OTA/G-OTA/Inbound만 필터링
+    ALLOWED_SEGMENTS = {"OTA", "G-OTA", "Inbound"}
     all_ps_props = sorted(set(list(pdbps.keys()) + list(cdbps.keys())))
     for prop in all_ps_props:
         p_segs = pdbps.get(prop, {})
@@ -1246,6 +1247,8 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         all_segs = sorted(set(list(p_segs.keys()) + list(c_segs.keys())))
         prop_seg_data = {}
         for seg in all_segs:
+            if seg not in ALLOWED_SEGMENTS:
+                continue
             p_val = p_segs.get(seg, {}).get(today_date, {})
             c_val = c_segs.get(seg, {}).get(today_date, {})
             p_rn = p_val.get("rn", 0) or 0
@@ -1260,6 +1263,23 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 }
         if prop_seg_data:
             daily_analysis["byPropertySegment"][prop] = prop_seg_data
+
+    # (a-3) byProperty를 OTA/G-OTA/Inbound 3개 세그먼트 합계로 재계산
+    filtered_by_property = {}
+    for prop, segs in daily_analysis["byPropertySegment"].items():
+        tot_p, tot_c, tot_rp, tot_rc = 0, 0, 0.0, 0.0
+        for seg_data in segs.values():
+            tot_p += seg_data.get("pickup", 0)
+            tot_c += seg_data.get("cancel", 0)
+            tot_rp += seg_data.get("rev_pickup", 0)
+            tot_rc += seg_data.get("rev_cancel", 0)
+        if tot_p or tot_c:
+            filtered_by_property[prop] = {
+                "pickup": tot_p, "cancel": tot_c, "net": tot_p - tot_c,
+                "rev": round(tot_rp - tot_rc, 1),
+                "rev_pickup": round(tot_rp, 1), "rev_cancel": round(tot_rc, 1),
+            }
+    daily_analysis["byProperty"] = filtered_by_property
 
     # (b) 세그먼트별 전일 전체
     for seg in sorted(pds.keys()):
