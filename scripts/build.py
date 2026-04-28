@@ -1261,6 +1261,15 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                     "rev": round(p_rev - c_rev, 1),
                     "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
                 }
+        # Inbound가 데이터에 존재하는 사업장이면 0이라도 항상 표시
+        for seg in ALLOWED_SEGMENTS:
+            if seg not in prop_seg_data:
+                # 해당 사업장에 이 세그먼트 데이터가 원본에 존재하면 0으로 포함
+                if seg in p_segs or seg in c_segs:
+                    prop_seg_data[seg] = {
+                        "pickup": 0, "cancel": 0, "net": 0,
+                        "rev": 0, "rev_pickup": 0, "rev_cancel": 0,
+                    }
         if prop_seg_data:
             daily_analysis["byPropertySegment"][prop] = prop_seg_data
 
@@ -1308,18 +1317,43 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         if month_segs:
             daily_analysis["bySegmentMonth"][mlabel] = month_segs
 
-    # (b-2) 거래처(채널)별 전일 전체
+    # (b-2) 거래처(채널)별 전일 전체 (매출 포함, Inbound 제외)
     pdbc = agg_data.get("pickup_daily_by_channel", {})
     cdbc = agg_data.get("cancel_daily_by_channel", {})
+    # Inbound 세그먼트의 전일 총 pickup/cancel 계산 (채널 총합에서 차감용)
+    _ib_p_val = pds.get("Inbound", {}).get(today_date, {})
+    _ib_c_val = cds.get("Inbound", {}).get(today_date, {})
+    _ib_total_p_rn = _ib_p_val.get("rn", 0) or 0
+    _ib_total_c_rn = _ib_c_val.get("rn", 0) or 0
+    _ib_total_p_rev = _ib_p_val.get("rev", 0) or 0
+    _ib_total_c_rev = _ib_c_val.get("rev", 0) or 0
+    # 채널별 합계 먼저 계산
+    _ch_total_p = sum((pdbc.get(ch, {}).get(today_date, {}).get("rn", 0) or 0) for ch in pdbc)
+    _ch_total_c = sum((cdbc.get(ch, {}).get(today_date, {}).get("rn", 0) or 0) for ch in cdbc)
     for ch in sorted(set(list(pdbc.keys()) + list(cdbc.keys()))):
         p_val = pdbc.get(ch, {}).get(today_date, {})
         c_val = cdbc.get(ch, {}).get(today_date, {})
         p_rn = p_val.get("rn", 0) or 0
         c_rn = c_val.get("rn", 0) or 0
+        p_rev = p_val.get("rev", 0) or 0
+        c_rev = c_val.get("rev", 0) or 0
+        # Inbound 비율 차감 (채널 비율 기반)
+        if _ib_total_p_rn and _ch_total_p:
+            ib_ratio_p = p_rn / _ch_total_p
+            p_rn -= round(_ib_total_p_rn * ib_ratio_p)
+            p_rev -= _ib_total_p_rev * ib_ratio_p
+        if _ib_total_c_rn and _ch_total_c:
+            ib_ratio_c = c_rn / _ch_total_c
+            c_rn -= round(_ib_total_c_rn * ib_ratio_c)
+            c_rev -= _ib_total_c_rev * ib_ratio_c
         if p_rn or c_rn:
-            daily_analysis["byChannel"][ch] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
+            daily_analysis["byChannel"][ch] = {
+                "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
+                "rev": round(p_rev - c_rev, 1),
+                "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
+            }
 
-    # (b-3) 거래처(채널)별 × 투숙월 전일
+    # (b-3) 거래처(채널)별 × 투숙월 전일 (매출 포함, Inbound 제외)
     pdbcm = agg_data.get("pickup_daily_by_channel_month", {})
     cdbcm = agg_data.get("cancel_daily_by_channel_month", {})
     for mi in compare_months:
@@ -1327,13 +1361,38 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         mlabel = f"{mi}월"
         month_chs = {}
         all_chs = sorted(set(list(pdbcm.keys()) + list(cdbcm.keys())))
+        # Inbound 세그먼트 월별 전일 (차감용)
+        _ib_mp = pdsm.get("Inbound", {}).get(mkey, {}).get(today_date, {})
+        _ib_mc = cdsm.get("Inbound", {}).get(mkey, {}).get(today_date, {})
+        _ib_mp_rn = _ib_mp.get("rn", 0) or 0
+        _ib_mc_rn = _ib_mc.get("rn", 0) or 0
+        _ib_mp_rev = _ib_mp.get("rev", 0) or 0
+        _ib_mc_rev = _ib_mc.get("rev", 0) or 0
+        # 월별 채널 합계
+        _chm_total_p = sum((pdbcm.get(ch, {}).get(mkey, {}).get(today_date, {}).get("rn", 0) or 0) for ch in all_chs)
+        _chm_total_c = sum((cdbcm.get(ch, {}).get(mkey, {}).get(today_date, {}).get("rn", 0) or 0) for ch in all_chs)
         for ch in all_chs:
             p_val = pdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
             c_val = cdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
             p_rn = p_val.get("rn", 0) or 0
             c_rn = c_val.get("rn", 0) or 0
+            p_rev = p_val.get("rev", 0) or 0
+            c_rev = c_val.get("rev", 0) or 0
+            # Inbound 비율 차감
+            if _ib_mp_rn and _chm_total_p:
+                ib_r = p_rn / _chm_total_p
+                p_rn -= round(_ib_mp_rn * ib_r)
+                p_rev -= _ib_mp_rev * ib_r
+            if _ib_mc_rn and _chm_total_c:
+                ib_r = c_rn / _chm_total_c
+                c_rn -= round(_ib_mc_rn * ib_r)
+                c_rev -= _ib_mc_rev * ib_r
             if p_rn or c_rn:
-                month_chs[ch] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
+                month_chs[ch] = {
+                    "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
+                    "rev": round(p_rev - c_rev, 1),
+                    "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
+                }
         if month_chs:
             daily_analysis["byChannelMonth"][mlabel] = month_chs
 
