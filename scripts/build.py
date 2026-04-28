@@ -1018,6 +1018,18 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         html = apply_tpl(html, "otb-gap", gap_txt)
         html = html.replace("OTB_GAP_CLR", gap_clr)
 
+        # 월별 갭 데이터 JSON 주입 (JS 월탭 연동용)
+        import json as _json_gap
+        gap_by_month = {}
+        for mkey in month_keys:
+            ms = all_months.get(mkey, {}).get("summary", {})
+            gap_by_month[mkey] = {
+                "budget": ms.get("rns_budget", 0) or 0,
+                "actual": ms.get("rns_actual", 0) or 0
+            }
+        gap_json = _json_gap.dumps(gap_by_month, ensure_ascii=False)
+        html = html.replace("/*__OTB_GAP_BY_MONTH__*/", f"var _OTB_GAP_BY_MONTH = {gap_json};")
+
         # 매출 달성률
         rev_ach = cur_s.get("rev_achievement")
         html = apply_tpl(html, "otb-rev-ach", f"{rev_ach:.1f}%" if rev_ach is not None else "—")
