@@ -369,11 +369,12 @@ function renderDailyChart() {
   const mn = parseInt(targetKey.slice(4));
   setText('daily-chart-title', mn + '월 · 일별 투숙 RNS (투숙일기준)');
 
+  const segsToRender = activeSegment === '전체' ? SEGS : [activeSegment];
   dailyChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
-      datasets: SEGS.map(seg => ({
+      datasets: segsToRender.map(seg => ({
         label: seg,
         data: (segs[seg] || {}).net_rn || days.map(() => 0),
         backgroundColor: SEG_COLORS[seg] + 'bb',
@@ -448,7 +449,27 @@ function render() {
 
   // Determine data source based on filter selection
   let dataSource;
-  if (activeRegion !== '전체' && activeProps.size === 0) {
+  if (activeProps.size > 0) {
+    // 선택된 사업장들의 세그먼트 데이터를 합산
+    dataSource = {};
+    const bps = db.by_property_segment || {};
+    for (const prop of activeProps) {
+      const propData = bps[prop] || {};
+      for (const seg in propData) {
+        if (!dataSource[seg]) dataSource[seg] = {};
+        for (const m in propData[seg]) {
+          if (!dataSource[seg][m]) dataSource[seg][m] = { booking_rn: 0, cancel_rn: 0, booking_rev: 0, cancel_rev: 0, net_rn: 0, net_rev: 0 };
+          const src = propData[seg][m];
+          dataSource[seg][m].booking_rn += src.booking_rn || 0;
+          dataSource[seg][m].cancel_rn += src.cancel_rn || 0;
+          dataSource[seg][m].booking_rev += src.booking_rev || 0;
+          dataSource[seg][m].cancel_rev += src.cancel_rev || 0;
+          dataSource[seg][m].net_rn += src.net_rn || 0;
+          dataSource[seg][m].net_rev += src.net_rev || 0;
+        }
+      }
+    }
+  } else if (activeRegion !== '전체') {
     dataSource = db.by_region_segment && db.by_region_segment[activeRegion] ? db.by_region_segment[activeRegion] : {};
   } else {
     dataSource = db.by_segment;
