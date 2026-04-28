@@ -1206,11 +1206,19 @@ async function loadFcstData() {
     if (!resp.ok) return;
     const otb = await resp.json();
     fcstData = otb.yoyTable || [];
-    const months = otb.allMonths || [];
+    const allMonths = otb.allMonths || {};
+
+    // allMonths는 {"0":{}, "4":{}, "5":{}, "6":{}} 형태 객체
+    // "0"(전체)을 제외한 월 키를 추출하여 탭 생성
+    const monthKeys = Object.keys(allMonths)
+      .filter(k => k !== '0')
+      .map(Number)
+      .filter(n => !isNaN(n))
+      .sort((a, b) => a - b);
 
     // Create month tabs
     const tabContainer = document.querySelector('#fcst-card .ftab[data-fcst-month="all"]').parentElement;
-    months.forEach((m, i) => {
+    monthKeys.forEach(m => {
       const btn = document.createElement('button');
       btn.className = 'ftab';
       btn.setAttribute('data-fcst-month', String(m));

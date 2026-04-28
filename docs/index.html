@@ -1281,6 +1281,14 @@
       box-sizing: border-box;
       justify-content: center;
     }
+    /* 768px: WEEKLY REPORT 간격 축소 */
+    #weekly-report { margin-top: 16px !important; }
+    .otb-hero-grid { gap: 10px !important; }
+    .insight-grid { margin-top: 10px !important; gap: 10px !important; }
+    /* 768px: OTB 큰 숫자 축소 */
+    .otb-hero-grid .weekly-card [style*="font-size:32px"] {
+      font-size: 24px !important;
+    }
   }
   /* ===== 모바일 (480px 이하) — 통합 블록 ===== */
   @media (max-width: 480px) {
@@ -1519,6 +1527,160 @@
 
     /* --- 모노 폰트 영역 --- */
     [style*="font-size:12.5px"] { font-size: 11.5px !important; }
+
+    /* ============================================================
+       모바일 DAILY OTB / WEEKLY REPORT 최적화 (480px 이하)
+       ============================================================ */
+
+    /* --- WEEKLY REPORT 전체 --- */
+    #weekly-report { margin-top: 14px !important; }
+    #weekly-report > div:first-child { margin-bottom: 8px !important; }
+
+    /* --- OTB hero 그리드: 1칼럼, 간격 축소 --- */
+    .otb-hero-grid { gap: 8px !important; }
+
+    /* --- DAILY OTB 카드 내부 패딩 축소 --- */
+    .otb-hero-grid .weekly-card > div:nth-child(2) {
+      padding: 10px 12px 12px !important;
+    }
+
+    /* --- DAILY OTB 헤더 (DAILY OTB + YoY + 매출) 줄바꿈 대응 --- */
+    .otb-hero-grid .weekly-card > div:nth-child(2) > div:first-child {
+      flex-wrap: wrap !important;
+      gap: 4px 8px !important;
+      margin-bottom: 8px !important;
+    }
+    .otb-hero-grid .weekly-card > div:nth-child(2) > div:first-child > div[style*="margin-left:auto"] {
+      margin-left: 0 !important;
+      width: 100%;
+      justify-content: flex-start !important;
+      gap: 8px !important;
+    }
+    /* YoY/매출 라벨 & 값 축소 */
+    .otb-hero-grid .weekly-card > div:nth-child(2) > div:first-child [style*="font-size:16px"] {
+      font-size: 13px !important;
+    }
+
+    /* --- 3개월 그리드 (4월/5월/6월) — 가로 3칼럼 유지, 컴팩트화 --- */
+    .otb-hero-grid .weekly-card [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:12px"] {
+      gap: 0 !important;
+      margin-bottom: 6px !important;
+    }
+    /* 각 월 컬럼 패딩 축소 */
+    .otb-hero-grid .weekly-card [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:12px"] > div {
+      padding-left: 6px !important;
+      padding-right: 6px !important;
+    }
+    .otb-hero-grid .weekly-card [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:12px"] > div:first-child {
+      padding-left: 0 !important;
+      padding-right: 6px !important;
+    }
+    .otb-hero-grid .weekly-card [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:12px"] > div:last-child {
+      padding-left: 6px !important;
+      padding-right: 0 !important;
+    }
+    /* 큰 숫자 (32px → 20px) */
+    .otb-hero-grid .weekly-card [style*="font-size:32px"] {
+      font-size: 20px !important;
+    }
+    /* 월 라벨 축소 */
+    .otb-hero-grid .weekly-card [style*="font-size:11px"][style*="margin-bottom:4px"] {
+      margin-bottom: 2px !important;
+      font-size: 10px !important;
+    }
+    /* 달성률 뱃지 + 당일 Net */
+    .otb-hero-grid .weekly-card [style*="gap:6px"][style*="align-items:center"] {
+      gap: 4px !important;
+    }
+    /* FCST 행 마진 축소 */
+    .otb-hero-grid .weekly-card [style*="font-size:8.5px"][style*="margin-top:3px"] {
+      margin-top: 1px !important;
+    }
+
+    /* --- WoW + 차트 + TOP/BOTTOM 영역 --- */
+    .otb-hero-grid .weekly-card [style*="border-top:1px solid"][style*="padding-top:10px"] {
+      padding-top: 6px !important;
+    }
+    /* WoW 행 간격 축소 */
+    .otb-hero-grid .weekly-card [style*="border-top:1px solid"] > div:first-child {
+      margin-bottom: 4px !important;
+      gap: 6px !important;
+    }
+    /* 차트 높이 축소 */
+    .otb-hero-grid .weekly-card [style*="height:50px"][style*="margin-bottom:8px"] {
+      height: 36px !important;
+      margin-bottom: 4px !important;
+    }
+    #chart-daily-net { height: 36px !important; }
+    /* TOP/BOTTOM 간격 축소 */
+    .otb-hero-grid .weekly-card [style*="align-items:flex-start"][style*="gap:16px"] {
+      gap: 8px !important;
+    }
+    .otb-hero-grid .weekly-card [style*="align-items:flex-start"] [style*="margin-bottom:3px"] {
+      margin-bottom: 1px !important;
+    }
+
+    /* --- 당일 분석 카드 --- */
+    .otb-hero-grid .weekly-card:nth-child(2) > div:nth-child(2) {
+      padding: 10px 12px 12px !important;
+    }
+    /* 당일 분석 테이블 max-height 축소 */
+    #da-table-container { max-height: 180px !important; }
+    #da-table { font-size: 9px !important; }
+    #da-table th, #da-table td { padding: 3px 4px !important; }
+
+    /* --- ROW 2 (insight-grid) --- */
+    .insight-grid { margin-top: 8px !important; gap: 8px !important; }
+    .insight-grid .weekly-card > div:nth-child(2) {
+      padding: 8px 10px 10px !important;
+    }
+    /* 주간 픽업 트렌드: 요약 카드 간격 축소 */
+    .insight-grid [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:10px"] {
+      gap: 4px !important;
+      margin-bottom: 6px !important;
+    }
+    .insight-grid [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:10px"] > div {
+      padding: 4px 3px !important;
+    }
+    .insight-grid [style*="grid-template-columns:1fr 1fr 1fr"][style*="margin-bottom:10px"] [style*="font-size:14px"] {
+      font-size: 12px !important;
+    }
+    /* 차트 높이 축소 */
+    #chart-pickup-cancel { height: 80px !important; }
+    #chart-channel-weekly-share { height: 100px !important; }
+    .insight-grid [style*="height:100px"] { height: 80px !important; }
+    .insight-grid [style*="height:120px"] { height: 100px !important; }
+    /* 차트 여백 축소 */
+    .insight-grid [style*="margin-bottom:8px"]:has(canvas) { margin-bottom: 4px !important; }
+    .insight-grid [style*="padding-top:8px"] { padding-top: 4px !important; }
+    .insight-grid [style*="margin-bottom:4px"][style*="letter-spacing"] { margin-bottom: 2px !important; }
+
+    /* 전략 카드 (OTA 비발디 / GOTA 양양) */
+    .insight-grid .weekly-card [style*="padding:14px 18px"] {
+      padding: 10px 12px 12px !important;
+    }
+    .insight-grid .weekly-card [style*="margin-bottom:14px"] {
+      margin-bottom: 8px !important;
+    }
+    .insight-grid .weekly-card [style*="margin-bottom:12px"][style*="padding:8px 10px"] {
+      padding: 6px 8px !important;
+      margin-bottom: 8px !important;
+    }
+    .insight-grid .weekly-card svg[width="108"] {
+      width: 80px !important;
+      height: 50px !important;
+    }
+    .insight-grid .weekly-card [style*="gap:14px"][style*="margin-bottom:14px"] {
+      gap: 8px !important;
+      margin-bottom: 8px !important;
+    }
+    .insight-grid .weekly-card [style*="font-size:18px"][style*="font-weight:700"] {
+      font-size: 14px !important;
+    }
+    .insight-grid .weekly-card [style*="padding-top:10px"][style*="gap:9px"] {
+      padding-top: 6px !important;
+      gap: 6px !important;
+    }
   }
 
   /* ===== 뉴스 더보기 버튼 ===== */
@@ -12886,7 +13048,7 @@
     본 대시보드는 <strong style="color:rgba(255,255,255,0.75);">GS팀 내부 운영용</strong>이며, 무단 복제 및 외부 공유를 금지합니다.
   </div>
 
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-28 11:24 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-28 12:03 KST</span></div>
 </footer>
 
 <script>
@@ -13153,13 +13315,22 @@ function toggleNewsMore(btn, id) {
         }
         return (monDt.getMonth()+1) + '/' + monDt.getDate() + '~' + sun.getDate();
       }
-      function _groupByWeek(dailyData) {
+      function _groupByWeek(dailyData, excludeIncomplete) {
         var weeks = {}, order = [];
         Object.keys(dailyData).sort().forEach(function(k) {
           var mon = _getMonday(k), mk = _dateKey(mon);
           if (!weeks[mk]) { weeks[mk] = { net: 0, label: _weekLabel(mon), monDate: mon }; order.push(mk); }
           weeks[mk].net += (dailyData[k] || {}).net_rn || 0;
         });
+        // 미완료 주 제외: 일요일(월+6)이 오늘 이후이면 아직 끝나지 않은 주
+        if (excludeIncomplete) {
+          var todayTs = _todayDt.getTime();
+          order = order.filter(function(mk) {
+            var sun = new Date(weeks[mk].monDate);
+            sun.setDate(sun.getDate() + 6);
+            return sun.getTime() < todayTs;
+          });
+        }
         return { weeks: weeks, order: order };
       }
       function _getDailyByMonth(mk) {
@@ -13182,9 +13353,9 @@ function toggleNewsMore(btn, id) {
       window._renderWeeklyOTB = function(monthKey) {
         _activeChartMonth = monthKey || 'all';
         var daily = _getDailyByMonth(monthKey);
-        var g = _groupByWeek(daily);
+        var g = _groupByWeek(daily, true);
 
-        // 최근 8주 표시
+        // 최근 8주 표시 (미완료 주 제외됨)
         var lastN = g.order.slice(-8);
         var labels = lastN.map(function(k) { return g.weeks[k].label; });
         var vals = lastN.map(function(k) { return g.weeks[k].net; });

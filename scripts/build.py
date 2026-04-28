@@ -954,23 +954,31 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             fcst     = s.get("rns_fcst")
             fcst_ach = s.get("fcst_achievement")
 
-            # admin key-in FCST 합산 (해당 월에 키인값이 있으면 오버라이드)
-            keyin_total = 0
-            has_keyin = False
+            # admin key-in FCST 오버라이드
+            # yoyTable의 사업장별 자동 FCST를 기본값으로, 키인이 있는 사업장만 대체 후 합산
             bud_rn = s.get("rns_budget", 0) or 0
-            for akey, aval in admin_fcst_keyin.items():
-                # key format: "사업장|월" where 월 = "all" or month number
-                parts = akey.split("|")
-                if len(parts) == 2:
-                    keyin_month = parts[1]
-                    if keyin_month == mkey or keyin_month == "all":
-                        v = aval.get("value") if isinstance(aval, dict) else None
-                        if v is not None:
-                            keyin_total += v
-                            has_keyin = True
-            if has_keyin and keyin_total > 0:
-                fcst = keyin_total
-                fcst_ach = round(keyin_total / bud_rn * 100, 1) if bud_rn > 0 else None
+            if admin_fcst_keyin and otb_data:
+                yoy_table = otb_data.get("yoyTable", [])
+                # 해당 월에 키인이 하나라도 있는지 확인
+                keyin_for_month = {}
+                for akey, aval in admin_fcst_keyin.items():
+                    parts = akey.split("|")
+                    if len(parts) == 2:
+                        prop_name, keyin_month = parts
+                        if keyin_month == mkey or keyin_month == "all":
+                            v = aval.get("value") if isinstance(aval, dict) else None
+                            if v is not None:
+                                keyin_for_month[prop_name] = v
+                if keyin_for_month:
+                    # 사업장별로: 키인 있으면 키인값, 없으면 자동 FCST 사용
+                    fcst_total = 0
+                    for row in yoy_table:
+                        pname = row.get("name", "")
+                        md = (row.get("months") or {}).get(mkey, {})
+                        auto_fcst = md.get("rns_fcst") or md.get("rns_fcst_ai") or 0
+                        fcst_total += keyin_for_month.get(pname, auto_fcst)
+                    fcst = fcst_total
+                    fcst_ach = round(fcst_total / bud_rn * 100, 1) if bud_rn > 0 else None
             t_net    = s.get("today_net", 0) or 0
             t_book   = s.get("today_booking", 0) or 0
             t_cancel = s.get("today_cancel", 0) or 0
