@@ -17,6 +17,7 @@ import html as html_module
 import json
 import logging
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -1563,6 +1564,21 @@ def main():
     comp_data = load_json(DATA_DIR / "competitors.json")
     weekly_data = load_json(DATA_DIR / "weekly_report.json")
     pkg_data = load_json(DATA_DIR / "package_series_trend.json")
+    # ── 채널(거래처)별 일별 데이터 패치 (byChannel 생성) ──
+    patch_script = Path(__file__).resolve().parent / "patch_channel_daily.py"
+    if patch_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(patch_script)],
+                capture_output=True, text=True, timeout=60,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ patch_channel_daily 완료: {result.stdout.strip().splitlines()[-1] if result.stdout.strip() else 'OK'}")
+            else:
+                logger.warning(f"✗ patch_channel_daily 실패: {result.stderr.strip()}")
+        except Exception as e:
+            logger.warning(f"✗ patch_channel_daily 실행 오류: {e}")
+
     agg_data = load_json(DATA_DIR / "db_aggregated.json")
     admin_data = load_json(DATA_DIR / "admin_input.json")
     otb_data = load_json(DOCS_DIR / "data" / "otb_data.json")
