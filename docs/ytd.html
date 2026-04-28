@@ -168,6 +168,14 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">월:</span>
   <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
+<div class="mobile-filter-bar" style="border-top:none;">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">권역:</span>
+  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;border-top:none;">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
+  <div id="mobile-prop-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
 
 <div class="app-shell">
   <aside class="sidebar">
@@ -189,6 +197,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div>
       <div class="filter-section-label">월 필터</div>
       <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">권역</div>
+      <div class="filter-chips" id="region-chips"></div>
+    </div>
+    <div id="prop-filter-wrap" style="display:none;">
+      <div class="sidebar-divider"></div>
+      <div>
+        <div class="filter-section-label">사업장 <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
+        <div class="filter-chips" id="prop-chips"></div>
+      </div>
     </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA UPDATED</div>
@@ -304,7 +324,18 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 <script>
 let otb = null;
 let activeMonth = '0';
+let activeRegion = '전체';
+let activeProps = new Set();
 let rnsChart = null, achChart = null;
+
+const REGION_DEFS = [
+  { key: '전체', label: '전체' },
+  { key: 'vivaldi', label: '비발디' },
+  { key: 'central', label: '중부' },
+  { key: 'south', label: '남부' },
+  { key: 'apac', label: 'APAC' },
+];
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
 
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
@@ -318,13 +349,44 @@ function achClass(v) {
   return 'ach-low';
 }
 
+function getFilteredProps(allProps) {
+  if (activeRegion === '전체') return allProps;
+  let filtered = allProps.filter(p => p.region === activeRegion);
+  if (activeProps.size > 0) {
+    filtered = filtered.filter(p => activeProps.has(p.name));
+  }
+  return filtered;
+}
+
+function computeSummary(props) {
+  const s = { rns_budget: 0, rns_actual: 0, rns_last: 0, rev_budget: 0, rev_actual: 0, rev_last: 0, adr_actual: 0, adr_budget: 0 };
+  for (const p of props) {
+    s.rns_budget += p.rns_budget || 0;
+    s.rns_actual += p.rns_actual || 0;
+    s.rns_last += p.rns_last || 0;
+    s.rev_budget += p.rev_budget || 0;
+    s.rev_actual += p.rev_actual || 0;
+    s.rev_last += p.rev_last || 0;
+  }
+  s.rns_achievement = s.rns_budget > 0 ? (s.rns_actual / s.rns_budget * 100) : 0;
+  s.rev_achievement = s.rev_budget > 0 ? (s.rev_actual / s.rev_budget * 100) : 0;
+  s.adr_actual = s.rns_actual > 0 ? (s.rev_actual / s.rns_actual) : 0;
+  s.adr_budget = s.rns_budget > 0 ? (s.rev_budget / s.rns_budget) : 0;
+  return s;
+}
+
 function render() {
   const data = otb.allMonths[activeMonth];
   if (!data) return;
-  const props = data.byProperty;
-  const sum = data.summary;
+  const allProps = data.byProperty;
+  const props = getFilteredProps(allProps);
+  const isFiltered = activeRegion !== '전체';
+  const sum = isFiltered ? computeSummary(props) : data.summary;
 
-  const periodLabel = activeMonth === '0' ? '2026년 전체' : '2026년 ' + activeMonth + '월';
+  let periodLabel = activeMonth === '0' ? '2026년 전체' : '2026년 ' + activeMonth + '월';
+  if (activeRegion !== '전체') {
+    periodLabel += ' · ' + (activeProps.size > 0 ? [...activeProps].map(n => n.replace(/^\d+\./, '').trim()).join('+') : REGION_LABEL[activeRegion] + ' 전체');
+  }
   setText('period-display', periodLabel);
   setText('table-label', periodLabel);
   setText('sidebar-refresh', otb.meta.refreshTime || '—');
@@ -471,6 +533,90 @@ function buildMonthChips() {
   });
 }
 
+function buildRegionChips() {
+  const regionContainer = document.getElementById('region-chips');
+  const mRegionContainer = document.getElementById('mobile-region-chips');
+  [regionContainer, mRegionContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    REGION_DEFS.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.textContent = r.label;
+      btn.dataset.value = r.key;
+      btn.addEventListener('click', () => {
+        activeRegion = btn.dataset.value;
+        activeProps = new Set();
+        document.querySelectorAll('#region-chips .chip, #mobile-region-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeRegion);
+        });
+        buildPropChips();
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+  buildPropChips();
+}
+
+function buildPropChips() {
+  const propWrap = document.getElementById('prop-filter-wrap');
+  const mPropBar = document.getElementById('mobile-prop-bar');
+  const propContainer = document.getElementById('prop-chips');
+  const mPropContainer = document.getElementById('mobile-prop-chips');
+  const propLabel = document.getElementById('prop-region-label');
+
+  if (activeRegion === '전체') {
+    if (propWrap) propWrap.style.display = 'none';
+    if (mPropBar) mPropBar.style.display = 'none';
+    return;
+  }
+
+  if (propWrap) propWrap.style.display = '';
+  if (mPropBar) mPropBar.style.display = '';
+  if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
+
+  // Get properties for this region from byProperty data
+  const data = otb.allMonths[activeMonth];
+  if (!data) return;
+  const regionProps = data.byProperty.filter(p => p.region === activeRegion).map(p => p.name);
+
+  [propContainer, mPropContainer].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+
+    const allBtn = document.createElement('button');
+    allBtn.className = 'chip' + (activeProps.size === 0 ? ' active' : '');
+    allBtn.textContent = '전체';
+    allBtn.dataset.value = '__all__';
+    allBtn.addEventListener('click', () => {
+      activeProps = new Set();
+      document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+        b.classList.toggle('active', b.dataset.value === '__all__');
+      });
+      render();
+    });
+    c.appendChild(allBtn);
+
+    regionProps.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (activeProps.has(p) ? ' active' : '');
+      btn.textContent = p.replace(/^\d+\./, '').trim();
+      btn.dataset.value = p;
+      btn.addEventListener('click', () => {
+        if (activeProps.has(p)) activeProps.delete(p);
+        else activeProps.add(p);
+        document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
+          if (b.dataset.value === '__all__') b.classList.toggle('active', activeProps.size === 0);
+          else b.classList.toggle('active', activeProps.has(b.dataset.value));
+        });
+        render();
+      });
+      c.appendChild(btn);
+    });
+  });
+}
+
 function setText(id, v) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -488,6 +634,7 @@ async function loadData() {
     const res = await fetch('data/otb_data.json?t=' + Date.now());
     otb = await res.json();
     buildMonthChips();
+    buildRegionChips();
     render();
   } catch (e) {
     console.error(e);

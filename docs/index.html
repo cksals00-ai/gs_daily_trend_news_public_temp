@@ -14147,6 +14147,41 @@ function toggleNewsMore(btn, id) {
     if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
   };
 
+  // ── 목표 갭 (Budget - Actual) 월별 데이터 ──
+  var _OTB_GAP_BY_MONTH = {
+    '4': { budget: 58125, actual: 56948 },
+    '5': { budget: 61205, actual: 37742 },
+    '6': { budget: 73340, actual: 17107 }
+  };
+  function _updateOtbGap(month) {
+    var gapEl = document.querySelector('[data-tpl-otb-gap]');
+    if (!gapEl) return;
+    var totalBudget = 0, totalActual = 0;
+    if (month === 'all') {
+      Object.keys(_OTB_GAP_BY_MONTH).forEach(function(k) {
+        totalBudget += _OTB_GAP_BY_MONTH[k].budget;
+        totalActual += _OTB_GAP_BY_MONTH[k].actual;
+      });
+    } else {
+      var mk = month.replace('월', '');
+      var d = _OTB_GAP_BY_MONTH[mk];
+      if (d) { totalBudget = d.budget; totalActual = d.actual; }
+    }
+    var gap = totalBudget - totalActual;
+    if (gap > 0) {
+      gapEl.textContent = '부족 ' + gap.toLocaleString() + '실';
+      gapEl.style.color = '#ff6b6b';
+    } else if (gap < 0) {
+      gapEl.textContent = '초과 ' + Math.abs(gap).toLocaleString() + '실';
+      gapEl.style.color = 'var(--positive)';
+    } else {
+      gapEl.textContent = '달성';
+      gapEl.style.color = 'var(--positive)';
+    }
+  }
+  // 초기 로드 시 전체 갭 표시
+  _updateOtbGap('all');
+
   window.switchDailyAnalysis = function(month) {
     _daCurrentMonth = month;
     document.querySelectorAll('.da-month-tab').forEach(function(t) {
@@ -14160,6 +14195,9 @@ function toggleNewsMore(btn, id) {
     var data = _getDailyData(month, _daCurrentView);
     var showRev = _daCurrentView === 'property' || _daCurrentView === 'segment';
     _renderDailyTable(data, showRev, month);
+
+    // 목표 갭 연동
+    _updateOtbGap(month);
 
     // WoW 주간차트 + TOP/BOTTOM 연동: "4월"→"4", "5월"→"5", "6월"→"6", "all"→"all"
     var tbMonthKey = month === 'all' ? 'all' : month.replace('월', '');
