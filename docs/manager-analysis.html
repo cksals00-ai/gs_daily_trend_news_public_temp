@@ -123,7 +123,7 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
 .section-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 4px; }
 .section-heading { font-family: var(--serif); font-size: 16px; font-weight: 700; color: var(--ink-soft); margin-bottom: 16px; }
 
-/* ───── CHART CONTAINERS ───���─ */
+/* ───── CHART CONTAINERS ──────── */
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .chart-wrap { position: relative; height: 300px; }
 .chart-wrap canvas { width: 100% !important; height: 100% !important; }
@@ -339,7 +339,7 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
       <div class="base-date-tag">기준일 <strong id="report-date">—</strong></div>
     </div>
 
-    <!-- ═══ A) 채널별 월간 OTB 트��드 ═══ -->
+    <!-- ═══ A) 채널별 월간 OTB 트렌드 ═══ -->
     <div class="section-card gold" id="sec-channel-trend">
       <div class="section-title">SECTION A</div>
       <div class="section-heading">채널별 월간 OTB 트렌드</div>
@@ -361,10 +361,10 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
       </div>
     </div>
 
-    <!-- ═══ B) 사업장별 6개월 달성률 히트맵 ���══ -->
+    <!-- ═══ B) 사업장별 6개월 달성률 히트맵 ═══ -->
     <div class="section-card info" id="sec-heatmap">
       <div class="section-title">SECTION B</div>
-      <div class="section-heading">사업장별 6개월 달성��� 히트맵</div>
+      <div class="section-heading">사업장별 6개월 달성률 히트맵</div>
       <div class="hm-wrap">
         <table class="hm-table" id="heatmap-table">
           <thead></thead>
@@ -373,7 +373,7 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
       </div>
     </div>
 
-    <!-- ═══ C) 주��� 픽업 타이밍 분석 ═══ -->
+    <!-- ═══ C) 주간 픽업 타이밍 분석 ═══ -->
     <div class="section-card warn" id="sec-timing">
       <div class="section-title">SECTION C</div>
       <div class="section-heading">주간 픽업 타이밍 분석</div>
@@ -420,7 +420,7 @@ async function init() {
     const res = await fetch('manager_analysis_data.json');
     DATA = await res.json();
   } catch(e) {
-    document.querySelector('.main-content').innerHTML = '<div class="loading-state">데이터 로드 실패. manager_analysis_data.json 확인 ���요.</div>';
+    document.querySelector('.main-content').innerHTML = '<div class="loading-state">데이터 로드 실패. manager_analysis_data.json 확인 필요.</div>';
     return;
   }
 
@@ -660,7 +660,7 @@ function renderTiming() {
 
   // Region totals then individual properties
   const regionTotalKeys = ['비발디_Total','한국중부_Total','아시아퍼시픽_Total','한국남부_Total'];
-  const regionDisplayNames = { '비발디_Total':'비발디파크', '한국중부_Total':'한국중부', '아시아퍼시픽_Total':'아시아퍼시��', '한국남부_Total':'한국남부' };
+  const regionDisplayNames = { '비발디_Total':'비발디파크', '한국중부_Total':'한국중부', '아시아퍼시픽_Total':'아시아퍼시픽', '한국남부_Total':'한국남부' };
 
   const regionPropMap = {};
   Object.entries(regions).forEach(([rName, rProps]) => {
@@ -703,7 +703,7 @@ function renderLateBarChart(filtered) {
   // Get unique properties (not totals) with their max late%
   const propLate = new Map();
   filtered.forEach(t => {
-    if (t.property.includes('Total') || t.property === '전���') return;
+    if (t.property.includes('Total') || t.property === '전체') return;
     const existing = propLate.get(t.property) || 0;
     if (t.late_pct > existing) propLate.set(t.property, t.late_pct);
   });
