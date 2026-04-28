@@ -202,7 +202,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <div class="kpi-card-sub">전년 대비</div>
       </div>
       <div class="kpi-card warning">
-        <div class="kpi-card-label">예산 달성률</div>
+        <div class="kpi-card-label">목표 달성률</div>
         <div class="kpi-card-value" id="kpi-ach">—<span class="unit">%</span></div>
         <div class="kpi-card-sub" id="kpi-ach-sub">YTD 누계 기준</div>
       </div>
@@ -210,11 +210,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
     <div class="chart-card">
       <div class="chart-card-header">
-        <span class="chart-card-title">월별 RNS — 2026 vs 2025 vs 예산</span>
+        <span class="chart-card-title">월별 RNS — 2026 vs 2025 vs 목표</span>
         <div class="chart-legend">
           <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>2026년 실적</div>
           <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;opacity:0.7;"></div>2025년 실적</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div>2026년 예산</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div>2026년 목표</div>
         </div>
       </div>
       <div class="chart-canvas-wrap" style="height:320px;">
@@ -232,7 +232,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
           <thead>
             <tr>
               <th style="text-align:left;">월</th>
-              <th class="border-left-group">예산 RNS</th>
+              <th class="border-left-group">목표 RNS</th>
               <th>2026 실적</th>
               <th>달성률</th>
               <th class="border-left-group">2025 실적</th>
@@ -289,7 +289,7 @@ function render() {
   document.getElementById('kpi-yoy').closest('.kpi-card').querySelector('.kpi-card-value').style.color =
     yoy == null ? '' : yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
   setText('kpi-ach', ach == null ? '—' : ach.toFixed(1));
-  setText('kpi-ach-sub', '예산 ' + fmt.num(totalBud) + '실 대비');
+  setText('kpi-ach-sub', '목표 ' + fmt.num(totalBud) + '실 대비');
 
   const labels = monthly.map(m => m.label);
   const actData = monthly.map(m => m.rns_actual || 0);
@@ -306,7 +306,7 @@ function render() {
         datasets: [
           { label: '2026년 실적', data: actData, backgroundColor: '#e6b970bb', borderColor: '#e6b970', borderWidth: 1, borderRadius: 3 },
           { label: '2025년 실적', data: lyData, backgroundColor: '#5a9fc466', borderColor: '#5a9fc4', borderWidth: 1, borderRadius: 3 },
-          { label: '2026년 예산', data: budData, backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 3, type: 'bar' }
+          { label: '2026년 목표', data: budData, backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 3, type: 'bar' }
         ]
       },
       options: {

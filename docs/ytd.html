@@ -215,7 +215,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="kpi-card booking">
         <div class="kpi-card-label">RNS 달성률</div>
         <div class="kpi-card-value" id="kpi-rns-ach">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub" id="kpi-rns-ach-sub">예산 대비</div>
+        <div class="kpi-card-sub" id="kpi-rns-ach-sub">목표 대비</div>
       </div>
       <div class="kpi-card info">
         <div class="kpi-card-label">매출 실적</div>
@@ -225,12 +225,12 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="kpi-card warning">
         <div class="kpi-card-label">매출 달성률</div>
         <div class="kpi-card-value" id="kpi-rev-ach">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub">예산 대비</div>
+        <div class="kpi-card-sub">목표 대비</div>
       </div>
       <div class="kpi-card negative">
         <div class="kpi-card-label">평균 ADR</div>
         <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
-        <div class="kpi-card-sub" id="kpi-adr-sub">예산 대비</div>
+        <div class="kpi-card-sub" id="kpi-adr-sub">목표 대비</div>
       </div>
     </div>
 
@@ -240,7 +240,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
           <span class="chart-card-title">사업장별 RNS 실적</span>
           <div class="chart-legend">
             <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>실적</div>
-            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.25);"></div>예산</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.25);"></div>목표</div>
           </div>
         </div>
         <div class="chart-canvas-wrap">
@@ -278,7 +278,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th class="border-left-group" rowspan="2">ADR(천원)</th>
             </tr>
             <tr>
-              <th class="border-left-group">예산</th>
+              <th class="border-left-group">목표</th>
               <th>실적</th>
               <th>달성률</th>
               <th class="border-left-group">전년</th>
@@ -330,17 +330,17 @@ function render() {
   setText('refresh-badge', otb.meta.refreshTime || '—');
 
   setText('kpi-rns-act', fmt.num(sum.rns_actual));
-  setText('kpi-rns-act-sub', '예산 ' + fmt.num(sum.rns_budget) + '실');
+  setText('kpi-rns-act-sub', '목표 ' + fmt.num(sum.rns_budget) + '실');
   setText('kpi-rns-ach', (sum.rns_achievement || 0).toFixed(1));
-  setText('kpi-rns-ach-sub', '예산 ' + fmt.num(sum.rns_budget) + '실 대비');
+  setText('kpi-rns-ach-sub', '목표 ' + fmt.num(sum.rns_budget) + '실 대비');
   setText('kpi-rev-act', fmt.rev(sum.rev_actual));
-  setText('kpi-rev-act-sub', '예산 ' + fmt.rev(sum.rev_budget) + '억원');
+  setText('kpi-rev-act-sub', '목표 ' + fmt.rev(sum.rev_budget) + '억원');
   setText('kpi-rev-ach', (sum.rev_achievement || 0).toFixed(1));
   const adrAct = sum.adr_actual || 0;
   const adrBud = sum.adr_budget || 0;
   setText('kpi-adr', Math.round(adrAct / 1000).toLocaleString('ko-KR'));
   const adrVs = adrBud > 0 ? ((adrAct - adrBud) / adrBud * 100) : 0;
-  setText('kpi-adr-sub', '예산 대비 ' + (adrVs >= 0 ? '+' : '') + adrVs.toFixed(1) + '%');
+  setText('kpi-adr-sub', '목표 대비 ' + (adrVs >= 0 ? '+' : '') + adrVs.toFixed(1) + '%');
 
   const sorted = [...props].sort((a, b) => b.rns_actual - a.rns_actual);
   const labels = sorted.map(p => p.name.replace(/^\d+\./, '').trim());
@@ -357,7 +357,7 @@ function render() {
         labels,
         datasets: [
           { label: 'RNS 실적', data: rnsActual, backgroundColor: '#5a9fc4bb', borderColor: '#5a9fc4', borderWidth: 1, borderRadius: 3 },
-          { label: 'RNS 예산', data: rnsBudget, backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 3 }
+          { label: 'RNS 목표', data: rnsBudget, backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderRadius: 3 }
         ]
       },
       options: {
