@@ -1824,6 +1824,20 @@ def main():
         except Exception as e:
             logger.warning(f"✗ docs/data 동기화 실패: {e}")
 
+    # ── docs/data/package_series_trend.json 동기화 ──
+    # 프론트엔드(product-detail.html)가 by_category·by_year_ranking 등을 fetch하므로,
+    # parse_package_trend.py가 생성한 원본(data/)을 항상 docs/data/에 동기화해야 함
+    src_pkg_path = DATA_DIR / "package_series_trend.json"
+    dst_pkg_path = DOCS_DIR / "data" / "package_series_trend.json"
+    if src_pkg_path.exists():
+        try:
+            import shutil
+            dst_pkg_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(src_pkg_path), str(dst_pkg_path))
+            logger.info(f"✓ docs/data/package_series_trend.json 동기화 완료")
+        except Exception as e:
+            logger.warning(f"✗ package_series_trend.json 동기화 실패: {e}")
+
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)
     logger.info(f"✓ 전체 빌드 완료 · {build_meta}")
