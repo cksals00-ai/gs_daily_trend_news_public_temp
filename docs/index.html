@@ -14089,7 +14089,7 @@ function toggleNewsMore(btn, id) {
 
     var html = '';
     var totP = 0, totC = 0, totN = 0, totR = 0, totRP = 0, totRC = 0;
-    var hasSegments = showRev && useSegOverride && Object.keys(segData).length > 0;
+    var hasSegments = showRev && Object.keys(segData).length > 0;
 
     entries.forEach(function(e, idx) {
       var netStr = _fmtNet(e.net);
@@ -14230,12 +14230,17 @@ function toggleNewsMore(btn, id) {
       t.style.fontWeight = isA ? '700' : '500';
       t.style.borderColor = isA ? 'rgba(240,165,0,0.3)' : 'rgba(255,255,255,0.1)';
     });
-    var data = _getDailyData(month, _daCurrentView);
-    var showRev = _daCurrentView === 'property' || _daCurrentView === 'segment';
-    _renderDailyTable(data, showRev, month);
 
-    // 목표 갭 연동
+    // 목표 갭 먼저 업데이트 (테이블 렌더링 오류 시에도 갭은 정확하게 표시)
     _updateOtbGap(month);
+
+    try {
+      var data = _getDailyData(month, _daCurrentView);
+      var showRev = _daCurrentView === 'property' || _daCurrentView === 'segment';
+      _renderDailyTable(data, showRev, month);
+    } catch(e) {
+      console.warn('당일분석 테이블 렌더링 오류:', e);
+    }
 
     // WoW 주간차트 + TOP/BOTTOM 연동: "4월"→"4", "5월"→"5", "6월"→"6", "all"→"all"
     var tbMonthKey = month === 'all' ? 'all' : month.replace('월', '');
@@ -14254,9 +14259,13 @@ function toggleNewsMore(btn, id) {
     // INBOUND 제외 안내 표시
     var ibNote = document.getElementById('da-inbound-note');
     if (ibNote) ibNote.style.display = (view === 'segment') ? 'block' : 'none';
-    var data = _getDailyData(_daCurrentMonth, view);
-    var showRev = view === 'property' || view === 'segment';
-    _renderDailyTable(data, showRev, _daCurrentMonth);
+    try {
+      var data = _getDailyData(_daCurrentMonth, view);
+      var showRev = view === 'property' || view === 'segment';
+      _renderDailyTable(data, showRev, _daCurrentMonth);
+    } catch(e) {
+      console.warn('당일분석 뷰 전환 렌더링 오류:', e);
+    }
   };
 
   // 초기 렌더링
