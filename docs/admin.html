@@ -545,6 +545,59 @@ select option{background:var(--bg-deep);}
     </div>
   </div>
 
+  <!-- ⑧ FCST 키인 수정 -->
+  <div class="card" id="fcst-card">
+    <div class="card-head"><span class="card-icon">📈</span><span class="card-title">FCST 키인 수정</span><span class="card-desc">AI 자동 예측 → 담당자 수정 → 최종 확정</span></div>
+
+    <!-- 투숙월 탭 -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button class="ftab active" data-fcst-month="all" onclick="switchFcstMonth('all')">전체</button>
+    </div>
+    <div id="fcst-month-tabs" style="display:inline-flex;gap:6px;"></div>
+
+    <!-- 안내 텍스트 -->
+    <div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;line-height:1.7;">
+      자동 FCST는 <code>경과일 비율 외삽</code> 기반입니다. 수정이 필요한 사업장만 키인값을 입력하세요.<br>
+      키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다.
+    </div>
+
+    <!-- FCST 테이블 -->
+    <div style="overflow-x:auto;margin-bottom:12px;">
+      <table id="fcst-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--rule-strong);">
+            <th style="text-align:left;padding:8px 10px;color:var(--ink-muted);font-weight:700;font-size:12px;white-space:nowrap;">사업장</th>
+            <th style="text-align:right;padding:8px 10px;color:var(--ink-faint);font-weight:600;font-size:11px;white-space:nowrap;">예산 RN</th>
+            <th style="text-align:right;padding:8px 10px;color:var(--ink-faint);font-weight:600;font-size:11px;white-space:nowrap;">실적 RN</th>
+            <th style="text-align:right;padding:8px 10px;color:var(--info);font-weight:700;font-size:11px;white-space:nowrap;">자동 FCST</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--gold-bright);font-weight:800;font-size:11px;white-space:nowrap;">키인 수정</th>
+            <th style="text-align:right;padding:8px 10px;color:var(--positive);font-weight:700;font-size:11px;white-space:nowrap;">최종 FCST</th>
+            <th style="text-align:right;padding:8px 10px;color:var(--ink-faint);font-weight:600;font-size:11px;white-space:nowrap;">달성률</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--ink-faint);font-weight:600;font-size:11px;white-space:nowrap;">사유</th>
+          </tr>
+        </thead>
+        <tbody id="fcst-tbody"></tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--rule-strong);background:var(--bg-soft);">
+            <td style="padding:8px 10px;font-weight:800;color:var(--ink);">합계</td>
+            <td id="fcst-tot-bud" style="text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:700;color:var(--ink-muted);">—</td>
+            <td id="fcst-tot-act" style="text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:700;color:var(--ink);">—</td>
+            <td id="fcst-tot-auto" style="text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:700;color:var(--info);">—</td>
+            <td style="text-align:center;padding:8px 10px;color:var(--ink-faint);font-size:11px;">—</td>
+            <td id="fcst-tot-final" style="text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:800;color:var(--positive);">—</td>
+            <td id="fcst-tot-ach" style="text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:700;">—</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="resetFcstKeyin()" style="font-size:12px;padding:7px 14px;">↺ 키인 초기화</button>
+      <span style="font-size:11px;color:var(--ink-faint);margin-left:auto;">키인 수정값은 JSON 내보내기에 포함됩니다</span>
+    </div>
+  </div>
+
 </main>
 
 <!-- Bottom action bar -->
@@ -1016,6 +1069,7 @@ function getFormData() {
       vivaldi: radio('sv'), central: radio('sc'),
       south:   radio('ss'), apac:    radio('sa'),
     },
+    fcst_keyin: Object.keys(fcstKeyinValues).length > 0 ? fcstKeyinValues : undefined,
   };
 }
 
@@ -1060,6 +1114,11 @@ function applyFormData(d, reRenderInsights = true) {
       d.selected_strategies.find(s => s.slot === 2) || null,
     ];
     if (reRenderInsights) renderStrategySlots();
+  }
+
+  if (d.fcst_keyin && typeof d.fcst_keyin === 'object') {
+    fcstKeyinValues = d.fcst_keyin;
+    renderFcstTable();
   }
 }
 
@@ -1133,6 +1192,169 @@ function showToast(msg, type = 'ok') {
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 3400);
 }
+
+/* ══════════════════════════════════════════════
+   FCST KEY-IN
+══════════════════════════════════════════════ */
+let fcstData = [];           // from otb_data.json yoyTable
+let fcstKeyinValues = {};    // { "사업장|월": { value: number, reason: string } }
+let fcstCurrentMonth = 'all';
+
+async function loadFcstData() {
+  try {
+    const resp = await fetch('data/otb_data.json');
+    if (!resp.ok) return;
+    const otb = await resp.json();
+    fcstData = otb.yoyTable || [];
+    const months = otb.allMonths || [];
+
+    // Create month tabs
+    const tabContainer = document.querySelector('#fcst-card .ftab[data-fcst-month="all"]').parentElement;
+    months.forEach((m, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'ftab';
+      btn.setAttribute('data-fcst-month', String(m));
+      btn.textContent = m + '월';
+      btn.onclick = () => switchFcstMonth(String(m));
+      tabContainer.appendChild(btn);
+    });
+
+    renderFcstTable();
+  } catch(e) {
+    console.warn('FCST data load failed:', e);
+  }
+}
+
+window.switchFcstMonth = function(month) {
+  fcstCurrentMonth = month;
+  document.querySelectorAll('#fcst-card .ftab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-fcst-month') === month);
+  });
+  renderFcstTable();
+};
+
+function renderFcstTable() {
+  const tbody = document.getElementById('fcst-tbody');
+  if (!tbody || !fcstData.length) return;
+
+  let html = '';
+  let totBud = 0, totAct = 0, totAuto = 0, totFinal = 0;
+
+  fcstData.forEach(row => {
+    const months = row.months || {};
+    const mKeys = fcstCurrentMonth === 'all'
+      ? Object.keys(months).sort((a,b) => Number(a) - Number(b))
+      : [fcstCurrentMonth];
+
+    let rowBud = 0, rowAct = 0, rowAuto = 0;
+    mKeys.forEach(m => {
+      const md = months[String(m)];
+      if (md) {
+        rowBud  += md.bud_rn || 0;
+        rowAct  += md.act_rn || 0;
+        rowAuto += md.rns_fcst || md.rns_fcst_ai || 0;
+      }
+    });
+
+    const keyinKey = row.name + '|' + fcstCurrentMonth;
+    const keyin = fcstKeyinValues[keyinKey];
+    const keyinVal = keyin ? keyin.value : null;
+    const keyinReason = keyin ? keyin.reason : '';
+    const finalVal = keyinVal !== null ? keyinVal : rowAuto;
+    const ach = rowBud > 0 ? (finalVal / rowBud * 100).toFixed(1) : '—';
+    const achNum = rowBud > 0 ? finalVal / rowBud * 100 : 0;
+    const achClass = achNum >= 100 ? 'positive' : achNum >= 80 ? 'warning' : achNum > 0 ? 'negative' : '';
+
+    totBud += rowBud; totAct += rowAct; totAuto += rowAuto; totFinal += finalVal;
+
+    const region = row.region || '';
+    const rbClass = region === 'vivaldi' ? 'v' : region === 'central' ? 'c' : region === 'south' ? 's' : region === 'apac' ? 'a' : '';
+
+    html += `<tr style="border-bottom:1px solid var(--rule);">
+      <td style="padding:7px 10px;white-space:nowrap;">
+        <span class="rbadge ${rbClass}" style="font-size:10px;padding:1px 5px;margin-right:4px;">${region.charAt(0).toUpperCase()}</span>
+        <span style="font-weight:600;color:var(--ink-soft);font-size:13px;">${esc(row.name)}</span>
+      </td>
+      <td style="text-align:right;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--ink-muted);">${fmt(rowBud)}</td>
+      <td style="text-align:right;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--ink);">${fmt(rowAct)}</td>
+      <td style="text-align:right;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--info);font-weight:600;">${fmt(rowAuto)}</td>
+      <td style="text-align:center;padding:4px 6px;">
+        <input type="number" class="fcst-keyin-input" data-prop="${esca(row.name)}" data-month="${fcstCurrentMonth}"
+               value="${keyinVal !== null ? keyinVal : ''}"
+               placeholder="${fmt(rowAuto)}"
+               style="width:80px;background:var(--bg-soft);border:1px solid ${keyinVal !== null ? 'var(--gold)' : 'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;padding:5px 8px;outline:none;"
+               onchange="updateFcstKeyin(this)"
+               onfocus="this.style.borderColor='var(--gold)'"
+               onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)'">
+      </td>
+      <td style="text-align:right;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--positive);font-weight:800;">${fmt(finalVal)}</td>
+      <td style="text-align:right;padding:7px 10px;">
+        <span class="tbadge ${achClass}" style="font-size:11px;">${typeof ach === 'number' ? ach + '%' : ach}</span>
+      </td>
+      <td style="padding:4px 6px;">
+        <input type="text" class="fcst-reason-input" data-prop="${esca(row.name)}" data-month="${fcstCurrentMonth}"
+               value="${esca(keyinReason)}"
+               placeholder="수정 사유"
+               style="width:120px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);font-size:11px;padding:5px 8px;outline:none;"
+               onchange="updateFcstReason(this)">
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+
+  // Update totals
+  const totAch = totBud > 0 ? (totFinal / totBud * 100).toFixed(1) : '—';
+  const totAchClass = totBud > 0 && totFinal / totBud >= 1 ? 'color:var(--positive)' : 'color:var(--warning)';
+  document.getElementById('fcst-tot-bud').textContent = fmt(totBud);
+  document.getElementById('fcst-tot-act').textContent = fmt(totAct);
+  document.getElementById('fcst-tot-auto').textContent = fmt(totAuto);
+  document.getElementById('fcst-tot-final').textContent = fmt(totFinal);
+  const achEl = document.getElementById('fcst-tot-ach');
+  achEl.textContent = typeof totAch === 'string' ? totAch : totAch + '%';
+  achEl.style.cssText = 'text-align:right;padding:8px 10px;font-family:var(--mono);font-weight:700;' + totAchClass;
+}
+
+window.updateFcstKeyin = function(input) {
+  const prop = input.getAttribute('data-prop');
+  const month = input.getAttribute('data-month');
+  const key = prop + '|' + month;
+  const val = input.value.trim();
+  if (val === '') {
+    if (fcstKeyinValues[key]) delete fcstKeyinValues[key].value;
+    if (fcstKeyinValues[key] && !fcstKeyinValues[key].reason) delete fcstKeyinValues[key];
+  } else {
+    if (!fcstKeyinValues[key]) fcstKeyinValues[key] = {};
+    fcstKeyinValues[key].value = parseInt(val) || 0;
+  }
+  renderFcstTable();
+  autoSave();
+};
+
+window.updateFcstReason = function(input) {
+  const prop = input.getAttribute('data-prop');
+  const month = input.getAttribute('data-month');
+  const key = prop + '|' + month;
+  const val = input.value.trim();
+  if (val === '') {
+    if (fcstKeyinValues[key]) delete fcstKeyinValues[key].reason;
+    if (fcstKeyinValues[key] && fcstKeyinValues[key].value === undefined) delete fcstKeyinValues[key];
+  } else {
+    if (!fcstKeyinValues[key]) fcstKeyinValues[key] = {};
+    fcstKeyinValues[key].reason = val;
+  }
+  autoSave();
+};
+
+window.resetFcstKeyin = function() {
+  fcstKeyinValues = {};
+  renderFcstTable();
+  autoSave();
+  showToast('FCST 키인 초기화 완료');
+};
+
+// Load FCST data on page init
+document.addEventListener('DOMContentLoaded', () => { loadFcstData(); });
 
 /* Auto-save on any input */
 document.addEventListener('input',  e => { if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) autoSave(); });

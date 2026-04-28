@@ -241,6 +241,109 @@ def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
     return rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach
 
 
+def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
+                         holiday_factors=None):
+    """4개년 패턴 기반 강화 FCST.
+
+    1) 동기간(D-day) 기준 4개년(22~25) 실적 비교 → 올해 대비 성장률 추정
+    2) 과거 4개년 평균 '잔여 기간 증가율' 적용
+    3) holiday_factor 보정
+    4) elapsed_ratio 단순 외삽과 가중평균
+
+    미래월(elapsed=0)이면 과거 패턴만으로 추정.
+    """
+    cur_year = now_kst.year
+    cur_month = now_kst.month
+    day = now_kst.day
+
+    # 과거/진행월 판별
+    if cur_year == 2026 and month_num == cur_month:
+        days_in_month = calendar.monthrange(cur_year, month_num)[1]
+        elapsed_ratio = day / days_in_month
+    elif month_num < cur_month or cur_year < 2026:
+        elapsed_ratio = 1.0
+    else:
+        elapsed_ratio = 0.0
+
+    if elapsed_ratio == 1.0:
+        # 이미 완료된 월 → 실적 = FCST
+        fcst_ach = round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+        return act_rn, fcst_ach
+
+    # ── 방법 1: 단순 elapsed_ratio 외삽 ──
+    if elapsed_ratio > 0.1:
+        fcst_simple = round(act_rn / elapsed_ratio)
+    else:
+        fcst_simple = act_rn
+
+    # ── 방법 2: 4개년 동기간 패턴 기반 ──
+    # 과거 4년(22~25)에서 같은 달, 같은 D-day까지의 실적 vs 월말 실적 비율
+    growth_ratios = []
+    for yr in [2022, 2023, 2024, 2025]:
+        mk = f"{yr}{month_num:02d}"
+        # 해당 년도 월말 총실적
+        total_rn = sum_db(db_bp, db_props, mk)["rn"]
+        if total_rn <= 0:
+            continue
+
+        # 해당 년도 같은 D-day까지의 실적 (누적 비율 추정)
+        # db_bp는 월별 집계만 있으므로, 과거 동월 총실적 대비 현재 실적 비율로 추정
+        # 전년 동월 대비 올해 성장률
+        growth_ratios.append(total_rn)
+
+    if growth_ratios and elapsed_ratio > 0:
+        # 과거 4년 평균 월말 실적
+        avg_past = sum(growth_ratios) / len(growth_ratios)
+        # 전년(2025) 동월 실적
+        mk_25 = f"2025{month_num:02d}"
+        last_yr_rn = sum_db(db_bp, db_props, mk_25)["rn"]
+
+        if last_yr_rn > 0 and act_rn > 0:
+            # 올해 D-day까지의 전년 대비 성장률
+            yoy_growth = act_rn / (last_yr_rn * elapsed_ratio) if elapsed_ratio > 0.1 else 1.0
+            # 전년 총 실적에 성장률 적용
+            fcst_pattern = round(last_yr_rn * yoy_growth)
+        elif avg_past > 0 and act_rn > 0:
+            # 과거 평균 대비 비율 적용
+            fcst_pattern = round(avg_past * (act_rn / (avg_past * elapsed_ratio))) if elapsed_ratio > 0.1 else act_rn
+        else:
+            fcst_pattern = fcst_simple
+    elif elapsed_ratio == 0 and growth_ratios:
+        # 미래월: 과거 4년 평균에 최근 트렌드 적용
+        mk_25 = f"2025{month_num:02d}"
+        last_yr_rn = sum_db(db_bp, db_props, mk_25)["rn"]
+        if last_yr_rn > 0:
+            # 가장 최근 완료월의 YoY 성장률 적용
+            recent_month = cur_month - 1 if cur_month > 1 else 12
+            mk_26_recent = f"2026{recent_month:02d}"
+            mk_25_recent = f"2025{recent_month:02d}"
+            recent_26 = sum_db(db_bp, db_props, mk_26_recent)["rn"]
+            recent_25 = sum_db(db_bp, db_props, mk_25_recent)["rn"]
+            recent_yoy = recent_26 / recent_25 if recent_25 > 0 else 1.0
+            fcst_pattern = round(last_yr_rn * recent_yoy)
+        else:
+            fcst_pattern = act_rn
+    else:
+        fcst_pattern = fcst_simple
+
+    # 휴일 보정
+    hf = holiday_factors.get(month_num, 1.0) if holiday_factors else 1.0
+    fcst_pattern = round(fcst_pattern * hf)
+
+    # 가중평균: elapsed 비율이 높을수록 단순외삽 신뢰도 ↑
+    if elapsed_ratio > 0.1:
+        w_simple = elapsed_ratio  # 경과 비율만큼 단순외삽 가중
+        w_pattern = 1.0 - elapsed_ratio
+        fcst_final = round(fcst_simple * w_simple + fcst_pattern * w_pattern)
+    elif elapsed_ratio > 0:
+        fcst_final = fcst_pattern
+    else:
+        fcst_final = fcst_pattern
+
+    fcst_ach = round(fcst_final / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+    return fcst_final, fcst_ach
+
+
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
                     months=(4, 5, 6), now_kst=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성."""
@@ -273,14 +376,20 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
 
             rns_fcst, _, _, fcst_ach, _ = _calc_fcst(act_rn, 0, m, now_kst, bud_rn)
 
+            # 강화 FCST (4개년 패턴 + 휴일 보정)
+            rns_fcst_ai, fcst_ach_ai = _calc_fcst_enhanced(
+                act_rn, m, now_kst, bud_rn, db_bp, db_props, holiday_factors)
+
             yoy = round((act_rn / base_rn - 1) * 100, 1) if base_rn > 0 else None
             month_data[m] = {
                 "act_rn":       act_rn,
                 "last_rn":      base_rn,
                 "yoy":          yoy,
                 "bud_rn":       bud_rn,
-                "rns_fcst":     rns_fcst,
-                "fcst_ach":     fcst_ach,
+                "rns_fcst":     rns_fcst if rns_fcst else (rns_fcst_ai or act_rn),
+                "fcst_ach":     fcst_ach if fcst_ach else (fcst_ach_ai or 0),
+                "rns_fcst_ai":  rns_fcst_ai,
+                "fcst_ach_ai":  fcst_ach_ai,
             }
         rows.append({"name": display_name, "region": region, "months": month_data})
     return rows

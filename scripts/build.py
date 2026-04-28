@@ -914,7 +914,7 @@ def inject_news_section(html: str, news_data: dict) -> str:
 # ─────────────────────────────────────────────
 # 주간 리포트 주입
 # ─────────────────────────────────────────────
-def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_data: dict = None) -> str:
+def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_data: dict = None, admin_data: dict = None) -> str:
     """data/weekly_report.json + otb_data.json → 주간 리포트 카드 데이터 주입"""
     if not weekly:
         return html
@@ -943,12 +943,33 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
                 return "ach-low"
             return "ach-high" if v >= 90 else "ach-mid" if v >= 75 else "ach-low"
 
+        # admin FCST key-in 오버라이드 집계
+        admin_fcst_keyin = (admin_data or {}).get("fcst_keyin", {})
+
         for m_idx, mkey in enumerate(month_keys):
             s = all_months.get(mkey, {}).get("summary", {})
             actual   = s.get("rns_actual")
             ach      = s.get("rns_achievement")
             fcst     = s.get("rns_fcst")
             fcst_ach = s.get("fcst_achievement")
+
+            # admin key-in FCST 합산 (해당 월에 키인값이 있으면 오버라이드)
+            keyin_total = 0
+            has_keyin = False
+            bud_rn = s.get("rns_budget", 0) or 0
+            for akey, aval in admin_fcst_keyin.items():
+                # key format: "사업장|월" where 월 = "all" or month number
+                parts = akey.split("|")
+                if len(parts) == 2:
+                    keyin_month = parts[1]
+                    if keyin_month == mkey or keyin_month == "all":
+                        v = aval.get("value") if isinstance(aval, dict) else None
+                        if v is not None:
+                            keyin_total += v
+                            has_keyin = True
+            if has_keyin and keyin_total > 0:
+                fcst = keyin_total
+                fcst_ach = round(keyin_total / bud_rn * 100, 1) if bud_rn > 0 else None
             t_net    = s.get("today_net", 0) or 0
             t_book   = s.get("today_booking", 0) or 0
             t_cancel = s.get("today_cancel", 0) or 0
@@ -1324,7 +1345,7 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     if agg_data:
         html = inject_weekly_onbook(html, agg_data)
     html = inject_competitor_section(html, comp_data)
-    html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data)
+    html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     if otb_data:
         html = inject_yoy_property_table(html, otb_data)
     if otb_data and agg_data:
