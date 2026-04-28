@@ -1221,6 +1221,24 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         if p_rn or c_rn:
             daily_analysis["bySegment"][seg] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
 
+    # (c-0) 세그먼트별 × 투숙월 전일
+    pdsm = agg_data.get("pickup_daily_by_segment_month", {})
+    cdsm = agg_data.get("cancel_daily_by_segment_month", {})
+    for mi in compare_months:
+        mkey = f"{now.year}{mi:02d}"
+        mlabel = f"{mi}월"
+        month_segs = {}
+        all_segs = sorted(set(list(pdsm.keys()) + list(cdsm.keys())))
+        for seg in all_segs:
+            p_val = pdsm.get(seg, {}).get(mkey, {}).get(today_date, {})
+            c_val = cdsm.get(seg, {}).get(mkey, {}).get(today_date, {})
+            p_rn = p_val.get("rn", 0) or 0
+            c_rn = c_val.get("rn", 0) or 0
+            if p_rn or c_rn:
+                month_segs[seg] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
+        if month_segs:
+            daily_analysis["bySegmentMonth"][mlabel] = month_segs
+
     # (c) 사업장별 × 투숙월 전일
     for mi in compare_months:
         mkey = f"{now.year}{mi:02d}"
