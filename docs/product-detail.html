@@ -398,7 +398,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
   function filteredRanking() {
     var r = pkg.by_year_ranking[selYear] || [];
-    return selCat === 'ALL' ? r : r.filter(function(x){return x.category === selCat;});
+    if (selCat !== 'ALL') {
+      r = r.filter(function(x){return x.category === selCat;});
+    }
+    return aggByCategory(r);
   }
 
   function render() {
@@ -620,10 +623,27 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   var lypChart = null, lypShowAll = false, LYP_ROWS = 20;
   function lypSet(id,v){var e=document.getElementById(id);if(!e)return;var u=e.querySelector('.unit');if(u){e.childNodes.forEach(function(n){if(n!==u)n.remove();});e.insertBefore(document.createTextNode(v),u);}else{e.innerHTML=v;}}
 
+  // 카테고리별 합산 유틸
+  function aggByCategory(arr) {
+    var m = {};
+    (arr||[]).forEach(function(x) {
+      var c = x.category;
+      if (!m[c]) m[c] = {name: c, category: c, rn: 0, rev: 0, rev_won: 0};
+      m[c].rn += x.rn||0;
+      m[c].rev += x.rev||0;
+      m[c].rev_won += (x.rev_won || (x.rev||0)*1000000);
+    });
+    var out = Object.values(m);
+    out.forEach(function(v){ v.adr = v.rn>0 ? Math.round(v.rev_won/v.rn/1000) : 0; });
+    out.sort(function(a,b){return b.rn-a.rn;});
+    return out;
+  }
+
   function renderLyp() {
     if (!pkg) return;
     var cy = selYear, ly = String(parseInt(cy)-1);
-    var cyData = pkg.by_year_ranking[cy]||[], lyData = pkg.by_year_ranking[ly]||[];
+    var cyData = aggByCategory(pkg.by_year_ranking[cy]||[]);
+    var lyData = aggByCategory(pkg.by_year_ranking[ly]||[]);
     var cyTotal = cyData.reduce(function(s,d){return s+(d.rn||0);},0);
     var lyTotal = lyData.reduce(function(s,d){return s+(d.rn||0);},0);
     var yoy = lyTotal>0?((cyTotal-lyTotal)/lyTotal*100):null;
