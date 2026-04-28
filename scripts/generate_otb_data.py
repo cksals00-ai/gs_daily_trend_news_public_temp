@@ -536,6 +536,24 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach = _calc_fcst(
                 act_rn, act_rev, month_idx, now_kst, bud_rn, bud_rev
             )
+            # 미래월 fallback: _calc_fcst가 None이면 _calc_fcst_enhanced 사용
+            if rns_fcst is None:
+                rns_fcst_ai, fcst_ach_ai = _calc_fcst_enhanced(
+                    act_rn, month_idx, now_kst, bud_rn, db_bp, db_props,
+                    holiday_factors
+                )
+                if rns_fcst_ai is not None and rns_fcst_ai > 0:
+                    rns_fcst = rns_fcst_ai
+                    fcst_ach = fcst_ach_ai
+                    # 매출 FCST도 전년 기반 추정
+                    mk_25 = f"2025{month_idx:02d}"
+                    lst_rev_m = sum_db(db_bp, db_props, mk_25)["rev_m"]
+                    if lst_rev_m > 0 and lst_rn > 0:
+                        rev_fcst = lst_rev_m * (rns_fcst / lst_rn)
+                    else:
+                        rev_fcst = 0.0
+                    adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
+                    rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
         else:
             # 전체 월: 개별 월(1~12월)별 FCST를 합산
             rns_fcst = 0
@@ -559,6 +577,21 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 if mi_rns_f is not None:
                     rns_fcst += mi_rns_f
                     rev_fcst += mi_rev_f
+                else:
+                    # 미래월 fallback: enhanced FCST 사용
+                    mi_rns_ai, _ = _calc_fcst_enhanced(
+                        mi_rn, mi, now_kst, mi_bud_rn, db_bp, db_props,
+                        holiday_factors
+                    )
+                    if mi_rns_ai is not None and mi_rns_ai > 0:
+                        rns_fcst += mi_rns_ai
+                        # 매출도 추정
+                        mk_25_mi = f"2025{mi:02d}"
+                        mi_lst = sum_db(db_bp, db_props, mk_25_mi)
+                        if mi_lst["rev_m"] > 0 and mi_lst["rn"] > 0:
+                            rev_fcst += mi_lst["rev_m"] * (mi_rns_ai / mi_lst["rn"])
+                        else:
+                            rev_fcst += mi_bud_rev
             adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
             fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
             rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
@@ -613,11 +646,17 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     tot_adr_bud  = round(tot_bud_rev * 1_000_000 / tot_bud_rn)  if tot_bud_rn  > 0 else 0
     tot_adr_lst  = round(tot_lst_rev * 1_000_000 / tot_lst_rn)  if tot_lst_rn  > 0 else 0
     if is_future_month:
-        tot_rns_fcst = None
-        tot_rev_fcst = None
-        tot_adr_fcst = None
-        tot_fcst_ach = None
-        tot_rev_fcst_ach = None
+        # 미래월이라도 enhanced FCST 합산값이 있으면 사용
+        if tot_rns_fcst and tot_rns_fcst > 0:
+            tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
+            tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
+            tot_rev_fcst_ach = round(tot_rev_fcst / tot_bud_rev * 100, 1) if tot_bud_rev > 0 else 0.0
+        else:
+            tot_rns_fcst = None
+            tot_rev_fcst = None
+            tot_adr_fcst = None
+            tot_fcst_ach = None
+            tot_rev_fcst_ach = None
     else:
         tot_adr_fcst = round(tot_rev_fcst * 1_000_000 / tot_rns_fcst) if tot_rns_fcst > 0 else 0
         tot_fcst_ach     = round(tot_rns_fcst / tot_bud_rn  * 100, 1) if tot_bud_rn  > 0 else 0.0
