@@ -1358,6 +1358,107 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         if month_props:
             daily_analysis["byPropertyMonth"][mlabel] = month_props
 
+    # ── 6) 거래처별 주간 점유율 데이터 (최근 8주) ──
+    from datetime import timedelta
+    pdbc_full = agg_data.get("pickup_daily_by_channel", {})
+    cdbc_full = agg_data.get("cancel_daily_by_channel", {})
+    pdbcm_full = agg_data.get("pickup_daily_by_channel_month", {})
+    cdbcm_full = agg_data.get("cancel_daily_by_channel_month", {})
+
+    def _build_channel_weekly(p_data, c_data, is_month_keyed=False, month_key=None):
+        """일별 채널 데이터를 주간 집계하여 거래처별 점유율 계산."""
+        from collections import defaultdict
+        # 모든 날짜 수집
+        all_dates = set()
+        for ch in list(p_data.keys()) + list(c_data.keys()):
+            if is_month_keyed:
+                dates_dict = p_data.get(ch, {}).get(month_key, {})
+                all_dates.update(dates_dict.keys())
+                dates_dict = c_data.get(ch, {}).get(month_key, {})
+                all_dates.update(dates_dict.keys())
+            else:
+                all_dates.update(p_data.get(ch, {}).keys())
+                all_dates.update(c_data.get(ch, {}).keys())
+
+        if not all_dates:
+            return []
+
+        # 날짜 → ISO 주번호(월요일 시작) 매핑
+        def date_to_week(d_str):
+            """YYYYMMDD → (year, week_num) 월요일 시작"""
+            from datetime import datetime
+            dt = datetime.strptime(d_str, "%Y%m%d")
+            iso = dt.isocalendar()
+            return (iso[0], iso[1])
+
+        def week_start_label(d_str):
+            from datetime import datetime
+            dt = datetime.strptime(d_str, "%Y%m%d")
+            # 해당 날짜의 월요일
+            monday = dt - timedelta(days=dt.weekday())
+            return monday.strftime("%m/%d")
+
+        # 주별 채널별 net 합산
+        weekly_ch = defaultdict(lambda: defaultdict(int))  # {week_key: {channel: net}}
+        week_labels = {}  # {week_key: label}
+
+        all_channels = sorted(set(list(p_data.keys()) + list(c_data.keys())))
+        for ch in all_channels:
+            if is_month_keyed:
+                p_dates = p_data.get(ch, {}).get(month_key, {})
+                c_dates = c_data.get(ch, {}).get(month_key, {})
+            else:
+                p_dates = p_data.get(ch, {})
+                c_dates = c_data.get(ch, {})
+
+            for d in set(list(p_dates.keys()) + list(c_dates.keys())):
+                if len(d) != 8:
+                    continue
+                p_rn = (p_dates.get(d, {}).get("rn", 0) or 0)
+                c_rn = (c_dates.get(d, {}).get("rn", 0) or 0)
+                net = p_rn - c_rn
+                wk = date_to_week(d)
+                weekly_ch[wk][ch] += net
+                if wk not in week_labels:
+                    week_labels[wk] = week_start_label(d)
+
+        if not weekly_ch:
+            return []
+
+        # 최근 8주만
+        sorted_weeks = sorted(weekly_ch.keys())[-8:]
+
+        # 상위 6채널 + 기타 결정 (전체 주간 합계 기준, "기타" 원본 채널 제외)
+        total_by_ch = defaultdict(int)
+        for wk in sorted_weeks:
+            for ch, net in weekly_ch[wk].items():
+                if ch != "기타":
+                    total_by_ch[ch] += abs(net)
+        top_channels = sorted(total_by_ch.keys(), key=lambda c: total_by_ch[c], reverse=True)[:6]
+        top_set = set(top_channels)
+
+        # 주간 결과 배열 생성
+        result = []
+        for wk in sorted_weeks:
+            entry = {"label": week_labels.get(wk, ""), "channels": {}}
+            for ch in top_channels:
+                v = weekly_ch[wk].get(ch, 0)
+                entry["channels"][ch] = v
+            # 기타 = 원본 "기타" + 상위 6에 안 든 나머지
+            etc_val = sum(v for ch, v in weekly_ch[wk].items() if ch not in top_set)
+            entry["channels"]["기타"] = etc_val
+            entry["total"] = sum(entry["channels"].values())
+            result.append(entry)
+        return result
+
+    channel_weekly_share = {
+        "all": _build_channel_weekly(pdbc_full, cdbc_full),
+    }
+    for mi in compare_months:
+        mkey = f"{now.year}{mi:02d}"
+        mlabel = f"{mi}월"
+        channel_weekly_share[mlabel] = _build_channel_weekly(pdbcm_full, cdbcm_full, is_month_keyed=True, month_key=mkey)
+
     insight_blob = {
         "todayDate": today_date,
         "todayLabel": f"{today_date[4:6]}/{today_date[6:]}" if len(today_date) == 8 else "",
@@ -1370,6 +1471,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "yoySummary": yoy_summary,
         "compareMonths": [f"{m}월" for m in compare_months],
         "dailyAnalysis": daily_analysis,
+        "channelWeeklyShare": channel_weekly_share,
     }
 
     js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"
