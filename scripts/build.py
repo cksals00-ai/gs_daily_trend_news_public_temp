@@ -1850,7 +1850,8 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_competitor_section(html, comp_data)
     html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     if otb_data:
-        html = inject_yoy_property_table(html, otb_data)
+        rm_fcst_data = load_json(DOCS_DIR / "data" / "rm_fcst.json")
+        html = inject_yoy_property_table(html, otb_data, rm_fcst_data)
     if otb_data and agg_data:
         html = inject_insight_panel_data(html, otb_data, agg_data, now)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
@@ -1874,13 +1875,14 @@ REGION_LABELS = {
     "apac":    "APAC",
 }
 
-def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
+def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dict = None) -> str:
     if not yoy_table:
         return "<p style='color:#888;font-size:12px;'>YoY 데이터 없음</p>"
 
     base_disp = f"{base_date[:4]}.{base_date[4:6]}.{base_date[6:]}" if len(base_date) == 8 else base_date
     months = [4, 5, 6]
     month_labels = {4: "4월", 5: "5월", 6: "6월"}
+    rm_props = (rm_fcst_data or {}).get("properties", {})
 
     def arrow(yoy):
         if yoy is None:
@@ -1913,12 +1915,30 @@ def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
                 )
             else:
                 fcst_html = ""
+            # RM FCST (Revenue Meeting forecast)
+            rm_key = f"2026-{m:02d}"
+            rm_entry = rm_props.get(row.get("name", ""), {}).get(rm_key, {})
+            rm_rn = rm_entry.get("rm_fcst_rn")
+            if rm_rn is not None and bud > 0:
+                rm_ach = round(rm_rn / bud * 100, 1)
+                rm_html = (
+                    f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
+                    f'RM: {rm_rn:,}실 ({rm_ach:.1f}%)</div>'
+                )
+            elif rm_rn is not None:
+                rm_html = (
+                    f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
+                    f'RM: {rm_rn:,}실</div>'
+                )
+            else:
+                rm_html = ""
             cells += (
                 f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
                 f'<div style="font-size:12px;">{act:,}실</div>'
                 f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
                 f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
                 f'{fcst_html}'
+                f'{rm_html}'
                 f'</td>'
             )
         rows_html += (
@@ -1952,7 +1972,7 @@ def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
     )
 
 
-def inject_yoy_property_table(html: str, otb_data: dict) -> str:
+def inject_yoy_property_table(html: str, otb_data: dict, rm_fcst_data: dict = None) -> str:
     yoy_table = otb_data.get("yoyTable", [])
     base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
 
@@ -1963,7 +1983,7 @@ def inject_yoy_property_table(html: str, otb_data: dict) -> str:
         base_date = now_kst.strftime("%Y%m%d")
         logger.info(f"⚠ yoyBaseDate 폴백 → {base_date} (현재 연도 {current_year} 기준)")
 
-    table_html = render_yoy_property_table(yoy_table, base_date)
+    table_html = render_yoy_property_table(yoy_table, base_date, rm_fcst_data)
     pattern = re.compile(
         r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
         re.DOTALL
@@ -1982,6 +2002,291 @@ def inject_yoy_property_table(html: str, otb_data: dict) -> str:
 # ─────────────────────────────────────────────
 # 패키지 트렌드 데이터 주입
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# Daily Booking Report 섹션
+# ─────────────────────────────────────────────
+BOOKING_REGION_COLORS_MAP = {
+    "vivaldi": "#d97a7a", "central": "#6ba3c4", "south": "#7ab891", "apac": "#a892c8",
+}
+
+
+def _occ_heatmap_color(occ: float) -> str:
+    if occ >= 90:
+        return "rgba(76,175,111,0.35)"
+    elif occ >= 70:
+        return "rgba(76,175,111,0.20)"
+    elif occ >= 50:
+        return "rgba(232,162,86,0.20)"
+    elif occ >= 30:
+        return "rgba(232,162,86,0.12)"
+    elif occ > 0:
+        return "rgba(229,115,115,0.15)"
+    else:
+        return "rgba(122,126,133,0.08)"
+
+
+def _occ_text_color(occ: float) -> str:
+    if occ >= 70:
+        return "#4caf6f"
+    elif occ >= 50:
+        return "#e8a256"
+    elif occ >= 30:
+        return "#e0c070"
+    elif occ > 0:
+        return "#e57373"
+    else:
+        return "#7a7e85"
+
+
+def _gauge_svg(pct: float, label: str, size: int = 90) -> str:
+    import math
+    clamped = max(0, min(pct, 150))
+    angle = clamped / 150 * 180
+    if pct >= 100:
+        color = "#4caf6f"
+    elif pct >= 80:
+        color = "#e8a256"
+    elif pct >= 60:
+        color = "#e0c070"
+    else:
+        color = "#e57373"
+    r = size * 0.38
+    cx, cy = size / 2, size * 0.55
+    start_x = cx - r
+    start_y = cy
+    end_angle_rad = math.radians(angle - 180)
+    end_x = cx + r * math.cos(end_angle_rad)
+    end_y = cy + r * math.sin(end_angle_rad)
+    large_arc = 1 if angle > 180 else 0
+    return (
+        f'<svg width="{size}" height="{int(size*0.65)}" viewBox="0 0 {size} {int(size*0.65)}">'
+        f'<path d="M {cx-r},{cy} A {r},{r} 0 0 1 {cx+r},{cy}" '
+        f'fill="none" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        f'<path d="M {start_x},{start_y} A {r},{r} 0 {large_arc} 1 {end_x:.1f},{end_y:.1f}" '
+        f'fill="none" stroke="{color}" stroke-width="5" stroke-linecap="round"/>'
+        f'<text x="{cx}" y="{cy-2}" text-anchor="middle" '
+        f'font-family="var(--mono,monospace)" font-size="12" font-weight="800" fill="{color}">'
+        f'{pct:.0f}%</text>'
+        f'<text x="{cx}" y="{cy+10}" text-anchor="middle" '
+        f'font-family="var(--sans,sans-serif)" font-size="7" fill="#a8acb3">{label}</text>'
+        f'</svg>'
+    )
+
+
+def render_daily_booking_section(booking_data: dict) -> str:
+    if not booking_data:
+        return ""
+    meta = booking_data.get("meta", {})
+    by_prop = booking_data.get("by_property", {})
+    report_date = meta.get("report_date", "")
+    months = meta.get("months", [])
+    if not by_prop or not months:
+        return ""
+
+    gt = by_prop.get("Grand Total", {})
+    gt_months = gt.get("months", {})
+
+    # Grand Total 요약 카드
+    gt_cards = ""
+    for mk in months:
+        md = gt_months.get(mk, {})
+        m_label = f"{int(mk.split('-')[1])}월"
+        rns = md.get("actual_rns", 0)
+        budget = md.get("budget_rns", 0)
+        ach = md.get("budget_achievement", 0)
+        occ = md.get("occ_actual", 0)
+        occ_chg = md.get("occ_yoy_change", 0)
+        daily_chg = md.get("daily_change", 0)
+        ach_color = "#4caf6f" if ach >= 90 else "#e8a256" if ach >= 70 else "#e57373"
+        occ_dir_color = "#4caf6f" if occ_chg >= 0 else "#e57373"
+        occ_dir = "▲" if occ_chg >= 0 else "▼"
+        daily_dir = "▲" if daily_chg > 0 else "▼" if daily_chg < 0 else ""
+        daily_color = "#4caf6f" if daily_chg > 0 else "#e57373" if daily_chg < 0 else "#7a7e85"
+        is_current = (mk == months[0])
+        opacity = "1" if is_current else "0.6"
+        border = f"border:1px solid {ach_color}40;" if is_current else "border:1px solid var(--rule);"
+        gt_cards += f'''
+      <div style="flex:1;min-width:160px;background:var(--bg-card);{border}border-radius:6px;padding:14px 16px;opacity:{opacity};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:800;color:var(--ink);letter-spacing:0.08em;">{m_label}</span>
+          <span style="font-family:var(--mono);font-size:10px;padding:2px 6px;background:{ach_color}20;color:{ach_color};border-radius:3px;font-weight:800;">{ach:.0f}%</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--ink);margin-bottom:4px;">{rns:,}<span style="font-size:11px;color:var(--ink-muted);font-weight:600;margin-left:4px;">/ {budget:,}</span></div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <span style="font-family:var(--mono);font-size:11px;color:{_occ_text_color(occ)};font-weight:700;">OCC {occ:.1f}%</span>
+          <span style="font-family:var(--mono);font-size:10px;color:{occ_dir_color};font-weight:700;">{occ_dir}{abs(occ_chg):.1f}%p</span>
+          <span style="font-family:var(--mono);font-size:10px;color:{daily_color};font-weight:700;">{daily_dir}{abs(daily_chg):,}</span>
+        </div>
+      </div>'''
+
+    # OCC 히트맵
+    props_for_heatmap = [(n, d) for n, d in by_prop.items() if n != "Grand Total"]
+    month_headers = ""
+    for mk in months:
+        m_label = f"{int(mk.split('-')[1])}월"
+        month_headers += (
+            f'<th style="padding:8px 10px;font-family:var(--mono);font-size:11px;'
+            f'font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;'
+            f'border-bottom:2px solid var(--rule-strong);">{m_label} OCC</th>'
+        )
+    heatmap_rows = ""
+    for name, pdata in props_for_heatmap:
+        r_color = BOOKING_REGION_COLORS_MAP.get(pdata.get("region", ""), "#888")
+        ms = pdata.get("months", {})
+        cells = ""
+        for mk in months:
+            md = ms.get(mk, {})
+            occ = md.get("occ_actual", 0)
+            occ_chg = md.get("occ_yoy_change", 0)
+            bg = _occ_heatmap_color(occ)
+            txt_color = _occ_text_color(occ)
+            chg_html = ""
+            if occ_chg != 0:
+                chg_dir = "▲" if occ_chg > 0 else "▼"
+                chg_color = "#4caf6f" if occ_chg > 0 else "#e57373"
+                chg_html = f'<div style="font-size:9px;color:{chg_color};font-weight:700;">{chg_dir}{abs(occ_chg):.1f}%p</div>'
+            cells += (
+                f'<td style="padding:6px 8px;text-align:center;background:{bg};'
+                f'border-bottom:1px solid var(--rule);vertical-align:middle;">'
+                f'<div style="font-family:var(--mono);font-size:13px;font-weight:800;color:{txt_color};">{occ:.1f}%</div>'
+                f'{chg_html}</td>'
+            )
+        heatmap_rows += (
+            f'<tr style="transition:background 0.15s;" '
+            f'onmouseover="this.style.background=\'var(--bg-hover)\'" '
+            f'onmouseout="this.style.background=\'transparent\'">'
+            f'<td style="padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;">'
+            f'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:{r_color};margin-right:6px;vertical-align:middle;"></span>'
+            f'<span style="font-family:var(--sans);font-size:12px;font-weight:600;color:var(--ink-soft);">{escape_html(name)}</span></td>'
+            f'{cells}</tr>'
+        )
+
+    # Budget 달성률 게이지
+    gauge_cards = ""
+    for mk in months:
+        m_label = f"{int(mk.split('-')[1])}월"
+        md = gt_months.get(mk, {})
+        ach = md.get("budget_achievement", 0)
+        gauge_cards += f'<div style="text-align:center;">{_gauge_svg(ach, m_label, 90)}</div>'
+
+    # YoY 사업장별 비교
+    current_month = months[0] if months else ""
+    yoy_list = []
+    for name, pdata in props_for_heatmap:
+        md = pdata.get("months", {}).get(current_month, {})
+        yoy_list.append((name, pdata.get("region", ""), md))
+    yoy_list.sort(key=lambda x: x[2].get("yoy_pct", 0), reverse=True)
+
+    yoy_rows = ""
+    for name, region, md in yoy_list:
+        r_color = BOOKING_REGION_COLORS_MAP.get(region, "#888")
+        actual = md.get("actual_rns", 0)
+        ly = md.get("ly_actual", 0)
+        yoy_pct = md.get("yoy_pct", 0)
+        ach = md.get("budget_achievement", 0)
+        daily_chg = md.get("daily_change", 0)
+        if yoy_pct > 3:
+            yoy_color, yoy_icon = "#4caf6f", "▲"
+        elif yoy_pct < -3:
+            yoy_color, yoy_icon = "#e57373", "▼"
+        else:
+            yoy_color, yoy_icon = "#e0c070", "→"
+        ach_color = "#4caf6f" if ach >= 90 else "#e8a256" if ach >= 70 else "#e57373"
+        daily_html = ""
+        if daily_chg != 0:
+            d_dir = "▲" if daily_chg > 0 else "▼"
+            d_color = "#4caf6f" if daily_chg > 0 else "#e57373"
+            daily_html = f'<span style="font-family:var(--mono);font-size:10px;color:{d_color};font-weight:700;">{d_dir}{abs(daily_chg):,}</span>'
+        yoy_rows += (
+            f'<tr style="border-bottom:1px solid var(--rule);transition:background 0.15s;" '
+            f'onmouseover="this.style.background=\'var(--bg-hover)\'" '
+            f'onmouseout="this.style.background=\'transparent\'">'
+            f'<td style="padding:8px 10px;white-space:nowrap;">'
+            f'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:{r_color};margin-right:6px;vertical-align:middle;"></span>'
+            f'<span style="font-size:12px;font-weight:600;">{escape_html(name)}</span></td>'
+            f'<td style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:13px;font-weight:800;">{actual:,}</td>'
+            f'<td style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted);">{ly:,}</td>'
+            f'<td style="padding:8px 10px;text-align:center;">'
+            f'<span style="font-family:var(--mono);font-size:12px;color:{yoy_color};font-weight:800;">{yoy_icon} {yoy_pct:+.1f}%</span></td>'
+            f'<td style="padding:8px 10px;text-align:center;">'
+            f'<span style="font-family:var(--mono);font-size:11px;color:{ach_color};font-weight:700;">{ach:.0f}%</span></td>'
+            f'<td style="padding:8px 10px;text-align:center;">{daily_html}</td>'
+            f'</tr>'
+        )
+
+    cm_label = f"{int(current_month.split('-')[1])}월" if current_month else ""
+
+    section_html = f'''
+<section id="sec-daily-booking" style="max-width:1640px;margin:0 auto;padding:20px 28px 12px;">
+  <div style="border-top:2px solid var(--ink);padding-top:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--mono);font-size:12.5px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:6px;">DAILY BOOKING REPORT &middot; {report_date}</div>
+      <h2 style="font-family:var(--serif);font-weight:800;font-size:clamp(24px,3.2vw,34px);line-height:1.05;color:var(--ink);">Daily Booking <em style="font-family:var(--script);font-style:normal;font-weight:400;color:var(--gold);padding-left:10px;">예약 현황</em></h2>
+    </div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--ink-muted);letter-spacing:0.1em;text-align:right;">
+      {meta.get("property_count", 0)}개 사업장 &middot; 4개월 예약 현황<br>
+      <span style="color:var(--gold);font-weight:700;">투숙일 기준 (27+43)</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">{gt_cards}
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;margin-bottom:12px;">BUDGET ACHIEVEMENT &mdash; 전사 달성률</div>
+    <div style="display:flex;justify-content:space-around;align-items:center;flex-wrap:wrap;gap:8px;">{gauge_cards}</div>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 0;margin-bottom:24px;overflow-x:auto;">
+    <div style="padding:0 20px 10px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">OCCUPANCY HEATMAP &mdash; 사업장별 OCC%</div>
+    <table style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
+      <thead><tr>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:left;border-bottom:2px solid var(--rule-strong);">사업장</th>
+        {month_headers}
+      </tr></thead>
+      <tbody>{heatmap_rows}</tbody>
+    </table>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 0;overflow-x:auto;">
+    <div style="padding:0 20px 10px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">YoY COMPARISON &mdash; {cm_label} 사업장별 전년 동기 대비</div>
+    <table style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
+      <thead><tr style="border-bottom:2px solid var(--rule-strong);">
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:left;">사업장</th>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:right;">금년</th>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:right;">전년</th>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;">YoY</th>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;">달성률</th>
+        <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;">당일</th>
+      </tr></thead>
+      <tbody>{yoy_rows}</tbody>
+    </table>
+  </div>
+</section>
+'''
+    return section_html
+
+
+def inject_daily_booking(html: str, booking_data: dict) -> str:
+    if not booking_data:
+        logger.info("  Daily Booking 데이터 없음 - 스킵")
+        return html
+    section_html = render_daily_booking_section(booking_data)
+    if not section_html:
+        return html
+    pattern = re.compile(
+        r'(<!-- DAILY_BOOKING_START -->)(.*?)(<!-- DAILY_BOOKING_END -->)',
+        re.DOTALL
+    )
+    new_html, n = pattern.subn(
+        lambda m: m.group(1) + "\n" + section_html + "\n" + m.group(3),
+        html, count=1
+    )
+    if n > 0:
+        prop_count = booking_data.get("meta", {}).get("property_count", 0)
+        m_count = len(booking_data.get("meta", {}).get("months", []))
+        logger.info(f"✓ Daily Booking 섹션 주입: {prop_count}개 사업장, {m_count}개월")
+    else:
+        logger.warning("✗ DAILY_BOOKING 마커 미발견")
+    return new_html
+
+
 def inject_package_data(html: str, pkg_data: dict) -> str:
     """package_series_trend.json → <!-- PKG_DATA_START/END --> 사이에 주입"""
     if not pkg_data:
@@ -2017,6 +2322,7 @@ def main():
     comp_data = load_json(DATA_DIR / "competitors.json")
     weekly_data = load_json(DATA_DIR / "weekly_report.json")
     pkg_data = load_json(DATA_DIR / "package_series_trend.json")
+    booking_data = load_json(DATA_DIR / "daily_booking.json")
     # ── 채널(거래처)별 일별 데이터 패치 (byChannel 생성) ──
     patch_script = Path(__file__).resolve().parent / "patch_channel_daily.py"
     if patch_script.exists():
@@ -2052,6 +2358,7 @@ def main():
     logger.info(f"✓ index.html 로드 ({len(html):,} bytes)")
     html = _apply_common_injections(html, notes, data, comp_data, weekly_data, now, agg_data, admin_data, otb_data=otb_data)
     html = inject_news_section(html, news_data)
+    html = inject_daily_booking(html, booking_data)
     html = inject_package_data(html, pkg_data)
     HTML_FILE.write_text(html, encoding="utf-8")
     logger.info(f"✓ index.html 빌드 완료 ({len(html):,} bytes)")
