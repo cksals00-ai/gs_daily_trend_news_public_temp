@@ -100,23 +100,18 @@ td,th{font-weight:600}th{font-weight:800}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
 @media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
 </style>
-<nav class="gsn">
-  <div class="gsn-wrap">
-    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
-    <div class="gsn-links" id="gsn-links">
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
-    </div>
-    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+<nav class="gsn"><div class="gsn-wrap">
+  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+  <div class="gsn-links" id="gsn-links">
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+    <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
   </div>
-</nav>
-<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)||h.match(/gs_daily_trend_news_public_temp\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;if(hit)a.classList.add('active');});};}());</script>
+  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+</div></nav>
 
 <header class="mast">
   <div class="mast-logo"><span class="mast-name">SONO & TRINITY</span><span class="mast-sub">FCST 추이 분석</span></div>
@@ -136,6 +131,12 @@ td,th{font-weight:600}th{font-weight:800}
 
   <!-- 투숙월 탭 -->
   <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="month-tabs"></div>
+
+  <!-- 사업본부 필터 칩 -->
+  <div class="filter-bar" id="division-bar" style="margin-bottom:10px">
+    <span class="f-label">사업본부</span>
+    <div id="division-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+  </div>
 
   <!-- 필터 -->
   <div class="filter-bar">
@@ -203,6 +204,21 @@ td,th{font-weight:600}th{font-weight:800}
 let trendData = null;
 let currentStayMonth = null;  // e.g. "2026-04" (year-month of the STAY month)
 let charts = {};
+let selectedDivision = '전체';
+
+/* ── 사업본부 매핑 ── */
+const DIVISION_MAP = {
+  '비발디파크': ['01.벨비발디','02.캄비발디','03.펫비발디','04.펠리체비발디','05.빌리지비발디'],
+  '중부권': ['06.양평','07.델피노','08.쏠비치양양','09.쏠비치삼척','10.소노벨단양','12.소노벨청송','13.소노벨천안','14.소노벨변산','23.르네블루'],
+  '남부권': ['11.소노캄경주','15.소노캄여수','16.소노캄거제','17.쏠비치진도','21.소노문해운대','22.쏠비치남해'],
+  '광역권': ['18.소노벨제주','19.소노캄제주','20.소노캄고양']
+};
+const ALL_DIVISION_PROPS = Object.values(DIVISION_MAP).flat();
+
+function getFilteredProps() {
+  if (selectedDivision === '전체' || selectedDivision === 'GS') return null; // null = all (GS = OTA+GOTA+Inbound = 전체)
+  return DIVISION_MAP[selectedDivision] || [];
+}
 
 const fmt = n => n == null ? '—' : n.toLocaleString('ko-KR');
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -293,20 +309,47 @@ function initUI() {
     }
   });
 
-  // Populate property dropdown
-  const propSel = document.getElementById('filter-prop');
-  propSel.innerHTML = '<option value="__ALL__">전체 합산</option>';
-  sortedProps.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p; opt.textContent = p;
-    propSel.appendChild(opt);
+  // Build division chips (GS = OTA+GOTA+Inbound = 전체 사업장)
+  const divChips = document.getElementById('division-chips');
+  ['전체', 'GS', ...Object.keys(DIVISION_MAP)].forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'ftab' + (d === selectedDivision ? ' active' : '');
+    btn.textContent = d;
+    btn.onclick = () => {
+      selectedDivision = d;
+      document.querySelectorAll('#division-chips .ftab').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      populatePropDropdown(sortedProps);
+      renderAll();
+    };
+    divChips.appendChild(btn);
   });
+
+  // Populate property dropdown
+  populatePropDropdown(sortedProps);
 
   renderAll();
 }
 
+function populatePropDropdown(allProps) {
+  const propSel = document.getElementById('filter-prop');
+  const filtered = selectedDivision === '전체' ? allProps : allProps.filter(p => (DIVISION_MAP[selectedDivision]||[]).includes(p));
+  const label = selectedDivision === '전체' ? '전체 합산' : selectedDivision + ' 합산';
+  propSel.innerHTML = `<option value="__ALL__">${label}</option>`;
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    propSel.appendChild(opt);
+  });
+  // Reset selection if current prop not in filtered list
+  if (propSel.value !== '__ALL__' && !filtered.includes(propSel.value)) {
+    propSel.value = '__ALL__';
+  }
+}
+
 /* ── Get series data for a stay month ── */
 function getSeriesForMonth(stayMonth, propFilter) {
+  const divProps = getFilteredProps(); // null = all, or array of prop names
   const series = [];
   trendData.snapshots.forEach(snap => {
     // Only include snapshots from the same year as the stay month
@@ -315,7 +358,8 @@ function getSeriesForMonth(stayMonth, propFilter) {
 
     let fcst = 0, budget = 0, count = 0;
     if (propFilter === '__ALL__') {
-      Object.values(snap.properties).forEach(months => {
+      Object.entries(snap.properties).forEach(([pName, months]) => {
+        if (divProps && !divProps.includes(pName)) return; // division filter
         if (months[stayMonth]) {
           fcst += months[stayMonth].rm_fcst_rn || 0;
           budget += months[stayMonth].rm_budget_rn || 0;
@@ -585,8 +629,10 @@ function renderRankCards(stayMonth, lyMonth) {
   if (!latestSnap) { container.innerHTML = ''; return; }
 
   const [yr, mm] = stayMonth.split('-');
+  const divProps = getFilteredProps();
   const rankings = [];
   Object.entries(latestSnap.properties).forEach(([prop, months]) => {
+    if (divProps && !divProps.includes(prop)) return; // division filter
     const entry = months[stayMonth];
     if (!entry) return;
     const ach = entry.rm_budget_rn > 0 ? entry.rm_fcst_rn / entry.rm_budget_rn * 100 : 0;
@@ -660,9 +706,12 @@ function renderTable(stayMonth, lyMonth) {
     s._year === stayYear && Object.values(s.properties).some(p => p[stayMonth])
   );
 
-  // Get all properties
+  // Get all properties (filtered by division)
+  const divProps = getFilteredProps();
   const allProps = new Set();
-  relevantSnaps.forEach(s => Object.keys(s.properties).forEach(p => allProps.add(p)));
+  relevantSnaps.forEach(s => Object.keys(s.properties).forEach(p => {
+    if (!divProps || divProps.includes(p)) allProps.add(p);
+  }));
   const sortedProps = [...allProps].sort();
 
   // Header
@@ -755,7 +804,8 @@ function renderTable(stayMonth, lyMonth) {
   // Total YoY
   let totLyFcst = 0;
   if (lySnap) {
-    Object.values(lySnap.properties).forEach(months => {
+    Object.entries(lySnap.properties).forEach(([pName, months]) => {
+      if (divProps && !divProps.includes(pName)) return;
       if (months[lyMonth]) totLyFcst += months[lyMonth].rm_fcst_rn || 0;
     });
   }
@@ -770,54 +820,61 @@ function renderTable(stayMonth, lyMonth) {
   document.getElementById('tbl-desc').textContent = `${parseInt(mm)}월 '${yr.slice(2)} · ${relevantSnaps.length}개 시점`;
 }
 
-/* ── AI Factor Generator ── */
+/* ── AI Factor Generator (숫자 기반) ── */
 function generateAIFactor(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst) {
   const lines = [];
   if (firstFcst === null || lastFcst === null) return '<span class="ai-nt">데이터 부족</span>';
 
-  // FCST 변동 추이
+  // 1) FCST 변동 추이: 최초→최신 변동폭 + 변동률
   const delta = lastFcst - firstFcst;
   if (firstFcst > 0) {
     const pct = ((delta / firstFcst) * 100).toFixed(1);
-    if (Math.abs(parseFloat(pct)) >= 3) {
+    if (Math.abs(parseFloat(pct)) >= 2) {
       const cls = delta >= 0 ? 'ai-up' : 'ai-dn';
-      lines.push(`<span class="ai-line"><span class="ai-tag ch">추이</span><span class="${cls}">FCST ${delta>=0?'+':''}${fmt(delta)} (${delta>=0?'+':''}${pct}%)</span></span>`);
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">변동</span><span class="${cls}">${delta>=0?'+':''}${fmt(delta)}실 (${delta>=0?'+':''}${pct}%)</span></span>`);
     }
   }
 
-  // Budget 대비
+  // 2) Budget Gap: 목표 대비 차이 실수로 표시
   if (budget > 0) {
-    const achV = lastFcst / budget * 100;
-    let achComment = '';
-    if (achV >= 130) achComment = `달성 ${achV.toFixed(0)}% 초과`;
-    else if (achV >= 110) achComment = `달성 ${achV.toFixed(0)}% 양호`;
-    else if (achV >= 95) achComment = `달성 ${achV.toFixed(0)}% 목표 근접`;
-    else if (achV >= 80) achComment = `달성 ${achV.toFixed(0)}% 소폭 부진`;
-    else if (achV > 0) achComment = `달성 ${achV.toFixed(0)}% 부진`;
-    if (achComment) {
-      const cls = achV >= 100 ? 'ai-up' : achV >= 80 ? '' : 'ai-dn';
-      lines.push(`<span class="ai-line"><span class="ai-tag ach">달성</span><span class="${cls}">${achComment}</span></span>`);
-    }
+    const gap = lastFcst - budget;
+    const achV = (lastFcst / budget * 100).toFixed(1);
+    const cls = gap >= 0 ? 'ai-up' : 'ai-dn';
+    lines.push(`<span class="ai-line"><span class="ai-tag ach">Gap</span><span class="${cls}">목표대비 ${gap>=0?'+':''}${fmt(gap)}실 (${achV}%)</span></span>`);
   }
 
-  // YoY
+  // 3) YoY 실수 차이 + 비율
   if (lyFcst !== null && lyFcst > 0) {
+    const yoyDiff = lastFcst - lyFcst;
     const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
-    if (Math.abs(parseFloat(yoyPct)) >= 5) {
-      const cls = parseFloat(yoyPct) >= 0 ? 'ai-up' : 'ai-dn';
-      lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">전년대비 ${parseFloat(yoyPct)>=0?'+':''}${yoyPct}%</span></span>`);
+    const cls = yoyDiff >= 0 ? 'ai-up' : 'ai-dn';
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">${yoyDiff>=0?'+':''}${fmt(yoyDiff)}실 (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
+  }
+
+  // 4) 최근 2회차 변동 방향 (가속/감속)
+  const stayYear = parseInt(stayMonth.split('-')[0]);
+  const snaps = trendData.snapshots.filter(s => s._year === stayYear && s.properties[propName]?.[stayMonth]);
+  if (snaps.length >= 3) {
+    const vals = snaps.map(s => s.properties[propName][stayMonth].rm_fcst_rn || 0);
+    const last3 = vals.slice(-3);
+    const d1 = last3[1] - last3[0]; // 전전→전
+    const d2 = last3[2] - last3[1]; // 전→최신
+    if (d1 !== 0 || d2 !== 0) {
+      let trend = '';
+      if (d2 > 0 && d1 > 0 && d2 > d1) trend = `가속 상향 (${fmt(d1)}→${fmt(d2)})`;
+      else if (d2 > 0 && d1 > 0 && d2 <= d1) trend = `상향 둔화 (${fmt(d1)}→${fmt(d2)})`;
+      else if (d2 < 0 && d1 < 0 && d2 < d1) trend = `가속 하향 (${fmt(d1)}→${fmt(d2)})`;
+      else if (d2 < 0 && d1 < 0 && d2 >= d1) trend = `하향 둔화 (${fmt(d1)}→${fmt(d2)})`;
+      else if (d2 > 0 && d1 <= 0) trend = `반등 전환 (${fmt(d1)}→+${fmt(d2)})`;
+      else if (d2 < 0 && d1 >= 0) trend = `하락 전환 (+${fmt(d1)}→${fmt(d2)})`;
+      if (trend) {
+        const cls = d2 >= 0 ? 'ai-up' : 'ai-dn';
+        lines.push(`<span class="ai-line"><span class="ai-tag rev">추세</span><span class="${cls}">${trend}</span></span>`);
+      }
     }
   }
 
-  // Seasonal context
-  const mo = parseInt(stayMonth.split('-')[1]);
-  if (mo === 4) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>봄 성수기</span>`);
-  else if (mo === 5) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>황금연휴</span>`);
-  else if (mo === 6) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>비수기 전환</span>`);
-  else if (mo === 7 || mo === 8) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>여름 성수기</span>`);
-  else if (mo === 12 || mo === 1) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>겨울 성수기</span>`);
-
-  return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">안정적</span>';
+  return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">변동 없음</span>';
 }
 </script>
 </body>

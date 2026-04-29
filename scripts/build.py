@@ -1609,28 +1609,6 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         if month_props:
             daily_analysis["byPropertyMonth"][mlabel] = month_props
 
-    # ── 5b) 당일 총계 (스트립 표시용, 표 합계와 일치) ──
-    today_totals = {}
-    _bp = daily_analysis["byProperty"]
-    _tt_p = sum(v.get("pickup", 0) for v in _bp.values())
-    _tt_c = sum(v.get("cancel", 0) for v in _bp.values())
-    _tt_rp = sum(v.get("rev_pickup", 0) for v in _bp.values())
-    _tt_rc = sum(v.get("rev_cancel", 0) for v in _bp.values())
-    today_totals["all"] = {
-        "pickup": _tt_p, "cancel": _tt_c, "net": _tt_p - _tt_c,
-        "rev": round(_tt_rp - _tt_rc, 1),
-    }
-    for _ml, _mprops in daily_analysis.get("byPropertyMonth", {}).items():
-        _mp = sum(v.get("pickup", 0) for v in _mprops.values())
-        _mc = sum(v.get("cancel", 0) for v in _mprops.values())
-        _mrp = sum(v.get("rev_pickup", 0) for v in _mprops.values())
-        _mrc = sum(v.get("rev_cancel", 0) for v in _mprops.values())
-        today_totals[_ml] = {
-            "pickup": _mp, "cancel": _mc, "net": _mp - _mc,
-            "rev": round(_mrp - _mrc, 1),
-        }
-    logger.info(f"✓ 당일 총계: all net={today_totals['all']['net']}, 월별={list(today_totals.keys())}")
-
     # ── 6) 거래처별 주간 점유율 데이터 (최근 8주) ──
     from datetime import timedelta
     pdbc_full = agg_data.get("pickup_daily_by_channel", {})
@@ -1863,7 +1841,6 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "yoyExclusions": yoy_exclusions_all,
         "yoyExclusionsByMonth": yoy_exclusions_by_month,
         "yoyOtb": yoy_otb,
-        "todayTotals": today_totals,
     }
 
     js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"
@@ -1874,40 +1851,6 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         html = html.replace("/*__INSIGHT_DATA__*/", js_const)
 
     logger.info(f"✓ 인사이트 패널 데이터 주입 (seg={len(seg_today)}, daily={len(daily_trend)}, years={len(years_compare)})")
-
-    # ── 당일 건수 스트립 오버라이드 JS 주입 ──
-    strip_override_js = """<script>
-(function(){
-  var D=typeof INSIGHT_DATA!=='undefined'?INSIGHT_DATA:{};
-  var TT=D.todayTotals||{};
-  var YOY=D.yoyOtb||{};
-  var strip=document.getElementById('da-yoy-strip');
-  if(strip){
-    var lbs=strip.querySelectorAll(':scope > div > div:first-child');
-    if(lbs[0])lbs[0].textContent='당일 RN';
-    if(lbs[1])lbs[1].textContent='당일 REV';
-    if(lbs[2])lbs[2].textContent='OTB RN · YoY';
-  }
-  function _tsu(m){
-    var t=TT[m]||TT['all']||{};
-    var yd=YOY[m]||YOY['all']||{};
-    var rnE=document.getElementById('da-yoy-rn-val');
-    var rvE=document.getElementById('da-yoy-rev-val');
-    var adE=document.getElementById('da-yoy-adr-val');
-    function fN(v){return v?(v>0?'+':'')+v.toLocaleString():'0';}
-    function nC(v){return v>0?'#6dd396':v<0?'#e08580':'rgba(255,255,255,0.4)';}
-    function yB(p){if(p==null)return'';var c=p>=0?'#6dd396':'#e08580';var a=p>=0?'\\u25B2':'\\u25BC';return'<span style=\"color:'+c+';font-weight:800;\">'+a+' '+Math.abs(p).toFixed(1)+'%</span>';}
-    if(rnE){var n=t.net||0;rnE.innerHTML='<span style=\"color:'+nC(n)+';font-weight:800;\">'+fN(n)+'</span> <span style=\"color:rgba(255,255,255,0.25);font-size:8px;\">('+(t.pickup||0).toLocaleString()+' - '+(t.cancel||0).toLocaleString()+')</span>';}
-    if(rvE){var rv=t.rev||0;rvE.innerHTML='<span style=\"color:'+nC(rv)+';font-weight:800;\">'+(rv>0?'+':'')+rv.toFixed(1)+'</span> <span style=\"color:rgba(255,255,255,0.25);font-size:8px;\">백만</span>';}
-    if(adE&&yd.cy_rn!=null){adE.innerHTML=(yd.cy_rn||0).toLocaleString()+' <span style=\"color:rgba(255,255,255,0.25);font-size:8px;\">vs '+(yd.ly_rn||0).toLocaleString()+'</span> '+yB(yd.rn_pct);}
-  }
-  var _o=window.switchDailyAnalysis;
-  window.switchDailyAnalysis=function(m){if(_o)_o.call(this,m);_tsu(m);};
-  _tsu('all');
-})();
-</script>"""
-    html = html.replace("</body>", strip_override_js + "\n</body>")
-
     return html
 
 
@@ -1954,7 +1897,7 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     if otb_data:
         rm_fcst_data = load_json(DOCS_DIR / "data" / "rm_fcst.json")
-        html = inject_yoy_property_table(html, otb_data, rm_fcst_data, agg_data=agg_data, now=now)
+        html = inject_yoy_property_table(html, otb_data, rm_fcst_data)
     if otb_data and agg_data:
         html = inject_insight_panel_data(html, otb_data, agg_data, now)
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
@@ -1978,14 +1921,13 @@ REGION_LABELS = {
     "apac":    "APAC",
 }
 
-def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dict = None, future_months: list = None) -> str:
+def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dict = None) -> str:
     if not yoy_table:
         return "<p style='color:#888;font-size:12px;'>YoY 데이터 없음</p>"
 
     base_disp = f"{base_date[:4]}.{base_date[4:6]}.{base_date[6:]}" if len(base_date) == 8 else base_date
     months = [4, 5, 6]
-    _fm = set(future_months or [])
-    month_labels = {m: (f"{m}월 (동기간)" if m in _fm else f"{m}월") for m in months}
+    month_labels = {4: "4월", 5: "5월", 6: "6월"}
     rm_props = (rm_fcst_data or {}).get("properties", {})
 
     def arrow(yoy):
@@ -2036,11 +1978,10 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
                 )
             else:
                 rm_html = ""
-            _ly_label = "전년 동기간" if m in _fm else "전년"
             cells += (
                 f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
                 f'<div style="font-size:12px;">{act:,}실</div>'
-                f'<div style="font-size:11px;color:#888;">{_ly_label} {last:,}실</div>'
+                f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
                 f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
                 f'{fcst_html}'
                 f'{rm_html}'
@@ -2077,58 +2018,18 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
     )
 
 
-def inject_yoy_property_table(html: str, otb_data: dict, rm_fcst_data: dict = None,
-                              agg_data: dict = None, now: datetime = None) -> str:
+def inject_yoy_property_table(html: str, otb_data: dict, rm_fcst_data: dict = None) -> str:
     yoy_table = otb_data.get("yoyTable", [])
     base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
 
     # base_date가 비어있거나 현재 연도와 다르면 빌드 날짜(KST 오늘)로 폴백
-    now_kst = now or datetime.now(KST)
+    now_kst = datetime.now(KST)
     current_year = now_kst.strftime("%Y")
     if not base_date or not base_date.startswith(current_year):
         base_date = now_kst.strftime("%Y%m%d")
         logger.info(f"⚠ yoyBaseDate 폴백 → {base_date} (현재 연도 {current_year} 기준)")
 
-    # ── 미래월 동기간 보정: 예약일 기준 booking-date Net으로 override ──
-    future_months = []
-    if agg_data and now:
-        cur_month = now.month
-        pdbpm = agg_data.get("pickup_daily_by_property_month", {})
-        cdbpm = agg_data.get("cancel_daily_by_property_month", {})
-        cy_cutoff = f"{now.year}{now.month:02d}{now.day:02d}"
-        ly_cutoff = f"{now.year - 1}{now.month:02d}{now.day:02d}"
-
-        for m in [4, 5, 6]:
-            if m > cur_month:
-                future_months.append(m)
-
-        if future_months and yoy_table:
-            for row in yoy_table:
-                prop_name = row.get("name", "")
-                months_data = row.get("months", {})
-                for m in future_months:
-                    mdata = months_data.get(str(m))
-                    if mdata is None:
-                        continue
-                    cy_mkey = f"{now.year}{m:02d}"
-                    ly_mkey = f"{now.year - 1}{m:02d}"
-                    # CY: pickup - cancel (예약일 ≤ cy_cutoff)
-                    p_cy = pdbpm.get(prop_name, {}).get(cy_mkey, {})
-                    c_cy = cdbpm.get(prop_name, {}).get(cy_mkey, {})
-                    cy_rn = sum(v.get("rn", 0) for dt, v in p_cy.items() if dt <= cy_cutoff)
-                    cy_rn -= sum(v.get("rn", 0) for dt, v in c_cy.items() if dt <= cy_cutoff)
-                    # LY: pickup - cancel (예약일 ≤ ly_cutoff)
-                    p_ly = pdbpm.get(prop_name, {}).get(ly_mkey, {})
-                    c_ly = cdbpm.get(prop_name, {}).get(ly_mkey, {})
-                    ly_rn = sum(v.get("rn", 0) for dt, v in p_ly.items() if dt <= ly_cutoff)
-                    ly_rn -= sum(v.get("rn", 0) for dt, v in c_ly.items() if dt <= ly_cutoff)
-                    # Override
-                    mdata["act_rn"] = cy_rn
-                    mdata["last_rn"] = ly_rn
-                    mdata["yoy"] = round((cy_rn - ly_rn) / ly_rn * 100, 1) if ly_rn else None
-            logger.info(f"✓ YoY 사업장 테이블 동기간 보정: {future_months}월 ({len(yoy_table)}개 사업장)")
-
-    table_html = render_yoy_property_table(yoy_table, base_date, rm_fcst_data, future_months=future_months)
+    table_html = render_yoy_property_table(yoy_table, base_date, rm_fcst_data)
     pattern = re.compile(
         r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
         re.DOTALL
@@ -2512,7 +2413,7 @@ def main():
     if OTB_FILE.exists():
         otb_html = OTB_FILE.read_text(encoding="utf-8")
         logger.info(f"✓ otb.html 로드 ({len(otb_html):,} bytes)")
-        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now, agg_data=agg_data, otb_data=otb_data)
+        otb_html = _apply_common_injections(otb_html, notes, data, comp_data, weekly_data, now, otb_data=otb_data)
         OTB_FILE.write_text(otb_html, encoding="utf-8")
         logger.info(f"✓ otb.html 빌드 완료 ({len(otb_html):,} bytes)")
     else:
