@@ -399,9 +399,11 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
     """전체 세그먼트별 budget vs actual 요약 (예산 없는 세그먼트는 budget=0)"""
     if month_idx == 0:
         target_keys = MONTHS_26
+        ly_keys     = MONTHS_25
         bud_labels  = BUDGET_MONTH_LABEL
     else:
         target_keys = [MONTHS_26[month_idx - 1]]
+        ly_keys     = [MONTHS_25[month_idx - 1]]
         bud_labels  = [BUDGET_MONTH_LABEL[month_idx - 1]]
 
     result = {}
@@ -421,23 +423,31 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx):
         act_rev = sum(seg_db.get(mk, {}).get("booking_rev", 0.0) for mk in target_keys)
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
+        # LY: 2025년 동월 세그먼트 실적
+        ly_rn   = sum(seg_db.get(mk, {}).get("booking_rn",  0)   for mk in ly_keys)
+        ly_rev  = sum(seg_db.get(mk, {}).get("booking_rev", 0.0) for mk in ly_keys)
+        ly_adr  = round(ly_rev * 1_000_000 / ly_rn) if ly_rn > 0 else 0
+
         rns_ach = round(act_rn  / bud_rn  * 100, 1) if bud_rn  > 0 else 0.0
         rev_ach = round(act_rev / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+        rns_yoy = round((act_rn / ly_rn - 1) * 100, 1) if ly_rn > 0 else 0.0
 
         result[seg] = {
             "rns_budget":      bud_rn,
             "rns_actual":      act_rn,
             "rns_achievement": rns_ach,
-            "rns_last":        0,
-            "rns_yoy":         0.0,
+            "rns_last":        ly_rn,
+            "rns_yoy":         rns_yoy,
             "today_booking":   0,
             "today_cancel":    0,
             "today_net":       0,
             "rev_budget":      round(bud_rev * 1_000_000),
             "rev_actual":      round(act_rev * 1_000_000),
             "rev_achievement": rev_ach,
+            "rev_last":        round(ly_rev * 1_000_000),
             "adr_budget":      bud_adr,
             "adr_actual":      act_adr,
+            "adr_last":        ly_adr,
             "adr_vs_budget":   round((act_adr / bud_adr - 1) * 100, 1) if bud_adr > 0 else 0.0,
         }
     return result

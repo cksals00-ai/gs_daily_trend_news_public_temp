@@ -161,20 +161,23 @@ table.bs .muted { color: var(--ink-faint); }
 </style>
 
 <!-- GSN -->
-<nav class="gsn"><div class="gsn-wrap">
-  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
-  <div class="gsn-links" id="gsn-links">
-    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
-    <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
-    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
-  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-</div></nav>
+</nav>
 <script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)||h.match(/gs_daily_trend_news_public_temp\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;if(hit)a.classList.add('active');});}());</script>
 
 <!-- MASTHEAD -->
@@ -476,12 +479,13 @@ function render() {
 
 function renderMonthlyTable() {
   const months = MONTHS_DISPLAY;
+  const SEG_NAMES = ['OTA', 'G-OTA', 'Inbound'];
   let html = '<thead><tr>';
   html += '<th class="row-label">구분</th>';
   months.forEach(m => {
     html += '<th colspan="3" class="sep" style="text-align:center;">2026 ' + m + '월 OTB</th>';
     html += '<th colspan="3" class="grp-sep" style="text-align:center;">2025 ' + m + '월 (LY)</th>';
-    html += '<th colspan="2" class="grp-sep" style="text-align:center;">Pick Up</th>';
+    html += '<th colspan="2" class="grp-sep" style="text-align:center;">YoY ±</th>';
   });
   html += '</tr><tr><th class="row-label"></th>';
   months.forEach(() => {
@@ -491,45 +495,35 @@ function renderMonthlyTable() {
   });
   html += '</tr></thead><tbody>';
 
-  // Single row with data
-  html += '<tr>';
-  html += '<td class="row-label">실적</td>';
-  months.forEach(m => {
-    const s = getSummaryForMonth(m);
-    const rn = s ? s.rns_actual : 0;
-    const adr = s ? s.adr_actual : 0;
-    const rev = s ? s.rev_actual : 0;
-    const lyRn = s ? (s.rns_last || 0) : 0;
-    const lyAdr = s ? (s.adr_last || 0) : 0;
-    const lyRev = s ? (s.rev_last || 0) : 0;
-    const pickRn = rn - lyRn;
-    const pickAdr = adr - lyAdr;
-
-    html += '<td class="sep">' + fmt.num(rn) + '</td>';
-    html += '<td>' + fmt.adr(adr) + '</td>';
-    html += '<td>' + fmt.won(rev) + '</td>';
-    html += '<td class="grp-sep">' + fmt.num(lyRn) + '</td>';
-    html += '<td>' + fmt.adr(lyAdr) + '</td>';
-    html += '<td>' + fmt.won(lyRev) + '</td>';
-    html += '<td class="grp-sep ' + valClass(pickRn) + '">' + arrow(pickRn) + ' ' + fmt.num(Math.abs(pickRn)) + '</td>';
-    html += '<td class="' + valClass(pickAdr) + '">' + arrow(pickAdr) + ' ' + fmt.adr(Math.abs(pickAdr)) + '</td>';
+  // Segment rows: OTA, G-OTA, Inbound
+  SEG_NAMES.forEach(seg => {
+    html += '<tr>';
+    html += '<td class="row-label">' + seg + '</td>';
+    months.forEach(m => {
+      const sd = getSegmentForMonth(m, seg);
+      const rn = sd ? (sd.rns_actual || 0) : 0;
+      const adr = sd ? (sd.adr_actual || 0) : 0;
+      const rev = sd ? (sd.rev_actual || 0) : 0;
+      const lyRn = sd ? (sd.rns_last || 0) : 0;
+      const lyAdr = sd ? (sd.adr_last || 0) : 0;
+      const lyRev = sd ? (sd.rev_last || 0) : 0;
+      const pickRn = rn - lyRn;
+      const pickAdr = adr - lyAdr;
+      html += '<td class="sep">' + fmt.num(rn) + '</td>';
+      html += '<td>' + fmt.adr(adr) + '</td>';
+      html += '<td>' + fmt.won(rev) + '</td>';
+      html += '<td class="grp-sep">' + fmt.num(lyRn) + '</td>';
+      html += '<td>' + fmt.adr(lyAdr) + '</td>';
+      html += '<td>' + fmt.won(lyRev) + '</td>';
+      html += '<td class="grp-sep ' + valClass(pickRn) + '">' + arrow(pickRn) + ' ' + fmt.num(Math.abs(pickRn)) + '</td>';
+      html += '<td class="' + valClass(pickAdr) + '">' + arrow(pickAdr) + ' ' + fmt.adr(Math.abs(pickAdr)) + '</td>';
+    });
+    html += '</tr>';
   });
-  html += '</tr>';
 
-  // Total row
+  // 합계 row (sum of all segments = overall summary)
   html += '<tr class="total-row">';
   html += '<td class="row-label">합계</td>';
-  let totRn=0, totRev=0, totLyRn=0, totLyRev=0;
-  months.forEach(m => {
-    const s = getSummaryForMonth(m);
-    totRn += s ? (s.rns_actual||0) : 0;
-    totRev += s ? (s.rev_actual||0) : 0;
-    totLyRn += s ? (s.rns_last||0) : 0;
-    totLyRev += s ? (s.rev_last||0) : 0;
-  });
-  const totAdr = totRn > 0 ? Math.round(totRev/totRn) : 0;
-  const totLyAdr = totLyRn > 0 ? Math.round(totLyRev/totLyRn) : 0;
-  // Fill each month column in total
   months.forEach(m => {
     const s = getSummaryForMonth(m);
     const rn = s ? (s.rns_actual||0) : 0;
@@ -546,7 +540,20 @@ function renderMonthlyTable() {
   });
   html += '</tr>';
   html += '</tbody>';
+
+  // 동기간 기준일 caption
+  const today = new Date();
+  const cyDate = today.getFullYear() + '/' + (today.getMonth()+1) + '/' + today.getDate();
+  const lyDate = (today.getFullYear()-1) + '/' + (today.getMonth()+1) + '/' + today.getDate();
+  const caption = '<div style="text-align:right;font-size:11px;color:#888;margin-top:4px;">동기간 기준: CY ' + cyDate + ' vs LY ' + lyDate + ' (월 누계 동일일자 기준)</div>';
+
   document.getElementById('tbl-monthly').innerHTML = html;
+  let capEl = document.getElementById('monthly-caption');
+  if (!capEl) {
+    document.getElementById('tbl-monthly').insertAdjacentHTML('afterend', '<div id="monthly-caption"></div>');
+    capEl = document.getElementById('monthly-caption');
+  }
+  capEl.innerHTML = caption;
 }
 
 function renderBudgetTable() {
