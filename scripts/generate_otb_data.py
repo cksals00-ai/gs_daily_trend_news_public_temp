@@ -981,34 +981,59 @@ def main():
             snap["summary"]["today_cancel_rev"]  = sum(p["today_cancel_rev"]  for p in snap["byProperty"])
             snap["summary"]["today_net_rev"]     = sum(p["today_net_rev"]     for p in snap["byProperty"])
 
-        for seg_props in snap.get("byPropertySegment", {}).values():
+        for seg_name, seg_props in snap.get("byPropertySegment", {}).items():
             for prop in seg_props:
                 db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
+                # 해당 세그먼트만의 today 데이터 (3세그 합산 X → 개별 세그먼트)
+                pdbps = db.get("pickup_daily_by_property_segment", {})
+                cdbps = db.get("cancel_daily_by_property_segment", {})
                 if m_str == "0":
-                    prop_booking, _ = get_today_booking_by_props(db, today_date, db_props)
-                    prop_cancel,  _ = get_today_cancel_by_props(db, today_date, db_props)
+                    prop_booking, prop_cancel = 0, 0
+                    if today_date:
+                        for pname in db_props:
+                            prop_booking += pdbps.get(pname, {}).get(seg_name, {}).get(today_date, {}).get("rn", 0) or 0
+                            prop_cancel  += cdbps.get(pname, {}).get(seg_name, {}).get(today_date, {}).get("rn", 0) or 0
                 else:
                     stay_month = f"2026{int(m_str):02d}"
-                    prop_booking, _ = get_today_booking_by_props_month(db, today_date, db_props, stay_month)
-                    prop_cancel,  _ = get_today_cancel_by_props_month(db, today_date, db_props, stay_month)
+                    pdbpsm = db.get("pickup_daily_by_property_segment_month", {})
+                    cdbpsm = db.get("cancel_daily_by_property_segment_month", {})
+                    prop_booking, prop_cancel = 0, 0
+                    if today_date:
+                        for pname in db_props:
+                            prop_booking += pdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {}).get("rn", 0) or 0
+                            prop_cancel  += cdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {}).get("rn", 0) or 0
                 prop["today_booking"] = prop_booking
                 prop["today_cancel"]  = prop_cancel
                 prop["today_net"]     = prop_booking - prop_cancel
 
-        # ── segmentData에 today 주입 (net_daily_by_segment 기반) ──
-        nds = db.get("net_daily_by_segment", {})
-        pds = db.get("pickup_daily_by_segment", {})
-        cds = db.get("cancel_daily_by_segment", {})
+        # ── segmentData에 today 주입 ──
         for seg, seg_summary in snap.get("segmentData", {}).items():
             if today_date:
-                nd_entry = nds.get(seg, {}).get(today_date, {})
-                seg_summary["today_booking"] = nd_entry.get("pickup_rn", 0)
-                seg_summary["today_cancel"]  = nd_entry.get("cancel_rn", 0)
-                seg_summary["today_net"]     = nd_entry.get("net_rn", 0)
-                pd_entry = pds.get(seg, {}).get(today_date, {})
-                cd_entry = cds.get(seg, {}).get(today_date, {})
-                seg_summary["today_booking_rev"] = round(pd_entry.get("rev", 0.0) * 1_000_000)
-                seg_summary["today_cancel_rev"]  = round(cd_entry.get("rev", 0.0) * 1_000_000)
+                if m_str == "0":
+                    # 전체: net_daily_by_segment (전월 합산)
+                    nds = db.get("net_daily_by_segment", {})
+                    pds = db.get("pickup_daily_by_segment", {})
+                    cds = db.get("cancel_daily_by_segment", {})
+                    nd_entry = nds.get(seg, {}).get(today_date, {})
+                    seg_summary["today_booking"] = nd_entry.get("pickup_rn", 0)
+                    seg_summary["today_cancel"]  = nd_entry.get("cancel_rn", 0)
+                    seg_summary["today_net"]     = nd_entry.get("net_rn", 0)
+                    pd_entry = pds.get(seg, {}).get(today_date, {})
+                    cd_entry = cds.get(seg, {}).get(today_date, {})
+                    seg_summary["today_booking_rev"] = round(pd_entry.get("rev", 0.0) * 1_000_000)
+                    seg_summary["today_cancel_rev"]  = round(cd_entry.get("rev", 0.0) * 1_000_000)
+                else:
+                    # 월별: pickup/cancel_daily_by_segment_month 사용
+                    stay_month = f"2026{int(m_str):02d}"
+                    pdsm = db.get("pickup_daily_by_segment_month", {})
+                    cdsm = db.get("cancel_daily_by_segment_month", {})
+                    pd_entry = pdsm.get(seg, {}).get(stay_month, {}).get(today_date, {})
+                    cd_entry = cdsm.get(seg, {}).get(stay_month, {}).get(today_date, {})
+                    seg_summary["today_booking"] = pd_entry.get("rn", 0) or 0
+                    seg_summary["today_cancel"]  = cd_entry.get("rn", 0) or 0
+                    seg_summary["today_net"]     = seg_summary["today_booking"] - seg_summary["today_cancel"]
+                    seg_summary["today_booking_rev"] = round((pd_entry.get("rev", 0.0) or 0) * 1_000_000)
+                    seg_summary["today_cancel_rev"]  = round((cd_entry.get("rev", 0.0) or 0) * 1_000_000)
                 seg_summary["today_net_rev"]     = seg_summary["today_booking_rev"] - seg_summary["today_cancel_rev"]
 
     # Chart data (동기간 보정 반영)

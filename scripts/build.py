@@ -1496,6 +1496,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     # (c-0) 세그먼트별 × 투숙월 전일
     pdsm = agg_data.get("pickup_daily_by_segment_month", {})
     cdsm = agg_data.get("cancel_daily_by_segment_month", {})
+    compare_mkeys = {f"{now.year}{mi:02d}" for mi in compare_months}
     for mi in compare_months:
         mkey = f"{now.year}{mi:02d}"
         mlabel = f"{mi}월"
@@ -1510,6 +1511,24 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 month_segs[seg] = {"pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn}
         if month_segs:
             daily_analysis["bySegmentMonth"][mlabel] = month_segs
+    # "기타" = compare_months(4~6월) 이외 투숙월 합산
+    etc_segs = {}
+    all_segs = sorted(set(list(pdsm.keys()) + list(cdsm.keys())))
+    for seg in all_segs:
+        seg_months = set(pdsm.get(seg, {}).keys()) | set(cdsm.get(seg, {}).keys())
+        for mkey in seg_months:
+            if mkey in compare_mkeys or not mkey.startswith(str(now.year)):
+                continue
+            p_val = pdsm.get(seg, {}).get(mkey, {}).get(today_date, {})
+            c_val = cdsm.get(seg, {}).get(mkey, {}).get(today_date, {})
+            p_rn = p_val.get("rn", 0) or 0
+            c_rn = c_val.get("rn", 0) or 0
+            if p_rn or c_rn:
+                prev = etc_segs.get(seg, {"pickup": 0, "cancel": 0, "net": 0})
+                prev["pickup"] += p_rn; prev["cancel"] += c_rn; prev["net"] += p_rn - c_rn
+                etc_segs[seg] = prev
+    if etc_segs:
+        daily_analysis["bySegmentMonth"]["기타"] = etc_segs
 
     # (b-2) 거래처(채널)별 전일 전체 (매출 포함, Inbound 제외)
     pdbc = agg_data.get("pickup_daily_by_channel", {})
@@ -1589,6 +1608,31 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 }
         if month_chs:
             daily_analysis["byChannelMonth"][mlabel] = month_chs
+    # "기타" 채널별
+    etc_chs = {}
+    all_chs_etc = sorted(set(list(pdbcm.keys()) + list(cdbcm.keys())))
+    for ch in all_chs_etc:
+        ch_months_p = set(pdbcm.get(ch, {}).keys())
+        ch_months_c = set(cdbcm.get(ch, {}).keys())
+        for mkey in ch_months_p | ch_months_c:
+            if mkey in compare_mkeys or not mkey.startswith(str(now.year)):
+                continue
+            p_val = pdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
+            c_val = cdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
+            p_rn = p_val.get("rn", 0) or 0; c_rn = c_val.get("rn", 0) or 0
+            p_rev = p_val.get("rev", 0) or 0; c_rev = c_val.get("rev", 0) or 0
+            if p_rn or c_rn:
+                prev = etc_chs.get(ch, {"pickup": 0, "cancel": 0, "net": 0, "rev": 0.0, "rev_pickup": 0.0, "rev_cancel": 0.0})
+                prev["pickup"] += p_rn; prev["cancel"] += c_rn; prev["net"] += p_rn - c_rn
+                prev["rev"] += round(p_rev - c_rev, 1); prev["rev_pickup"] += p_rev; prev["rev_cancel"] += c_rev
+                etc_chs[ch] = prev
+    if etc_chs:
+        # round rev values
+        for ch in etc_chs:
+            etc_chs[ch]["rev"] = round(etc_chs[ch]["rev"], 1)
+            etc_chs[ch]["rev_pickup"] = round(etc_chs[ch]["rev_pickup"], 1)
+            etc_chs[ch]["rev_cancel"] = round(etc_chs[ch]["rev_cancel"], 1)
+        daily_analysis["byChannelMonth"]["기타"] = etc_chs
 
     # (c) 사업장별 × 투숙월 전일 — OTA/G-OTA/Inbound 3개 세그먼트만 합산
     all_psm_props = sorted(set(list(pdbpsm.keys()) + list(cdbpsm.keys())))
@@ -1613,6 +1657,83 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 }
         if month_props:
             daily_analysis["byPropertyMonth"][mlabel] = month_props
+    # "기타" 사업장별
+    etc_props = {}
+    for prop in all_psm_props:
+        prop_months_p = set()
+        prop_months_c = set()
+        for seg in ALLOWED_SEGMENTS:
+            prop_months_p |= set(pdbpsm.get(prop, {}).get(seg, {}).keys())
+            prop_months_c |= set(cdbpsm.get(prop, {}).get(seg, {}).keys())
+        for mkey in prop_months_p | prop_months_c:
+            if mkey in compare_mkeys or not mkey.startswith(str(now.year)):
+                continue
+            for seg in ALLOWED_SEGMENTS:
+                p_val = pdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                c_val = cdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                p_rn = p_val.get("rn", 0) or 0; c_rn = c_val.get("rn", 0) or 0
+                p_rev = p_val.get("rev", 0) or 0; c_rev = c_val.get("rev", 0) or 0
+                if p_rn or c_rn:
+                    prev = etc_props.get(prop, {"pickup": 0, "cancel": 0, "net": 0, "rev": 0.0, "rev_pickup": 0.0, "rev_cancel": 0.0})
+                    prev["pickup"] += p_rn; prev["cancel"] += c_rn; prev["net"] += p_rn - c_rn
+                    prev["rev"] += p_rev - c_rev; prev["rev_pickup"] += p_rev; prev["rev_cancel"] += c_rev
+                    etc_props[prop] = prev
+    if etc_props:
+        for prop in etc_props:
+            etc_props[prop]["rev"] = round(etc_props[prop]["rev"], 1)
+            etc_props[prop]["rev_pickup"] = round(etc_props[prop]["rev_pickup"], 1)
+            etc_props[prop]["rev_cancel"] = round(etc_props[prop]["rev_cancel"], 1)
+        daily_analysis["byPropertyMonth"]["기타"] = etc_props
+
+    # (c-2) 사업장별 × 세그먼트 × 투숙월 전일 (서브행용)
+    daily_analysis["byPropertySegmentMonth"] = {}
+    for mi in compare_months:
+        mkey = f"{now.year}{mi:02d}"
+        mlabel = f"{mi}월"
+        month_prop_segs = {}
+        for prop in all_psm_props:
+            prop_segs = {}
+            for seg in ALLOWED_SEGMENTS:
+                p_val = pdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                c_val = cdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                p_rn = p_val.get("rn", 0) or 0; c_rn = c_val.get("rn", 0) or 0
+                p_rev = p_val.get("rev", 0) or 0; c_rev = c_val.get("rev", 0) or 0
+                if p_rn or c_rn:
+                    prop_segs[seg] = {
+                        "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
+                        "rev": round(p_rev - c_rev, 1),
+                        "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
+                    }
+            if prop_segs:
+                month_prop_segs[prop] = prop_segs
+        if month_prop_segs:
+            daily_analysis["byPropertySegmentMonth"][mlabel] = month_prop_segs
+    # "기타" 사업장별 세그먼트
+    etc_prop_segs = {}
+    for prop in all_psm_props:
+        prop_segs = {}
+        for seg in ALLOWED_SEGMENTS:
+            seg_months = set(pdbpsm.get(prop, {}).get(seg, {}).keys()) | set(cdbpsm.get(prop, {}).get(seg, {}).keys())
+            for mkey in seg_months:
+                if mkey in compare_mkeys or not mkey.startswith(str(now.year)):
+                    continue
+                p_val = pdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                c_val = cdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                p_rn = p_val.get("rn", 0) or 0; c_rn = c_val.get("rn", 0) or 0
+                p_rev = p_val.get("rev", 0) or 0; c_rev = c_val.get("rev", 0) or 0
+                if p_rn or c_rn:
+                    prev = prop_segs.get(seg, {"pickup": 0, "cancel": 0, "net": 0, "rev": 0.0, "rev_pickup": 0.0, "rev_cancel": 0.0})
+                    prev["pickup"] += p_rn; prev["cancel"] += c_rn; prev["net"] += p_rn - c_rn
+                    prev["rev"] += p_rev - c_rev; prev["rev_pickup"] += p_rev; prev["rev_cancel"] += c_rev
+                    prop_segs[seg] = prev
+        if prop_segs:
+            for seg in prop_segs:
+                prop_segs[seg]["rev"] = round(prop_segs[seg]["rev"], 1)
+                prop_segs[seg]["rev_pickup"] = round(prop_segs[seg]["rev_pickup"], 1)
+                prop_segs[seg]["rev_cancel"] = round(prop_segs[seg]["rev_cancel"], 1)
+            etc_prop_segs[prop] = prop_segs
+    if etc_prop_segs:
+        daily_analysis["byPropertySegmentMonth"]["기타"] = etc_prop_segs
 
     # ── 6) 거래처별 주간 점유율 데이터 (최근 8주) ──
     from datetime import timedelta
@@ -1840,7 +1961,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "segWeekly": seg_weekly,
         "yearsCompare": years_compare,
         "yoySummary": yoy_summary,
-        "compareMonths": [f"{m}월" for m in compare_months],
+        "compareMonths": [f"{m}월" for m in compare_months] + (["기타"] if daily_analysis["byPropertyMonth"].get("기타") or daily_analysis["bySegmentMonth"].get("기타") else []),
         "dailyAnalysis": daily_analysis,
         "channelWeeklyShare": channel_weekly_share,
         "yoyExclusions": yoy_exclusions_all,
