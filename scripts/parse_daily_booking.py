@@ -59,7 +59,9 @@ PROPERTY_MAP = [
     {"name": "쏠비치 남해",       "rns_line": 67, "occ_line": 68, "region": "south"},
     {"name": "파나크 영덕",       "rns_line": 70, "occ_line": 72, "region": "south"},
     {"name": "르네블루",          "rns_line": 73, "occ_line": 74, "region": "south"},
-    {"name": "팔라티움 해운대",   "rns_line": 76, "occ_line": 78, "region": "apac"},
+    # 팔라티움 해운대는 PDF에 포함되지 않음. OCC는 scripts/parse_palatium_rooms.py가
+    # data/palatium_rooma/ 의 사용가능 객실 현황 xlsx에서 직접 산출하여
+    # docs/data/palatium_room_availability.json 및 occ_data.json("25.팔라티움")에 반영.
 ]
 
 
