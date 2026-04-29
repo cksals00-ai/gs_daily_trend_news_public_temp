@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--vivaldi:#d97a7a;--vivaldi-bg:#2e2228;--central:#6ba3c4;--central-bg:#1f2a35;--south:#6db58a;--south-bg:#1f2e28;--apac:#a892c8;--apac-bg:#252035;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;--radius:7px}
 *{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
@@ -32,50 +32,60 @@ td,th{font-weight:600}th{font-weight:800}
 .card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
 .card-icon{font-size:14px;line-height:1}.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright)}.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto}
 
-.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
 .summary-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;text-align:center}
-.summary-val{font-family:var(--mono);font-size:20px;font-weight:800;margin-bottom:2px}
+.summary-val{font-family:var(--mono);font-size:18px;font-weight:800;margin-bottom:2px}
 .summary-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--ink-faint);font-weight:700}
-
-.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px}
-.rbadge.v{background:var(--vivaldi-bg);color:var(--vivaldi)}.rbadge.c{background:var(--central-bg);color:var(--central)}.rbadge.s{background:var(--south-bg);color:var(--south)}.rbadge.a{background:var(--apac-bg);color:var(--apac)}
-.tbadge{font-family:var(--mono);font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
-.tbadge.positive{background:var(--positive-bg);color:var(--positive)}.tbadge.warning{background:var(--warning-bg);color:var(--warning)}.tbadge.negative{background:var(--negative-bg);color:var(--negative)}.tbadge.info{background:var(--info-bg);color:var(--info)}
 
 .ftab{padding:5px 12px;border-radius:4px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
 .ftab.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
 
-/* Trend table wrapper – scrollable container for sticky to work */
-.trend-tbl-wrap{overflow:auto;max-height:72vh;border:1px solid var(--rule);border-radius:6px}
+.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.filter-bar .f-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px}
+.filter-select{background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:12px;font-weight:600;padding:5px 10px;outline:none;font-family:var(--sans);cursor:pointer}
+.filter-select:focus{border-color:var(--gold)}
 
-/* Trend table */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:16px;position:relative}
+.chart-box canvas{max-height:340px}
+.chart-label{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ink-faint);font-weight:700;margin-bottom:10px}
+.chart-full{grid-column:1/-1}
+
+.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px}
+.tbadge{font-family:var(--mono);font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
+.tbadge.positive{background:var(--positive-bg);color:var(--positive)}.tbadge.warning{background:var(--warning-bg);color:var(--warning)}.tbadge.negative{background:var(--negative-bg);color:var(--negative)}.tbadge.info{background:var(--info-bg);color:var(--info)}
+
+.trend-tbl-wrap{overflow:auto;max-height:72vh;border:1px solid var(--rule);border-radius:6px}
 .trend-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
 .trend-tbl th{text-align:left;padding:8px 10px;font-weight:700;font-size:10.5px;white-space:nowrap;border-bottom:2px solid var(--rule-strong);color:var(--ink-muted);position:sticky;top:0;background:var(--bg-card);z-index:3}
 .trend-tbl td{padding:6px 10px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:11.5px}
 .trend-tbl tr:hover td{background:var(--bg-hover)}
-
-/* Sticky first column (사업장명) */
 .trend-tbl th:first-child{position:sticky;left:0;top:0;z-index:4;background:var(--bg-card)}
 .trend-tbl td:first-child{position:sticky;left:0;z-index:1;background:var(--bg-card)}
 .trend-tbl tr:hover td:first-child{background:var(--bg-hover)}
 .trend-tbl .total-row td:first-child{background:var(--bg-soft)}
-
 .trend-tbl .prop-name{font-family:var(--sans);font-weight:700;font-size:12px;white-space:nowrap}
-.trend-tbl .reason-cell{font-family:var(--sans);font-size:10.5px;color:var(--ink-soft);min-width:220px;max-width:320px;font-weight:400;line-height:1.6;white-space:normal}
-.reason-cell .ai-line{display:block;padding:1px 0}.reason-cell .ai-up{color:var(--positive)}.reason-cell .ai-dn{color:var(--negative)}.reason-cell .ai-nt{color:var(--ink-faint)}.reason-cell .ai-tag{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:2px;margin-right:3px}.reason-cell .ai-tag.ch{background:var(--info-bg);color:var(--info)}.reason-cell .ai-tag.yoy{background:var(--apac-bg);color:var(--apac)}.reason-cell .ai-tag.ach{background:var(--warning-bg);color:var(--warning)}.reason-cell .ai-tag.rev{background:var(--vivaldi-bg);color:var(--vivaldi)}
-.trend-tbl .week-col{text-align:right;min-width:68px}
+.trend-tbl .week-col{text-align:right;min-width:72px}
 .trend-tbl .total-row{background:var(--bg-soft);font-weight:800;border-top:2px solid var(--rule-strong)}
 .trend-tbl .total-row td{padding:10px 10px;font-size:12px}
 
-/* Charts grid */
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.chart-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:16px;position:relative}
-.chart-box canvas{max-height:320px}
-.chart-label{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ink-faint);font-weight:700;margin-bottom:10px}
-.chart-full{grid-column:1/-1}
+.trend-tbl .reason-cell{font-family:var(--sans);font-size:10.5px;color:var(--ink-soft);min-width:220px;max-width:320px;font-weight:400;line-height:1.6;white-space:normal}
+.reason-cell .ai-line{display:block;padding:1px 0}.reason-cell .ai-up{color:var(--positive)}.reason-cell .ai-dn{color:var(--negative)}.reason-cell .ai-nt{color:var(--ink-faint)}
+.reason-cell .ai-tag{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:2px;margin-right:3px}
+.reason-cell .ai-tag.ch{background:var(--info-bg);color:var(--info)}.reason-cell .ai-tag.yoy{background:var(--apac-bg);color:var(--apac)}.reason-cell .ai-tag.ach{background:var(--warning-bg);color:var(--warning)}.reason-cell .ai-tag.rev{background:var(--vivaldi-bg);color:var(--vivaldi)}
 
-@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:1fr 1fr}}
-@media(max-width:640px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:14px 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr}}
+.rank-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.rank-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+.rank-title{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.18em;margin-bottom:10px}
+.rank-title.top{color:var(--positive)}.rank-title.bottom{color:var(--negative)}
+.rank-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--rule);font-size:12px}
+.rank-item:last-child{border-bottom:none}
+.rank-name{font-weight:600;color:var(--ink-soft)}.rank-val{font-family:var(--mono);font-size:11px;font-weight:700}
+.rank-val.pos{color:var(--positive)}.rank-val.neg{color:var(--negative)}
+.rank-pct{font-family:var(--mono);font-size:10px;font-weight:700;margin-left:6px}
+
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:repeat(3,1fr)}.rank-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:14px 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -116,46 +126,59 @@ td,th{font-weight:600}th{font-weight:800}
   <div class="page-title">
     <div class="eyebrow">FCST · TREND ANALYSIS</div>
     <h1>FCST 추이 분석</h1>
-    <p>투숙월별 FCST 변동 추이를 주차 단위로 추적합니다. 사업장별 목표 대비 달성률과 FCST 수정 내역을 한 눈에 확인할 수 있습니다.</p>
+    <p>Revenue Meeting PDF 시점별 FCST 변동 추이를 투숙월 단위로 추적합니다. 2025년 vs 2026년 YoY 비교를 지원합니다.</p>
   </div>
 
   <!-- 투숙월 탭 -->
-  <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap" id="month-tabs"></div>
+  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="month-tabs"></div>
+
+  <!-- 필터 -->
+  <div class="filter-bar">
+    <span class="f-label">사업장</span>
+    <select class="filter-select" id="filter-prop" onchange="renderAll()">
+      <option value="__ALL__">전체 합산</option>
+    </select>
+    <span class="f-label" style="margin-left:12px">YoY 비교</span>
+    <label style="font-size:12px;color:var(--ink-muted);cursor:pointer;display:flex;align-items:center;gap:4px">
+      <input type="checkbox" id="filter-yoy" onchange="renderAll()" style="accent-color:var(--gold)"> 전년 동월 오버레이
+    </label>
+    <span id="data-info" style="font-size:10px;color:var(--ink-faint);margin-left:auto;font-family:var(--mono)"></span>
+  </div>
 
   <!-- Summary KPI -->
   <div class="summary-row">
     <div class="summary-box"><div class="summary-val" id="kpi-budget" style="color:var(--ink-muted)">—</div><div class="summary-lbl">목표 RN</div></div>
-    <div class="summary-box"><div class="summary-val" id="kpi-actual" style="color:var(--ink)">—</div><div class="summary-lbl">실적 RN</div></div>
-    <div class="summary-box"><div class="summary-val" id="kpi-fcst" style="color:var(--positive)">—</div><div class="summary-lbl">최종 FCST</div></div>
-    <div class="summary-box"><div class="summary-val" id="kpi-ach" style="color:var(--gold-bright)">—</div><div class="summary-lbl">FCST 달성률</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-fcst" style="color:var(--positive)">—</div><div class="summary-lbl">최신 FCST</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-ach" style="color:var(--gold-bright)">—</div><div class="summary-lbl">달성률</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-delta" style="color:var(--info)">—</div><div class="summary-lbl">최초→최신 변동</div></div>
+    <div class="summary-box"><div class="summary-val" id="kpi-yoy" style="color:var(--apac)">—</div><div class="summary-lbl">YoY 대비</div></div>
   </div>
 
   <!-- Charts -->
   <div class="chart-grid">
     <div class="chart-box chart-full">
-      <div class="chart-label">FCST vs 목표 vs 실적 · 사업장별</div>
-      <canvas id="chart-fcst-vs-budget"></canvas>
+      <div class="chart-label">RM FCST 추이 (시점별)</div>
+      <canvas id="chart-trend"></canvas>
     </div>
     <div class="chart-box">
-      <div class="chart-label">사업장별 FCST 달성률 (%)</div>
-      <canvas id="chart-ach-rate"></canvas>
+      <div class="chart-label">Budget 대비 달성률 추이</div>
+      <canvas id="chart-ach"></canvas>
     </div>
     <div class="chart-box">
-      <div class="chart-label">권역별 FCST 구성 비율</div>
-      <canvas id="chart-region-pie"></canvas>
-    </div>
-    <div class="chart-box chart-full">
-      <div class="chart-label">주차별 FCST 변화 추이 (히스토리)</div>
-      <canvas id="chart-weekly-trend"></canvas>
+      <div class="chart-label">YoY 비교 (전년 동월)</div>
+      <canvas id="chart-yoy"></canvas>
     </div>
   </div>
 
-  <!-- Table: 사업장별 FCST 추이 -->
-  <div class="card">
+  <!-- Top/Bottom Rankings -->
+  <div class="rank-grid" id="rank-cards"></div>
+
+  <!-- Detail Table -->
+  <div class="card" style="margin-top:16px">
     <div class="card-head">
       <span class="card-icon">📋</span>
       <span class="card-title">사업장별 FCST 추이 테이블</span>
-      <span class="card-desc" id="tbl-desc">주차별 FCST 기록</span>
+      <span class="card-desc" id="tbl-desc">시점별 FCST 기록</span>
     </div>
     <div class="trend-tbl-wrap">
       <table class="trend-tbl" id="trend-table">
@@ -168,607 +191,629 @@ td,th{font-weight:600}th{font-weight:800}
 
 <script>
 /* ═══════════════════════════════════════════════
-   FCST 추이 분석 - Main Script
+   FCST 추이 분석 - rm_fcst_trend.json 기반
+   2025+2026 YoY 비교 지원
    ═══════════════════════════════════════════════ */
 
-const STORAGE_KEY = 'gs_fcst_admin_v3';
-const REGION_MAP = {vivaldi:'비발디파크',central:'한국중부',south:'한국남부',apac:'APAC'};
-const REGION_COLORS = {vivaldi:'#d97a7a',central:'#6ba3c4',south:'#6db58a',apac:'#a892c8'};
-const REGION_CLS = {vivaldi:'v',central:'c',south:'s',apac:'a'};
+let trendData = null;
+let currentStayMonth = null;  // e.g. "2026-04" (year-month of the STAY month)
+let charts = {};
 
-let otbData = {};
-let fcstHistory = {};
-let properties = [];
-let currentMonth = '4';
+const fmt = n => n == null ? '—' : n.toLocaleString('ko-KR');
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-/* ── Helpers ── */
-function fmt(n){ return n==null?'—':n.toLocaleString('ko-KR'); }
-function pct(v,b){ return b>0?(v/b*100).toFixed(1):'—'; }
-function achCls(v){ return v>=100?'positive':v>=80?'warning':v>0?'negative':''; }
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-/* ── ISO Week utils ── */
-function getISOWeek(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);const y=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date-y)/864e5)+1)/7)}
-function getISOWeekKey(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);return`${date.getUTCFullYear()}-W${String(getISOWeek(d)).padStart(2,'0')}`}
-function getWeekMonday(d){const date=new Date(d);const day=date.getDay();const diff=day===0?-6:1-day;date.setDate(date.getDate()+diff);return date}
-function getWeekLabel(weekKey){
-  // Parse "2026-W18" → human label
-  const m = weekKey.match(/(\d{4})-W(\d{2})/);
-  if(!m) return weekKey;
-  const yr=parseInt(m[1]),wn=parseInt(m[2]);
-  // Approximate: Jan 4 is always in W01
-  const jan4=new Date(yr,0,4);
-  const mon=getWeekMonday(jan4);
-  mon.setDate(mon.getDate()+(wn-1)*7);
-  const monthNum=mon.getMonth()+1;
-  const weekOfMonth=Math.ceil(mon.getDate()/7);
-  return `${monthNum}월 ${weekOfMonth}주`;
-}
-
-/* ── Load data ── */
-async function init(){
-  try{
-    const resp=await fetch('data/otb_data.json?t='+Date.now());
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    otbData=await resp.json();
-  }catch(e){
-    document.getElementById('trend-tbody').innerHTML='<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">data/otb_data.json 로딩 실패</td></tr>';
-    return;
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const resp = await fetch('data/rm_fcst_trend.json?t=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    trendData = await resp.json();
+    initUI();
+  } catch(e) {
+    document.getElementById('trend-tbody').innerHTML =
+      '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">rm_fcst_trend.json 로딩 실패: ' + e.message + '</td></tr>';
   }
+});
 
-  // Load fcst history from localStorage
-  try{
-    const raw=localStorage.getItem(STORAGE_KEY);
-    if(raw){const parsed=JSON.parse(raw);if(parsed.fcst_history)fcstHistory=parsed.fcst_history;}
-  }catch(e){}
+/* ── Build UI ── */
+function initUI() {
+  if (!trendData?.snapshots?.length) return;
 
-  // Generate simulated weekly history if none exists (for demo)
-  generateDemoHistory();
+  // Discover all stay months across all snapshots
+  const allMonths = new Set();
+  const allProps = new Set();
+  trendData.snapshots.forEach(snap => {
+    Object.entries(snap.properties).forEach(([prop, months]) => {
+      allProps.add(prop);
+      Object.keys(months).forEach(m => allMonths.add(m));
+    });
+  });
 
-  // Extract properties from yoyTable
-  properties=(otbData.yoyTable||[]).map(r=>({name:r.name,region:r.region}));
+  const sortedMonths = [...allMonths].sort();
+  const sortedProps = [...allProps].sort();
 
-  // Determine available months
-  const yoy0=otbData.yoyTable?.[0];
-  const availMonths=yoy0?Object.keys(yoy0.months).map(Number).sort((a,b)=>a-b):[];
+  // Build month tabs - group by month number (e.g. all "XX-04" months)
+  // Show unique month numbers with year info
+  const monthGroups = {};
+  sortedMonths.forEach(m => {
+    const [yr, mm] = m.split('-');
+    const mo = parseInt(mm);
+    monthGroups[mo] = monthGroups[mo] || [];
+    monthGroups[mo].push(m);
+  });
 
-  // Render month tabs
-  const tabC=document.getElementById('month-tabs');
-  if(availMonths.length)currentMonth=String(availMonths[0]);
-  availMonths.forEach(m=>{
-    const btn=document.createElement('button');
-    btn.className='ftab'+(String(m)===currentMonth?' active':'');
-    btn.setAttribute('data-m',String(m));
-    btn.textContent=m+'월';
-    btn.onclick=()=>{currentMonth=String(m);document.querySelectorAll('#month-tabs .ftab').forEach(t=>t.classList.toggle('active',t.getAttribute('data-m')===String(m)));renderAll()};
-    tabC.appendChild(btn);
+  // Default: pick the latest year's most common month (April 2026 for now)
+  const latestYear = Math.max(...trendData._years);
+  const latestMonths = sortedMonths.filter(m => m.startsWith(String(latestYear)));
+
+  // Find most data-rich month for latest year
+  let bestMonth = latestMonths[0];
+  let bestCount = 0;
+  latestMonths.forEach(m => {
+    const count = trendData.snapshots.filter(s =>
+      Object.values(s.properties).some(p => p[m])
+    ).length;
+    if (count > bestCount) { bestCount = count; bestMonth = m; }
+  });
+  currentStayMonth = bestMonth || sortedMonths[sortedMonths.length - 1];
+
+  // Render month tabs grouped by year
+  const tabC = document.getElementById('month-tabs');
+  // Show latest year months first, then previous year
+  const yearsDesc = [...trendData._years].sort((a,b) => b-a);
+  yearsDesc.forEach(yr => {
+    const yrMonths = sortedMonths.filter(m => m.startsWith(String(yr)));
+    if (!yrMonths.length) return;
+    yrMonths.forEach(m => {
+      const [y, mm] = m.split('-');
+      const btn = document.createElement('button');
+      btn.className = 'ftab' + (m === currentStayMonth ? ' active' : '');
+      btn.setAttribute('data-m', m);
+      btn.textContent = `${parseInt(mm)}월 '${y.slice(2)}`;
+      btn.onclick = () => {
+        currentStayMonth = m;
+        document.querySelectorAll('#month-tabs .ftab').forEach(t =>
+          t.classList.toggle('active', t.getAttribute('data-m') === m));
+        renderAll();
+      };
+      tabC.appendChild(btn);
+    });
+    // Add separator between years
+    if (yr !== yearsDesc[yearsDesc.length - 1]) {
+      const sep = document.createElement('span');
+      sep.style.cssText = 'width:1px;height:20px;background:var(--rule);margin:0 4px';
+      tabC.appendChild(sep);
+    }
+  });
+
+  // Populate property dropdown
+  const propSel = document.getElementById('filter-prop');
+  propSel.innerHTML = '<option value="__ALL__">전체 합산</option>';
+  sortedProps.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    propSel.appendChild(opt);
   });
 
   renderAll();
 }
 
-/* ── Generate demo FCST history for visualization ── */
-function generateDemoHistory(){
-  const today=new Date();
-  const weekKeys=Object.keys(fcstHistory);
+/* ── Get series data for a stay month ── */
+function getSeriesForMonth(stayMonth, propFilter) {
+  const series = [];
+  trendData.snapshots.forEach(snap => {
+    // Only include snapshots from the same year as the stay month
+    const stayYear = parseInt(stayMonth.split('-')[0]);
+    if (snap._year !== stayYear) return;
 
-  // If we already have multiple weeks, use them
-  if(weekKeys.length>=3)return;
-
-  // Generate 6 weeks of synthetic history based on OTB data
-  const yoyTable=otbData.yoyTable||[];
-  for(let w=6;w>=0;w--){
-    const d=new Date(today);
-    d.setDate(d.getDate()-w*7);
-    const wk=getISOWeekKey(d);
-
-    if(fcstHistory[wk])continue; // Keep real data
-
-    const keyin={};
-    const SEGMENTS=['OTA','G-OTA','Inbound'];
-    yoyTable.forEach(prop=>{
-      const months=Object.keys(prop.months);
-      months.forEach(mo=>{
-        const md=prop.months[mo];
-        if(!md)return;
-        SEGMENTS.forEach(seg=>{
-          // Get segment data from allMonths
-          const segData=otbData.allMonths?.[mo]?.byPropertySegment?.[seg]?.find(p=>p.name===prop.name);
-          if(!segData)return;
-          const baseFcst=segData.rns_fcst||0;
-          if(baseFcst===0)return;
-
-          // Simulate convergence: earlier weeks are further from final FCST
-          const noise=1+(6-w)*0.02*(Math.random()-0.5)*2;
-          const spread=1+(6-w)*0.06*(Math.random()>0.5?-1:1);
-          const simVal=Math.round(baseFcst*spread*noise);
-          keyin[`${prop.name}|${seg}`]=Math.max(0,simVal);
-        });
+    let fcst = 0, budget = 0, count = 0;
+    if (propFilter === '__ALL__') {
+      Object.values(snap.properties).forEach(months => {
+        if (months[stayMonth]) {
+          fcst += months[stayMonth].rm_fcst_rn || 0;
+          budget += months[stayMonth].rm_budget_rn || 0;
+          count++;
+        }
       });
-    });
-
-    const mon=getWeekMonday(d);
-    const monthNum=mon.getMonth()+1;
-    const weekOfMonth=Math.ceil(mon.getDate()/7);
-    fcstHistory[wk]={
-      month:String(monthNum<=6?monthNum:4),
-      week_label:`${monthNum}월 ${weekOfMonth}주차`,
-      created:d.toISOString().slice(0,10),
-      keyin
-    };
-  }
+    } else {
+      const entry = snap.properties[propFilter]?.[stayMonth];
+      if (entry) {
+        fcst = entry.rm_fcst_rn || 0;
+        budget = entry.rm_budget_rn || 0;
+        count = 1;
+      }
+    }
+    if (count > 0) {
+      series.push({
+        date: snap._snapshot_date,
+        fcst, budget,
+        ach: budget > 0 ? fcst / budget * 100 : 0
+      });
+    }
+  });
+  return series;
 }
 
-/* ── Get weekly FCST totals for a property across history ── */
-function getWeeklyFcstForProp(propName,month){
-  const weekKeys=Object.keys(fcstHistory).sort();
-  const SEGMENTS=['OTA','G-OTA','Inbound'];
-  return weekKeys.map(wk=>{
-    const keyin=fcstHistory[wk]?.keyin||{};
-    let total=0;
-    let hasData=false;
-    SEGMENTS.forEach(seg=>{
-      const key=`${propName}|${seg}`;
-      if(keyin[key]!=null){total+=keyin[key];hasData=true;}
-      else{
-        const segData=otbData.allMonths?.[month]?.byPropertySegment?.[seg]?.find(p=>p.name===propName);
-        if(segData?.rns_fcst){total+=segData.rns_fcst;hasData=true;}
-      }
-    });
-    return {week:wk,label:getWeekLabel(wk),fcst:hasData?total:null};
-  });
+/* ── Get last-year equivalent month ── */
+function getLastYearMonth(stayMonth) {
+  const [yr, mm] = stayMonth.split('-');
+  return `${parseInt(yr) - 1}-${mm}`;
 }
 
 /* ── Render all ── */
-function renderAll(){
-  renderKPI();
-  renderTable();
-  renderCharts();
+function renderAll() {
+  const prop = document.getElementById('filter-prop').value;
+  const showYoY = document.getElementById('filter-yoy').checked;
+  const series = getSeriesForMonth(currentStayMonth, prop);
+  const lyMonth = getLastYearMonth(currentStayMonth);
+  const lySeries = getSeriesForMonth(lyMonth, prop);
+
+  const [yr, mm] = currentStayMonth.split('-');
+  const monthLabel = `${parseInt(mm)}월`;
+  const yearLabel = `'${yr.slice(2)}`;
+
+  // Data info
+  document.getElementById('data-info').textContent =
+    `${series.length}개 스냅샷 · ${currentStayMonth}`;
+
+  renderKPI(series, lySeries);
+  renderTrendChart(series, lySeries, showYoY, monthLabel, yearLabel);
+  renderAchChart(series, monthLabel, yearLabel);
+  renderYoYChart(series, lySeries, monthLabel, yr);
+  renderRankCards(currentStayMonth, lyMonth);
+  renderTable(currentStayMonth, lyMonth);
 }
 
 /* ── KPI ── */
-function renderKPI(){
-  let totBud=0,totAct=0,totFcst=0;
-  (otbData.yoyTable||[]).forEach(prop=>{
-    const md=prop.months?.[currentMonth];
-    if(!md)return;
-    totBud+=md.bud_rn||0;
-    totAct+=md.act_rn||0;
-    totFcst+=md.rns_fcst||0;
-  });
-  document.getElementById('kpi-budget').textContent=fmt(totBud);
-  document.getElementById('kpi-actual').textContent=fmt(totAct);
-  document.getElementById('kpi-fcst').textContent=fmt(totFcst);
-  const ach=totBud>0?(totFcst/totBud*100).toFixed(1)+'%':'—';
-  const achEl=document.getElementById('kpi-ach');
-  achEl.textContent=ach;
-  if(totBud>0){
-    const v=totFcst/totBud*100;
-    achEl.style.color=v>=100?'var(--positive)':v>=80?'var(--warning)':'var(--negative)';
+function renderKPI(series, lySeries) {
+  if (!series.length) {
+    ['kpi-budget','kpi-fcst','kpi-ach','kpi-delta','kpi-yoy'].forEach(id =>
+      document.getElementById(id).textContent = '—');
+    return;
+  }
+  const latest = series[series.length - 1];
+  const earliest = series[0];
+  document.getElementById('kpi-budget').textContent = fmt(latest.budget);
+  document.getElementById('kpi-fcst').textContent = fmt(latest.fcst);
+
+  const ach = latest.budget > 0 ? (latest.fcst / latest.budget * 100).toFixed(1) + '%' : '—';
+  const achEl = document.getElementById('kpi-ach');
+  achEl.textContent = ach;
+  if (latest.budget > 0) {
+    const v = latest.fcst / latest.budget * 100;
+    achEl.style.color = v >= 100 ? 'var(--positive)' : v >= 80 ? 'var(--warning)' : 'var(--negative)';
+  }
+
+  const delta = latest.fcst - earliest.fcst;
+  const deltaEl = document.getElementById('kpi-delta');
+  deltaEl.textContent = (delta >= 0 ? '+' : '') + fmt(delta);
+  deltaEl.style.color = delta >= 0 ? 'var(--positive)' : 'var(--negative)';
+
+  // YoY
+  const yoyEl = document.getElementById('kpi-yoy');
+  if (lySeries.length) {
+    const lyLatest = lySeries[lySeries.length - 1];
+    const yoyPct = lyLatest.fcst > 0 ? ((latest.fcst / lyLatest.fcst - 1) * 100).toFixed(1) : '—';
+    yoyEl.textContent = yoyPct !== '—' ? (parseFloat(yoyPct) >= 0 ? '+' : '') + yoyPct + '%' : '—';
+    yoyEl.style.color = parseFloat(yoyPct) >= 0 ? 'var(--positive)' : 'var(--negative)';
+  } else {
+    yoyEl.textContent = '—';
+    yoyEl.style.color = 'var(--ink-faint)';
   }
 }
 
-/* ── AI 변동 요인 심층 분석 ── */
-function generateAIAnalysis(propName, month){
-  const lines=[];
-  const am=otbData.allMonths?.[month];
-  if(!am) return '—';
+/* ── Chart 1: FCST Trend ── */
+function renderTrendChart(series, lySeries, showYoY, monthLabel, yearLabel) {
+  destroyChart('trend');
+  if (!series.length) return;
+  const ctx = document.getElementById('chart-trend').getContext('2d');
 
-  // 1) byProperty: YoY, ADR, Revenue
-  const bp=(am.byProperty||[]).find(p=>p.name===propName);
-  if(!bp) return '—';
-
-  const act=bp.rns_actual||0, last=bp.rns_last||0, bud=bp.rns_budget||0;
-  const fcst=bp.rns_fcst||0, achRate=bp.fcst_achievement||0;
-  const revAct=bp.rev_actual||0, revLast=bp.rev_last||0;
-  const adrAct=bp.adr_actual||0, adrLast=bp.adr_last||0;
-
-  // === YoY 객실 분석 ===
-  if(last>0){
-    const yoyDiff=act-last;
-    const yoyPct=((act/last-1)*100).toFixed(1);
-    const cls=yoyDiff>=0?'ai-up':'ai-dn';
-    const sign=yoyDiff>=0?'+':'';
-    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">객실 LY ${fmt(last)}→${fmt(act)}건 (${sign}${yoyPct}%)</span></span>`);
-  } else if(act>0){
-    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="ai-nt">전년 실적 없음 (신규 or 미운영)</span></span>`);
-  }
-
-  // === YoY ADR 분석 ===
-  if(adrLast>0 && adrAct>0){
-    const adrDiff=adrAct-adrLast;
-    const adrPct=((adrAct/adrLast-1)*100).toFixed(1);
-    if(Math.abs(parseFloat(adrPct))>=3){
-      const cls=adrDiff>=0?'ai-up':'ai-dn';
-      const sign=adrDiff>=0?'+':'';
-      lines.push(`<span class="ai-line"><span class="ai-tag rev">ADR</span><span class="${cls}">₩${Math.round(adrLast/1000)}K→₩${Math.round(adrAct/1000)}K (${sign}${adrPct}%)</span></span>`);
-    }
-  }
-
-  // === YoY 매출 분석 (큰 변동만) ===
-  if(revLast>0 && revAct>0){
-    const revPct=((revAct/revLast-1)*100).toFixed(1);
-    if(Math.abs(parseFloat(revPct))>=5){
-      const cls=parseFloat(revPct)>=0?'ai-up':'ai-dn';
-      const sign=parseFloat(revPct)>=0?'+':'';
-      lines.push(`<span class="ai-line"><span class="ai-tag rev">매출</span><span class="${cls}">YoY ${sign}${revPct}% (${fmtRev(revLast)}→${fmtRev(revAct)})</span></span>`);
-    }
-  }
-
-  // === 채널별 분석: 주요 증감 상위 3개 ===
-  const segMap=am.byPropertySegment||{};
-  const segDeltas=[];
-  const KEY_SEGMENTS=['OTA','G-OTA','Inbound','D멤버스','FIT','자사 패키지','회원PKG','제휴사PKG','일반단체','연간계약사','GSA','임차','법인주중(회원사)'];
-
-  KEY_SEGMENTS.forEach(seg=>{
-    const entries=segMap[seg]||[];
-    const e=entries.find(p=>p.name===propName);
-    if(!e)return;
-    const sAct=e.rns_actual||0;
-    const sBud=e.rns_budget||0;
-    const sLast=e.rns_last||0;
-    const sFcst=e.rns_fcst||0;
-
-    // Budget 대비 분석
-    if(sBud>0){
-      const diff=sAct-sBud;
-      const pct=((sAct/sBud-1)*100).toFixed(1);
-      if(Math.abs(diff)>=5){
-        segDeltas.push({seg,diff,pct:parseFloat(pct),act:sAct,bud:sBud,last:sLast,type:'bud'});
-      }
-    } else if(sAct>0 && sBud===0){
-      // 목표 없이 실적 발생
-      segDeltas.push({seg,diff:sAct,pct:100,act:sAct,bud:0,last:sLast,type:'extra'});
-    }
-
-    // Inbound 미발생 체크
-    if(seg==='Inbound' && sBud>0 && sAct===0){
-      segDeltas.push({seg,diff:-sBud,pct:-100,act:0,bud:sBud,last:sLast,type:'zero'});
-    }
+  const labels = series.map(s => {
+    const [y, m, d] = s.date.split('-');
+    return `${parseInt(m)}/${parseInt(d)}`;
   });
 
-  // Sort by absolute impact
-  segDeltas.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
-
-  // Top 3 channel insights
-  segDeltas.slice(0,3).forEach(sd=>{
-    if(sd.type==='zero'){
-      const lastNote=sd.last>0?` (LY: ${fmt(sd.last)}건)`:'';
-      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="ai-dn">미발생, 목표 ${fmt(sd.bud)}건 미달${lastNote}</span></span>`);
-    } else if(sd.type==='extra'){
-      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="ai-up">목표外 ${fmt(sd.act)}건 추가 발생</span></span>`);
-    } else {
-      const cls=sd.diff>=0?'ai-up':'ai-dn';
-      const sign=sd.diff>=0?'+':'';
-      lines.push(`<span class="ai-line"><span class="ai-tag ch">${sd.seg}</span><span class="${cls}">목표대비 ${sign}${fmt(sd.diff)}건 (${sign}${sd.pct}%)</span></span>`);
+  const datasets = [
+    {
+      label: `RM FCST ${monthLabel} ${yearLabel}`,
+      data: series.map(s => s.fcst),
+      borderColor: '#e6b970',
+      backgroundColor: 'rgba(230,185,112,0.1)',
+      borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#e6b970',
+      fill: true, tension: 0.3
+    },
+    {
+      label: `Budget ${monthLabel} ${yearLabel}`,
+      data: series.map(s => s.budget),
+      borderColor: '#7a7e85',
+      borderDash: [6, 3], borderWidth: 1.5,
+      pointRadius: 2, pointBackgroundColor: '#7a7e85',
+      fill: false, tension: 0.1
     }
-  });
+  ];
 
-  // === 달성률 기반 종합 판단 ===
-  if(bud>0){
-    const achV=fcst/bud*100;
-    let achComment='';
-    if(achV>=130) achComment=`FCST ${achV.toFixed(0)}% 초과달성, 상향 조정 검토`;
-    else if(achV>=110) achComment=`FCST ${achV.toFixed(0)}% 양호`;
-    else if(achV>=95) achComment=`FCST ${achV.toFixed(0)}% 목표 근접`;
-    else if(achV>=80) achComment=`FCST ${achV.toFixed(0)}% 소폭 부진, 추가 판촉 필요`;
-    else if(achV>0) achComment=`FCST ${achV.toFixed(0)}% 심각 부진, 원인 분석 시급`;
-    if(achComment){
-      const cls=achV>=100?'ai-up':achV>=80?'':'ai-dn';
-      lines.push(`<span class="ai-line"><span class="ai-tag ach">달성</span><span class="${cls}">${achComment}</span></span>`);
-    }
-  }
-
-  return lines.length>0 ? lines.join('') : '<span class="ai-nt">분석 데이터 부족</span>';
-}
-
-/* Revenue formatting helper */
-function fmtRev(v){
-  if(v>=1e8) return (v/1e8).toFixed(1)+'억';
-  if(v>=1e4) return (v/1e4).toFixed(0)+'만';
-  return fmt(v);
-}
-
-/* ── Table ── */
-function renderTable(){
-  const thead=document.getElementById('trend-thead');
-  const tbody=document.getElementById('trend-tbody');
-  const weekKeys=Object.keys(fcstHistory).sort();
-
-  // Build header
-  let hdr='<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th><th class="week-col" style="text-align:right;color:var(--ink)">실적</th>';
-  weekKeys.forEach((wk,i)=>{
-    const isLast=i===weekKeys.length-1;
-    hdr+=`<th class="week-col" style="text-align:right;color:${isLast?'var(--positive)':'var(--info)'}">${getWeekLabel(wk)}<br><span style="font-size:8px;color:var(--ink-faint);font-weight:400">${wk}</span></th>`;
-  });
-  hdr+='<th class="week-col" style="text-align:right;color:var(--gold-bright)">달성률</th><th style="min-width:220px;color:var(--ink-faint)">AI 변동 요인</th></tr>';
-  thead.innerHTML=hdr;
-
-  // Build rows
-  let html='';
-  let totBud=0,totAct=0,totFcstArr=weekKeys.map(()=>0);
-
-  properties.forEach(prop=>{
-    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
-    if(!md)return;
-    const bud=md.bud_rn||0;
-    const act=md.act_rn||0;
-    const region=prop.region||'';
-    const rCls=REGION_CLS[region]||'';
-
-    totBud+=bud;totAct+=act;
-
-    const weeklyFcst=getWeeklyFcstForProp(prop.name,currentMonth);
-
-    html+=`<tr><td class="prop-name"><span class="rbadge ${rCls}" style="font-size:9px;padding:1px 5px;margin-right:4px">${(REGION_MAP[region]||region).charAt(0)}</span>${prop.name}</td>`;
-    html+=`<td class="week-col" style="color:var(--ink-muted)">${fmt(bud)}</td>`;
-    html+=`<td class="week-col" style="color:var(--ink)">${fmt(act)}</td>`;
-
-    weeklyFcst.forEach((wf,i)=>{
-      const v=wf.fcst;
-      const isLast=i===weeklyFcst.length-1;
-      // Delta from previous week
-      let delta='';
-      if(i>0&&weeklyFcst[i-1].fcst!=null&&v!=null){
-        const d=v-weeklyFcst[i-1].fcst;
-        if(d!==0)delta=`<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};margin-left:2px">${d>0?'+':''}${fmt(d)}</span>`;
-      }
-      html+=`<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${v!=null?fmt(v):'—'}${delta}</td>`;
-      if(v!=null)totFcstArr[i]+=v;
+  if (showYoY && lySeries.length) {
+    const lyLabels = lySeries.map(s => {
+      const [y, m, d] = s.date.split('-');
+      return `${parseInt(m)}/${parseInt(d)}`;
     });
+    // Pad to same length
+    const maxLen = Math.max(labels.length, lyLabels.length);
+    while (labels.length < maxLen) labels.push('');
 
-    const lastFcst=weeklyFcst[weeklyFcst.length-1]?.fcst;
-    const achV=bud>0&&lastFcst!=null?(lastFcst/bud*100).toFixed(1):null;
-    const achClass=achV!=null?achCls(parseFloat(achV)):'';
-    html+=`<td class="week-col"><span class="tbadge ${achClass}">${achV!=null?achV+'%':'—'}</span></td>`;
-    html+=`<td class="reason-cell">${generateAIAnalysis(prop.name,currentMonth)}</td></tr>`;
-  });
+    datasets.push({
+      label: `LY FCST ${monthLabel}`,
+      data: lySeries.map(s => s.fcst).concat(Array(maxLen - lySeries.length).fill(null)),
+      borderColor: 'rgba(168,146,200,0.7)',
+      borderDash: [4, 4], borderWidth: 2,
+      pointRadius: 3, pointBackgroundColor: '#a892c8',
+      fill: false, tension: 0.3
+    });
+  }
 
-  // Total row
-  html+=`<tr class="total-row"><td style="font-family:var(--sans)">전체 합계</td>`;
-  html+=`<td class="week-col" style="color:var(--ink-muted)">${fmt(totBud)}</td>`;
-  html+=`<td class="week-col" style="color:var(--ink)">${fmt(totAct)}</td>`;
-  totFcstArr.forEach((v,i)=>{
-    const isLast=i===totFcstArr.length-1;
-    html+=`<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:800">${fmt(v)}</td>`;
-  });
-  const lastTotal=totFcstArr[totFcstArr.length-1]||0;
-  const totAchV=totBud>0?(lastTotal/totBud*100).toFixed(1):null;
-  const totAchCls=totAchV!=null?achCls(parseFloat(totAchV)):'';
-  html+=`<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAchV!=null?totAchV+'%':'—'}</span></td>`;
-  html+=`<td class="reason-cell"></td></tr>`;
-
-  tbody.innerHTML=html;
-  document.getElementById('tbl-desc').textContent=`${currentMonth}월 · ${weekKeys.length}주차 기록`;
-}
-
-/* ═══ Charts ═══ */
-let charts={};
-function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-
-function renderCharts(){
-  renderFcstVsBudgetChart();
-  renderAchRateChart();
-  renderRegionPieChart();
-  renderWeeklyTrendChart();
-}
-
-/* Chart 1: FCST vs Budget vs Actual - Grouped Bar */
-function renderFcstVsBudgetChart(){
-  destroyChart('fcst-vs-budget');
-  const labels=[],budgets=[],actuals=[],fcsts=[],bgColors=[];
-
-  properties.forEach(prop=>{
-    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
-    if(!md)return;
-    labels.push(prop.name.replace(/^\d+\./,''));
-    budgets.push(md.bud_rn||0);
-    actuals.push(md.act_rn||0);
-    fcsts.push(md.rns_fcst||0);
-    bgColors.push(REGION_COLORS[prop.region]||'#888');
-  });
-
-  const ctx=document.getElementById('chart-fcst-vs-budget').getContext('2d');
-  charts['fcst-vs-budget']=new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[
-        {label:'목표',data:budgets,backgroundColor:'rgba(168,172,179,0.35)',borderColor:'rgba(168,172,179,0.6)',borderWidth:1,borderRadius:3},
-        {label:'실적',data:actuals,backgroundColor:'rgba(90,159,196,0.5)',borderColor:'rgba(90,159,196,0.8)',borderWidth:1,borderRadius:3},
-        {label:'FCST',data:fcsts,backgroundColor:bgColors.map(c=>c+'88'),borderColor:bgColors,borderWidth:1.5,borderRadius:3}
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"}},position:'top'}},
-      scales:{
-        x:{ticks:{color:'#7a7e85',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.06)'}},
-        y:{ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'rgba(255,255,255,0.06)'}}
+  charts['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#a8acb3', font: { size: 11 }, usePointStyle: true } },
+        tooltip: {
+          backgroundColor: '#252932', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#f5f5f7', bodyColor: '#e0e0e3',
+          callbacks: { label: c => `${c.dataset.label}: ${fmt(c.raw)} RN` }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v }, grid: { color: 'rgba(255,255,255,0.06)' } }
       }
     }
   });
 }
 
-/* Chart 2: Achievement Rate - Horizontal Bar */
-function renderAchRateChart(){
-  destroyChart('ach-rate');
-  const labels=[],data=[],colors=[];
+/* ── Chart 2: Achievement Rate ── */
+function renderAchChart(series, monthLabel, yearLabel) {
+  destroyChart('ach');
+  if (!series.length) return;
+  const ctx = document.getElementById('chart-ach').getContext('2d');
+  const labels = series.map(s => { const [y,m,d]=s.date.split('-'); return `${parseInt(m)}/${parseInt(d)}`; });
 
-  properties.forEach(prop=>{
-    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
-    if(!md||!md.bud_rn)return;
-    const ach=md.rns_fcst/md.bud_rn*100;
-    labels.push(prop.name.replace(/^\d+\./,''));
-    data.push(parseFloat(ach.toFixed(1)));
-    colors.push(ach>=100?'#4caf6f':ach>=80?'#e8a256':'#e57373');
-  });
-
-  const ctx=document.getElementById('chart-ach-rate').getContext('2d');
-  charts['ach-rate']=new Chart(ctx,{
-    type:'bar',
-    data:{
+  charts['ach'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
       labels,
-      datasets:[{label:'달성률 %',data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:1.5,borderRadius:3}]
+      datasets: [{
+        label: '달성률',
+        data: series.map(s => Math.round(s.ach * 10) / 10),
+        backgroundColor: series.map(s => s.ach >= 100 ? 'rgba(76,175,111,0.7)' : s.ach >= 80 ? 'rgba(232,162,86,0.7)' : 'rgba(229,115,115,0.7)'),
+        borderColor: series.map(s => s.ach >= 100 ? '#4caf6f' : s.ach >= 80 ? '#e8a256' : '#e57373'),
+        borderWidth: 1, borderRadius: 4, barThickness: 24
+      }]
     },
-    options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        annotation:{}
-      },
-      scales:{
-        x:{
-          ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v+'%'},
-          grid:{color:'rgba(255,255,255,0.06)'},
-          suggestedMax:180
-        },
-        y:{ticks:{color:'#a8acb3',font:{size:10}},grid:{display:false}}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `달성률: ${c.raw}%` } } },
+      scales: {
+        x: { ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" } }, grid: { display: false } },
+        y: { min: 0, ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" }, callback: v => v+'%' }, grid: { color: 'rgba(255,255,255,0.06)' } }
       }
     },
-    plugins:[{
-      id:'target-line',
-      afterDraw(chart){
-        const xScale=chart.scales.x;
-        const x100=xScale.getPixelForValue(100);
-        const ctx2=chart.ctx;
-        ctx2.save();
-        ctx2.strokeStyle='rgba(201,160,99,0.6)';
-        ctx2.lineWidth=1.5;
-        ctx2.setLineDash([5,3]);
-        ctx2.beginPath();
-        ctx2.moveTo(x100,chart.chartArea.top);
-        ctx2.lineTo(x100,chart.chartArea.bottom);
-        ctx2.stroke();
-        ctx2.fillStyle='#c9a063';
-        ctx2.font='10px JetBrains Mono';
-        ctx2.fillText('100%',x100+4,chart.chartArea.top+12);
-        ctx2.restore();
+    plugins: [{
+      id: 'target100',
+      afterDraw(chart) {
+        const y100 = chart.scales.y.getPixelForValue(100);
+        if (y100 >= chart.chartArea.top && y100 <= chart.chartArea.bottom) {
+          const ctx2 = chart.ctx;
+          ctx2.save(); ctx2.strokeStyle = 'rgba(229,115,115,0.6)'; ctx2.lineWidth = 1; ctx2.setLineDash([4,3]);
+          ctx2.beginPath(); ctx2.moveTo(chart.chartArea.left, y100); ctx2.lineTo(chart.chartArea.right, y100); ctx2.stroke();
+          ctx2.fillStyle = '#e57373'; ctx2.font = "10px 'JetBrains Mono'"; ctx2.fillText('100%', chart.chartArea.right + 4, y100 + 3);
+          ctx2.restore();
+        }
       }
     }]
   });
 }
 
-/* Chart 3: Region Pie */
-function renderRegionPieChart(){
-  destroyChart('region-pie');
-  const regionTotals={};
+/* ── Chart 3: YoY Comparison ── */
+function renderYoYChart(series, lySeries, monthLabel, curYear) {
+  destroyChart('yoy');
+  const ctx = document.getElementById('chart-yoy').getContext('2d');
+  const lyYear = parseInt(curYear) - 1;
 
-  properties.forEach(prop=>{
-    const md=(otbData.yoyTable||[]).find(r=>r.name===prop.name)?.months?.[currentMonth];
-    if(!md)return;
-    const r=prop.region||'other';
-    regionTotals[r]=(regionTotals[r]||0)+(md.rns_fcst||0);
-  });
+  if (!series.length && !lySeries.length) return;
 
-  const labels=Object.keys(regionTotals).map(r=>REGION_MAP[r]||r);
-  const data=Object.values(regionTotals);
-  const colors=Object.keys(regionTotals).map(r=>REGION_COLORS[r]||'#888');
-
-  const ctx=document.getElementById('chart-region-pie').getContext('2d');
-  charts['region-pie']=new Chart(ctx,{
-    type:'doughnut',
-    data:{
-      labels,
-      datasets:[{data,backgroundColor:colors.map(c=>c+'cc'),borderColor:colors,borderWidth:2,hoverOffset:6}]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"},padding:12},position:'bottom'},
-        tooltip:{callbacks:{label:(ctx)=>{const total=ctx.dataset.data.reduce((a,b)=>a+b,0);return`${ctx.label}: ${fmt(ctx.raw)} RN (${(ctx.raw/total*100).toFixed(1)}%)`;}}}
-      },
-      cutout:'55%'
-    }
-  });
-}
-
-/* Chart 4: Weekly FCST Trend - Line Chart */
-function renderWeeklyTrendChart(){
-  destroyChart('weekly-trend');
-  const weekKeys=Object.keys(fcstHistory).sort();
-  if(weekKeys.length===0)return;
-
-  const labels=weekKeys.map(wk=>getWeekLabel(wk));
-
-  // Aggregate by region
-  const regionData={};
-  const totalData=weekKeys.map(()=>0);
-
-  properties.forEach(prop=>{
-    const r=prop.region||'other';
-    if(!regionData[r])regionData[r]=weekKeys.map(()=>0);
-    const weekly=getWeeklyFcstForProp(prop.name,currentMonth);
-    weekly.forEach((wf,i)=>{
-      if(wf.fcst!=null){regionData[r][i]+=wf.fcst;totalData[i]+=wf.fcst;}
+  // Normalize both series by "weeks before month" for alignment
+  const datasets = [];
+  if (series.length) {
+    datasets.push({
+      label: `${curYear}년 ${monthLabel} FCST`,
+      data: series.map((s, i) => ({ x: i, y: s.fcst })),
+      borderColor: '#e6b970', backgroundColor: 'rgba(230,185,112,0.1)',
+      borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#e6b970',
+      fill: true, tension: 0.3
     });
-  });
+  }
+  if (lySeries.length) {
+    datasets.push({
+      label: `${lyYear}년 ${monthLabel} FCST`,
+      data: lySeries.map((s, i) => ({ x: i, y: s.fcst })),
+      borderColor: '#a892c8', backgroundColor: 'rgba(168,146,200,0.08)',
+      borderDash: [5, 3], borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#a892c8',
+      fill: true, tension: 0.3
+    });
+  }
 
-  // Budget line
-  let totBud=0;
-  (otbData.yoyTable||[]).forEach(prop=>{
-    const md=prop.months?.[currentMonth];
-    if(md)totBud+=md.bud_rn||0;
-  });
-  const budgetLine=weekKeys.map(()=>totBud);
+  const maxLen = Math.max(series.length, lySeries.length);
+  const labels = Array.from({ length: maxLen }, (_, i) => `#${i + 1}`);
 
-  const datasets=Object.keys(regionData).map(r=>({
-    label:REGION_MAP[r]||r,
-    data:regionData[r],
-    borderColor:REGION_COLORS[r]||'#888',
-    backgroundColor:(REGION_COLORS[r]||'#888')+'22',
-    fill:false,
-    tension:0.3,
-    borderWidth:2,
-    pointRadius:3,
-    pointHoverRadius:5
-  }));
-
-  datasets.push({
-    label:'전체 합계',
-    data:totalData,
-    borderColor:'#e6b970',
-    backgroundColor:'rgba(230,185,112,0.08)',
-    fill:true,
-    tension:0.3,
-    borderWidth:2.5,
-    pointRadius:4,
-    pointHoverRadius:6,
-    borderDash:[]
-  });
-
-  datasets.push({
-    label:'목표',
-    data:budgetLine,
-    borderColor:'rgba(168,172,179,0.5)',
-    backgroundColor:'transparent',
-    fill:false,
-    tension:0,
-    borderWidth:1.5,
-    pointRadius:0,
-    borderDash:[6,4]
-  });
-
-  const ctx=document.getElementById('chart-weekly-trend').getContext('2d');
-  charts['weekly-trend']=new Chart(ctx,{
-    type:'line',
-    data:{labels,datasets},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{color:'#a8acb3',font:{size:11,family:"'Pretendard Variable',sans-serif"},usePointStyle:true,pointStyle:'circle'},position:'top'},
-        tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${fmt(ctx.raw)} RN`}}
+  charts['yoy'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: datasets.map(ds => ({
+      ...ds,
+      data: ds.data.map(d => d.y)
+    })) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#a8acb3', font: { size: 11 }, usePointStyle: true } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.raw)} RN` } }
       },
-      scales:{
-        x:{ticks:{color:'#7a7e85',font:{size:10}},grid:{color:'rgba(255,255,255,0.06)'}},
-        y:{ticks:{color:'#7a7e85',font:{size:10,family:"'JetBrains Mono',monospace"},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'rgba(255,255,255,0.06)'}}
+      scales: {
+        x: { title: { display: true, text: '스냅샷 순서', color: '#7a7e85', font: { size: 10 } }, ticks: { color: '#7a7e85', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v }, grid: { color: 'rgba(255,255,255,0.06)' } }
       }
     }
   });
 }
 
-/* ═══ INIT ═══ */
-document.addEventListener('DOMContentLoaded',init);
+/* ── Rank Cards ── */
+function renderRankCards(stayMonth, lyMonth) {
+  const container = document.getElementById('rank-cards');
+  // Use latest snapshot for this year
+  const stayYear = parseInt(stayMonth.split('-')[0]);
+  const latestSnap = [...trendData.snapshots].reverse().find(s => s._year === stayYear);
+  if (!latestSnap) { container.innerHTML = ''; return; }
+
+  const [yr, mm] = stayMonth.split('-');
+  const rankings = [];
+  Object.entries(latestSnap.properties).forEach(([prop, months]) => {
+    const entry = months[stayMonth];
+    if (!entry) return;
+    const ach = entry.rm_budget_rn > 0 ? entry.rm_fcst_rn / entry.rm_budget_rn * 100 : 0;
+    const r = { name: prop, fcst: entry.rm_fcst_rn, budget: entry.rm_budget_rn, ach: Math.round(ach * 10) / 10 };
+
+    // YoY: find LY latest snapshot
+    const lyYear = stayYear - 1;
+    const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+    if (lySnap) {
+      const lyEntry = lySnap.properties[prop]?.[lyMonth];
+      if (lyEntry) {
+        r.lyFcst = lyEntry.rm_fcst_rn;
+        r.yoyPct = lyEntry.rm_fcst_rn > 0 ? ((entry.rm_fcst_rn / lyEntry.rm_fcst_rn - 1) * 100).toFixed(1) : null;
+      }
+    }
+
+    // Change from earliest
+    const earliestSnap = trendData.snapshots.find(s => s._year === stayYear && s.properties[prop]?.[stayMonth]);
+    if (earliestSnap && earliestSnap !== latestSnap) {
+      const earlyEntry = earliestSnap.properties[prop]?.[stayMonth];
+      if (earlyEntry) r.delta = entry.rm_fcst_rn - earlyEntry.rm_fcst_rn;
+    }
+    rankings.push(r);
+  });
+
+  if (!rankings.length) { container.innerHTML = ''; return; }
+
+  const byAch = [...rankings].sort((a, b) => b.ach - a.ach);
+  const top5 = byAch.slice(0, 5);
+  const bottom5 = byAch.slice(-5).reverse();
+  const snapDate = latestSnap._snapshot_date;
+  const [sd_y, sd_m, sd_d] = snapDate.split('-');
+
+  container.innerHTML = `
+    <div class="rank-box">
+      <div class="rank-title top">▲ TOP 5 달성률 (${parseInt(mm)}월, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
+      ${top5.map((r, i) => `
+        <div class="rank-item">
+          <span class="rank-name">${i + 1}. ${esc(r.name)}</span>
+          <span>
+            <span class="rank-val pos">${r.ach}%</span>
+            <span class="rank-pct" style="color:var(--ink-faint)">${fmt(r.fcst)}/${fmt(r.budget)}</span>
+            ${r.yoyPct != null ? `<span class="rank-pct" style="color:${parseFloat(r.yoyPct)>=0?'var(--positive)':'var(--negative)'}">YoY ${parseFloat(r.yoyPct)>=0?'+':''}${r.yoyPct}%</span>` : ''}
+          </span>
+        </div>`).join('')}
+    </div>
+    <div class="rank-box">
+      <div class="rank-title bottom">▼ BOTTOM 5 달성률 (${parseInt(mm)}월, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
+      ${bottom5.map((r, i) => `
+        <div class="rank-item">
+          <span class="rank-name">${rankings.length - 4 + i}. ${esc(r.name)}</span>
+          <span>
+            <span class="rank-val neg">${r.ach}%</span>
+            <span class="rank-pct" style="color:var(--ink-faint)">${fmt(r.fcst)}/${fmt(r.budget)}</span>
+            ${r.yoyPct != null ? `<span class="rank-pct" style="color:${parseFloat(r.yoyPct)>=0?'var(--positive)':'var(--negative)'}">YoY ${parseFloat(r.yoyPct)>=0?'+':''}${r.yoyPct}%</span>` : ''}
+          </span>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+/* ── Detail Table ── */
+function renderTable(stayMonth, lyMonth) {
+  const thead = document.getElementById('trend-thead');
+  const tbody = document.getElementById('trend-tbody');
+  const [yr, mm] = stayMonth.split('-');
+  const stayYear = parseInt(yr);
+
+  // Get all snapshots for this stay month's year
+  const relevantSnaps = trendData.snapshots.filter(s =>
+    s._year === stayYear && Object.values(s.properties).some(p => p[stayMonth])
+  );
+
+  // Get all properties
+  const allProps = new Set();
+  relevantSnaps.forEach(s => Object.keys(s.properties).forEach(p => allProps.add(p)));
+  const sortedProps = [...allProps].sort();
+
+  // Header
+  let hdr = '<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>';
+  relevantSnaps.forEach((snap, i) => {
+    const [sy, sm, sd] = snap._snapshot_date.split('-');
+    const isLast = i === relevantSnaps.length - 1;
+    hdr += `<th class="week-col" style="text-align:right;color:${isLast ? 'var(--positive)' : 'var(--info)'}">${parseInt(sm)}/${parseInt(sd)}</th>`;
+  });
+  hdr += '<th class="week-col" style="text-align:right;color:var(--gold-bright)">달성률</th>';
+  hdr += '<th class="week-col" style="text-align:right;color:var(--apac)">YoY</th>';
+  hdr += '<th style="min-width:180px;color:var(--ink-faint)">AI 변동 요인</th></tr>';
+  thead.innerHTML = hdr;
+
+  // LY data for YoY
+  const lyYear = stayYear - 1;
+  const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+
+  // Body rows
+  let html = '';
+  let totBud = 0, totFcstArr = relevantSnaps.map(() => 0);
+
+  sortedProps.forEach(propName => {
+    const firstSnap = relevantSnaps.find(s => s.properties[propName]?.[stayMonth]);
+    const budget = firstSnap?.properties[propName]?.[stayMonth]?.rm_budget_rn || 0;
+    totBud += budget;
+
+    html += `<tr><td class="prop-name">${esc(propName)}</td>`;
+    html += `<td class="week-col" style="color:var(--ink-muted)">${fmt(budget)}</td>`;
+
+    let lastFcst = null, firstFcst = null;
+    relevantSnaps.forEach((snap, i) => {
+      const entry = snap.properties[propName]?.[stayMonth];
+      const fcst = entry?.rm_fcst_rn ?? null;
+      const isLast = i === relevantSnaps.length - 1;
+
+      if (fcst !== null) {
+        if (firstFcst === null) firstFcst = fcst;
+        lastFcst = fcst;
+        totFcstArr[i] += fcst;
+      }
+
+      // Delta from previous
+      let delta = '';
+      if (i > 0) {
+        const prevEntry = relevantSnaps[i-1].properties[propName]?.[stayMonth];
+        const prevFcst = prevEntry?.rm_fcst_rn ?? null;
+        if (prevFcst !== null && fcst !== null) {
+          const d = fcst - prevFcst;
+          if (d !== 0) delta = `<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};display:block">${d>0?'+':''}${fmt(d)}</span>`;
+        }
+      }
+
+      html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${fcst !== null ? fmt(fcst) : '—'}${delta}</td>`;
+    });
+
+    // Achievement
+    const achV = budget > 0 && lastFcst !== null ? (lastFcst / budget * 100).toFixed(1) : null;
+    const achCls = achV !== null ? (parseFloat(achV) >= 100 ? 'positive' : parseFloat(achV) >= 80 ? 'warning' : 'negative') : '';
+    html += `<td class="week-col"><span class="tbadge ${achCls}">${achV !== null ? achV + '%' : '—'}</span></td>`;
+
+    // YoY
+    const lyEntry = lySnap?.properties[propName]?.[lyMonth];
+    const lyFcst = lyEntry?.rm_fcst_rn ?? null;
+    let yoyHtml = '—';
+    if (lyFcst !== null && lastFcst !== null && lyFcst > 0) {
+      const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
+      const yoyCls = parseFloat(yoyPct) >= 0 ? 'var(--positive)' : 'var(--negative)';
+      yoyHtml = `<span style="color:${yoyCls}">${parseFloat(yoyPct) >= 0 ? '+' : ''}${yoyPct}%</span>`;
+    }
+    html += `<td class="week-col">${yoyHtml}</td>`;
+
+    // AI factor
+    html += `<td class="reason-cell">${generateAIFactor(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst)}</td>`;
+    html += '</tr>';
+  });
+
+  // Total row
+  html += '<tr class="total-row"><td style="font-family:var(--sans)">전체 합계</td>';
+  html += `<td class="week-col" style="color:var(--ink-muted)">${fmt(totBud)}</td>`;
+  totFcstArr.forEach((v, i) => {
+    const isLast = i === totFcstArr.length - 1;
+    html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:800">${fmt(v)}</td>`;
+  });
+  const totLast = totFcstArr[totFcstArr.length - 1] || 0;
+  const totAch = totBud > 0 ? (totLast / totBud * 100).toFixed(1) : null;
+  const totAchCls = totAch !== null ? (parseFloat(totAch) >= 100 ? 'positive' : parseFloat(totAch) >= 80 ? 'warning' : 'negative') : '';
+  html += `<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAch !== null ? totAch + '%' : '—'}</span></td>`;
+
+  // Total YoY
+  let totLyFcst = 0;
+  if (lySnap) {
+    Object.values(lySnap.properties).forEach(months => {
+      if (months[lyMonth]) totLyFcst += months[lyMonth].rm_fcst_rn || 0;
+    });
+  }
+  let totYoyHtml = '—';
+  if (totLyFcst > 0 && totLast > 0) {
+    const yp = ((totLast / totLyFcst - 1) * 100).toFixed(1);
+    totYoyHtml = `<span style="color:${parseFloat(yp)>=0?'var(--positive)':'var(--negative)'}">${parseFloat(yp)>=0?'+':''}${yp}%</span>`;
+  }
+  html += `<td class="week-col">${totYoyHtml}</td><td></td></tr>`;
+
+  tbody.innerHTML = html;
+  document.getElementById('tbl-desc').textContent = `${parseInt(mm)}월 '${yr.slice(2)} · ${relevantSnaps.length}개 시점`;
+}
+
+/* ── AI Factor Generator ── */
+function generateAIFactor(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst) {
+  const lines = [];
+  if (firstFcst === null || lastFcst === null) return '<span class="ai-nt">데이터 부족</span>';
+
+  // FCST 변동 추이
+  const delta = lastFcst - firstFcst;
+  if (firstFcst > 0) {
+    const pct = ((delta / firstFcst) * 100).toFixed(1);
+    if (Math.abs(parseFloat(pct)) >= 3) {
+      const cls = delta >= 0 ? 'ai-up' : 'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">추이</span><span class="${cls}">FCST ${delta>=0?'+':''}${fmt(delta)} (${delta>=0?'+':''}${pct}%)</span></span>`);
+    }
+  }
+
+  // Budget 대비
+  if (budget > 0) {
+    const achV = lastFcst / budget * 100;
+    let achComment = '';
+    if (achV >= 130) achComment = `달성 ${achV.toFixed(0)}% 초과`;
+    else if (achV >= 110) achComment = `달성 ${achV.toFixed(0)}% 양호`;
+    else if (achV >= 95) achComment = `달성 ${achV.toFixed(0)}% 목표 근접`;
+    else if (achV >= 80) achComment = `달성 ${achV.toFixed(0)}% 소폭 부진`;
+    else if (achV > 0) achComment = `달성 ${achV.toFixed(0)}% 부진`;
+    if (achComment) {
+      const cls = achV >= 100 ? 'ai-up' : achV >= 80 ? '' : 'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag ach">달성</span><span class="${cls}">${achComment}</span></span>`);
+    }
+  }
+
+  // YoY
+  if (lyFcst !== null && lyFcst > 0) {
+    const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
+    if (Math.abs(parseFloat(yoyPct)) >= 5) {
+      const cls = parseFloat(yoyPct) >= 0 ? 'ai-up' : 'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">전년대비 ${parseFloat(yoyPct)>=0?'+':''}${yoyPct}%</span></span>`);
+    }
+  }
+
+  // Seasonal context
+  const mo = parseInt(stayMonth.split('-')[1]);
+  if (mo === 4) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>봄 성수기</span>`);
+  else if (mo === 5) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>황금연휴</span>`);
+  else if (mo === 6) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>비수기 전환</span>`);
+  else if (mo === 7 || mo === 8) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>여름 성수기</span>`);
+  else if (mo === 12 || mo === 1) lines.push(`<span class="ai-line"><span class="ai-tag rev">시즌</span>겨울 성수기</span>`);
+
+  return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">안정적</span>';
+}
 </script>
 </body>
 </html>

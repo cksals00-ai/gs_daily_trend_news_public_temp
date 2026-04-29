@@ -271,18 +271,20 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         rooms = _int(idx_rooms)
                         night_rate = _int(idx_1night)
 
-                        # ── 노쇼 제거 ──
-                        if idx_rsv_status >= 0 and idx_rsv_status < plen:
-                            rsv_status = parts[idx_rsv_status].strip()
-                            if rsv_status == '노쇼':
-                                continue
+                        # ── 노쇼: OTB 기준과 맞추기 위해 포함 (제거하지 않음) ──
+                        # if idx_rsv_status >= 0 and idx_rsv_status < plen:
+                        #     rsv_status = parts[idx_rsv_status].strip()
+                        #     if rsv_status == '노쇼':
+                        #         continue
 
                         # ── 거래처 제거: 예약자명 == 거래처명(회원명) ──
+                        # Inbound(코드58)는 여행사 대행예약이라 회원명=이용자명이 정상 → 예외
                         if idx_member >= 0 and idx_user >= 0 and idx_member < plen and idx_user < plen:
                             member_name = parts[idx_member].strip()
                             user_name = parts[idx_user].strip()
                             if member_name and user_name and member_name == user_name:
-                                continue
+                                if code_num != '58':
+                                    continue
 
                         # ── 매출조정 제거 ──
                         if idx_member >= 0 and idx_member < plen and '매출조정' in parts[idx_member]:
