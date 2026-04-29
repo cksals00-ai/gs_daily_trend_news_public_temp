@@ -9,10 +9,18 @@ Parse ALL Revenue Meeting PDFs → build rm_fcst_trend.json with:
 Output: docs/data/rm_fcst_trend.json
 """
 
-import json, re, subprocess, sys
+import json, re, subprocess, sys, shutil
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
+
+try:
+    import pdfplumber
+    HAS_PDFPLUMBER = True
+except ImportError:
+    HAS_PDFPLUMBER = False
+
+HAS_PDFTOTEXT = shutil.which("pdftotext") is not None
 
 REPO = Path(__file__).resolve().parent.parent
 PDF_DIR = REPO / "data" / "RM자료"
@@ -48,13 +56,29 @@ SEG_TARGETS = ["OTA", "G-OTA", "Inbound"]
 
 
 def extract_text(pdf):
-    try:
-        r = subprocess.run(["pdftotext", "-layout", str(pdf), "-"],
-                           capture_output=True, check=True, text=True, timeout=15)
-        return r.stdout
-    except Exception as e:
-        print(f"  SKIP {pdf.name}: {e}")
-        return None
+    """Extract text from PDF using pdftotext (preferred) or pdfplumber (fallback)."""
+    if HAS_PDFTOTEXT:
+        try:
+            r = subprocess.run(["pdftotext", "-layout", str(pdf), "-"],
+                               capture_output=True, check=True, text=True, timeout=15)
+            return r.stdout
+        except Exception as e:
+            print(f"  SKIP {pdf.name}: {e}")
+            return None
+    elif HAS_PDFPLUMBER:
+        try:
+            with pdfplumber.open(str(pdf)) as p:
+                pages = []
+                for page in p.pages:
+                    text = page.extract_text(layout=True) or ""
+                    pages.append(text)
+                return "\f".join(pages)
+        except Exception as e:
+            print(f"  SKIP {pdf.name}: {e}")
+            return None
+    else:
+        print("  ERROR: pdftotext와 pdfplumber 모두 없음. brew install poppler 또는 pip install pdfplumber 실행 필요")
+        sys.exit(1)
 
 
 def parse_nums(line):
