@@ -50,7 +50,7 @@ SEG_TARGETS = ["OTA", "G-OTA", "Inbound"]
 def extract_text(pdf):
     try:
         r = subprocess.run(["pdftotext", "-layout", str(pdf), "-"],
-                           capture_output=True, check=True, text=True, timeout=30)
+                           capture_output=True, check=True, text=True, timeout=15)
         return r.stdout
     except Exception as e:
         print(f"  SKIP {pdf.name}: {e}")
