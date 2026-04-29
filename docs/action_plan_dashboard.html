@@ -29,25 +29,117 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent}.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
 
 .wrap{max-width:1800px;margin:0 auto;padding:20px 18px 60px}
-.page-title{margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.page-title{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.page-title-left{min-width:0}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:4px;font-weight:700}
 .page-title h1{font-size:18px;font-weight:800;letter-spacing:-.02em}
-
-/* Chips */
-.chip-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-.chip-bar .f-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.12em;margin-right:4px}
-.chip{padding:4px 12px;border-radius:16px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
-.chip.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
-.chip.ch-inbound.active{background:rgba(6,182,212,.15);border-color:var(--inbound);color:var(--inbound)}
-.chip.ch-ota.active{background:rgba(139,92,246,.15);border-color:var(--ota);color:var(--ota)}
-.chip.ch-gota.active{background:rgba(245,158,11,.15);border-color:var(--gota);color:var(--gota)}
-.filter-select{background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:11px;font-weight:600;padding:4px 8px;outline:none;cursor:pointer}
+.page-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;text-align:right;line-height:1.6}
+.page-meta strong{color:var(--gold-bright);font-weight:700}
 
 /* Config */
+.config-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.btn-mini{background:transparent;border:1px solid var(--rule);padding:5px 10px;border-radius:4px;color:var(--ink-faint);font-size:11px;cursor:pointer;font-family:var(--mono);font-weight:600;transition:all .15s}
+.btn-mini:hover{border-color:var(--gold);color:var(--gold-bright)}
 .config-panel{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .config-panel label{font-size:11px;color:var(--ink-muted);font-weight:600;white-space:nowrap}
 .config-panel input{background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:11px;padding:5px 8px;flex:1;min-width:200px;outline:none;font-family:var(--mono)}
 .config-panel button{padding:5px 14px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--ink-faint)}
+.kpi-card.active::before{background:var(--positive)}
+.kpi-card.upcoming::before{background:var(--info)}
+.kpi-card.ended::before{background:var(--ink-faint)}
+.kpi-card.total::before{background:var(--gold)}
+.kpi-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;margin-bottom:4px}
+.kpi-value{font-family:var(--mono);font-size:24px;font-weight:800;color:var(--ink);line-height:1.1}
+.kpi-card.active .kpi-value{color:var(--positive)}
+.kpi-card.upcoming .kpi-value{color:var(--info)}
+.kpi-card.total .kpi-value{color:var(--gold-bright)}
+.kpi-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px;font-weight:600}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:12px 14px}
+.chart-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);letter-spacing:.05em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.chart-title small{font-size:9px;color:var(--ink-faint);font-weight:600}
+.chart-bars{display:flex;flex-direction:column;gap:5px}
+.chart-row{display:grid;grid-template-columns:120px 1fr 36px;gap:8px;align-items:center;font-size:11px}
+.chart-row-label{color:var(--ink-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-row-bar-wrap{background:rgba(255,255,255,.04);border-radius:3px;height:14px;position:relative;overflow:hidden}
+.chart-row-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold) 0%,var(--gold-bright) 100%);transition:width .4s}
+.chart-row-val{font-family:var(--mono);font-size:10px;color:var(--ink-muted);text-align:right;font-weight:700}
+
+/* View tabs */
+.view-tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--rule);padding-bottom:0}
+.view-tab{background:transparent;border:1px solid transparent;border-bottom:none;padding:8px 16px;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;transition:all .15s;font-family:var(--mono)}
+.view-tab:hover{color:var(--ink-soft);background:rgba(255,255,255,.03)}
+.view-tab.active{background:var(--bg-card);border-color:var(--rule);border-bottom:1px solid var(--bg-card);color:var(--gold-bright);margin-bottom:-1px;position:relative;z-index:1}
+
+/* Chips & filters */
+.chip-bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.chip-bar .f-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px}
+.chip{padding:4px 12px;border-radius:16px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.chip.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
+.chip.st-active.active{background:rgba(76,175,111,.15);border-color:var(--positive);color:var(--positive)}
+.chip.st-upcoming.active{background:rgba(90,159,196,.15);border-color:var(--info);color:var(--info)}
+.chip.st-ended.active{background:rgba(122,126,133,.15);border-color:var(--ink-faint);color:var(--ink-soft)}
+.filter-select{background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:11px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer;min-width:120px;max-width:240px}
+
+/* Status badges */
+.st-badge{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.04em;white-space:nowrap}
+.st-badge.active{background:rgba(76,175,111,.15);color:var(--positive)}
+.st-badge.upcoming{background:rgba(90,159,196,.15);color:var(--info)}
+.st-badge.ended{background:rgba(122,126,133,.12);color:var(--ink-faint)}
+.st-badge.unknown{background:rgba(255,255,255,.05);color:var(--ink-faint)}
+
+/* Table view */
+.tbl-wrap{overflow-x:auto;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:16px}
+.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;min-width:1200px}
+.tbl th{position:sticky;top:0;background:var(--bg-deep);z-index:2;padding:8px 10px;font-size:10px;font-weight:700;color:var(--ink-faint);text-align:left;border-bottom:2px solid var(--rule-strong);white-space:nowrap;letter-spacing:.04em;font-family:var(--mono)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.45}
+.tbl tr:hover td{background:var(--bg-hover)}
+.tbl .col-num{width:36px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:10px}
+.tbl .col-status{width:64px;white-space:nowrap}
+.tbl .col-channel{width:140px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-soft);font-weight:600}
+.tbl .col-prop{width:90px;color:var(--gold-bright);font-weight:700;white-space:nowrap}
+.tbl .col-region{width:80px;color:var(--ink-faint);font-size:11px;white-space:nowrap}
+.tbl .col-title{min-width:200px;max-width:340px;color:var(--ink);font-weight:600}
+.tbl .col-product{min-width:180px;max-width:280px;color:var(--ink-muted);font-size:11px}
+.tbl .col-period{width:130px;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);white-space:nowrap}
+.tbl .col-period .period-sub{color:var(--ink-faint);font-size:9.5px}
+.tbl .col-note{min-width:140px;max-width:240px;color:var(--ink-muted);font-size:11px}
+.tbl .col-actual{width:64px;font-family:var(--mono);font-size:10px;color:var(--info);text-align:right;white-space:nowrap}
+.tbl .row-active td{background:rgba(76,175,111,.04)}
+.tbl .row-active:hover td{background:rgba(76,175,111,.09)}
+
+/* Calendar view */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:10px 14px}
+.cal-nav-btn{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:700}
+.cal-nav-btn:hover{border-color:var(--gold);color:var(--gold-bright)}
+.cal-month-label{font-size:14px;font-weight:800;color:var(--ink);letter-spacing:.02em}
+.cal-mode{display:flex;gap:4px}
+.cal-mode-btn{padding:4px 10px;font-size:10px;font-family:var(--mono);font-weight:700;background:transparent;border:1px solid var(--rule);border-radius:4px;color:var(--ink-faint);cursor:pointer}
+.cal-mode-btn.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
+.cal-grid{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.cal-week-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg-deep);border-bottom:1px solid var(--rule-strong)}
+.cal-week-head>div{padding:8px 6px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em}
+.cal-week-head>div.sun{color:var(--negative)}.cal-week-head>div.sat{color:var(--info)}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(110px,auto)}
+.cal-day{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6px;display:flex;flex-direction:column;gap:3px;min-height:110px;overflow:hidden;position:relative}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day.outside{background:rgba(0,0,0,.18);opacity:.5}
+.cal-day.today{background:rgba(201,160,99,.07)}
+.cal-day.today .cal-day-num{color:var(--gold-bright);font-weight:800}
+.cal-day-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:2px}
+.cal-day-num.sun{color:var(--negative)}.cal-day-num.sat{color:var(--info)}
+.cal-event{font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(90,159,196,.18);color:var(--info);border-left:2px solid var(--info);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help}
+.cal-event.start{background:rgba(76,175,111,.2);color:var(--positive);border-left-color:var(--positive)}
+.cal-event.end{background:rgba(229,115,115,.18);color:var(--negative);border-left-color:var(--negative)}
+.cal-event.middle{background:rgba(90,159,196,.12);color:var(--ink-soft);border-left-color:var(--info);opacity:.85}
+.cal-event-more{font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;text-align:center;margin-top:2px}
 
 /* Gantt container */
 .gantt-wrap{overflow-x:auto;overflow-y:auto;max-height:75vh;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:16px;position:relative}
@@ -59,42 +151,45 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .gantt-table tr:hover td{background:var(--bg-hover)}
 .gantt-table tr:hover td.freeze{background:var(--bg-hover)}
 
-/* Info columns (left side) */
-.col-no{width:30px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:10px}
-.col-ch{width:55px}
-.col-person{width:55px}
-.col-prop{width:90px;font-weight:600}
-.col-title{min-width:180px;max-width:280px;overflow:hidden;text-overflow:ellipsis}
-.col-period{width:80px;font-family:var(--mono);font-size:10px;color:var(--ink-muted)}
-.col-price{width:70px;font-family:var(--mono);font-size:10px;text-align:right}
-.col-pkg{width:80px;font-family:var(--mono);font-size:10px;color:var(--info)}
-.col-rn{width:60px;font-family:var(--mono);font-size:11px;text-align:right;font-weight:700}
-
-/* Channel badges */
-.ch-badge{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap}
-.ch-badge.inbound{background:rgba(6,182,212,.15);color:var(--inbound)}
-.ch-badge.ota{background:rgba(139,92,246,.15);color:var(--ota)}
-.ch-badge.gota{background:rgba(245,158,11,.15);color:var(--gota)}
-
-/* Gantt bars */
 .gantt-cell{width:24px;min-width:24px;max-width:24px;padding:0!important;position:relative;border-left:1px solid rgba(255,255,255,.04)}
 .gantt-cell.weekend{background:rgba(255,255,255,.03)}
 .gantt-cell.today{background:rgba(201,160,99,.08)}
-.gantt-cell .bar{position:absolute;top:25%;height:50%;border-radius:2px;min-width:100%}
-.bar-inbound{background:var(--inbound);opacity:.75}
-.bar-ota{background:var(--ota);opacity:.75}
-.bar-gota{background:var(--gota);opacity:.75}
-.bar-default{background:var(--info);opacity:.75}
+.gantt-cell .bar{position:absolute;height:48%;border-radius:2px}
+.gantt-cell .bar-sale{top:6%;background:var(--gold);opacity:.85}
+.gantt-cell .bar-stay{top:48%;background:var(--info);opacity:.7}
 
-/* Today marker */
-.today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none}
+.legend{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--ink-muted);font-weight:600;font-family:var(--mono);padding:6px 0;flex-wrap:wrap}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
 
-/* Status dot */
-.st-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
-.st-dot.active{background:var(--positive)}.st-dot.upcoming{background:var(--info)}.st-dot.ended{background:var(--ink-faint)}
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint)}
+.empty-state-icon{font-size:36px;margin-bottom:10px}
+.empty-state-title{font-weight:700;margin-bottom:6px;color:var(--ink-soft)}
+.empty-state-sub{font-size:11px}
 
-@media(max-width:900px){.wrap{padding:12px 10px 36px}}
-@media(max-width:900px){.mast{padding:0 14px}.mast-sub{display:none}}
+/* Tooltip-ish */
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:0;background:var(--bg-deep);color:var(--ink);padding:6px 10px;border-radius:4px;font-size:10.5px;line-height:1.5;white-space:pre-wrap;max-width:340px;width:max-content;border:1px solid var(--rule-strong);z-index:50;font-family:var(--sans);font-weight:500;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+
+/* Responsive */
+@media(max-width:900px){
+  .wrap{padding:12px 10px 36px}
+  .mast{padding:0 14px}.mast-sub{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .chart-grid{grid-template-columns:1fr}
+  .chart-row{grid-template-columns:90px 1fr 32px;font-size:10.5px}
+  .page-title{flex-direction:column;align-items:flex-start}
+  .page-meta{text-align:left}
+  .filter-select{min-width:100px;flex:1}
+  .view-tab{padding:7px 10px;font-size:11px}
+  .cal-days{grid-auto-rows:minmax(80px,auto)}
+  .cal-day{min-height:80px;padding:4px}
+  .cal-day-num{font-size:10px}
+  .cal-event{font-size:9px;padding:1px 4px}
+  .tbl{min-width:900px;font-size:11px}
+  .tbl th,.tbl td{padding:6px 7px}
+  .kpi-value{font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -112,7 +207,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
-</div>
+    </div>
     <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -121,7 +216,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 <script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)||h.match(/gs_daily_trend_news_public_temp\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;if(hit)a.classList.add('active');});})();</script>
 
 <header class="mast">
-  <div class="mast-logo"><span class="mast-name">SONO & TRINITY</span><span class="mast-sub">주간활동일지 · Action Plan</span></div>
+  <div class="mast-logo"><span class="mast-name">SONO &amp; TRINITY</span><span class="mast-sub">주간활동일지 · Action Plan</span></div>
   <nav style="display:flex;gap:8px">
     <a href="index.html" class="nav-btn">↗ 트렌드</a>
     <a href="otb.html" class="nav-btn">↗ 실적</a>
@@ -131,346 +226,609 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
 <main class="wrap">
   <div class="page-title">
-    <div class="eyebrow">WEEKLY ACTIVITY · ACTION PLAN</div>
-    <h1>주간활동일지 · Action Plan</h1>
+    <div class="page-title-left">
+      <div class="eyebrow">WEEKLY ACTIVITY · ACTION PLAN</div>
+      <h1>주간활동일지 · Action Plan</h1>
+    </div>
+    <div class="page-meta">
+      기준일자 · <strong id="today-label">—</strong><br>
+      <span id="load-status">⏳ 로딩 중...</span>
+    </div>
   </div>
 
-  <!-- 설정 -->
-  <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
-    <button id="config-toggle-btn" onclick="document.getElementById('config-panel').style.display = document.getElementById('config-panel').style.display === 'none' ? 'flex' : 'none'" style="background:transparent;border:1px solid var(--rule);padding:6px 10px;border-radius:4px;color:var(--ink-faint);font-size:11px;cursor:pointer;font-family:var(--mono);font-weight:600">⚙ 설정</button>
+  <!-- Config -->
+  <div class="config-row">
+    <button class="btn-mini" onclick="document.getElementById('config-panel').style.display = document.getElementById('config-panel').style.display === 'none' ? 'flex' : 'none'">⚙ 데이터 소스 설정</button>
+    <button class="btn-mini" onclick="loadCSV()">↻ 새로고침</button>
   </div>
   <div class="config-panel" id="config-panel" style="display:none">
     <label>📋 구글시트 CSV</label>
     <input type="text" id="csv-url" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTqe7nY8vHYVVnnGR5qrl-uubCABXtmbToAuKWziuaoms14hZ3qlJuQTBWUXDmjCOU-4hd0hp6cpO_O/pub?gid=1818134248&amp;single=true&amp;output=csv">
     <button onclick="loadCSV()">로드</button>
-    <span id="load-status" style="font-size:10px;color:var(--ink-faint)"></span>
   </div>
 
-  <!-- 필터 -->
-  <div class="chip-bar">
-    <span class="f-label">채널</span>
-    <div id="ch-chips" style="display:flex;gap:4px"></div>
-    <span class="f-label" style="margin-left:10px">담당</span>
-    <select class="filter-select" id="f-person" onchange="render()"><option value="">전체</option></select>
-    <span class="f-label" style="margin-left:10px">사업장</span>
-    <select class="filter-select" id="f-prop" onchange="render()"><option value="">전체</option></select>
-    <span id="count-label" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto"></span>
-  </div>
-
-  <!-- 간트 차트 + 테이블 -->
-  <div class="gantt-wrap" id="gantt-wrap">
-    <div id="no-data" style="text-align:center;padding:50px;color:var(--ink-faint)">
-      <div style="font-size:36px;margin-bottom:10px">📋</div>
-      <div style="font-weight:700;margin-bottom:6px">구글시트 데이터 로딩 중...</div>
-      <div style="font-size:11px">잠시만 기다려주세요</div>
+  <!-- KPI cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card total">
+      <div class="kpi-label">전체 기획전</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-total-sub">—</div>
+    </div>
+    <div class="kpi-card active">
+      <div class="kpi-label">진행중 (판매)</div>
+      <div class="kpi-value" id="kpi-active">—</div>
+      <div class="kpi-sub" id="kpi-active-sub">오늘 판매 중</div>
+    </div>
+    <div class="kpi-card upcoming">
+      <div class="kpi-label">예정</div>
+      <div class="kpi-value" id="kpi-upcoming">—</div>
+      <div class="kpi-sub" id="kpi-upcoming-sub">판매 시작 전</div>
+    </div>
+    <div class="kpi-card ended">
+      <div class="kpi-label">종료</div>
+      <div class="kpi-value" id="kpi-ended">—</div>
+      <div class="kpi-sub" id="kpi-ended-sub">판매 종료</div>
     </div>
   </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">채널별 기획전 수 <small>TOP 10</small></div>
+      <div class="chart-bars" id="chart-channel"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">사업장별 기획전 수 <small>TOP 10</small></div>
+      <div class="chart-bars" id="chart-property"></div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="chip-bar">
+    <span class="f-label">채널</span>
+    <select class="filter-select" id="f-channel" onchange="render()"><option value="">전체 채널</option></select>
+    <span class="f-label" style="margin-left:6px">사업장</span>
+    <select class="filter-select" id="f-prop" onchange="render()"><option value="">전체 사업장</option></select>
+    <span class="f-label" style="margin-left:6px">상태</span>
+    <div id="status-chips" style="display:flex;gap:4px"></div>
+    <span id="count-label" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto">—</span>
+  </div>
+
+  <!-- View tabs -->
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="table" onclick="setView('table')">📋 테이블</button>
+    <button class="view-tab" data-view="calendar" onclick="setView('calendar')">📅 캘린더</button>
+    <button class="view-tab" data-view="gantt" onclick="setView('gantt')">📊 간트 차트</button>
+  </div>
+
+  <!-- Content panes -->
+  <div id="view-table" class="view-pane">
+    <div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-title">데이터 로딩 중...</div></div>
+  </div>
+  <div id="view-calendar" class="view-pane" style="display:none"></div>
+  <div id="view-gantt" class="view-pane" style="display:none"></div>
 </main>
 
 <script>
 /* ═══════════════════════════════════════════
-   주간활동일지 Action Plan — 간트 차트
-   구글시트 CSV 자동 연동
-   Key번호 시트 → 패키지코드 매칭 → 실적 연동
+   주간활동일지 · Action Plan 대시보드
+   - CSV (Google Sheet) 자동 연동
+   - 필터: 채널 / 사업장 / 상태
+   - 뷰: 테이블 / 캘린더 / 간트
+   - 시각화: KPI + 채널·사업장별 분포
    ═══════════════════════════════════════════ */
 
 let allRows = [];
-let selCh = '전체';
-const today = new Date();
-const todayStr = today.toISOString().slice(0,10);
+let curView = 'table';
+let selStatus = '전체';
+let calCursor = null;        // Date cursor for calendar (1st of displayed month)
+let calMode = 'sale';        // 'sale' or 'stay'
+const today = new Date(); today.setHours(0,0,0,0);
+const todayStr = ymdStr(today);
 
-const fmt = n => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('ko-KR');
-
-/* ── CSV ── */
-function parseCSVLine(line) {
-  const r = []; let cur = '', q = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') { if (q && line[i+1] === '"') { cur += '"'; i++; } else q = !q; }
-    else if (c === ',' && !q) { r.push(cur); cur = ''; }
-    else cur += c;
+/* ── Date utils ── */
+function ymdStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtYMD(d){if(!d)return '—';const y=String(d.getFullYear()).slice(-2),m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return y+'.'+m+'.'+da}
+function fmtMD(d){if(!d)return '—';const m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return m+'.'+da}
+function parseDate(s){
+  if(!s)return null;
+  s=String(s).trim();
+  if(!s)return null;
+  // YY.MM.DD or YYYY.MM.DD or YY-MM-DD or YY/MM/DD
+  let m=s.match(/^(\d{2,4})[\-\.\/](\d{1,2})[\-\.\/](\d{1,2})/);
+  if(m){
+    let y=+m[1]; if(y<100)y+=2000;
+    const d=new Date(y,+m[2]-1,+m[3]); d.setHours(0,0,0,0);
+    if(isNaN(d.getTime()))return null;
+    return d;
   }
-  r.push(cur); return r;
+  // MM/DD/YYYY
+  m=s.match(/^(\d{1,2})[\-\.\/](\d{1,2})[\-\.\/](\d{4})/);
+  if(m){const d=new Date(+m[3],+m[1]-1,+m[2]);d.setHours(0,0,0,0);return d}
+  return null;
 }
 
-function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  // 실제 헤더 행 탐색: '사업장' 또는 '채널' 컬럼이 포함된 첫 행
-  let hdrIdx = 0;
-  for (let i = 0; i < Math.min(lines.length, 30); i++) {
-    const cells = parseCSVLine(lines[i]).map(h => h.trim());
-    // 실제 헤더는 사업장 + 채널이 별도 셀로 존재하고, 판매기간/구분 같은 보조 컬럼도 함께 등장
-    const hasProperty = cells.some(c => c === '사업장' || c === '영업장');
-    const hasChannel = cells.some(c => c === '채널');
-    if (hasProperty && hasChannel) { hdrIdx = i; break; }
+/* ── CSV parse ── */
+function parseCSVLine(line){
+  const r=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++}else q=!q}
+    else if(c===','&&!q){r.push(cur);cur=''}
+    else cur+=c;
   }
-  const hdr = parseCSVLine(lines[hdrIdx]).map(h => h.trim());
-  return lines.slice(hdrIdx + 1).map(l => {
-    const vals = parseCSVLine(l);
-    const row = {};
-    hdr.forEach((h, i) => row[h] = (vals[i]||'').trim());
+  r.push(cur);return r;
+}
+function parseCSV(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<2)return [];
+  // 실제 헤더 행 탐색
+  let hdrIdx=0;
+  for(let i=0;i<Math.min(lines.length,30);i++){
+    const cells=parseCSVLine(lines[i]).map(c=>c.trim());
+    const hasProperty=cells.some(c=>c==='사업장'||c==='영업장');
+    const hasChannel=cells.some(c=>c==='채널');
+    if(hasProperty&&hasChannel){hdrIdx=i;break}
+  }
+  const hdr=parseCSVLine(lines[hdrIdx]).map(h=>h.trim());
+  return lines.slice(hdrIdx+1).map(l=>{
+    const vals=parseCSVLine(l);
+    const row={};
+    hdr.forEach((h,i)=>row[h]=(vals[i]||'').trim());
     return row;
   });
 }
-
-/* ── Column finder ── */
-function findCol(row, ...keys) {
-  for (const k of keys) {
-    for (const rk of Object.keys(row)) {
-      if (rk.toLowerCase().includes(k.toLowerCase())) return row[rk];
+function findCol(row,...keys){
+  for(const k of keys){
+    for(const rk of Object.keys(row)){
+      if(rk.toLowerCase()===k.toLowerCase())return row[rk];
+    }
+    for(const rk of Object.keys(row)){
+      if(rk.toLowerCase().includes(k.toLowerCase()))return row[rk];
     }
   }
   return '';
 }
 
-function normCh(ch) {
-  if (!ch) return '';
-  const u = ch.toUpperCase().replace(/[\s\-_]/g,'');
-  if (u.includes('INBOUND') || u.includes('인바운드')) return 'Inbound';
-  if (u.includes('GOTA') || u.includes('G-OTA') || u.includes('글로벌') || u.includes('G_OTA')) return 'G-OTA';
-  if (u.includes('OTA')) return 'OTA';
-  return ch;
-}
+/* ── Map row ── */
+function mapRow(raw,idx){
+  const region=findCol(raw,'구분');
+  const property=findCol(raw,'사업장');
+  const channel=findCol(raw,'채널');
+  const saleStartStr=findCol(raw,'판매기간(시작)','판매시작');
+  const saleEndStr=findCol(raw,'판매기간(종료)','판매종료');
+  const stayStartStr=findCol(raw,'투숙기간(시작)','투숙시작');
+  const stayEndStr=findCol(raw,'투숙기간(종료)','투숙종료');
+  const venue=findCol(raw,'영업장');
+  const product=findCol(raw,'상품').trim()||findCol(raw,'상품명').trim();
+  const exhibition=findCol(raw,'노출영역','기획전명','기획전').trim();
+  const note=findCol(raw,'비고').trim();
+  const key=findCol(raw,'Key','키','번호').trim();
+  const actual=findCol(raw,'실적','PKG','패키지코드','패키지').trim();
 
-function parseDate(s) {
-  if (!s) return null;
-  // Handle various formats: 2026-04-28, 2026.04.28, 04/28/2026, etc.
-  const m = s.match(/(\d{4})[\-\.\/](\d{1,2})[\-\.\/](\d{1,2})/);
-  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
-  const m2 = s.match(/(\d{1,2})[\-\.\/](\d{1,2})[\-\.\/](\d{4})/);
-  if (m2) return new Date(+m2[3], +m2[1]-1, +m2[2]);
-  return null;
-}
+  const saleStart=parseDate(saleStartStr);
+  const saleEnd=parseDate(saleEndStr);
+  const stayStart=parseDate(stayStartStr);
+  const stayEnd=parseDate(stayEndStr);
 
-function mapRow(raw) {
-  const startStr = findCol(raw, '판매기간(시작)', '시작일', '판매시작', '기간시작', '시작', 'start');
-  const endStr = findCol(raw, '판매기간(종료)', '종료일', '판매종료', '기간종료', '종료', 'end');
-  const start = parseDate(startStr);
-  const end = parseDate(endStr);
-  let status = 'unknown';
-  if (start && start > today) status = 'upcoming';
-  else if (end && end < today) status = 'ended';
-  else if (start) status = 'active';
+  // Status: based on 판매기간
+  let status='unknown';
+  if(saleStart&&saleEnd){
+    if(today<saleStart)status='upcoming';
+    else if(today>saleEnd)status='ended';
+    else status='active';
+  }else if(saleStart){
+    status=today<saleStart?'upcoming':'active';
+  }
 
-  return {
-    key: findCol(raw, 'Key', 'key', 'KEY', '키', 'No', 'no', '번호'),
-    channel: normCh(findCol(raw, '채널', 'channel', '세그')),
-    person: findCol(raw, '담당자', '담당', 'person', '작성자'),
-    property: findCol(raw, '사업장', '영업장', 'property', '리조트'),
-    title: findCol(raw, '기획전', '기획전명', '상품명', '내용', 'title', '프로모션', '제목'),
-    startDate: start,
-    endDate: end,
-    startStr, endStr,
-    price: findCol(raw, '판매가', '가격', 'price'),
-    packageCode: findCol(raw, '패키지코드', '패키지', 'package', 'code', 'PKG'),
-    status,
-    _raw: raw
+  // Title: 노출영역 > 상품 > '—'
+  const title=exhibition||product||'';
+
+  return{
+    idx,key,region,property,channel,
+    saleStart,saleEnd,stayStart,stayEnd,
+    saleStartStr,saleEndStr,stayStartStr,stayEndStr,
+    venue,product,exhibition,note,actual,
+    title,status,_raw:raw
   };
 }
 
 /* ── Load ── */
-async function loadCSV() {
-  const url = document.getElementById('csv-url').value.trim();
-  if (!url) return;
-  document.getElementById('load-status').textContent = '⏳ 로딩...';
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const txt = await r.text();
-    const raw = parseCSV(txt);
-    if (!raw.length) throw new Error('빈 데이터');
-    allRows = raw.map(mapRow).filter(r => r.title || r.property); // skip empty rows
-    document.getElementById('load-status').innerHTML = `✅ ${allRows.length}건 (${new Date().toLocaleTimeString('ko-KR')})`;
-    localStorage.setItem('ap_csv_url', url);
+async function loadCSV(){
+  const url=document.getElementById('csv-url').value.trim();
+  if(!url)return;
+  document.getElementById('load-status').textContent='⏳ 로딩 중...';
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    const raw=parseCSV(txt);
+    if(!raw.length)throw new Error('빈 데이터');
+    allRows=raw.map((row,i)=>mapRow(row,i)).filter(r=>r.title||r.property||r.channel);
+    document.getElementById('load-status').innerHTML=`✅ <strong>${allRows.length}</strong>건 · ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
+    try{localStorage.setItem('ap_csv_url',url)}catch(e){}
     populateFilters();
+    updateKPIs();
+    renderCharts();
     render();
-  } catch(e) {
-    document.getElementById('load-status').textContent = '❌ ' + e.message;
+  }catch(e){
+    document.getElementById('load-status').innerHTML='❌ '+e.message;
+    document.getElementById('view-table').innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">데이터 로드 실패</div><div class="empty-state-sub">${e.message}</div></div>`;
   }
 }
 
-function populateFilters() {
-  const persons = [...new Set(allRows.map(d => d.person).filter(Boolean))].sort();
-  const props = [...new Set(allRows.map(d => d.property).filter(Boolean))].sort();
-  const ps = document.getElementById('f-person');
-  ps.innerHTML = '<option value="">전체</option>' + persons.map(p => `<option>${p}</option>`).join('');
-  const pr = document.getElementById('f-prop');
-  pr.innerHTML = '<option value="">전체</option>' + props.map(p => `<option>${p}</option>`).join('');
-  buildChChips();
+/* ── Filter population ── */
+function populateFilters(){
+  const channels=[...new Set(allRows.map(d=>d.channel).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const props=[...new Set(allRows.map(d=>d.property).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const ch=document.getElementById('f-channel');
+  ch.innerHTML='<option value="">전체 채널 ('+channels.length+')</option>'+channels.map(p=>`<option>${escapeHtml(p)}</option>`).join('');
+  const pr=document.getElementById('f-prop');
+  pr.innerHTML='<option value="">전체 사업장 ('+props.length+')</option>'+props.map(p=>`<option>${escapeHtml(p)}</option>`).join('');
+  buildStatusChips();
+}
+function buildStatusChips(){
+  const c=document.getElementById('status-chips');
+  const items=[
+    {key:'전체',label:'전체',cls:''},
+    {key:'active',label:'진행중',cls:'st-active'},
+    {key:'upcoming',label:'예정',cls:'st-upcoming'},
+    {key:'ended',label:'종료',cls:'st-ended'}
+  ];
+  c.innerHTML=items.map(it=>`<button class="chip ${it.cls} ${selStatus===it.key?'active':''}" onclick="selStatus='${it.key}';buildStatusChips();render()">${it.label}</button>`).join('');
 }
 
-function buildChChips() {
-  const c = document.getElementById('ch-chips');
-  c.innerHTML = ['전체','Inbound','OTA','G-OTA'].map(ch => {
-    const cls = ch === 'Inbound' ? 'ch-inbound' : ch === 'OTA' ? 'ch-ota' : ch === 'G-OTA' ? 'ch-gota' : '';
-    return `<button class="chip ${cls} ${selCh===ch?'active':''}" onclick="selCh='${ch}';buildChChips();render()">${ch}</button>`;
-  }).join('');
-}
-
-function getFiltered() {
-  return allRows.filter(d => {
-    if (selCh !== '전체' && d.channel !== selCh) return false;
-    const p = document.getElementById('f-person').value;
-    if (p && d.person !== p) return false;
-    const pr = document.getElementById('f-prop').value;
-    if (pr && d.property !== pr) return false;
+/* ── Filtering ── */
+function getFiltered(){
+  const ch=document.getElementById('f-channel').value;
+  const pr=document.getElementById('f-prop').value;
+  return allRows.filter(d=>{
+    if(ch&&d.channel!==ch)return false;
+    if(pr&&d.property!==pr)return false;
+    if(selStatus!=='전체'&&d.status!==selStatus)return false;
     return true;
   });
 }
 
-/* ── Gantt Date Range ── */
-function getDateRange(data) {
-  // Find min start and max end, then pad
-  let minD = new Date(today); minD.setDate(minD.getDate() - 14);
-  let maxD = new Date(today); maxD.setDate(maxD.getDate() + 60);
+/* ── Sort: active first, then upcoming, then ended ── */
+function sortRows(rows){
+  const order={active:0,upcoming:1,ended:2,unknown:3};
+  return rows.slice().sort((a,b)=>{
+    const s=(order[a.status]||3)-(order[b.status]||3);
+    if(s!==0)return s;
+    if(a.saleStart&&b.saleStart)return a.saleStart-b.saleStart;
+    if(a.saleStart)return -1;
+    if(b.saleStart)return 1;
+    return 0;
+  });
+}
 
-  data.forEach(d => {
-    if (d.startDate && d.startDate < minD) minD = new Date(d.startDate);
-    if (d.endDate && d.endDate > maxD) maxD = new Date(d.endDate);
+/* ── KPIs ── */
+function updateKPIs(){
+  const total=allRows.length;
+  const act=allRows.filter(r=>r.status==='active').length;
+  const up=allRows.filter(r=>r.status==='upcoming').length;
+  const ed=allRows.filter(r=>r.status==='ended').length;
+  document.getElementById('kpi-total').textContent=total;
+  document.getElementById('kpi-active').textContent=act;
+  document.getElementById('kpi-upcoming').textContent=up;
+  document.getElementById('kpi-ended').textContent=ed;
+  document.getElementById('kpi-total-sub').textContent=`전체 ${total}건 등록`;
+  // Active distinct channels
+  const actChannels=new Set(allRows.filter(r=>r.status==='active').map(r=>r.channel).filter(Boolean));
+  document.getElementById('kpi-active-sub').textContent=`채널 ${actChannels.size}개`;
+}
+
+/* ── Charts (CSS bars) ── */
+function renderCharts(){
+  const data=allRows;
+  const byChannel=tally(data,'channel');
+  const byProp=tally(data,'property');
+  document.getElementById('chart-channel').innerHTML=renderBarRows(byChannel,10,'channel');
+  document.getElementById('chart-property').innerHTML=renderBarRows(byProp,10,'property');
+}
+function tally(rows,key){
+  const m=new Map();
+  rows.forEach(r=>{const v=r[key]||'(미지정)';m.set(v,(m.get(v)||0)+1)});
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+function renderBarRows(arr,limit,kind){
+  if(!arr.length)return '<div style="padding:14px;color:var(--ink-faint);font-size:11px;text-align:center">데이터 없음</div>';
+  const top=arr.slice(0,limit);
+  const max=top[0][1]||1;
+  const colorMap={channel:'linear-gradient(90deg,#8b5cf6 0%,#a78bfa 100%)',property:'linear-gradient(90deg,#c9a063 0%,#e6b970 100%)'};
+  return top.map(([label,count])=>{
+    const w=Math.max(2,(count/max)*100);
+    return `<div class="chart-row">
+      <div class="chart-row-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+      <div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${w}%;background:${colorMap[kind]||'var(--gold)'}"></div></div>
+      <div class="chart-row-val">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── View switching ── */
+function setView(v){
+  curView=v;
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  ['table','calendar','gantt'].forEach(k=>{
+    document.getElementById('view-'+k).style.display=(k===v?'block':'none');
+  });
+  render();
+}
+
+/* ── Master render ── */
+function render(){
+  const data=sortRows(getFiltered());
+  document.getElementById('count-label').textContent=`${data.length} / ${allRows.length}건`;
+  if(curView==='table')renderTable(data);
+  else if(curView==='calendar')renderCalendar(data);
+  else if(curView==='gantt')renderGantt(data);
+}
+
+/* ── Table view ── */
+function renderTable(data){
+  if(!data.length){
+    document.getElementById('view-table').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">표시할 데이터가 없습니다</div><div class="empty-state-sub">필터를 조정해 보세요</div></div>`;
+    return;
+  }
+  const stLabel={active:'진행중',upcoming:'예정',ended:'종료',unknown:'—'};
+  let html='<div class="tbl-wrap"><table class="tbl"><thead><tr>'+
+    '<th class="col-num">#</th>'+
+    '<th class="col-status">상태</th>'+
+    '<th class="col-channel">채널</th>'+
+    '<th class="col-region">구분</th>'+
+    '<th class="col-prop">사업장</th>'+
+    '<th class="col-title">기획전명</th>'+
+    '<th class="col-product">상품</th>'+
+    '<th class="col-period">판매기간</th>'+
+    '<th class="col-period">투숙기간</th>'+
+    '<th class="col-note">비고</th>'+
+    '<th class="col-actual">실적</th>'+
+    '</tr></thead><tbody>';
+  data.forEach((d,i)=>{
+    const rowCls=d.status==='active'?'row-active':'';
+    const tip=`기획전: ${d.title||'—'}\n채널: ${d.channel||'—'}\n사업장: ${d.property||'—'}\n구분: ${d.region||'—'}\n영업장: ${d.venue||'—'}\n상품: ${d.product||'—'}\n비고: ${d.note||'—'}`;
+    html+=`<tr class="${rowCls}">`+
+      `<td class="col-num">${i+1}</td>`+
+      `<td class="col-status"><span class="st-badge ${d.status}">${stLabel[d.status]||'—'}</span></td>`+
+      `<td class="col-channel" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`+
+      `<td class="col-region">${escapeHtml(d.region||'—')}</td>`+
+      `<td class="col-prop">${escapeHtml(d.property||'—')}</td>`+
+      `<td class="col-title" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`+
+      `<td class="col-product">${escapeHtml(d.product||'—')}</td>`+
+      `<td class="col-period">${fmtYMD(d.saleStart)} <span class="period-sub">~ ${fmtYMD(d.saleEnd)}</span></td>`+
+      `<td class="col-period">${fmtYMD(d.stayStart)} <span class="period-sub">~ ${fmtYMD(d.stayEnd)}</span></td>`+
+      `<td class="col-note">${escapeHtml(d.note||'—')}</td>`+
+      `<td class="col-actual">${escapeHtml(d.actual||'—')}</td>`+
+      `</tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('view-table').innerHTML=html;
+}
+
+/* ── Calendar view ── */
+function renderCalendar(data){
+  if(!calCursor){calCursor=new Date(today.getFullYear(),today.getMonth(),1)}
+  const year=calCursor.getFullYear();
+  const month=calCursor.getMonth();
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  const startDow=firstDay.getDay(); // 0=Sun
+  // Grid start: Sunday before/on the 1st
+  const gridStart=new Date(year,month,1-startDow);
+  // Grid end: Saturday after/on the last day
+  const gridEnd=new Date(year,month,lastDay.getDate()+(6-lastDay.getDay()));
+
+  // Build header
+  const monthLabel=`${year}년 ${month+1}월`;
+  let html=`<div class="cal-header">
+    <button class="cal-nav-btn" onclick="calNav(-1)" aria-label="이전 달">‹</button>
+    <div class="cal-month-label" id="cal-month-label">${monthLabel}</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="cal-nav-btn" onclick="calToday()" style="width:auto;padding:0 10px;font-size:11px;font-family:var(--mono);font-weight:700">오늘</button>
+      <div class="cal-mode">
+        <button class="cal-mode-btn ${calMode==='sale'?'active':''}" onclick="setCalMode('sale')">판매기간</button>
+        <button class="cal-mode-btn ${calMode==='stay'?'active':''}" onclick="setCalMode('stay')">투숙기간</button>
+      </div>
+      <button class="cal-nav-btn" onclick="calNav(1)" aria-label="다음 달">›</button>
+    </div>
+  </div>`;
+
+  html+='<div class="cal-grid"><div class="cal-week-head">';
+  ['일','월','화','수','목','금','토'].forEach((w,i)=>{
+    const cls=i===0?'sun':i===6?'sat':'';
+    html+=`<div class="${cls}">${w}</div>`;
+  });
+  html+='</div><div class="cal-days">';
+
+  const cur=new Date(gridStart);
+  while(cur<=gridEnd){
+    const isOutside=cur.getMonth()!==month;
+    const isToday=ymdStr(cur)===todayStr;
+    const dow=cur.getDay();
+    const dayNumCls=dow===0?'sun':dow===6?'sat':'';
+    let dayCls='cal-day';
+    if(isOutside)dayCls+=' outside';
+    if(isToday)dayCls+=' today';
+
+    // Find events on this day
+    const dayKey=ymdStr(cur);
+    const events=data.filter(d=>{
+      const s=calMode==='sale'?d.saleStart:d.stayStart;
+      const e=calMode==='sale'?d.saleEnd:d.stayEnd;
+      if(!s||!e)return false;
+      const sk=ymdStr(s),ek=ymdStr(e);
+      return dayKey>=sk&&dayKey<=ek;
+    });
+
+    html+=`<div class="${dayCls}"><div class="cal-day-num ${dayNumCls}">${cur.getDate()}</div>`;
+
+    const maxShow=3;
+    events.slice(0,maxShow).forEach(ev=>{
+      const s=calMode==='sale'?ev.saleStart:ev.stayStart;
+      const e=calMode==='sale'?ev.saleEnd:ev.stayEnd;
+      const sk=ymdStr(s),ek=ymdStr(e);
+      let evCls='cal-event';
+      if(dayKey===sk&&dayKey===ek)evCls+=' start';
+      else if(dayKey===sk)evCls+=' start';
+      else if(dayKey===ek)evCls+=' end';
+      else evCls+=' middle';
+      const tip=`[${ev.channel||'—'}] ${ev.title||'—'}\n사업장: ${ev.property||'—'}\n판매: ${fmtYMD(ev.saleStart)} ~ ${fmtYMD(ev.saleEnd)}\n투숙: ${fmtYMD(ev.stayStart)} ~ ${fmtYMD(ev.stayEnd)}`;
+      const label=`${ev.property||'?'} · ${ev.title||ev.channel||'?'}`;
+      html+=`<div class="${evCls}" data-tip="${escapeHtml(tip)}" title="${escapeHtml(label)}">${escapeHtml(label)}</div>`;
+    });
+    if(events.length>maxShow){
+      html+=`<div class="cal-event-more">+${events.length-maxShow}건</div>`;
+    }
+    html+='</div>';
+    cur.setDate(cur.getDate()+1);
+  }
+  html+='</div></div>';
+
+  // Legend
+  html+=`<div class="legend">
+    <span><span class="legend-dot" style="background:var(--positive)"></span>${calMode==='sale'?'판매 시작일':'투숙 시작일'}</span>
+    <span><span class="legend-dot" style="background:var(--info);opacity:.5"></span>기간 중</span>
+    <span><span class="legend-dot" style="background:var(--negative);opacity:.7"></span>${calMode==='sale'?'판매 종료일':'투숙 종료일'}</span>
+    <span><span class="legend-dot" style="background:var(--gold);opacity:.5"></span>오늘</span>
+    <span style="margin-left:auto">기간 표시 기준 · <strong>${calMode==='sale'?'판매기간':'투숙기간'}</strong></span>
+  </div>`;
+
+  document.getElementById('view-calendar').innerHTML=html;
+}
+function calNav(delta){
+  if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);
+  calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);
+  render();
+}
+function calToday(){
+  calCursor=new Date(today.getFullYear(),today.getMonth(),1);
+  render();
+}
+function setCalMode(m){calMode=m;render()}
+
+/* ── Gantt view ── */
+function renderGantt(data){
+  if(!data.length){
+    document.getElementById('view-gantt').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">표시할 데이터가 없습니다</div></div>`;
+    return;
+  }
+  const days=getDateRange(data);
+  // Build month headers
+  const months=[];let cur=null;
+  days.forEach((d,i)=>{
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if(!cur||cur.key!==key){
+      cur={key,start:i,count:0,label:`${d.getFullYear().toString().slice(-2)}.${String(d.getMonth()+1).padStart(2,'0')}`};
+      months.push(cur);
+    }
+    cur.count++;
   });
 
-  // Align to Monday
-  const dayOfWeek = minD.getDay();
-  minD.setDate(minD.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  // Extend to Sunday
-  maxD.setDate(maxD.getDate() + (7 - maxD.getDay()) % 7);
+  let html='<div class="gantt-wrap" id="gantt-scroll"><table class="gantt-table">';
+  // Month header
+  html+='<tr><th class="freeze" colspan="6" style="text-align:left;border-right:2px solid var(--rule-strong)">기획전 정보</th>';
+  const bgs=['rgba(59,130,246,.08)','rgba(245,158,11,.06)','rgba(76,175,111,.06)','rgba(168,146,200,.06)'];
+  months.forEach((m,i)=>{
+    html+=`<th colspan="${m.count}" style="background:${bgs[i%bgs.length]};font-size:11px;color:var(--ink-soft);font-weight:800">${m.label}</th>`;
+  });
+  html+='</tr>';
 
-  const days = [];
-  const cur = new Date(minD);
-  while (cur <= maxD) {
-    days.push(new Date(cur));
-    cur.setDate(cur.getDate() + 1);
+  // Day header
+  html+='<tr>';
+  html+='<th class="freeze" style="border-right:1px solid var(--rule)">#</th>';
+  html+='<th style="border-right:1px solid var(--rule)">채널</th>';
+  html+='<th style="border-right:1px solid var(--rule)">사업장</th>';
+  html+='<th style="border-right:1px solid var(--rule);text-align:left">기획전명</th>';
+  html+='<th style="border-right:1px solid var(--rule)">판매기간</th>';
+  html+='<th style="border-right:2px solid var(--rule-strong)">투숙기간</th>';
+  days.forEach(d=>{
+    const dow=d.getDay(),isWe=dow===0||dow===6,isToday=ymdStr(d)===todayStr;
+    const color=isToday?'var(--red)':isWe?'rgba(229,115,115,.6)':'var(--ink-faint)';
+    const bg=isToday?'rgba(239,68,68,.12)':isWe?'rgba(255,255,255,.03)':'';
+    html+=`<th class="gantt-cell" style="color:${color};${bg?'background:'+bg+';':''}font-size:8px;padding:2px 0!important">${d.getDate()}</th>`;
+  });
+  html+='</tr>';
+
+  // Data rows
+  data.forEach((d,rowIdx)=>{
+    const tip=`${d.title||'—'}\n사업장: ${d.property||'—'}\n채널: ${d.channel||'—'}\n판매: ${fmtYMD(d.saleStart)} ~ ${fmtYMD(d.saleEnd)}\n투숙: ${fmtYMD(d.stayStart)} ~ ${fmtYMD(d.stayEnd)}`;
+    html+='<tr>';
+    html+=`<td class="freeze" style="border-right:1px solid var(--rule);width:32px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:10px"><span class="st-badge ${d.status}" style="font-size:8px;padding:1px 4px">●</span></td>`;
+    html+=`<td style="border-right:1px solid var(--rule);width:130px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-soft);font-size:10.5px" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`;
+    html+=`<td style="border-right:1px solid var(--rule);width:80px;color:var(--gold-bright);font-weight:700;white-space:nowrap;font-size:10.5px">${escapeHtml(d.property||'—')}</td>`;
+    html+=`<td style="border-right:1px solid var(--rule);min-width:200px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`;
+    html+=`<td style="border-right:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--gold-bright);white-space:nowrap">${fmtMD(d.saleStart)}~${fmtMD(d.saleEnd)}</td>`;
+    html+=`<td style="border-right:2px solid var(--rule-strong);font-family:var(--mono);font-size:10px;color:var(--info);white-space:nowrap">${fmtMD(d.stayStart)}~${fmtMD(d.stayEnd)}</td>`;
+    days.forEach(day=>{
+      const isWe=day.getDay()===0||day.getDay()===6,isToday=ymdStr(day)===todayStr;
+      const ds=ymdStr(day);
+      let bars='';
+      if(d.saleStart&&d.saleEnd){
+        const ss=ymdStr(d.saleStart),se=ymdStr(d.saleEnd);
+        if(ds>=ss&&ds<=se)bars+='<div class="bar bar-sale" style="left:0;right:0"></div>';
+      }
+      if(d.stayStart&&d.stayEnd){
+        const ss=ymdStr(d.stayStart),se=ymdStr(d.stayEnd);
+        if(ds>=ss&&ds<=se)bars+='<div class="bar bar-stay" style="left:0;right:0"></div>';
+      }
+      const bgCls=isToday?'background:rgba(239,68,68,.08);':isWe?'background:rgba(255,255,255,.02);':'';
+      html+=`<td class="gantt-cell" style="${bgCls}">${bars}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</table></div>';
+
+  // Legend
+  html+=`<div class="legend">
+    <span><span class="legend-dot" style="background:var(--gold);opacity:.85"></span>판매기간</span>
+    <span><span class="legend-dot" style="background:var(--info);opacity:.7"></span>투숙기간</span>
+    <span><span class="legend-dot" style="background:rgba(239,68,68,.5);width:2px"></span>오늘</span>
+  </div>`;
+
+  document.getElementById('view-gantt').innerHTML=html;
+
+  // Auto-scroll to today
+  const todayIdx=days.findIndex(d=>ymdStr(d)===todayStr);
+  if(todayIdx>=0){
+    const wrap=document.getElementById('gantt-scroll');
+    setTimeout(()=>{wrap.scrollLeft=Math.max(0,560+(todayIdx-5)*24)},80);
   }
+}
+function getDateRange(data){
+  let minD=new Date(today);minD.setDate(minD.getDate()-14);
+  let maxD=new Date(today);maxD.setDate(maxD.getDate()+60);
+  data.forEach(d=>{
+    const candidates=[d.saleStart,d.saleEnd,d.stayStart,d.stayEnd].filter(Boolean);
+    candidates.forEach(c=>{if(c<minD)minD=new Date(c);if(c>maxD)maxD=new Date(c)});
+  });
+  // Cap at reasonable range to avoid huge gantts
+  const maxFromToday=new Date(today);maxFromToday.setDate(maxFromToday.getDate()+180);
+  if(maxD>maxFromToday)maxD=maxFromToday;
+  const minFromToday=new Date(today);minFromToday.setDate(minFromToday.getDate()-90);
+  if(minD<minFromToday)minD=minFromToday;
+  // Align Mon..Sun
+  const dow=minD.getDay();
+  minD.setDate(minD.getDate()-(dow===0?6:dow-1));
+  maxD.setDate(maxD.getDate()+((7-maxD.getDay())%7));
+  const days=[];const cur=new Date(minD);
+  while(cur<=maxD){days.push(new Date(cur));cur.setDate(cur.getDate()+1)}
   return days;
 }
 
-/* ── Render ── */
-function render() {
-  const data = getFiltered();
-  document.getElementById('count-label').textContent = `${data.length}건 / ${allRows.length}건`;
-
-  if (!data.length) {
-    document.getElementById('gantt-wrap').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-faint)">표시할 데이터가 없습니다</div>';
-    return;
-  }
-
-  // Sort: active first, then upcoming, then ended, within each by start date
-  const order = {active:0, upcoming:1, ended:2, unknown:3};
-  data.sort((a,b) => {
-    const s = (order[a.status]||3) - (order[b.status]||3);
-    if (s !== 0) return s;
-    if (a.startDate && b.startDate) return a.startDate - b.startDate;
-    return 0;
-  });
-
-  const days = getDateRange(data);
-  const todayIdx = days.findIndex(d => d.toISOString().slice(0,10) === todayStr);
-
-  // Build month headers
-  const months = {};
-  days.forEach((d, i) => {
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if (!months[key]) months[key] = {start: i, count: 0, label: `${d.getFullYear()}년 ${d.getMonth()+1}월`};
-    months[key].count++;
-  });
-
-  // Build HTML
-  let html = '<table class="gantt-table">';
-
-  // Month header row
-  html += '<tr>';
-  html += '<th class="freeze" colspan="9" style="text-align:left;border-right:2px solid var(--rule-strong)">기획전 정보</th>';
-  Object.values(months).forEach(m => {
-    const bgColors = ['rgba(59,130,246,.08)','rgba(245,158,11,.06)','rgba(76,175,111,.06)','rgba(168,146,200,.06)'];
-    const idx = Object.keys(months).indexOf(Object.keys(months).find(k => months[k] === m));
-    html += `<th colspan="${m.count}" style="background:${bgColors[idx%bgColors.length]};font-size:11px;color:var(--ink-soft);font-weight:800">${m.label}</th>`;
-  });
-  html += '</tr>';
-
-  // Day header row
-  html += '<tr>';
-  html += '<th class="freeze" style="border-right:1px solid var(--rule)">No</th>';
-  html += '<th style="border-right:1px solid var(--rule)">채널</th>';
-  html += '<th style="border-right:1px solid var(--rule)">담당</th>';
-  html += '<th style="border-right:1px solid var(--rule)">사업장</th>';
-  html += '<th style="border-right:1px solid var(--rule);text-align:left">기획전명</th>';
-  html += '<th style="border-right:1px solid var(--rule)">시작</th>';
-  html += '<th style="border-right:1px solid var(--rule)">종료</th>';
-  html += '<th style="border-right:1px solid var(--rule)">판매가</th>';
-  html += '<th style="border-right:2px solid var(--rule-strong)">PKG</th>';
-  days.forEach((d, i) => {
-    const dow = d.getDay();
-    const isWe = dow === 0 || dow === 6;
-    const isToday = d.toISOString().slice(0,10) === todayStr;
-    const dayNum = d.getDate();
-    const color = isToday ? 'var(--red)' : isWe ? 'rgba(229,115,115,.6)' : 'var(--ink-faint)';
-    const bg = isToday ? 'rgba(239,68,68,.12)' : isWe ? 'rgba(255,255,255,.03)' : '';
-    html += `<th class="gantt-cell" style="color:${color};${bg?'background:'+bg+';':''}font-size:8px;padding:2px 0!important">${dayNum}</th>`;
-  });
-  html += '</tr>';
-
-  // Data rows
-  data.forEach((d, rowIdx) => {
-    const chCls = d.channel === 'Inbound' ? 'inbound' : d.channel === 'OTA' ? 'ota' : d.channel === 'G-OTA' ? 'gota' : '';
-    const barCls = d.channel === 'Inbound' ? 'bar-inbound' : d.channel === 'OTA' ? 'bar-ota' : d.channel === 'G-OTA' ? 'bar-gota' : 'bar-default';
-    const stDot = d.status === 'active' ? 'active' : d.status === 'upcoming' ? 'upcoming' : 'ended';
-
-    html += '<tr>';
-    html += `<td class="freeze col-no" style="border-right:1px solid var(--rule)"><span class="st-dot ${stDot}"></span>${d.key || (rowIdx+1)}</td>`;
-    html += `<td class="col-ch" style="border-right:1px solid var(--rule)"><span class="ch-badge ${chCls}">${d.channel||'—'}</span></td>`;
-    html += `<td class="col-person" style="border-right:1px solid var(--rule)">${d.person||'—'}</td>`;
-    html += `<td class="col-prop" style="border-right:1px solid var(--rule)">${d.property||'—'}</td>`;
-    html += `<td class="col-title" style="border-right:1px solid var(--rule)">${d.title||'—'}</td>`;
-    html += `<td class="col-period" style="border-right:1px solid var(--rule)">${d.startStr ? d.startStr.replace(/^\d{4}[\-\.]/, '') : '—'}</td>`;
-    html += `<td class="col-period" style="border-right:1px solid var(--rule)">${d.endStr ? d.endStr.replace(/^\d{4}[\-\.]/, '') : '—'}</td>`;
-
-    const priceNum = d.price ? parseInt(d.price.replace(/[^0-9]/g,'')) : null;
-    html += `<td class="col-price" style="border-right:1px solid var(--rule)">${priceNum ? fmt(priceNum) : '—'}</td>`;
-    html += `<td class="col-pkg" style="border-right:2px solid var(--rule-strong)">${d.packageCode||'—'}</td>`;
-
-    // Gantt bar cells
-    days.forEach((day, dayIdx) => {
-      const isWe = day.getDay() === 0 || day.getDay() === 6;
-      const isToday = day.toISOString().slice(0,10) === todayStr;
-      const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
-
-      let hasBar = false;
-      if (d.startDate && d.endDate) {
-        const s = new Date(d.startDate); s.setHours(0,0,0,0);
-        const e = new Date(d.endDate); e.setHours(23,59,59,999);
-        hasBar = dayStart >= s && dayStart <= e;
-      }
-
-      const bgCls = isToday ? 'background:rgba(239,68,68,.08);' : isWe ? 'background:rgba(255,255,255,.02);' : '';
-      html += `<td class="gantt-cell" style="${bgCls}">`;
-      if (hasBar) html += `<div class="bar ${barCls}"></div>`;
-      html += '</td>';
-    });
-
-    html += '</tr>';
-  });
-
-  html += '</table>';
-  document.getElementById('gantt-wrap').innerHTML = html;
-
-  // Scroll to today
-  if (todayIdx > 0) {
-    const wrap = document.getElementById('gantt-wrap');
-    // Each gantt cell is ~24px, info columns ~600px
-    setTimeout(() => {
-      const targetX = 600 + (todayIdx - 5) * 24;
-      wrap.scrollLeft = Math.max(0, targetX);
-    }, 100);
-  }
+/* ── Util ── */
+function escapeHtml(s){
+  if(s==null)return '';
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 /* ── Init ── */
-document.addEventListener('DOMContentLoaded', () => {
-  buildChChips();
-  const saved = localStorage.getItem('ap_csv_url');
-  if (saved) document.getElementById('csv-url').value = saved;
-  // Auto-load
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('today-label').textContent=fmtYMD(today)+' ('+'일월화수목금토'[today.getDay()]+')';
+  buildStatusChips();
+  const saved=(()=>{try{return localStorage.getItem('ap_csv_url')}catch(e){return null}})();
+  if(saved)document.getElementById('csv-url').value=saved;
   loadCSV();
 });
 </script>
