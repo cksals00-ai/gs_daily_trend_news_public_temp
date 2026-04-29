@@ -1710,7 +1710,9 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         mlabel = f"{mi}월"
         channel_weekly_share[mlabel] = _build_channel_weekly(pdbcm_full, cdbcm_full, is_month_keyed=True, month_key=mkey)
 
-    # ── 7) 동기간(YoY) OTB 비교 — yoy_adjusted 기준 (투숙일 기준 온북) ──
+    # ── 7) 동기간(YoY) OTB 비교 ──
+    # 4월(당월): yoy_adjusted (투숙일 기준 온북, 코드 27+43)
+    # 5·6월(미래월): 예약일 기준 동기간 Net (pickup - cancel, 예약일 ≤ 기준일)
     yoy_adj = agg_data.get("yoy_adjusted", {})
     _cy_yr = str(now.year)
     _ly_yr = str(now.year - 1)
@@ -1718,31 +1720,75 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     _ly_yoy = yoy_adj.get(_ly_yr, {})
     yoy_otb = {}
 
+    # 예약일 기준 동기간 비교용 cutoff (CY/LY 동일 월일)
+    _cy_cutoff = f"{now.year}{now.month:02d}{now.day:02d}"      # e.g. 20260429
+    _ly_cutoff = f"{now.year - 1}{now.month:02d}{now.day:02d}"  # e.g. 20250429
+
     def _safe_pct(cv, lv):
         """전년 대비 증감률 (%) — 분모 0 방어"""
         return round((cv - lv) / lv * 100, 1) if lv else None
 
+    def _booking_date_net(pdbpm_src, cdbpm_src, month_key, cutoff):
+        """예약일 기준 동기간 Net: pickup - cancel (예약일 ≤ cutoff) 를 사업장별로 계산.
+        Returns (total_rn, total_rev_raw, {prop: {rn, rev}})"""
+        prop_net = {}
+        all_props = sorted(set(list(pdbpm_src.keys()) + list(cdbpm_src.keys())))
+        total_rn = 0
+        total_rev = 0.0
+        for prop in all_props:
+            p_month = pdbpm_src.get(prop, {}).get(month_key, {})
+            c_month = cdbpm_src.get(prop, {}).get(month_key, {})
+            p_rn = sum(v.get("rn", 0) for dt, v in p_month.items() if dt <= cutoff)
+            c_rn = sum(v.get("rn", 0) for dt, v in c_month.items() if dt <= cutoff)
+            p_rev = sum(v.get("rev", 0) for dt, v in p_month.items() if dt <= cutoff)
+            c_rev = sum(v.get("rev", 0) for dt, v in c_month.items() if dt <= cutoff)
+            net_rn = p_rn - c_rn
+            net_rev = p_rev - c_rev
+            if net_rn or net_rev:
+                prop_net[prop] = {"rn": net_rn, "rev": net_rev}
+            total_rn += net_rn
+            total_rev += net_rev
+        return total_rn, total_rev, prop_net
+
     for mi in compare_months:
         cy_mkey = f"{now.year}{mi:02d}"
         ly_mkey = f"{now.year - 1}{mi:02d}"
-        cy_m = _cy_yoy.get("by_month", {}).get(cy_mkey, {})
-        ly_m = _ly_yoy.get("by_month", {}).get(ly_mkey, {})
-        cy_rn = cy_m.get("booking_rn", 0) or 0
-        ly_rn = ly_m.get("booking_rn", 0) or 0
-        cy_rev = cy_m.get("booking_rev_m", 0) or 0
-        ly_rev = ly_m.get("booking_rev_m", 0) or 0
-        cy_adr = round(cy_rev * 1e6 / cy_rn / 1000, 1) if cy_rn else 0
-        ly_adr = round(ly_rev * 1e6 / ly_rn / 1000, 1) if ly_rn else 0
 
-        # 사업장별 RN YoY (투숙일 기준 온북)
-        _bp_yoy = {}
-        _cy_props = _cy_yoy.get("by_property", {})
-        _ly_props = _ly_yoy.get("by_property", {})
-        for prop in sorted(set(list(_cy_props.keys()) + list(_ly_props.keys()))):
-            c_rn = _cy_props.get(prop, {}).get(cy_mkey, {}).get("booking_rn", 0) or 0
-            l_rn = _ly_props.get(prop, {}).get(ly_mkey, {}).get("booking_rn", 0) or 0
-            if c_rn or l_rn:
-                _bp_yoy[prop] = {"cy": c_rn, "ly": l_rn, "pct": _safe_pct(c_rn, l_rn)}
+        if mi == cur_month:
+            # ── 당월(4월): yoy_adjusted 투숙일 기준 (실적 확정) ──
+            cy_m = _cy_yoy.get("by_month", {}).get(cy_mkey, {})
+            ly_m = _ly_yoy.get("by_month", {}).get(ly_mkey, {})
+            cy_rn = cy_m.get("booking_rn", 0) or 0
+            ly_rn = ly_m.get("booking_rn", 0) or 0
+            cy_rev = cy_m.get("booking_rev_m", 0) or 0
+            ly_rev = ly_m.get("booking_rev_m", 0) or 0
+            cy_adr = round(cy_rev * 1e6 / cy_rn / 1000, 1) if cy_rn else 0
+            ly_adr = round(ly_rev * 1e6 / ly_rn / 1000, 1) if ly_rn else 0
+
+            _bp_yoy = {}
+            _cy_props = _cy_yoy.get("by_property", {})
+            _ly_props = _ly_yoy.get("by_property", {})
+            for prop in sorted(set(list(_cy_props.keys()) + list(_ly_props.keys()))):
+                c_rn = _cy_props.get(prop, {}).get(cy_mkey, {}).get("booking_rn", 0) or 0
+                l_rn = _ly_props.get(prop, {}).get(ly_mkey, {}).get("booking_rn", 0) or 0
+                if c_rn or l_rn:
+                    _bp_yoy[prop] = {"cy": c_rn, "ly": l_rn, "pct": _safe_pct(c_rn, l_rn)}
+        else:
+            # ── 미래월(5·6월): 예약일 기준 동기간 Net (pickup - cancel) ──
+            cy_rn, cy_rev_raw, cy_bp = _booking_date_net(pdbpm, cdbpm, cy_mkey, _cy_cutoff)
+            ly_rn, ly_rev_raw, ly_bp = _booking_date_net(pdbpm, cdbpm, ly_mkey, _ly_cutoff)
+            cy_rev = round(cy_rev_raw / 1_000_000, 2) if cy_rev_raw else 0
+            ly_rev = round(ly_rev_raw / 1_000_000, 2) if ly_rev_raw else 0
+            cy_adr = round(cy_rev_raw / cy_rn / 1000, 1) if cy_rn else 0
+            ly_adr = round(ly_rev_raw / ly_rn / 1000, 1) if ly_rn else 0
+
+            _bp_yoy = {}
+            all_bp = sorted(set(list(cy_bp.keys()) + list(ly_bp.keys())))
+            for prop in all_bp:
+                c_rn = cy_bp.get(prop, {}).get("rn", 0)
+                l_rn = ly_bp.get(prop, {}).get("rn", 0)
+                if c_rn or l_rn:
+                    _bp_yoy[prop] = {"cy": c_rn, "ly": l_rn, "pct": _safe_pct(c_rn, l_rn)}
 
         mlabel = f"{mi}월"
         yoy_otb[mlabel] = {

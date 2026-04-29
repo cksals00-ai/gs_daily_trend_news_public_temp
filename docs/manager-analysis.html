@@ -283,9 +283,7 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
 <div class="mobile-filter-bar" id="mobile-filter-bar">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">보고월:</span>
   <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
-  <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">사업본부:</span>
   <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
@@ -313,12 +311,7 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
     </div>
     <div class="sidebar-divider"></div>
     <div>
-      <div class="filter-section-label">세그먼트</div>
-      <div class="filter-chips" id="seg-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">권역</div>
+      <div class="filter-section-label">사업본부</div>
       <div class="filter-chips" id="region-chips"></div>
     </div>
     <div id="prop-filter-wrap" style="display:none;">
@@ -471,8 +464,6 @@ function buildFilters() {
   const months = DATA.channel_monthly_trend.map(d => d.month);
   const regionMap = DATA.property_6month_status.regions;
   const regions = ['전체', ...Object.keys(regionMap)];
-  const SEGS = ['전체', 'GS팀', 'Inbound', 'OTA', 'G-OTA'];
-
   // Sidebar month chips
   const mc = document.getElementById('month-chips');
   const mmc = document.getElementById('mobile-month-chips');
@@ -480,15 +471,6 @@ function buildFilters() {
     const active = i === months.length - 1 ? ' active' : '';
     mc.innerHTML += `<button class="chip${active}" data-month="${m}">${m}</button>`;
     mmc.innerHTML += `<button class="chip${active}" data-month="${m}">${m}</button>`;
-  });
-
-  // Segment chips
-  const sc = document.getElementById('seg-chips');
-  const msc = document.getElementById('mobile-seg-chips');
-  SEGS.forEach(s => {
-    const active = s === '전체' ? ' active' : '';
-    sc.innerHTML += `<button class="chip${active}" data-seg="${s}">${s}</button>`;
-    msc.innerHTML += `<button class="chip${active}" data-seg="${s}">${s}</button>`;
   });
 
   // Region chips
@@ -522,12 +504,6 @@ function buildFilters() {
 
   // Event delegation
   document.addEventListener('click', e => {
-    if (e.target.dataset.seg) {
-      document.querySelectorAll('[data-seg]').forEach(c => c.classList.remove('active'));
-      document.querySelectorAll(`[data-seg="${e.target.dataset.seg}"]`).forEach(c => c.classList.add('active'));
-      selectedSeg = e.target.dataset.seg;
-      renderAll();
-    }
     if (e.target.dataset.region) {
       document.querySelectorAll('[data-region]').forEach(c => c.classList.remove('active'));
       document.querySelectorAll(`[data-region="${e.target.dataset.region}"]`).forEach(c => c.classList.add('active'));
@@ -564,9 +540,7 @@ function renderAll() {
 let otbLineChart = null, yoyBarChart = null;
 
 function getVisibleChannels() {
-  if (selectedSeg === '전체') return ['OTA', 'G-OTA', 'Inbound'];
-  if (selectedSeg === 'GS팀') return GS_CHANNELS;
-  return [selectedSeg];
+  return GS_CHANNELS;
 }
 
 const CH_COLORS = { 'OTA': { line: '#5a9fc4', bg: 'rgba(90,159,196,0.1)', bar: 'rgba(90,159,196,0.7)' }, 'G-OTA': { line: '#e6b970', bg: 'rgba(230,185,112,0.1)', bar: 'rgba(230,185,112,0.7)' }, 'Inbound': { line: '#4caf6f', bg: 'rgba(76,175,111,0.1)', bar: 'rgba(76,175,111,0.7)' } };
