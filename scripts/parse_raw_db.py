@@ -370,7 +370,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
     return 0
 
 
-def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop):
+def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, adj_by_segment=None):
     """28/44 취소파일에서 동기간 보정값 추출 (OTB 세그먼트 기준).
 
     조건: 최초입력일자(col27) ≤ base_date_str AND 취소일자(col33) > base_date_str
@@ -456,6 +456,9 @@ def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop):
                         adj_by_month[stay_month]['rev'] += night_rate
                         adj_by_prop[prop_name][stay_month]['rn']  += rn
                         adj_by_prop[prop_name][stay_month]['rev'] += night_rate
+                        if adj_by_segment is not None:
+                            adj_by_segment[segment][stay_month]['rn']  += rn
+                            adj_by_segment[segment][stay_month]['rev'] += night_rate
                         ok_count += 1
 
                     except (IndexError, ValueError):
@@ -1130,17 +1133,19 @@ def main():
         base_mmdd = base_dt.strftime("%m%d")
         logger.info(f"  {year}년 기준일: {base_date_str}")
 
-        adj_by_month = defaultdict(lambda: {'rn': 0, 'rev': 0})
-        adj_by_prop  = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        adj_by_month   = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        adj_by_prop    = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        adj_by_segment = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
 
         cancel_files = [fp for fp in txt_files
                         if fp.parent.name == year
                         and detect_file_type(fp.name) in ("28", "44")]
         for fpath in cancel_files:
-            parse_yoy_adjustments(str(fpath), base_date_str, adj_by_month, adj_by_prop)
+            parse_yoy_adjustments(str(fpath), base_date_str, adj_by_month, adj_by_prop, adj_by_segment)
 
-        # 해당 연도의 OTB 원래 booking_rn (by_property_segment)
+        # 해당 연도의 OTB 원래 booking_rn (by_property, by_segment)
         orig_by_prop_month = defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0}))
+        orig_by_seg_month  = defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0}))
         for (prop, region, month, channel, segment, btype), vals in agg.items():
             if not month.startswith(year):
                 continue
@@ -1150,6 +1155,8 @@ def main():
                 continue
             orig_by_prop_month[prop][month]['booking_rn']  += vals['rn']
             orig_by_prop_month[prop][month]['booking_rev'] += vals['rev']
+            orig_by_seg_month[segment][month]['booking_rn']  += vals['rn']
+            orig_by_seg_month[segment][month]['booking_rev'] += vals['rev']
 
         # by_month (전체 사업장 합산)
         all_months_set = set(adj_by_month.keys())
@@ -1186,6 +1193,26 @@ def main():
                 }
             by_property[p] = prop_months
 
+        # by_segment (세그먼트별 월별 보정)
+        all_segs_set = set(list(orig_by_seg_month.keys()) + list(adj_by_segment.keys()))
+        by_segment = {}
+        for seg in sorted(all_segs_set):
+            seg_orig = orig_by_seg_month.get(seg, {})
+            seg_adj  = adj_by_segment.get(seg, {})
+            seg_months = {}
+            for m in sorted(set(list(seg_orig.keys()) + list(seg_adj.keys()))):
+                orig_rn  = seg_orig.get(m, {}).get('booking_rn', 0)
+                orig_rev = seg_orig.get(m, {}).get('booking_rev', 0)
+                adj_rn   = seg_adj.get(m, {}).get('rn', 0)
+                adj_rev  = seg_adj.get(m, {}).get('rev', 0)
+                seg_months[m] = {
+                    'booking_rn':      orig_rn + adj_rn,
+                    'adjustment_rn':   adj_rn,
+                    'booking_rev_m':   round((orig_rev + adj_rev) / 1_000_000, 2),
+                    'adjustment_rev_m': round(adj_rev / 1_000_000, 2),
+                }
+            by_segment[seg] = seg_months
+
         total_adj = sum(v['rn'] for v in adj_by_month.values())
         logger.info(f"  {year}년 보정 합계: {total_adj:,} RNs")
         yoy_adjusted[year] = {
@@ -1193,6 +1220,7 @@ def main():
             'base_date_full': base_date_str,
             'by_month':       by_month,
             'by_property':    by_property,
+            'by_segment':     by_segment,
         }
 
     summary['yoy_adjusted'] = yoy_adjusted
