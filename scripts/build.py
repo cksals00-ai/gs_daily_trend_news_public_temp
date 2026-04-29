@@ -1632,7 +1632,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
             etc_chs[ch]["rev"] = round(etc_chs[ch]["rev"], 1)
             etc_chs[ch]["rev_pickup"] = round(etc_chs[ch]["rev_pickup"], 1)
             etc_chs[ch]["rev_cancel"] = round(etc_chs[ch]["rev_cancel"], 1)
-        daily_analysis["byChannelMonth"]["기타"] = etc_chs
+        # daily_analysis["byChannelMonth"]["기타"] = etc_chs
 
     # (c) 사업장별 × 투숙월 전일 — OTA/G-OTA/Inbound 3개 세그먼트만 합산
     all_psm_props = sorted(set(list(pdbpsm.keys()) + list(cdbpsm.keys())))

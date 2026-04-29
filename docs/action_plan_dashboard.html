@@ -21,7 +21,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
 .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
-@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
 
 /* Layout */
 .mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:42px;z-index:190}
@@ -136,7 +136,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   </div>
 
   <!-- 설정 -->
-  <div class="config-panel" id="config-panel">
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+    <button id="config-toggle-btn" onclick="document.getElementById('config-panel').style.display = document.getElementById('config-panel').style.display === 'none' ? 'flex' : 'none'" style="background:transparent;border:1px solid var(--rule);padding:6px 10px;border-radius:4px;color:var(--ink-faint);font-size:11px;cursor:pointer;font-family:var(--mono);font-weight:600">⚙ 설정</button>
+  </div>
+  <div class="config-panel" id="config-panel" style="display:none">
     <label>📋 구글시트 CSV</label>
     <input type="text" id="csv-url" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTqe7nY8vHYVVnnGR5qrl-uubCABXtmbToAuKWziuaoms14hZ3qlJuQTBWUXDmjCOU-4hd0hp6cpO_O/pub?gid=1818134248&amp;single=true&amp;output=csv">
     <button onclick="loadCSV()">로드</button>
@@ -158,8 +161,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   <div class="gantt-wrap" id="gantt-wrap">
     <div id="no-data" style="text-align:center;padding:50px;color:var(--ink-faint)">
       <div style="font-size:36px;margin-bottom:10px">📋</div>
-      <div style="font-weight:700;margin-bottom:6px">데이터 로드 버튼을 눌러주세요</div>
-      <div style="font-size:11px">구글시트에서 "파일 → 공유 → 웹에 게시" 후 CSV URL 입력</div>
+      <div style="font-weight:700;margin-bottom:6px">구글시트 데이터 로딩 중...</div>
+      <div style="font-size:11px">잠시만 기다려주세요</div>
     </div>
   </div>
 </main>
@@ -466,9 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('ap_csv_url');
   if (saved) document.getElementById('csv-url').value = saved;
   // Auto-load
-  if (document.getElementById('csv-url').value) {
-    setTimeout(loadCSV, 300);
-  }
+  loadCSV();
 });
 </script>
 </body>

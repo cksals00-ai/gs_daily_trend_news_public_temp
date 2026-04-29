@@ -98,7 +98,7 @@ td,th{font-weight:600}th{font-weight:800}
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
 .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
-@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
 </style>
 <nav class="gsn"><div class="gsn-wrap">
   <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -733,10 +733,12 @@ function renderTable(stayMonth, lyMonth) {
   // Get all properties (filtered by division)
   const divProps = getFilteredProps();
   const allProps = new Set();
-  relevantSnaps.forEach(s => Object.keys(s.properties).forEach(p => {
+  trendData.snapshots.forEach(s => Object.keys(s.properties).forEach(p => {
     if (!divProps || divProps.includes(p)) allProps.add(p);
   }));
-  const sortedProps = [...allProps].sort();
+  const sortedProps = [...allProps].filter(p =>
+    relevantSnaps.some(s => s.properties[p]?.[stayMonth])
+  ).sort();
 
   // Header
   let hdr = '<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>';
