@@ -297,9 +297,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         # - RN = 객실수 (박수 제외, 각 행이 이미 1박 단위)
                         rn = rooms if rooms > 0 else 1
 
-                        # REV = 1박객실료 (이미 VAT 제외된 기본 객실 요금)
-                        # 1박객실료 ≈ 판매가/1.1 (검증 완료, ~1% 이내 일치)
-                        rev = night_rate
+                        # REV = 1박객실료 * 0.97 (엑셀 실적 매칭 경험적 보정, 추후 원인 재조사 필요)
+                        rev = int(night_rate * 0.97)
 
                         region = get_region(prop_name)
                         channel = extract_channel(agent_name)
