@@ -524,15 +524,20 @@ function renderMonthlyTable() {
     html += '</tr>';
   });
 
-  // 합계 row (sum of all segments = overall summary)
+  // 합계 row (OTA + G-OTA + Inbound 3개 세그먼트 합산)
   html += '<tr class="total-row">';
   html += '<td class="row-label">합계</td>';
   months.forEach(m => {
-    const s = getSummaryForMonth(m);
-    const rn = s ? (s.rns_actual||0) : 0;
-    const rev = s ? (s.rev_actual||0) : 0;
-    const lyRn = s ? (s.rns_last||0) : 0;
-    const lyRev = s ? (s.rev_last||0) : 0;
+    let rn = 0, rev = 0, lyRn = 0, lyRev = 0;
+    SEG_NAMES.forEach(seg => {
+      const sd = getSegmentForMonth(m, seg);
+      if (sd) {
+        rn += (sd.rns_actual || 0);
+        rev += (sd.rev_actual || 0);
+        lyRn += (sd.rns_last || 0);
+        lyRev += (sd.rev_last || 0);
+      }
+    });
     const adr = rn > 0 ? Math.round(rev/rn) : 0;
     const lyAdr = lyRn > 0 ? Math.round(lyRev/lyRn) : 0;
     html += '<td class="sep">' + fmt.num(rn) + '</td><td>' + fmt.adr(adr) + '</td><td>' + fmt.won(rev) + '</td>';

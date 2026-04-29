@@ -1410,6 +1410,8 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     cds = agg_data.get("cancel_daily_by_segment", {})
     pdbps = agg_data.get("pickup_daily_by_property_segment", {})
     cdbps = agg_data.get("cancel_daily_by_property_segment", {})
+    pdbpsm = agg_data.get("pickup_daily_by_property_segment_month", {})
+    cdbpsm = agg_data.get("cancel_daily_by_property_segment_month", {})
 
     # 전일 = today_date (빌드 기준일)
     daily_analysis = {"byProperty": {}, "bySegment": {}, "byPropertyMonth": {}, "bySegmentMonth": {},
@@ -1588,23 +1590,26 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         if month_chs:
             daily_analysis["byChannelMonth"][mlabel] = month_chs
 
-    # (c) 사업장별 × 투숙월 전일
+    # (c) 사업장별 × 투숙월 전일 — OTA/G-OTA/Inbound 3개 세그먼트만 합산
+    all_psm_props = sorted(set(list(pdbpsm.keys()) + list(cdbpsm.keys())))
     for mi in compare_months:
         mkey = f"{now.year}{mi:02d}"
         mlabel = f"{mi}월"
         month_props = {}
-        for prop in sorted(pdbpm.keys()):
-            p_val = pdbpm[prop].get(mkey, {}).get(today_date, {})
-            c_val = cdbpm.get(prop, {}).get(mkey, {}).get(today_date, {})
-            p_rn = p_val.get("rn", 0) or 0
-            c_rn = c_val.get("rn", 0) or 0
-            p_rev = p_val.get("rev", 0) or 0
-            c_rev = c_val.get("rev", 0) or 0
-            if p_rn or c_rn:
+        for prop in all_psm_props:
+            tot_p, tot_c, tot_rp, tot_rc = 0, 0, 0.0, 0.0
+            for seg in ALLOWED_SEGMENTS:
+                p_val = pdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                c_val = cdbpsm.get(prop, {}).get(seg, {}).get(mkey, {}).get(today_date, {})
+                tot_p += p_val.get("rn", 0) or 0
+                tot_c += c_val.get("rn", 0) or 0
+                tot_rp += p_val.get("rev", 0) or 0
+                tot_rc += c_val.get("rev", 0) or 0
+            if tot_p or tot_c:
                 month_props[prop] = {
-                    "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
-                    "rev": round(p_rev - c_rev, 1),
-                    "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
+                    "pickup": tot_p, "cancel": tot_c, "net": tot_p - tot_c,
+                    "rev": round(tot_rp - tot_rc, 1),
+                    "rev_pickup": round(tot_rp, 1), "rev_cancel": round(tot_rc, 1),
                 }
         if month_props:
             daily_analysis["byPropertyMonth"][mlabel] = month_props

@@ -502,21 +502,19 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 (동기간 보정 반영)
+        # 전년 합산 (OTA+G-OTA+Inbound 3개 세그먼트만, 동기간 보정 반영)
         lst_rn = 0
-        for mk in last_keys:
-            if adj_by_prop:
-                for pname in db_props:
-                    adj_m = adj_by_prop.get(pname, {}).get(mk, {})
-                    lst_rn += adj_m.get("booking_rn", 0) if adj_m else sum_db(db_bp, [pname], mk)["rn"]
-            else:
-                d = sum_db(db_bp, db_props, mk)
-                lst_rn += d["rn"]
-
-        # 전년 매출 (adj_by_prop에는 booking_rev 없으므로 by_property에서 직접)
         lst_rev = 0.0
-        for mk in last_keys:
-            lst_rev += sum_db(db_bp, db_props, mk)["rev_m"]
+        if db_bps is not None:
+            for mk in last_keys:
+                d = sum_db_segments(db_bps, db_props, mk)
+                lst_rn  += d["rn"]
+                lst_rev += d["rev_m"]
+        else:
+            for mk in last_keys:
+                d = sum_db(db_bp, db_props, mk)
+                lst_rn  += d["rn"]
+                lst_rev += d["rev_m"]
         lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
@@ -788,82 +786,108 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_pr
 
 
 def get_today_summary(db, now_kst):
-    """net_daily에서 전일(빌드일-1) 데이터를 반환.
-    빌드 시점(now_kst)의 당일 데이터는 아직 미완성이므로
-    가장 최근 완성된 날짜 = 전일(days_ago=1)부터 탐색.
-    없거나 0이면 더 이전 날짜로 fallback."""
-    net_daily = db.get("net_daily", {})
+    """OTA+G-OTA+Inbound 3개 세그먼트만 합산한 전일 데이터 반환.
+    빌드 시점(now_kst)의 당일 데이터는 미완성이므로 전일(days_ago=1)부터 탐색."""
+    nd_seg = db.get("net_daily_by_segment", {})
     for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
-        if date_str in net_daily:
-            entry = net_daily[date_str]
-            pickup = entry.get("pickup_rn", 0)
-            cancel = entry.get("cancel_rn", 0)
-            if pickup > 0 or cancel > 0:
-                return pickup, cancel, entry.get("net_rn", 0), date_str
+        pickup, cancel = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            entry = nd_seg.get(seg, {}).get(date_str, {})
+            pickup += entry.get("pickup_rn", 0)
+            cancel += entry.get("cancel_rn", 0)
+        if pickup > 0 or cancel > 0:
+            return pickup, cancel, pickup - cancel, date_str
+    # fallback: 전체 net_daily에서 최근 날짜 (세그먼트 필터 적용)
+    net_daily = db.get("net_daily", {})
     if net_daily:
         most_recent = max(net_daily.keys())
-        entry = net_daily[most_recent]
-        return entry.get("pickup_rn", 0), entry.get("cancel_rn", 0), entry.get("net_rn", 0), most_recent
+        pickup, cancel = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            entry = nd_seg.get(seg, {}).get(most_recent, {})
+            pickup += entry.get("pickup_rn", 0)
+            cancel += entry.get("cancel_rn", 0)
+        return pickup, cancel, pickup - cancel, most_recent
     return 0, 0, 0, None
 
 
 def get_today_booking_by_props(db, date_str, db_props):
-    """pickup_daily_by_property에서 특정 날짜의 사업장별 예약 RN, REV 합산."""
+    """pickup_daily_by_property_segment에서 OTA+G-OTA+Inbound만 합산."""
     if not date_str:
         return 0, 0
-    pdbp = db.get("pickup_daily_by_property", {})
-    rn  = sum(pdbp.get(pname, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
-    rev = sum(pdbp.get(pname, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    pdbps = db.get("pickup_daily_by_property_segment", {})
+    rn, rev = 0, 0.0
+    for pname in db_props:
+        for seg in BUDGET_SEGMENT_KEYS:
+            d = pdbps.get(pname, {}).get(seg, {}).get(date_str, {})
+            rn  += d.get("rn",  0)
+            rev += d.get("rev", 0.0)
     return rn, rev
 
 
 def get_today_cancel_by_props(db, date_str, db_props):
-    """cancel_daily_by_property에서 특정 날짜의 사업장별 취소 RN, REV 합산."""
+    """cancel_daily_by_property_segment에서 OTA+G-OTA+Inbound만 합산."""
     if not date_str:
         return 0, 0
-    cdbp = db.get("cancel_daily_by_property", {})
-    rn  = sum(cdbp.get(pname, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
-    rev = sum(cdbp.get(pname, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    cdbps = db.get("cancel_daily_by_property_segment", {})
+    rn, rev = 0, 0.0
+    for pname in db_props:
+        for seg in BUDGET_SEGMENT_KEYS:
+            d = cdbps.get(pname, {}).get(seg, {}).get(date_str, {})
+            rn  += d.get("rn",  0)
+            rev += d.get("rev", 0.0)
     return rn, rev
 
 
 def get_today_booking_by_props_month(db, date_str, db_props, stay_month):
-    """pickup_daily_by_property_month에서 특정 날짜·투숙월의 사업장별 예약 합산."""
+    """pickup_daily_by_property_segment_month에서 OTA+G-OTA+Inbound만 합산."""
     if not date_str:
         return 0, 0
-    pdbpm = db.get("pickup_daily_by_property_month", {})
-    rn  = sum(pdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
-    rev = sum(pdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    pdbpsm = db.get("pickup_daily_by_property_segment_month", {})
+    rn, rev = 0, 0.0
+    for pname in db_props:
+        for seg in BUDGET_SEGMENT_KEYS:
+            d = pdbpsm.get(pname, {}).get(seg, {}).get(stay_month, {}).get(date_str, {})
+            rn  += d.get("rn",  0)
+            rev += d.get("rev", 0.0)
     return rn, rev
 
 
 def get_today_cancel_by_props_month(db, date_str, db_props, stay_month):
-    """cancel_daily_by_property_month에서 특정 날짜·투숙월의 사업장별 취소 합산."""
+    """cancel_daily_by_property_segment_month에서 OTA+G-OTA+Inbound만 합산."""
     if not date_str:
         return 0, 0
-    cdbpm = db.get("cancel_daily_by_property_month", {})
-    rn  = sum(cdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rn",  0)   for pname in db_props)
-    rev = sum(cdbpm.get(pname, {}).get(stay_month, {}).get(date_str, {}).get("rev", 0.0) for pname in db_props)
+    cdbpsm = db.get("cancel_daily_by_property_segment_month", {})
+    rn, rev = 0, 0.0
+    for pname in db_props:
+        for seg in BUDGET_SEGMENT_KEYS:
+            d = cdbpsm.get(pname, {}).get(seg, {}).get(stay_month, {}).get(date_str, {})
+            rn  += d.get("rn",  0)
+            rev += d.get("rev", 0.0)
     return rn, rev
 
 
 def get_today_summary_by_month(db, now_kst, stay_month):
-    """net_daily_by_month에서 특정 투숙월의 전일(빌드일-1) 데이터를 반환.
-    당일 데이터는 미완성이므로 전일부터 탐색."""
-    net_daily_m = db.get("net_daily_by_month", {}).get(stay_month, {})
+    """OTA+G-OTA+Inbound 3개 세그먼트만 합산, 특정 투숙월의 전일 데이터 반환."""
+    pdsm = db.get("pickup_daily_by_segment_month", {})
+    cdsm = db.get("cancel_daily_by_segment_month", {})
     for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
-        if date_str in net_daily_m:
-            entry = net_daily_m[date_str]
-            pickup = entry.get("pickup_rn", 0)
-            cancel = entry.get("cancel_rn", 0)
-            if pickup > 0 or cancel > 0:
-                return pickup, cancel, entry.get("net_rn", 0)
+        pickup, cancel = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            pickup += pdsm.get(seg, {}).get(stay_month, {}).get(date_str, {}).get("rn", 0)
+            cancel += cdsm.get(seg, {}).get(stay_month, {}).get(date_str, {}).get("rn", 0)
+        if pickup > 0 or cancel > 0:
+            return pickup, cancel, pickup - cancel
+    # fallback
+    net_daily_m = db.get("net_daily_by_month", {}).get(stay_month, {})
     if net_daily_m:
         most_recent = max(net_daily_m.keys())
-        entry = net_daily_m[most_recent]
-        return entry.get("pickup_rn", 0), entry.get("cancel_rn", 0), entry.get("net_rn", 0)
+        pickup, cancel = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            pickup += pdsm.get(seg, {}).get(stay_month, {}).get(most_recent, {}).get("rn", 0)
+            cancel += cdsm.get(seg, {}).get(stay_month, {}).get(most_recent, {}).get("rn", 0)
+        return pickup, cancel, pickup - cancel
     return 0, 0, 0
 
 
