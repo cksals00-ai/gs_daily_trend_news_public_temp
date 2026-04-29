@@ -193,8 +193,15 @@ function parseCSVLine(line) {
 function parseCSV(text) {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
-  const hdr = parseCSVLine(lines[0]).map(h => h.trim());
-  return lines.slice(1).map(l => {
+  // 실제 헤더 행 탐색: '사업장' 또는 '채널' 컬럼이 포함된 첫 행
+  let hdrIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const cells = parseCSVLine(lines[i]).map(h => h.trim());
+    const joined = cells.join(',').toLowerCase();
+    if (joined.includes('사업장') || joined.includes('채널')) { hdrIdx = i; break; }
+  }
+  const hdr = parseCSVLine(lines[hdrIdx]).map(h => h.trim());
+  return lines.slice(hdrIdx + 1).map(l => {
     const vals = parseCSVLine(l);
     const row = {};
     hdr.forEach((h, i) => row[h] = (vals[i]||'').trim());
@@ -232,8 +239,8 @@ function parseDate(s) {
 }
 
 function mapRow(raw) {
-  const startStr = findCol(raw, '시작일', '시작', 'start', '판매시작', '기간시작');
-  const endStr = findCol(raw, '종료일', '종료', 'end', '판매종료', '기간종료');
+  const startStr = findCol(raw, '판매기간(시작)', '시작일', '판매시작', '기간시작', '시작', 'start');
+  const endStr = findCol(raw, '판매기간(종료)', '종료일', '판매종료', '기간종료', '종료', 'end');
   const start = parseDate(startStr);
   const end = parseDate(endStr);
   let status = 'unknown';
@@ -245,8 +252,8 @@ function mapRow(raw) {
     key: findCol(raw, 'Key', 'key', 'KEY', '키', 'No', 'no', '번호'),
     channel: normCh(findCol(raw, '채널', 'channel', '세그')),
     person: findCol(raw, '담당자', '담당', 'person', '작성자'),
-    property: findCol(raw, '사업장', 'property', '리조트'),
-    title: findCol(raw, '기획전', '기획전명', '내용', 'title', '프로모션', '제목'),
+    property: findCol(raw, '사업장', '영업장', 'property', '리조트'),
+    title: findCol(raw, '기획전', '기획전명', '상품명', '내용', 'title', '프로모션', '제목'),
     startDate: start,
     endDate: end,
     startStr, endStr,
