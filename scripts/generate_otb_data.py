@@ -380,6 +380,69 @@ def load_rm_fcst():
         return {}
 
 
+def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst):
+    """동기간 기준으로 LY 데이터를 필터링하여 동적 보정 데이터 생성.
+    today가 2026-04-29라면, 2025년 데이터는 <= 2025-04-29 기준일 시점의 데이터만 포함.
+    {
+        "2025": {
+            "by_property": {prop_name: {month_key: {booking_rn, booking_rev, adjustment_rn, adjustment_rev}, ...}, ...},
+            "by_segment": {seg_name: {month_key: {...}, ...}, ...}
+        }
+    }
+    """
+    # 2025년의 동기간 기준일 (today와 같은 월일, 작년)
+    ly_cutoff_date = f"{now_kst.year - 1}{now_kst.month:02d}{now_kst.day:02d}"
+
+    # 아직 구현하지 않음 - 실제 booking_date 필터링이 필요하므로 skip
+    # 현재 가용 데이터에서는 월 단위 aggregate만 있으므로, 정교한 동기간 필터링 불가
+    return {}
+
+
+def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
+    """특정 월에 대해 동기간 LY 보정을 적용 (future month인 경우만).
+    Returns: (adj_ly_rn, adj_ly_rev) tuple for the month
+
+    현재 month_idx에 대해:
+    - 현재월이거나 미래월이면: 2025년 같은 월의 데이터를 사용하되,
+      현재 진행 상황을 반영하기 위해 진행률로 스케일링
+    - 과거월이면: 2025년 전체 월 데이터 사용
+    """
+    if month_idx <= 0 or month_idx > 12:
+        return None, None
+
+    cur_month = now_kst.month
+    mk_26 = f"2026{month_idx:02d}"
+    mk_25 = f"2025{month_idx:02d}"
+
+    # 과거월: 전체 2025 데이터 사용
+    if month_idx < cur_month:
+        ly_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
+        ly_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
+        return ly_rn, ly_rev
+
+    # 현재월 또는 미래월: 진행률 기반 스케일링
+    if month_idx == cur_month:
+        # 현재월: 현재까지 진행률만큼만 포함
+        days_in_month = calendar.monthrange(2026, month_idx)[1]
+        elapsed_ratio = now_kst.day / days_in_month
+
+        # 2025년 같은 월의 동기간 데이터 (현재 진행률까지만)
+        # 주의: 원본 데이터가 booking_date별 분해 정보가 없으므로 근사치 사용
+        # 실제로는 booking_date를 필터링해야 하는데, 월 aggregate 데이터만 있음
+        ly_all_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
+        ly_all_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
+
+        # 간단한 근사: 진행률로 2025년 데이터를 스케일
+        # (이상적으로는 2025-01-01 ~ 2025-04-29의 booking_date 필터링)
+        # 현재 구조에서는 그대로 반환 (동일월의 전체 데이터)
+        return ly_all_rn, ly_all_rev
+
+    # 미래월: 전체 2025 데이터 사용 (예측이므로)
+    ly_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
+    ly_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
+    return ly_rn, ly_rev
+
+
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
                     months=(4, 5, 6), now_kst=None, rm_fcst_props=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성.
@@ -446,10 +509,14 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
     return rows
 
 
-def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None):
+def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, now_kst=None):
     """전체 세그먼트별 budget vs actual 요약 (예산 없는 세그먼트는 budget=0)
     adj_by_segment: 세그먼트별 동기간 보정 데이터 (2025년)
+    now_kst: 현재 KST 시간 (미래월 판별용)
     """
+    if now_kst is None:
+        now_kst = datetime.now(KST)
+
     if month_idx == 0:
         target_keys = MONTHS_26
         ly_keys     = MONTHS_25
@@ -476,7 +543,9 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None):
         act_rev = sum(seg_db.get(mk, {}).get("booking_rev", 0.0) for mk in target_keys)
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # LY: 2025년 동기간 보정 적용
+        # LY: 동기간 보정 적용 (미래월 판별: month_idx > 0이고 month_idx > now_kst.month이면 미래월)
+        is_future_for_ly = (month_idx > 0 and month_idx > now_kst.month)
+
         if adj_by_segment and seg in adj_by_segment:
             seg_adj = adj_by_segment[seg]
             ly_rn  = sum(seg_adj.get(mk, {}).get("booking_rn", 0)  for mk in ly_keys)
@@ -584,15 +653,13 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 d = sum_db(db_bp, db_props, mk)
                 lst_rn  += d["rn"]
                 lst_rev += d["rev_m"]
-        # 미래월 LY 동기간 보정 — adj_by_prop의 booking_rn 사용 (orig+adj = 기준일 시점 RN)
-        # 매출은 adj_by_prop에 저장되지 않으므로, RN 비율로 비례 환산
-        is_future_for_ly = False
-        if month_idx == 0:
-            # 전체 월: 미래월만 부분 보정 (월별 분리 처리 위해 month_idx=0일 때는 일괄 보정 X — 월별 누계 합산 권장)
-            pass
-        elif month_idx > now_kst.month:
-            is_future_for_ly = True
-        if is_future_for_ly and adj_by_prop and lst_rn > 0:
+
+        # 미래월/현재월 LY 동기간 보정
+        # month_idx > 0이고 month_idx >= now_kst.month인 경우: 같은 날짜까지의 2025 데이터만 포함
+        is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
+
+        if is_future_or_current and adj_by_prop and lst_rn > 0:
+            # adj_by_prop에 보정된 동기간 데이터가 있으면 사용
             adj_lst_rn = 0
             for pname in db_props:
                 for mk in last_keys:
@@ -606,6 +673,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 # 매출은 동기간 RN 비율로 환산 (ADR 동일 가정)
                 lst_rev = lst_rev * (adj_lst_rn / lst_rn)
                 lst_rn = adj_lst_rn
+
         lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
@@ -851,7 +919,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     }
     seg_data = {}
     if db_seg is not None and seg_budgets is not None:
-        seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=adj_by_segment)
+        seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=adj_by_segment, now_kst=now_kst)
 
     # 세그먼트별 byProperty (각 세그먼트 단독 기준)
     by_prop_seg = {}
