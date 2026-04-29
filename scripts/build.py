@@ -1073,16 +1073,17 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             m_snap = all_months.get(mkey, {})
             m_props = m_snap.get("byProperty", [])
             if m_props:
-                s_props = sorted(m_props, key=lambda x: x.get("rns_achievement", 0), reverse=True)
-                t3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_achievement", 0)} for p in s_props[:3]]
-                b3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_achievement", 0)} for p in s_props[-3:] if p.get("rns_achievement", 0) < 100]
+                s_props = sorted(m_props, key=lambda x: x.get("rns_yoy", 0), reverse=True)
+                t3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_yoy", 0)} for p in s_props[:3]]
+                b3 = [{"n": p["name"].split(".",1)[-1], "a": p.get("rns_yoy", 0)} for p in s_props[-3:] if p.get("rns_yoy", 0) < 0]
                 tb_by_month[mkey] = {"top": t3, "bot": b3}
             else:
                 tb_by_month[mkey] = {"top": [], "bot": []}
         # 당월 기본 표시
         cur_tb = tb_by_month.get(str(cur_month), {"top": [], "bot": []})
-        top_items = " / ".join(f'{p["n"]} {p["a"]}%' for p in cur_tb["top"]) or "—"
-        bot_items = " / ".join(f'{p["n"]} {p["a"]}%' for p in cur_tb["bot"]) or "—"
+        def _fmt_tb(p): return f'{p["n"]} {"+" if p["a"] >= 0 else ""}{p["a"]}% YoY'
+        top_items = " / ".join(_fmt_tb(p) for p in cur_tb["top"]) or "—"
+        bot_items = " / ".join(_fmt_tb(p) for p in cur_tb["bot"]) or "—"
         html = apply_tpl(html, "otb-top3", top_items)
         html = apply_tpl(html, "otb-bot3", bot_items)
         # JSON 주입 (JS 토글용)
