@@ -1954,15 +1954,15 @@
             <!-- 동기간(YoY) OTB 비교 스트립 -->
             <div id="da-yoy-strip" style="display:flex;gap:5px;margin-bottom:6px;font-family:var(--mono);font-size:9px;">
               <div style="flex:1;background:rgba(109,211,150,0.06);border:1px solid rgba(109,211,150,0.12);border-radius:4px;padding:4px 7px;">
-                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">OTB RN · YoY</div>
+                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">당일 순증 RN</div>
                 <div id="da-yoy-rn-val" style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;">—</div>
               </div>
               <div style="flex:1;background:rgba(240,165,0,0.06);border:1px solid rgba(240,165,0,0.12);border-radius:4px;padding:4px 7px;">
-                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">OTB REV · YoY</div>
+                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">당일 순증 REV</div>
                 <div id="da-yoy-rev-val" style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;">—</div>
               </div>
               <div style="flex:1;background:rgba(168,146,200,0.06);border:1px solid rgba(168,146,200,0.12);border-radius:4px;padding:4px 7px;">
-                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">OTB ADR · YoY</div>
+                <div style="color:rgba(255,255,255,0.3);font-size:7.5px;letter-spacing:0.05em;margin-bottom:1px;">당일 순증 ADR</div>
                 <div id="da-yoy-adr-val" style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;">—</div>
               </div>
             </div>
@@ -13093,7 +13093,7 @@
   </div>
 
 <<<<<<< HEAD
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-29 17:43 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-29 17:48 KST</span></div>
 =======
   <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-29 15:58 KST</span></div>
 >>>>>>> d097c60 (feat: FCST추이 세그필터+AI변동요인 숫자기반 + 네비게이터통일 + 데이터재빌드)
@@ -13970,22 +13970,42 @@ function toggleNewsMore(btn, id) {
   var _daCurrentMonth = 'all';
   var _daCurrentView = 'property';
 
-  // YoY OTB 스트립 업데이트
+  // 당일 순증 스트립 업데이트 — 테이블 합계와 동일한 수치 표시
   function _updateYoyStrip(month) {
-    var yd = YOY_OTB[month] || {};
+    var data = _getDailyData(month, _daCurrentView);
     var rnEl = document.getElementById('da-yoy-rn-val');
     var revEl = document.getElementById('da-yoy-rev-val');
     var adrEl = document.getElementById('da-yoy-adr-val');
-    function _yoyBadge(pct) {
-      if (pct === null || pct === undefined) return '<span style="color:rgba(255,255,255,0.25);">—</span>';
-      var c = pct >= 0 ? '#6dd396' : '#e08580';
-      var a = pct >= 0 ? '▲' : '▼';
-      return '<span style="color:' + c + ';font-weight:800;">' + a + ' ' + Math.abs(pct).toFixed(1) + '%</span>';
-    }
-    function _fmtK(v) { return v ? v.toLocaleString() : '—'; }
-    if (rnEl) rnEl.innerHTML = _fmtK(yd.cy_rn) + ' <span style="color:rgba(255,255,255,0.25);font-size:8px;">vs ' + _fmtK(yd.ly_rn) + '</span> ' + _yoyBadge(yd.rn_pct);
-    if (revEl) revEl.innerHTML = _fmtK(yd.cy_rev) + ' <span style="color:rgba(255,255,255,0.25);font-size:8px;">vs ' + _fmtK(yd.ly_rev) + '</span> ' + _yoyBadge(yd.rev_pct);
-    if (adrEl) adrEl.innerHTML = _fmtK(yd.cy_adr) + 'K <span style="color:rgba(255,255,255,0.25);font-size:8px;">vs ' + _fmtK(yd.ly_adr) + 'K</span> ' + _yoyBadge(yd.adr_pct);
+    var segData = DA.byPropertySegment || {};
+    var ALLOWED_SEGS = {'OTA': 1, 'G-OTA': 1, 'Inbound': 1};
+    var useSegOverride = (!month || month === 'all');
+    var showRev = _daCurrentView === 'property';
+
+    var totP = 0, totC = 0, totRP = 0.0, totRC = 0.0;
+    Object.keys(data).forEach(function(k) {
+      var d2 = data[k];
+      if (showRev && useSegOverride && segData[k]) {
+        Object.keys(segData[k]).forEach(function(s) {
+          if (ALLOWED_SEGS[s]) {
+            var sd = segData[k][s];
+            totP += sd.pickup || 0; totC += sd.cancel || 0;
+            totRP += sd.rev_pickup || 0; totRC += sd.rev_cancel || 0;
+          }
+        });
+      } else {
+        totP += d2.pickup || 0; totC += d2.cancel || 0;
+        totRP += d2.rev_pickup || 0; totRC += d2.rev_cancel || 0;
+      }
+    });
+    var netRn = totP - totC;
+    var netRev = Math.round((totRP - totRC) * 10) / 10;
+    var netAdr = netRn > 0 ? Math.round(netRev * 1000000 / netRn / 1000 * 10) / 10 : 0;
+    function _netFmt(v) { return (v > 0 ? '+' : '') + v.toLocaleString(); }
+    function _netClr2(v) { return v >= 0 ? '#6dd396' : '#e08580'; }
+
+    if (rnEl) rnEl.innerHTML = '<span style="color:' + _netClr2(netRn) + ';font-weight:800;font-size:12px;">' + _netFmt(netRn) + '</span> <span style="color:rgba(255,255,255,0.25);font-size:8px;">(' + totP.toLocaleString() + ' - ' + totC.toLocaleString() + ')</span>';
+    if (revEl) revEl.innerHTML = '<span style="color:' + _netClr2(netRev) + ';font-weight:800;font-size:12px;">' + (netRev > 0 ? '+' : '') + netRev.toFixed(1) + '</span> <span style="color:rgba(255,255,255,0.25);font-size:8px;">백만원</span>';
+    if (adrEl) adrEl.innerHTML = netAdr ? '<span style="color:rgba(255,255,255,0.7);font-weight:800;font-size:12px;">' + netAdr.toFixed(1) + 'K</span>' : '<span style="color:rgba(255,255,255,0.25);">—</span>';
   }
   _updateYoyStrip('all');
 
@@ -14276,6 +14296,7 @@ function toggleNewsMore(btn, id) {
     // INBOUND 제외 안내 표시
     var ibNote = document.getElementById('da-inbound-note');
     if (ibNote) ibNote.style.display = (view === 'segment') ? 'block' : 'none';
+    _updateYoyStrip(_daCurrentMonth);
     try {
       var data = _getDailyData(_daCurrentMonth, view);
       var showRev = view === 'property' || view === 'segment';
