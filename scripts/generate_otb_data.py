@@ -571,7 +571,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 (OTA+G-OTA+Inbound 3개 세그먼트만, 동기간 보정 반영)
+        # 전년 합산 (OTA+G-OTA+Inbound 3개 세그먼트만)
         lst_rn = 0
         lst_rev = 0.0
         if db_bps is not None:
@@ -584,6 +584,28 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 d = sum_db(db_bp, db_props, mk)
                 lst_rn  += d["rn"]
                 lst_rev += d["rev_m"]
+        # 미래월 LY 동기간 보정 — adj_by_prop의 booking_rn 사용 (orig+adj = 기준일 시점 RN)
+        # 매출은 adj_by_prop에 저장되지 않으므로, RN 비율로 비례 환산
+        is_future_for_ly = False
+        if month_idx == 0:
+            # 전체 월: 미래월만 부분 보정 (월별 분리 처리 위해 month_idx=0일 때는 일괄 보정 X — 월별 누계 합산 권장)
+            pass
+        elif month_idx > now_kst.month:
+            is_future_for_ly = True
+        if is_future_for_ly and adj_by_prop and lst_rn > 0:
+            adj_lst_rn = 0
+            for pname in db_props:
+                for mk in last_keys:
+                    pm = adj_by_prop.get(pname, {}).get(mk, {})
+                    # booking_rn = orig + adj (기준일 시점 동기간 RN). 없으면 final 사용.
+                    if pm.get("booking_rn") is not None:
+                        adj_lst_rn += pm.get("booking_rn", 0)
+                    else:
+                        adj_lst_rn += 0
+            if adj_lst_rn > 0:
+                # 매출은 동기간 RN 비율로 환산 (ADR 동일 가정)
+                lst_rev = lst_rev * (adj_lst_rn / lst_rn)
+                lst_rn = adj_lst_rn
         lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0

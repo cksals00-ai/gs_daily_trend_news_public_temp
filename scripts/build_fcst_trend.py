@@ -154,10 +154,12 @@ def parse_pdf(pdf):
             nums = parse_nums(tail)
 
         if head_name and len(nums) >= 6:
+            # Grand Total line layout: BUDGET(rn,%,adr,rev,%) FCST(rn,%,adr,rev,%) DIFF(...) LY(...)
+            # → nums[0]=budget_rn, nums[5]=fcst_rn (NOT nums[3] which is budget_rev)
             rows.append({
                 "name": head_name,
                 "budget_rn": nums[0],
-                "fcst_rn": nums[3] if len(nums) > 3 else nums[0],
+                "fcst_rn": nums[5] if len(nums) > 5 else nums[0],
             })
 
     # Assign months
@@ -232,7 +234,7 @@ def parse_pdf(pdf):
                         # Pattern: budget_rn, budget_pct(skip), budget_adr, budget_rev, budget_rev_pct(skip),
                         #          fcst_rn, fcst_pct(skip), fcst_adr, fcst_rev, fcst_rev_pct(skip)
                         budget_rn = nums[0]
-                        fcst_rn = nums[3] if len(nums) > 5 else nums[0]
+                        fcst_rn = nums[5] if len(nums) > 5 else nums[0]
                         segments.setdefault(month_key, {})[seg] = {
                             "rm_budget_rn": budget_rn,
                             "rm_fcst_rn": fcst_rn,

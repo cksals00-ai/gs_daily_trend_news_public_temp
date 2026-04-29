@@ -55,7 +55,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
 .base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
 .base-date-tag strong{color:var(--gold-bright);font-weight:700;}
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
 .kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .kpi-card.achievement::before{background:var(--gold);}
@@ -114,7 +114,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
 .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
-@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
 </style>
 <nav class="gsn">
   <div class="gsn-wrap">
@@ -527,15 +527,28 @@ function render() {
   setText('kpi-inbound-sub', months.length + '개월 누계');
   setText('kpi-total', fmt.num(totAll));
   setText('kpi-total-sub', months.length + '개월 · 3세그먼트 합계');
-  // 전체OCC KPI — 현재 선택된 연도의 당월 기준
+  // 전체OCC KPI — 현재 선택된 연도의 당월(없으면 occ_data에서 첫 가용월) 기준
   if (occData && occData.total) {
     const nowM = new Date().getMonth() + 1;
-    const occKey = activeYear + '-' + String(nowM).padStart(2, '0');
-    const occV = occData.total[occKey];
+    const tryKey = activeYear + '-' + String(nowM).padStart(2, '0');
+    let occKey = tryKey;
+    let occV = occData.total[occKey];
+    if (occV == null) {
+      const yearKeys = Object.keys(occData.total).filter(k => k.startsWith(activeYear)).sort();
+      if (yearKeys.length > 0) {
+        occKey = yearKeys[0];
+        occV = occData.total[occKey];
+      }
+    }
     if (occV != null) {
       setText('kpi-occ', occV.toFixed(1));
-      setText('kpi-occ-sub', nowM + '월 Booking Status 기준');
+      setText('kpi-occ-sub', parseInt(occKey.slice(5)) + '월 Booking Status 기준');
+    } else {
+      setText('kpi-occ', '—');
+      setText('kpi-occ-sub', '데이터 없음');
     }
+  } else {
+    setText('kpi-occ-sub', occData ? '데이터 없음' : 'OCC 로드 실패');
   }
 
   if (segChart) segChart.destroy();

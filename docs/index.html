@@ -1632,9 +1632,15 @@
     /* --- 당일 분석 카드 --- */
     .otb-hero-grid .weekly-card:nth-child(2) > div:nth-child(2) {
       padding: 10px 12px 12px !important;
+      height: auto !important;
     }
-    /* 당일 분석 테이블 max-height 축소 */
-    #da-table-container { max-height: 180px !important; }
+    /* 당일 분석 테이블: flex:1 + height:100% 조합이 모바일 1칼럼에서 0px로 collapse — 명시적 높이 강제 */
+    #da-table-container {
+      flex: 0 0 auto !important;
+      height: auto !important;
+      max-height: 320px !important;
+      min-height: 220px !important;
+    }
     #da-table { font-size: 9px !important; }
     #da-table th, #da-table td { padding: 3px 4px !important; }
 
@@ -1733,7 +1739,7 @@
 .gsn-badge{background:#2d3a48;color:#7d8590;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;letter-spacing:.3px}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
 .gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
-@media(max-width:640px){
+@media(max-width:900px){
   .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
   .gsn-links.open{display:flex}
   .gsn-item[style*="display:none"]{display:none!important}
@@ -12941,7 +12947,7 @@
     본 대시보드는 <strong style="color:rgba(255,255,255,0.75);">GS팀 내부 운영용</strong>이며, 무단 복제 및 외부 공유를 금지합니다.
   </div>
 
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-29 22:12 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-04-29 22:42 KST</span></div>
 </footer>
 
 <script>
@@ -13284,7 +13290,7 @@ function toggleNewsMore(btn, id) {
         }
         if (deltaEl) {
           var sign = yoyDelta >= 0 ? '+' : '';
-          deltaEl.textContent = sign + yoyDelta.toLocaleString() + ' (' + sign + yoyPct + '%)';
+          deltaEl.textContent = sign + yoyDelta.toLocaleString() + ' (' + sign + yoyPct + '% YoY)';
           deltaEl.style.color = yoyDelta >= 0 ? '#4ecdc4' : '#ff6b6b';
         }
 

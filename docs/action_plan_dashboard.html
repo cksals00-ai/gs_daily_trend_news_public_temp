@@ -21,7 +21,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
 .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
-@media(max-width:640px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
 
 /* Layout */
 .mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:42px;z-index:190}
@@ -94,7 +94,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .st-dot.active{background:var(--positive)}.st-dot.upcoming{background:var(--info)}.st-dot.ended{background:var(--ink-faint)}
 
 @media(max-width:900px){.wrap{padding:12px 10px 36px}}
-@media(max-width:640px){.mast{padding:0 14px}.mast-sub{display:none}}
+@media(max-width:900px){.mast{padding:0 14px}.mast-sub{display:none}}
 </style>
 </head>
 <body>
@@ -200,8 +200,10 @@ function parseCSV(text) {
   let hdrIdx = 0;
   for (let i = 0; i < Math.min(lines.length, 30); i++) {
     const cells = parseCSVLine(lines[i]).map(h => h.trim());
-    const joined = cells.join(',').toLowerCase();
-    if (joined.includes('사업장') || joined.includes('채널')) { hdrIdx = i; break; }
+    // 실제 헤더는 사업장 + 채널이 별도 셀로 존재하고, 판매기간/구분 같은 보조 컬럼도 함께 등장
+    const hasProperty = cells.some(c => c === '사업장' || c === '영업장');
+    const hasChannel = cells.some(c => c === '채널');
+    if (hasProperty && hasChannel) { hdrIdx = i; break; }
   }
   const hdr = parseCSVLine(lines[hdrIdx]).map(h => h.trim());
   return lines.slice(hdrIdx + 1).map(l => {
