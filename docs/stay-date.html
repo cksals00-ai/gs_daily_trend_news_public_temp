@@ -543,12 +543,16 @@ function render() {
     if (occV != null) {
       setText('kpi-occ', occV.toFixed(1));
       setText('kpi-occ-sub', parseInt(occKey.slice(5)) + '월 Booking Status 기준');
+      console.log('OCC KPI rendered:', occKey, occV);
     } else {
       setText('kpi-occ', '—');
       setText('kpi-occ-sub', '데이터 없음');
+      console.warn('No OCC data for year:', activeYear);
     }
   } else {
+    setText('kpi-occ', '—');
     setText('kpi-occ-sub', occData ? '데이터 없음' : 'OCC 로드 실패');
+    console.warn('OCC data not loaded properly:', occData);
   }
 
   if (segChart) segChart.destroy();
@@ -817,11 +821,20 @@ async function loadData() {
     const [r1, r2, r3] = await Promise.all([
       fetch('data/db_aggregated.json?t=' + Date.now()),
       fetch('data/otb_data.json?t=' + Date.now()),
-      fetch('data/occ_data.json?t=' + Date.now()).catch(() => null),
+      fetch('data/occ_data.json?t=' + Date.now()).catch(err => { console.warn('OCC data fetch failed:', err); return null; }),
     ]);
     db = await r1.json();
     otb = await r2.json();
-    if (r3 && r3.ok) occData = await r3.json();
+    if (r3) {
+      try {
+        occData = await r3.json();
+        console.log('OCC data loaded:', occData);
+      } catch (e) {
+        console.warn('OCC data parse error:', e);
+      }
+    } else {
+      console.warn('OCC data fetch returned null');
+    }
     buildFilters();
     render();
   } catch (e) {
