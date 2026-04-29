@@ -1710,6 +1710,73 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         mlabel = f"{mi}월"
         channel_weekly_share[mlabel] = _build_channel_weekly(pdbcm_full, cdbcm_full, is_month_keyed=True, month_key=mkey)
 
+    # ── 7) 동기간(YoY) OTB 비교 — yoy_adjusted 기준 (투숙일 기준 온북) ──
+    yoy_adj = agg_data.get("yoy_adjusted", {})
+    _cy_yr = str(now.year)
+    _ly_yr = str(now.year - 1)
+    _cy_yoy = yoy_adj.get(_cy_yr, {})
+    _ly_yoy = yoy_adj.get(_ly_yr, {})
+    yoy_otb = {}
+
+    def _safe_pct(cv, lv):
+        """전년 대비 증감률 (%) — 분모 0 방어"""
+        return round((cv - lv) / lv * 100, 1) if lv else None
+
+    for mi in compare_months:
+        cy_mkey = f"{now.year}{mi:02d}"
+        ly_mkey = f"{now.year - 1}{mi:02d}"
+        cy_m = _cy_yoy.get("by_month", {}).get(cy_mkey, {})
+        ly_m = _ly_yoy.get("by_month", {}).get(ly_mkey, {})
+        cy_rn = cy_m.get("booking_rn", 0) or 0
+        ly_rn = ly_m.get("booking_rn", 0) or 0
+        cy_rev = cy_m.get("booking_rev_m", 0) or 0
+        ly_rev = ly_m.get("booking_rev_m", 0) or 0
+        cy_adr = round(cy_rev * 1e6 / cy_rn / 1000, 1) if cy_rn else 0
+        ly_adr = round(ly_rev * 1e6 / ly_rn / 1000, 1) if ly_rn else 0
+
+        # 사업장별 RN YoY (투숙일 기준 온북)
+        _bp_yoy = {}
+        _cy_props = _cy_yoy.get("by_property", {})
+        _ly_props = _ly_yoy.get("by_property", {})
+        for prop in sorted(set(list(_cy_props.keys()) + list(_ly_props.keys()))):
+            c_rn = _cy_props.get(prop, {}).get(cy_mkey, {}).get("booking_rn", 0) or 0
+            l_rn = _ly_props.get(prop, {}).get(ly_mkey, {}).get("booking_rn", 0) or 0
+            if c_rn or l_rn:
+                _bp_yoy[prop] = {"cy": c_rn, "ly": l_rn, "pct": _safe_pct(c_rn, l_rn)}
+
+        mlabel = f"{mi}월"
+        yoy_otb[mlabel] = {
+            "cy_rn": cy_rn, "ly_rn": ly_rn, "rn_pct": _safe_pct(cy_rn, ly_rn),
+            "cy_rev": round(cy_rev, 1), "ly_rev": round(ly_rev, 1), "rev_pct": _safe_pct(cy_rev, ly_rev),
+            "cy_adr": cy_adr, "ly_adr": ly_adr, "adr_pct": _safe_pct(cy_adr, ly_adr),
+            "byProperty": _bp_yoy,
+        }
+
+    # "전체" = 비교 대상 월 합산
+    _a_cy_rn = sum(yoy_otb.get(f"{mi}월", {}).get("cy_rn", 0) for mi in compare_months)
+    _a_ly_rn = sum(yoy_otb.get(f"{mi}월", {}).get("ly_rn", 0) for mi in compare_months)
+    _a_cy_rev = sum(yoy_otb.get(f"{mi}월", {}).get("cy_rev", 0) for mi in compare_months)
+    _a_ly_rev = sum(yoy_otb.get(f"{mi}월", {}).get("ly_rev", 0) for mi in compare_months)
+    _a_cy_adr = round(_a_cy_rev * 1e6 / _a_cy_rn / 1000, 1) if _a_cy_rn else 0
+    _a_ly_adr = round(_a_ly_rev * 1e6 / _a_ly_rn / 1000, 1) if _a_ly_rn else 0
+    _a_bp = {}
+    for mi in compare_months:
+        for prop, pv in yoy_otb.get(f"{mi}월", {}).get("byProperty", {}).items():
+            if prop not in _a_bp:
+                _a_bp[prop] = {"cy": 0, "ly": 0}
+            _a_bp[prop]["cy"] += pv.get("cy", 0)
+            _a_bp[prop]["ly"] += pv.get("ly", 0)
+    for prop in _a_bp:
+        _a_bp[prop]["pct"] = _safe_pct(_a_bp[prop]["cy"], _a_bp[prop]["ly"])
+    yoy_otb["all"] = {
+        "cy_rn": _a_cy_rn, "ly_rn": _a_ly_rn, "rn_pct": _safe_pct(_a_cy_rn, _a_ly_rn),
+        "cy_rev": round(_a_cy_rev, 1), "ly_rev": round(_a_ly_rev, 1), "rev_pct": _safe_pct(_a_cy_rev, _a_ly_rev),
+        "cy_adr": _a_cy_adr, "ly_adr": _a_ly_adr, "adr_pct": _safe_pct(_a_cy_adr, _a_ly_adr),
+        "byProperty": _a_bp,
+    }
+    logger.info(f"✓ YoY OTB 비교 계산: {len(yoy_otb)}개 탭 (전체+{len(compare_months)}개월), "
+                f"사업장 {len(_a_bp)}개")
+
     insight_blob = {
         "todayDate": today_date,
         "todayLabel": f"{today_date[4:6]}/{today_date[6:]}" if len(today_date) == 8 else "",
@@ -1727,6 +1794,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         "channelWeeklyShare": channel_weekly_share,
         "yoyExclusions": yoy_exclusions_all,
         "yoyExclusionsByMonth": yoy_exclusions_by_month,
+        "yoyOtb": yoy_otb,
     }
 
     js_const = f"const INSIGHT_DATA = {_json.dumps(insight_blob, ensure_ascii=False)};"
@@ -1887,6 +1955,14 @@ def render_yoy_property_table(yoy_table: list, base_date: str) -> str:
 def inject_yoy_property_table(html: str, otb_data: dict) -> str:
     yoy_table = otb_data.get("yoyTable", [])
     base_date = otb_data.get("meta", {}).get("yoyBaseDate", "")
+
+    # base_date가 비어있거나 현재 연도와 다르면 빌드 날짜(KST 오늘)로 폴백
+    now_kst = datetime.now(KST)
+    current_year = now_kst.strftime("%Y")
+    if not base_date or not base_date.startswith(current_year):
+        base_date = now_kst.strftime("%Y%m%d")
+        logger.info(f"⚠ yoyBaseDate 폴백 → {base_date} (현재 연도 {current_year} 기준)")
+
     table_html = render_yoy_property_table(yoy_table, base_date)
     pattern = re.compile(
         r'(<!-- YOY_PROP_TABLE_START -->)(.*?)(<!-- YOY_PROP_TABLE_END -->)',
@@ -2025,6 +2101,20 @@ def main():
             logger.info(f"✓ docs/data/package_series_trend.json 동기화 완료")
         except Exception as e:
             logger.warning(f"✗ package_series_trend.json 동기화 실패: {e}")
+
+    # ── docs/data/rm_fcst.json 동기화 ──
+    # fcst-admin.html이 RM FCST 열에서 사용 (사업장×월별 Revenue Meeting 전망 RN).
+    # scripts/parse_rm_fcst.py가 최신 PDF로부터 data/rm_fcst.json을 생성한다.
+    src_rm_path = DATA_DIR / "rm_fcst.json"
+    dst_rm_path = DOCS_DIR / "data" / "rm_fcst.json"
+    if src_rm_path.exists():
+        try:
+            import shutil
+            dst_rm_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(src_rm_path), str(dst_rm_path))
+            logger.info(f"✓ docs/data/rm_fcst.json 동기화 완료")
+        except Exception as e:
+            logger.warning(f"✗ rm_fcst.json 동기화 실패: {e}")
 
     # ── 해외사업장 데이터 파싱 (overseas_data.json) ──
     overseas_script = Path(__file__).resolve().parent / "parse_overseas.py"
