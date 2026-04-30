@@ -603,7 +603,13 @@ function renderDailyDetailTable() {
   const mdata = stayDaily[targetKey];
   const days = mdata.days || [];
   const segments = mdata.segments || {};
-  const total = mdata.total || {};
+
+  // LY 데이터: 전년 같은 월에서 가져오기
+  const yr = parseInt(targetKey.slice(0,4));
+  const lyKey = (yr - 1) + targetKey.slice(4);
+  const lyData = stayDaily[lyKey] || {};
+  const lySegments = lyData.segments || {};
+  const lyDays = lyData.days || [];
 
   const monthKeyDash = targetKey.slice(0,4) + '-' + targetKey.slice(4);
   let dailyOcc = null;
@@ -615,91 +621,98 @@ function renderDailyDetailTable() {
     }
   }
 
+  // 매출 포맷 (이미 백만원 단위)
+  const fmtRev = v => v > 0 ? Math.round(v).toLocaleString('ko-KR') + 'M' : '—';
+
+  const getVal = (segs, seg, field, idx) => {
+    if (segs[seg] && segs[seg][field] && segs[seg][field][idx] != null) return segs[seg][field][idx];
+    return 0;
+  };
+
+  // Total = OTA + G-OTA + Inbound 합산
+  const sumSegs = (segs, field, idx) => {
+    let s = 0;
+    for (const seg of ['OTA', 'G-OTA', 'Inbound']) {
+      s += getVal(segs, seg, field, idx);
+    }
+    return s;
+  };
+
+  const calcYoY = (ty, ly) => (ly > 0) ? ((ty / ly - 1) * 100) : null;
+
   let rows = '';
   for (let i = 0; i < days.length; i++) {
     const d = days[i];
-    const stayDate = `${d}일`;
+    // LY에서 같은 날짜의 인덱스 찾기
+    const lyIdx = lyDays.indexOf(d);
 
-    // Get segment data for this day
-    const totalRn = total.net_rn && total.net_rn[i] ? total.net_rn[i] : 0;
-    const totalRev = total.net_rev && total.net_rev[i] ? total.net_rev[i] : 0;
-    const totalRnLy = total.net_rn_last && total.net_rn_last[i] ? total.net_rn_last[i] : 0;
-    const totalRevLy = total.net_rev_last && total.net_rev_last[i] ? total.net_rev_last[i] : 0;
+    const totalRn = sumSegs(segments, 'net_rn', i);
+    const totalRev = sumSegs(segments, 'net_rev', i);
+    const totalRnLy = lyIdx >= 0 ? sumSegs(lySegments, 'net_rn', lyIdx) : 0;
+    const totalRevLy = lyIdx >= 0 ? sumSegs(lySegments, 'net_rev', lyIdx) : 0;
 
-    const getSegData = (seg, field, idx) => {
-      if (segments[seg] && segments[seg][field] && segments[seg][field][idx]) {
-        return segments[seg][field][idx];
-      }
-      return 0;
-    };
+    const otaRn = getVal(segments, 'OTA', 'net_rn', i);
+    const otaRev = getVal(segments, 'OTA', 'net_rev', i);
+    const otaRnLy = lyIdx >= 0 ? getVal(lySegments, 'OTA', 'net_rn', lyIdx) : 0;
+    const otaRevLy = lyIdx >= 0 ? getVal(lySegments, 'OTA', 'net_rev', lyIdx) : 0;
 
-    const otaRn = getSegData('OTA', 'net_rn', i);
-    const otaRev = getSegData('OTA', 'net_rev', i);
-    const otaRnLy = getSegData('OTA', 'net_rn_last', i);
-    const otaRevLy = getSegData('OTA', 'net_rev_last', i);
+    const gotaRn = getVal(segments, 'G-OTA', 'net_rn', i);
+    const gotaRev = getVal(segments, 'G-OTA', 'net_rev', i);
+    const gotaRnLy = lyIdx >= 0 ? getVal(lySegments, 'G-OTA', 'net_rn', lyIdx) : 0;
+    const gotaRevLy = lyIdx >= 0 ? getVal(lySegments, 'G-OTA', 'net_rev', lyIdx) : 0;
 
-    const gotaRn = getSegData('G-OTA', 'net_rn', i);
-    const gotaRev = getSegData('G-OTA', 'net_rev', i);
-    const gotaRnLy = getSegData('G-OTA', 'net_rn_last', i);
-    const gotaRevLy = getSegData('G-OTA', 'net_rev_last', i);
-
-    const inboundRn = getSegData('Inbound', 'net_rn', i);
-    const inboundRev = getSegData('Inbound', 'net_rev', i);
-    const inboundRnLy = getSegData('Inbound', 'net_rn_last', i);
-    const inboundRevLy = getSegData('Inbound', 'net_rev_last', i);
-
-    // Calculate YoY%
-    const calcYoY = (ty, ly) => {
-      if (ly === 0 || ly == null) return null;
-      return ((ty / ly - 1) * 100);
-    };
+    const inboundRn = getVal(segments, 'Inbound', 'net_rn', i);
+    const inboundRev = getVal(segments, 'Inbound', 'net_rev', i);
+    const inboundRnLy = lyIdx >= 0 ? getVal(lySegments, 'Inbound', 'net_rn', lyIdx) : 0;
+    const inboundRevLy = lyIdx >= 0 ? getVal(lySegments, 'Inbound', 'net_rev', lyIdx) : 0;
 
     const totalYoY = calcYoY(totalRn, totalRnLy);
     const otaYoY = calcYoY(otaRn, otaRnLy);
     const gotaYoY = calcYoY(gotaRn, gotaRnLy);
     const inboundYoY = calcYoY(inboundRn, inboundRnLy);
 
-    // ADR calculation
-    const adr = totalRn > 0 ? (totalRev / totalRn) : 0;
+    // ADR: 매출(백만원) * 1000000 / 객실수 = 원 단위
+    const adr = totalRn > 0 ? Math.round(totalRev * 1000000 / totalRn) : 0;
 
-    // OCC value
     const occVal = dailyOcc && dailyOcc[i] ? dailyOcc[i] : null;
     const occHtml = occVal != null ? occVal.toFixed(1) : '—';
     const occColor = occVal != null ? (occVal >= 70 ? 'var(--positive)' : occVal >= 50 ? 'var(--warning)' : 'var(--negative)') : 'var(--ink-faint)';
     const occClass = occVal != null && occVal < 40 ? ' style="background:rgba(229,115,115,0.15);"' : '';
 
-    // Season classification (weekday/weekend/holiday - placeholder)
-    const date = new Date(parseInt(targetKey.slice(0, 4)), parseInt(targetKey.slice(4)) - 1, d);
+    const date = new Date(yr, parseInt(targetKey.slice(4)) - 1, d);
     const dow = date.getDay();
+    const isFri = dow === 5;
     const isWeekend = dow === 0 || dow === 6;
-    const season = isWeekend ? '주말' : '평일';
+    const season = isWeekend ? '주말' : isFri ? '금' : '평일';
+
+    const yoyCell = (v) => v != null ? `<td style="color:${v >= 0 ? 'var(--positive)' : 'var(--negative)'};">${v.toFixed(1)}%</td>` : '<td>—</td>';
 
     rows += `<tr${occClass}>
-      <td style="text-align:left;position:sticky;left:0;background:inherit;z-index:1;">${stayDate}</td>
+      <td style="text-align:left;position:sticky;left:0;background:inherit;z-index:1;">${d}일</td>
       <td class="border-left-group">${fmt.num(totalRn)}</td>
-      <td>${totalRev > 0 ? fmt.num(Math.round(totalRev / 1000000)) + 'M' : '—'}</td>
-      <td>${fmt.num(totalRnLy)}</td>
-      <td>${totalRevLy > 0 ? fmt.num(Math.round(totalRevLy / 1000000)) + 'M' : '—'}</td>
-      <td${totalYoY != null ? ' style="color:' + (totalYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${totalYoY != null ? totalYoY.toFixed(1) + '%' : '—'}</td>
+      <td>${fmtRev(totalRev)}</td>
+      <td>${totalRnLy > 0 ? fmt.num(totalRnLy) : '—'}</td>
+      <td>${fmtRev(totalRevLy)}</td>
+      ${yoyCell(totalYoY)}
       <td class="border-left-group">${fmt.num(otaRn)}</td>
-      <td>${otaRev > 0 ? fmt.num(Math.round(otaRev / 1000000)) + 'M' : '—'}</td>
-      <td>${fmt.num(otaRnLy)}</td>
-      <td>${otaRevLy > 0 ? fmt.num(Math.round(otaRevLy / 1000000)) + 'M' : '—'}</td>
-      <td${otaYoY != null ? ' style="color:' + (otaYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${otaYoY != null ? otaYoY.toFixed(1) + '%' : '—'}</td>
+      <td>${fmtRev(otaRev)}</td>
+      <td>${otaRnLy > 0 ? fmt.num(otaRnLy) : '—'}</td>
+      <td>${fmtRev(otaRevLy)}</td>
+      ${yoyCell(otaYoY)}
       <td class="border-left-group">${fmt.num(gotaRn)}</td>
-      <td>${gotaRev > 0 ? fmt.num(Math.round(gotaRev / 1000000)) + 'M' : '—'}</td>
-      <td>${fmt.num(gotaRnLy)}</td>
-      <td>${gotaRevLy > 0 ? fmt.num(Math.round(gotaRevLy / 1000000)) + 'M' : '—'}</td>
-      <td${gotaYoY != null ? ' style="color:' + (gotaYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${gotaYoY != null ? gotaYoY.toFixed(1) + '%' : '—'}</td>
+      <td>${fmtRev(gotaRev)}</td>
+      <td>${gotaRnLy > 0 ? fmt.num(gotaRnLy) : '—'}</td>
+      <td>${fmtRev(gotaRevLy)}</td>
+      ${yoyCell(gotaYoY)}
       <td class="border-left-group">${fmt.num(inboundRn)}</td>
-      <td>${inboundRev > 0 ? fmt.num(Math.round(inboundRev / 1000000)) + 'M' : '—'}</td>
-      <td>${fmt.num(inboundRnLy)}</td>
-      <td>${inboundRevLy > 0 ? fmt.num(Math.round(inboundRevLy / 1000000)) + 'M' : '—'}</td>
-      <td${inboundYoY != null ? ' style="color:' + (inboundYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${inboundYoY != null ? inboundYoY.toFixed(1) + '%' : '—'}</td>
+      <td>${fmtRev(inboundRev)}</td>
+      <td>${inboundRnLy > 0 ? fmt.num(inboundRnLy) : '—'}</td>
+      <td>${fmtRev(inboundRevLy)}</td>
+      ${yoyCell(inboundYoY)}
       <td class="border-left-group" style="color:${occColor};">${occHtml}</td>
       <td>—</td>
       <td>${season}</td>
-      <td>${adr > 0 ? fmt.num(Math.round(adr)) : '—'}</td>
+      <td>${adr > 0 ? fmt.num(adr) : '—'}</td>
     </tr>`;
   }
 
@@ -715,14 +728,31 @@ function renderInsightCharts() {
 
   const mdata = stayDaily[targetKey];
   const days = mdata.days || [];
-  const total = mdata.total || {};
   const segments = mdata.segments || {};
   const mn = parseInt(targetKey.slice(4));
   const labels = days.map(d => d + '일');
 
-  const tyRn = days.map((d, i) => total.net_rn && total.net_rn[i] ? total.net_rn[i] : 0);
-  const lyRn = days.map((d, i) => total.net_rn_last && total.net_rn_last[i] ? total.net_rn_last[i] : 0);
-  const tyRev = days.map((d, i) => total.net_rev && total.net_rev[i] ? total.net_rev[i] : 0);
+  // LY 데이터
+  const yr = parseInt(targetKey.slice(0,4));
+  const lyKey = (yr - 1) + targetKey.slice(4);
+  const lyData = stayDaily[lyKey] || {};
+  const lySegments = lyData.segments || {};
+  const lyDays = lyData.days || [];
+
+  const sumSegsChart = (segs, field, idx) => {
+    let s = 0;
+    for (const seg of ['OTA', 'G-OTA', 'Inbound']) {
+      if (segs[seg] && segs[seg][field] && segs[seg][field][idx] != null) s += segs[seg][field][idx];
+    }
+    return s;
+  };
+
+  const tyRn = days.map((d, i) => sumSegsChart(segments, 'net_rn', i));
+  const lyRn = days.map((d, i) => {
+    const li = lyDays.indexOf(d);
+    return li >= 0 ? sumSegsChart(lySegments, 'net_rn', li) : 0;
+  });
+  const tyRev = days.map((d, i) => sumSegsChart(segments, 'net_rev', i));
 
   // OCC data
   const monthKeyDash = targetKey.slice(0,4) + '-' + targetKey.slice(4);
@@ -733,7 +763,7 @@ function renderInsightCharts() {
   }
 
   const occArr = days.map((d, i) => dailyOcc && dailyOcc[i] ? dailyOcc[i] : null);
-  const adrArr = days.map((d, i) => tyRn[i] > 0 ? Math.round(tyRev[i] / tyRn[i]) : null);
+  const adrArr = days.map((d, i) => tyRn[i] > 0 ? Math.round(tyRev[i] * 1000000 / tyRn[i]) : null);
 
   const tooltipOpts = { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10 };
   const gridColor = 'rgba(255,255,255,0.05)';
