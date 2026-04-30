@@ -179,7 +179,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 
   <main class="main-content">
     <div class="page-header">
-      <div class="page-title">Forecast 품의서<span class="sub">사업장/월 선택 후 생성</span></div>
+      <div class="page-title">품의서 작성<span class="sub">사업장/월 선택 후 생성</span></div>
     </div>
     <div id="output-area">
       <div class="empty-state">
@@ -425,11 +425,11 @@ function initUI(){
     monthChips.appendChild(chip);
   });
 
-  // Segment chips
+  // Segment chips — GS 세그먼트만 표시
   const segChips = document.getElementById('seg-chips');
-  ALL_SEGMENTS.forEach(s=>{
+  GS_SEGMENTS.forEach(s=>{
     const chip = document.createElement('div');
-    chip.className='seg-chip'+(GS_SEGMENTS.includes(s)?' active':'');
+    chip.className='seg-chip active';
     chip.textContent=s;
     chip.addEventListener('click',()=>{
       if(selectedSegs.has(s)) selectedSegs.delete(s); else selectedSegs.add(s);
@@ -506,13 +506,18 @@ function getGsData(dbName, month, segs){
   return {rn:totalRn, rev:totalRev, adr:Math.round(adr*1000)}; // rev 백만, adr 원
 }
 
+// rm_fcst.json (enhanced): Budget/OTB/ADR/REV + FCST RN per property per month
 function getRmFcst(otbName, month){
   if(!DATA.fcst) return null;
-  const props = DATA.fcst.properties;
+  const props = DATA.fcst.properties || {};
   const key = `2026-${String(month).padStart(2,'0')}`;
-  const matchKey = Object.keys(props).find(k=>k===otbName);
-  if(matchKey && props[matchKey][key]) return props[matchKey][key];
+  if(props[otbName] && props[otbName][key]) return props[otbName][key];
   return null;
+}
+function getRmTotal(month){
+  if(!DATA.fcst || !DATA.fcst.total) return null;
+  const key = `2026-${String(month).padStart(2,'0')}`;
+  return DATA.fcst.total[key] || null;
 }
 
 /* ─── Format helpers ─── */
@@ -551,145 +556,160 @@ function generateTables(){
 
   // Build per-month aggregated data
   const monthData = selMonthsArr.map(month=>{
-    // 전체 — RM level
-    let t_bud_rn=0, t_act_rn=0, t_fcst_rn=0;
-    // 전체 — monthly OTB from db (all segments)
-    let t_otb_rn=0, t_otb_rev=0;
-    // 전체 — yearly aggregate for ADR/REV budget & fcst
-    let t_adr_bud_sum=0, t_adr_bud_cnt=0;
-    let t_adr_fcst_sum=0, t_adr_fcst_cnt=0;
-    // OCC
-    let occ_sum=0, occ_cnt=0;
-    // GS
-    let gs_rn=0, gs_rev=0;
+    /* ── 전체 (Booking Status + Revenue Meeting) ── */
+    let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
+    let t_otb_rn=0, t_otb_occ=0, t_otb_adr_w=0, t_otb_rev=0;
+    let t_fcst_rn=0;
+    let rm_cnt=0;
+
+    /* ── GS (otb_data yoyTable + db_aggregated segments) ── */
+    let gs_bud_rn=0, gs_otb_rn=0, gs_fcst_rn=0;
+    let gs_otb_rev=0; // db by_property_segment 백만원
+    // GS ADR budget from byProperty (weighted by RN)
+    let gs_adr_bud_w=0, gs_bud_rn_bp=0;
 
     selPropsArr.forEach(p=>{
-      // RM yoyTable — monthly RN
+      // 전체: Booking Status data from rm_fcst.json (enhanced)
+      const rm = getRmFcst(p.otb, month);
+      if(rm){
+        t_bud_rn += rm.bud_rn||0;
+        t_bud_adr_w += (rm.bud_adr||0)*(rm.bud_rn||0);
+        t_bud_rev += rm.bud_rev_k||0;
+        t_otb_rn += rm.otb_rn||0;
+        t_otb_adr_w += (rm.otb_adr||0)*(rm.otb_rn||0);
+        t_otb_rev += rm.otb_rev_k||0;
+        t_fcst_rn += rm.rm_fcst_rn||0;
+        // OCC: use budget OCC weighted avg
+        t_bud_occ += rm.bud_occ||0;
+        t_otb_occ += rm.otb_occ||0;
+        rm_cnt++;
+      }
+
+      // GS: yoyTable monthly
       const yoy = getOtbYoy(p.otb, month);
       if(yoy){
-        t_bud_rn += yoy.rm_budget_rn||0;
-        t_act_rn += yoy.act_rn||0;
-        t_fcst_rn += yoy.rm_fcst_rn||0;
+        gs_bud_rn += yoy.bud_rn||0;
+        gs_otb_rn += yoy.act_rn||0;
+        gs_fcst_rn += yoy.rns_fcst||0;
       }
-      // db by_property — monthly total OTB (all segments)
-      const tm = getTotalMonthly(p.db, month);
-      if(tm){
-        t_otb_rn += tm.net_rn||0;
-        t_otb_rev += tm.net_rev||0; // 백만원
-      }
-      // byProperty yearly — ADR budget/fcst
+      // GS: db_aggregated segments for ADR/REV
+      const gs = getGsData(p.db, month, segsArr);
+      if(gs){ gs_otb_rev += gs.rev; }
+      // GS ADR budget from byProperty yearly weighted avg
       const bp = getOtbByProp(p.otb);
       if(bp){
-        if(bp.adr_budget){t_adr_bud_sum+=bp.adr_budget; t_adr_bud_cnt++;}
-        if(bp.adr_fcst){t_adr_fcst_sum+=bp.adr_fcst; t_adr_fcst_cnt++;}
+        gs_adr_bud_w += (bp.adr_budget||0) * (bp.rns_budget||0);
+        gs_bud_rn_bp += bp.rns_budget||0;
       }
-      // OCC
-      const occ = getOcc(p.occ, month);
-      if(occ!=null){occ_sum+=occ; occ_cnt++;}
-      // GS segments
-      const gs = getGsData(p.db, month, segsArr);
-      if(gs){ gs_rn+=gs.rn; gs_rev+=gs.rev; }
     });
 
-    // 전체 계산
-    const t_occ = occ_cnt>0 ? occ_sum/occ_cnt : null;
-    const t_rn_ach = t_bud_rn>0 ? t_act_rn/t_bud_rn*100 : null;
-    const t_fcst_ach = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
-    const t_fcst_diff_rn = t_fcst_rn - t_bud_rn;
-    // ADR: OTB from db monthly, budget/fcst from yearly avg
-    const t_adr_otb = t_otb_rn>0 ? Math.round(t_otb_rev/t_otb_rn*1000000) : null; // rev백만→원
-    const t_adr_bud = t_adr_bud_cnt>0 ? Math.round(t_adr_bud_sum/t_adr_bud_cnt) : null;
-    const t_adr_fcst = t_adr_fcst_cnt>0 ? Math.round(t_adr_fcst_sum/t_adr_fcst_cnt) : null;
+    /* ── 전체 계산 ── */
+    // OCC (사업장 평균)
+    const t_bud_occ_avg = rm_cnt>0 ? t_bud_occ/rm_cnt : null;
+    const t_otb_occ_avg = rm_cnt>0 ? t_otb_occ/rm_cnt : null;
+    // RNs
+    const t_rn_ach = t_bud_rn>0 ? t_otb_rn/t_bud_rn*100 : null;
+    const t_fcst_ach_rn = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
+    const t_fcst_diff_rn = t_fcst_rn>0 ? t_fcst_rn - t_bud_rn : null;
+    // ADR (원 → 천원)
+    const t_adr_bud = t_bud_rn>0 ? Math.round(t_bud_adr_w/t_bud_rn/1000) : null; // 원→천원
+    const t_adr_otb = t_otb_rn>0 ? Math.round(t_otb_adr_w/t_otb_rn/1000) : null;
     const t_adr_ach = (t_adr_bud&&t_adr_otb) ? t_adr_otb/t_adr_bud*100 : null;
-    const t_adr_fcst_ach = (t_adr_bud&&t_adr_fcst) ? t_adr_fcst/t_adr_bud*100 : null;
-    const t_adr_fcst_diff = (t_adr_fcst&&t_adr_bud) ? t_adr_fcst-t_adr_bud : null;
-    // REV: OTB from db, budget=bud_rn*adr_bud, fcst=fcst_rn*adr_fcst
-    const t_rev_otb = t_otb_rev; // 백만원
-    const t_rev_bud = (t_bud_rn&&t_adr_bud) ? t_bud_rn*t_adr_bud/1000000 : null; // →백만원
-    const t_rev_fcst = (t_fcst_rn&&t_adr_fcst) ? t_fcst_rn*t_adr_fcst/1000000 : null;
+    // FCST ADR: 없음 (RM에 ADR FCST 없음), REV에서 역산 불가 → FCST RN 대비 추정
+    const t_adr_fcst = t_adr_bud; // FCST ADR = Budget ADR 가정
+    const t_adr_f_diff = 0;
+    const t_adr_f_ach = t_adr_bud ? 100 : null;
+    // REV (천원 → 백만원 표시)
+    const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null; // 천원→백만원
+    const t_rev_otb = t_otb_rev>0 ? Math.round(t_otb_rev/1000) : null;
     const t_rev_ach = (t_rev_bud&&t_rev_otb) ? t_rev_otb/t_rev_bud*100 : null;
-    const t_rev_fcst_ach = (t_rev_bud&&t_rev_fcst) ? t_rev_fcst/t_rev_bud*100 : null;
-    const t_rev_fcst_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
+    const t_rev_fcst = (t_fcst_rn>0&&t_adr_fcst) ? Math.round(t_fcst_rn*t_adr_fcst/1000) : null; // rn*천원/1000=백만
+    const t_rev_f_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
+    const t_rev_f_ach = (t_rev_bud&&t_rev_fcst) ? t_rev_fcst/t_rev_bud*100 : null;
 
-    // GS 계산
-    const gs_adr = gs_rn>0 ? Math.round(gs_rev/gs_rn*1000000) : null; // rev백만→원
-    const gs_rev_m = gs_rev; // 백만원
+    /* ── GS 계산 ── */
+    const gs_rn_ach = gs_bud_rn>0 ? gs_otb_rn/gs_bud_rn*100 : null;
+    const gs_fcst_ach_rn = gs_bud_rn>0 ? gs_fcst_rn/gs_bud_rn*100 : null;
+    const gs_fcst_diff_rn = gs_fcst_rn - gs_bud_rn;
+    // GS ADR (천원)
+    const gs_adr_otb = gs_otb_rn>0 ? Math.round(gs_otb_rev/gs_otb_rn*1000) : null; // rev백만/rn*1000=천원
+    const gs_adr_bud = gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null; // 원→천원
+    const gs_adr_fcst = gs_adr_bud; // FCST ADR ≈ Budget ADR
+    const gs_adr_ach = (gs_adr_bud&&gs_adr_otb) ? gs_adr_otb/gs_adr_bud*100 : null;
+    const gs_adr_f_diff = 0;
+    const gs_adr_f_ach = gs_adr_bud ? 100 : null;
+    // GS REV (백만원)
+    const gs_rev_otb = gs_otb_rev; // already 백만원
+    const gs_rev_bud = (gs_bud_rn&&gs_adr_bud) ? Math.round(gs_bud_rn*gs_adr_bud/1000) : null;
+    const gs_rev_fcst = (gs_fcst_rn&&gs_adr_fcst) ? Math.round(gs_fcst_rn*gs_adr_fcst/1000) : null;
+    const gs_rev_ach = (gs_rev_bud&&gs_rev_otb) ? gs_rev_otb/gs_rev_bud*100 : null;
+    const gs_rev_f_diff = (gs_rev_fcst!=null&&gs_rev_bud!=null) ? gs_rev_fcst-gs_rev_bud : null;
+    const gs_rev_f_ach = (gs_rev_bud&&gs_rev_fcst) ? gs_rev_fcst/gs_rev_bud*100 : null;
 
     return {month,
-      t_occ, t_bud_rn, t_act_rn, t_fcst_rn, t_rn_ach, t_fcst_ach, t_fcst_diff_rn,
-      t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_fcst_diff, t_adr_fcst_ach,
-      t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_fcst_diff, t_rev_fcst_ach,
-      gs_rn, gs_adr, gs_rev_m};
+      t_bud_occ_avg, t_otb_occ_avg,
+      t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
+      t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
+      t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_f_diff, t_rev_f_ach,
+      gs_bud_rn, gs_otb_rn, gs_rn_ach, gs_fcst_rn, gs_fcst_diff_rn, gs_fcst_ach_rn,
+      gs_adr_bud, gs_adr_otb, gs_adr_ach, gs_adr_fcst, gs_adr_f_diff, gs_adr_f_ach,
+      gs_rev_bud, gs_rev_otb, gs_rev_ach, gs_rev_fcst, gs_rev_f_diff, gs_rev_f_ach};
   });
+
+  // cell helpers
+  const cell=(v,f=fmt)=>(v!=null&&!isNaN(v))?f(v):'—';
+  const diffCell=(v,f=fmt)=>{
+    if(v==null||isNaN(v)) return '<td>—</td>';
+    const cls=v>=0?'pos':'neg'; const sign=v>=0?'+':'';
+    return `<td class="${cls}">${sign}${f(v)}</td>`;
+  };
+  const pctCell=(v)=>{
+    if(v==null||isNaN(v)) return '<td class="pct-cell">—</td>';
+    return `<td class="pct-cell ${pctClass(v)}">${fmtPct(v)}</td>`;
+  };
 
   // Render
   let rows = '';
   monthData.forEach((d,idx)=>{
     const border = idx>0 ? 'border-top:2px solid var(--rule-strong);' : '';
-    const rnDiffCls = d.t_fcst_diff_rn>=0?'pos':'neg';
-    const rnDiffSign = d.t_fcst_diff_rn>=0?'+':'';
-    const adrDiffCls = (d.t_adr_fcst_diff||0)>=0?'pos':'neg';
-    const adrDiffSign = (d.t_adr_fcst_diff||0)>=0?'+':'';
-    const revDiffCls = (d.t_rev_fcst_diff||0)>=0?'pos':'neg';
-    const revDiffSign = (d.t_rev_fcst_diff||0)>=0?'+':'';
 
     rows += `
       <tr style="${border}">
         <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">${d.month}월</td>
         <td class="row-label">OCC</td>
-        <td>—</td>
-        <td>${fmtPct(d.t_occ)}</td>
-        <td class="pct-cell">—</td>
+        <td>${fmtPct(d.t_bud_occ_avg)}</td><td>${fmtPct(d.t_otb_occ_avg)}</td><td class="pct-cell">—</td>
         <td>—</td><td>—</td><td class="pct-cell">—</td>
         <td>—</td><td>—</td><td class="pct-cell">—</td>
         <td>—</td><td>—</td><td class="pct-cell">—</td>
       </tr>
       <tr>
         <td class="row-label">RNs</td>
-        <td>${fmt(d.t_bud_rn)}</td>
-        <td>${fmt(d.t_act_rn)}</td>
-        <td class="pct-cell ${pctClass(d.t_rn_ach)}">${fmtPct(d.t_rn_ach)}</td>
-        <td>${fmt(d.t_fcst_rn)}</td>
-        <td class="${rnDiffCls}">${rnDiffSign}${fmt(d.t_fcst_diff_rn)}</td>
-        <td class="pct-cell ${pctClass(d.t_fcst_ach)}">${fmtPct(d.t_fcst_ach)}</td>
-        <td>—</td>
-        <td>${fmt(d.gs_rn)}</td>
-        <td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>${cell(d.t_bud_rn)}</td><td>${cell(d.t_otb_rn)}</td>${pctCell(d.t_rn_ach)}
+        <td>${cell(d.t_fcst_rn)}</td>${diffCell(d.t_fcst_diff_rn)}${pctCell(d.t_fcst_ach_rn)}
+        <td>${cell(d.gs_bud_rn)}</td><td>${cell(d.gs_otb_rn)}</td>${pctCell(d.gs_rn_ach)}
+        <td>${cell(d.gs_fcst_rn)}</td>${diffCell(d.gs_fcst_diff_rn)}${pctCell(d.gs_fcst_ach_rn)}
       </tr>
       <tr>
         <td class="row-label">ADR</td>
-        <td>${d.t_adr_bud ? fmt(d.t_adr_bud) : '—'}</td>
-        <td>${d.t_adr_otb ? fmt(d.t_adr_otb) : '—'}</td>
-        <td class="pct-cell ${pctClass(d.t_adr_ach)}">${fmtPct(d.t_adr_ach)}</td>
-        <td>${d.t_adr_fcst ? fmt(d.t_adr_fcst) : '—'}</td>
-        <td class="${adrDiffCls}">${d.t_adr_fcst_diff!=null ? adrDiffSign+fmt(d.t_adr_fcst_diff) : '—'}</td>
-        <td class="pct-cell ${pctClass(d.t_adr_fcst_ach)}">${fmtPct(d.t_adr_fcst_ach)}</td>
-        <td>—</td>
-        <td>${d.gs_adr ? fmt(d.gs_adr) : '—'}</td>
-        <td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>${cell(d.t_adr_bud)}</td><td>${cell(d.t_adr_otb)}</td>${pctCell(d.t_adr_ach)}
+        <td>${cell(d.t_adr_fcst)}</td>${diffCell(d.t_adr_f_diff)}${pctCell(d.t_adr_f_ach)}
+        <td>${cell(d.gs_adr_bud)}</td><td>${cell(d.gs_adr_otb)}</td>${pctCell(d.gs_adr_ach)}
+        <td>${cell(d.gs_adr_fcst)}</td>${diffCell(d.gs_adr_f_diff)}${pctCell(d.gs_adr_f_ach)}
       </tr>
       <tr>
         <td class="row-label">REV</td>
-        <td>${d.t_rev_bud!=null ? fmtRev(d.t_rev_bud) : '—'}</td>
-        <td>${fmtRev(d.t_rev_otb)}</td>
-        <td class="pct-cell ${pctClass(d.t_rev_ach)}">${fmtPct(d.t_rev_ach)}</td>
-        <td>${d.t_rev_fcst!=null ? fmtRev(d.t_rev_fcst) : '—'}</td>
-        <td class="${revDiffCls}">${d.t_rev_fcst_diff!=null ? revDiffSign+fmtRev(d.t_rev_fcst_diff) : '—'}</td>
-        <td class="pct-cell ${pctClass(d.t_rev_fcst_ach)}">${fmtPct(d.t_rev_fcst_ach)}</td>
-        <td>—</td>
-        <td>${fmtRev(d.gs_rev_m)}</td>
-        <td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>${cell(d.t_rev_bud,fmtRev)}</td><td>${cell(d.t_rev_otb,fmtRev)}</td>${pctCell(d.t_rev_ach)}
+        <td>${cell(d.t_rev_fcst,fmtRev)}</td>${diffCell(d.t_rev_f_diff,fmtRev)}${pctCell(d.t_rev_f_ach)}
+        <td>${cell(d.gs_rev_bud,fmtRev)}</td><td>${cell(d.gs_rev_otb,fmtRev)}</td>${pctCell(d.gs_rev_ach)}
+        <td>${cell(d.gs_rev_fcst,fmtRev)}</td>${diffCell(d.gs_rev_f_diff,fmtRev)}${pctCell(d.gs_rev_f_ach)}
       </tr>`;
   });
 
   const html = `
   <div class="table-block">
     <div class="table-block-header">
-      <span class="table-block-title">Forecast — ${propLabel}</span>
-      <span class="table-block-sub">2026년</span>
+      <span class="table-block-title">품의서 작성 — ${propLabel}</span>
+      <span class="table-block-sub">2026년 · 전체=Booking Status · GS=온북대시보드</span>
     </div>
     <div class="table-wrap">
       <table class="forecast-table" id="forecast-main-table">
@@ -697,14 +717,14 @@ function generateTables(){
           <tr>
             <th rowspan="2" style="width:50px;text-align:center;">월</th>
             <th rowspan="2" style="width:50px;text-align:left;">항목</th>
-            <th colspan="6" style="border-bottom:2px solid var(--gold);color:var(--gold-bright);">전체</th>
+            <th colspan="6" style="border-bottom:2px solid var(--gold);color:var(--gold-bright);">전체 (RM)</th>
             <th colspan="6" style="border-bottom:2px solid var(--info);color:var(--info);">GS (${segsArr.join('+')})</th>
           </tr>
           <tr>
             <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
-            <th style="width:80px;">예상실적</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
+            <th style="width:80px;">FCST</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
             <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
-            <th style="width:80px;">예상실적</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
+            <th style="width:80px;">FCST</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
