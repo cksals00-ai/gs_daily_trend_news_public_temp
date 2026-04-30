@@ -479,8 +479,8 @@ const fmtPct = (n,dec=1)=>{
 };
 const fmtRev = (n)=>{
   if(n==null || isNaN(n)) return '—';
-  // n is in 백만원 → 억원 표시
-  return (n/100).toFixed(1)+'억';
+  // n is in 백만원
+  return Math.round(n).toLocaleString('ko-KR');
 };
 const fmtRevWon = (n)=>{
   if(n==null || isNaN(n)) return '—';
@@ -665,7 +665,7 @@ function generateTables(){
         <td>${cell(d.gs_adr_fcst)}</td>${diffCell(d.gs_adr_f_diff)}${pctCell(d.gs_adr_f_ach)}
       </tr>
       <tr>
-        <td class="row-label">REV</td>
+        <td class="row-label">REV<span style="font-size:9px;color:var(--ink-faint);margin-left:3px;">(백만)</span></td>
         <td>${cell(d.t_rev_bud,fmtRev)}</td><td>${cell(d.t_rev_otb,fmtRev)}</td>${pctCell(d.t_rev_ach)}
         <td>${cell(d.t_rev_fcst,fmtRev)}</td>${diffCell(d.t_rev_f_diff,fmtRev)}${pctCell(d.t_rev_f_ach)}
         <td>${cell(d.gs_rev_bud,fmtRev)}</td><td>${cell(d.gs_rev_otb,fmtRev)}</td>${pctCell(d.gs_rev_ach)}
