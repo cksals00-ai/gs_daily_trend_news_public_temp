@@ -211,6 +211,9 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
           <tr><th>상품 비고</th><td><input type="text" id="f-product-note" placeholder="예: 기준인원(3,4인), 셀러특전 등"></td></tr>
         </table>
 
+        <!-- 요금안 (엑셀 업로드 시 표시) -->
+        <div id="pricing-section" style="display:none;">
+
         <!-- 객실가 -->
         <div style="margin-top:16px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -222,35 +225,12 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
               <tr><th>정상기</th><th>비수기</th><th>정상기</th><th>비수기</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <th>정상가</th>
-                <td><input type="text" id="f-room-mem-peak" placeholder="157~378"></td>
-                <td><input type="text" id="f-room-mem-off" placeholder="157~378"></td>
-                <td><input type="text" id="f-room-fit-peak" placeholder="167~458"></td>
-                <td><input type="text" id="f-room-fit-off" placeholder="197~458"></td>
-              </tr>
-              <tr>
-                <th>배분가</th>
-                <td><input type="text" id="f-room-mem-peak-dist" placeholder=""></td>
-                <td><input type="text" id="f-room-mem-off-dist" placeholder=""></td>
-                <td><input type="text" id="f-room-fit-peak-dist" placeholder=""></td>
-                <td><input type="text" id="f-room-fit-off-dist" placeholder=""></td>
-              </tr>
-              <tr>
-                <th>할인율</th>
-                <td><input type="text" id="f-room-disc-mem-peak" placeholder="0%"></td>
-                <td><input type="text" id="f-room-disc-mem-off" placeholder="0%"></td>
-                <td><input type="text" id="f-room-disc-fit-peak" placeholder="-18%"></td>
-                <td><input type="text" id="f-room-disc-fit-off" placeholder="0%"></td>
-              </tr>
+              <tr><th>정상가</th><td id="f-room-mem-peak">—</td><td id="f-room-mem-off">—</td><td id="f-room-fit-peak">—</td><td id="f-room-fit-off">—</td></tr>
+              <tr><th>배분가</th><td id="f-room-mem-peak-dist">—</td><td id="f-room-mem-off-dist">—</td><td id="f-room-fit-peak-dist">—</td><td id="f-room-fit-off-dist">—</td></tr>
+              <tr><th>할인율</th><td id="f-room-disc-mem-peak">—</td><td id="f-room-disc-mem-off">—</td><td id="f-room-disc-fit-peak">—</td><td id="f-room-disc-fit-off">—</td></tr>
             </tbody>
           </table>
         </div>
-
-        <!-- 화원가比 -->
-        <table class="form-table" style="margin-top:12px;">
-          <tr><th>화원가比</th><td><input type="text" id="f-member-ratio" placeholder="예: 30 ~ 100"></td></tr>
-        </table>
 
         <!-- 식음/부대 -->
         <div style="margin-top:16px;">
@@ -262,28 +242,9 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
               <tr><th style="width:80px;">구 분</th><th>조식</th><th>석식</th><th>오션(요트)</th><th>레전드</th><th>비고</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <th>정상기</th>
-                <td><input type="text" id="f-fb-bk-peak" placeholder="112"></td>
-                <td><input type="text" id="f-fb-dn-peak" placeholder="247"></td>
-                <td><input type="text" id="f-fb-ocean-peak" placeholder="212"></td>
-                <td><input type="text" id="f-fb-legend-peak" placeholder="33"></td>
-                <td rowspan="3"><input type="text" id="f-fb-note" placeholder="구성 3인기준 등" style="width:100%;height:100%;"></td>
-              </tr>
-              <tr>
-                <th>배분기</th>
-                <td><input type="text" id="f-fb-bk-off" placeholder="60"></td>
-                <td><input type="text" id="f-fb-dn-off" placeholder="140"></td>
-                <td><input type="text" id="f-fb-ocean-off" placeholder="50"></td>
-                <td><input type="text" id="f-fb-legend-off" placeholder="12"></td>
-              </tr>
-              <tr>
-                <th>할인율</th>
-                <td><input type="text" id="f-fb-disc-bk" placeholder="46%"></td>
-                <td><input type="text" id="f-fb-disc-dn" placeholder="43%"></td>
-                <td><input type="text" id="f-fb-disc-ocean" placeholder="76%"></td>
-                <td><input type="text" id="f-fb-disc-legend" placeholder="64%"></td>
-              </tr>
+              <tr><th>정상가</th><td id="f-fb-bk-peak">—</td><td id="f-fb-dn-peak">—</td><td id="f-fb-ocean-peak">—</td><td id="f-fb-legend-peak">—</td><td id="f-fb-note" rowspan="3">—</td></tr>
+              <tr><th>배분가</th><td id="f-fb-bk-off">—</td><td id="f-fb-dn-off">—</td><td id="f-fb-ocean-off">—</td><td id="f-fb-legend-off">—</td></tr>
+              <tr><th>할인율</th><td id="f-fb-disc-bk">—</td><td id="f-fb-disc-dn">—</td><td id="f-fb-disc-ocean">—</td><td id="f-fb-disc-legend">—</td></tr>
             </tbody>
           </table>
         </div>
@@ -298,31 +259,14 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
               <tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <th>정상기</th>
-                <td><input type="text" id="f-sell-mem-peak" placeholder="761~981"></td>
-                <td><input type="text" id="f-sell-fit-peak" placeholder="771~1,062"></td>
-              </tr>
-              <tr>
-                <th>배분기</th>
-                <td><input type="text" id="f-sell-mem-off" placeholder="279~500"></td>
-                <td><input type="text" id="f-sell-fit-off" placeholder="319~580"></td>
-              </tr>
-              <tr>
-                <th>할인율</th>
-                <td><input type="text" id="f-sell-disc-mem" placeholder="49%~63%"></td>
-                <td><input type="text" id="f-sell-disc-fit" placeholder="45%~59%"></td>
-              </tr>
+              <tr><th>정상기</th><td id="f-sell-mem-peak">—</td><td id="f-sell-fit-peak">—</td></tr>
+              <tr><th>배분기</th><td id="f-sell-mem-off">—</td><td id="f-sell-fit-off">—</td></tr>
+              <tr><th>할인율</th><td id="f-sell-disc-mem">—</td><td id="f-sell-disc-fit">—</td></tr>
             </tbody>
           </table>
         </div>
 
-        <!-- 수수료 / KPI -->
-        <table class="form-table" style="margin-top:12px;">
-          <tr><th>수수료</th><td><input type="text" id="f-commission" placeholder="예: 11%, 13%"></td></tr>
-          <tr><th>KPI</th><td><input type="text" id="f-kpi" placeholder="예: 1,150RNs (1차: 600RNs, 2차: 550RNs)"></td></tr>
-          <tr><th>비 고</th><td><textarea id="f-remarks" placeholder="추가 사항" style="min-height:40px;"></textarea></td></tr>
-        </table>
+        </div><!-- /pricing-section -->
       </div>
 
       <div class="form-msg" id="form-msg"></div>
@@ -566,10 +510,9 @@ function generateTables(){
     let t_fcst_rn=0;
     let rm_cnt=0;
 
-    /* ── GS (otb_data yoyTable + db_aggregated segments) ── */
+    /* ── GS (db_aggregated segments: OTA+G-OTA+Inbound) ── */
     let gs_bud_rn=0, gs_otb_rn=0, gs_fcst_rn=0;
-    let gs_otb_rev=0; // db by_property_segment 백만원
-    // GS ADR budget from byProperty (weighted by RN)
+    let gs_otb_rev=0;
     let gs_adr_bud_w=0, gs_bud_rn_bp=0;
 
     selPropsArr.forEach(p=>{
@@ -583,22 +526,28 @@ function generateTables(){
         t_otb_adr_w += (rm.otb_adr||0)*(rm.otb_rn||0);
         t_otb_rev += rm.otb_rev_k||0;
         t_fcst_rn += rm.rm_fcst_rn||0;
-        // OCC: use budget OCC weighted avg
         t_bud_occ += rm.bud_occ||0;
         t_otb_occ += rm.otb_occ||0;
         rm_cnt++;
       }
 
-      // GS: yoyTable monthly
+      // GS OTB/REV: db_aggregated by_property_segment (세그먼트 필터링)
+      const gs = getGsData(p.db, month, segsArr);
+      if(gs){
+        gs_otb_rn += gs.rn;
+        gs_otb_rev += gs.rev;
+      }
+      // GS Budget/FCST: yoyTable 전체 대비 세그먼트 비율로 안분
       const yoy = getOtbYoy(p.otb, month);
-      if(yoy){
+      if(yoy && gs){
+        const totalOtb = yoy.act_rn||1;
+        const segRatio = gs.rn / totalOtb;
+        gs_bud_rn += Math.round((yoy.bud_rn||0) * segRatio);
+        gs_fcst_rn += Math.round((yoy.rns_fcst||0) * segRatio);
+      } else if(yoy){
         gs_bud_rn += yoy.bud_rn||0;
-        gs_otb_rn += yoy.act_rn||0;
         gs_fcst_rn += yoy.rns_fcst||0;
       }
-      // GS: db_aggregated segments for ADR/REV
-      const gs = getGsData(p.db, month, segsArr);
-      if(gs){ gs_otb_rev += gs.rev; }
       // GS ADR budget from byProperty yearly weighted avg
       const bp = getOtbByProp(p.otb);
       if(bp){
@@ -770,7 +719,7 @@ function downloadExcel(){
 
 /* ─── Form helpers ─── */
 function getFormData(){
-  const g=id=>document.getElementById(id)?.value||'';
+  const g=id=>{const el=document.getElementById(id); return el?(el.value||el.textContent||'').trim():'';};
   return {
     property:g('f-property'), channel:g('f-channel'),
     salePeriod:g('f-sale-period'), stayPeriod:g('f-stay-period'),
@@ -781,7 +730,6 @@ function getFormData(){
     roomFitPeakDist:g('f-room-fit-peak-dist'), roomFitOffDist:g('f-room-fit-off-dist'),
     roomDiscMemPeak:g('f-room-disc-mem-peak'), roomDiscMemOff:g('f-room-disc-mem-off'),
     roomDiscFitPeak:g('f-room-disc-fit-peak'), roomDiscFitOff:g('f-room-disc-fit-off'),
-    memberRatio:g('f-member-ratio'),
     fbBkPeak:g('f-fb-bk-peak'), fbDnPeak:g('f-fb-dn-peak'),
     fbOceanPeak:g('f-fb-ocean-peak'), fbLegendPeak:g('f-fb-legend-peak'),
     fbBkOff:g('f-fb-bk-off'), fbDnOff:g('f-fb-dn-off'),
@@ -792,7 +740,6 @@ function getFormData(){
     sellMemPeak:g('f-sell-mem-peak'), sellFitPeak:g('f-sell-fit-peak'),
     sellMemOff:g('f-sell-mem-off'), sellFitOff:g('f-sell-fit-off'),
     sellDiscMem:g('f-sell-disc-mem'), sellDiscFit:g('f-sell-disc-fit'),
-    commission:g('f-commission'), kpi:g('f-kpi'), remarks:g('f-remarks'),
     submittedAt:new Date().toISOString()
   };
 }
@@ -856,7 +803,7 @@ function handleXlsxUpload(e){
 }
 
 function parseYokumXlsx(wb){
-  const result = {갑지:null, 상품:[], facility:null};
+  const result = {갑지:null, 상품:[], facility:null, facDist:null};
 
   // 갑지 시트 파싱
   const gapjiName = wb.SheetNames.find(s=>s.trim().startsWith('갑지') && !s.includes('기존') && !s.includes('목표'));
@@ -873,21 +820,19 @@ function parseYokumXlsx(wb){
       if(label==='상품구성') info.product=val;
       if(label==='기준인원') info.people=val;
     });
-    // 부대시설 요금 (갑지 R22~)
-    const fac = {조식:{peak:null,off:null},석식:{peak:null,off:null},오션:{peak:null,off:null},레전드:{peak:null,off:null}};
+    // 부대시설 요금 (갑지 "기 준" 행 = 3인 합산 정상가)
+    const fac = {조식:null,석식:null,오션:null,레전드:null};
     let facSection=false;
-    rows.forEach((r,ri)=>{
+    rows.forEach(r=>{
       if(String(r[1]||'').includes('부대시설 요금')) facSection=true;
       if(!facSection) return;
       const lbl = String(r[1]||'').trim();
-      const period = String(r[2]||'').trim();
-      const who = String(r[3]||'').trim();
-      if(lbl==='정상가'&&(period==='주중'||period==='주말')&&who==='대인'){
-        // col4=조식, col6=석식, col8=오션, col10=레전드
-        if(!fac.조식.peak && typeof r[4]==='number') fac.조식.peak=r[4];
-        if(!fac.석식.peak && typeof r[6]==='number') fac.석식.peak=r[6];
-        if(!fac.오션.peak && typeof r[8]==='number') fac.오션.peak=r[8];
-        if(!fac.레전드.peak && typeof r[10]==='number') fac.레전드.peak=r[10];
+      // "기 준" 대인2+소인1 행에서 3인 합산 정상가 추출
+      if(lbl==='기 준' && String(r[2]||'').includes('소인1')){
+        if(typeof r[4]==='number') fac.조식=r[4];
+        if(typeof r[6]==='number') fac.석식=r[6];
+        if(typeof r[8]==='number') fac.오션=r[8];
+        if(typeof r[10]==='number') fac.레전드=r[10];
       }
     });
     result.갑지 = info;
@@ -914,6 +859,35 @@ function parseYokumXlsx(wb){
     }
     result.상품.push(product);
   });
+
+  // 부대시설 배분가 추출 (상품③ 우선, 없으면 상품②)
+  const fullSheet = wb.SheetNames.find(s=>s.trim()==='상품③') || wb.SheetNames.find(s=>s.trim()==='상품②');
+  if(fullSheet){
+    const ws = wb.Sheets[fullSheet];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    // 헤더에서 배분가 열 위치 찾기 (R20 = index 19)
+    const hdr = rows[19]||[];
+    const distStart = hdr.findIndex((v,i)=>i>20&&String(v).includes('할인율'));
+    // 첫 데이터 행 (R21 = index 20)에서 배분가 추출
+    if(distStart>0){
+      const r = rows[20]||[];
+      const fd = {조식:null,석식:null,오션:null,레전드:null};
+      // 배분가 cols after FIT 할인율: scan for facility names in header
+      for(let c=distStart-1; c<hdr.length; c++){
+        const h = String(hdr[c]||'').trim();
+        const val = r[c];
+        if(typeof val!=='number') continue;
+        // 배분가 columns: value > 10000 (원 단위)
+        if(val>10000 && val<500000){
+          if(h.includes('조식')) fd.조식=val;
+          else if(h.includes('석식')) fd.석식=val;
+          else if(h.includes('오션')||h.includes('요트')) fd.오션=val;
+          else if(h.includes('레전드')) fd.레전드=val;
+        }
+      }
+      result.facDist = fd;
+    }
+  }
 
   return result;
 }
@@ -972,8 +946,9 @@ function renderYokumPreview(data, filename){
     fit_off: minMax(off, i=>i.selling3.fit),
   };
 
-  // 폼 자동입력
-  const setVal = (id,v) => { const el=document.getElementById(id); if(el&&v!=='—') el.value=v; };
+  // 요금안 표시 (display-only cells)
+  document.getElementById('pricing-section').style.display='';
+  const setVal = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   setVal('f-room-mem-peak', rangeK(room.mem_peak));
   setVal('f-room-mem-off', rangeK(room.mem_off));
   setVal('f-room-fit-peak', rangeK(room.fit_peak));
@@ -993,13 +968,27 @@ function renderYokumPreview(data, filename){
   setVal('f-sell-fit-off', rangeK(sell.fit_off));
   setVal('f-sell-disc-mem', discRange(room.mem_peak, sell.mem_peak));
   setVal('f-sell-disc-fit', discRange(room.fit_peak, sell.fit_peak));
-  // 부대시설
+  // 부대시설 정상가 (갑지 기준 3인)
   if(data.facility){
     const f=data.facility;
-    setVal('f-fb-bk-peak', f.조식.peak?fmtK(f.조식.peak):'');
-    setVal('f-fb-dn-peak', f.석식.peak?fmtK(f.석식.peak):'');
-    setVal('f-fb-ocean-peak', f.오션.peak?fmtK(f.오션.peak):'');
-    setVal('f-fb-legend-peak', f.레전드.peak?fmtK(f.레전드.peak):'');
+    setVal('f-fb-bk-peak', f.조식?fmtK(f.조식):'—');
+    setVal('f-fb-dn-peak', f.석식?fmtK(f.석식):'—');
+    setVal('f-fb-ocean-peak', f.오션?fmtK(f.오션):'—');
+    setVal('f-fb-legend-peak', f.레전드?fmtK(f.레전드):'—');
+    // 배분가/할인율: 상품③(가장 완전)에서 추출
+    const facDist = data.facDist;
+    if(facDist){
+      setVal('f-fb-bk-off', facDist.조식?fmtK(facDist.조식):'—');
+      setVal('f-fb-dn-off', facDist.석식?fmtK(facDist.석식):'—');
+      setVal('f-fb-ocean-off', facDist.오션?fmtK(facDist.오션):'—');
+      setVal('f-fb-legend-off', facDist.레전드?fmtK(facDist.레전드):'—');
+      // 할인율
+      if(f.조식&&facDist.조식) setVal('f-fb-disc-bk', Math.round((1-facDist.조식/f.조식)*100)+'%');
+      if(f.석식&&facDist.석식) setVal('f-fb-disc-dn', Math.round((1-facDist.석식/f.석식)*100)+'%');
+      if(f.오션&&facDist.오션) setVal('f-fb-disc-ocean', Math.round((1-facDist.오션/f.오션)*100)+'%');
+      if(f.레전드&&facDist.레전드) setVal('f-fb-disc-legend', Math.round((1-facDist.레전드/f.레전드)*100)+'%');
+    }
+    setVal('f-fb-note', data.갑지?.people||'3인기준');
   }
   // 갑지 정보
   if(data.갑지){
