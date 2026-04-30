@@ -506,6 +506,34 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "rm_fcst_ach":  rm_ach,
             }
         rows.append({"name": display_name, "region": region, "months": month_data})
+
+        # 세그먼트별 sub-row 추가
+        if db_bps is not None and seg_budgets is not None:
+            for seg in BUDGET_SEGMENT_KEYS:
+                seg_month_data = {}
+                for m in months:
+                    mk_26 = f"2026{m:02d}"
+                    mk_25 = f"2025{m:02d}"
+                    bud_label = BUDGET_MONTH_LABEL[m - 1]
+                    s_act_rn = 0
+                    s_ly_rn = 0
+                    for pname in db_props:
+                        s_act_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_26, {}).get("booking_rn", 0)
+                        s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    sb = seg_budgets.get(display_name, {}).get(seg, {})
+                    s_bud_rn = sb.get(bud_label, {}).get("rn", 0)
+                    s_yoy = round((s_act_rn / s_ly_rn - 1) * 100, 1) if s_ly_rn > 0 else None
+                    seg_month_data[m] = {
+                        "act_rn":   s_act_rn,
+                        "last_rn":  s_ly_rn,
+                        "yoy":      s_yoy,
+                        "bud_rn":   s_bud_rn,
+                    }
+                # 실적이 0인 세그먼트는 생략
+                has_data = any(seg_month_data[m]["act_rn"] > 0 or seg_month_data[m]["last_rn"] > 0 for m in months)
+                if has_data:
+                    rows.append({"name": seg, "region": region, "months": seg_month_data, "is_segment": True, "parent": display_name})
+
     return rows
 
 

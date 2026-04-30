@@ -22,11 +22,21 @@ td,th{font-weight:600}th{font-weight:800}
 .nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
 .nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
 
-.wrap{max-width:1400px;margin:0 auto;padding:26px 18px 60px}
+.wrap{max-width:1600px;margin:0 auto;padding:0 18px 60px;display:flex;gap:0}
+.sidebar{width:230px;min-width:230px;background:var(--bg-deep);border-right:1px solid var(--rule);padding:18px 16px;position:sticky;top:96px;height:calc(100vh - 96px);overflow-y:auto;flex-shrink:0}
+.sidebar::-webkit-scrollbar{width:4px}.sidebar::-webkit-scrollbar-thumb{background:var(--rule);border-radius:2px}
+.sidebar .sb-section{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+.sidebar .sb-section:last-child{border-bottom:none}
+.sidebar .sb-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--ink-faint);font-weight:700;margin-bottom:8px;text-transform:uppercase}
+.sidebar .sb-chips{display:flex;flex-wrap:wrap;gap:4px}
+.sidebar .sb-chips .ftab{font-size:11px;padding:4px 9px}
+.sidebar .sb-info{font-size:10px;color:var(--ink-faint);font-family:var(--mono);margin-top:8px}
+.main-content{flex:1;min-width:0;padding:26px 0 0 22px}
 .page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
 .page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
 .page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.75}
+@media(max-width:1100px){.wrap{flex-direction:column}.sidebar{width:100%;min-width:0;position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:14px 16px}.sidebar .sb-section{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;padding-bottom:8px;width:100%}.main-content{padding:18px 0 0 0}}
 
 .card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
 .card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
@@ -85,7 +95,7 @@ td,th{font-weight:600}th{font-weight:800}
 .rank-pct{font-family:var(--mono);font-size:10px;font-weight:700;margin-left:6px}
 
 @media(max-width:900px){.chart-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:repeat(3,1fr)}.rank-grid{grid-template-columns:1fr}}
-@media(max-width:900px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:14px 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:0 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -125,39 +135,49 @@ td,th{font-weight:600}th{font-weight:800}
 </header>
 
 <main class="wrap">
+  <!-- ═══ LEFT SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">연도</div>
+      <div class="sb-chips" id="year-chips"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">투숙월</div>
+      <div class="sb-chips" id="month-btns"></div>
+    </div>
+    <div class="sb-section" id="division-bar">
+      <div class="sb-label">권역</div>
+      <div class="sb-chips" id="division-chips"></div>
+    </div>
+    <div class="sb-section" id="seg-bar">
+      <div class="sb-label">세그먼트</div>
+      <div class="sb-chips" id="seg-chips"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">리조트</div>
+      <select class="filter-select" id="filter-prop" onchange="renderAll()" style="width:100%;margin-top:2px">
+        <option value="__ALL__">전체 합산</option>
+      </select>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">옵션</div>
+      <label style="font-size:11px;color:var(--ink-muted);cursor:pointer;display:flex;align-items:center;gap:5px;margin-top:4px">
+        <input type="checkbox" id="filter-yoy" onchange="renderAll()" style="accent-color:var(--gold)"> YoY 전년 동월 오버레이
+      </label>
+    </div>
+    <div class="sb-info" id="data-info"></div>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="main-content">
   <div class="page-title">
     <div class="eyebrow">FCST · TREND ANALYSIS</div>
     <h1>FCST 추이 분석</h1>
     <p>Revenue Meeting PDF 시점별 FCST 변동 추이를 투숙월 단위로 추적합니다. 2025년 vs 2026년 YoY 비교를 지원합니다.</p>
   </div>
 
-  <!-- 투숙월 탭 -->
-  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="month-tabs"></div>
-
-  <!-- 사업장 필터 칩 -->
-  <div class="filter-bar" id="division-bar" style="margin-bottom:6px">
-    <span class="f-label">사업장</span>
-    <div id="division-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-  </div>
-
-  <!-- 세그 필터 칩 -->
-  <div class="filter-bar" id="seg-bar" style="margin-bottom:10px">
-    <span class="f-label">세그</span>
-    <div id="seg-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-  </div>
-
-  <!-- 필터 -->
-  <div class="filter-bar">
-    <span class="f-label">리조트</span>
-    <select class="filter-select" id="filter-prop" onchange="renderAll()">
-      <option value="__ALL__">전체 합산</option>
-    </select>
-    <span class="f-label" style="margin-left:12px">YoY 비교</span>
-    <label style="font-size:12px;color:var(--ink-muted);cursor:pointer;display:flex;align-items:center;gap:4px">
-      <input type="checkbox" id="filter-yoy" onchange="renderAll()" style="accent-color:var(--gold)"> 전년 동월 오버레이
-    </label>
-    <span id="data-info" style="font-size:10px;color:var(--ink-faint);margin-left:auto;font-family:var(--mono)"></span>
-  </div>
+  <!-- hidden container for old month-tabs reference (no longer rendered here) -->
+  <div id="month-tabs" style="display:none"></div>
 
   <!-- Summary KPI -->
   <div class="summary-row">
@@ -175,7 +195,7 @@ td,th{font-weight:600}th{font-weight:800}
       <canvas id="chart-trend"></canvas>
     </div>
     <div class="chart-box">
-      <div class="chart-label">Budget 대비 달성률 추이</div>
+      <div class="chart-label">세그별 FCST 구성 추이</div>
       <canvas id="chart-ach"></canvas>
     </div>
     <div class="chart-box">
@@ -186,6 +206,21 @@ td,th{font-weight:600}th{font-weight:800}
 
   <!-- Top/Bottom Rankings -->
   <div class="rank-grid" id="rank-cards"></div>
+
+  <!-- Volatility Analysis -->
+  <div class="card" style="margin-top:16px" id="volatility-card">
+    <div class="card-head">
+      <span class="card-icon">📊</span>
+      <span class="card-title">변동 분석</span>
+      <span class="card-desc">FCST 변동이 큰 사업장</span>
+    </div>
+    <div class="trend-tbl-wrap" style="max-height:40vh">
+      <table class="trend-tbl" id="volatility-table">
+        <thead id="vol-thead"></thead>
+        <tbody id="vol-tbody"></tbody>
+      </table>
+    </div>
+  </div>
 
   <!-- Detail Table -->
   <div class="card" style="margin-top:16px">
@@ -201,6 +236,7 @@ td,th{font-weight:600}th{font-weight:800}
       </table>
     </div>
   </div>
+  </div><!-- /main-content -->
 </main>
 
 <script>
@@ -230,33 +266,13 @@ function getFilteredProps() {
   return DIVISION_MAP[selectedDivision] || [];
 }
 
-// seg != 'GS' 일 때는 사업장 breakdown 미제공 → 사업장/리조트 필터 비활성화
+// 세그 모드에서도 사업장 필터 활성화 (per-property segment 데이터 있을 때)
 function updateSegDependentUI() {
-  const isSegMode = selectedSeg !== 'GS';
-  const propSel = document.getElementById('filter-prop');
-  if (propSel) {
-    if (isSegMode) propSel.value = '__ALL__';
-    propSel.disabled = isSegMode;
-    propSel.style.opacity = isSegMode ? '0.4' : '1';
-  }
-  document.querySelectorAll('#division-chips .ftab').forEach(c => {
-    c.style.pointerEvents = isSegMode ? 'none' : '';
-    c.style.opacity = isSegMode ? '0.35' : '';
-  });
+  // 세그 모드에서도 사업장 필터 사용 가능
   const divBar = document.getElementById('division-bar');
   if (divBar) {
     let note = divBar.querySelector('.seg-note');
-    if (isSegMode) {
-      if (!note) {
-        note = document.createElement('span');
-        note.className = 'seg-note';
-        note.style.cssText = 'font-size:10px;color:var(--ink-faint);margin-left:8px;font-family:var(--mono)';
-        divBar.appendChild(note);
-      }
-      note.textContent = `· ${selectedSeg} 세그는 사업장 breakdown 미제공 (전체 합계만 제공)`;
-    } else if (note) {
-      note.remove();
-    }
+    if (note) note.remove();
   }
 }
 
@@ -320,34 +336,45 @@ function initUI() {
   });
   currentStayMonth = bestMonth || sortedMonths[sortedMonths.length - 1];
 
-  // Render month tabs grouped by year
-  const tabC = document.getElementById('month-tabs');
-  // Show latest year months first, then previous year
+  // Render year chips + month buttons in sidebar
   const yearsDesc = [...trendData._years].sort((a,b) => b-a);
+  const currentYear = parseInt(currentStayMonth.split('-')[0]);
+
+  let selectedYear = currentYear;
+  const yearChips = document.getElementById('year-chips');
   yearsDesc.forEach(yr => {
-    const yrMonths = sortedMonths.filter(m => m.startsWith(String(yr)));
-    if (!yrMonths.length) return;
+    const btn = document.createElement('button');
+    btn.className = 'ftab' + (yr === selectedYear ? ' active' : '');
+    btn.textContent = `${yr}년`;
+    btn.setAttribute('data-yr', yr);
+    btn.onclick = () => {
+      selectedYear = yr;
+      document.querySelectorAll('#year-chips [data-yr]').forEach(b => b.classList.toggle('active', parseInt(b.dataset.yr) === yr));
+      renderMonthButtons();
+    };
+    yearChips.appendChild(btn);
+  });
+
+  function renderMonthButtons() {
+    const mc = document.getElementById('month-btns');
+    mc.innerHTML = '';
+    const yrMonths = sortedMonths.filter(m => m.startsWith(String(selectedYear)));
     yrMonths.forEach(m => {
       const [y, mm] = m.split('-');
       const btn = document.createElement('button');
       btn.className = 'ftab' + (m === currentStayMonth ? ' active' : '');
       btn.setAttribute('data-m', m);
-      btn.textContent = `${parseInt(mm)}월 '${y.slice(2)}`;
+      btn.textContent = `${parseInt(mm)}월`;
       btn.onclick = () => {
         currentStayMonth = m;
-        document.querySelectorAll('#month-tabs .ftab').forEach(t =>
+        document.querySelectorAll('#month-btns .ftab').forEach(t =>
           t.classList.toggle('active', t.getAttribute('data-m') === m));
         renderAll();
       };
-      tabC.appendChild(btn);
+      mc.appendChild(btn);
     });
-    // Add separator between years
-    if (yr !== yearsDesc[yearsDesc.length - 1]) {
-      const sep = document.createElement('span');
-      sep.style.cssText = 'width:1px;height:20px;background:var(--rule);margin:0 4px';
-      tabC.appendChild(sep);
-    }
-  });
+  }
+  renderMonthButtons();
 
   // Build 사업장 chips
   const divChips = document.getElementById('division-chips');
@@ -424,12 +451,26 @@ function getSeriesForMonth(stayMonth, propFilter) {
     let fcst = 0, budget = 0, count = 0;
 
     if (selectedSeg !== 'GS') {
-      // 세그 모드: snap.segments[stayMonth][selectedSeg] 직접 사용 (사업장 breakdown 없음)
-      const segEntry = snap.segments?.[stayMonth]?.[selectedSeg];
-      if (segEntry) {
-        fcst = segEntry.rm_fcst_rn || 0;
-        budget = segEntry.rm_budget_rn || 0;
-        count = 1;
+      // 세그 모드: per-property segment 데이터 합산 (사업장 필터 적용)
+      let hasPerProp = false;
+      Object.entries(snap.properties).forEach(([pName, months]) => {
+        if (divProps && !divProps.includes(pName)) return;
+        const segEntry = months[stayMonth]?.segments?.[selectedSeg];
+        if (segEntry) {
+          fcst += segEntry.rm_fcst_rn || 0;
+          budget += segEntry.rm_budget_rn || 0;
+          count++;
+          hasPerProp = true;
+        }
+      });
+      // fallback: per-property 없으면 전체 세그 합계 사용
+      if (!hasPerProp && !divProps) {
+        const segEntry = snap.segments?.[stayMonth]?.[selectedSeg];
+        if (segEntry) {
+          fcst = segEntry.rm_fcst_rn || 0;
+          budget = segEntry.rm_budget_rn || 0;
+          count = 1;
+        }
       }
     } else if (propFilter === '__ALL__') {
       Object.entries(snap.properties).forEach(([pName, months]) => {
@@ -492,6 +533,7 @@ function renderAll() {
   renderAchChart(series, monthLabel, yearLabel);
   renderYoYChart(series, lySeries, monthLabel, yr);
   renderRankCards(currentStayMonth, lyMonth);
+  renderVolatility(currentStayMonth, lyMonth);
   renderTable(currentStayMonth, lyMonth);
 }
 
@@ -604,46 +646,58 @@ function renderTrendChart(series, lySeries, showYoY, monthLabel, yearLabel) {
   });
 }
 
-/* ── Chart 2: Achievement Rate ── */
+/* ── Chart 2: Segment Composition Trend ── */
 function renderAchChart(series, monthLabel, yearLabel) {
   destroyChart('ach');
-  if (!series.length) return;
   const ctx = document.getElementById('chart-ach').getContext('2d');
-  const labels = series.map(s => { const [y,m,d]=s.date.split('-'); return `${parseInt(m)}/${parseInt(d)}`; });
+  const stayYear = parseInt(currentStayMonth.split('-')[0]);
+  const SEG_COLORS = { 'OTA': '#6ba3c4', 'G-OTA': '#7ab891', 'Inbound': '#a892c8' };
+  const SEGS = ['OTA', 'G-OTA', 'Inbound'];
+
+  const relevantSnaps = trendData.snapshots.filter(s => s._year === stayYear);
+  if (!relevantSnaps.length) return;
+
+  const labels = relevantSnaps.map(s => {
+    const [,m,d] = s._snapshot_date.split('-');
+    return `${parseInt(m)}/${parseInt(d)}`;
+  });
+
+  const datasets = SEGS.map(seg => ({
+    label: seg,
+    data: relevantSnaps.map(snap => {
+      // per-property segment 합산
+      let total = 0;
+      const divProps = getFilteredProps();
+      Object.entries(snap.properties).forEach(([pName, months]) => {
+        if (divProps && !divProps.includes(pName)) return;
+        total += months[currentStayMonth]?.segments?.[seg]?.rm_fcst_rn || 0;
+      });
+      // fallback
+      if (total === 0 && !divProps) {
+        total = snap.segments?.[currentStayMonth]?.[seg]?.rm_fcst_rn || 0;
+      }
+      return total;
+    }),
+    backgroundColor: SEG_COLORS[seg] + '99',
+    borderColor: SEG_COLORS[seg],
+    borderWidth: 1,
+    borderRadius: 2,
+  }));
 
   charts['ach'] = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: '달성률',
-        data: series.map(s => Math.round(s.ach * 10) / 10),
-        backgroundColor: series.map(s => s.ach >= 100 ? 'rgba(76,175,111,0.7)' : s.ach >= 80 ? 'rgba(232,162,86,0.7)' : 'rgba(229,115,115,0.7)'),
-        borderColor: series.map(s => s.ach >= 100 ? '#4caf6f' : s.ach >= 80 ? '#e8a256' : '#e57373'),
-        borderWidth: 1, borderRadius: 4, barThickness: 24
-      }]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `달성률: ${c.raw}%` } } },
+      plugins: {
+        legend: { labels: { color: '#a8acb3', font: { size: 11 }, usePointStyle: true } },
+        tooltip: { mode: 'index', callbacks: { label: c => `${c.dataset.label}: ${fmt(c.raw)} RN` } }
+      },
       scales: {
-        x: { ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" } }, grid: { display: false } },
-        y: { min: 0, ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" }, callback: v => v+'%' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        x: { stacked: true, ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" } }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#7a7e85', font: { size: 10, family: "'JetBrains Mono'" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v }, grid: { color: 'rgba(255,255,255,0.06)' } }
       }
-    },
-    plugins: [{
-      id: 'target100',
-      afterDraw(chart) {
-        const y100 = chart.scales.y.getPixelForValue(100);
-        if (y100 >= chart.chartArea.top && y100 <= chart.chartArea.bottom) {
-          const ctx2 = chart.ctx;
-          ctx2.save(); ctx2.strokeStyle = 'rgba(229,115,115,0.6)'; ctx2.lineWidth = 1; ctx2.setLineDash([4,3]);
-          ctx2.beginPath(); ctx2.moveTo(chart.chartArea.left, y100); ctx2.lineTo(chart.chartArea.right, y100); ctx2.stroke();
-          ctx2.fillStyle = '#e57373'; ctx2.font = "10px 'JetBrains Mono'"; ctx2.fillText('100%', chart.chartArea.right + 4, y100 + 3);
-          ctx2.restore();
-        }
-      }
-    }]
+    }
   });
 }
 
@@ -774,6 +828,114 @@ function renderRankCards(stayMonth, lyMonth) {
         </div>`).join('')}
     </div>
   `;
+}
+
+/* ── Volatility Analysis ── */
+function renderVolatility(stayMonth, lyMonth) {
+  const card = document.getElementById('volatility-card');
+  const thead = document.getElementById('vol-thead');
+  const tbody = document.getElementById('vol-tbody');
+  const [yr, mm] = stayMonth.split('-');
+  const stayYear = parseInt(yr);
+
+  // 세그 모드에서도 동작
+  const isSegMode = selectedSeg !== 'GS';
+  const divProps = getFilteredProps();
+
+  const relevantSnaps = trendData.snapshots.filter(s => s._year === stayYear);
+  if (relevantSnaps.length < 2) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const latestSnap = relevantSnaps[relevantSnaps.length - 1];
+  const earliestSnap = relevantSnaps[0];
+  const prevSnap = relevantSnaps.length >= 2 ? relevantSnaps[relevantSnaps.length - 2] : null;
+  const lyYear = stayYear - 1;
+  const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+
+  // Collect per-property volatility data
+  const volData = [];
+  const allProps = new Set();
+  trendData.snapshots.forEach(s => Object.keys(s.properties).forEach(p => {
+    if (!divProps || divProps.includes(p)) allProps.add(p);
+  }));
+
+  [...allProps].sort().forEach(propName => {
+    let latestFcst, earliestFcst, prevFcst, budget, lyFcst;
+    if (isSegMode) {
+      latestFcst = latestSnap.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]?.rm_fcst_rn ?? null;
+      earliestFcst = earliestSnap.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]?.rm_fcst_rn ?? null;
+      prevFcst = prevSnap?.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]?.rm_fcst_rn ?? null;
+      budget = latestSnap.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]?.rm_budget_rn ?? 0;
+      lyFcst = lySnap?.properties[propName]?.[lyMonth]?.segments?.[selectedSeg]?.rm_fcst_rn ?? null;
+    } else {
+      latestFcst = latestSnap.properties[propName]?.[stayMonth]?.rm_fcst_rn ?? null;
+      earliestFcst = earliestSnap.properties[propName]?.[stayMonth]?.rm_fcst_rn ?? null;
+      prevFcst = prevSnap?.properties[propName]?.[stayMonth]?.rm_fcst_rn ?? null;
+      budget = latestSnap.properties[propName]?.[stayMonth]?.rm_budget_rn ?? 0;
+      lyFcst = lySnap?.properties[propName]?.[lyMonth]?.rm_fcst_rn ?? null;
+    }
+    if (latestFcst === null || earliestFcst === null) return;
+
+    const totalDelta = latestFcst - earliestFcst;
+    const totalPct = earliestFcst > 0 ? (totalDelta / earliestFcst * 100) : 0;
+    const recentDelta = prevFcst !== null ? latestFcst - prevFcst : 0;
+    const recentPct = prevFcst > 0 ? (recentDelta / prevFcst * 100) : 0;
+
+    // Volatility = standard deviation of FCST values across snapshots
+    const vals = relevantSnaps.map(s => {
+      if (isSegMode) return s.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]?.rm_fcst_rn ?? null;
+      return s.properties[propName]?.[stayMonth]?.rm_fcst_rn ?? null;
+    }).filter(v => v !== null);
+    const mean = vals.length > 0 ? vals.reduce((a,b) => a+b, 0) / vals.length : 0;
+    const variance = vals.length > 1 ? vals.reduce((a,v) => a + (v - mean) ** 2, 0) / (vals.length - 1) : 0;
+    const stddev = Math.sqrt(variance);
+    const cv = mean > 0 ? (stddev / mean * 100) : 0; // coefficient of variation
+
+    volData.push({
+      name: propName, latestFcst, budget, totalDelta, totalPct, recentDelta, recentPct, cv, stddev
+    });
+  });
+
+  if (!volData.length) { card.style.display = 'none'; return; }
+
+  // Sort by absolute total change (biggest movers first)
+  volData.sort((a, b) => Math.abs(b.totalDelta) - Math.abs(a.totalDelta));
+  const top10 = volData.slice(0, 10);
+
+  thead.innerHTML = `<tr>
+    <th style="min-width:130px">사업장</th>
+    <th class="week-col" style="text-align:right">최신 FCST</th>
+    <th class="week-col" style="text-align:right">목표</th>
+    <th class="week-col" style="text-align:right">총 변동</th>
+    <th class="week-col" style="text-align:right">변동률</th>
+    <th class="week-col" style="text-align:right">최근 변동</th>
+    <th class="week-col" style="text-align:right">변동계수</th>
+    <th style="min-width:160px">시각화</th>
+  </tr>`;
+
+  let html = '';
+  top10.forEach(d => {
+    const dColor = d.totalDelta >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const rColor = d.recentDelta >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const pctCls = Math.abs(d.totalPct) >= 10 ? (d.totalDelta >= 0 ? 'positive' : 'negative') : 'info';
+
+    // Mini sparkline bar (proportional to totalDelta relative to max)
+    const maxDelta = Math.max(...top10.map(x => Math.abs(x.totalDelta)), 1);
+    const barWidth = Math.round(Math.abs(d.totalDelta) / maxDelta * 100);
+    const barColor = d.totalDelta >= 0 ? 'var(--positive)' : 'var(--negative)';
+
+    html += `<tr>
+      <td class="prop-name">${esc(d.name)}</td>
+      <td class="week-col">${fmt(d.latestFcst)}</td>
+      <td class="week-col" style="color:var(--ink-muted)">${fmt(d.budget)}</td>
+      <td class="week-col" style="color:${dColor};font-weight:700">${d.totalDelta>=0?'+':''}${fmt(d.totalDelta)}</td>
+      <td class="week-col"><span class="tbadge ${pctCls}">${d.totalPct>=0?'+':''}${d.totalPct.toFixed(1)}%</span></td>
+      <td class="week-col" style="color:${rColor}">${d.recentDelta>=0?'+':''}${fmt(d.recentDelta)}</td>
+      <td class="week-col" style="color:${d.cv >= 5 ? 'var(--warning)' : 'var(--ink-muted)'}">${d.cv.toFixed(1)}%</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div style="width:${barWidth}%;height:8px;background:${barColor};border-radius:2px;opacity:.7;min-width:2px"></div><span style="font-family:var(--mono);font-size:9px;color:var(--ink-faint)">${fmt(Math.round(d.stddev))}σ</span></div></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
 }
 
 /* ── Detail Table ── */
@@ -910,24 +1072,134 @@ function renderTable(stayMonth, lyMonth) {
   document.getElementById('tbl-desc').textContent = `${parseInt(mm)}월 '${yr.slice(2)} · ${relevantSnaps.length}개 시점`;
 }
 
-/* ── 세그 모드 전용 테이블 (세그 합계 한 줄) ── */
+/* ── 세그 모드 전용 테이블 (사업장별 해당 세그 FCST 표시) ── */
 function renderSegTable(stayMonth, lyMonth, stayYear) {
   const thead = document.getElementById('trend-thead');
   const tbody = document.getElementById('trend-tbody');
   const [yr, mm] = stayMonth.split('-');
 
+  // 해당 세그의 사업장별 데이터가 있는 스냅샷 필터
   const relevantSnaps = trendData.snapshots.filter(s =>
-    s._year === stayYear && s.segments?.[stayMonth]?.[selectedSeg]
+    s._year === stayYear && Object.values(s.properties).some(p =>
+      p[stayMonth]?.segments?.[selectedSeg])
   );
 
+  // 세그 데이터 없으면 전체 세그 합계 fallback
   if (!relevantSnaps.length) {
-    thead.innerHTML = '';
-    tbody.innerHTML = `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">${selectedSeg} 세그의 ${parseInt(mm)}월 '${yr.slice(2)} 데이터가 없습니다</td></tr>`;
-    document.getElementById('tbl-desc').textContent = `${selectedSeg} 세그 · 데이터 없음`;
+    // 기존 전체 세그 합계 방식으로 fallback
+    const segSnaps = trendData.snapshots.filter(s =>
+      s._year === stayYear && s.segments?.[stayMonth]?.[selectedSeg]);
+    if (!segSnaps.length) {
+      thead.innerHTML = '';
+      tbody.innerHTML = `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">${selectedSeg} 세그의 ${parseInt(mm)}월 '${yr.slice(2)} 데이터가 없습니다. 파싱을 다시 실행해주세요.</td></tr>`;
+      document.getElementById('tbl-desc').textContent = `${selectedSeg} 세그 · 데이터 없음`;
+      return;
+    }
+    renderSegTableFallback(stayMonth, lyMonth, stayYear, segSnaps);
     return;
   }
 
+  const divProps = getFilteredProps();
+  const allProps = new Set();
+  trendData.snapshots.forEach(s => Object.keys(s.properties).forEach(p => {
+    if (!divProps || divProps.includes(p)) allProps.add(p);
+  }));
+  const sortedProps = [...allProps].filter(p =>
+    relevantSnaps.some(s => s.properties[p]?.[stayMonth]?.segments?.[selectedSeg])
+  ).sort();
+
   // Header
+  let hdr = '<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>';
+  relevantSnaps.forEach((snap, i) => {
+    const [, sm, sd] = snap._snapshot_date.split('-');
+    const isLast = i === relevantSnaps.length - 1;
+    hdr += `<th class="week-col" style="text-align:right;color:${isLast ? 'var(--positive)' : 'var(--info)'}">${parseInt(sm)}/${parseInt(sd)}</th>`;
+  });
+  hdr += '<th class="week-col" style="text-align:right;color:var(--gold-bright)">달성률</th>';
+  hdr += '<th class="week-col" style="text-align:right;color:var(--apac)">YoY</th>';
+  hdr += '<th style="min-width:180px;color:var(--ink-faint)">AI 변동 요인</th></tr>';
+  thead.innerHTML = hdr;
+
+  const lyYear = stayYear - 1;
+  const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+
+  let html = '';
+  let totBud = 0, totFcstArr = relevantSnaps.map(() => 0);
+
+  sortedProps.forEach(propName => {
+    const firstSnap = relevantSnaps.find(s => s.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]);
+    const segData = firstSnap?.properties[propName]?.[stayMonth]?.segments?.[selectedSeg];
+    const budget = segData?.rm_budget_rn || 0;
+    totBud += budget;
+
+    html += `<tr><td class="prop-name">${esc(propName)}</td>`;
+    html += `<td class="week-col" style="color:var(--ink-muted)">${fmt(budget)}</td>`;
+
+    let lastFcst = null, firstFcst = null;
+    relevantSnaps.forEach((snap, i) => {
+      const entry = snap.properties[propName]?.[stayMonth]?.segments?.[selectedSeg];
+      const fcst = entry?.rm_fcst_rn ?? null;
+      const isLast = i === relevantSnaps.length - 1;
+
+      if (fcst !== null) {
+        if (firstFcst === null) firstFcst = fcst;
+        lastFcst = fcst;
+        totFcstArr[i] += fcst;
+      }
+
+      let delta = '';
+      if (i > 0) {
+        const prevEntry = relevantSnaps[i-1].properties[propName]?.[stayMonth]?.segments?.[selectedSeg];
+        const prevFcst = prevEntry?.rm_fcst_rn ?? null;
+        if (prevFcst !== null && fcst !== null) {
+          const d = fcst - prevFcst;
+          if (d !== 0) delta = `<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};display:block">${d>0?'+':''}${fmt(d)}</span>`;
+        }
+      }
+      html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${fcst !== null ? fmt(fcst) : '—'}${delta}</td>`;
+    });
+
+    const achV = budget > 0 && lastFcst !== null ? (lastFcst / budget * 100).toFixed(1) : null;
+    const achCls = achV !== null ? (parseFloat(achV) >= 100 ? 'positive' : parseFloat(achV) >= 80 ? 'warning' : 'negative') : '';
+    html += `<td class="week-col"><span class="tbadge ${achCls}">${achV !== null ? achV + '%' : '—'}</span></td>`;
+
+    // YoY
+    const lyEntry = lySnap?.properties[propName]?.[lyMonth]?.segments?.[selectedSeg];
+    const lyFcst = lyEntry?.rm_fcst_rn ?? null;
+    let yoyHtml = '—';
+    if (lyFcst !== null && lastFcst !== null && lyFcst > 0) {
+      const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
+      const yoyCls = parseFloat(yoyPct) >= 0 ? 'var(--positive)' : 'var(--negative)';
+      yoyHtml = `<span style="color:${yoyCls}">${parseFloat(yoyPct) >= 0 ? '+' : ''}${yoyPct}%</span>`;
+    }
+    html += `<td class="week-col">${yoyHtml}</td>`;
+    html += `<td class="reason-cell">${generateAIFactorSeg(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst)}</td>`;
+    html += '</tr>';
+  });
+
+  // Total row
+  html += `<tr class="total-row"><td style="font-family:var(--sans)">${esc(selectedSeg)} 합계</td>`;
+  html += `<td class="week-col" style="color:var(--ink-muted)">${fmt(totBud)}</td>`;
+  totFcstArr.forEach((v, i) => {
+    const isLast = i === totFcstArr.length - 1;
+    html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:800">${fmt(v)}</td>`;
+  });
+  const totLast = totFcstArr[totFcstArr.length - 1] || 0;
+  const totAch = totBud > 0 ? (totLast / totBud * 100).toFixed(1) : null;
+  const totAchCls = totAch !== null ? (parseFloat(totAch) >= 100 ? 'positive' : parseFloat(totAch) >= 80 ? 'warning' : 'negative') : '';
+  html += `<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAch !== null ? totAch + '%' : '—'}</span></td>`;
+  html += '<td class="week-col">—</td><td></td></tr>';
+
+  tbody.innerHTML = html;
+  document.getElementById('tbl-desc').textContent = `${selectedSeg} 세그 · ${parseInt(mm)}월 '${yr.slice(2)} · ${sortedProps.length}개 사업장 · ${relevantSnaps.length}개 시점`;
+}
+
+/* ── 세그 fallback (per-property seg 없을 때 전체 합계 한 줄) ── */
+function renderSegTableFallback(stayMonth, lyMonth, stayYear, relevantSnaps) {
+  const thead = document.getElementById('trend-thead');
+  const tbody = document.getElementById('trend-tbody');
+  const [yr, mm] = stayMonth.split('-');
+
   let hdr = '<tr><th style="min-width:140px">세그</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>';
   relevantSnaps.forEach((snap, i) => {
     const [, sm, sd] = snap._snapshot_date.split('-');
@@ -941,8 +1213,7 @@ function renderSegTable(stayMonth, lyMonth, stayYear) {
 
   const lyYear = stayYear - 1;
   const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear && s.segments?.[lyMonth]?.[selectedSeg]);
-  const lyEntry = lySnap?.segments?.[lyMonth]?.[selectedSeg];
-  const lyFcst = lyEntry?.rm_fcst_rn ?? null;
+  const lyFcst = lySnap?.segments?.[lyMonth]?.[selectedSeg]?.rm_fcst_rn ?? null;
 
   const firstEntry = relevantSnaps[0].segments[stayMonth][selectedSeg];
   const lastEntry = relevantSnaps[relevantSnaps.length - 1].segments[stayMonth][selectedSeg];
@@ -950,9 +1221,8 @@ function renderSegTable(stayMonth, lyMonth, stayYear) {
   const firstFcst = firstEntry.rm_fcst_rn || 0;
   const lastFcst = lastEntry.rm_fcst_rn || 0;
 
-  let html = `<tr><td class="prop-name">${esc(selectedSeg)}</td>`;
+  let html = `<tr><td class="prop-name">${esc(selectedSeg)} (합계)</td>`;
   html += `<td class="week-col" style="color:var(--ink-muted)">${fmt(budget)}</td>`;
-
   relevantSnaps.forEach((snap, i) => {
     const e = snap.segments[stayMonth][selectedSeg];
     const fcst = e?.rm_fcst_rn ?? null;
@@ -967,11 +1237,9 @@ function renderSegTable(stayMonth, lyMonth, stayYear) {
     }
     html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${fcst !== null ? fmt(fcst) : '—'}${delta}</td>`;
   });
-
   const achV = budget > 0 ? (lastFcst / budget * 100).toFixed(1) : null;
   const achCls = achV !== null ? (parseFloat(achV) >= 100 ? 'positive' : parseFloat(achV) >= 80 ? 'warning' : 'negative') : '';
   html += `<td class="week-col"><span class="tbadge ${achCls}">${achV !== null ? achV + '%' : '—'}</span></td>`;
-
   let yoyHtml = '—';
   if (lyFcst !== null && lyFcst > 0) {
     const yp = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
@@ -980,9 +1248,56 @@ function renderSegTable(stayMonth, lyMonth, stayYear) {
   html += `<td class="week-col">${yoyHtml}</td>`;
   html += `<td class="reason-cell">${generateAIFactor(selectedSeg, stayMonth, firstFcst, lastFcst, budget, lyFcst)}</td>`;
   html += '</tr>';
-
   tbody.innerHTML = html;
-  document.getElementById('tbl-desc').textContent = `${selectedSeg} 세그 · ${parseInt(mm)}월 '${yr.slice(2)} · ${relevantSnaps.length}개 시점`;
+  document.getElementById('tbl-desc').textContent = `${selectedSeg} 세그 (합계만) · ${parseInt(mm)}월 '${yr.slice(2)} · ${relevantSnaps.length}개 시점`;
+}
+
+/* ── AI Factor Generator (세그 모드 — per-property segment) ── */
+function generateAIFactorSeg(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst) {
+  const lines = [];
+  if (firstFcst === null || lastFcst === null) return '<span class="ai-nt">데이터 부족</span>';
+  const delta = lastFcst - firstFcst;
+  if (firstFcst > 0) {
+    const pct = ((delta / firstFcst) * 100).toFixed(1);
+    if (Math.abs(parseFloat(pct)) >= 2) {
+      const cls = delta >= 0 ? 'ai-up' : 'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">변동</span><span class="${cls}">${delta>=0?'+':''}${fmt(delta)}실 (${delta>=0?'+':''}${pct}%)</span></span>`);
+    }
+  }
+  if (budget > 0) {
+    const gap = lastFcst - budget;
+    const achV = (lastFcst / budget * 100).toFixed(1);
+    const cls = gap >= 0 ? 'ai-up' : 'ai-dn';
+    lines.push(`<span class="ai-line"><span class="ai-tag ach">Gap</span><span class="${cls}">목표대비 ${gap>=0?'+':''}${fmt(gap)}실 (${achV}%)</span></span>`);
+  }
+  if (lyFcst !== null && lyFcst > 0) {
+    const yoyDiff = lastFcst - lyFcst;
+    const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
+    const cls = yoyDiff >= 0 ? 'ai-up' : 'ai-dn';
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">${yoyDiff>=0?'+':''}${fmt(yoyDiff)}실 (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
+  }
+  // 추세: 최근 3개 스냅샷에서 해당 세그의 값 변동
+  const stayYear = parseInt(stayMonth.split('-')[0]);
+  const snaps = trendData.snapshots.filter(s => s._year === stayYear && s.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]);
+  if (snaps.length >= 3) {
+    const vals = snaps.map(s => s.properties[propName][stayMonth].segments[selectedSeg].rm_fcst_rn || 0);
+    const last3 = vals.slice(-3);
+    const d1 = last3[1] - last3[0], d2 = last3[2] - last3[1];
+    if (d1 !== 0 || d2 !== 0) {
+      let trend = '';
+      if (d2 > 0 && d1 > 0 && d2 > d1) trend = `가속 상향`;
+      else if (d2 > 0 && d1 > 0) trend = `상향 둔화`;
+      else if (d2 < 0 && d1 < 0 && d2 < d1) trend = `가속 하향`;
+      else if (d2 < 0 && d1 < 0) trend = `하향 둔화`;
+      else if (d2 > 0 && d1 <= 0) trend = `반등 전환`;
+      else if (d2 < 0 && d1 >= 0) trend = `하락 전환`;
+      if (trend) {
+        const cls = d2 >= 0 ? 'ai-up' : 'ai-dn';
+        lines.push(`<span class="ai-line"><span class="ai-tag rev">추세</span><span class="${cls}">${trend}</span></span>`);
+      }
+    }
+  }
+  return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">변동 없음</span>';
 }
 
 /* ── AI Factor Generator (숫자 기반) ── */

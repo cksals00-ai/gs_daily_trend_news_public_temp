@@ -2067,8 +2067,11 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
         else:
             return f'<span style="color:#b0a060;font-weight:700;">→ {yoy:+.1f}%</span>'
 
+    SEG_COLORS = {"OTA": "#6ba3c4", "G-OTA": "#7ab891", "Inbound": "#a892c8"}
+
     rows_html = ""
     for row in yoy_table:
+        is_segment = row.get("is_segment", False)
         region = row.get("region", "")
         color  = REGION_COLORS.get(region, "#888")
         cells  = ""
@@ -2077,51 +2080,78 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
             act   = md.get("act_rn", 0)
             last  = md.get("last_rn", 0)
             yoy   = md.get("yoy")
-            fcst  = md.get("rns_fcst", act)
-            fach  = md.get("fcst_ach", 0.0)
-            bud   = md.get("bud_rn", 0)
             arrow_html = arrow(yoy)
-            if bud > 0 and fcst is not None and fach is not None:
-                fcst_html = (
-                    f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
-                    f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
+
+            if is_segment:
+                # 세그먼트 행: 간결하게 실적/전년/YoY만
+                bud = md.get("bud_rn", 0)
+                bud_html = f'<div style="font-size:9px;color:#666;">목표 {bud:,}</div>' if bud > 0 else ""
+                cells += (
+                    f'<td style="padding:4px 10px;border-bottom:1px solid #2a2a2a;vertical-align:top;background:rgba(255,255,255,0.02);">'
+                    f'<div style="font-size:11px;">{act:,}실</div>'
+                    f'<div style="font-size:10px;color:#777;">전년 {last:,}실</div>'
+                    f'<div style="font-size:11px;margin-top:2px;">{arrow_html}</div>'
+                    f'{bud_html}'
+                    f'</td>'
                 )
             else:
-                fcst_html = ""
-            # RM FCST (Revenue Meeting forecast)
-            rm_key = f"2026-{m:02d}"
-            rm_entry = rm_props.get(row.get("name", ""), {}).get(rm_key, {})
-            rm_rn = rm_entry.get("rm_fcst_rn")
-            if rm_rn is not None and bud > 0:
-                rm_ach = round(rm_rn / bud * 100, 1)
-                rm_html = (
-                    f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
-                    f'RM: {rm_rn:,}실 ({rm_ach:.1f}%)</div>'
+                # 사업장 행: 풀 정보 (FCST, RM 포함)
+                fcst  = md.get("rns_fcst", act)
+                fach  = md.get("fcst_ach", 0.0)
+                bud   = md.get("bud_rn", 0)
+                if bud > 0 and fcst is not None and fach is not None:
+                    fcst_html = (
+                        f'<div style="font-size:10px;color:#a0a0c0;margin-top:2px;">'
+                        f'FCST: {fcst:,}실 (목표대비 {fach:.1f}%)</div>'
+                    )
+                else:
+                    fcst_html = ""
+                rm_key = f"2026-{m:02d}"
+                rm_entry = rm_props.get(row.get("name", ""), {}).get(rm_key, {})
+                rm_rn = rm_entry.get("rm_fcst_rn")
+                if rm_rn is not None and bud > 0:
+                    rm_ach = round(rm_rn / bud * 100, 1)
+                    rm_html = (
+                        f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
+                        f'RM: {rm_rn:,}실 ({rm_ach:.1f}%)</div>'
+                    )
+                elif rm_rn is not None:
+                    rm_html = (
+                        f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
+                        f'RM: {rm_rn:,}실</div>'
+                    )
+                else:
+                    rm_html = ""
+                cells += (
+                    f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
+                    f'<div style="font-size:12px;">{act:,}실</div>'
+                    f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
+                    f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
+                    f'{fcst_html}'
+                    f'{rm_html}'
+                    f'</td>'
                 )
-            elif rm_rn is not None:
-                rm_html = (
-                    f'<div style="font-size:10px;color:#e8a256;margin-top:1px;">'
-                    f'RM: {rm_rn:,}실</div>'
-                )
-            else:
-                rm_html = ""
-            cells += (
-                f'<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">'
-                f'<div style="font-size:12px;">{act:,}실</div>'
-                f'<div style="font-size:11px;color:#888;">전년 {last:,}실</div>'
-                f'<div style="font-size:12px;margin-top:3px;">{arrow_html}</div>'
-                f'{fcst_html}'
-                f'{rm_html}'
+
+        if is_segment:
+            seg_name = row["name"]
+            seg_color = SEG_COLORS.get(seg_name, "#888")
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:4px 10px 4px 28px;border-bottom:1px solid #2a2a2a;white-space:nowrap;background:rgba(255,255,255,0.02);">'
+                f'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:{seg_color};margin-right:5px;vertical-align:middle;"></span>'
+                f'<span style="font-size:11px;color:#aaa;">{seg_name}</span>'
                 f'</td>'
+                f'{cells}</tr>'
             )
-        rows_html += (
-            f'<tr>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #333;white-space:nowrap;">'
-            f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:{color};margin-right:6px;vertical-align:middle;"></span>'
-            f'<span style="font-size:12px;font-weight:600;">{row["name"]}</span>'
-            f'</td>'
-            f'{cells}</tr>'
-        )
+        else:
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:8px 10px;border-bottom:1px solid #333;white-space:nowrap;">'
+                f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:{color};margin-right:6px;vertical-align:middle;"></span>'
+                f'<span style="font-size:12px;font-weight:600;">{row["name"]}</span>'
+                f'</td>'
+                f'{cells}</tr>'
+            )
 
     header_cells = "".join(
         f'<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;'

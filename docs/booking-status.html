@@ -398,7 +398,29 @@ function getSummaryForMonth(monthNum) {
 
 function getSegmentForMonth(monthNum, segName) {
   const md = getMonthData(monthNum);
-  if (!md || !md.segmentData) return null;
+  if (!md) return null;
+  // 사업장/권역 필터 적용 시 byPropertySegment에서 재집계
+  if ((activeRegion !== '전체' || activeProps.size > 0) && md.byPropertySegment) {
+    const segProps = md.byPropertySegment[segName] || [];
+    let filtered = segProps;
+    if (activeRegion !== '전체') filtered = filtered.filter(p => p.region === activeRegion);
+    if (activeProps.size > 0) filtered = filtered.filter(p => activeProps.has(p.name));
+    if (filtered.length === 0) return null;
+    const out = {};
+    const sumKeys = ['rns_budget','rns_actual','rns_last','rev_budget','rev_actual','rev_last',
+      'today_booking','today_cancel','today_net'];
+    sumKeys.forEach(k => out[k] = 0);
+    filtered.forEach(p => { sumKeys.forEach(k => { out[k] += (p[k] || 0); }); });
+    out.adr_actual = out.rns_actual > 0 ? Math.round(out.rev_actual / out.rns_actual) : 0;
+    out.adr_budget = out.rns_budget > 0 ? Math.round(out.rev_budget / out.rns_budget) : 0;
+    out.adr_last = out.rns_last > 0 ? Math.round(out.rev_last / out.rns_last) : 0;
+    out.rns_achievement = out.rns_budget > 0 ? +(out.rns_actual / out.rns_budget * 100).toFixed(1) : 0;
+    out.rev_achievement = out.rev_budget > 0 ? +(out.rev_actual / out.rev_budget * 100).toFixed(1) : 0;
+    out.rns_yoy = out.rns_last > 0 ? +((out.rns_actual / out.rns_last - 1) * 100).toFixed(1) : 0;
+    out.adr_vs_budget = out.adr_budget > 0 ? +((out.adr_actual / out.adr_budget - 1) * 100).toFixed(1) : 0;
+    return out;
+  }
+  if (!md.segmentData) return null;
   return md.segmentData[segName] || null;
 }
 
