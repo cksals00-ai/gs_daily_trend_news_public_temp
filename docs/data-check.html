@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>데이터 검증 · GS팀 트렌드 리포트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;--radius:7px}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;font-size:15px;font-weight:500;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;word-break:keep-all;padding-bottom:40px;overflow-x:hidden}
+*,*::before,*::after{font-family:inherit}input,button,textarea,select,table,th,td{font-family:var(--sans)!important}
+
+.mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.mast-logo{display:flex;align-items:baseline;gap:10px}.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600}
+.mast-nav{display:flex;align-items:center;gap:8px}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.wrap{max-width:1400px;margin:0 auto;padding:26px 18px 40px}
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
+.page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.75}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:1px 5px;border-radius:3px;color:var(--gold)}
+
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+.card-icon{font-size:14px;line-height:1}.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright)}.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto}
+
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.summary-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;text-align:center;position:relative;overflow:hidden}
+.summary-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);opacity:0.6}
+.summary-val{font-family:var(--mono);font-size:20px;font-weight:800;margin-bottom:4px;color:var(--ink)}
+.summary-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--ink-faint);font-weight:700;text-transform:uppercase}
+
+.footnote{font-size:11px;color:var(--ink-faint);margin-top:12px;line-height:1.6;padding:10px 12px;background:var(--bg-deep);border-left:2px solid var(--rule);border-radius:3px}
+
+/* ── Upload Zone ── */
+.upload-zone{border:2px dashed var(--rule-strong);border-radius:8px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .25s;position:relative}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--gold);background:rgba(201,160,99,.06)}
+.upload-zone .uz-icon{font-size:40px;margin-bottom:12px;opacity:.7}
+.upload-zone .uz-title{font-size:14px;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+.upload-zone .uz-desc{font-size:11.5px;color:var(--ink-faint)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone .uz-file-name{margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--gold-bright);display:none}
+
+/* ── Preview Table ── */
+.preview-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;margin-top:14px;max-height:320px;overflow-y:auto}
+.preview-tbl{width:100%;border-collapse:collapse;font-size:11px;background:var(--bg-soft)}
+.preview-tbl th{background:var(--bg-deep);border:1px solid var(--rule);padding:6px 8px;text-align:left;font-weight:700;color:var(--gold-bright);font-size:10px;position:sticky;top:0;z-index:5}
+.preview-tbl td{border:1px solid var(--rule);padding:4px 8px;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)}
+.preview-tbl tr:hover td{background:var(--bg-hover)}
+
+/* ── Sheet Selector ── */
+.sheet-tabs{display:flex;gap:4px;margin-top:12px;flex-wrap:wrap}
+.sheet-tab{padding:5px 12px;border-radius:4px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.sheet-tab.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright);font-weight:700}
+
+/* ── Column Mapping ── */
+.mapping-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.mapping-item{display:flex;align-items:center;gap:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;padding:8px 12px}
+.mapping-item label{font-size:11px;font-weight:700;color:var(--ink-muted);min-width:90px;font-family:var(--mono)}
+.mapping-item select{flex:1;background:var(--bg-deep);border:1px solid var(--rule);color:var(--ink);border-radius:4px;padding:5px 8px;font-size:11px;font-family:var(--mono)}
+
+/* ── Result Table ── */
+.result-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px}
+.result-tbl{width:100%;border-collapse:collapse;font-size:11.5px;background:var(--bg-soft)}
+.result-tbl th{background:var(--bg-deep);border:1px solid var(--rule);padding:8px 10px;text-align:center;font-weight:700;color:var(--gold-bright);font-size:10px;position:sticky;top:0;z-index:5;white-space:nowrap}
+.result-tbl th.group-header{background:#1a1f28;border-bottom:2px solid var(--gold);font-size:11px;letter-spacing:.1em}
+.result-tbl td{border:1px solid var(--rule);padding:6px 8px;text-align:center;font-family:var(--mono);font-size:11px}
+.result-tbl .prop-col{text-align:left;font-family:var(--sans);font-weight:700;color:var(--ink);min-width:110px;padding-left:12px;font-size:12px}
+.result-tbl tr:hover td{background:var(--bg-hover)}
+.cell-match{background:var(--positive-bg);color:var(--positive)}
+.cell-mismatch{background:var(--negative-bg);color:var(--negative)}
+.cell-na{color:var(--ink-faint);font-style:italic}
+
+/* ── Action Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;border:1px solid var(--rule);font-family:var(--mono)}
+.btn-primary{background:rgba(201,160,99,.18);border-color:var(--gold);color:var(--gold-bright)}
+.btn-primary:hover{background:rgba(201,160,99,.3)}
+.btn-secondary{background:var(--bg-soft);color:var(--ink-muted)}
+.btn-secondary:hover{background:var(--bg-hover);color:var(--ink)}
+.btn-group{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+/* ── Mismatch List ── */
+.mismatch-list{margin-top:12px}
+.mismatch-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--rule);font-size:12px}
+.mismatch-item:last-child{border-bottom:none}
+.mismatch-dot{width:6px;height:6px;border-radius:50%;background:var(--negative);flex-shrink:0}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .mast{padding:0 14px}
+  .mast-sub{display:none}
+  .wrap{padding:14px 12px 36px}
+  .card{padding:14px}
+  .summary-row{grid-template-columns:1fr 1fr}
+  .page-title h1{font-size:18px}
+  .mapping-grid{grid-template-columns:1fr}
+  .upload-zone{padding:32px 16px}
+}
+@media(max-width:380px){
+  .summary-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ GSN Navigator ═══ -->
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+</style>
+<nav class="gsn"><div class="gsn-wrap">
+  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+  <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy.html" data-gsn="gs-strategy">영업기획 대시보드</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/data-check.html" data-gsn="data-check">데이터 검증</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
+  </div>
+  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+</div></nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)||h.match(/gs_daily_trend_news_public_temp\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;else if(k==='gs-strategy')hit=h.indexOf('gs-strategy')!==-1;else if(k==='data-check')hit=h.indexOf('data-check')!==-1;if(hit)a.classList.add('active');});})();</script>
+
+<!-- ═══ Masthead ═══ -->
+<header class="mast">
+  <div class="mast-logo"><span class="mast-name">SONO & TRINITY</span><span class="mast-sub">데이터 검증</span></div>
+  <nav class="mast-nav"><a href="gs-strategy.html" class="nav-btn">↗ 영업기획</a><a href="otb.html" class="nav-btn">↗ 실적 리포트</a><a href="index.html" class="nav-btn">↗ 트렌드 리포트</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="page-title">
+    <div class="eyebrow">DATA · VALIDATION</div>
+    <h1>데이터 검증 · PMS ↔ Dashboard</h1>
+    <p>PMS 원본 Excel을 업로드하면 대시보드 JSON 데이터(otb_data.json)와 자동 비교하여 불일치 항목을 식별합니다.</p>
+  </div>
+
+  <!-- ═══ 1. Upload ═══ -->
+  <div class="card" id="card-upload">
+    <div class="card-head"><span class="card-icon">📤</span><span class="card-title">EXCEL 업로드</span><span class="card-desc">실시간 실적현황 Excel 파일</span></div>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+      <div class="uz-icon">📁</div>
+      <div class="uz-title">Excel 파일을 드래그하거나 클릭하세요</div>
+      <div class="uz-desc">.xlsx, .xls, .csv 지원 · SheetJS로 클라이언트 파싱</div>
+      <div class="uz-file-name" id="file-name"></div>
+    </div>
+    <div id="sheet-selector" style="display:none">
+      <div class="sheet-tabs" id="sheet-tabs"></div>
+    </div>
+    <div id="preview-area" style="display:none;margin-top:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright)">미리보기 (처음 10행)</span>
+        <span id="preview-info" style="font-size:10px;color:var(--ink-faint);font-family:var(--mono)"></span>
+      </div>
+      <div class="preview-wrap"><table class="preview-tbl" id="preview-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ 2. Column Mapping ═══ -->
+  <div class="card" id="card-mapping" style="display:none">
+    <div class="card-head"><span class="card-icon">🔗</span><span class="card-title">컬럼 매핑</span><span class="card-desc">Excel 컬럼 → 대시보드 지표 매핑</span></div>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:12px">Excel에서 각 지표에 해당하는 컬럼을 선택하세요. 자동 감지가 가능한 경우 미리 선택됩니다.</p>
+    <div class="mapping-grid" id="mapping-grid">
+      <div class="mapping-item"><label>사업장명</label><select id="map-name"></select></div>
+      <div class="mapping-item"><label>실적 RN</label><select id="map-rn"></select></div>
+      <div class="mapping-item"><label>매출(Revenue)</label><select id="map-rev"></select></div>
+      <div class="mapping-item"><label>ADR</label><select id="map-adr"></select></div>
+      <div class="mapping-item"><label>OCC(%)</label><select id="map-occ"></select></div>
+      <div class="mapping-item"><label>예산 RN</label><select id="map-bud-rn"></select></div>
+      <div class="mapping-item"><label>예산 매출</label><select id="map-bud-rev"></select></div>
+      <div class="mapping-item"><label>전년 RN</label><select id="map-last-rn"></select></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="runComparison()">▶ 비교 실행</button>
+      <button class="btn btn-secondary" onclick="autoDetectMapping()">⟳ 자동 감지</button>
+    </div>
+  </div>
+
+  <!-- ═══ 3. Cancellation Note ═══ -->
+  <div class="card" id="card-note" style="display:none">
+    <div class="card-head"><span class="card-icon">⚠️</span><span class="card-title">취소 반영 유의사항</span></div>
+    <div class="footnote" style="margin-top:0">
+      <strong style="color:var(--warning)">예약일 기준 vs 투숙일 기준 차이 안내</strong><br>
+      • <strong>예약일 기준</strong>: 코드 27(신규)+43(변경)-28(취소)-44(취소변경) — 취소 차감 포함<br>
+      • <strong>투숙일 기준</strong>: 코드 27(신규)+43(변경)만 집계 — 취소 미반영<br>
+      → PMS 원본과 대시보드 간 <strong style="color:var(--negative)">소폭 차이(1~3%)</strong>는 이 기준 차이로 발생할 수 있습니다.<br>
+      → 3% 이내 차이는 정상 범위로 간주합니다.
+    </div>
+  </div>
+
+  <!-- ═══ 4. Summary KPIs ═══ -->
+  <div class="card" id="card-summary" style="display:none">
+    <div class="card-head"><span class="card-icon">📊</span><span class="card-title">검증 요약</span></div>
+    <div class="summary-row">
+      <div class="summary-box">
+        <div class="summary-val" id="kpi-accuracy">—</div>
+        <div class="summary-lbl">전체 정확도</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-val" id="kpi-match">—</div>
+        <div class="summary-lbl">일치 항목</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-val" id="kpi-mismatch">—</div>
+        <div class="summary-lbl">불일치 항목</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-val" id="kpi-properties">—</div>
+        <div class="summary-lbl">비교 사업장</div>
+      </div>
+    </div>
+    <div id="mismatch-summary"></div>
+  </div>
+
+  <!-- ═══ 5. Result Table ═══ -->
+  <div class="card" id="card-result" style="display:none">
+    <div class="card-head"><span class="card-icon">🔍</span><span class="card-title">비교 결과</span><span class="card-desc" id="result-timestamp"></span></div>
+    <div class="result-wrap"><table class="result-tbl" id="result-tbl"></table></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="downloadCSV()">📥 CSV 다운로드</button>
+      <button class="btn btn-secondary" onclick="resetAll()">⟳ 초기화</button>
+    </div>
+  </div>
+
+  <!-- ═══ 6. Unmatched Properties ═══ -->
+  <div class="card" id="card-unmatched" style="display:none">
+    <div class="card-head"><span class="card-icon">❓</span><span class="card-title">매칭 실패 사업장</span><span class="card-desc">Excel 또는 JSON에만 존재하는 사업장</span></div>
+    <div id="unmatched-list"></div>
+  </div>
+
+</main>
+
+<script>
+(function(){
+  /* ── State ── */
+  let workbook = null;
+  let currentSheet = null;
+  let sheetData = [];
+  let headers = [];
+  let otbData = null;
+  let comparisonResults = [];
+
+  /* ── OTB Data Fetch ── */
+  async function fetchOtbData(){
+    try {
+      const res = await fetch('data/otb_data.json');
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      otbData = await res.json();
+      console.log('[data-check] otb_data.json loaded:', otbData.byProperty?.length, 'properties');
+    } catch(e){
+      console.error('[data-check] Failed to load otb_data.json:', e);
+      alert('otb_data.json을 불러올 수 없습니다.\n경로: data/otb_data.json\n\n'+e.message);
+    }
+  }
+  fetchOtbData();
+
+  /* ── File Upload ── */
+  const zone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+
+  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e=>{e.preventDefault();zone.classList.remove('drag-over');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+  fileInput.addEventListener('change', e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
+
+  function handleFile(file){
+    const fn = document.getElementById('file-name');
+    fn.textContent = '📄 '+file.name+' ('+formatBytes(file.size)+')';
+    fn.style.display = 'block';
+
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const data = new Uint8Array(e.target.result);
+      workbook = XLSX.read(data, {type:'array'});
+      renderSheetTabs();
+      selectSheet(workbook.SheetNames[0]);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function formatBytes(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB';}
+
+  /* ── Sheet Tabs ── */
+  function renderSheetTabs(){
+    const c = document.getElementById('sheet-tabs');
+    c.innerHTML = '';
+    workbook.SheetNames.forEach(name=>{
+      const btn = document.createElement('button');
+      btn.className = 'sheet-tab';
+      btn.textContent = name;
+      btn.onclick = ()=> selectSheet(name);
+      c.appendChild(btn);
+    });
+    document.getElementById('sheet-selector').style.display = '';
+  }
+
+  function selectSheet(name){
+    currentSheet = name;
+    document.querySelectorAll('.sheet-tab').forEach(b=> b.classList.toggle('active', b.textContent===name));
+    const ws = workbook.Sheets[name];
+    const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    if(json.length < 1) return;
+
+    /* Find header row: look for a row with recognizable keywords */
+    let headerIdx = 0;
+    for(let i=0; i<Math.min(json.length, 15); i++){
+      const row = json[i].map(c=> String(c).toLowerCase());
+      const hasKeyword = row.some(c=>
+        c.includes('사업장') || c.includes('호텔') || c.includes('리조트') ||
+        c.includes('rn') || c.includes('매출') || c.includes('revenue') ||
+        c.includes('adr') || c.includes('occ') || c.includes('실적') ||
+        c.includes('예산') || c.includes('budget')
+      );
+      if(hasKeyword){ headerIdx = i; break; }
+    }
+
+    headers = json[headerIdx].map((h,i)=> h ? String(h).trim() : 'Col_'+i);
+    sheetData = json.slice(headerIdx+1).filter(r=> r.some(c=> c !== ''));
+
+    renderPreview();
+    populateMappingSelects();
+    autoDetectMapping();
+    document.getElementById('card-mapping').style.display = '';
+    document.getElementById('card-note').style.display = '';
+  }
+
+  /* ── Preview ── */
+  function renderPreview(){
+    const tbl = document.getElementById('preview-tbl');
+    let html = '<thead><tr>';
+    headers.forEach(h=> html += '<th>'+esc(h)+'</th>');
+    html += '</tr></thead><tbody>';
+    const rows = sheetData.slice(0, 10);
+    rows.forEach(r=>{
+      html += '<tr>';
+      headers.forEach((_,i)=> html += '<td>'+esc(r[i]!=null?r[i]:'')+'</td>');
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+    document.getElementById('preview-area').style.display = '';
+    document.getElementById('preview-info').textContent = sheetData.length+'행 × '+headers.length+'열';
+  }
+
+  /* ── Mapping Selects ── */
+  function populateMappingSelects(){
+    const ids = ['map-name','map-rn','map-rev','map-adr','map-occ','map-bud-rn','map-bud-rev','map-last-rn'];
+    ids.forEach(id=>{
+      const sel = document.getElementById(id);
+      sel.innerHTML = '<option value="">— 선택 —</option>';
+      headers.forEach((h,i)=>{
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = h;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  /* ── Auto-detect column mapping ── */
+  window.autoDetectMapping = function(){
+    const patterns = {
+      'map-name': [/사업장/i, /호텔/i, /리조트/i, /property/i, /name/i, /업장/i],
+      'map-rn': [/실적.*rn/i, /rn.*실적/i, /판매.*rn/i, /^rn$/i, /실적.*객실/i, /act.*rn/i, /rns.*actual/i],
+      'map-rev': [/실적.*매출/i, /매출.*실적/i, /revenue.*act/i, /act.*rev/i, /매출액/i, /^매출$/i],
+      'map-adr': [/실적.*adr/i, /adr.*실적/i, /^adr$/i, /act.*adr/i],
+      'map-occ': [/실적.*occ/i, /occ.*실적/i, /^occ$/i, /가동률/i, /점유율/i, /act.*occ/i],
+      'map-bud-rn': [/예산.*rn/i, /rn.*예산/i, /bud.*rn/i, /budget.*rn/i],
+      'map-bud-rev': [/예산.*매출/i, /매출.*예산/i, /bud.*rev/i, /budget.*rev/i],
+      'map-last-rn': [/전년.*rn/i, /rn.*전년/i, /ly.*rn/i, /last.*rn/i, /작년/i]
+    };
+
+    Object.entries(patterns).forEach(([selId, pats])=>{
+      const sel = document.getElementById(selId);
+      let found = false;
+      for(const pat of pats){
+        for(let i=0; i<headers.length; i++){
+          if(pat.test(headers[i])){
+            sel.value = i;
+            found = true;
+            break;
+          }
+        }
+        if(found) break;
+      }
+    });
+  };
+
+  /* ── Name Matching ── */
+  function normalizeName(n){
+    if(!n) return '';
+    return String(n).replace(/^\d+\.\s*/, '').replace(/\s+/g,'').toLowerCase()
+      .replace(/소노캄/,'캄').replace(/소노벨/,'벨').replace(/소노펠리체/,'펠리체')
+      .replace(/비발디파크/,'비발디').replace(/빌리지/,'빌리지');
+  }
+
+  function findOtbMatch(excelName){
+    if(!otbData || !otbData.byProperty) return null;
+    const norm = normalizeName(excelName);
+    if(!norm) return null;
+
+    /* Exact normalized match */
+    let match = otbData.byProperty.find(p=> normalizeName(p.name) === norm);
+    if(match) return match;
+
+    /* Partial match */
+    match = otbData.byProperty.find(p=>{
+      const pn = normalizeName(p.name);
+      return pn.includes(norm) || norm.includes(pn);
+    });
+    if(match) return match;
+
+    /* Fuzzy: check if at least 3 consecutive chars match */
+    match = otbData.byProperty.find(p=>{
+      const pn = normalizeName(p.name);
+      for(let len=Math.min(norm.length,pn.length); len>=3; len--){
+        for(let i=0; i<=norm.length-len; i++){
+          if(pn.includes(norm.substring(i,i+len))) return true;
+        }
+      }
+      return false;
+    });
+    return match || null;
+  }
+
+  /* ── Comparison ── */
+  window.runComparison = function(){
+    if(!otbData || !otbData.byProperty){ alert('otb_data.json이 로드되지 않았습니다.'); return; }
+
+    const nameIdx = parseInt(document.getElementById('map-name').value);
+    if(isNaN(nameIdx)){ alert('사업장명 컬럼을 선택해주세요.'); return; }
+
+    const metrics = [
+      {id:'map-rn', label:'실적 RN', jsonKey:'rns_actual'},
+      {id:'map-rev', label:'매출(Revenue)', jsonKey:'rev_actual'},
+      {id:'map-adr', label:'ADR', jsonKey:'adr_actual'},
+      {id:'map-occ', label:'OCC', jsonKey:null}, /* OCC computed or from dedicated field */
+      {id:'map-bud-rn', label:'예산 RN', jsonKey:'rns_budget'},
+      {id:'map-bud-rev', label:'예산 매출', jsonKey:'rev_budget'},
+      {id:'map-last-rn', label:'전년 RN', jsonKey:'rns_last'}
+    ];
+
+    comparisonResults = [];
+    const unmatchedExcel = [];
+    const matchedJsonNames = new Set();
+
+    sheetData.forEach(row=>{
+      const excelName = String(row[nameIdx] || '').trim();
+      if(!excelName) return;
+      const otbMatch = findOtbMatch(excelName);
+      if(!otbMatch){ unmatchedExcel.push(excelName); return; }
+      matchedJsonNames.add(otbMatch.name);
+
+      const result = { excelName, jsonName: otbMatch.name, cells: [] };
+
+      metrics.forEach(m=>{
+        const colIdx = parseInt(document.getElementById(m.id).value);
+        if(isNaN(colIdx)){
+          result.cells.push({metric:m.label, pms:null, dash:null, diff:null, pct:null, status:'na'});
+          return;
+        }
+
+        let pmsVal = parseNumeric(row[colIdx]);
+        let dashVal = m.jsonKey ? otbMatch[m.jsonKey] : null;
+
+        /* OCC: not always a dedicated field, skip if jsonKey null and no mapping */
+        if(m.jsonKey === null && m.label === 'OCC'){
+          /* Try occ_actual field */
+          dashVal = otbMatch.occ_actual || otbMatch.occ || null;
+        }
+
+        if(pmsVal === null || dashVal === null || dashVal === undefined){
+          result.cells.push({metric:m.label, pms:pmsVal, dash:dashVal, diff:null, pct:null, status:'na'});
+          return;
+        }
+
+        const diff = pmsVal - dashVal;
+        const base = Math.abs(dashVal) > 0 ? dashVal : 1;
+        const pct = (diff / Math.abs(base)) * 100;
+        const status = Math.abs(pct) <= 3 ? 'match' : 'mismatch';
+
+        result.cells.push({metric:m.label, pms:pmsVal, dash:dashVal, diff, pct, status});
+      });
+
+      comparisonResults.push(result);
+    });
+
+    /* Unmatched JSON properties */
+    const unmatchedJson = otbData.byProperty.filter(p=> !matchedJsonNames.has(p.name)).map(p=>p.name);
+
+    renderResults(unmatchedExcel, unmatchedJson);
+  };
+
+  function parseNumeric(v){
+    if(v === null || v === undefined || v === '') return null;
+    if(typeof v === 'number') return v;
+    const s = String(v).replace(/[,\s%]/g,'');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  /* ── Render Results ── */
+  function renderResults(unmatchedExcel, unmatchedJson){
+    /* Summary */
+    let total = 0, matched = 0, mismatched = 0;
+    const mismatchProps = new Set();
+    comparisonResults.forEach(r=>{
+      r.cells.forEach(c=>{
+        if(c.status==='na') return;
+        total++;
+        if(c.status==='match') matched++;
+        else { mismatched++; mismatchProps.add(r.jsonName + ' → ' + c.metric); }
+      });
+    });
+    const accuracy = total > 0 ? ((matched/total)*100).toFixed(1)+'%' : '—';
+
+    document.getElementById('kpi-accuracy').textContent = accuracy;
+    document.getElementById('kpi-accuracy').style.color = total>0 && matched/total>=0.9 ? 'var(--positive)' : 'var(--negative)';
+    document.getElementById('kpi-match').textContent = matched + ' / ' + total;
+    document.getElementById('kpi-mismatch').textContent = mismatched;
+    document.getElementById('kpi-mismatch').style.color = mismatched > 0 ? 'var(--negative)' : 'var(--positive)';
+    document.getElementById('kpi-properties').textContent = comparisonResults.length;
+
+    /* Mismatch list */
+    if(mismatched > 0){
+      let listHtml = '<div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-family:var(--mono);font-weight:700">불일치 항목 목록:</div><div class="mismatch-list">';
+      mismatchProps.forEach(p=>{
+        listHtml += '<div class="mismatch-item"><span class="mismatch-dot"></span><span>'+esc(p)+'</span></div>';
+      });
+      listHtml += '</div>';
+      document.getElementById('mismatch-summary').innerHTML = listHtml;
+    } else {
+      document.getElementById('mismatch-summary').innerHTML = '<div style="text-align:center;padding:10px;color:var(--positive);font-weight:700;font-size:13px">✓ 모든 항목이 3% 이내로 일치합니다</div>';
+    }
+
+    document.getElementById('card-summary').style.display = '';
+
+    /* Result Table */
+    const metrics = comparisonResults[0] ? comparisonResults[0].cells.map(c=>c.metric) : [];
+    let html = '<thead><tr><th rowspan="2" class="group-header" style="min-width:110px">사업장</th>';
+    metrics.forEach(m=>{
+      if(m==='na') return;
+      html += '<th colspan="4" class="group-header">'+esc(m)+'</th>';
+    });
+    html += '</tr><tr>';
+    metrics.forEach(()=>{
+      html += '<th>PMS</th><th>대시보드</th><th>차이</th><th>차이%</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    comparisonResults.forEach(r=>{
+      html += '<tr><td class="prop-col" title="Excel: '+esc(r.excelName)+'">'+esc(r.jsonName)+'</td>';
+      r.cells.forEach(c=>{
+        if(c.status==='na'){
+          html += '<td class="cell-na" colspan="4">매핑 없음</td>';
+          return;
+        }
+        const cls = c.status==='match' ? 'cell-match' : 'cell-mismatch';
+        html += '<td class="'+cls+'">'+fmtNum(c.pms)+'</td>';
+        html += '<td class="'+cls+'">'+fmtNum(c.dash)+'</td>';
+        html += '<td class="'+cls+'">'+(c.diff>0?'+':'')+fmtNum(c.diff)+'</td>';
+        html += '<td class="'+cls+'" style="font-weight:800">'+(c.pct>0?'+':'')+c.pct.toFixed(1)+'%</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('result-tbl').innerHTML = html;
+    document.getElementById('result-timestamp').textContent = '검증 시각: '+new Date().toLocaleString('ko-KR');
+    document.getElementById('card-result').style.display = '';
+
+    /* Unmatched */
+    if(unmatchedExcel.length > 0 || unmatchedJson.length > 0){
+      let uhtml = '';
+      if(unmatchedExcel.length > 0){
+        uhtml += '<div style="margin-bottom:10px"><span style="font-size:11px;color:var(--warning);font-weight:700;font-family:var(--mono)">Excel에만 존재 ('+unmatchedExcel.length+'개):</span>';
+        uhtml += '<div class="mismatch-list">';
+        unmatchedExcel.forEach(n=> uhtml += '<div class="mismatch-item"><span class="mismatch-dot" style="background:var(--warning)"></span><span style="font-size:11px;color:var(--ink-muted)">'+esc(n)+'</span></div>');
+        uhtml += '</div></div>';
+      }
+      if(unmatchedJson.length > 0){
+        uhtml += '<div><span style="font-size:11px;color:var(--info);font-weight:700;font-family:var(--mono)">JSON에만 존재 ('+unmatchedJson.length+'개):</span>';
+        uhtml += '<div class="mismatch-list">';
+        unmatchedJson.forEach(n=> uhtml += '<div class="mismatch-item"><span class="mismatch-dot" style="background:var(--info)"></span><span style="font-size:11px;color:var(--ink-muted)">'+esc(n)+'</span></div>');
+        uhtml += '</div></div>';
+      }
+      document.getElementById('unmatched-list').innerHTML = uhtml;
+      document.getElementById('card-unmatched').style.display = '';
+    }
+
+    /* Scroll to summary */
+    document.getElementById('card-summary').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  /* ── CSV Download ── */
+  window.downloadCSV = function(){
+    if(!comparisonResults.length){ alert('비교 결과가 없습니다.'); return; }
+    const metrics = comparisonResults[0].cells.map(c=>c.metric);
+    let csv = '﻿'; /* BOM for Excel Korean */
+    csv += '사업장(Excel),사업장(JSON)';
+    metrics.forEach(m=> csv += ','+m+'_PMS,'+m+'_대시보드,'+m+'_차이,'+m+'_차이%,'+m+'_판정');
+    csv += '\n';
+
+    comparisonResults.forEach(r=>{
+      csv += '"'+r.excelName+'","'+r.jsonName+'"';
+      r.cells.forEach(c=>{
+        if(c.status==='na'){
+          csv += ',,,,,N/A';
+        } else {
+          csv += ','+c.pms+','+c.dash+','+c.diff+','+c.pct.toFixed(1)+'%,'+(c.status==='match'?'OK':'불일치');
+        }
+      });
+      csv += '\n';
+    });
+
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data-check_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /* ── Reset ── */
+  window.resetAll = function(){
+    workbook = null; currentSheet = null; sheetData = []; headers = []; comparisonResults = [];
+    document.getElementById('file-name').style.display = 'none';
+    document.getElementById('sheet-selector').style.display = 'none';
+    document.getElementById('preview-area').style.display = 'none';
+    document.getElementById('card-mapping').style.display = 'none';
+    document.getElementById('card-note').style.display = 'none';
+    document.getElementById('card-summary').style.display = 'none';
+    document.getElementById('card-result').style.display = 'none';
+    document.getElementById('card-unmatched').style.display = 'none';
+    document.getElementById('file-input').value = '';
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  /* ── Helpers ── */
+  function fmtNum(v){
+    if(v===null||v===undefined) return '—';
+    if(Math.abs(v)>=100000000) return (v/100000000).toFixed(1)+'억';
+    if(Math.abs(v)>=10000) return Math.round(v).toLocaleString('ko-KR');
+    if(Number.isInteger(v)) return v.toLocaleString('ko-KR');
+    return v.toFixed(1);
+  }
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+})();
+</script>
+</body>
+</html>
