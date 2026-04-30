@@ -844,6 +844,35 @@ function parseYokumXlsx(wb){
     const ws = wb.Sheets[sn];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     const product = {name:sn, items:[]};
+    const n = v => { const x=Number(v); return (v!=null&&v!==''&&!isNaN(x)&&x>1000)?x:null; };
+
+    // 동적 컬럼 탐색: 배분가 객실, 판매가 3인
+    const hdr18 = rows[17]||[];
+    const hdr19 = rows[18]||[];
+    // 배분가 객실: "객 실" in R19 after col 20
+    let distCol = -1;
+    for(let c=20; c<hdr19.length; c++){
+      if(String(hdr19[c]||'').includes('객 실')||String(hdr19[c]||'').includes('객실')){
+        // 다음 3칸: 기명, 무기명?, FIT? — 실제 "기명" 위치 찾기
+        const h20 = rows[19]||[];
+        for(let j=c; j<c+5; j++){
+          if(String(h20[j]||'').includes('기명')){distCol=j; break;}
+        }
+        break;
+      }
+    }
+    // 판매가 3인: "3인" in R18
+    let sellCol = -1;
+    for(let c=30; c<hdr18.length; c++){
+      if(String(hdr18[c]||'').includes('3인')||String(hdr18[c]||'').includes('소인1')){
+        const h20 = rows[19]||[];
+        for(let j=c; j<c+5; j++){
+          if(String(h20[j]||'').includes('기명')){sellCol=j; break;}
+        }
+        break;
+      }
+    }
+
     for(let i=20; i<rows.length; i++){
       const r = rows[i];
       if(!r || r.length<10) continue;
@@ -851,42 +880,43 @@ function parseYokumXlsx(wb){
       if(!season) continue;
       const item = {
         season,
-        regular: {named:r[7], unnamed:r[8], fit:r[9]},
-        distributed: {named:r[22], unnamed:r[24], fit:r[26]},
-        selling3: {named:r[37]||r[41], unnamed:r[38]||r[42], fit:r[39]||r[43]},
+        regular: {named:n(r[7]), unnamed:n(r[8]), fit:n(r[9])},
+        distributed: distCol>0 ? {named:n(r[distCol]), unnamed:n(r[distCol+2]), fit:n(r[distCol+4])} : {named:null,unnamed:null,fit:null},
+        selling3: sellCol>0 ? {named:n(r[sellCol]), unnamed:n(r[sellCol+1]), fit:n(r[sellCol+2])} : {named:null,unnamed:null,fit:null},
       };
-      if(typeof item.regular.named==='number') product.items.push(item);
+      if(item.regular.named!=null) product.items.push(item);
     }
     result.상품.push(product);
   });
 
-  // 부대시설 배분가 추출 (상품③ 우선, 없으면 상품②)
+  // 부대시설 배분가 추출 (상품③ 우선, 3인 기준 = "성인2+소인1")
   const fullSheet = wb.SheetNames.find(s=>s.trim()==='상품③') || wb.SheetNames.find(s=>s.trim()==='상품②');
   if(fullSheet){
     const ws = wb.Sheets[fullSheet];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-    // 헤더에서 배분가 열 위치 찾기 (R20 = index 19)
-    const hdr = rows[19]||[];
-    const distStart = hdr.findIndex((v,i)=>i>20&&String(v).includes('할인율'));
-    // 첫 데이터 행 (R21 = index 20)에서 배분가 추출
-    if(distStart>0){
-      const r = rows[20]||[];
-      const fd = {조식:null,석식:null,오션:null,레전드:null};
-      // 배분가 cols after FIT 할인율: scan for facility names in header
-      for(let c=distStart-1; c<hdr.length; c++){
-        const h = String(hdr[c]||'').trim();
-        const val = r[c];
-        if(typeof val!=='number') continue;
-        // 배분가 columns: value > 10000 (원 단위)
-        if(val>10000 && val<500000){
-          if(h.includes('조식')) fd.조식=val;
-          else if(h.includes('석식')) fd.석식=val;
-          else if(h.includes('오션')||h.includes('요트')) fd.오션=val;
-          else if(h.includes('레전드')) fd.레전드=val;
+    const hdr19 = rows[18]||[]; // R19 (0-based 18): "부대시설(성인2+소인1)" 위치
+    const hdr20 = rows[19]||[]; // R20: 조식, 석식, 오션, 레전드
+    const r = rows[20]||[];
+    const fd = {조식:null,석식:null,오션:null,레전드:null};
+    // "부대시설(성인2+소인1)" 3인기준 배분가 섹션 찾기
+    let secStart = -1;
+    for(let c=24; c<hdr19.length; c++){
+      if(String(hdr19[c]||'').includes('소인1')){secStart=c; break;}
+    }
+    if(secStart>0){
+      for(let c=secStart; c<secStart+10&&c<hdr20.length; c++){
+        const h = String(hdr20[c]||'').trim();
+        const val = Number(r[c]);
+        if(isNaN(val)||val<=0) continue;
+        if(val>5000 && val<500000){
+          if(h.includes('조식')&&!fd.조식) fd.조식=val;
+          else if(h.includes('석식')&&!fd.석식) fd.석식=val;
+          else if((h.includes('오션')||h.includes('요트'))&&!fd.오션) fd.오션=val;
+          else if(h.includes('레전드')&&!fd.레전드) fd.레전드=val;
         }
       }
-      result.facDist = fd;
     }
+    result.facDist = fd;
   }
 
   return result;
@@ -907,7 +937,7 @@ function renderYokumPreview(data, filename){
   const off = allItems.filter(it=>offSeasons.includes(it.season));
 
   const minMax = (arr, fn) => {
-    const nums = arr.map(fn).filter(v=>typeof v==='number'&&v>0);
+    const nums = arr.map(fn).filter(v=>v!=null&&!isNaN(v)&&v>0);
     if(!nums.length) return null;
     const mn=Math.min(...nums), mx=Math.max(...nums);
     return {min:mn, max:mx};
