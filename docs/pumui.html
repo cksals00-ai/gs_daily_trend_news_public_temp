@@ -82,6 +82,41 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .empty-state{text-align:center;padding:80px 20px;color:var(--ink-faint);font-family:var(--mono);font-size:13px;letter-spacing:0.04em;}
 .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:0.3;}
 
+/* ─── 기획전 입력 폼 ─── */
+.pumui-form{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-top:8px;}
+.pumui-form-header{padding:14px 20px;border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between;}
+.pumui-form-title{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--gold-bright);letter-spacing:0.06em;}
+.pumui-form-body{padding:20px;}
+
+.form-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.form-table th,.form-table td{padding:8px 12px;border:1px solid var(--rule-strong);vertical-align:top;}
+.form-table th{background:var(--bg-deep);color:var(--ink-muted);font-weight:700;text-align:left;white-space:nowrap;width:100px;font-family:var(--mono);font-size:11px;letter-spacing:0.04em;}
+.form-table td{color:var(--ink-soft);}
+.form-table input[type=text],.form-table input[type=number],.form-table input[type=date],.form-table textarea,.form-table select{
+  background:var(--bg-soft);border:1px solid var(--rule);border-radius:3px;color:var(--ink);padding:5px 8px;font-family:var(--mono);font-size:11.5px;width:100%;outline:none;transition:border-color 0.15s;
+}
+.form-table input:focus,.form-table textarea:focus,.form-table select:focus{border-color:var(--gold);}
+.form-table textarea{min-height:60px;resize:vertical;}
+
+.sub-table{width:100%;border-collapse:collapse;font-size:11.5px;margin:4px 0;}
+.sub-table th,.sub-table td{padding:5px 8px;border:1px solid var(--rule);text-align:center;}
+.sub-table th{background:var(--bg-deep);color:var(--ink-faint);font-weight:600;font-size:10.5px;}
+.sub-table input{width:80px;text-align:right;}
+
+.form-actions{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--rule);justify-content:flex-end;}
+.btn-submit{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:var(--positive);border:1px solid var(--positive);border-radius:4px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;letter-spacing:0.06em;}
+.btn-submit:hover{background:#5cc080;}
+.btn-submit:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-reset{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:transparent;border:1px solid var(--rule-strong);border-radius:4px;color:var(--ink-muted);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;}
+.btn-reset:hover{border-color:var(--negative);color:var(--negative);}
+
+.form-msg{padding:8px 14px;border-radius:4px;font-family:var(--mono);font-size:11.5px;margin:8px 20px;display:none;}
+.form-msg.success{display:block;background:var(--positive-bg);color:var(--positive);border:1px solid var(--positive);}
+.form-msg.error{display:block;background:var(--negative-bg);color:var(--negative);border:1px solid var(--negative);}
+
+.add-row-btn{background:transparent;border:1px dashed var(--rule-strong);border-radius:4px;color:var(--ink-faint);font-family:var(--mono);font-size:11px;padding:6px 14px;cursor:pointer;width:100%;margin-top:8px;}
+.add-row-btn:hover{border-color:var(--gold);color:var(--gold);}
+
 .seg-select{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .seg-chip{padding:3px 8px;border-radius:3px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer;transition:all 0.12s;}
 .seg-chip:hover{color:var(--ink);}
@@ -152,6 +187,161 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
         좌측에서 사업장과 월을 선택하고<br>
         [테이블 생성] 버튼을 눌러주세요
       </div>
+    </div>
+
+    <!-- ─── 기획전 상세 입력 ─── -->
+    <div class="pumui-form" id="pumui-form">
+      <div class="pumui-form-header">
+        <span class="pumui-form-title">3. 내 용 — 기획전 상세</span>
+        <button class="select-all-btn" onclick="resetForm()" style="font-size:11px;">초기화</button>
+      </div>
+      <div class="pumui-form-body">
+        <table class="form-table">
+          <tr><th>사업장</th><td><input type="text" id="f-property" placeholder="예: 소노캄 거제"></td></tr>
+          <tr><th>채 널</th><td><input type="text" id="f-channel" placeholder="예: 회원 / 인플루언서"></td></tr>
+          <tr><th>판매일자</th><td>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="f-sale-period" placeholder="예: 1차: 5/12~5/14, 2차: 5/26~5/29" style="flex:1;">
+            </div>
+          </td></tr>
+          <tr><th>투숙일자</th><td><input type="text" id="f-stay-period" placeholder="예: 5월 12일 ~ 7월 16일"></td></tr>
+          <tr><th>상 품</th><td>
+            <textarea id="f-product" placeholder="패키지 구성 입력&#10;예:&#10;① Ocean pkg - 객실+조식+오션or요트투어+레전드히어로즈+할인권&#10;② Morning pkg - 객실+조식+오션or요트투어+레전드히어로즈+할인권"></textarea>
+          </td></tr>
+          <tr><th>상품 비고</th><td><input type="text" id="f-product-note" placeholder="예: 기준인원(3,4인), 셀러특전 등"></td></tr>
+        </table>
+
+        <!-- 객실가 -->
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원]</span>
+          </div>
+          <table class="sub-table" id="room-price-table">
+            <thead>
+              <tr><th rowspan="2" style="width:80px;">객 실</th><th colspan="2">회원(무기명)</th><th colspan="2">FIT</th></tr>
+              <tr><th>정상기</th><th>비수기</th><th>정상기</th><th>비수기</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>정상가</th>
+                <td><input type="text" id="f-room-mem-peak" placeholder="157~378"></td>
+                <td><input type="text" id="f-room-mem-off" placeholder="157~378"></td>
+                <td><input type="text" id="f-room-fit-peak" placeholder="167~458"></td>
+                <td><input type="text" id="f-room-fit-off" placeholder="197~458"></td>
+              </tr>
+              <tr>
+                <th>배분가</th>
+                <td><input type="text" id="f-room-mem-peak-dist" placeholder=""></td>
+                <td><input type="text" id="f-room-mem-off-dist" placeholder=""></td>
+                <td><input type="text" id="f-room-fit-peak-dist" placeholder=""></td>
+                <td><input type="text" id="f-room-fit-off-dist" placeholder=""></td>
+              </tr>
+              <tr>
+                <th>할인율</th>
+                <td><input type="text" id="f-room-disc-mem-peak" placeholder="0%"></td>
+                <td><input type="text" id="f-room-disc-mem-off" placeholder="0%"></td>
+                <td><input type="text" id="f-room-disc-fit-peak" placeholder="-18%"></td>
+                <td><input type="text" id="f-room-disc-fit-off" placeholder="0%"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 화원가比 -->
+        <table class="form-table" style="margin-top:12px;">
+          <tr><th>화원가比</th><td><input type="text" id="f-member-ratio" placeholder="예: 30 ~ 100"></td></tr>
+        </table>
+
+        <!-- 식음/부대 -->
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">식음/부대 [단위:천원]</span>
+          </div>
+          <table class="sub-table" id="fb-price-table">
+            <thead>
+              <tr><th style="width:80px;">구 분</th><th>조식</th><th>석식</th><th>오션(요트)</th><th>레전드</th><th>비고</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>정상기</th>
+                <td><input type="text" id="f-fb-bk-peak" placeholder="112"></td>
+                <td><input type="text" id="f-fb-dn-peak" placeholder="247"></td>
+                <td><input type="text" id="f-fb-ocean-peak" placeholder="212"></td>
+                <td><input type="text" id="f-fb-legend-peak" placeholder="33"></td>
+                <td rowspan="3"><input type="text" id="f-fb-note" placeholder="구성 3인기준 등" style="width:100%;height:100%;"></td>
+              </tr>
+              <tr>
+                <th>배분기</th>
+                <td><input type="text" id="f-fb-bk-off" placeholder="60"></td>
+                <td><input type="text" id="f-fb-dn-off" placeholder="140"></td>
+                <td><input type="text" id="f-fb-ocean-off" placeholder="50"></td>
+                <td><input type="text" id="f-fb-legend-off" placeholder="12"></td>
+              </tr>
+              <tr>
+                <th>할인율</th>
+                <td><input type="text" id="f-fb-disc-bk" placeholder="46%"></td>
+                <td><input type="text" id="f-fb-disc-dn" placeholder="43%"></td>
+                <td><input type="text" id="f-fb-disc-ocean" placeholder="76%"></td>
+                <td><input type="text" id="f-fb-disc-legend" placeholder="64%"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 판매가 -->
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">판매가 [단위:천원 / 구성 3인기준]</span>
+          </div>
+          <table class="sub-table" id="sell-price-table">
+            <thead>
+              <tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>정상기</th>
+                <td><input type="text" id="f-sell-mem-peak" placeholder="761~981"></td>
+                <td><input type="text" id="f-sell-fit-peak" placeholder="771~1,062"></td>
+              </tr>
+              <tr>
+                <th>배분기</th>
+                <td><input type="text" id="f-sell-mem-off" placeholder="279~500"></td>
+                <td><input type="text" id="f-sell-fit-off" placeholder="319~580"></td>
+              </tr>
+              <tr>
+                <th>할인율</th>
+                <td><input type="text" id="f-sell-disc-mem" placeholder="49%~63%"></td>
+                <td><input type="text" id="f-sell-disc-fit" placeholder="45%~59%"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 수수료 / KPI -->
+        <table class="form-table" style="margin-top:12px;">
+          <tr><th>수수료</th><td><input type="text" id="f-commission" placeholder="예: 11%, 13%"></td></tr>
+          <tr><th>KPI</th><td><input type="text" id="f-kpi" placeholder="예: 1,150RNs (1차: 600RNs, 2차: 550RNs)"></td></tr>
+          <tr><th>비 고</th><td><textarea id="f-remarks" placeholder="추가 사항" style="min-height:40px;"></textarea></td></tr>
+        </table>
+      </div>
+
+      <div class="form-msg" id="form-msg"></div>
+      <div class="form-actions">
+        <button class="btn-action" onclick="addToExcelDownload()">품의서 엑셀 포함</button>
+        <button class="btn-submit" id="btn-submit-sheet" onclick="submitToSheet()">구글시트 제출</button>
+      </div>
+    </div>
+
+    <!-- Apps Script 설정 -->
+    <div style="margin-top:12px;padding:12px 16px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-faint);">APPS SCRIPT 연동</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="apps-script-url" placeholder="Apps Script 웹앱 URL 입력" style="flex:1;background:var(--bg-card);border:1px solid var(--rule);border-radius:3px;color:var(--ink);padding:6px 10px;font-family:var(--mono);font-size:11px;outline:none;">
+        <button class="select-all-btn" onclick="saveScriptUrl()" style="padding:5px 12px;">저장</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:6px;">구글시트 제출을 사용하려면 Apps Script 웹앱 URL을 입력하세요</div>
     </div>
   </main>
 </div>
@@ -527,6 +717,137 @@ function downloadExcel(){
   const fname = `Forecast_${propLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, fname);
 }
+
+/* ─── Form helpers ─── */
+function getFormData(){
+  const g=id=>document.getElementById(id)?.value||'';
+  return {
+    property:g('f-property'), channel:g('f-channel'),
+    salePeriod:g('f-sale-period'), stayPeriod:g('f-stay-period'),
+    product:g('f-product'), productNote:g('f-product-note'),
+    roomMemPeak:g('f-room-mem-peak'), roomMemOff:g('f-room-mem-off'),
+    roomFitPeak:g('f-room-fit-peak'), roomFitOff:g('f-room-fit-off'),
+    roomMemPeakDist:g('f-room-mem-peak-dist'), roomMemOffDist:g('f-room-mem-off-dist'),
+    roomFitPeakDist:g('f-room-fit-peak-dist'), roomFitOffDist:g('f-room-fit-off-dist'),
+    roomDiscMemPeak:g('f-room-disc-mem-peak'), roomDiscMemOff:g('f-room-disc-mem-off'),
+    roomDiscFitPeak:g('f-room-disc-fit-peak'), roomDiscFitOff:g('f-room-disc-fit-off'),
+    memberRatio:g('f-member-ratio'),
+    fbBkPeak:g('f-fb-bk-peak'), fbDnPeak:g('f-fb-dn-peak'),
+    fbOceanPeak:g('f-fb-ocean-peak'), fbLegendPeak:g('f-fb-legend-peak'),
+    fbBkOff:g('f-fb-bk-off'), fbDnOff:g('f-fb-dn-off'),
+    fbOceanOff:g('f-fb-ocean-off'), fbLegendOff:g('f-fb-legend-off'),
+    fbDiscBk:g('f-fb-disc-bk'), fbDiscDn:g('f-fb-disc-dn'),
+    fbDiscOcean:g('f-fb-disc-ocean'), fbDiscLegend:g('f-fb-disc-legend'),
+    fbNote:g('f-fb-note'),
+    sellMemPeak:g('f-sell-mem-peak'), sellFitPeak:g('f-sell-fit-peak'),
+    sellMemOff:g('f-sell-mem-off'), sellFitOff:g('f-sell-fit-off'),
+    sellDiscMem:g('f-sell-disc-mem'), sellDiscFit:g('f-sell-disc-fit'),
+    commission:g('f-commission'), kpi:g('f-kpi'), remarks:g('f-remarks'),
+    submittedAt:new Date().toISOString()
+  };
+}
+
+function resetForm(){
+  document.querySelectorAll('#pumui-form input, #pumui-form textarea').forEach(el=>{el.value='';});
+  showFormMsg('','');
+}
+
+function showFormMsg(msg, type){
+  const el=document.getElementById('form-msg');
+  el.textContent=msg;
+  el.className='form-msg'+(type?' '+type:'');
+}
+
+function saveScriptUrl(){
+  const url=document.getElementById('apps-script-url').value.trim();
+  if(url) localStorage.setItem('pumui_apps_script_url',url);
+  showFormMsg('URL 저장됨','success');
+  setTimeout(()=>showFormMsg('',''),2000);
+}
+
+async function submitToSheet(){
+  const url=document.getElementById('apps-script-url').value.trim()||localStorage.getItem('pumui_apps_script_url')||'';
+  if(!url){showFormMsg('Apps Script URL을 먼저 입력해주세요','error');return;}
+  const data=getFormData();
+  if(!data.property){showFormMsg('사업장을 입력해주세요','error');return;}
+
+  const btn=document.getElementById('btn-submit-sheet');
+  btn.disabled=true; btn.textContent='제출 중...';
+  try{
+    const r=await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+    showFormMsg('구글시트에 제출되었습니다','success');
+  }catch(e){
+    showFormMsg('제출 실패: '+e.message,'error');
+  }finally{
+    btn.disabled=false; btn.textContent='구글시트 제출';
+  }
+}
+
+function addToExcelDownload(){
+  // Include form data in the Excel download alongside forecast tables
+  const tables = document.querySelectorAll('.forecast-table');
+  if(!tables.length){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
+
+  const wb = XLSX.utils.book_new();
+  const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
+  const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
+
+  // Forecast sheets
+  tables.forEach(tbl=>{
+    const month = tbl.dataset.month;
+    const ws = XLSX.utils.table_to_sheet(tbl);
+    XLSX.utils.book_append_sheet(wb, ws, `Forecast_${month}월`);
+  });
+
+  // 기획전 상세 sheet
+  const fd=getFormData();
+  const detailRows=[
+    ['3. 내 용'],
+    ['구 분','내 용'],
+    ['사업장',fd.property],
+    ['채 널',fd.channel],
+    ['판매일자',fd.salePeriod],
+    ['투숙일자',fd.stayPeriod],
+    ['상 품',fd.product],
+    ['상품 비고',fd.productNote],
+    [],
+    ['객실 [단위:천원]','','회원(무기명)','','FIT',''],
+    ['','','정상기','비수기','정상기','비수기'],
+    ['','정상가',fd.roomMemPeak,fd.roomMemOff,fd.roomFitPeak,fd.roomFitOff],
+    ['','배분가',fd.roomMemPeakDist,fd.roomMemOffDist,fd.roomFitPeakDist,fd.roomFitOffDist],
+    ['','할인율',fd.roomDiscMemPeak,fd.roomDiscMemOff,fd.roomDiscFitPeak,fd.roomDiscFitOff],
+    [],
+    ['화원가(무기명)比',fd.memberRatio],
+    [],
+    ['식음/부대 [단위:천원]','','조식','석식','오션(요트)','레전드','비고'],
+    ['','정상기',fd.fbBkPeak,fd.fbDnPeak,fd.fbOceanPeak,fd.fbLegendPeak,fd.fbNote],
+    ['','배분기',fd.fbBkOff,fd.fbDnOff,fd.fbOceanOff,fd.fbLegendOff,''],
+    ['','할인율',fd.fbDiscBk,fd.fbDiscDn,fd.fbDiscOcean,fd.fbDiscLegend,''],
+    [],
+    ['판매가 [단위:천원]','','회원(무기명)','FIT'],
+    ['','정상기',fd.sellMemPeak,fd.sellFitPeak],
+    ['','배분기',fd.sellMemOff,fd.sellFitOff],
+    ['','할인율',fd.sellDiscMem,fd.sellDiscFit],
+    [],
+    ['수수료',fd.commission],
+    ['KPI',fd.kpi],
+    ['비 고',fd.remarks]
+  ];
+  const ws2=XLSX.utils.aoa_to_sheet(detailRows);
+  ws2['!cols']=[{wch:18},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'기획전상세');
+
+  const fname=`품의서_${fd.property||propLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  showFormMsg('엑셀 다운로드 완료','success');
+  setTimeout(()=>showFormMsg('',''),2000);
+}
+
+// Restore saved Apps Script URL
+(function(){
+  const saved=localStorage.getItem('pumui_apps_script_url');
+  if(saved) document.getElementById('apps-script-url').value=saved;
+})();
 
 /* ─── Boot ─── */
 loadData();
