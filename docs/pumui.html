@@ -539,160 +539,98 @@ function generateTables(){
   const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
   const selMonthsArr = [...selectedMonths].sort((a,b)=>a-b);
   const segsArr = [...selectedSegs];
-  const multiProp = selPropsArr.length > 1;
-  const propLabel = multiProp ? selPropsArr.map(p=>p.label).join(' + ') : selPropsArr[0].label;
+  const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join(' + ') : selPropsArr[0].label;
 
-  let html = '';
-
-  selMonthsArr.forEach(month=>{
-    // Aggregate data across selected properties
-    let total_rm_budget_rn=0, total_act_rn=0, total_rm_fcst_rn=0, total_last_rn=0;
-    let total_gs_rn=0, total_gs_rev=0;
+  // Build per-month data
+  const monthData = selMonthsArr.map(month=>{
+    let t_bud_rn=0, t_act_rn=0, t_fcst_rn=0;
+    let gs_rn=0, gs_rev=0;
     let occ_sum=0, occ_cnt=0;
 
     selPropsArr.forEach(p=>{
-      // 전체 (RM)
       const yoy = getOtbYoy(p.otb, month);
-      console.log(`[${p.otb}] month=${month} yoy:`,yoy);
-      if(yoy){
-        total_rm_budget_rn += yoy.rm_budget_rn||0;
-        total_act_rn += yoy.act_rn||0;
-        total_rm_fcst_rn += yoy.rm_fcst_rn||0;
-        total_last_rn += yoy.last_rn||0;
-      }
-      // OCC
+      if(yoy){ t_bud_rn+=yoy.rm_budget_rn||0; t_act_rn+=yoy.act_rn||0; t_fcst_rn+=yoy.rm_fcst_rn||0; }
       const occ = getOcc(p.occ, month);
-      console.log(`[${p.occ}] month=${month} occ:`,occ);
       if(occ!=null){occ_sum+=occ; occ_cnt++;}
-      // GS
       const gs = getGsData(p.db, month, segsArr);
-      if(gs){
-        total_gs_rn += gs.rn;
-        total_gs_rev += gs.rev;
-      }
+      if(gs){ gs_rn+=gs.rn; gs_rev+=gs.rev; }
     });
 
-    const avg_occ = occ_cnt>0 ? occ_sum/occ_cnt : null;
-    const total_gs_adr = total_gs_rn>0 ? Math.round(total_gs_rev/total_gs_rn*1000) : null;
-    const rn_ach = total_rm_budget_rn>0 ? (total_act_rn/total_rm_budget_rn*100) : null;
-    const fcst_ach = total_rm_budget_rn>0 ? (total_rm_fcst_rn/total_rm_budget_rn*100) : null;
-    const fcst_diff_rn = total_rm_fcst_rn - total_rm_budget_rn;
+    const t_occ = occ_cnt>0 ? occ_sum/occ_cnt : null;
+    const t_rn_ach = t_bud_rn>0 ? t_act_rn/t_bud_rn*100 : null;
+    const t_fcst_ach = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
+    const t_fcst_diff = t_fcst_rn - t_bud_rn;
+    const gs_adr = gs_rn>0 ? Math.round(gs_rev/gs_rn*1000) : null;
 
-    // GS budget: no direct data, so show as proportion of total OTB
-    const gs_ratio_rn = total_act_rn>0 ? total_gs_rn/total_act_rn : 0;
-    const gs_budget_rn = Math.round(total_rm_budget_rn * gs_ratio_rn);
-    const gs_rn_ach = gs_budget_rn>0 ? (total_gs_rn/gs_budget_rn*100) : null;
-
-    // REV: GS rev is in 백만원
-    const gs_rev_display = total_gs_rev; // 백만원
-
-    html += `
-    <div class="table-block">
-      <div class="table-block-header">
-        <span class="table-block-title">Forecast — ${propLabel}</span>
-        <span class="table-block-sub">2026년 ${month}월</span>
-      </div>
-      <div class="table-wrap">
-        <table class="forecast-table" data-month="${month}">
-          <thead>
-            <tr>
-              <th colspan="2" style="text-align:left;">구분</th>
-              <th colspan="3" style="border-bottom:2px solid var(--gold);">OTB</th>
-              <th colspan="3" style="border-bottom:2px solid var(--info);">FCST</th>
-            </tr>
-            <tr>
-              <th style="width:60px;text-align:left;">채널</th>
-              <th style="width:60px;text-align:left;">항목</th>
-              <th style="width:100px;">목표</th>
-              <th style="width:100px;">현재 OTB</th>
-              <th style="width:80px;">진행률</th>
-              <th style="width:100px;">예상실적</th>
-              <th style="width:100px;">증감</th>
-              <th style="width:80px;">달성률</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="section-header"><td colspan="8">전체 (Revenue Meeting 기준)</td></tr>
-            <tr>
-              <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:13px;font-weight:800;color:var(--gold);">전체</td>
-              <td class="row-label">OCC</td>
-              <td>—</td>
-              <td>${fmtPct(avg_occ)}</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr>
-              <td class="row-label">RNs</td>
-              <td>${fmt(total_rm_budget_rn)}</td>
-              <td>${fmt(total_act_rn)}</td>
-              <td class="pct-cell ${pctClass(rn_ach)}">${fmtPct(rn_ach)}</td>
-              <td>${fmt(total_rm_fcst_rn)}</td>
-              <td class="${fcst_diff_rn>=0?'pos':'neg'}">${fcst_diff_rn>=0?'+':''}${fmt(fcst_diff_rn)}</td>
-              <td class="pct-cell ${pctClass(fcst_ach)}">${fmtPct(fcst_ach)}</td>
-            </tr>
-            <tr>
-              <td class="row-label">ADR</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr>
-              <td class="row-label">REV</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr class="section-header"><td colspan="8">GS (${segsArr.join(' + ')})</td></tr>
-            <tr>
-              <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:13px;font-weight:800;color:var(--info);">GS</td>
-              <td class="row-label">OCC</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr>
-              <td class="row-label">RNs</td>
-              <td>—</td>
-              <td>${fmt(total_gs_rn)}</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr>
-              <td class="row-label">ADR</td>
-              <td>—</td>
-              <td>${total_gs_adr ? fmt(total_gs_adr)+'원' : '—'}</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-            <tr>
-              <td class="row-label">REV</td>
-              <td>—</td>
-              <td>${fmtRev(gs_rev_display)}</td>
-              <td class="pct-cell">—</td>
-              <td>—</td>
-              <td>—</td>
-              <td class="pct-cell">—</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>`;
+    return {month, t_bud_rn, t_act_rn, t_fcst_rn, t_occ, t_rn_ach, t_fcst_ach, t_fcst_diff,
+            gs_rn, gs_rev, gs_adr};
   });
+
+  // Render single table: columns = 전체(OTB+FCST) + GS(OTB+FCST), rows = 월별(OCC/RNs/ADR/REV)
+  let rows = '';
+  monthData.forEach((d,idx)=>{
+    const border = idx>0 ? 'border-top:2px solid var(--rule-strong);' : '';
+    const diffCls = d.t_fcst_diff>=0?'pos':'neg';
+    const diffSign = d.t_fcst_diff>=0?'+':'';
+
+    rows += `
+      <tr style="${border}">
+        <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">${d.month}월</td>
+        <td class="row-label">OCC</td>
+        <td>—</td><td>${fmtPct(d.t_occ)}</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+      </tr>
+      <tr>
+        <td class="row-label">RNs</td>
+        <td>${fmt(d.t_bud_rn)}</td><td>${fmt(d.t_act_rn)}</td><td class="pct-cell ${pctClass(d.t_rn_ach)}">${fmtPct(d.t_rn_ach)}</td>
+        <td>${fmt(d.t_fcst_rn)}</td><td class="${diffCls}">${diffSign}${fmt(d.t_fcst_diff)}</td><td class="pct-cell ${pctClass(d.t_fcst_ach)}">${fmtPct(d.t_fcst_ach)}</td>
+        <td>—</td><td>${fmt(d.gs_rn)}</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+      </tr>
+      <tr>
+        <td class="row-label">ADR</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>${d.gs_adr ? fmt(d.gs_adr)+'원' : '—'}</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+      </tr>
+      <tr>
+        <td class="row-label">REV</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>—</td><td>${fmtRev(d.gs_rev)}</td><td class="pct-cell">—</td>
+        <td>—</td><td>—</td><td class="pct-cell">—</td>
+      </tr>`;
+  });
+
+  const html = `
+  <div class="table-block">
+    <div class="table-block-header">
+      <span class="table-block-title">Forecast — ${propLabel}</span>
+      <span class="table-block-sub">2026년</span>
+    </div>
+    <div class="table-wrap">
+      <table class="forecast-table" id="forecast-main-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:50px;text-align:center;">월</th>
+            <th rowspan="2" style="width:50px;text-align:left;">항목</th>
+            <th colspan="6" style="border-bottom:2px solid var(--gold);color:var(--gold-bright);">전체</th>
+            <th colspan="6" style="border-bottom:2px solid var(--info);color:var(--info);">GS (${segsArr.join('+')})</th>
+          </tr>
+          <tr>
+            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
+            <th style="width:80px;">예상실적</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
+            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
+            <th style="width:80px;">예상실적</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 
   output.innerHTML = html;
   document.getElementById('btn-download').disabled = false;
@@ -700,20 +638,13 @@ function generateTables(){
 
 /* ─── Excel download ─── */
 function downloadExcel(){
-  const tables = document.querySelectorAll('.forecast-table');
-  if(!tables.length) return;
-
+  const tbl = document.getElementById('forecast-main-table');
+  if(!tbl) return;
   const wb = XLSX.utils.book_new();
   const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
   const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
-
-  tables.forEach(tbl=>{
-    const month = tbl.dataset.month;
-    const sheetName = `${month}월`;
-    const ws = XLSX.utils.table_to_sheet(tbl);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  });
-
+  const ws = XLSX.utils.table_to_sheet(tbl);
+  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
   const fname = `Forecast_${propLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, fname);
 }
@@ -785,19 +716,16 @@ async function submitToSheet(){
 
 function addToExcelDownload(){
   // Include form data in the Excel download alongside forecast tables
-  const tables = document.querySelectorAll('.forecast-table');
-  if(!tables.length){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
+  const tbl = document.getElementById('forecast-main-table');
+  if(!tbl){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
 
   const wb = XLSX.utils.book_new();
   const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
   const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
 
-  // Forecast sheets
-  tables.forEach(tbl=>{
-    const month = tbl.dataset.month;
-    const ws = XLSX.utils.table_to_sheet(tbl);
-    XLSX.utils.book_append_sheet(wb, ws, `Forecast_${month}월`);
-  });
+  // Forecast sheet
+  const ws = XLSX.utils.table_to_sheet(tbl);
+  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
 
   // 기획전 상세 sheet
   const fd=getFormData();
