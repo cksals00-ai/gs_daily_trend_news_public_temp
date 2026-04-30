@@ -886,6 +886,8 @@ function parseYokumXlsx(wb){
       };
       if(item.regular.named!=null) product.items.push(item);
     }
+    console.log('[요금안파서]', sn, 'distCol='+distCol, 'sellCol='+sellCol, 'items='+product.items.length);
+    if(product.items.length>0) console.log('[요금안파서] 첫 아이템:', JSON.stringify(product.items[0]));
     result.상품.push(product);
   });
 
@@ -931,10 +933,13 @@ function renderYokumPreview(data, filename){
 
   // 모든 상품 시트의 아이템을 합쳐서 min/max 계산
   const allItems = data.상품.flatMap(p=>p.items);
+  console.log('[요금안렌더] allItems='+allItems.length, 'seasons:', [...new Set(allItems.map(i=>i.season))]);
   const peakSeasons = ['토요일','골드'];
   const offSeasons = ['주중'];
   const peak = allItems.filter(it=>peakSeasons.includes(it.season));
   const off = allItems.filter(it=>offSeasons.includes(it.season));
+  console.log('[요금안렌더] peak='+peak.length, 'off='+off.length);
+  if(peak.length>0) console.log('[요금안렌더] peak[0] unnamed:', peak[0].regular.unnamed, 'dist:', peak[0].distributed.unnamed, 'sell:', peak[0].selling3.unnamed);
 
   const minMax = (arr, fn) => {
     const nums = arr.map(fn).filter(v=>v!=null&&!isNaN(v)&&v>0);
