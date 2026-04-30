@@ -131,13 +131,17 @@ def parse_pdf(pdf):
     if not detected_months:
         return None, None, detected_months
 
-    # ── Parse per-property Grand Total (existing logic) ──
+    # ── Parse per-property Grand Total + Segment (OTA/G-OTA/Inbound) ──
+    # 각 페이지에서 ▣ 사업장명, Grand Total, OTA/G-OTA/Inbound 행을 동시에 추출
     rows = []
     for page in pages:
         if not page.strip():
             continue
+        page_lines = page.split("\n")
+
+        # 1) 사업장명 감지
         head_name = ""
-        for ln in [l for l in page.split("\n") if l.strip()][:8]:
+        for ln in [l for l in page_lines if l.strip()][:8]:
             mm = re.search(r"▣\s+(\S[^▣]*?)(?:\s{2,}|\s*$)", ln)
             if not mm:
                 continue
@@ -147,22 +151,51 @@ def parse_pdf(pdf):
             head_name = cand
             break
 
-        gm = re.search(r"Grand Total\s+(.+)", page)
-        nums = []
-        if gm:
-            tail = gm.group(1).split("\n")[0]
-            nums = parse_nums(tail)
+        # 2) 주요 지표 섹션에서 Grand Total + 세그먼트 추출
+        #    주요 지표 블록 = "Segment" 헤더행 ~ Grand Total 행 사이
+        gt_idx = None
+        for i, ln in enumerate(page_lines):
+            if re.search(r"Grand Total", ln):
+                gt_idx = i
+                break  # 첫 번째 Grand Total만 (주요 지표 섹션)
 
-        if head_name and len(nums) >= 6:
-            # Grand Total line layout: BUDGET(rn,%,adr,rev,%) FCST(rn,%,adr,rev,%) DIFF(...) LY(...)
-            # → nums[0]=budget_rn, nums[5]=fcst_rn (NOT nums[3] which is budget_rev)
-            rows.append({
-                "name": head_name,
-                "budget_rn": nums[0],
-                "fcst_rn": nums[5] if len(nums) > 5 else nums[0],
-            })
+        if gt_idx is None:
+            continue
+        # head_name 없는 페이지 = 전체 총괄 → "_TOTAL" 마커
+        if not head_name:
+            head_name = "_TOTAL"
 
-    # Assign months
+        gt_tail = re.search(r"Grand Total\s+(.+)", page_lines[gt_idx])
+        gt_nums = parse_nums(gt_tail.group(1).split("\n")[0]) if gt_tail else []
+        if len(gt_nums) < 6:
+            continue
+
+        # Grand Total: nums[0]=budget_rn, nums[5]=fcst_rn
+        row_data = {
+            "name": head_name,
+            "budget_rn": gt_nums[0],
+            "fcst_rn": gt_nums[5] if len(gt_nums) > 5 else gt_nums[0],
+            "segments": {},
+        }
+
+        # 세그먼트 행 검색 (Grand Total 위 30줄 이내)
+        search_start = max(0, gt_idx - 30)
+        for li in range(search_start, gt_idx):
+            line = page_lines[li]
+            for seg in SEG_TARGETS:
+                pattern = rf"(?:^|\s){re.escape(seg)}\s"
+                if re.search(pattern, line) and not (seg == "OTA" and "G-OTA" in line):
+                    nums = parse_nums(line)
+                    if len(nums) >= 6:
+                        row_data["segments"][seg] = {
+                            "rm_budget_rn": nums[0],
+                            "rm_fcst_rn": nums[5] if len(nums) > 5 else nums[0],
+                        }
+                    break
+
+        rows.append(row_data)
+
+    # Assign months (사업장 중복 시 다음 월로 이동)
     section_idx = 0
     seen = set()
     for r in rows:
@@ -174,73 +207,26 @@ def parse_pdf(pdf):
             r["month"] = detected_months[section_idx]
 
     properties = {}
+    segments = {}
     for r in rows:
         if "month" not in r:
             continue
-        canonical = NAME_MAP.get(r["name"])
-        if not canonical:
-            continue
         month_key = f"{year}-{r['month']:02d}"
-        properties.setdefault(canonical, {})[month_key] = {
-            "rm_fcst_rn": r["fcst_rn"],
-            "rm_budget_rn": r["budget_rn"],
-        }
+        canonical = NAME_MAP.get(r["name"])
 
-    # ── Parse segment totals from summary pages ──
-    # Summary pages contain detailed segment rows near Grand Total.
-    # We look for lines starting with OTA/G-OTA/Inbound in the summary sections.
-    segments = {}
-    full_text_lines = text.split("\n")
+        # 사업장별 데이터 (NAME_MAP에 있는 사업장만)
+        if canonical:
+            prop_entry = {
+                "rm_fcst_rn": r["fcst_rn"],
+                "rm_budget_rn": r["budget_rn"],
+            }
+            if r["segments"]:
+                prop_entry["segments"] = r["segments"]
+            properties.setdefault(canonical, {})[month_key] = prop_entry
 
-    # Find all Grand Total lines with line numbers
-    gt_lines = []
-    for i, ln in enumerate(full_text_lines):
-        if re.search(r"Grand Total", ln):
-            gt_lines.append(i)
-
-    # For each month's summary section (first 3 Grand Total occurrences = summary pages)
-    # The summary Grand Total lines are the ones on pages that DON'T have ▣ property headers
-    summary_gt_indices = []
-    for gt_idx in gt_lines:
-        # Check if this Grand Total is on a summary page (no ▣ property header nearby)
-        context_start = max(0, gt_idx - 40)
-        context = "\n".join(full_text_lines[context_start:gt_idx])
-        # Summary pages have segment detail rows (기명, 무기명, OTA, G-OTA etc.) before Grand Total
-        has_ota = any(re.search(r"(?:^|\s)(?:OTA|G-OTA)\s", full_text_lines[j]) for j in range(max(0, gt_idx - 25), gt_idx))
-        if has_ota:
-            summary_gt_indices.append(gt_idx)
-
-    for si, gt_idx in enumerate(summary_gt_indices):
-        month_idx = si if si < len(detected_months) else len(detected_months) - 1
-        if month_idx >= len(detected_months):
-            break
-        mo = detected_months[month_idx]
-        month_key = f"{year}-{mo:02d}"
-
-        # Search lines before Grand Total for segment rows
-        search_start = max(0, gt_idx - 30)
-        for li in range(search_start, gt_idx):
-            line = full_text_lines[li]
-            stripped = line.strip()
-
-            for seg in SEG_TARGETS:
-                # Match line containing segment name (handles "FIT G-OTA" prefix)
-                # G-OTA를 OTA보다 먼저 체크해야 오매칭 방지
-                pattern = rf"(?:^|\s){re.escape(seg)}\s"
-                if re.search(pattern, line) and not (seg == "OTA" and "G-OTA" in line):
-                    nums = parse_nums(line)
-                    if len(nums) >= 6:
-                        # First number group: budget_rn, then skip %, ADR, rev, rev%
-                        # Sixth number group: fcst_rn
-                        # Pattern: budget_rn, budget_pct(skip), budget_adr, budget_rev, budget_rev_pct(skip),
-                        #          fcst_rn, fcst_pct(skip), fcst_adr, fcst_rev, fcst_rev_pct(skip)
-                        budget_rn = nums[0]
-                        fcst_rn = nums[5] if len(nums) > 5 else nums[0]
-                        segments.setdefault(month_key, {})[seg] = {
-                            "rm_budget_rn": budget_rn,
-                            "rm_fcst_rn": fcst_rn,
-                        }
-                    break  # Don't match same line for multiple segments
+        # 전체 총괄 세그먼트: _TOTAL 마커 페이지에서 추출
+        if r["name"] == "_TOTAL" and r["segments"]:
+            segments[month_key] = r["segments"]
 
     return properties, segments, detected_months
 

@@ -297,8 +297,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         # - RN = 객실수 (박수 제외, 각 행이 이미 1박 단위)
                         rn = rooms if rooms > 0 else 1
 
-                        # REV = 1박객실료 * 0.97 (엑셀 실적 매칭 경험적 보정, 추후 원인 재조사 필요)
-                        rev = int(night_rate * 0.97)
+                        # REV = 1박객실료 × 객실수 ÷ 1.1 (VAT 제외, BI Power Query 동일 로직)
+                        rev = int(night_rate * rn / 1.1)
 
                         region = get_region(prop_name)
                         channel = extract_channel(agent_name)
@@ -568,7 +568,7 @@ def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg):
                         rn = rooms if rooms > 0 else 1
                         rate_str  = parts[idx_1night].strip() if idx_1night >= 0 and idx_1night < plen else ''
                         night_rate = int(rate_str) if rate_str else 0
-                        rev = int(night_rate * 0.97)
+                        rev = int(night_rate * rn / 1.1)
 
                         orig_by_prop[prop_name][stay_month]['rn']  += rn
                         orig_by_prop[prop_name][stay_month]['rev'] += rev
@@ -659,7 +659,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         - 27/43 예약파일 = 확정(active) 예약만 포함 (취소건 미포함)
         - 28/44 취소파일 = 취소건만 별도 기록
         - 따라서 net_rn = booking_rn (이미 순수 확정 RNS)
-        - REV: 원 → 백만원 (÷1,000,000) — 판매가/1.1은 파싱 단계에서 적용 완료
+        - REV: 원 → 백만원 (÷1,000,000) — 1박객실료×객실수/1.1 (VAT제외) 파싱 단계에서 적용 완료
         - ADR: REV(백만원) × 1000 ÷ RNS → 천원 단위
         """
         # 예약파일(27/43)은 확정건만 포함 → booking_rn이 곧 Net RNS

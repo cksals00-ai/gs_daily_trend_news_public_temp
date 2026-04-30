@@ -43,7 +43,7 @@ table tr:hover td { background: rgba(59,130,246,0.1); }
 .badge.inbound { background: rgba(6,182,212,0.2); color: var(--inbound); }
 .badge.ota { background: rgba(139,92,246,0.2); color: var(--ota); }
 .badge.gota { background: rgba(245,158,11,0.2); color: var(--gota); }
-.table-wrap { max-height: 500px; overflow-y: auto; background: var(--surface); border-radius: var(--radius); }
+.table-wrap { max-height: 600px; overflow: auto; background: var(--surface); border-radius: var(--radius); }
 .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .cal-header { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 4px; }
 .cal-day { background: var(--surface); border-radius: 6px; padding: 6px; min-height: 60px; font-size: 0.7rem; }
@@ -126,7 +126,7 @@ table tr:hover td { background: rgba(59,130,246,0.1); }
   <h2>진행중 기획전 목록</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>GS채널</th><th>사업장</th><th>채널</th><th>판매기간</th><th>상품</th><th>비고</th></tr></thead>
+      <thead><tr><th>#</th><th>상태</th><th>GS채널</th><th>사업장</th><th>채널</th><th>기획현황</th><th>상품</th><th>판매기간</th><th>후속기간</th><th style="width:55px;">KPI</th><th style="width:55px;">실적</th><th style="width:110px;">달성률</th><th>비고</th></tr></thead>
       <tbody id="promoTable"></tbody>
     </table>
   </div>
@@ -203,16 +203,47 @@ function render() {
   renderBar(document.getElementById('siteChart'), countBy(active,'site'), siteColor);
 
   // Table
-  document.getElementById('promoTable').innerHTML = active.map(r => `
-    <tr>
+  document.getElementById('promoTable').innerHTML = active.map((r, idx) => {
+    const now = new Date(dateStr);
+    const saleEnd = r.sale_period?.end ? new Date(r.sale_period.end) : null;
+    const saleStart = r.sale_period?.start ? new Date(r.sale_period.start) : null;
+    let statusLabel = '준비중', statusColor = 'var(--muted)';
+    if (saleStart && saleEnd) {
+      if (now < saleStart) { statusLabel = '예정'; statusColor = 'var(--accent)'; }
+      else if (now <= saleEnd) { statusLabel = '진행중'; statusColor = 'var(--green)'; }
+      else { statusLabel = '종료'; statusColor = 'var(--red)'; }
+    }
+    // stay_period를 후속기간으로 표시
+    const followUp = r.stay_period ? `${r.stay_period.start||''} ~ ${r.stay_period.end||''}` : '';
+    // KPI/실적/달성률 — 데이터에 있으면 사용, 없으면 —
+    const kpi = r.kpi_rn || null;
+    const actual = r.actual_rn || null;
+    const achRate = (kpi && actual) ? Math.round(actual / kpi * 100) : null;
+    const achBar = achRate !== null
+      ? `<div style="display:flex;align-items:center;gap:4px;">
+           <div style="flex:1;height:14px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+             <div style="width:${Math.min(achRate,100)}%;height:100%;background:${achRate>=90?'var(--green)':achRate>=70?'var(--gota)':'var(--red)'};border-radius:3px;"></div>
+           </div>
+           <span style="font-size:0.75rem;font-weight:700;color:${achRate>=90?'var(--green)':achRate>=70?'var(--gota)':'var(--red)'};min-width:32px;text-align:right;">${achRate}%</span>
+         </div>`
+      : '<span style="color:var(--muted);">—</span>';
+    const exposure = r.exposure || '';
+    return `<tr>
+      <td style="color:var(--muted);">${idx+1}</td>
+      <td><span style="font-size:0.7rem;font-weight:600;color:${statusColor};padding:2px 6px;border-radius:8px;background:${statusColor}22;">${statusLabel}</span></td>
       <td><span class="badge ${r.gs_channel==='Inbound'?'inbound':r.gs_channel==='OTA'?'ota':'gota'}">${r.gs_channel}</span></td>
       <td>${r.site||''}</td>
       <td>${r.channel||''}</td>
-      <td>${r.sale_period?.start||''} ~ ${r.sale_period?.end||''}</td>
+      <td style="font-size:0.75rem;">${exposure.substring(0,30)}</td>
       <td>${(r.product||'').substring(0,40)}</td>
-      <td>${(r.note||'').substring(0,20)}</td>
-    </tr>
-  `).join('');
+      <td style="white-space:nowrap;">${r.sale_period?.start||''} ~ ${r.sale_period?.end||''}</td>
+      <td style="font-size:0.75rem;white-space:nowrap;">${followUp}</td>
+      <td style="text-align:right;">${kpi !== null ? kpi.toLocaleString() : '<span style="color:var(--muted);">—</span>'}</td>
+      <td style="text-align:right;">${actual !== null ? actual.toLocaleString() : '<span style="color:var(--muted);">—</span>'}</td>
+      <td>${achBar}</td>
+      <td style="font-size:0.75rem;">${(r.note||'').substring(0,20)}</td>
+    </tr>`;
+  }).join('');
 
   // Monthly chart (전체 데이터 기반)
   const monthly = {};
