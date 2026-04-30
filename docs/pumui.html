@@ -604,42 +604,55 @@ function generateTables(){
     });
 
     /* ── 전체 계산 ── */
-    // OCC (사업장 평균)
+    // 총 객실수 역산: total_rooms = bud_rn / (bud_occ/100)
     const t_bud_occ_avg = rm_cnt>0 ? t_bud_occ/rm_cnt : null;
     const t_otb_occ_avg = rm_cnt>0 ? t_otb_occ/rm_cnt : null;
+    const total_rooms = (t_bud_occ_avg&&t_bud_rn) ? Math.round(t_bud_rn/(t_bud_occ_avg/100)) : null;
+    // 전체 OCC FCST
+    const t_fcst_occ = (total_rooms&&t_fcst_rn) ? t_fcst_rn/total_rooms*100 : null;
+    const t_occ_ach = (t_bud_occ_avg&&t_otb_occ_avg) ? t_otb_occ_avg/t_bud_occ_avg*100 : null;
+    const t_occ_f_diff = (t_fcst_occ!=null&&t_bud_occ_avg!=null) ? t_fcst_occ-t_bud_occ_avg : null;
+    const t_occ_f_ach = (t_bud_occ_avg&&t_fcst_occ) ? t_fcst_occ/t_bud_occ_avg*100 : null;
     // RNs
     const t_rn_ach = t_bud_rn>0 ? t_otb_rn/t_bud_rn*100 : null;
     const t_fcst_ach_rn = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
     const t_fcst_diff_rn = t_fcst_rn>0 ? t_fcst_rn - t_bud_rn : null;
     // ADR (원 → 천원)
-    const t_adr_bud = t_bud_rn>0 ? Math.round(t_bud_adr_w/t_bud_rn/1000) : null; // 원→천원
+    const t_adr_bud = t_bud_rn>0 ? Math.round(t_bud_adr_w/t_bud_rn/1000) : null;
     const t_adr_otb = t_otb_rn>0 ? Math.round(t_otb_adr_w/t_otb_rn/1000) : null;
     const t_adr_ach = (t_adr_bud&&t_adr_otb) ? t_adr_otb/t_adr_bud*100 : null;
-    // FCST ADR: 없음 (RM에 ADR FCST 없음), REV에서 역산 불가 → FCST RN 대비 추정
-    const t_adr_fcst = t_adr_bud; // FCST ADR = Budget ADR 가정
+    const t_adr_fcst = t_adr_bud; // FCST ADR ≈ Budget ADR (RM PDF에 FCST ADR 없음)
     const t_adr_f_diff = 0;
     const t_adr_f_ach = t_adr_bud ? 100 : null;
     // REV (천원 → 백만원 표시)
-    const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null; // 천원→백만원
+    const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null;
     const t_rev_otb = t_otb_rev>0 ? Math.round(t_otb_rev/1000) : null;
     const t_rev_ach = (t_rev_bud&&t_rev_otb) ? t_rev_otb/t_rev_bud*100 : null;
-    const t_rev_fcst = (t_fcst_rn>0&&t_adr_fcst) ? Math.round(t_fcst_rn*t_adr_fcst/1000) : null; // rn*천원/1000=백만
+    const t_rev_fcst = (t_fcst_rn>0&&t_adr_fcst) ? Math.round(t_fcst_rn*t_adr_fcst/1000) : null;
     const t_rev_f_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
     const t_rev_f_ach = (t_rev_bud&&t_rev_fcst) ? t_rev_fcst/t_rev_bud*100 : null;
 
     /* ── GS 계산 ── */
+    // GS OCC (GS RN / 전체 총객실)
+    const gs_occ_bud = (total_rooms&&gs_bud_rn) ? gs_bud_rn/total_rooms*100 : null;
+    const gs_occ_otb = (total_rooms&&gs_otb_rn) ? gs_otb_rn/total_rooms*100 : null;
+    const gs_occ_ach = (gs_occ_bud&&gs_occ_otb) ? gs_occ_otb/gs_occ_bud*100 : null;
+    const gs_occ_fcst = (total_rooms&&gs_fcst_rn) ? gs_fcst_rn/total_rooms*100 : null;
+    const gs_occ_f_diff = (gs_occ_fcst!=null&&gs_occ_bud!=null) ? gs_occ_fcst-gs_occ_bud : null;
+    const gs_occ_f_ach = (gs_occ_bud&&gs_occ_fcst) ? gs_occ_fcst/gs_occ_bud*100 : null;
+    // GS RNs
     const gs_rn_ach = gs_bud_rn>0 ? gs_otb_rn/gs_bud_rn*100 : null;
     const gs_fcst_ach_rn = gs_bud_rn>0 ? gs_fcst_rn/gs_bud_rn*100 : null;
     const gs_fcst_diff_rn = gs_fcst_rn - gs_bud_rn;
     // GS ADR (천원)
-    const gs_adr_otb = gs_otb_rn>0 ? Math.round(gs_otb_rev/gs_otb_rn*1000) : null; // rev백만/rn*1000=천원
-    const gs_adr_bud = gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null; // 원→천원
+    const gs_adr_otb = gs_otb_rn>0 ? Math.round(gs_otb_rev/gs_otb_rn*1000) : null;
+    const gs_adr_bud = gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null;
     const gs_adr_fcst = gs_adr_bud; // FCST ADR ≈ Budget ADR
     const gs_adr_ach = (gs_adr_bud&&gs_adr_otb) ? gs_adr_otb/gs_adr_bud*100 : null;
     const gs_adr_f_diff = 0;
     const gs_adr_f_ach = gs_adr_bud ? 100 : null;
     // GS REV (백만원)
-    const gs_rev_otb = gs_otb_rev; // already 백만원
+    const gs_rev_otb = gs_otb_rev;
     const gs_rev_bud = (gs_bud_rn&&gs_adr_bud) ? Math.round(gs_bud_rn*gs_adr_bud/1000) : null;
     const gs_rev_fcst = (gs_fcst_rn&&gs_adr_fcst) ? Math.round(gs_fcst_rn*gs_adr_fcst/1000) : null;
     const gs_rev_ach = (gs_rev_bud&&gs_rev_otb) ? gs_rev_otb/gs_rev_bud*100 : null;
@@ -647,10 +660,11 @@ function generateTables(){
     const gs_rev_f_ach = (gs_rev_bud&&gs_rev_fcst) ? gs_rev_fcst/gs_rev_bud*100 : null;
 
     return {month,
-      t_bud_occ_avg, t_otb_occ_avg,
+      t_bud_occ_avg, t_otb_occ_avg, t_occ_ach, t_fcst_occ, t_occ_f_diff, t_occ_f_ach,
       t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
       t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
       t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_f_diff, t_rev_f_ach,
+      gs_occ_bud, gs_occ_otb, gs_occ_ach, gs_occ_fcst, gs_occ_f_diff, gs_occ_f_ach,
       gs_bud_rn, gs_otb_rn, gs_rn_ach, gs_fcst_rn, gs_fcst_diff_rn, gs_fcst_ach_rn,
       gs_adr_bud, gs_adr_otb, gs_adr_ach, gs_adr_fcst, gs_adr_f_diff, gs_adr_f_ach,
       gs_rev_bud, gs_rev_otb, gs_rev_ach, gs_rev_fcst, gs_rev_f_diff, gs_rev_f_ach};
@@ -677,10 +691,10 @@ function generateTables(){
       <tr style="${border}">
         <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">${d.month}월</td>
         <td class="row-label">OCC</td>
-        <td>${fmtPct(d.t_bud_occ_avg)}</td><td>${fmtPct(d.t_otb_occ_avg)}</td><td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
-        <td>—</td><td>—</td><td class="pct-cell">—</td>
+        <td>${fmtPct(d.t_bud_occ_avg)}</td><td>${fmtPct(d.t_otb_occ_avg)}</td>${pctCell(d.t_occ_ach)}
+        <td>${fmtPct(d.t_fcst_occ)}</td>${diffCell(d.t_occ_f_diff,v=>v.toFixed(1)+'%p')}${pctCell(d.t_occ_f_ach)}
+        <td>${fmtPct(d.gs_occ_bud)}</td><td>${fmtPct(d.gs_occ_otb)}</td>${pctCell(d.gs_occ_ach)}
+        <td>${fmtPct(d.gs_occ_fcst)}</td>${diffCell(d.gs_occ_f_diff,v=>v.toFixed(1)+'%p')}${pctCell(d.gs_occ_f_ach)}
       </tr>
       <tr>
         <td class="row-label">RNs</td>
