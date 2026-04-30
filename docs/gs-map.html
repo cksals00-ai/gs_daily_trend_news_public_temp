@@ -4,563 +4,495 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>GS 영업기획 대시보드 · Navigation Map</title>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-
 <style>
-  :root {
-    /* ========== 다크모드 베이스 ========== */
-    --bg: #1a1d23;
-    --bg-card: #252932;
-    --bg-deep: #14171c;
-    --bg-soft: #2d3138;
-    --bg-hover: #353a44;
+:root{
+  --bg:#0f1117;--bg2:#161921;--bg3:#1c1f2a;--bg4:#242836;
+  --glass:rgba(255,255,255,.04);--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.10);
+  --ink:#f0f0f4;--ink2:#c8cad0;--ink3:#8b8f9a;--ink4:#5c6070;
+  --gold:#d4a74a;--gold2:#ecc06a;--gold3:#f5d98a;--gold-glow:rgba(212,167,74,.15);
+  --rose:#e87a8a;--violet:#a07ee8;--cyan:#5cc4d0;--mint:#5cc49a;
+  --rule:rgba(255,255,255,.08);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
+  --pen:'Nanum Pen Script',cursive;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-    /* ========== 텍스트 색상 ========== */
-    --ink: #f5f5f7;
-    --ink-soft: #e0e0e3;
-    --ink-muted: #a8acb3;
-    --ink-faint: #7a7e85;
+/* ═══ HERO ═══ */
+.hero{
+  position:relative;min-height:340px;display:flex;align-items:flex-end;
+  padding:0 0 56px;overflow:hidden;
+  background:linear-gradient(165deg,#1a1028 0%,#0f1117 35%,#0d1520 70%,#0f1117 100%);
+}
+.hero::before{
+  content:'';position:absolute;top:-120px;right:-80px;width:600px;height:600px;
+  background:radial-gradient(circle,rgba(212,167,74,.12) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-200px;left:-100px;width:500px;height:500px;
+  background:radial-gradient(circle,rgba(92,196,208,.08) 0%,transparent 60%);
+  pointer-events:none;
+}
+.hero-inner{
+  max-width:1400px;margin:0 auto;padding:0 36px;width:100%;position:relative;z-index:2;
+}
+.hero-top{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:24px 36px;position:absolute;top:0;left:0;right:0;z-index:10;
+}
+.hero-brand{
+  font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--ink3);font-weight:700;
+  display:flex;align-items:center;gap:10px;
+}
+.hero-brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block}
+.hero-back{
+  font-family:var(--mono);font-size:11px;color:var(--ink3);text-decoration:none;
+  padding:6px 14px;border:1px solid var(--rule);border-radius:20px;
+  transition:all .2s;letter-spacing:.05em;
+}
+.hero-back:hover{color:var(--gold2);border-color:var(--gold)}
 
-    /* ========== 액센트 색상 ========== */
-    --gold: #c9a063;
-    --gold-bright: #e6b970;
-    --positive: #4caf6f;
-    --positive-bg: #1f3a28;
-    --warning: #e8a256;
-    --warning-bg: #3d2e1a;
-    --negative: #e57373;
-    --negative-bg: #3d1f1f;
-    --info: #5a9fc4;
-    --info-bg: #1a2e3d;
+.hero-eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.35em;color:var(--gold);font-weight:700;
+  margin-bottom:16px;text-transform:uppercase;
+}
+.hero h1{
+  font-size:clamp(36px,5.5vw,60px);font-weight:800;line-height:1.05;letter-spacing:-.03em;
+  background:linear-gradient(135deg,#fff 30%,var(--gold2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:14px;
+}
+.hero-sub{
+  font-size:15px;color:var(--ink3);font-weight:400;max-width:520px;line-height:1.7;
+}
+.hero-stats{
+  display:flex;gap:32px;margin-top:28px;
+}
+.hero-stat{display:flex;flex-direction:column;gap:2px}
+.hero-stat-val{font-family:var(--mono);font-size:28px;font-weight:800;color:var(--ink)}
+.hero-stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--ink4);font-weight:600;text-transform:uppercase}
 
-    /* 카테고리별 색상 */
-    --cat-daily: #d97a7a;
-    --cat-daily-bg: #2e2228;
-    --cat-perform: #a892c8;
-    --cat-perform-bg: #252035;
-    --cat-admin: #6ba3c4;
-    --cat-admin-bg: #1f2a35;
-    --cat-external: #6db58a;
-    --cat-external-bg: #1f2e28;
+/* ═══ DAILY QUOTE ═══ */
+.daily-quote{
+  margin-top:20px;padding:14px 0;font-size:13.5px;color:var(--ink3);
+  font-style:italic;line-height:1.6;max-width:600px;position:relative;
+}
+.daily-quote::before{
+  content:'"';font-size:32px;color:var(--gold);font-style:normal;
+  position:absolute;left:-18px;top:6px;font-family:Georgia,serif;opacity:.5;
+}
+.quote-author{
+  font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ink4);
+  margin-top:6px;letter-spacing:.1em;
+}
 
-    --rule: rgba(255,255,255,0.12);
+/* ═══ CONTENT ═══ */
+.content{max-width:1400px;margin:0 auto;padding:0 36px 80px}
 
-    /* 폰트 */
-    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    --script: 'Nanum Pen Script', 'Pretendard Variable', cursive;
-    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    --mono: 'JetBrains Mono', 'Pretendard Variable', 'D2Coding', Consolas, monospace;
-  }
+/* ═══ FAVORITES — BENTO GRID ═══ */
+.fav-section{margin:-28px 0 56px;position:relative;z-index:5}
+.fav-label{
+  font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--gold);font-weight:700;
+  margin-bottom:16px;display:flex;align-items:center;gap:10px;text-transform:uppercase;
+}
+.fav-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(212,167,74,.3),transparent 60%)}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--sans);
-    line-height: 1.65;
-    font-size: 15.5px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    overflow-x: hidden;
-    word-break: keep-all;
-  }
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.bento-card{
+  background:var(--glass2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--rule);border-radius:14px;padding:22px 24px;
+  text-decoration:none;color:inherit;position:relative;overflow:hidden;
+  transition:all .35s cubic-bezier(.25,.46,.45,.94);cursor:pointer;
+  display:flex;flex-direction:column;justify-content:space-between;min-height:120px;
+}
+.bento-card::before{
+  content:'';position:absolute;inset:0;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,255,255,.04),transparent 60%);
+  pointer-events:none;opacity:0;transition:opacity .35s;
+}
+.bento-card:hover{
+  transform:translateY(-4px);border-color:rgba(212,167,74,.35);
+  box-shadow:0 16px 48px rgba(0,0,0,.3),0 0 0 1px rgba(212,167,74,.15);
+}
+.bento-card:hover::before{opacity:1}
 
-  /* ============= MASTHEAD ============= */
-  .masthead {
-    background: var(--bg-deep);
-    color: #fff;
-    padding: 16px 0;
-    border-bottom: 3px solid var(--gold);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .masthead-inner {
-    max-width: 1640px;
-    margin: 0 auto;
-    padding: 0 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-  .logo-mark {
-    font-family: var(--serif);
-    font-weight: 800;
-    font-size: 22px;
-    color: var(--gold-bright);
-    letter-spacing: 0.01em;
-  }
-  .logo-mark .amp {
-    color: #fff;
-    font-family: var(--script);
-    font-weight: 400;
-    padding: 0 6px;
-    font-size: 26px;
-  }
-  .team-tag {
-    font-family: var(--mono);
-    font-size: 12.5px;
-    letter-spacing: 0.18em;
-    color: rgba(255,255,255,0.65);
-    border-left: 1px solid rgba(255,255,255,0.2);
-    padding-left: 18px;
-    margin-left: 18px;
-  }
+.bento-primary{grid-column:span 4}
+.bento-normal{grid-column:span 3}
+.bento-coming{grid-column:span 3;opacity:.45;pointer-events:none;border-style:dashed}
 
-  /* ============= HERO ============= */
-  .hero {
-    background:
-      radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
-      radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
-      var(--bg-deep);
-    color: #fff;
-    padding: 52px 28px 44px;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-inner {
-    max-width: 1640px;
-    margin: 0 auto;
-    position: relative;
-  }
-  .hero-eyebrow {
-    font-family: var(--mono);
-    font-size: 12.5px;
-    letter-spacing: 0.25em;
-    color: var(--gold-bright);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .hero-eyebrow::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(to right, var(--gold-bright), transparent);
-    max-width: 220px;
-  }
-  .hero-title {
-    font-family: var(--serif);
-    font-weight: 700;
-    font-size: clamp(32px, 5vw, 52px);
-    line-height: 1.1;
-    letter-spacing: -0.01em;
-    margin-bottom: 14px;
-  }
-  .hero-subtitle {
-    font-family: var(--sans);
-    font-size: clamp(14px, 1.2vw, 16px);
-    color: rgba(255,255,255,0.7);
-    margin-top: 8px;
-  }
+.bento-icon{font-size:24px;margin-bottom:auto}
+.bento-title{font-size:14px;font-weight:700;color:var(--ink);margin-top:12px;line-height:1.3}
+.bento-desc{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5}
+.bento-tag{
+  position:absolute;top:14px;right:14px;
+  font-family:var(--mono);font-size:8px;letter-spacing:.15em;font-weight:700;
+  padding:3px 8px;border-radius:10px;
+}
+.tag-gold{background:rgba(212,167,74,.15);color:var(--gold2)}
+.tag-soon{background:rgba(232,122,138,.12);color:var(--rose);font-size:7px}
 
-  /* ============= CONTENT ============= */
-  .content {
-    max-width: 1640px;
-    margin: 0 auto;
-    padding: 48px 28px;
-  }
+/* ═══ CATEGORY SECTIONS ═══ */
+.cat-section{margin-bottom:52px}
+.cat-head{
+  display:flex;align-items:baseline;gap:14px;margin-bottom:20px;
+  padding-bottom:12px;border-bottom:1px solid var(--rule);
+}
+.cat-title{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+.cat-accent{width:3px;height:18px;border-radius:2px;align-self:center}
+.cat-count{
+  font-family:var(--mono);font-size:10px;color:var(--ink4);margin-left:auto;
+  letter-spacing:.1em;font-weight:600;
+}
 
-  .category-section {
-    margin-bottom: 64px;
-  }
+/* ═══ LINK LIST — magazine style ═══ */
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.link-item{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border-radius:10px;text-decoration:none;color:inherit;
+  background:var(--glass);border:1px solid transparent;
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.link-item:hover{
+  background:var(--glass2);border-color:var(--rule);
+  transform:translateX(4px);
+}
+.link-icon{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.link-icon.daily{background:rgba(232,122,138,.1)}
+.link-icon.perform{background:rgba(160,126,232,.1)}
+.link-icon.admin{background:rgba(92,196,208,.1)}
+.link-icon.external{background:rgba(92,196,154,.1)}
 
-  .category-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 28px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--rule);
-  }
+.link-info{flex:1;min-width:0}
+.link-name{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-desc{font-size:11px;color:var(--ink4);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-arrow{
+  font-family:var(--mono);font-size:14px;color:var(--ink4);
+  opacity:0;transform:translateX(-6px);transition:all .25s;flex-shrink:0;
+}
+.link-item:hover .link-arrow{opacity:1;transform:translateX(0)}
+.link-ext{
+  font-family:var(--mono);font-size:10px;color:var(--ink4);flex-shrink:0;
+  border:1px solid var(--rule);padding:2px 6px;border-radius:4px;
+}
 
-  .category-icon {
-    font-size: 28px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+/* ═══ FOOTER ═══ */
+.map-footer{
+  border-top:1px solid var(--rule);padding:32px 0;margin-top:24px;
+  text-align:center;
+}
+.map-footer p{font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:.15em}
 
-  .category-title {
-    font-family: var(--serif);
-    font-weight: 700;
-    font-size: 24px;
-    color: var(--ink);
-  }
-
-  .category-count {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--ink-muted);
-    margin-left: auto;
-  }
-
-  /* Card Grid */
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  /* Navigation Card */
-  .nav-card {
-    background: var(--bg-card);
-    border: 1px solid var(--rule);
-    border-radius: 4px;
-    padding: 24px;
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.2, 0.4, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    border-top: 4px solid var(--rule);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .nav-card:hover {
-    transform: translateY(-6px);
-    background: var(--bg-hover);
-    border-color: var(--gold);
-    box-shadow: 0 12px 32px rgba(201, 160, 99, 0.15);
-  }
-
-  /* 카테고리별 상단 보더 색상 */
-  .nav-card.cat-daily { border-top-color: var(--cat-daily); }
-  .nav-card.cat-daily:hover { border-top-color: var(--gold); }
-
-  .nav-card.cat-perform { border-top-color: var(--cat-perform); }
-  .nav-card.cat-perform:hover { border-top-color: var(--gold); }
-
-  .nav-card.cat-admin { border-top-color: var(--cat-admin); }
-  .nav-card.cat-admin:hover { border-top-color: var(--gold); }
-
-  .nav-card.cat-external { border-top-color: var(--cat-external); }
-  .nav-card.cat-external:hover { border-top-color: var(--gold); }
-
-  .nav-card-icon {
-    font-size: 32px;
-    margin-bottom: 12px;
-  }
-
-  .nav-card-title {
-    font-family: var(--serif);
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--ink);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .nav-card-external {
-    font-size: 11px;
-    color: var(--ink-muted);
-    margin-left: auto;
-  }
-
-  .nav-card-desc {
-    font-family: var(--sans);
-    font-size: 13px;
-    color: var(--ink-muted);
-    line-height: 1.5;
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-
-  /* ============= FOOTER ============= */
-  footer {
-    background: var(--bg-deep);
-    border-top: 1px solid var(--rule);
-    padding: 32px 28px;
-    margin-top: 64px;
-  }
-
-  .footer-inner {
-    max-width: 1640px;
-    margin: 0 auto;
-  }
-
-  .footer-text {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--ink-muted);
-    text-align: center;
-  }
-
-  /* ============= RESPONSIVE ============= */
-  @media (max-width: 768px) {
-    .masthead-inner {
-      padding: 0 16px;
-    }
-    .content {
-      padding: 32px 16px;
-    }
-    .card-grid {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
-    }
-    .nav-card {
-      padding: 18px;
-    }
-    .hero {
-      padding: 40px 16px 32px;
-    }
-    .hero-title {
-      font-size: clamp(24px, 4vw, 36px);
-    }
-  }
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1024px){
+  .bento{grid-template-columns:repeat(6,1fr)}
+  .bento-primary{grid-column:span 3}
+  .bento-normal{grid-column:span 3}
+  .bento-coming{grid-column:span 3}
+}
+@media(max-width:768px){
+  .hero{min-height:280px;padding-bottom:40px}
+  .hero-inner{padding:0 20px}
+  .hero-top{padding:16px 20px}
+  .hero-stats{gap:20px}
+  .hero-stat-val{font-size:22px}
+  .content{padding:0 20px 60px}
+  .bento{grid-template-columns:repeat(2,1fr)}
+  .bento-primary,.bento-normal,.bento-coming{grid-column:span 1}
+  .link-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .bento{grid-template-columns:1fr}
+  .hero h1{font-size:28px}
+}
 </style>
 </head>
-
 <body>
 
-<!-- MASTHEAD -->
-<div class="masthead">
-  <div class="masthead-inner">
-    <div style="display: flex; align-items: center;">
-      <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
-      <div class="team-tag">GS팀</div>
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="hero-top">
+    <div class="hero-brand"><span class="hero-brand-dot"></span> SONO & TRINITY · GS팀</div>
+    <a href="gs-strategy.html" class="hero-back">← 운영전략</a>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Command Center</div>
+    <h1>Data Drives<br>Every Decision.</h1>
+    <p class="hero-sub">숫자가 전략이 되는 곳 — GS팀의 모든 대시보드, 분석 도구, 운영 시스템을 하나의 허브에서</p>
+    <div class="daily-quote" id="daily-quote"></div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-stat-val" id="stat-pages">24</span><span class="hero-stat-lbl">Total Pages</span></div>
+      <div class="hero-stat"><span class="hero-stat-val">2</span><span class="hero-stat-lbl">Repositories</span></div>
+      <div class="hero-stat"><span class="hero-stat-val">4</span><span class="hero-stat-lbl">Categories</span></div>
     </div>
   </div>
 </div>
 
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-inner">
-    <div class="hero-eyebrow">GS 데이터 시스템</div>
-    <h1 class="hero-title">영업기획 대시보드</h1>
-    <p class="hero-subtitle">전체 시스템 네비게이션 맵 · 모든 대시보드와 도구에 빠르게 접근</p>
-  </div>
-</div>
-
-<!-- CONTENT -->
+<!-- ═══ CONTENT ═══ -->
 <div class="content">
 
-  <!-- ★ 즐겨찾기 -->
-  <div class="category-section" style="margin-bottom:48px">
-    <div class="category-header" style="border-bottom-color:var(--gold)">
-      <div class="category-icon">⭐</div>
-      <div class="category-title" style="color:var(--gold-bright)">즐겨찾기</div>
-      <div class="category-count">5 pages</div>
-    </div>
-    <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
-      <a href="admin.html" class="nav-card" style="border-top:3px solid var(--gold);padding:18px">
-        <div class="nav-card-icon" style="font-size:26px;margin-bottom:8px">🔑</div>
-        <div class="nav-card-title" style="font-size:14px">관리자 키인</div>
-        <div class="nav-card-desc" style="font-size:12px;padding-top:8px">시스템 데이터 관리 및 입력</div>
+  <!-- ★ FAVORITES — Bento Grid -->
+  <div class="fav-section">
+    <div class="fav-label">Pinned · 즐겨찾기</div>
+    <div class="bento">
+      <a href="admin.html" class="bento-card bento-primary">
+        <span class="bento-tag tag-gold">ADMIN</span>
+        <span class="bento-icon">🔑</span>
+        <span class="bento-title">관리자 키인</span>
+        <span class="bento-desc">시스템 데이터 관리 및 입력</span>
       </a>
-      <a href="gs-strategy.html" class="nav-card" style="border-top:3px solid var(--gold);padding:18px">
-        <div class="nav-card-icon" style="font-size:26px;margin-bottom:8px">🎯</div>
-        <div class="nav-card-title" style="font-size:14px">운영전략 대시보드</div>
-        <div class="nav-card-desc" style="font-size:12px;padding-top:8px">3대 인사이트 + 사업계획 F/U</div>
+      <a href="gs-strategy.html" class="bento-card bento-primary">
+        <span class="bento-tag tag-gold">STRATEGY</span>
+        <span class="bento-icon">🎯</span>
+        <span class="bento-title">운영전략 대시보드</span>
+        <span class="bento-desc">3대 인사이트 + 사업계획 F/U</span>
       </a>
-      <a href="gs-report.html" class="nav-card" style="border-top:3px solid var(--gold);padding:18px">
-        <div class="nav-card-icon" style="font-size:26px;margin-bottom:8px">📑</div>
-        <div class="nav-card-title" style="font-size:14px">구축 현황 리포트</div>
-        <div class="nav-card-desc" style="font-size:12px;padding-top:8px">시스템 구축 진행 상황</div>
+      <a href="gs-report.html" class="bento-card bento-primary">
+        <span class="bento-tag tag-gold">REPORT</span>
+        <span class="bento-icon">📑</span>
+        <span class="bento-title">구축 현황 리포트</span>
+        <span class="bento-desc">시스템 구축 진행 상황</span>
       </a>
-      <a href="fcst-status.html" class="nav-card" style="border-top:3px solid var(--gold);padding:18px">
-        <div class="nav-card-icon" style="font-size:26px;margin-bottom:8px">📊</div>
-        <div class="nav-card-title" style="font-size:14px">FCST 키인 현황</div>
-        <div class="nav-card-desc" style="font-size:12px;padding-top:8px">담당자별 키인 완료 현황</div>
+      <a href="fcst-status.html" class="bento-card bento-normal">
+        <span class="bento-icon">📊</span>
+        <span class="bento-title">FCST 키인 현황</span>
+        <span class="bento-desc">담당자별 키인 완료 현황</span>
       </a>
-      <a href="#" class="nav-card" style="border-top:3px solid var(--ink-faint);padding:18px;opacity:0.5;pointer-events:none">
-        <div class="nav-card-icon" style="font-size:26px;margin-bottom:8px">📋</div>
-        <div class="nav-card-title" style="font-size:14px">주간회의자료 데이터 <span style="font-size:9px;color:var(--warning);font-family:var(--mono);font-weight:700;margin-left:4px">COMING SOON</span></div>
-        <div class="nav-card-desc" style="font-size:12px;padding-top:8px">주간회의 자료 자동 생성 (추후 제작)</div>
+      <a href="manager-analysis.html" class="bento-card bento-normal">
+        <span class="bento-icon">👤</span>
+        <span class="bento-title">담당자 분석</span>
+        <span class="bento-desc">담당자별 성과 및 활동</span>
       </a>
-    </div>
-  </div>
-
-  <!-- 데일리 리포트 -->
-  <div class="category-section">
-    <div class="category-header">
-      <div class="category-icon">📊</div>
-      <div class="category-title">데일리 리포트</div>
-      <div class="category-count">5 pages</div>
-    </div>
-    <div class="card-grid">
-      <a href="gs-strategy.html" class="nav-card cat-daily" style="border-top-color:var(--gold);">
-        <div class="nav-card-icon">🎯</div>
-        <div class="nav-card-title">운영전략 대시보드</div>
-        <div class="nav-card-desc">3대 인사이트 + 사업계획 F/U + 4개년 트렌드</div>
-      </a>
-      <a href="index.html" class="nav-card cat-daily">
-        <div class="nav-card-icon">📰</div>
-        <div class="nav-card-title">데일리 트렌드 리포트</div>
-        <div class="nav-card-desc">뉴스 자동 수집, 권역별 분석, OTA TOP4, 경쟁사 동향</div>
-      </a>
-      <a href="otb.html" class="nav-card cat-daily">
-        <div class="nav-card-icon">📈</div>
-        <div class="nav-card-title">GS 실적 리포트</div>
-        <div class="nav-card-desc">Daily OTB, 사업장별 달성률, YoY 비교</div>
-      </a>
-      <a href="booking-status.html" class="nav-card cat-daily">
-        <div class="nav-card-icon">🔖</div>
-        <div class="nav-card-title">Booking Status</div>
-        <div class="nav-card-desc">좌측 사이드바 필터, 4개월 예약현황</div>
-      </a>
-      <a href="fcst-trend.html" class="nav-card cat-daily">
-        <div class="nav-card-icon">📅</div>
-        <div class="nav-card-title">FCST 추이 분석</div>
-        <div class="nav-card-desc">Revenue Meeting PDF 파싱, 사이드바 필터</div>
+      <a href="#" class="bento-card bento-coming">
+        <span class="bento-tag tag-soon">COMING SOON</span>
+        <span class="bento-icon">📋</span>
+        <span class="bento-title">주간회의자료 데이터</span>
+        <span class="bento-desc">주간회의 자료 자동 생성</span>
       </a>
     </div>
   </div>
 
-  <!-- 실적 분석 -->
-  <div class="category-section">
-    <div class="category-header">
-      <div class="category-icon">💼</div>
-      <div class="category-title">실적 분석</div>
-      <div class="category-count">10 pages</div>
+  <!-- ── 데일리 리포트 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--rose)"></div>
+      <div class="cat-title">데일리 리포트</div>
+      <div class="cat-count">5 PAGES</div>
     </div>
-    <div class="card-grid">
-      <a href="monthly.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">📆</div>
-        <div class="nav-card-title">월별실적</div>
-        <div class="nav-card-desc">월 단위 성과 분석 및 추이</div>
+    <div class="link-grid">
+      <a href="gs-strategy.html" class="link-item">
+        <div class="link-icon daily">🎯</div>
+        <div class="link-info"><div class="link-name">운영전략 대시보드</div><div class="link-desc">3대 인사이트 + 사업계획 F/U + 4개년 트렌드</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="ytd.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🎯</div>
-        <div class="nav-card-title">연간누계</div>
-        <div class="nav-card-desc">Year-to-Date 누적 실적</div>
+      <a href="index.html" class="link-item">
+        <div class="link-icon daily">📰</div>
+        <div class="link-info"><div class="link-name">데일리 트렌드 리포트</div><div class="link-desc">뉴스 자동 수집, 권역별 분석, OTA TOP4</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="channel.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🌐</div>
-        <div class="nav-card-title">채널별 실적</div>
-        <div class="nav-card-desc">OTA, 자사몰, 법인 등 채널 분석</div>
+      <a href="otb.html" class="link-item">
+        <div class="link-icon daily">📈</div>
+        <div class="link-info"><div class="link-name">GS 실적 리포트</div><div class="link-desc">Daily OTB, 사업장별 달성률, YoY 비교</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="stay-date.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🏨</div>
-        <div class="nav-card-title">투숙일기준</div>
-        <div class="nav-card-desc">투숙일 기준 실적 분석</div>
+      <a href="booking-status.html" class="link-item">
+        <div class="link-icon daily">🔖</div>
+        <div class="link-info"><div class="link-name">Booking Status</div><div class="link-desc">좌측 사이드바 필터, 4개월 예약현황</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="booking-trend.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">📍</div>
-        <div class="nav-card-title">예약추이</div>
-        <div class="nav-card-desc">예약 트렌드 및 변동 분석</div>
-      </a>
-      <a href="manager-analysis.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">👤</div>
-        <div class="nav-card-title">담당자 분석</div>
-        <div class="nav-card-desc">담당자별 성과 및 활동</div>
-      </a>
-      <a href="product-detail.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🛏️</div>
-        <div class="nav-card-title">상품비교</div>
-        <div class="nav-card-desc">상품 간 성과 비교 분석</div>
-      </a>
-      <a href="ly-trend.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">📊</div>
-        <div class="nav-card-title">전년추이</div>
-        <div class="nav-card-desc">YoY 비교 분석</div>
-      </a>
-      <a href="ly-product.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🏆</div>
-        <div class="nav-card-title">전년상품</div>
-        <div class="nav-card-desc">전년 상품별 성과</div>
-      </a>
-      <a href="overseas.html" class="nav-card cat-perform">
-        <div class="nav-card-icon">🌏</div>
-        <div class="nav-card-title">해외사업장</div>
-        <div class="nav-card-desc">국외 사업장 실적</div>
+      <a href="fcst-trend.html" class="link-item">
+        <div class="link-icon daily">📅</div>
+        <div class="link-info"><div class="link-name">FCST 추이 분석</div><div class="link-desc">Revenue Meeting PDF 파싱, 사이드바 필터</div></div>
+        <span class="link-arrow">→</span>
       </a>
     </div>
   </div>
 
-  <!-- 관리 도구 -->
-  <div class="category-section">
-    <div class="category-header">
-      <div class="category-icon">⚙️</div>
-      <div class="category-title">관리 도구</div>
-      <div class="category-count">6 pages</div>
+  <!-- ── 실적 분석 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--violet)"></div>
+      <div class="cat-title">실적 분석</div>
+      <div class="cat-count">10 PAGES</div>
     </div>
-    <div class="card-grid">
-      <a href="admin.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">🔑</div>
-        <div class="nav-card-title">관리자 키인</div>
-        <div class="nav-card-desc">시스템 데이터 관리 및 입력</div>
+    <div class="link-grid">
+      <a href="monthly.html" class="link-item">
+        <div class="link-icon perform">📆</div>
+        <div class="link-info"><div class="link-name">월별실적</div><div class="link-desc">월 단위 성과 분석 및 추이</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="fcst-admin.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">📝</div>
-        <div class="nav-card-title">FCST 키인</div>
-        <div class="nav-card-desc">예측 데이터 입력 및 수정</div>
+      <a href="ytd.html" class="link-item">
+        <div class="link-icon perform">🎯</div>
+        <div class="link-info"><div class="link-name">연간누계</div><div class="link-desc">Year-to-Date 누적 실적</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="pumui.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">📋</div>
-        <div class="nav-card-title">품의 작성</div>
-        <div class="nav-card-desc">결재 문서 작성 및 생성</div>
+      <a href="channel.html" class="link-item">
+        <div class="link-icon perform">🌐</div>
+        <div class="link-info"><div class="link-name">채널별 실적</div><div class="link-desc">OTA, 자사몰, 법인 등 채널 분석</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="action_plan_dashboard.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">📅</div>
-        <div class="nav-card-title">주간활동일지</div>
-        <div class="nav-card-desc">주간 활동 기록 및 관리</div>
+      <a href="stay-date.html" class="link-item">
+        <div class="link-icon perform">🏨</div>
+        <div class="link-info"><div class="link-name">투숙일기준</div><div class="link-desc">투숙일 기준 실적 분석</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="fcst-status.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">📊</div>
-        <div class="nav-card-title">FCST 키인 현황</div>
-        <div class="nav-card-desc">담당자별 키인 완료 현황 및 비교</div>
+      <a href="booking-trend.html" class="link-item">
+        <div class="link-icon perform">📍</div>
+        <div class="link-info"><div class="link-name">예약추이</div><div class="link-desc">예약 트렌드 및 변동 분석</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="gs-report.html" class="nav-card cat-admin">
-        <div class="nav-card-icon">📑</div>
-        <div class="nav-card-title">구축 현황 리포트</div>
-        <div class="nav-card-desc">시스템 구축 진행 상황</div>
+      <a href="manager-analysis.html" class="link-item">
+        <div class="link-icon perform">👤</div>
+        <div class="link-info"><div class="link-name">담당자 분석</div><div class="link-desc">담당자별 성과 및 활동</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="product-detail.html" class="link-item">
+        <div class="link-icon perform">🛏️</div>
+        <div class="link-info"><div class="link-name">상품비교</div><div class="link-desc">상품 간 성과 비교 분석</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="ly-trend.html" class="link-item">
+        <div class="link-icon perform">📊</div>
+        <div class="link-info"><div class="link-name">전년추이</div><div class="link-desc">YoY 비교 분석</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="ly-product.html" class="link-item">
+        <div class="link-icon perform">🏆</div>
+        <div class="link-info"><div class="link-name">전년상품</div><div class="link-desc">전년 상품별 성과</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="overseas.html" class="link-item">
+        <div class="link-icon perform">🌏</div>
+        <div class="link-info"><div class="link-name">해외사업장</div><div class="link-desc">국외 사업장 실적</div></div>
+        <span class="link-arrow">→</span>
       </a>
     </div>
   </div>
 
-  <!-- 외부 시스템 -->
-  <div class="category-section">
-    <div class="category-header">
-      <div class="category-icon">🔗</div>
-      <div class="category-title">외부 시스템</div>
-      <div class="category-count">3 links</div>
+  <!-- ── 관리 도구 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--cyan)"></div>
+      <div class="cat-title">관리 도구</div>
+      <div class="cat-count">6 PAGES</div>
     </div>
-    <div class="card-grid">
-      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/" target="_blank" class="nav-card cat-external">
-        <div class="nav-card-icon">🏪</div>
-        <div class="nav-card-title">GS Monitor <span class="nav-card-external">↗</span></div>
-        <div class="nav-card-desc">22개 사업장 경쟁사 OTA 가격 모니터링</div>
+    <div class="link-grid">
+      <a href="admin.html" class="link-item">
+        <div class="link-icon admin">🔑</div>
+        <div class="link-info"><div class="link-name">관리자 키인</div><div class="link-desc">시스템 데이터 관리 및 입력</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" target="_blank" class="nav-card cat-external">
-        <div class="nav-card-icon">📊</div>
-        <div class="nav-card-title">팔라티움 리포트 (내부) <span class="nav-card-external">↗</span></div>
-        <div class="nav-card-desc">팔라티움 경쟁사 분석 대시보드</div>
+      <a href="fcst-admin.html" class="link-item">
+        <div class="link-icon admin">📝</div>
+        <div class="link-info"><div class="link-name">FCST 키인</div><div class="link-desc">예측 데이터 입력 및 수정</div></div>
+        <span class="link-arrow">→</span>
       </a>
-      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium-client.html" target="_blank" class="nav-card cat-external">
-        <div class="nav-card-icon">📊</div>
-        <div class="nav-card-title">팔라티움 리포트 (고객사) <span class="nav-card-external">↗</span></div>
-        <div class="nav-card-desc">고객사 제공용 경쟁 분석</div>
+      <a href="pumui.html" class="link-item">
+        <div class="link-icon admin">📋</div>
+        <div class="link-info"><div class="link-name">품의 작성</div><div class="link-desc">결재 문서 작성 및 생성</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="action_plan_dashboard.html" class="link-item">
+        <div class="link-icon admin">📅</div>
+        <div class="link-info"><div class="link-name">주간활동일지</div><div class="link-desc">주간 활동 기록 및 관리</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="fcst-status.html" class="link-item">
+        <div class="link-icon admin">📊</div>
+        <div class="link-info"><div class="link-name">FCST 키인 현황</div><div class="link-desc">담당자별 키인 완료 현황 및 비교</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="gs-report.html" class="link-item">
+        <div class="link-icon admin">📑</div>
+        <div class="link-info"><div class="link-name">구축 현황 리포트</div><div class="link-desc">시스템 구축 진행 상황</div></div>
+        <span class="link-arrow">→</span>
       </a>
     </div>
+  </div>
+
+  <!-- ── 외부 시스템 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--mint)"></div>
+      <div class="cat-title">외부 시스템</div>
+      <div class="cat-count">3 LINKS</div>
+    </div>
+    <div class="link-grid">
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/" target="_blank" class="link-item">
+        <div class="link-icon external">🏪</div>
+        <div class="link-info"><div class="link-name">GS Monitor</div><div class="link-desc">22개 사업장 경쟁사 OTA 가격 모니터링</div></div>
+        <span class="link-ext">↗ External</span>
+      </a>
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" target="_blank" class="link-item">
+        <div class="link-icon external">📊</div>
+        <div class="link-info"><div class="link-name">팔라티움 리포트 (내부)</div><div class="link-desc">팔라티움 경쟁사 분석 대시보드</div></div>
+        <span class="link-ext">↗ External</span>
+      </a>
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium-client.html" target="_blank" class="link-item">
+        <div class="link-icon external">📊</div>
+        <div class="link-info"><div class="link-name">팔라티움 리포트 (고객사)</div><div class="link-desc">고객사 제공용 경쟁 분석</div></div>
+        <span class="link-ext">↗ External</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="map-footer">
+    <p>SONO & TRINITY · GS팀 · 영업기획 대시보드 시스템 v2.0 · 2026</p>
   </div>
 
 </div>
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-text">SONO & TRINITY · GS팀 · 영업기획 대시보드 시스템 v1.0 · 2026</div>
-  </div>
-</footer>
-
+<script>
+(function(){
+  var quotes = [
+    {text:"The only way to do great work is to love what you do.",author:"Steve Jobs"},
+    {text:"In the middle of difficulty lies opportunity.",author:"Albert Einstein"},
+    {text:"Success is not final, failure is not fatal: it is the courage to continue that counts.",author:"Winston Churchill"},
+    {text:"Innovation distinguishes between a leader and a follower.",author:"Steve Jobs"},
+    {text:"The best way to predict the future is to create it.",author:"Peter Drucker"},
+    {text:"What gets measured gets managed.",author:"Peter Drucker"},
+    {text:"Strategy without tactics is the slowest route to victory. Tactics without strategy is the noise before defeat.",author:"Sun Tzu"},
+    {text:"The secret of getting ahead is getting started.",author:"Mark Twain"},
+    {text:"Excellence is not a destination but a continuously growing process.",author:"Ed Foreman"},
+    {text:"Numbers have an important story to tell. They rely on you to give them a voice.",author:"Stephen Few"},
+    {text:"Without data, you're just another person with an opinion.",author:"W. Edwards Deming"},
+    {text:"The goal is to turn data into information, and information into insight.",author:"Carly Fiorina"},
+    {text:"It is not the strongest of the species that survives, nor the most intelligent, but the one most responsive to change.",author:"Charles Darwin"},
+    {text:"Perfection is not attainable, but if we chase perfection we can catch excellence.",author:"Vince Lombardi"},
+    {text:"The only limit to our realization of tomorrow is our doubts of today.",author:"Franklin D. Roosevelt"},
+    {text:"Vision without execution is hallucination.",author:"Thomas Edison"},
+    {text:"Do what you can, with what you have, where you are.",author:"Theodore Roosevelt"},
+    {text:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},
+    {text:"Quality is not an act, it is a habit.",author:"Aristotle"},
+    {text:"Stay hungry, stay foolish.",author:"Steve Jobs"},
+    {text:"If you can dream it, you can do it.",author:"Walt Disney"},
+    {text:"Hard work beats talent when talent doesn't work hard.",author:"Tim Notke"},
+    {text:"Great things in business are never done by one person. They're done by a team of people.",author:"Steve Jobs"},
+    {text:"The way to get started is to quit talking and begin doing.",author:"Walt Disney"},
+    {text:"Your most unhappy customers are your greatest source of learning.",author:"Bill Gates"},
+    {text:"Opportunities don't happen. You create them.",author:"Chris Grosser"},
+    {text:"Don't be afraid to give up the good to go for the great.",author:"John D. Rockefeller"},
+    {text:"I find that the harder I work, the more luck I seem to have.",author:"Thomas Jefferson"},
+    {text:"Believe you can and you're halfway there.",author:"Theodore Roosevelt"},
+    {text:"A person who never made a mistake never tried anything new.",author:"Albert Einstein"},
+    {text:"The only thing standing between you and your goal is the story you keep telling yourself.",author:"Jordan Belfort"}
+  ];
+  var today = new Date();
+  var dayOfYear = Math.floor((today - new Date(today.getFullYear(),0,0)) / 86400000);
+  var q = quotes[dayOfYear % quotes.length];
+  var el = document.getElementById('daily-quote');
+  if(el) el.innerHTML = q.text + '<div class="quote-author">— ' + q.author + '</div>';
+})();
+</script>
 </body>
 </html>
