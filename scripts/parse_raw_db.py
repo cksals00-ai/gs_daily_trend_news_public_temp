@@ -10,7 +10,7 @@ CP949 인코딩, 세미콜론(;) 구분
 import os, sys, json, re, logging, glob, unicodedata, pickle
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -470,6 +470,121 @@ def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, ad
             continue
 
     logger.error(f"  YoY보정 인코딩 실패: {filepath}")
+    return 0
+
+
+def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg):
+    """27/43 예약파일에서 최초입력일자 ≤ base_date인 레코드만 집계.
+
+    동기간 OTB 산출을 위해 기준일 이전에 생성된 예약만 카운트.
+    orig_by_prop[prop][month] += {rn, rev}
+    orig_by_seg[segment][month] += {rn, rev}
+    """
+    encodings = ['cp949', 'euc-kr', 'utf-8']
+
+    for enc in encodings:
+        try:
+            with open(filepath, 'r', encoding=enc) as f:
+                header_line = f.readline().strip()
+                headers = header_line.split(';')
+                col_map = {h.strip(): i for i, h in enumerate(headers)}
+
+                has_change_prop = '변경사업장명' in col_map
+                code_col = '변경예약집계코드명' if '변경예약집계코드명' in col_map else '예약집계명'
+                code_num_col = '변경예약집계코드' if '변경예약집계코드' in col_map else '예약집계코드'
+
+                idx_prop      = col_map.get('영업장명', -1)
+                idx_cprop     = col_map.get('변경사업장명', -1) if has_change_prop else -1
+                idx_selldate  = col_map.get('판매일자', -1)
+                idx_checkin   = col_map.get('입실일자', -1)
+                idx_code_num  = col_map.get(code_num_col, -1)
+                idx_code      = col_map.get(code_col, -1)
+                idx_agent     = col_map.get('AGENT명', -1)
+                idx_pickup    = col_map.get('최초입력일자', -1)
+                idx_rooms     = col_map.get('객실수', -1)
+                idx_1night    = col_map.get('1박객실료', -1)
+                idx_member    = col_map.get('회원명', -1)
+                idx_user      = col_map.get('이용자명', -1)
+
+                ok_count = 0
+                seen_hashes = set()
+                for line in f:
+                    line_stripped = line.rstrip('\n\r')
+                    h = hash(line_stripped)
+                    if h in seen_hashes:
+                        continue
+                    seen_hashes.add(h)
+                    parts = line.split(';')
+                    plen = len(parts)
+                    try:
+                        # 최초입력일자 필터: base_date 이전 예약만
+                        if idx_pickup < 0 or idx_pickup >= plen:
+                            continue
+                        pickup_str = parts[idx_pickup].strip()
+                        if len(pickup_str) < 8:
+                            continue
+                        if pickup_str[:8] > base_date_str:
+                            continue
+
+                        # OTB 세그먼트 필터
+                        code_num  = parts[idx_code_num].strip() if idx_code_num >= 0 and idx_code_num < plen else ''
+                        code_name = parts[idx_code].strip()     if idx_code >= 0 and idx_code < plen else ''
+                        agent_nm  = parts[idx_agent].strip()    if idx_agent >= 0 and idx_agent < plen else ''
+                        file_type = detect_file_type(Path(filepath).name)
+                        segment   = classify_segment(code_num, code_name, agent_nm, file_type)
+                        if segment not in ("OTA", "G-OTA", "Inbound"):
+                            continue
+
+                        # 거래처 제거 (Inbound 예외)
+                        if idx_member >= 0 and idx_user >= 0 and idx_member < plen and idx_user < plen:
+                            member_name = parts[idx_member].strip()
+                            user_name = parts[idx_user].strip()
+                            if member_name and user_name and member_name == user_name:
+                                if code_num != '58':
+                                    continue
+
+                        # 매출조정 제거
+                        if idx_member >= 0 and idx_member < plen and '매출조정' in parts[idx_member]:
+                            continue
+                        if idx_user >= 0 and idx_user < plen and '매출조정' in parts[idx_user]:
+                            continue
+
+                        # 사업장명
+                        prop_raw  = parts[idx_prop].strip()  if idx_prop >= 0 and idx_prop < plen else ''
+                        cprop     = parts[idx_cprop].strip() if idx_cprop >= 0 and idx_cprop < plen else ''
+                        prop_name = normalize_property(cprop) if cprop else normalize_property(prop_raw)
+
+                        # 투숙월
+                        sell_date = parts[idx_selldate].strip() if idx_selldate >= 0 and idx_selldate < plen else ''
+                        if len(sell_date) < 6:
+                            sell_date = parts[idx_checkin].strip() if idx_checkin >= 0 and idx_checkin < plen else ''
+                            if len(sell_date) < 6:
+                                continue
+                        stay_month = sell_date[:6]
+
+                        # 수량
+                        rooms_str = parts[idx_rooms].strip()  if idx_rooms >= 0 and idx_rooms < plen else ''
+                        rooms = int(rooms_str) if rooms_str else 0
+                        rn = rooms if rooms > 0 else 1
+                        rate_str  = parts[idx_1night].strip() if idx_1night >= 0 and idx_1night < plen else ''
+                        night_rate = int(rate_str) if rate_str else 0
+                        rev = int(night_rate * 0.97)
+
+                        orig_by_prop[prop_name][stay_month]['rn']  += rn
+                        orig_by_prop[prop_name][stay_month]['rev'] += rev
+                        orig_by_seg[segment][stay_month]['rn']  += rn
+                        orig_by_seg[segment][stay_month]['rev'] += rev
+                        ok_count += 1
+
+                    except (IndexError, ValueError):
+                        continue
+
+                return ok_count
+
+        except UnicodeDecodeError:
+            continue
+
+    logger.error(f"  YoY예약 인코딩 실패: {filepath}")
     return 0
 
 
@@ -1115,19 +1230,22 @@ def main():
                              stay_date_agg=stay_date_agg)
     summary['file_stats'] = file_stats
 
-    # ─── YoY 동기간 보정 (22~25년 취소파일 기반) ───
-    logger.info("\n동기간 보정 계산 중 (22~25년)...")
-    today = datetime.now()
+    # ─── YoY 동기간 계산 (27/43 예약 + 28/44 취소 기반) ───
+    # 동기간 OTB = 기준일 이전 예약(27/43에서 최초입력일자 ≤ base_date)
+    #            + 기준일 이후 취소된 건(28/44에서 최초입력일자 ≤ base_date AND 취소일자 > base_date)
+    logger.info("\n동기간 계산 중 (22~26년)...")
+    # 기준일 = 어제 (GS 시스템은 당일 아침 생성 → 전일까지 데이터 반영)
+    yesterday = datetime.now() - timedelta(days=1)
     HISTORICAL_YEARS = ["2022", "2023", "2024", "2025", "2026"]
     yoy_adjusted = {}
 
     for year in HISTORICAL_YEARS:
         int_year = int(year)
-        # 오늘의 월/일을 해당 연도에 적용 (2월 29일 → 비윤년 처리)
+        # 어제의 월/일을 해당 연도에 적용 (2월 29일 → 비윤년 처리)
         try:
-            base_dt = today.replace(year=int_year)
+            base_dt = yesterday.replace(year=int_year)
         except ValueError:
-            base_dt = today.replace(year=int_year, day=28)
+            base_dt = yesterday.replace(year=int_year, day=28)
         base_date_str = base_dt.strftime("%Y%m%d")
         base_mmdd = base_dt.strftime("%m%d")
         logger.info(f"  {year}년 기준일: {base_date_str}")
@@ -1142,20 +1260,17 @@ def main():
         for fpath in cancel_files:
             parse_yoy_adjustments(str(fpath), base_date_str, adj_by_month, adj_by_prop, adj_by_segment)
 
-        # 해당 연도의 OTB 원래 booking_rn (by_property, by_segment)
-        orig_by_prop_month = defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0}))
-        orig_by_seg_month  = defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0}))
-        for (prop, region, month, channel, segment, btype), vals in agg.items():
-            if not month.startswith(year):
-                continue
-            if btype != 'booking':
-                continue
-            if segment not in ('OTA', 'G-OTA', 'Inbound'):
-                continue
-            orig_by_prop_month[prop][month]['booking_rn']  += vals['rn']
-            orig_by_prop_month[prop][month]['booking_rev'] += vals['rev']
-            orig_by_seg_month[segment][month]['booking_rn']  += vals['rn']
-            orig_by_seg_month[segment][month]['booking_rev'] += vals['rev']
+        # 해당 연도의 27/43 예약파일에서 최초입력일자 ≤ base_date인 건만 집계
+        orig_by_prop_month = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        orig_by_seg_month  = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        booking_files = [fp for fp in txt_files
+                         if fp.parent.name == year
+                         and detect_file_type(fp.name) in ("27", "43")]
+        total_booking_ok = 0
+        for fpath in booking_files:
+            total_booking_ok += parse_yoy_bookings(str(fpath), base_date_str,
+                                                    orig_by_prop_month, orig_by_seg_month)
+        logger.info(f"  {year}년 기준일 이전 예약: {total_booking_ok:,}건")
 
         # by_month (전체 사업장 합산)
         all_months_set = set(adj_by_month.keys())
@@ -1164,8 +1279,8 @@ def main():
 
         by_month = {}
         for m in sorted(all_months_set):
-            orig_rn  = sum(orig_by_prop_month[p].get(m, {}).get('booking_rn', 0)  for p in orig_by_prop_month)
-            orig_rev = sum(orig_by_prop_month[p].get(m, {}).get('booking_rev', 0) for p in orig_by_prop_month)
+            orig_rn  = sum(orig_by_prop_month[p].get(m, {}).get('rn', 0)  for p in orig_by_prop_month)
+            orig_rev = sum(orig_by_prop_month[p].get(m, {}).get('rev', 0) for p in orig_by_prop_month)
             adj_rn  = adj_by_month[m]['rn']
             adj_rev = adj_by_month[m]['rev']
             by_month[m] = {
@@ -1184,7 +1299,7 @@ def main():
             p_adj  = adj_by_prop.get(p, {})
             prop_months = {}
             for m in sorted(set(list(p_orig.keys()) + list(p_adj.keys()))):
-                orig_rn = p_orig.get(m, {}).get('booking_rn', 0)
+                orig_rn = p_orig.get(m, {}).get('rn', 0)
                 adj_rn  = p_adj.get(m, {}).get('rn', 0)
                 prop_months[m] = {
                     'booking_rn':    orig_rn + adj_rn,
@@ -1200,8 +1315,8 @@ def main():
             seg_adj  = adj_by_segment.get(seg, {})
             seg_months = {}
             for m in sorted(set(list(seg_orig.keys()) + list(seg_adj.keys()))):
-                orig_rn  = seg_orig.get(m, {}).get('booking_rn', 0)
-                orig_rev = seg_orig.get(m, {}).get('booking_rev', 0)
+                orig_rn  = seg_orig.get(m, {}).get('rn', 0)
+                orig_rev = seg_orig.get(m, {}).get('rev', 0)
                 adj_rn   = seg_adj.get(m, {}).get('rn', 0)
                 adj_rev  = seg_adj.get(m, {}).get('rev', 0)
                 seg_months[m] = {

@@ -354,6 +354,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 let db = null;       // db_aggregated.json (월별 세그먼트)
 let otb = null;      // otb_data.json (stayDateDaily)
 let occData = null;  // occ_data.json (전체OCC)
+let dailyBooking = null; // daily_booking.json (일별 OCC)
 let activeYear = new Date().getFullYear().toString();
 let activeMonth = null; // 'YYYYMM' or null — will be set to current month in loadData
 let segChart = null, pieChart = null, dailyChart = null;
@@ -403,8 +404,29 @@ const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
 
 const fmt = { num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR') };
 
-// OCC 값 조회 (사업장 필터 반영)
+// OCC 값 조회 (사업장 필터 반영, daily_booking fallback)
 function getOccValue(monthKey) {
+  // daily_booking.json fallback (더 최신 데이터)
+  if (dailyBooking && dailyBooking.by_property) {
+    if (activeProps.size > 0) {
+      let sum = 0, cnt = 0;
+      for (const p of activeProps) {
+        for (const pk in dailyBooking.by_property) {
+          if (pk.includes(p) || p.includes(pk)) {
+            const mv = (dailyBooking.by_property[pk].months || {})[monthKey];
+            if (mv && mv.occ_actual > 0) { sum += mv.occ_actual; cnt++; }
+            break;
+          }
+        }
+      }
+      if (cnt > 0) return sum / cnt;
+    } else {
+      const gt = dailyBooking.by_property['Grand Total'];
+      if (gt && gt.months && gt.months[monthKey] && gt.months[monthKey].occ_actual > 0) {
+        return gt.months[monthKey].occ_actual;
+      }
+    }
+  }
   if (!occData) return null;
   if (activeProps.size > 0) {
     // 선택된 사업장들의 OCC 평균
@@ -445,31 +467,86 @@ function renderDailyChart() {
   setText('daily-chart-title', mn + '월 · 일별 투숙 RNS (투숙일기준)');
 
   const segsToRender = activeSegment === '전체' ? SEGS : [activeSegment];
+
+  // 일별 OCC 데이터 (daily_booking.json → Grand Total)
+  const monthKeyDash = targetKey.slice(0,4) + '-' + targetKey.slice(4);
+  let dailyOcc = null;
+  if (dailyBooking && dailyBooking.by_property && dailyBooking.by_property['Grand Total']) {
+    const gtMonths = dailyBooking.by_property['Grand Total'].months || {};
+    const gtMonth = gtMonths[monthKeyDash];
+    if (gtMonth && gtMonth.daily_occ && gtMonth.daily_occ.length > 0) {
+      dailyOcc = gtMonth.daily_occ.slice(0, days.length);
+    }
+  }
+
+  const datasets = segsToRender.map(seg => ({
+    label: seg,
+    data: (segs[seg] || {}).net_rn || days.map(() => 0),
+    backgroundColor: SEG_COLORS[seg] + 'bb',
+    borderColor: SEG_COLORS[seg],
+    borderWidth: 1, borderRadius: 2,
+    yAxisID: 'y',
+  }));
+
+  // OCC 라인 추가
+  if (dailyOcc) {
+    datasets.push({
+      label: '전체OCC',
+      type: 'line',
+      data: dailyOcc,
+      borderColor: '#ff6b6b',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#ff6b6b',
+      tension: 0.3,
+      yAxisID: 'yOcc',
+      order: -1,
+    });
+    // OCC 낮은 날 표시 (40% 미만)
+    const lowOccDays = dailyOcc.map((v, i) => v > 0 && v < 40 ? i : -1).filter(i => i >= 0);
+    if (lowOccDays.length > 0) {
+      const lowLabel = '⚠ OCC < 40%: ' + lowOccDays.map(i => (i+1)+'일').join(', ');
+      setText('daily-chart-title', mn + '월 · 일별 투숙 RNS + 전체OCC%');
+    } else {
+      setText('daily-chart-title', mn + '월 · 일별 투숙 RNS + 전체OCC%');
+    }
+  }
+
   dailyChart = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels,
-      datasets: segsToRender.map(seg => ({
-        label: seg,
-        data: (segs[seg] || {}).net_rn || days.map(() => 0),
-        backgroundColor: SEG_COLORS[seg] + 'bb',
-        borderColor: SEG_COLORS[seg],
-        borderWidth: 1, borderRadius: 2,
-      }))
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: !!dailyOcc, position: 'top', labels: { color: 'rgba(255,255,255,0.6)', font: { family: 'JetBrains Mono', size: 9 }, filter: item => item.text === '전체OCC' } },
         tooltip: {
           backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
           titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
-          callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString('ko-KR') + '실' }
-        }
+          callbacks: {
+            label: c => {
+              if (c.dataset.label === '전체OCC') return ' OCC: ' + c.parsed.y.toFixed(1) + '%';
+              return ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString('ko-KR') + '실';
+            }
+          }
+        },
+        annotation: dailyOcc ? {
+          annotations: {
+            lowLine: { type: 'line', yMin: 40, yMax: 40, yScaleID: 'yOcc', borderColor: 'rgba(255,107,107,0.3)', borderWidth: 1, borderDash: [4,4] }
+          }
+        } : undefined
       },
       scales: {
         x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0 }, border: { display: false } },
-        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } }
+        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } },
+        yOcc: {
+          position: 'right', min: 0, max: 100,
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#ff6b6b88', font: { family: 'JetBrains Mono', size: 9 }, callback: v => v + '%', stepSize: 20 },
+          border: { display: false },
+          display: !!dailyOcc,
+        }
       }
     }
   });
@@ -891,10 +968,11 @@ function setText(id, v) {
 
 async function loadData() {
   try {
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       fetch('data/db_aggregated.json?t=' + Date.now()),
       fetch('data/otb_data.json?t=' + Date.now()),
       fetch('data/occ_data.json?t=' + Date.now()).catch(err => { console.warn('OCC data fetch failed:', err); return null; }),
+      fetch('data/daily_booking.json?t=' + Date.now()).catch(err => { console.warn('daily_booking fetch failed:', err); return null; }),
     ]);
     db = await r1.json();
     otb = await r2.json();
@@ -907,6 +985,9 @@ async function loadData() {
       }
     } else {
       console.warn('OCC data fetch returned null');
+    }
+    if (r4) {
+      try { dailyBooking = await r4.json(); } catch(e) { console.warn('daily_booking parse error:', e); }
     }
     buildFilters();
     render();

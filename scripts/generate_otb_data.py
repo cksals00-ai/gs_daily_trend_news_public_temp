@@ -1127,8 +1127,12 @@ def main():
     print(f"  세그먼트 탐색: {len(SEGMENT_KEYS)}개 (기타 제외)")
 
     print("Budget XLSX 로드 중...")
-    wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True, data_only=True)
-    budgets, seg_budgets = load_budget(wb)
+    budgets, seg_budgets = {}, {}
+    if BUDGET_XLSX.exists():
+        wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True, data_only=True)
+        budgets, seg_budgets = load_budget(wb)
+    else:
+        print(f"  ⚠ Budget 파일 없음: {BUDGET_XLSX.name} — budget 없이 진행")
 
     now_kst = datetime.now(KST)
 

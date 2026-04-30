@@ -52,7 +52,7 @@ NAME_MAP = {
     "르네블루 바이 쏠비치": "23.르네블루",
 }
 
-SEG_TARGETS = ["OTA", "G-OTA", "Inbound"]
+SEG_TARGETS = ["G-OTA", "OTA", "Inbound"]  # G-OTA first to avoid OTA false-matching G-OTA lines
 
 
 def extract_text(pdf):
@@ -205,8 +205,8 @@ def parse_pdf(pdf):
         # Check if this Grand Total is on a summary page (no ▣ property header nearby)
         context_start = max(0, gt_idx - 40)
         context = "\n".join(full_text_lines[context_start:gt_idx])
-        # Summary pages have segment detail rows (기명, 무기명, OTA etc.) before Grand Total
-        has_ota = any(re.match(r"\s+OTA\s", full_text_lines[j]) for j in range(max(0, gt_idx - 25), gt_idx))
+        # Summary pages have segment detail rows (기명, 무기명, OTA, G-OTA etc.) before Grand Total
+        has_ota = any(re.search(r"(?:^|\s)(?:OTA|G-OTA)\s", full_text_lines[j]) for j in range(max(0, gt_idx - 25), gt_idx))
         if has_ota:
             summary_gt_indices.append(gt_idx)
 
@@ -224,9 +224,10 @@ def parse_pdf(pdf):
             stripped = line.strip()
 
             for seg in SEG_TARGETS:
-                # Match line starting with segment name (with possible leading whitespace)
-                pattern = rf"^\s+{re.escape(seg)}\s"
-                if re.match(pattern, line):
+                # Match line containing segment name (handles "FIT G-OTA" prefix)
+                # G-OTA를 OTA보다 먼저 체크해야 오매칭 방지
+                pattern = rf"(?:^|\s){re.escape(seg)}\s"
+                if re.search(pattern, line) and not (seg == "OTA" and "G-OTA" in line):
                     nums = parse_nums(line)
                     if len(nums) >= 6:
                         # First number group: budget_rn, then skip %, ADR, rev, rev%
