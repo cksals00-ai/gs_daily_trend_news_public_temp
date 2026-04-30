@@ -372,6 +372,28 @@ const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
 
 const fmt = { num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR') };
 
+// OCC 값 조회 (사업장 필터 반영)
+function getOccValue(monthKey) {
+  if (!occData) return null;
+  if (activeProps.size > 0) {
+    // 선택된 사업장들의 OCC 평균
+    const props = occData.properties || {};
+    let sum = 0, cnt = 0;
+    for (const p of activeProps) {
+      // 사업장명 매칭 (키에 번호+이름 형식)
+      for (const pk in props) {
+        if (pk.includes(p) || p.includes(pk.replace(/^\d+\./, ''))) {
+          const v = props[pk][monthKey];
+          if (v != null) { sum += v; cnt++; }
+          break;
+        }
+      }
+    }
+    return cnt > 0 ? sum / cnt : null;
+  }
+  return occData.total ? occData.total[monthKey] : null;
+}
+
 function renderDailyChart() {
   const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
   const monthKeys = Object.keys(stayDaily).filter(k => k.startsWith(activeYear)).sort();
@@ -527,32 +549,30 @@ function render() {
   setText('kpi-inbound-sub', months.length + '개월 누계');
   setText('kpi-total', fmt.num(totAll));
   setText('kpi-total-sub', months.length + '개월 · 3세그먼트 합계');
-  // 전체OCC KPI — 현재 선택된 연도의 당월(없으면 occ_data에서 첫 가용월) 기준
-  if (occData && occData.total) {
+  // OCC KPI — 사업장 필터 반영
+  if (occData) {
     const nowM = new Date().getMonth() + 1;
     const tryKey = activeYear + '-' + String(nowM).padStart(2, '0');
     let occKey = tryKey;
-    let occV = occData.total[occKey];
+    let occV = getOccValue(occKey);
     if (occV == null) {
-      const yearKeys = Object.keys(occData.total).filter(k => k.startsWith(activeYear)).sort();
-      if (yearKeys.length > 0) {
-        occKey = yearKeys[0];
-        occV = occData.total[occKey];
+      const refKeys = Object.keys(occData.total || {}).filter(k => k.startsWith(activeYear)).sort();
+      for (const rk of refKeys) {
+        const tv = getOccValue(rk);
+        if (tv != null) { occKey = rk; occV = tv; break; }
       }
     }
     if (occV != null) {
       setText('kpi-occ', occV.toFixed(1));
-      setText('kpi-occ-sub', parseInt(occKey.slice(5)) + '월 Booking Status 기준');
-      console.log('OCC KPI rendered:', occKey, occV);
+      const label = activeProps.size > 0 ? parseInt(occKey.slice(5)) + '월 선택사업장 기준' : parseInt(occKey.slice(5)) + '월 Booking Status 기준';
+      setText('kpi-occ-sub', label);
     } else {
       setText('kpi-occ', '—');
       setText('kpi-occ-sub', '데이터 없음');
-      console.warn('No OCC data for year:', activeYear);
     }
   } else {
     setText('kpi-occ', '—');
-    setText('kpi-occ-sub', occData ? '데이터 없음' : 'OCC 로드 실패');
-    console.warn('OCC data not loaded properly:', occData);
+    setText('kpi-occ-sub', 'OCC 로드 실패');
   }
 
   if (segChart) segChart.destroy();
@@ -616,7 +636,7 @@ function render() {
 
     // OCC for this month
     const occMonthKey = activeYear + '-' + String(parseInt(months[i].slice(4))).padStart(2, '0');
-    const occVal = occData && occData.total && occData.total[occMonthKey] != null ? occData.total[occMonthKey] : null;
+    const occVal = getOccValue(occMonthKey);
     const occHtml = occVal != null ? occVal.toFixed(1) + '%' : '—';
     const occColor = occVal != null ? (occVal >= 70 ? 'var(--positive)' : occVal >= 50 ? 'var(--warning)' : 'var(--negative)') : 'var(--ink-faint)';
 
@@ -652,7 +672,7 @@ function render() {
   const tTot = tOTA + tGOTA + tIB;
   // Average OCC across displayed months
   const occMonths = months.map(m => activeYear + '-' + String(parseInt(m.slice(4))).padStart(2, '0'));
-  const occVals = occMonths.map(k => occData && occData.total ? occData.total[k] : null).filter(v => v != null);
+  const occVals = occMonths.map(k => getOccValue(k)).filter(v => v != null);
   const avgOcc = occVals.length > 0 ? (occVals.reduce((a, v) => a + v, 0) / occVals.length).toFixed(1) + '%' : '—';
   rows += `<tr class="total-row">
     <td>합계</td>
