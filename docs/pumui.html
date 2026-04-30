@@ -524,6 +524,7 @@ function getRmTotal(month){
 }
 
 /* ─── Format helpers ─── */
+let lastMonthData = [];
 const fmt = (n,dec=0)=>{
   if(n==null || isNaN(n)) return '—';
   return n.toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
@@ -558,7 +559,7 @@ function generateTables(){
   const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join(' + ') : selPropsArr[0].label;
 
   // Build per-month aggregated data
-  const monthData = selMonthsArr.map(month=>{
+  lastMonthData = selMonthsArr.map(month=>{
     /* ── 전체 (Booking Status + Revenue Meeting) ── */
     let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
     let t_otb_rn=0, t_otb_occ=0, t_otb_adr_w=0, t_otb_rev=0;
@@ -687,6 +688,7 @@ function generateTables(){
 
   // Render
   let rows = '';
+  const monthData = lastMonthData;
   monthData.forEach((d,idx)=>{
     const border = idx>0 ? 'border-top:2px solid var(--rule-strong);' : '';
 
@@ -854,7 +856,7 @@ function handleXlsxUpload(e){
 }
 
 function parseYokumXlsx(wb){
-  const result = {갑지:null, 상품:[]};
+  const result = {갑지:null, 상품:[], facility:null};
 
   // 갑지 시트 파싱
   const gapjiName = wb.SheetNames.find(s=>s.trim().startsWith('갑지') && !s.includes('기존') && !s.includes('목표'));
@@ -871,18 +873,25 @@ function parseYokumXlsx(wb){
       if(label==='상품구성') info.product=val;
       if(label==='기준인원') info.people=val;
     });
-    // 부대시설 요금
-    const facilityRows = [];
-    let inFacility=false;
-    rows.forEach(r=>{
-      if(String(r[1]||'').includes('부대시설 요금')) inFacility=true;
-      if(inFacility && (String(r[1]||'').trim()==='정상가'||String(r[1]||'').trim()==='')){
-        const vals = r.slice(1).map(v=>v);
-        if(vals.some(v=>typeof v==='number')) facilityRows.push(r);
+    // 부대시설 요금 (갑지 R22~)
+    const fac = {조식:{peak:null,off:null},석식:{peak:null,off:null},오션:{peak:null,off:null},레전드:{peak:null,off:null}};
+    let facSection=false;
+    rows.forEach((r,ri)=>{
+      if(String(r[1]||'').includes('부대시설 요금')) facSection=true;
+      if(!facSection) return;
+      const lbl = String(r[1]||'').trim();
+      const period = String(r[2]||'').trim();
+      const who = String(r[3]||'').trim();
+      if(lbl==='정상가'&&(period==='주중'||period==='주말')&&who==='대인'){
+        // col4=조식, col6=석식, col8=오션, col10=레전드
+        if(!fac.조식.peak && typeof r[4]==='number') fac.조식.peak=r[4];
+        if(!fac.석식.peak && typeof r[6]==='number') fac.석식.peak=r[6];
+        if(!fac.오션.peak && typeof r[8]==='number') fac.오션.peak=r[8];
+        if(!fac.레전드.peak && typeof r[10]==='number') fac.레전드.peak=r[10];
       }
     });
-    info.facilityRows = facilityRows;
     result.갑지 = info;
+    result.facility = fac;
   }
 
   // 상품① ② ③ 시트 파싱
@@ -890,24 +899,18 @@ function parseYokumXlsx(wb){
     const ws = wb.Sheets[sn];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     const product = {name:sn, items:[]};
-    // 요금 데이터: row 21+ (0-indexed: 20+), columns based on header
-    // 정상가: col 7(기명), 8(무기명), 9(FIT)
-    // 배분가: col 22(기명), 24(무기명), 26(FIT)
-    // 판매가 3인: col 37(기명), 38(무기명), 39(FIT)
     for(let i=20; i<rows.length; i++){
       const r = rows[i];
       if(!r || r.length<10) continue;
-      const month = r[1]; const roomType = r[3]||''; const viewType = r[4]||''; const season = r[6]||'';
-      if(!season && !month) continue;
+      const season = String(r[6]||'').trim();
+      if(!season) continue;
       const item = {
-        month: month||'', roomType: roomType||'', viewType: viewType||'', season: String(season),
+        season,
         regular: {named:r[7], unnamed:r[8], fit:r[9]},
         distributed: {named:r[22], unnamed:r[24], fit:r[26]},
         selling3: {named:r[37]||r[41], unnamed:r[38]||r[42], fit:r[39]||r[43]},
       };
-      if(typeof item.regular.named==='number' || typeof item.distributed.named==='number'){
-        product.items.push(item);
-      }
+      if(typeof item.regular.named==='number') product.items.push(item);
     }
     result.상품.push(product);
   });
@@ -922,66 +925,181 @@ function renderYokumPreview(data, filename){
     return;
   }
 
-  const fmtW = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : '—';
-  const fmtP = v => typeof v==='number' ? v.toLocaleString('ko-KR') : '—';
+  // 모든 상품 시트의 아이템을 합쳐서 min/max 계산
+  const allItems = data.상품.flatMap(p=>p.items);
+  const peakSeasons = ['토요일','골드'];
+  const offSeasons = ['주중'];
+  const peak = allItems.filter(it=>peakSeasons.includes(it.season));
+  const off = allItems.filter(it=>offSeasons.includes(it.season));
 
-  let html = `<div class="table-block">
-    <div class="table-block-header">
-      <span class="table-block-title">요금안 — ${filename}</span>
-      <span class="table-block-sub">${data.갑지?.salePeriod||''} · ${data.갑지?.channel||''}</span>
-    </div>`;
+  const minMax = (arr, fn) => {
+    const nums = arr.map(fn).filter(v=>typeof v==='number'&&v>0);
+    if(!nums.length) return null;
+    const mn=Math.min(...nums), mx=Math.max(...nums);
+    return {min:mn, max:mx};
+  };
+  const fmtK = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : '—';
+  const rangeK = mm => {
+    if(!mm) return '—';
+    const a=fmtK(mm.min), b=fmtK(mm.max);
+    return a===b ? a : `${a}~${b}`;
+  };
+  const discRange = (regMM, distMM) => {
+    if(!regMM||!distMM) return '—';
+    const d1 = Math.round((1-distMM.min/regMM.max)*100);
+    const d2 = Math.round((1-distMM.max/regMM.min)*100);
+    const lo=Math.min(d1,d2), hi=Math.max(d1,d2);
+    return lo===hi ? `${lo}%` : `${lo}%~${hi}%`;
+  };
 
-  data.상품.forEach(prod=>{
-    html += `<div style="margin:12px 0 4px 0;font-size:12px;font-weight:700;color:var(--gold);">${prod.name}</div>`;
-    html += `<div class="table-wrap"><table class="forecast-table" style="font-size:11px;">
-      <thead><tr>
-        <th>월</th><th>타입</th><th>뷰</th><th>시즌</th>
-        <th colspan="3" style="border-bottom:1px solid var(--gold);color:var(--gold-bright);">정상가 [천원]</th>
-        <th colspan="3" style="border-bottom:1px solid var(--info);color:var(--info);">배분가 [천원]</th>
-        <th colspan="3" style="border-bottom:1px solid #4ade80;color:#4ade80;">판매가 [천원]</th>
-      </tr>
-      <tr>
-        <th></th><th></th><th></th><th></th>
-        <th>기명</th><th>무기명</th><th>FIT</th>
-        <th>기명</th><th>무기명</th><th>FIT</th>
-        <th>기명</th><th>무기명</th><th>FIT</th>
-      </tr></thead><tbody>`;
-    let prevMonth='', prevRoom='', prevView='';
-    prod.items.forEach(it=>{
-      const m = it.month||'';
-      const rt = it.roomType||'';
-      const vt = it.viewType||'';
-      html += `<tr>
-        <td>${m!==prevMonth?m:''}</td>
-        <td>${rt!==prevRoom?rt:''}</td>
-        <td>${vt!==prevView?vt:''}</td>
-        <td>${it.season}</td>
-        <td>${fmtW(it.regular.named)}</td><td>${fmtW(it.regular.unnamed)}</td><td>${fmtW(it.regular.fit)}</td>
-        <td>${fmtW(it.distributed.named)}</td><td>${fmtW(it.distributed.unnamed)}</td><td>${fmtW(it.distributed.fit)}</td>
-        <td>${fmtW(it.selling3.named)}</td><td>${fmtW(it.selling3.unnamed)}</td><td>${fmtW(it.selling3.fit)}</td>
-      </tr>`;
-      if(m) prevMonth=m;
-      if(rt) prevRoom=rt;
-      if(vt) prevView=vt;
-    });
-    html += '</tbody></table></div>';
-  });
+  // 객실 정상가/배분가
+  const room = {
+    mem_peak: minMax(peak, i=>i.regular.unnamed),
+    mem_off: minMax(off, i=>i.regular.unnamed),
+    fit_peak: minMax(peak, i=>i.regular.fit),
+    fit_off: minMax(off, i=>i.regular.fit),
+    mem_peak_d: minMax(peak, i=>i.distributed.unnamed),
+    mem_off_d: minMax(off, i=>i.distributed.unnamed),
+    fit_peak_d: minMax(peak, i=>i.distributed.fit),
+    fit_off_d: minMax(off, i=>i.distributed.fit),
+  };
 
-  html += '</div>';
-  preview.innerHTML = html;
+  // 판매가
+  const sell = {
+    mem_peak: minMax(peak, i=>i.selling3.unnamed),
+    mem_off: minMax(off, i=>i.selling3.unnamed),
+    fit_peak: minMax(peak, i=>i.selling3.fit),
+    fit_off: minMax(off, i=>i.selling3.fit),
+  };
+
+  // 폼 자동입력
+  const setVal = (id,v) => { const el=document.getElementById(id); if(el&&v!=='—') el.value=v; };
+  setVal('f-room-mem-peak', rangeK(room.mem_peak));
+  setVal('f-room-mem-off', rangeK(room.mem_off));
+  setVal('f-room-fit-peak', rangeK(room.fit_peak));
+  setVal('f-room-fit-off', rangeK(room.fit_off));
+  setVal('f-room-mem-peak-dist', rangeK(room.mem_peak_d));
+  setVal('f-room-mem-off-dist', rangeK(room.mem_off_d));
+  setVal('f-room-fit-peak-dist', rangeK(room.fit_peak_d));
+  setVal('f-room-fit-off-dist', rangeK(room.fit_off_d));
+  setVal('f-room-disc-mem-peak', discRange(room.mem_peak, room.mem_peak_d));
+  setVal('f-room-disc-mem-off', discRange(room.mem_off, room.mem_off_d));
+  setVal('f-room-disc-fit-peak', discRange(room.fit_peak, room.fit_peak_d));
+  setVal('f-room-disc-fit-off', discRange(room.fit_off, room.fit_off_d));
+  // 판매가
+  setVal('f-sell-mem-peak', rangeK(sell.mem_peak));
+  setVal('f-sell-mem-off', rangeK(sell.mem_off));
+  setVal('f-sell-fit-peak', rangeK(sell.fit_peak));
+  setVal('f-sell-fit-off', rangeK(sell.fit_off));
+  setVal('f-sell-disc-mem', discRange(room.mem_peak, sell.mem_peak));
+  setVal('f-sell-disc-fit', discRange(room.fit_peak, sell.fit_peak));
+  // 부대시설
+  if(data.facility){
+    const f=data.facility;
+    setVal('f-fb-bk-peak', f.조식.peak?fmtK(f.조식.peak):'');
+    setVal('f-fb-dn-peak', f.석식.peak?fmtK(f.석식.peak):'');
+    setVal('f-fb-ocean-peak', f.오션.peak?fmtK(f.오션.peak):'');
+    setVal('f-fb-legend-peak', f.레전드.peak?fmtK(f.레전드.peak):'');
+  }
+  // 갑지 정보
+  if(data.갑지){
+    const g=data.갑지;
+    setVal('f-channel', g.channel||'');
+    setVal('f-sale-period', g.salePeriod||'');
+    setVal('f-stay-period', g.stayPeriod||'');
+    setVal('f-product', g.product||'');
+  }
+
+  // 요약 프리뷰 표시
+  preview.innerHTML = `<div style="padding:8px 12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;font-size:11px;color:var(--ink-muted);">
+    <span style="color:var(--gold);font-weight:700;">✓ ${filename}</span> —
+    상품 ${data.상품.length}개 시트, ${allItems.length}개 요금행 파싱 완료.
+    위 폼에 min~max 자동입력됨.
+  </div>`;
 }
 
 function addToExcelDownload(){
-  // Include form data in the Excel download alongside forecast tables
-  const tbl = document.getElementById('forecast-main-table');
-  if(!tbl){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
+  if(!lastMonthData.length){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
 
   const wb = XLSX.utils.book_new();
   const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
   const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
+  const segsArr = [...selectedSegs];
 
-  // Forecast sheet
-  const ws = XLSX.utils.table_to_sheet(tbl);
+  // Forecast sheet — 수동 빌드 (셀 서식 적용)
+  const header1 = ['월','항목','전체 (RM)','','','','','','GS ('+segsArr.join('+')+')','','','','',''];
+  const header2 = ['','','목표','현재OTB','진행률','FCST','증감','달성률','목표','현재OTB','진행률','FCST','증감','달성률'];
+  const aoa = [header1, header2];
+
+  const revUnit = v => (v!=null&&!isNaN(v)) ? Math.round(v) : null; // 백만원
+
+  lastMonthData.forEach(d=>{
+    // OCC
+    aoa.push([d.month+'월','OCC',
+      d.t_bud_occ_avg!=null?d.t_bud_occ_avg/100:null, d.t_otb_occ_avg!=null?d.t_otb_occ_avg/100:null,
+      d.t_occ_ach!=null?d.t_occ_ach/100:null,
+      d.t_fcst_occ!=null?d.t_fcst_occ/100:null,
+      d.t_occ_f_diff!=null?d.t_occ_f_diff/100:null,
+      d.t_occ_f_ach!=null?d.t_occ_f_ach/100:null,
+      d.gs_occ_bud!=null?d.gs_occ_bud/100:null, d.gs_occ_otb!=null?d.gs_occ_otb/100:null,
+      d.gs_occ_ach!=null?d.gs_occ_ach/100:null,
+      d.gs_occ_fcst!=null?d.gs_occ_fcst/100:null,
+      d.gs_occ_f_diff!=null?d.gs_occ_f_diff/100:null,
+      d.gs_occ_f_ach!=null?d.gs_occ_f_ach/100:null]);
+    // RNs
+    aoa.push(['','RNs',
+      d.t_bud_rn||null, d.t_otb_rn||null, d.t_rn_ach!=null?d.t_rn_ach/100:null,
+      d.t_fcst_rn||null, d.t_fcst_diff_rn, d.t_fcst_ach_rn!=null?d.t_fcst_ach_rn/100:null,
+      d.gs_bud_rn||null, d.gs_otb_rn||null, d.gs_rn_ach!=null?d.gs_rn_ach/100:null,
+      d.gs_fcst_rn||null, d.gs_fcst_diff_rn, d.gs_fcst_ach_rn!=null?d.gs_fcst_ach_rn/100:null]);
+    // ADR
+    aoa.push(['','ADR',
+      d.t_adr_bud||null, d.t_adr_otb||null, d.t_adr_ach!=null?d.t_adr_ach/100:null,
+      d.t_adr_fcst||null, d.t_adr_f_diff, d.t_adr_f_ach!=null?d.t_adr_f_ach/100:null,
+      d.gs_adr_bud||null, d.gs_adr_otb||null, d.gs_adr_ach!=null?d.gs_adr_ach/100:null,
+      d.gs_adr_fcst||null, d.gs_adr_f_diff, d.gs_adr_f_ach!=null?d.gs_adr_f_ach/100:null]);
+    // REV
+    aoa.push(['','REV',
+      revUnit(d.t_rev_bud), revUnit(d.t_rev_otb), d.t_rev_ach!=null?d.t_rev_ach/100:null,
+      revUnit(d.t_rev_fcst), revUnit(d.t_rev_f_diff), d.t_rev_f_ach!=null?d.t_rev_f_ach/100:null,
+      revUnit(d.gs_rev_bud), revUnit(d.gs_rev_otb), d.gs_rev_ach!=null?d.gs_rev_ach/100:null,
+      revUnit(d.gs_rev_fcst), revUnit(d.gs_rev_f_diff), d.gs_rev_f_ach!=null?d.gs_rev_f_ach/100:null]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // 셀 서식 적용
+  const pctFmt = '0.0%';
+  const numFmt = '#,##0';
+  const diffPctFmt = '+0.0%p;-0.0%p;0.0%p';
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let R=2; R<=range.e.r; R++){
+    const rowType = aoa[R]?.[1]; // OCC, RNs, ADR, REV
+    for(let C=2; C<=13; C++){
+      const addr = XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr]) continue;
+      const colIdx = (C-2)%6; // 0=목표,1=OTB,2=진행률,3=FCST,4=증감,5=달성률
+      if(rowType==='OCC'){
+        if(colIdx===4) ws[addr].z = '+0.0%p;-0.0%p;0.0%p';
+        else ws[addr].z = pctFmt;
+      } else if(rowType==='RNs'){
+        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
+        else ws[addr].z = numFmt;
+      } else if(rowType==='ADR'){
+        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
+        else ws[addr].z = numFmt;
+      } else if(rowType==='REV'){
+        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
+        else ws[addr].z = '#,##0';
+      }
+    }
+  }
+  ws['!cols']=[{wch:6},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8}];
+  // 헤더 병합
+  ws['!merges']=[
+    {s:{r:0,c:2},e:{r:0,c:7}}, // 전체 (RM)
+    {s:{r:0,c:8},e:{r:0,c:13}}, // GS
+  ];
   XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
 
   // 기획전 상세 sheet
