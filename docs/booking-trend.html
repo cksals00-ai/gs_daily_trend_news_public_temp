@@ -284,14 +284,22 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 
     <div class="table-card">
       <div class="table-card-header">
-        <span class="table-card-title">월별 RNS 비교표</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
+        <span class="table-card-title">주별 예약 추이 (7일 간격)</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="weekly-label">—</span>
       </div>
-      <div class="table-wrap">
-        <table class="pivot" id="trend-table">
-          <thead id="trend-thead"></thead>
-          <tbody id="trend-tbody">
-            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+      <div class="table-wrap" style="max-height:500px;overflow-y:auto;">
+        <table class="pivot" id="weekly-table">
+          <thead style="position:sticky;top:0;background:var(--bg-deep);z-index:10;">
+            <tr>
+              <th style="text-align:left;">기간</th>
+              <th>TY 예약</th>
+              <th>LY 동기간</th>
+              <th>차이</th>
+              <th>YoY%</th>
+            </tr>
+          </thead>
+          <tbody id="weekly-tbody">
+            <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -368,6 +376,87 @@ function getYearTotal(year, months) {
   return { rns, rev, count, adr: rns > 0 ? (rev / rns) * 1_000_000 : 0 };
 }
 
+function renderWeeklyTable() {
+  if (!db || !db.net_daily) return;
+  const nd = db.net_daily;
+  const yr = parseInt(activeYear);
+  const lyYr = yr - 1;
+  const tbody = document.getElementById('weekly-tbody');
+  if (!tbody) return;
+
+  // Build 7-day intervals for the year
+  const weeks = [];
+  let start = new Date(yr, 0, 1); // Jan 1
+  const today = new Date();
+
+  while (start.getFullYear() === yr) {
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    if (end > today && start <= today) {
+      // Current partial week: end at today
+      end.setTime(today.getTime());
+    }
+    if (start > today) break;
+
+    // Sum TY
+    let tyRn = 0;
+    let lyRn = 0;
+    const d = new Date(start);
+    while (d <= end && d.getFullYear() === yr) {
+      const ds = String(d.getFullYear()) + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      if (nd[ds]) tyRn += nd[ds].net_rn || 0;
+      // LY same calendar date
+      const lyDs = String(lyYr) + ds.slice(4);
+      if (nd[lyDs]) lyRn += nd[lyDs].net_rn || 0;
+      d.setDate(d.getDate() + 1);
+    }
+
+    const sm = start.getMonth()+1, sd = start.getDate();
+    const em = end.getMonth()+1, ed = end.getDate();
+    const label = `${sm}/${sd}~${em}/${ed}`;
+
+    weeks.push({ label, tyRn, lyRn });
+
+    start = new Date(end);
+    start.setDate(start.getDate() + 1);
+  }
+
+  // Show most recent weeks first (reverse), limit to reasonable count
+  weeks.reverse();
+
+  let totalTy = 0, totalLy = 0;
+  let rows = '';
+  weeks.forEach(w => {
+    totalTy += w.tyRn;
+    totalLy += w.lyRn;
+    const diff = w.tyRn - w.lyRn;
+    const yoy = w.lyRn > 0 ? ((w.tyRn / w.lyRn - 1) * 100) : null;
+    const diffColor = diff >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const yoyColor = yoy != null ? (yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+    rows += `<tr>
+      <td style="text-align:left;">${w.label}</td>
+      <td>${w.tyRn.toLocaleString('ko-KR')}</td>
+      <td>${w.lyRn.toLocaleString('ko-KR')}</td>
+      <td style="color:${diffColor};">${(diff >= 0 ? '+' : '') + diff.toLocaleString('ko-KR')}</td>
+      <td style="color:${yoyColor};">${yoy != null ? (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%' : '—'}</td>
+    </tr>`;
+  });
+
+  // Total row
+  const totalDiff = totalTy - totalLy;
+  const totalYoy = totalLy > 0 ? ((totalTy / totalLy - 1) * 100) : null;
+  rows += `<tr class="total-row">
+    <td style="text-align:left;">합계 (${activeYear}년)</td>
+    <td>${totalTy.toLocaleString('ko-KR')}</td>
+    <td>${totalLy.toLocaleString('ko-KR')}</td>
+    <td style="color:${totalDiff >= 0 ? 'var(--positive)' : 'var(--negative)'};">${(totalDiff >= 0 ? '+' : '') + totalDiff.toLocaleString('ko-KR')}</td>
+    <td style="color:${totalYoy != null ? (totalYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : ''};">${totalYoy != null ? (totalYoy >= 0 ? '+' : '') + totalYoy.toFixed(1) + '%' : '—'}</td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+  setText('weekly-label', activeYear + ' vs ' + lyYr + ' · ' + weeks.length + '주');
+}
+
 function render() {
   const years = db.meta.years.filter(y => db.meta.months.some(m => m.startsWith(y)));
   const monthLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -441,31 +530,8 @@ function render() {
     ).join('');
   }
 
-  // Table
-  const thead = document.getElementById('trend-thead');
-  const tbody = document.getElementById('trend-tbody');
-  thead.innerHTML = '<tr><th style="text-align:left;">월</th>' +
-    years.map(y => `<th>${y}년</th>`).join('') + '</tr>';
-
-  const yearTotals = years.map(() => 0);
-  let trows = '';
-  for (let m = 1; m <= 12; m++) {
-    const cells = years.map((y, i) => {
-      const key = y + String(m).padStart(2, '0');
-      const data = getMonthData(key);
-      const val = data ? data.net_rn : null;
-      if (val != null) yearTotals[i] += val;
-      const cls = y === activeYear ? ' class="this-year"' : '';
-      return `<td${cls}>${val != null ? val.toLocaleString('ko-KR') : '—'}</td>`;
-    }).join('');
-    trows += `<tr><td>${m}월</td>${cells}</tr>`;
-  }
-  trows += '<tr class="total-row"><td>합계</td>' +
-    years.map((y, i) => {
-      const cls = y === activeYear ? ' class="this-year"' : '';
-      return `<td${cls}>${yearTotals[i].toLocaleString('ko-KR')}</td>`;
-    }).join('') + '</tr>';
-  tbody.innerHTML = trows;
+  // Weekly table
+  renderWeeklyTable();
 }
 
 function buildSegChips() {
