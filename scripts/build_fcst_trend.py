@@ -14,6 +14,11 @@ from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
 
+# 파싱 중 멈추는 PDF 제외 목록
+SKIP_PDFS = {
+    "Revenue Meeting_2024.01.24.pdf",
+}
+
 try:
     import pdfplumber
     HAS_PDFPLUMBER = True
@@ -239,6 +244,9 @@ def main():
     all_years = set()
 
     for pdf in pdfs:
+        if pdf.name in SKIP_PDFS:
+            print(f"  SKIP {pdf.name} (블랙리스트)")
+            continue
         snap_date = detect_snapshot_date(pdf.name)
         year = detect_year(pdf.name)
         if not snap_date or not year:
