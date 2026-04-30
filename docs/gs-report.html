@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS 시스템 구축 현황 리포트</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+  :root {
+    /* ========== 다크모드 베이스 ========== */
+    --bg: #1a1d23;
+    --bg-card: #252932;
+    --bg-deep: #14171c;
+    --bg-soft: #2d3138;
+    --bg-hover: #353a44;
+
+    /* ========== 텍스트 색상 ========== */
+    --ink: #f5f5f7;
+    --ink-soft: #e0e0e3;
+    --ink-muted: #a8acb3;
+    --ink-faint: #7a7e85;
+
+    /* ========== 액센트 색상 ========== */
+    --gold: #c9a063;
+    --gold-bright: #e6b970;
+    --positive: #4caf6f;
+    --positive-bg: #1f3a28;
+    --warning: #e8a256;
+    --warning-bg: #3d2e1a;
+    --negative: #e57373;
+    --negative-bg: #3d1f1f;
+    --info: #5a9fc4;
+    --info-bg: #1a2e3d;
+
+    --rule: rgba(255,255,255,0.12);
+
+    /* 폰트 */
+    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --script: 'Nanum Pen Script', 'Pretendard Variable', cursive;
+    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --mono: 'JetBrains Mono', 'Pretendard Variable', 'D2Coding', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 15.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    word-break: keep-all;
+  }
+
+  /* ============= MASTHEAD ============= */
+  .masthead {
+    background: var(--bg-deep);
+    color: #fff;
+    padding: 16px 0;
+    border-bottom: 3px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .masthead-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .logo-mark {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--gold-bright);
+    letter-spacing: 0.01em;
+  }
+  .logo-mark .amp {
+    color: #fff;
+    font-family: var(--script);
+    font-weight: 400;
+    padding: 0 6px;
+    font-size: 26px;
+  }
+  .team-tag {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.65);
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding-left: 18px;
+    margin-left: 18px;
+  }
+
+  /* ============= HERO ============= */
+  .hero {
+    background:
+      radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
+      var(--bg-deep);
+    color: #fff;
+    padding: 52px 28px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.25em;
+    color: var(--gold-bright);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-bright), transparent);
+    max-width: 220px;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .hero-subtitle {
+    font-family: var(--sans);
+    font-size: clamp(14px, 1.2vw, 16px);
+    color: rgba(255,255,255,0.7);
+    margin-top: 8px;
+  }
+
+  /* ============= CONTENT ============= */
+  .content {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 48px 28px;
+  }
+
+  /* Section */
+  .report-section {
+    margin-bottom: 64px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--ink);
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  /* Status Cards Grid */
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .status-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Status Badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
+
+  .status-badge.complete {
+    background: var(--positive-bg);
+    color: var(--positive);
+  }
+
+  .status-badge.in-progress {
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .status-badge.planned {
+    background: var(--info-bg);
+    color: var(--info);
+  }
+
+  .status-badge::before {
+    content: "●";
+    font-size: 8px;
+  }
+
+  .status-card-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .status-card-desc {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.6;
+  }
+
+  /* Detailed List Items */
+  .detail-list {
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid var(--gold);
+    padding: 20px;
+    margin: 16px 0;
+    border-radius: 2px;
+  }
+
+  .detail-list-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  .detail-list-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-list-icon {
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* Tech Stack */
+  .tech-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .tech-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--rule);
+    padding: 16px;
+    border-radius: 4px;
+  }
+
+  .tech-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .tech-value {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  /* ============= FOOTER ============= */
+  footer {
+    background: var(--bg-deep);
+    border-top: 1px solid var(--rule);
+    padding: 32px 28px;
+    margin-top: 64px;
+  }
+
+  .footer-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ============= RESPONSIVE ============= */
+  @media (max-width: 768px) {
+    .masthead-inner {
+      padding: 0 16px;
+    }
+    .content {
+      padding: 32px 16px;
+    }
+    .status-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      padding: 40px 16px 32px;
+    }
+    .hero-title {
+      font-size: clamp(24px, 4vw, 36px);
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-inner">
+    <div style="display: flex; align-items: center;">
+      <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
+      <div class="team-tag">GS팀</div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">System Status Report</div>
+    <h1 class="hero-title">시스템 구축 현황</h1>
+    <p class="hero-subtitle">GS팀 데이터 기반 의사결정 시스템 · 진행 상황 리포트 · 2026년 4월</p>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- 프로젝트 개요 -->
+  <div class="report-section">
+    <h2 class="section-title">📋 프로젝트 개요</h2>
+    <div class="detail-list">
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🎯</div>
+        <div><strong>미션:</strong> GS팀 데이터 기반 의사결정 시스템 구축</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🔄</div>
+        <div><strong>전환:</strong> Power BI 대체 → 웹 기반 대시보드 플랫폼</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🏗️</div>
+        <div><strong>구조:</strong> 2개 레포지토리 (트렌드 리포트 + 실적 분석 / 경쟁사 모니터링)</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📊</div>
+        <div><strong>Repo 1:</strong> gs_daily_trend_news_public_temp (뉴스 기반 트렌드 + 내부 실적)</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🏢</div>
+        <div><strong>Repo 2:</strong> sono-competitor-crawler (22개 사업장 경쟁사 OTA 가격 모니터링)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 구축 완료 -->
+  <div class="report-section">
+    <h2 class="section-title">✅ 구축 완료</h2>
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">데일리 트렌드 리포트</div>
+        <div class="status-card-desc">
+          뉴스 자동 수집, 권역별 분석, OTA TOP4 비교, 경쟁사 동향 추적
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">GS 실적 리포트</div>
+        <div class="status-card-desc">
+          Daily OTB 대시보드, 사업장별 달성률, YoY 비교 분석
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">Booking Status</div>
+        <div class="status-card-desc">
+          좌측 사이드바 필터링, 4개월 동향 예약현황 시각화
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">FCST 추이 분석</div>
+        <div class="status-card-desc">
+          Revenue Meeting PDF 자동 파싱, 사이드바 필터, 시계열 분석
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">GS Monitor</div>
+        <div class="status-card-desc">
+          22개 사업장 경쟁사 OTA 가격 자동 크롤링, 일일 업데이트
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">팔라티움 리포트 (쌍둥이)</div>
+        <div class="status-card-desc">
+          내부용 + 고객사용 자동 생성, 경쟁 분석 데이터 시각화
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">실적 분석 페이지 8종</div>
+        <div class="status-card-desc">
+          월별/연간/채널/투숙일/예약추이/담당자/상품비교/전년 분석
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">해외사업장 대시보드</div>
+        <div class="status-card-desc">
+          국외 사업장 실적 분석 및 비교, 권역별 성과 시각화
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">관리 도구 4종</div>
+        <div class="status-card-desc">
+          관리자 키인, FCST 키인, 품의 작성, 주간활동일지 페이지
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">좌측 사이드바 네비게이터</div>
+        <div class="status-card-desc">
+          트렌드 리포트, FCST 추이, Booking Status 크로스 네비게이션
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">더보기 토글 메뉴</div>
+        <div class="status-card-desc">
+          경쟁사 프로모션, OCC Heatmap, YoY Comparison 모듈
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">GS Navigator 영구 삽입</div>
+        <div class="status-card-desc">
+          dashboard_generator.py에 통합, 모든 페이지에서 자동 로드
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 진행 중 -->
+  <div class="report-section">
+    <h2 class="section-title">🔄 진행 중</h2>
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-badge in-progress">
+          진행 중
+        </div>
+        <div class="status-card-title">FCST 재파싱</div>
+        <div class="status-card-desc">
+          Revenue Meeting PDF pdfplumber 엔진 전환, 정확도 개선 중
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge in-progress">
+          진행 중
+        </div>
+        <div class="status-card-title">FCST Volatility 테이블</div>
+        <div class="status-card-desc">
+          변동성 분석 기능 추가, 리스크 시각화 및 메트릭
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge in-progress">
+          진행 중
+        </div>
+        <div class="status-card-title">+2M 전략 분석</div>
+        <div class="status-card-desc">
+          6월 데이터 기반 2개월 선행 분석 페이지 개발 중
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 예정 -->
+  <div class="report-section">
+    <h2 class="section-title">📋 예정 (Roadmap)</h2>
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-badge planned">
+          예정
+        </div>
+        <div class="status-card-title">Sales Support Page</div>
+        <div class="status-card-desc">
+          FCST 키인 + 품의 작성 통합, 영업 지원 workflow
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge planned">
+          예정
+        </div>
+        <div class="status-card-title">AI FCST 자동화</div>
+        <div class="status-card-desc">
+          4개년 패턴 분석 + 휴일 로직 → AI 자동 예측
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge planned">
+          예정
+        </div>
+        <div class="status-card-title">Google Sheets 연동</div>
+        <div class="status-card-desc">
+          자동 데이터 수집, 원본 데이터 관리 시스템
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge planned">
+          예정
+        </div>
+        <div class="status-card-title">관리자 페이지 고도화</div>
+        <div class="status-card-desc">
+          키인 페이지 통합, 권한 관리, 감사 로그
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기술 스택 -->
+  <div class="report-section">
+    <h2 class="section-title">⚙️ 기술 스택</h2>
+    <div class="tech-stack">
+      <div class="tech-item">
+        <span class="tech-label">Frontend</span>
+        <div class="tech-value">HTML/CSS/Vanilla JS · Chart.js · Pretendard Font</div>
+      </div>
+      <div class="tech-item">
+        <span class="tech-label">Data Processing</span>
+        <div class="tech-value">Python · pdfplumber · openpyxl · pandas</div>
+      </div>
+      <div class="tech-item">
+        <span class="tech-label">Data Source</span>
+        <div class="tech-value">온북 TXT 파싱 · 사업계획 XLSX · 뉴스 API</div>
+      </div>
+      <div class="tech-item">
+        <span class="tech-label">Hosting</span>
+        <div class="tech-value">GitHub Pages · Auto Workflow</div>
+      </div>
+      <div class="tech-item">
+        <span class="tech-label">CI/CD</span>
+        <div class="tech-value">GitHub Actions · Auto Crawl · Build · Push</div>
+      </div>
+      <div class="tech-item">
+        <span class="tech-label">Database</span>
+        <div class="tech-value">Static JSON · CSV Export · Google Sheets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 주요 특징 -->
+  <div class="report-section">
+    <h2 class="section-title">⭐ 주요 특징</h2>
+    <div class="detail-list">
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🚀</div>
+        <div><strong>완전 자동화:</strong> 뉴스, 경쟁사 가격, FCST 데이터 일일 자동 수집</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📱</div>
+        <div><strong>완전 반응형:</strong> 데스크톱, 태블릿, 모바일 모두 최적화</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🎨</div>
+        <div><strong>프리미엄 디자인:</strong> 다크 모드, 골드 액센트, Pretendard 폰트</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">⚡</div>
+        <div><strong>고속 성능:</strong> 정적 페이지, CDN 분배, 빠른 로딩</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🔒</div>
+        <div><strong>데이터 무결성:</strong> 중복 제거, 검증 로직, 버전 관리</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📊</div>
+        <div><strong>고급 분석:</strong> YoY 비교, 세그먼트 분석, 트렌드 패턴 인식</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-text">
+      SONO & TRINITY · GS팀 · 시스템 구축 현황 리포트 · 2026년 4월 ·
+      <a href="gs-map.html" style="color: var(--gold); text-decoration: none;">네비게이션 맵</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

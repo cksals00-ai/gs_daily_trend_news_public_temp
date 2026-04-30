@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS 영업기획 대시보드 · Navigation Map</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+  :root {
+    /* ========== 다크모드 베이스 ========== */
+    --bg: #1a1d23;
+    --bg-card: #252932;
+    --bg-deep: #14171c;
+    --bg-soft: #2d3138;
+    --bg-hover: #353a44;
+
+    /* ========== 텍스트 색상 ========== */
+    --ink: #f5f5f7;
+    --ink-soft: #e0e0e3;
+    --ink-muted: #a8acb3;
+    --ink-faint: #7a7e85;
+
+    /* ========== 액센트 색상 ========== */
+    --gold: #c9a063;
+    --gold-bright: #e6b970;
+    --positive: #4caf6f;
+    --positive-bg: #1f3a28;
+    --warning: #e8a256;
+    --warning-bg: #3d2e1a;
+    --negative: #e57373;
+    --negative-bg: #3d1f1f;
+    --info: #5a9fc4;
+    --info-bg: #1a2e3d;
+
+    /* 카테고리별 색상 */
+    --cat-daily: #d97a7a;
+    --cat-daily-bg: #2e2228;
+    --cat-perform: #a892c8;
+    --cat-perform-bg: #252035;
+    --cat-admin: #6ba3c4;
+    --cat-admin-bg: #1f2a35;
+    --cat-external: #6db58a;
+    --cat-external-bg: #1f2e28;
+
+    --rule: rgba(255,255,255,0.12);
+
+    /* 폰트 */
+    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --script: 'Nanum Pen Script', 'Pretendard Variable', cursive;
+    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --mono: 'JetBrains Mono', 'Pretendard Variable', 'D2Coding', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 15.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    word-break: keep-all;
+  }
+
+  /* ============= MASTHEAD ============= */
+  .masthead {
+    background: var(--bg-deep);
+    color: #fff;
+    padding: 16px 0;
+    border-bottom: 3px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .masthead-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .logo-mark {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--gold-bright);
+    letter-spacing: 0.01em;
+  }
+  .logo-mark .amp {
+    color: #fff;
+    font-family: var(--script);
+    font-weight: 400;
+    padding: 0 6px;
+    font-size: 26px;
+  }
+  .team-tag {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.65);
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding-left: 18px;
+    margin-left: 18px;
+  }
+
+  /* ============= HERO ============= */
+  .hero {
+    background:
+      radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
+      var(--bg-deep);
+    color: #fff;
+    padding: 52px 28px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.25em;
+    color: var(--gold-bright);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-bright), transparent);
+    max-width: 220px;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .hero-subtitle {
+    font-family: var(--sans);
+    font-size: clamp(14px, 1.2vw, 16px);
+    color: rgba(255,255,255,0.7);
+    margin-top: 8px;
+  }
+
+  /* ============= CONTENT ============= */
+  .content {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 48px 28px;
+  }
+
+  .category-section {
+    margin-bottom: 64px;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  .category-icon {
+    font-size: 28px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .category-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--ink);
+  }
+
+  .category-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-left: auto;
+  }
+
+  /* Card Grid */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  /* Navigation Card */
+  .nav-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.4, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border-top: 4px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-card:hover {
+    transform: translateY(-6px);
+    background: var(--bg-hover);
+    border-color: var(--gold);
+    box-shadow: 0 12px 32px rgba(201, 160, 99, 0.15);
+  }
+
+  /* 카테고리별 상단 보더 색상 */
+  .nav-card.cat-daily { border-top-color: var(--cat-daily); }
+  .nav-card.cat-daily:hover { border-top-color: var(--gold); }
+
+  .nav-card.cat-perform { border-top-color: var(--cat-perform); }
+  .nav-card.cat-perform:hover { border-top-color: var(--gold); }
+
+  .nav-card.cat-admin { border-top-color: var(--cat-admin); }
+  .nav-card.cat-admin:hover { border-top-color: var(--gold); }
+
+  .nav-card.cat-external { border-top-color: var(--cat-external); }
+  .nav-card.cat-external:hover { border-top-color: var(--gold); }
+
+  .nav-card-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .nav-card-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-card-external {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-left: auto;
+  }
+
+  .nav-card-desc {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ============= FOOTER ============= */
+  footer {
+    background: var(--bg-deep);
+    border-top: 1px solid var(--rule);
+    padding: 32px 28px;
+    margin-top: 64px;
+  }
+
+  .footer-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ============= RESPONSIVE ============= */
+  @media (max-width: 768px) {
+    .masthead-inner {
+      padding: 0 16px;
+    }
+    .content {
+      padding: 32px 16px;
+    }
+    .card-grid {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .nav-card {
+      padding: 18px;
+    }
+    .hero {
+      padding: 40px 16px 32px;
+    }
+    .hero-title {
+      font-size: clamp(24px, 4vw, 36px);
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-inner">
+    <div style="display: flex; align-items: center;">
+      <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
+      <div class="team-tag">GS팀</div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">GS 데이터 시스템</div>
+    <h1 class="hero-title">영업기획 대시보드</h1>
+    <p class="hero-subtitle">전체 시스템 네비게이션 맵 · 모든 대시보드와 도구에 빠르게 접근</p>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- 데일리 리포트 -->
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">📊</div>
+      <div class="category-title">데일리 리포트</div>
+      <div class="category-count">4 pages</div>
+    </div>
+    <div class="card-grid">
+      <a href="index.html" class="nav-card cat-daily">
+        <div class="nav-card-icon">📰</div>
+        <div class="nav-card-title">데일리 트렌드 리포트</div>
+        <div class="nav-card-desc">뉴스 자동 수집, 권역별 분석, OTA TOP4, 경쟁사 동향</div>
+      </a>
+      <a href="otb.html" class="nav-card cat-daily">
+        <div class="nav-card-icon">📈</div>
+        <div class="nav-card-title">GS 실적 리포트</div>
+        <div class="nav-card-desc">Daily OTB, 사업장별 달성률, YoY 비교</div>
+      </a>
+      <a href="booking-status.html" class="nav-card cat-daily">
+        <div class="nav-card-icon">🔖</div>
+        <div class="nav-card-title">Booking Status</div>
+        <div class="nav-card-desc">좌측 사이드바 필터, 4개월 예약현황</div>
+      </a>
+      <a href="fcst-trend.html" class="nav-card cat-daily">
+        <div class="nav-card-icon">📅</div>
+        <div class="nav-card-title">FCST 추이 분석</div>
+        <div class="nav-card-desc">Revenue Meeting PDF 파싱, 사이드바 필터</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 실적 분석 -->
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">💼</div>
+      <div class="category-title">실적 분석</div>
+      <div class="category-count">10 pages</div>
+    </div>
+    <div class="card-grid">
+      <a href="monthly.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">📆</div>
+        <div class="nav-card-title">월별실적</div>
+        <div class="nav-card-desc">월 단위 성과 분석 및 추이</div>
+      </a>
+      <a href="ytd.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🎯</div>
+        <div class="nav-card-title">연간누계</div>
+        <div class="nav-card-desc">Year-to-Date 누적 실적</div>
+      </a>
+      <a href="channel.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🌐</div>
+        <div class="nav-card-title">채널별 실적</div>
+        <div class="nav-card-desc">OTA, 자사몰, 법인 등 채널 분석</div>
+      </a>
+      <a href="stay-date.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🏨</div>
+        <div class="nav-card-title">투숙일기준</div>
+        <div class="nav-card-desc">투숙일 기준 실적 분석</div>
+      </a>
+      <a href="booking-trend.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">📍</div>
+        <div class="nav-card-title">예약추이</div>
+        <div class="nav-card-desc">예약 트렌드 및 변동 분석</div>
+      </a>
+      <a href="manager-analysis.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">👤</div>
+        <div class="nav-card-title">담당자 분석</div>
+        <div class="nav-card-desc">담당자별 성과 및 활동</div>
+      </a>
+      <a href="product-detail.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🛏️</div>
+        <div class="nav-card-title">상품비교</div>
+        <div class="nav-card-desc">상품 간 성과 비교 분석</div>
+      </a>
+      <a href="ly-trend.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">📊</div>
+        <div class="nav-card-title">전년추이</div>
+        <div class="nav-card-desc">YoY 비교 분석</div>
+      </a>
+      <a href="ly-product.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🏆</div>
+        <div class="nav-card-title">전년상품</div>
+        <div class="nav-card-desc">전년 상품별 성과</div>
+      </a>
+      <a href="overseas.html" class="nav-card cat-perform">
+        <div class="nav-card-icon">🌏</div>
+        <div class="nav-card-title">해외사업장</div>
+        <div class="nav-card-desc">국외 사업장 실적</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 관리 도구 -->
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">⚙️</div>
+      <div class="category-title">관리 도구</div>
+      <div class="category-count">4 pages</div>
+    </div>
+    <div class="card-grid">
+      <a href="admin.html" class="nav-card cat-admin">
+        <div class="nav-card-icon">🔑</div>
+        <div class="nav-card-title">관리자 키인</div>
+        <div class="nav-card-desc">시스템 데이터 관리 및 입력</div>
+      </a>
+      <a href="fcst-admin.html" class="nav-card cat-admin">
+        <div class="nav-card-icon">📝</div>
+        <div class="nav-card-title">FCST 키인</div>
+        <div class="nav-card-desc">예측 데이터 입력 및 수정</div>
+      </a>
+      <a href="pumui.html" class="nav-card cat-admin">
+        <div class="nav-card-icon">📋</div>
+        <div class="nav-card-title">품의 작성</div>
+        <div class="nav-card-desc">결재 문서 작성 및 생성</div>
+      </a>
+      <a href="action_plan_dashboard.html" class="nav-card cat-admin">
+        <div class="nav-card-icon">📅</div>
+        <div class="nav-card-title">주간활동일지</div>
+        <div class="nav-card-desc">주간 활동 기록 및 관리</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 외부 시스템 -->
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🔗</div>
+      <div class="category-title">외부 시스템</div>
+      <div class="category-count">3 links</div>
+    </div>
+    <div class="card-grid">
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/" target="_blank" class="nav-card cat-external">
+        <div class="nav-card-icon">🏪</div>
+        <div class="nav-card-title">GS Monitor <span class="nav-card-external">↗</span></div>
+        <div class="nav-card-desc">22개 사업장 경쟁사 OTA 가격 모니터링</div>
+      </a>
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" target="_blank" class="nav-card cat-external">
+        <div class="nav-card-icon">📊</div>
+        <div class="nav-card-title">팔라티움 리포트 (내부) <span class="nav-card-external">↗</span></div>
+        <div class="nav-card-desc">팔라티움 경쟁사 분석 대시보드</div>
+      </a>
+      <a href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium-client.html" target="_blank" class="nav-card cat-external">
+        <div class="nav-card-icon">📊</div>
+        <div class="nav-card-title">팔라티움 리포트 (고객사) <span class="nav-card-external">↗</span></div>
+        <div class="nav-card-desc">고객사 제공용 경쟁 분석</div>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-text">SONO & TRINITY · GS팀 · 영업기획 대시보드 시스템 v1.0 · 2026</div>
+  </div>
+</footer>
+
+</body>
+</html>
