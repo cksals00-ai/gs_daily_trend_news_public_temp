@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS 운영전략 대시보드</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  :root {
+    /* ========== 다크모드 베이스 ========== */
+    --bg: #1a1d23;
+    --bg-card: #252932;
+    --bg-deep: #14171c;
+    --bg-soft: #2d3138;
+    --bg-hover: #353a44;
+
+    /* ========== 텍스트 색상 ========== */
+    --ink: #f5f5f7;
+    --ink-soft: #e0e0e3;
+    --ink-muted: #a8acb3;
+    --ink-faint: #7a7e85;
+
+    /* ========== 액센트 색상 ========== */
+    --gold: #c9a063;
+    --gold-bright: #e6b970;
+    --positive: #4caf6f;
+    --positive-bg: #1f3a28;
+    --warning: #e8a256;
+    --warning-bg: #3d2e1a;
+    --negative: #e57373;
+    --negative-bg: #3d1f1f;
+    --info: #5a9fc4;
+    --info-bg: #1a2e3d;
+
+    --rule: rgba(255,255,255,0.12);
+
+    /* 폰트 */
+    --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --script: 'Nanum Pen Script', 'Pretendard Variable', cursive;
+    --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --mono: 'JetBrains Mono', 'Pretendard Variable', 'D2Coding', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 15.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    word-break: keep-all;
+  }
+
+  /* ============= MASTHEAD ============= */
+  .masthead {
+    background: var(--bg-deep);
+    color: #fff;
+    padding: 16px 0;
+    border-bottom: 3px solid var(--gold);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .masthead-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .logo-mark {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--gold-bright);
+    letter-spacing: 0.01em;
+  }
+  .logo-mark .amp {
+    color: #fff;
+    font-family: var(--script);
+    font-weight: 400;
+    padding: 0 6px;
+    font-size: 26px;
+  }
+  .team-tag {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.65);
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding-left: 18px;
+    margin-left: 18px;
+  }
+
+  /* ============= HERO ============= */
+  .hero {
+    background:
+      radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
+      var(--bg-deep);
+    color: #fff;
+    padding: 52px 28px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.25em;
+    color: var(--gold-bright);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-bright), transparent);
+    max-width: 220px;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .hero-subtitle {
+    font-family: var(--sans);
+    font-size: clamp(14px, 1.2vw, 16px);
+    color: rgba(255,255,255,0.7);
+    margin-top: 8px;
+  }
+
+  /* ============= CONTENT ============= */
+  .content {
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 48px 28px;
+  }
+
+  /* Section */
+  .report-section {
+    margin-bottom: 64px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--ink);
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  /* ============= INSIGHT CARDS (TOP 3) ============= */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .insight-card {
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(37, 41, 50, 0.6) 100%);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+  }
+
+  .insight-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(201, 160, 99, 0.1);
+  }
+
+  .insight-card.priority-1 {
+    grid-column: span 1;
+    border: 2px solid var(--gold);
+    background: linear-gradient(135deg, rgba(201, 160, 99, 0.08) 0%, var(--bg-card) 100%);
+    box-shadow: 0 0 24px rgba(201, 160, 99, 0.15);
+  }
+
+  .insight-card.priority-1 .insight-number {
+    color: var(--gold-bright);
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(230, 185, 112, 0.4);
+  }
+
+  .insight-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .insight-number::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+  }
+
+  .insight-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+
+  .insight-metric {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .metric-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--rule);
+    padding: 14px;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .metric-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gold-bright);
+    word-break: break-all;
+  }
+
+  .metric-value.positive {
+    color: var(--positive);
+  }
+
+  .metric-value.negative {
+    color: var(--negative);
+  }
+
+  .insight-text {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    margin: 16px 0;
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+    border-left: 3px solid var(--gold);
+    border-radius: 2px;
+  }
+
+  .risk-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .risk-level.red { color: var(--negative); }
+  .risk-level.orange { color: var(--warning); }
+  .risk-level.yellow { color: #fdd835; }
+  .risk-level.green { color: var(--positive); }
+
+  .chart-container {
+    position: relative;
+    height: 300px;
+    margin: 24px 0 16px 0;
+    background: rgba(255,255,255,0.02);
+    border-radius: 4px;
+    padding: 12px;
+  }
+
+  .property-list {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 12px 0;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+
+  .property-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .property-item:last-child {
+    border-bottom: none;
+  }
+
+  .property-name {
+    color: var(--ink-soft);
+    flex: 1;
+  }
+
+  .property-value {
+    color: var(--gold);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+
+  /* ============= HEATMAP TABLE ============= */
+  .heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 16px 0;
+  }
+
+  .heatmap-table th {
+    background: rgba(255,255,255,0.08);
+    padding: 10px;
+    text-align: left;
+    font-family: var(--mono);
+    color: var(--ink-muted);
+    border: 1px solid var(--rule);
+  }
+
+  .heatmap-table td {
+    padding: 10px;
+    border: 1px solid var(--rule);
+    text-align: center;
+  }
+
+  .heatmap-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    padding: 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+
+  .heatmap-cell.red { background: rgba(229, 115, 115, 0.2); color: var(--negative); }
+  .heatmap-cell.orange { background: rgba(232, 162, 86, 0.2); color: var(--warning); }
+  .heatmap-cell.yellow { background: rgba(253, 216, 53, 0.2); color: #fdd835; }
+  .heatmap-cell.green { background: rgba(76, 175, 111, 0.2); color: var(--positive); }
+
+  /* ============= STRATEGY CARDS ============= */
+  .strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .strategy-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .strategy-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, var(--gold), var(--gold-bright), transparent);
+  }
+
+  .strategy-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .strategy-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .strategy-goal {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+    font-weight: 400;
+  }
+
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .progress-label {
+    font-size: 12px;
+    color: var(--ink-muted);
+    min-width: 60px;
+    font-family: var(--mono);
+  }
+
+  .progress-fill {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-inner {
+    height: 100%;
+    background: linear-gradient(to right, var(--gold), var(--gold-bright));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  /* ============= TREND SECTION ============= */
+  .trend-section {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .trend-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .trend-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--rule);
+    padding: 14px;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .trend-year {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .trend-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: var(--mono);
+  }
+
+  .trend-change {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+
+  /* ============= FOOTER ============= */
+  footer {
+    background: var(--bg-deep);
+    border-top: 1px solid var(--rule);
+    padding: 32px 28px;
+    margin-top: 64px;
+  }
+
+  .footer-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--positive);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ============= RESPONSIVE ============= */
+  @media (max-width: 768px) {
+    .masthead-inner {
+      padding: 0 16px;
+    }
+    .content {
+      padding: 32px 16px;
+    }
+    .insight-grid {
+      grid-template-columns: 1fr;
+    }
+    .insight-card.priority-1 {
+      grid-column: span 1;
+    }
+    .strategy-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      padding: 40px 16px 32px;
+    }
+    .hero-title {
+      font-size: clamp(24px, 4vw, 36px);
+    }
+    .trend-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .insight-metric {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-inner">
+    <div style="display: flex; align-items: center;">
+      <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
+      <div class="team-tag">GS팀 · 운영전략</div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">
+      <span class="live-dot"></span>
+      Operations Strategy
+    </div>
+    <h1 class="hero-title">GS 운영전략 대시보드</h1>
+    <p class="hero-subtitle">사업계획 3대 전략 F/U + 데이터 기반 인사이트</p>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- TOP 3 INSIGHTS SECTION -->
+  <div class="report-section">
+    <h2 class="section-title">⭐ TOP 3 인사이트</h2>
+
+    <div class="insight-grid">
+      <!-- INSIGHT 01 - MOST IMPORTANT -->
+      <div class="insight-card priority-1">
+        <div class="insight-number">Insight 01</div>
+        <div class="insight-title">+2M 선제대응</div>
+        <div class="insight-title" style="font-size: 16px; color: var(--gold); margin-top: -8px;">6월 사전 전략</div>
+
+        <div class="insight-metric">
+          <div class="metric-box">
+            <div class="metric-label">6월 Budget Gap</div>
+            <div class="metric-value" id="budgetGap">-</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">YoY 달성률</div>
+            <div class="metric-value" id="yoyRate">-</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">FCST 실</div>
+            <div class="metric-value" id="fcstRN">-</div>
+          </div>
+        </div>
+
+        <div class="insight-text" id="insight01Text">
+          6월까지 B실 부족, 전년 대비 X% 수준. 집중 필요 사업장 분석 중...
+        </div>
+
+        <div style="margin-top: 16px;">
+          <div class="chart-container">
+            <canvas id="chart01"></canvas>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--ink-muted); margin-top: 12px; font-weight: 600;">
+          🔴 집중 대응 필요 (Budget 미달성)
+        </div>
+        <div class="property-list" id="insight01Properties">
+          <div style="text-align: center; padding: 20px; color: var(--ink-muted);">데이터 로딩 중...</div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--ink-muted); margin-top: 12px; font-weight: 600;">
+          🟢 YoY 개선 (Best Performance)
+        </div>
+        <div class="property-list" id="insight01YoY">
+          <div style="text-align: center; padding: 20px; color: var(--ink-muted);">데이터 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- INSIGHT 02 -->
+      <div class="insight-card">
+        <div class="insight-number">Insight 02</div>
+        <div class="insight-title">채널 믹스 전략</div>
+
+        <div class="insight-metric">
+          <div class="metric-box">
+            <div class="metric-label">Top 8 비중</div>
+            <div class="metric-value" id="channel82">82.1%</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Target</div>
+            <div class="metric-value" style="color: var(--gold-bright);">+4만실</div>
+          </div>
+        </div>
+
+        <div class="insight-text">
+          Mega Channel 시너지 전략으로 OTA TOP 8 채널 집중 운영. 전년 대비 채널 편성 개선 중.
+        </div>
+
+        <div style="margin-top: 16px;">
+          <div class="chart-container">
+            <canvas id="chart02"></canvas>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--ink-muted); margin-top: 16px;">
+          <strong>세그먼트별 현황:</strong>
+        </div>
+        <div class="property-list" id="insight02Properties">
+          <div style="text-align: center; padding: 20px; color: var(--ink-muted);">데이터 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- INSIGHT 03 -->
+      <div class="insight-card">
+        <div class="insight-number">Insight 03</div>
+        <div class="insight-title">리스크 사업장</div>
+        <div class="insight-title" style="font-size: 16px; color: var(--warning); margin-top: -8px;">진단 & 대응</div>
+
+        <div class="insight-metric">
+          <div class="metric-box">
+            <div class="metric-label">고위험 (< 40%)</div>
+            <div class="metric-value negative" id="riskHigh">-</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">중위험 (40-60%)</div>
+            <div class="metric-value" id="riskMedium" style="color: var(--warning);">-</div>
+          </div>
+        </div>
+
+        <div class="insight-text">
+          Budget 달성률 저조 및 YoY 부진 사업장 즉시 대응 필요. 영업팀 집중 지원.
+        </div>
+
+        <div style="margin-top: 16px; font-size: 13px;">
+          <strong style="color: var(--ink-soft);">위험도 매트릭스</strong>
+        </div>
+        <div class="property-list" id="insight03Properties">
+          <div style="text-align: center; padding: 20px; color: var(--ink-muted);">데이터 로딩 중...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY SECTION -->
+  <div class="report-section">
+    <h2 class="section-title">📊 사업계획 3대 전략 F/U</h2>
+
+    <div class="strategy-grid">
+      <!-- STRATEGY 01 -->
+      <div class="strategy-card">
+        <span class="strategy-number">STRATEGY 01</span>
+        <div class="strategy-title">매출 +66억</div>
+        <div class="strategy-goal">취소율 관리 · 38% → 28% · +3만실</div>
+
+        <div class="progress-bar">
+          <div class="progress-label" id="strategy01Progress">-</div>
+          <div class="progress-fill">
+            <div class="progress-inner" id="strategy01Bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 12px;">
+          <strong>주요 지표:</strong>
+        </div>
+        <div class="property-list" id="strategy01Details">
+          <div style="text-align: center; padding: 16px;">데이터 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- STRATEGY 02 -->
+      <div class="strategy-card">
+        <span class="strategy-number">STRATEGY 02</span>
+        <div class="strategy-title">매출 +79억</div>
+        <div class="strategy-goal">Mega Channel 시너지 · TOP 8 · +4만실</div>
+
+        <div class="progress-bar">
+          <div class="progress-label">114%</div>
+          <div class="progress-fill">
+            <div class="progress-inner" style="width: 100%; background: linear-gradient(to right, var(--positive), #4caf6f);"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 12px;">
+          <strong>진행 상황:</strong>
+        </div>
+        <div class="property-list">
+          <div class="property-item">
+            <div class="property-name">Yanolja</div>
+            <div class="property-value">+1.2만</div>
+          </div>
+          <div class="property-item">
+            <div class="property-name">Booking.com</div>
+            <div class="property-value">+0.8만</div>
+          </div>
+          <div class="property-item">
+            <div class="property-name">Agoda</div>
+            <div class="property-value">+1.5만</div>
+          </div>
+          <div class="property-item">
+            <div class="property-name">Naver Hotel</div>
+            <div class="property-value">+0.7만</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STRATEGY 03 -->
+      <div class="strategy-card">
+        <span class="strategy-number">STRATEGY 03</span>
+        <div class="strategy-title">매출 +43억</div>
+        <div class="strategy-goal">전략적 Spot Sales · 시즌별 운영 · +2만실</div>
+
+        <div class="progress-bar">
+          <div class="progress-label" id="strategy03Progress">-</div>
+          <div class="progress-fill">
+            <div class="progress-inner" id="strategy03Bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 12px;">
+          <strong>시즌별 목표:</strong>
+        </div>
+        <div class="property-list">
+          <div class="property-item">
+            <div class="property-name">봄 (3-5월)</div>
+            <div class="property-value">+5K RN</div>
+          </div>
+          <div class="property-item">
+            <div class="property-name">여름 (6-8월)</div>
+            <div class="property-value">+8K RN</div>
+          </div>
+          <div class="property-item">
+            <div class="property-name">가을 (9-11월)</div>
+            <div class="property-value">+7K RN</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4개년 TREND SECTION -->
+  <div class="report-section">
+    <h2 class="section-title">📈 4개년 전년도 비교</h2>
+
+    <div class="trend-section">
+      <div class="trend-title">FCST 트렌드 (2023-2026)</div>
+
+      <div style="margin-bottom: 28px;">
+        <div class="chart-container">
+          <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
+
+      <div class="trend-grid" id="trendGrid">
+        <div style="grid-column: span 2; text-align: center; padding: 40px; color: var(--ink-muted);">
+          데이터 로딩 중...
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; padding: 16px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--info); border-radius: 2px;">
+        <div style="font-size: 13px; color: var(--ink-soft); line-height: 1.7;">
+          <strong>분석:</strong> 4개년 패턴을 통해 당월 FCST 신뢰도 및 계절 변동성을 분석.
+          현년도 추이가 과년도 대비 얼마나 다른지 파악하여 선제적 대응 전략 수립.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-text">
+      SONO Group Operations Strategy Dashboard · GS팀 데이터 기반 의사결정
+      <br>
+      Last Updated: <span id="updateTime">-</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // 데이터 로드
+    const [otbResp, trendResp] = await Promise.all([
+      fetch('data/otb_data.json?t=' + Date.now()),
+      fetch('data/rm_fcst_trend.json?t=' + Date.now()),
+    ]);
+
+    const otbData = await otbResp.json();
+    const trendData = await trendResp.json();
+
+    console.log('OTB Data:', otbData);
+    console.log('Trend Data:', trendData);
+
+    // 렌더링
+    renderInsight01(otbData);
+    renderInsight02(otbData);
+    renderInsight03(otbData);
+    renderTrend(trendData);
+    renderUpdateTime();
+
+  } catch(e) {
+    console.error('Data load error:', e);
+    document.querySelectorAll('.property-list').forEach(el => {
+      el.innerHTML = '<div style="color: var(--negative); padding: 16px;">데이터 로드 실패</div>';
+    });
+  }
+});
+
+// INSIGHT 01: +2M 선제대응 (6월)
+function renderInsight01(otbData) {
+  if (!otbData.yoyTable) return;
+
+  // 6월 데이터 필터
+  const june = '6';
+  const properties = otbData.yoyTable.filter(row => row[june]);
+
+  // Budget gap 계산
+  let totalBudgetGap = 0;
+  let totalYoY = 0;
+  let totalFcst = 0;
+  const budgetGapList = [];
+
+  properties.forEach(prop => {
+    const monthData = prop[june];
+    const budGap = (monthData.bud_rn || 0) - (monthData.act_rn || 0);
+    const yoy = monthData.yoy || 0;
+    const fcst = monthData.rns_fcst || 0;
+
+    totalBudgetGap += budGap;
+    totalYoY += yoy;
+    totalFcst += fcst;
+
+    if (budGap > 0) {
+      budgetGapList.push({
+        name: prop.name,
+        gap: budGap,
+        achievement: ((monthData.act_rn || 0) / (monthData.bud_rn || 1) * 100).toFixed(0)
+      });
+    }
+  });
+
+  budgetGapList.sort((a, b) => b.gap - a.gap);
+  const topGapList = budgetGapList.slice(0, 5);
+
+  // YoY Top 5
+  const yoyList = properties
+    .filter(p => p[june].yoy)
+    .map(p => ({
+      name: p.name,
+      yoy: p[june].yoy
+    }))
+    .sort((a, b) => b.yoy - a.yoy)
+    .slice(0, 5);
+
+  // UI 업데이트
+  document.getElementById('budgetGap').textContent = totalBudgetGap.toLocaleString();
+  document.getElementById('yoyRate').textContent = (totalYoY / properties.length).toFixed(1) + '%';
+  document.getElementById('fcstRN').textContent = (totalFcst / 1000).toFixed(1) + '만';
+
+  document.getElementById('insight01Text').textContent =
+    `6월까지 ${Math.abs(totalBudgetGap)}실 부족, 전년 대비 ${(totalYoY / properties.length).toFixed(1)}% 수준. ` +
+    `집중 필요 사업장: ${topGapList.map(p => p.name).join(', ')}`;
+
+  // Budget Gap 리스트
+  document.getElementById('insight01Properties').innerHTML = topGapList
+    .map(p => `
+      <div class="property-item">
+        <div class="property-name">${p.name}</div>
+        <div class="property-value" style="color: var(--negative);">-${p.gap}실 (${p.achievement}%)</div>
+      </div>
+    `).join('');
+
+  // YoY 리스트
+  document.getElementById('insight01YoY').innerHTML = yoyList
+    .map(p => `
+      <div class="property-item">
+        <div class="property-name">${p.name}</div>
+        <div class="property-value" style="color: var(--positive);">+${p.yoy.toFixed(1)}%</div>
+      </div>
+    `).join('');
+
+  // Chart 01: Top 10 속성들의 6월 Budget vs Actual vs FCST
+  const chartData = properties
+    .sort((a, b) => (b[june].bud_rn || 0) - (a[june].bud_rn || 0))
+    .slice(0, 10);
+
+  const ctx = document.getElementById('chart01').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chartData.map(p => p.name.split('.')[1] || p.name),
+      datasets: [
+        {
+          label: 'Budget',
+          data: chartData.map(p => p[june].bud_rn || 0),
+          backgroundColor: 'rgba(201, 160, 99, 0.6)',
+          borderColor: '#c9a063',
+          borderWidth: 1
+        },
+        {
+          label: 'Actual',
+          data: chartData.map(p => p[june].act_rn || 0),
+          backgroundColor: 'rgba(76, 175, 111, 0.6)',
+          borderColor: '#4caf6f',
+          borderWidth: 1
+        },
+        {
+          label: 'FCST',
+          data: chartData.map(p => p[june].rns_fcst || 0),
+          backgroundColor: 'rgba(90, 159, 196, 0.6)',
+          borderColor: '#5a9fc4',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#a8acb3',
+            font: { family: 'var(--mono)', size: 12 }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: false, ticks: { color: '#a8acb3' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+        y: { stacked: false, ticks: { color: '#a8acb3' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+      }
+    }
+  });
+}
+
+// INSIGHT 02: 채널 믹스
+function renderInsight02(otbData) {
+  if (!otbData.yoyTable) return;
+
+  // 세그먼트별 데이터 추출
+  const segments = {};
+  otbData.yoyTable.forEach(row => {
+    if (row.segment) {
+      if (!segments[row.segment]) segments[row.segment] = 0;
+      const lastMonth = Object.keys(row).filter(k => !isNaN(k)).pop();
+      if (lastMonth) {
+        segments[row.segment] += (row[lastMonth].rns_fcst || 0);
+      }
+    }
+  });
+
+  const segmentList = Object.entries(segments)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  document.getElementById('insight02Properties').innerHTML = segmentList
+    .map(([seg, val]) => `
+      <div class="property-item">
+        <div class="property-name">${seg}</div>
+        <div class="property-value">${(val / 1000).toFixed(1)}만</div>
+      </div>
+    `).join('');
+
+  // Doughnut 차트
+  const ctx = document.getElementById('chart02').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: segmentList.map(s => s[0]),
+      datasets: [{
+        data: segmentList.map(s => s[1]),
+        backgroundColor: [
+          '#c9a063', '#e6b970', '#4caf6f', '#5a9fc4', '#e8a256', '#e57373', '#fdd835', '#66bb6a'
+        ],
+        borderColor: '#252932',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#a8acb3', font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// INSIGHT 03: 리스크 사업장
+function renderInsight03(otbData) {
+  if (!otbData.yoyTable) return;
+
+  const currentMonth = Math.max(...otbData.yoyTable.map(r => Math.max(...Object.keys(r).filter(k => !isNaN(k)).map(Number))));
+
+  let riskHigh = 0, riskMedium = 0;
+  const riskList = [];
+
+  otbData.yoyTable.forEach(prop => {
+    const data = prop[String(currentMonth)];
+    if (data) {
+      const achievement = ((data.act_rn || 0) / (data.bud_rn || 1) * 100);
+      if (achievement < 40) riskHigh++;
+      else if (achievement < 60) riskMedium++;
+
+      riskList.push({
+        name: prop.name,
+        achievement: achievement.toFixed(0),
+        riskLevel: achievement < 30 ? 'red' : achievement < 50 ? 'orange' : achievement < 70 ? 'yellow' : 'green'
+      });
+    }
+  });
+
+  document.getElementById('riskHigh').textContent = riskHigh;
+  document.getElementById('riskMedium').textContent = riskMedium;
+
+  document.getElementById('insight03Properties').innerHTML = riskList
+    .filter(p => p.achievement < 70)
+    .sort((a, b) => parseInt(a.achievement) - parseInt(b.achievement))
+    .slice(0, 8)
+    .map(p => `
+      <div class="property-item">
+        <div class="property-name">${p.name}</div>
+        <span class="risk-level ${p.riskLevel}">● ${p.achievement}%</span>
+      </div>
+    `).join('');
+}
+
+// 4개년 트렌드
+function renderTrend(trendData) {
+  if (!trendData.snapshots) return;
+
+  // 최근 스냅샷들만 필터
+  const recent = trendData.snapshots.slice(-20);
+
+  // 월별 연도별 합계
+  const yearData = { 2023: {}, 2024: {}, 2025: {}, 2026: {} };
+
+  recent.forEach(snap => {
+    const year = snap._year;
+    if (!yearData[year]) yearData[year] = {};
+
+    Object.entries(snap.properties || {}).forEach(([prop, months]) => {
+      Object.entries(months).forEach(([month, data]) => {
+        if (!yearData[year][month]) yearData[year][month] = 0;
+        yearData[year][month] += (data.rm_fcst_rn || 0);
+      });
+    });
+  });
+
+  // Trend Grid 렌더
+  const trendHtml = Object.entries(yearData)
+    .filter(([year, data]) => Object.keys(data).length > 0)
+    .map(([year, data]) => {
+      const total = Object.values(data).reduce((a, b) => a + b, 0);
+      return `
+        <div class="trend-item">
+          <div class="trend-year">${year}년</div>
+          <div class="trend-value">${(total / 1000).toFixed(1)}만</div>
+          <div class="trend-change">RN</div>
+        </div>
+      `;
+    }).join('');
+
+  document.getElementById('trendGrid').innerHTML = trendHtml;
+
+  // Line 차트
+  const months = ['01', '02', '03', '04', '05', '06'];
+  const colors = {
+    2023: 'rgba(168, 172, 179, 0.6)',
+    2024: 'rgba(232, 162, 86, 0.6)',
+    2025: 'rgba(201, 160, 99, 0.6)',
+    2026: 'rgba(76, 175, 111, 0.6)'
+  };
+
+  const datasets = Object.entries(yearData).map(([year, data]) => ({
+    label: year,
+    data: months.map(m => (data[year + '-' + m] || 0) / 1000),
+    borderColor: colors[year].replace('0.6', '1'),
+    backgroundColor: colors[year],
+    tension: 0.3,
+    fill: false,
+    borderWidth: 2
+  }));
+
+  const ctx = document.getElementById('chartTrend').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#a8acb3', font: { size: 12 } } }
+      },
+      scales: {
+        x: { ticks: { color: '#a8acb3' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+        y: { ticks: { color: '#a8acb3' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+      }
+    }
+  });
+}
+
+function renderUpdateTime() {
+  const now = new Date();
+  document.getElementById('updateTime').textContent =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + ' ' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0');
+}
+</script>
+
+</body>
+</html>
