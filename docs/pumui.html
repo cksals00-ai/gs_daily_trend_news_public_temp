@@ -387,16 +387,14 @@ let selectedSegs = new Set(GS_SEGMENTS);
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('ko-KR');
 
 async function loadData(){
-  try{
-    const [otbR,dbR,occR,fcstR] = await Promise.all([
-      fetch('data/otb_data.json').then(r=>r.json()),
-      fetch('data/db_aggregated.json').then(r=>r.json()),
-      fetch('data/occ_data.json').then(r=>r.json()),
-      fetch('data/rm_fcst.json').then(r=>r.json())
-    ]);
-    DATA.otb=otbR; DATA.db=dbR; DATA.occ=occR; DATA.fcst=fcstR;
-    initUI();
-  }catch(e){console.error('Data load error:',e);}
+  const load=async(url)=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();}catch(e){console.warn('Load fail:',url,e);return null;}};
+  DATA.otb = await load('data/otb_data.json');
+  DATA.db = await load('data/db_aggregated.json');
+  DATA.occ = await load('data/occ_data.json');
+  DATA.fcst = await load('data/rm_fcst.json');
+  console.log('DATA loaded:', {otb:!!DATA.otb, db:!!DATA.db, occ:!!DATA.occ, fcst:!!DATA.fcst});
+  if(DATA.occ) console.log('OCC props:', Object.keys(DATA.occ.properties||{}));
+  initUI();
 }
 
 function initUI(){
@@ -555,6 +553,7 @@ function generateTables(){
     selPropsArr.forEach(p=>{
       // 전체 (RM)
       const yoy = getOtbYoy(p.otb, month);
+      console.log(`[${p.otb}] month=${month} yoy:`,yoy);
       if(yoy){
         total_rm_budget_rn += yoy.rm_budget_rn||0;
         total_act_rn += yoy.act_rn||0;
@@ -563,6 +562,7 @@ function generateTables(){
       }
       // OCC
       const occ = getOcc(p.occ, month);
+      console.log(`[${p.occ}] month=${month} occ:`,occ);
       if(occ!=null){occ_sum+=occ; occ_cnt++;}
       // GS
       const gs = getGsData(p.db, month, segsArr);
