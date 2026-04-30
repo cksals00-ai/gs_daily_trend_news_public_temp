@@ -91,6 +91,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .border-left-group{border-left:1px solid var(--rule);}
 @media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.insight-grid{grid-template-columns:1fr!important;}}
 @media(max-width:560px){.main-content{padding:16px 14px;}}
 .mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
 @media(max-width:860px){.mobile-filter-bar{display:flex;}}
@@ -257,88 +258,94 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
-    <div class="kpi-strip">
-      <div class="kpi-card achievement">
-        <div class="kpi-card-label">OTA RNS</div>
-        <div class="kpi-card-value" id="kpi-ota">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-ota-sub">연간 누계</div>
-      </div>
-      <div class="kpi-card booking">
-        <div class="kpi-card-label">G-OTA RNS</div>
-        <div class="kpi-card-value" id="kpi-gota">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-gota-sub">연간 누계</div>
-      </div>
-      <div class="kpi-card info">
-        <div class="kpi-card-label">Inbound RNS</div>
-        <div class="kpi-card-value" id="kpi-inbound">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-inbound-sub">연간 누계</div>
-      </div>
-      <div class="kpi-card warning">
-        <div class="kpi-card-label">전체 RNS</div>
-        <div class="kpi-card-value" id="kpi-total">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-total-sub">전 세그먼트 합계</div>
-      </div>
-      <div class="kpi-card" style="border-left:3px solid var(--info);">
-        <div class="kpi-card-label">전체OCC</div>
-        <div class="kpi-card-value" id="kpi-occ" style="color:var(--info);">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub" id="kpi-occ-sub">Booking Status 기준</div>
-      </div>
-      <div class="kpi-card" style="border-left:3px solid var(--gold);">
-        <div class="kpi-card-label">우리OCC</div>
-        <div class="kpi-card-value" id="kpi-our-occ" style="color:var(--gold);">—<span class="unit">%</span></div>
-        <div class="kpi-card-sub" id="kpi-our-occ-sub">사업계획 가용객실 기준</div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <span class="chart-card-title">세그먼트별 월별 RNS 추이</span>
-        <div class="chart-legend">
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>OTA</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>G-OTA</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>Inbound</div>
+    <div class="insight-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title" id="insight-tyly-title">TY vs LY 일별 객실 비교</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>TY</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div>LY</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:280px;">
+          <canvas id="insight-tyly-chart"></canvas>
         </div>
       </div>
-      <div class="chart-canvas-wrap" style="height:320px;">
-        <canvas id="seg-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <span class="chart-card-title">세그먼트 비중 (선택 연도 누계)</span>
-        <div class="chart-legend">
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>OTA</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>G-OTA</div>
-          <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>Inbound</div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title" id="insight-occ-adr-title">OCC% vs ADR 추이</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e57373;"></div>OCC%</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>ADR</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:280px;">
+          <canvas id="insight-occ-adr-chart"></canvas>
         </div>
       </div>
-      <div style="height:220px;display:flex;justify-content:center;">
-        <canvas id="pie-chart" style="max-width:220px;"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title" id="insight-yoy-title">일별 YoY% 변화 (전년 대비)</span>
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="legend-dot" style="background:var(--positive);"></div>증가</div>
+          <div class="chart-legend-item"><div class="legend-dot" style="background:var(--negative);"></div>감소</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:220px;">
+        <canvas id="insight-yoy-chart"></canvas>
       </div>
     </div>
 
     <div class="table-card">
       <div class="table-card-header">
-        <span class="table-card-title">세그먼트별 월별 상세</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-label">—</span>
+        <span class="table-card-title">투숙일별 상세 (일일 세그먼트 분석)</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="daily-detail-label">—</span>
       </div>
-      <div class="table-wrap">
-        <table class="pivot">
-          <thead>
+      <div class="table-wrap" style="max-height:600px;overflow-y:auto;">
+        <table class="pivot" id="daily-detail-table" style="font-size:11px;">
+          <thead style="position:sticky;top:0;background:var(--bg-deep);z-index:10;">
             <tr>
-              <th style="text-align:left;">월</th>
-              <th class="border-left-group">OTA</th>
-              <th>G-OTA</th>
-              <th>Inbound</th>
-              <th class="border-left-group">합계</th>
-              <th>OTA%</th>
-              <th>G-OTA%</th>
-              <th class="border-left-group" style="color:var(--info);">전체OCC</th>
+              <th style="text-align:left;position:sticky;left:0;background:var(--bg-deep);z-index:11;">투숙일</th>
+              <th class="border-left-group" colspan="5" style="text-align:center;">Total</th>
+              <th class="border-left-group" colspan="5" style="text-align:center;">OTA</th>
+              <th class="border-left-group" colspan="5" style="text-align:center;">G-OTA</th>
+              <th class="border-left-group" colspan="5" style="text-align:center;">Inbound</th>
+              <th class="border-left-group" style="text-align:center;">전체OCC</th>
+              <th style="text-align:center;">GS OCC</th>
+              <th style="text-align:center;">시즌</th>
+              <th style="text-align:center;">ADR</th>
+            </tr>
+            <tr style="background:rgba(255,255,255,0.02);">
+              <th style="text-align:left;">—</th>
+              <th class="border-left-group" style="font-size:10px;">객실</th>
+              <th style="font-size:10px;">매출</th>
+              <th style="font-size:10px;">객실(LY)</th>
+              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">YoY%</th>
+              <th class="border-left-group" style="font-size:10px;">객실</th>
+              <th style="font-size:10px;">매출</th>
+              <th style="font-size:10px;">객실(LY)</th>
+              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">YoY%</th>
+              <th class="border-left-group" style="font-size:10px;">객실</th>
+              <th style="font-size:10px;">매출</th>
+              <th style="font-size:10px;">객실(LY)</th>
+              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">YoY%</th>
+              <th class="border-left-group" style="font-size:10px;">객실</th>
+              <th style="font-size:10px;">매출</th>
+              <th style="font-size:10px;">객실(LY)</th>
+              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">YoY%</th>
+              <th class="border-left-group" style="font-size:10px;">%</th>
+              <th style="font-size:10px;">%</th>
+              <th style="font-size:10px;">—</th>
+              <th style="font-size:10px;">원</th>
             </tr>
           </thead>
-          <tbody id="seg-tbody">
-            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+          <tbody id="daily-detail-tbody">
+            <tr><td colspan="24" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -358,6 +365,7 @@ let dailyBooking = null; // daily_booking.json (일별 OCC)
 let activeYear = new Date().getFullYear().toString();
 let activeMonth = null; // 'YYYYMM' or null — will be set to current month in loadData
 let segChart = null, pieChart = null, dailyChart = null;
+let insightTylyChart = null, insightOccAdrChart = null, insightYoyChart = null;
 
 let activeSegment = '전체'; // 전체/OTA/G-OTA/Inbound
 let activeRegion = '전체';
@@ -575,9 +583,243 @@ function buildMonthChips() {
       activeMonth = ym;
       container.querySelectorAll('.chip').forEach((b, i) => b.classList.toggle('active', monthKeys[i] === activeMonth));
       renderDailyChart();
+      renderDailyDetailTable();
+      renderInsightCharts();
     });
     container.appendChild(btn);
   });
+}
+
+function renderDailyDetailTable() {
+  const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
+  const targetKey = activeMonth ? activeMonth : null;
+
+  const tbody = document.getElementById('daily-detail-tbody');
+  if (!tbody || !targetKey || !stayDaily[targetKey]) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 없음</td></tr>';
+    return;
+  }
+
+  const mdata = stayDaily[targetKey];
+  const days = mdata.days || [];
+  const segments = mdata.segments || {};
+  const total = mdata.total || {};
+
+  const monthKeyDash = targetKey.slice(0,4) + '-' + targetKey.slice(4);
+  let dailyOcc = null;
+  if (dailyBooking && dailyBooking.by_property && dailyBooking.by_property['Grand Total']) {
+    const gtMonths = dailyBooking.by_property['Grand Total'].months || {};
+    const gtMonth = gtMonths[monthKeyDash];
+    if (gtMonth && gtMonth.daily_occ) {
+      dailyOcc = gtMonth.daily_occ;
+    }
+  }
+
+  let rows = '';
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    const stayDate = `${d}일`;
+
+    // Get segment data for this day
+    const totalRn = total.net_rn && total.net_rn[i] ? total.net_rn[i] : 0;
+    const totalRev = total.net_rev && total.net_rev[i] ? total.net_rev[i] : 0;
+    const totalRnLy = total.net_rn_last && total.net_rn_last[i] ? total.net_rn_last[i] : 0;
+    const totalRevLy = total.net_rev_last && total.net_rev_last[i] ? total.net_rev_last[i] : 0;
+
+    const getSegData = (seg, field, idx) => {
+      if (segments[seg] && segments[seg][field] && segments[seg][field][idx]) {
+        return segments[seg][field][idx];
+      }
+      return 0;
+    };
+
+    const otaRn = getSegData('OTA', 'net_rn', i);
+    const otaRev = getSegData('OTA', 'net_rev', i);
+    const otaRnLy = getSegData('OTA', 'net_rn_last', i);
+    const otaRevLy = getSegData('OTA', 'net_rev_last', i);
+
+    const gotaRn = getSegData('G-OTA', 'net_rn', i);
+    const gotaRev = getSegData('G-OTA', 'net_rev', i);
+    const gotaRnLy = getSegData('G-OTA', 'net_rn_last', i);
+    const gotaRevLy = getSegData('G-OTA', 'net_rev_last', i);
+
+    const inboundRn = getSegData('Inbound', 'net_rn', i);
+    const inboundRev = getSegData('Inbound', 'net_rev', i);
+    const inboundRnLy = getSegData('Inbound', 'net_rn_last', i);
+    const inboundRevLy = getSegData('Inbound', 'net_rev_last', i);
+
+    // Calculate YoY%
+    const calcYoY = (ty, ly) => {
+      if (ly === 0 || ly == null) return null;
+      return ((ty / ly - 1) * 100);
+    };
+
+    const totalYoY = calcYoY(totalRn, totalRnLy);
+    const otaYoY = calcYoY(otaRn, otaRnLy);
+    const gotaYoY = calcYoY(gotaRn, gotaRnLy);
+    const inboundYoY = calcYoY(inboundRn, inboundRnLy);
+
+    // ADR calculation
+    const adr = totalRn > 0 ? (totalRev / totalRn) : 0;
+
+    // OCC value
+    const occVal = dailyOcc && dailyOcc[i] ? dailyOcc[i] : null;
+    const occHtml = occVal != null ? occVal.toFixed(1) : '—';
+    const occColor = occVal != null ? (occVal >= 70 ? 'var(--positive)' : occVal >= 50 ? 'var(--warning)' : 'var(--negative)') : 'var(--ink-faint)';
+    const occClass = occVal != null && occVal < 40 ? ' style="background:rgba(229,115,115,0.15);"' : '';
+
+    // Season classification (weekday/weekend/holiday - placeholder)
+    const date = new Date(parseInt(targetKey.slice(0, 4)), parseInt(targetKey.slice(4)) - 1, d);
+    const dow = date.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const season = isWeekend ? '주말' : '평일';
+
+    rows += `<tr${occClass}>
+      <td style="text-align:left;position:sticky;left:0;background:inherit;z-index:1;">${stayDate}</td>
+      <td class="border-left-group">${fmt.num(totalRn)}</td>
+      <td>${totalRev > 0 ? fmt.num(Math.round(totalRev / 1000000)) + 'M' : '—'}</td>
+      <td>${fmt.num(totalRnLy)}</td>
+      <td>${totalRevLy > 0 ? fmt.num(Math.round(totalRevLy / 1000000)) + 'M' : '—'}</td>
+      <td${totalYoY != null ? ' style="color:' + (totalYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${totalYoY != null ? totalYoY.toFixed(1) + '%' : '—'}</td>
+      <td class="border-left-group">${fmt.num(otaRn)}</td>
+      <td>${otaRev > 0 ? fmt.num(Math.round(otaRev / 1000000)) + 'M' : '—'}</td>
+      <td>${fmt.num(otaRnLy)}</td>
+      <td>${otaRevLy > 0 ? fmt.num(Math.round(otaRevLy / 1000000)) + 'M' : '—'}</td>
+      <td${otaYoY != null ? ' style="color:' + (otaYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${otaYoY != null ? otaYoY.toFixed(1) + '%' : '—'}</td>
+      <td class="border-left-group">${fmt.num(gotaRn)}</td>
+      <td>${gotaRev > 0 ? fmt.num(Math.round(gotaRev / 1000000)) + 'M' : '—'}</td>
+      <td>${fmt.num(gotaRnLy)}</td>
+      <td>${gotaRevLy > 0 ? fmt.num(Math.round(gotaRevLy / 1000000)) + 'M' : '—'}</td>
+      <td${gotaYoY != null ? ' style="color:' + (gotaYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${gotaYoY != null ? gotaYoY.toFixed(1) + '%' : '—'}</td>
+      <td class="border-left-group">${fmt.num(inboundRn)}</td>
+      <td>${inboundRev > 0 ? fmt.num(Math.round(inboundRev / 1000000)) + 'M' : '—'}</td>
+      <td>${fmt.num(inboundRnLy)}</td>
+      <td>${inboundRevLy > 0 ? fmt.num(Math.round(inboundRevLy / 1000000)) + 'M' : '—'}</td>
+      <td${inboundYoY != null ? ' style="color:' + (inboundYoY >= 0 ? 'var(--positive)' : 'var(--negative)') + ';"' : ''}>${inboundYoY != null ? inboundYoY.toFixed(1) + '%' : '—'}</td>
+      <td class="border-left-group" style="color:${occColor};">${occHtml}</td>
+      <td>—</td>
+      <td>${season}</td>
+      <td>${adr > 0 ? fmt.num(Math.round(adr)) : '—'}</td>
+    </tr>`;
+  }
+
+  tbody.innerHTML = rows;
+  const mn = parseInt(targetKey.slice(4));
+  setText('daily-detail-label', mn + '월 · ' + days.length + '일');
+}
+
+function renderInsightCharts() {
+  const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
+  const targetKey = activeMonth ? activeMonth : null;
+  if (!targetKey || !stayDaily[targetKey]) return;
+
+  const mdata = stayDaily[targetKey];
+  const days = mdata.days || [];
+  const total = mdata.total || {};
+  const segments = mdata.segments || {};
+  const mn = parseInt(targetKey.slice(4));
+  const labels = days.map(d => d + '일');
+
+  const tyRn = days.map((d, i) => total.net_rn && total.net_rn[i] ? total.net_rn[i] : 0);
+  const lyRn = days.map((d, i) => total.net_rn_last && total.net_rn_last[i] ? total.net_rn_last[i] : 0);
+  const tyRev = days.map((d, i) => total.net_rev && total.net_rev[i] ? total.net_rev[i] : 0);
+
+  // OCC data
+  const monthKeyDash = targetKey.slice(0,4) + '-' + targetKey.slice(4);
+  let dailyOcc = null;
+  if (dailyBooking && dailyBooking.by_property && dailyBooking.by_property['Grand Total']) {
+    const gtMonth = (dailyBooking.by_property['Grand Total'].months || {})[monthKeyDash];
+    if (gtMonth && gtMonth.daily_occ) dailyOcc = gtMonth.daily_occ;
+  }
+
+  const occArr = days.map((d, i) => dailyOcc && dailyOcc[i] ? dailyOcc[i] : null);
+  const adrArr = days.map((d, i) => tyRn[i] > 0 ? Math.round(tyRev[i] / tyRn[i]) : null);
+
+  const tooltipOpts = { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10 };
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const tickFont = { family:'JetBrains Mono', size:10 };
+
+  // 1. TY vs LY bar chart
+  if (insightTylyChart) insightTylyChart.destroy();
+  const ctx1 = document.getElementById('insight-tyly-chart');
+  if (ctx1) {
+    setText('insight-tyly-title', mn + '월 TY vs LY 일별 객실');
+    insightTylyChart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'TY', data:tyRn, backgroundColor:'#e6b970bb', borderColor:'#e6b970', borderWidth:1, borderRadius:2 },
+          { label:'LY', data:lyRn, backgroundColor:'rgba(255,255,255,0.15)', borderColor:'rgba(255,255,255,0.3)', borderWidth:1, borderRadius:2 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ ...tooltipOpts, callbacks:{ label:c=>' '+c.dataset.label+': '+c.parsed.y.toLocaleString('ko-KR')+'실' } } },
+        scales:{
+          x:{ grid:{color:gridColor}, ticks:{color:'rgba(255,255,255,0.5)', font:tickFont, maxRotation:0, autoSkip:true, maxTicksLimit:15}, border:{display:false} },
+          y:{ grid:{color:gridColor}, ticks:{color:'rgba(255,255,255,0.3)', font:tickFont, callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} }
+        }
+      }
+    });
+  }
+
+  // 2. OCC% vs ADR dual-axis line chart
+  if (insightOccAdrChart) insightOccAdrChart.destroy();
+  const ctx2 = document.getElementById('insight-occ-adr-chart');
+  if (ctx2) {
+    setText('insight-occ-adr-title', mn + '월 OCC% vs ADR');
+    insightOccAdrChart = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label:'OCC%', data:occArr, borderColor:'#e57373', backgroundColor:'rgba(229,115,115,0.1)', fill:true, tension:0.3, pointRadius:2, pointHoverRadius:5, yAxisID:'y' },
+          { label:'ADR', data:adrArr, borderColor:'#5a9fc4', backgroundColor:'rgba(90,159,196,0.1)', fill:false, tension:0.3, pointRadius:2, pointHoverRadius:5, yAxisID:'y1', borderDash:[4,4] }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ ...tooltipOpts, callbacks:{ label:c=>c.dataset.label==='OCC%' ? ' OCC: '+(c.parsed.y!=null?c.parsed.y.toFixed(1)+'%':'—') : ' ADR: '+(c.parsed.y!=null?c.parsed.y.toLocaleString('ko-KR')+'원':'—') } } },
+        scales:{
+          x:{ grid:{color:gridColor}, ticks:{color:'rgba(255,255,255,0.5)', font:tickFont, maxRotation:0, autoSkip:true, maxTicksLimit:15}, border:{display:false} },
+          y:{ type:'linear', position:'left', min:0, max:100, grid:{color:gridColor}, ticks:{color:'#e57373', font:tickFont, callback:v=>v+'%'}, border:{display:false}, title:{display:true, text:'OCC%', color:'#e57373', font:{size:10}} },
+          y1:{ type:'linear', position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#5a9fc4', font:tickFont, callback:v=>(v/1000).toFixed(0)+'K'}, border:{display:false}, title:{display:true, text:'ADR', color:'#5a9fc4', font:{size:10}} }
+        }
+      }
+    });
+  }
+
+  // 3. YoY% bar chart (positive=green, negative=red)
+  if (insightYoyChart) insightYoyChart.destroy();
+  const ctx3 = document.getElementById('insight-yoy-chart');
+  if (ctx3) {
+    setText('insight-yoy-title', mn + '월 일별 YoY% (전년 대비 객실)');
+    const yoyData = days.map((d, i) => {
+      if (lyRn[i] === 0) return null;
+      return ((tyRn[i] / lyRn[i]) - 1) * 100;
+    });
+    const bgColors = yoyData.map(v => v == null ? 'rgba(255,255,255,0.1)' : v >= 0 ? 'rgba(76,175,111,0.7)' : 'rgba(229,115,115,0.7)');
+    const bdColors = yoyData.map(v => v == null ? 'rgba(255,255,255,0.2)' : v >= 0 ? '#4caf6f' : '#e57373');
+
+    insightYoyChart = new Chart(ctx3, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ label:'YoY%', data:yoyData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:1, borderRadius:2 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ ...tooltipOpts, callbacks:{ label:c=>c.parsed.y!=null ? ' YoY: '+c.parsed.y.toFixed(1)+'%' : ' 데이터 없음' } },
+          annotation: undefined
+        },
+        scales:{
+          x:{ grid:{color:gridColor}, ticks:{color:'rgba(255,255,255,0.5)', font:tickFont, maxRotation:0, autoSkip:true, maxTicksLimit:15}, border:{display:false} },
+          y:{ grid:{color:gridColor}, ticks:{color:'rgba(255,255,255,0.3)', font:tickFont, callback:v=>v+'%'}, border:{display:false} }
+        }
+      }
+    });
+  }
 }
 
 function render() {
@@ -593,7 +835,6 @@ function render() {
   }
 
   setText('period-display', periodLabel);
-  setText('table-label', activeYear + '년 · ' + months.length + '개월');
   setText('sidebar-refresh', db.generated_at || '—');
   setText('refresh-badge', db.generated_at || '—');
 
@@ -627,197 +868,10 @@ function render() {
     dataSource = db.by_segment;
   }
 
-  const segData = {};
-  const segsToShow = activeSegment === '전체' ? SEGS : [activeSegment];
-
-  for (const seg of segsToShow) {
-    segData[seg] = months.map(m => {
-      const d = dataSource[seg];
-      return d && d[m] ? d[m].net_rn || 0 : 0;
-    });
-  }
-
-  // Fill in missing segments with 0s for consistency
-  for (const seg of SEGS) {
-    if (!segData[seg]) {
-      segData[seg] = months.map(() => 0);
-    }
-  }
-
-  const totOTA = segData['OTA'].reduce((a, b) => a + b, 0);
-  const totGOTA = segData['G-OTA'].reduce((a, b) => a + b, 0);
-  const totInbound = segData['Inbound'].reduce((a, b) => a + b, 0);
-  const totAll = totOTA + totGOTA + totInbound;
-
-  setText('kpi-ota', fmt.num(totOTA));
-  setText('kpi-ota-sub', months.length + '개월 누계');
-  setText('kpi-gota', fmt.num(totGOTA));
-  setText('kpi-gota-sub', months.length + '개월 누계');
-  setText('kpi-inbound', fmt.num(totInbound));
-  setText('kpi-inbound-sub', months.length + '개월 누계');
-  setText('kpi-total', fmt.num(totAll));
-  setText('kpi-total-sub', months.length + '개월 · 3세그먼트 합계');
-  // OCC KPI — 사업장 필터 반영
-  if (occData) {
-    const nowM = new Date().getMonth() + 1;
-    const tryKey = activeYear + '-' + String(nowM).padStart(2, '0');
-    let occKey = tryKey;
-    let occV = getOccValue(occKey);
-    if (occV == null) {
-      const refKeys = Object.keys(occData.total || {}).filter(k => k.startsWith(activeYear)).sort();
-      for (const rk of refKeys) {
-        const tv = getOccValue(rk);
-        if (tv != null) { occKey = rk; occV = tv; break; }
-      }
-    }
-    if (occV != null) {
-      setText('kpi-occ', occV.toFixed(1));
-      const label = activeProps.size > 0 ? parseInt(occKey.slice(5)) + '월 선택사업장 기준' : parseInt(occKey.slice(5)) + '월 Booking Status 기준';
-      setText('kpi-occ-sub', label);
-    } else {
-      setText('kpi-occ', '—');
-      setText('kpi-occ-sub', '데이터 없음');
-    }
-  } else {
-    setText('kpi-occ', '—');
-    setText('kpi-occ-sub', 'OCC 로드 실패');
-  }
-
-  // 우리 OCC = 우리 Net RN / 사업계획 가용객실수 (사업장 필터 반영)
-  const ourMonthNums = months.map(m => parseInt(m.slice(4)));
-  let ourAvail = 0;
-  if (activeProps.size > 0) {
-    for (const p of activeProps) {
-      const pa = PLAN_AVAIL[p];
-      if (pa) ourMonthNums.forEach(m => { ourAvail += (pa[m] || 0); });
-    }
-  } else {
-    const pa = PLAN_AVAIL['전체'];
-    ourMonthNums.forEach(m => { ourAvail += (pa[m] || 0); });
-  }
-  if (ourAvail > 0 && totAll > 0) {
-    const ourOcc = (totAll / ourAvail * 100).toFixed(1);
-    setText('kpi-our-occ', ourOcc);
-    const occLabel = activeProps.size > 0 ? '선택사업장' : '전체';
-    setText('kpi-our-occ-sub', ourMonthNums.length + '개월 · ' + occLabel + (activeSegment !== '전체' ? ' · ' + activeSegment : ''));
-  } else {
-    setText('kpi-our-occ', '—');
-    setText('kpi-our-occ-sub', ourAvail === 0 ? '가용객실 데이터 없음' : '데이터 없음');
-  }
-
-  if (segChart) segChart.destroy();
-  const ctx1 = document.getElementById('seg-chart');
-  if (ctx1) {
-    segChart = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: monthLabels,
-        datasets: SEGS.map(seg => ({
-          label: seg, data: segData[seg],
-          backgroundColor: SEG_COLORS[seg] + 'bb', borderColor: SEG_COLORS[seg],
-          borderWidth: 1, borderRadius: 2
-        }))
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
-            callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ko-KR') + '실' } }
-        },
-        scales: {
-          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { family: 'JetBrains Mono', size: 10 } }, border: { display: false } },
-          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toLocaleString('ko-KR') }, border: { display: false } }
-        }
-      }
-    });
-  }
-
-  if (pieChart) pieChart.destroy();
-  const ctx2 = document.getElementById('pie-chart');
-  if (ctx2) {
-    pieChart = new Chart(ctx2, {
-      type: 'doughnut',
-      data: {
-        labels: SEGS,
-        datasets: [{ data: [totOTA, totGOTA, totInbound], backgroundColor: ['#e6b970cc', '#5a9fc4cc', '#4caf6fcc'], borderColor: ['#e6b970', '#5a9fc4', '#4caf6f'], borderWidth: 1 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
-            callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString('ko-KR') + '실 (' + (totAll > 0 ? (ctx.parsed / totAll * 100).toFixed(1) : 0) + '%)' } }
-        }
-      }
-    });
-  }
-
-  let rows = '';
-  let tOTA = 0, tGOTA = 0, tIB = 0;
-  for (let i = 0; i < months.length; i++) {
-    const ota = segData['OTA'][i] || 0;
-    const gota = segData['G-OTA'][i] || 0;
-    const ib = segData['Inbound'][i] || 0;
-    const tot = ota + gota + ib;
-    tOTA += ota; tGOTA += gota; tIB += ib;
-    const otaPct = tot > 0 ? (ota / tot * 100).toFixed(1) : '—';
-    const gotaPct = tot > 0 ? (gota / tot * 100).toFixed(1) : '—';
-
-    // OCC for this month
-    const occMonthKey = activeYear + '-' + String(parseInt(months[i].slice(4))).padStart(2, '0');
-    const occVal = getOccValue(occMonthKey);
-    const occHtml = occVal != null ? occVal.toFixed(1) + '%' : '—';
-    const occColor = occVal != null ? (occVal >= 70 ? 'var(--positive)' : occVal >= 50 ? 'var(--warning)' : 'var(--negative)') : 'var(--ink-faint)';
-
-    // 경고: OCC 낮고 우리 예약도 월평균 이하
-    const avgRn = months.length > 0 ? (tOTA + tGOTA + tIB + tot) / (i + 1) : 0; // running avg up to this month
-    const isLowOcc = occVal != null && occVal < 50;
-    const isBelowAvg = tot > 0 && i > 0 && tot < (segData['OTA'].reduce((a, v, idx) => idx < i ? a + (v||0) : a, 0) + segData['G-OTA'].reduce((a, v, idx) => idx < i ? a + (v||0) : a, 0) + segData['Inbound'].reduce((a, v, idx) => idx < i ? a + (v||0) : a, 0)) / i;
-    const warnFlag = isLowOcc && isBelowAvg ? ' <span title="OCC 낮음 + 예약 월평균 이하" style="color:var(--negative);font-size:10px;">⚠</span>' : '';
-
-    // Only show selected segment if filtered
-    if (activeSegment !== '전체') {
-      rows += `<tr>
-        <td>${monthLabels[i]}</td>
-        <td class="border-left-group" colspan="3">${fmt.num(segData[activeSegment][i] || 0)}</td>
-        <td class="border-left-group">—</td>
-        <td>—</td>
-        <td>—</td>
-        <td class="border-left-group" style="color:${occColor}">${occHtml}${warnFlag}</td>
-      </tr>`;
-    } else {
-      rows += `<tr>
-        <td>${monthLabels[i]}</td>
-        <td class="border-left-group">${fmt.num(ota)}</td>
-        <td>${fmt.num(gota)}</td>
-        <td>${fmt.num(ib)}</td>
-        <td class="border-left-group">${fmt.num(tot)}</td>
-        <td>${otaPct !== '—' ? otaPct + '%' : '—'}</td>
-        <td>${gotaPct !== '—' ? gotaPct + '%' : '—'}</td>
-        <td class="border-left-group" style="color:${occColor}">${occHtml}${warnFlag}</td>
-      </tr>`;
-    }
-  }
-  const tTot = tOTA + tGOTA + tIB;
-  // Average OCC across displayed months
-  const occMonths = months.map(m => activeYear + '-' + String(parseInt(m.slice(4))).padStart(2, '0'));
-  const occVals = occMonths.map(k => getOccValue(k)).filter(v => v != null);
-  const avgOcc = occVals.length > 0 ? (occVals.reduce((a, v) => a + v, 0) / occVals.length).toFixed(1) + '%' : '—';
-  rows += `<tr class="total-row">
-    <td>합계</td>
-    <td class="border-left-group">${fmt.num(tOTA)}</td>
-    <td>${fmt.num(tGOTA)}</td>
-    <td>${fmt.num(tIB)}</td>
-    <td class="border-left-group">${fmt.num(tTot)}</td>
-    <td>${tTot > 0 ? (tOTA / tTot * 100).toFixed(1) + '%' : '—'}</td>
-    <td>${tTot > 0 ? (tGOTA / tTot * 100).toFixed(1) + '%' : '—'}</td>
-    <td class="border-left-group" style="color:var(--info)">${avgOcc}</td>
-  </tr>`;
-  document.getElementById('seg-tbody').innerHTML = rows;
-
   buildMonthChips();
   renderDailyChart();
+  renderDailyDetailTable();
+  renderInsightCharts();
 }
 
 function buildFilters() {
@@ -867,6 +921,8 @@ function buildSidebarMonthChips() {
       const mainChips = document.getElementById('month-chips');
       if (mainChips) mainChips.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset && b.dataset.value === activeMonth));
       renderDailyChart();
+      renderDailyDetailTable();
+      renderInsightCharts();
     });
     c.appendChild(btn);
   });
