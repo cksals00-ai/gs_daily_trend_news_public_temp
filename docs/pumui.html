@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>품의 작성용 · SONO GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
+  --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+  --gold:#c9a063;--gold-bright:#e6b970;
+  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
+  --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --sidebar-w:260px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
+
+.masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
+.masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;text-decoration:none;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
+.page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;}
+.masthead-right{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6);}
+
+.app-shell{display:flex;min-height:calc(100vh - 52px);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{padding:4px 10px;border-radius:3px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.04em;user-select:none;}
+.chip:hover{background:var(--bg-soft);color:var(--ink);}
+.chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);}
+.sidebar-divider{height:1px;background:var(--rule);}
+
+.prop-list{display:flex;flex-direction:column;gap:3px;max-height:calc(100vh - 420px);overflow-y:auto;}
+.prop-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--ink-muted);transition:all 0.15s;}
+.prop-item:hover{background:var(--bg-soft);color:var(--ink);}
+.prop-item.active{background:rgba(201,160,99,0.12);color:var(--gold-bright);}
+.prop-item input[type=checkbox]{accent-color:var(--gold);width:14px;height:14px;cursor:pointer;}
+.prop-item label{cursor:pointer;flex:1;}
+
+.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;}
+.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
+
+.btn-action{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:rgba(201,160,99,0.18);border:1px solid var(--gold);border-radius:4px;color:var(--gold-bright);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;letter-spacing:0.06em;}
+.btn-action:hover{background:rgba(201,160,99,0.3);}
+.btn-action:disabled{opacity:0.4;cursor:not-allowed;}
+
+.btn-gen{background:var(--positive);border-color:var(--positive);color:#fff;font-size:13px;padding:10px 24px;}
+.btn-gen:hover{background:#5cc080;}
+
+.forecast-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--bg-card);}
+.forecast-table th,.forecast-table td{padding:8px 14px;border:1px solid var(--rule-strong);text-align:right;font-family:var(--mono);font-size:12px;}
+.forecast-table th{background:var(--bg-deep);color:var(--ink-muted);font-weight:700;letter-spacing:0.06em;text-align:center;white-space:nowrap;}
+.forecast-table td{color:var(--ink-soft);}
+.forecast-table .row-label{text-align:left;font-weight:600;color:var(--ink-muted);white-space:nowrap;}
+.forecast-table .section-header{background:var(--bg-deep);color:var(--gold-bright);font-weight:800;text-align:left;font-size:12.5px;letter-spacing:0.05em;border-bottom:2px solid var(--gold);}
+.forecast-table .section-header td{padding:10px 14px;}
+.forecast-table .pct-cell{color:var(--ink-faint);}
+.forecast-table .pos{color:var(--positive);}
+.forecast-table .neg{color:var(--negative);}
+
+.table-block{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-bottom:16px;}
+.table-block-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;}
+.table-block-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gold-bright);letter-spacing:0.06em;}
+.table-block-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+.empty-state{text-align:center;padding:80px 20px;color:var(--ink-faint);font-family:var(--mono);font-size:13px;letter-spacing:0.04em;}
+.empty-state .icon{font-size:40px;margin-bottom:12px;opacity:0.3;}
+
+.seg-select{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.seg-chip{padding:3px 8px;border-radius:3px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer;transition:all 0.12s;}
+.seg-chip:hover{color:var(--ink);}
+.seg-chip.active{background:rgba(90,159,196,0.18);border-color:var(--info);color:var(--info);}
+
+.select-all-btn{font-family:var(--mono);font-size:10px;color:var(--ink-faint);cursor:pointer;padding:2px 6px;border:1px solid var(--rule);border-radius:3px;background:transparent;margin-left:auto;}
+.select-all-btn:hover{color:var(--ink);background:var(--bg-soft);}
+
+@media(max-width:900px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:12px;}
+  .prop-list{max-height:200px;flex-direction:row;flex-wrap:wrap;}
+  .main-content{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div style="display:flex;align-items:center;">
+      <a href="index.html" class="logo-mark">SONO</a>
+      <span class="team-tag">GS팀</span>
+    </div>
+    <div class="masthead-right">
+      <span class="page-badge">품의 작성</span>
+      <span id="today-date"></span>
+    </div>
+  </div>
+</header>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <span class="filter-section-label" style="margin-bottom:0;">사업장</span>
+        <button class="select-all-btn" id="btn-prop-all">전체선택</button>
+      </div>
+      <div class="prop-list" id="prop-list"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <span class="filter-section-label" style="margin-bottom:0;">월 선택</span>
+        <button class="select-all-btn" id="btn-month-all">전체선택</button>
+      </div>
+      <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">GS 세그먼트</div>
+      <div class="seg-select" id="seg-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn-action btn-gen" id="btn-generate" onclick="generateTables()">테이블 생성</button>
+      <button class="btn-action" id="btn-download" onclick="downloadExcel()" disabled>엑셀 다운로드</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">Forecast 품의서<span class="sub">사업장/월 선택 후 생성</span></div>
+    </div>
+    <div id="output-area">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        좌측에서 사업장과 월을 선택하고<br>
+        [테이블 생성] 버튼을 눌러주세요
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ─── Property name mapping ─── */
+const PROPERTIES = [
+  {id:'01',otb:'01.벨비발디',db:'소노벨 비발디파크',occ:'01.벨비발디',label:'소노벨 비발디파크'},
+  {id:'02',otb:'02.캄비발디',db:'소노캄 비발디파크',occ:'02.캄비발디',label:'소노캄 비발디파크'},
+  {id:'03',otb:'03.펫비발디',db:'소노펫 비발디파크',occ:'03.펫비발디',label:'소노펫 비발디파크'},
+  {id:'04',otb:'04.펠리체비발디',db:'소노펠리체 비발디파크',occ:'04.펠리체비발디',label:'소노펠리체 비발디파크'},
+  {id:'05',otb:'05.빌리지비발디',db:'소노펠리체 빌리지 비발디파크',occ:'05.빌리지비발디',label:'빌리지 비발디파크'},
+  {id:'06',otb:'06.양평',db:'소노휴 양평',occ:'06.양평',label:'소노휴 양평'},
+  {id:'07',otb:'07.델피노',db:'델피노',occ:'07.델피노',label:'델피노'},
+  {id:'08',otb:'08.쏠비치양양',db:'쏠비치 양양',occ:'08.양양',label:'쏠비치 양양'},
+  {id:'09',otb:'09.쏠비치삼척',db:'쏠비치 삼척',occ:'09.삼척',label:'쏠비치 삼척'},
+  {id:'10',otb:'10.소노벨단양',db:'소노문 단양',occ:'10.단양',label:'소노벨 단양'},
+  {id:'11',otb:'11.소노캄경주',db:'소노벨 경주',occ:'11.경주',label:'소노캄 경주'},
+  {id:'12',otb:'12.소노벨청송',db:'소노벨 청송',occ:'12.청송',label:'소노벨 청송'},
+  {id:'13',otb:'13.소노벨천안',db:'소노벨 천안',occ:'13.천안',label:'소노벨 천안'},
+  {id:'14',otb:'14.소노벨변산',db:'소노벨 변산',occ:'14.변산',label:'소노벨 변산'},
+  {id:'15',otb:'15.소노캄여수',db:'소노캄 여수',occ:'15.여수',label:'소노캄 여수'},
+  {id:'16',otb:'16.소노캄거제',db:'소노캄 거제',occ:'16.거제',label:'소노캄 거제'},
+  {id:'17',otb:'17.쏠비치진도',db:'쏠비치 진도',occ:'17.진도',label:'쏠비치 진도'},
+  {id:'18',otb:'18.소노벨제주',db:'소노벨 제주',occ:'18.제주벨',label:'소노벨 제주'},
+  {id:'19',otb:'19.소노캄제주',db:'소노캄 제주',occ:'19.제주캄',label:'소노캄 제주'},
+  {id:'20',otb:'20.소노캄고양',db:'소노캄 고양',occ:'20.고양',label:'소노캄 고양'},
+  {id:'21',otb:'21.소노문해운대',db:'소노문 해운대',occ:'21.소노문',label:'소노문 해운대'},
+  {id:'22',otb:'22.쏠비치남해',db:'쏠비치 남해',occ:'22.남해',label:'쏠비치 남해'},
+  {id:'23',otb:'23.르네블루',db:'르네블루',occ:'23.르네블루',label:'르네블루'}
+];
+
+const GS_SEGMENTS = ['OTA','G-OTA','Inbound'];
+const ALL_SEGMENTS = ['OTA','G-OTA','Inbound','D멤버스','FIT','GSA','H/U','네트웍스 일반단체','단체COMP','법인주중(회원사)','비회원COMP','연간계약사','인바운드COMP','일반단체','임차','자사 패키지','제휴사PKG','학생단체','할인권 예약부일반','회원PKG'];
+const AVAIL_MONTHS = [4,5,6,7]; // months we have RM data for
+
+let DATA = {otb:null, db:null, occ:null, fcst:null};
+let selectedProps = new Set();
+let selectedMonths = new Set();
+let selectedSegs = new Set(GS_SEGMENTS);
+
+/* ─── Init ─── */
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('ko-KR');
+
+async function loadData(){
+  try{
+    const [otbR,dbR,occR,fcstR] = await Promise.all([
+      fetch('data/otb_data.json').then(r=>r.json()),
+      fetch('data/db_aggregated.json').then(r=>r.json()),
+      fetch('data/occ_data.json').then(r=>r.json()),
+      fetch('data/rm_fcst.json').then(r=>r.json())
+    ]);
+    DATA.otb=otbR; DATA.db=dbR; DATA.occ=occR; DATA.fcst=fcstR;
+    initUI();
+  }catch(e){console.error('Data load error:',e);}
+}
+
+function initUI(){
+  // Property list
+  const propList = document.getElementById('prop-list');
+  PROPERTIES.forEach(p=>{
+    const div = document.createElement('div');
+    div.className='prop-item';
+    div.innerHTML=`<input type="checkbox" id="prop-${p.id}" data-id="${p.id}"><label for="prop-${p.id}">${p.id}. ${p.label}</label>`;
+    div.querySelector('input').addEventListener('change',e=>{
+      if(e.target.checked) selectedProps.add(p.id); else selectedProps.delete(p.id);
+      div.classList.toggle('active',e.target.checked);
+    });
+    propList.appendChild(div);
+  });
+
+  // Month chips
+  const monthChips = document.getElementById('month-chips');
+  AVAIL_MONTHS.forEach(m=>{
+    const chip = document.createElement('div');
+    chip.className='chip';
+    chip.textContent=m+'월';
+    chip.dataset.month=m;
+    chip.addEventListener('click',()=>{
+      if(selectedMonths.has(m)) selectedMonths.delete(m); else selectedMonths.add(m);
+      chip.classList.toggle('active',selectedMonths.has(m));
+    });
+    monthChips.appendChild(chip);
+  });
+
+  // Segment chips
+  const segChips = document.getElementById('seg-chips');
+  ALL_SEGMENTS.forEach(s=>{
+    const chip = document.createElement('div');
+    chip.className='seg-chip'+(GS_SEGMENTS.includes(s)?' active':'');
+    chip.textContent=s;
+    chip.addEventListener('click',()=>{
+      if(selectedSegs.has(s)) selectedSegs.delete(s); else selectedSegs.add(s);
+      chip.classList.toggle('active',selectedSegs.has(s));
+    });
+    segChips.appendChild(chip);
+  });
+
+  // Select all buttons
+  document.getElementById('btn-prop-all').addEventListener('click',()=>{
+    const allSelected = selectedProps.size===PROPERTIES.length;
+    document.querySelectorAll('#prop-list input[type=checkbox]').forEach(cb=>{
+      cb.checked=!allSelected;
+      const id=cb.dataset.id;
+      if(!allSelected) selectedProps.add(id); else selectedProps.delete(id);
+      cb.closest('.prop-item').classList.toggle('active',!allSelected);
+    });
+  });
+  document.getElementById('btn-month-all').addEventListener('click',()=>{
+    const allSelected = selectedMonths.size===AVAIL_MONTHS.length;
+    document.querySelectorAll('#month-chips .chip').forEach(c=>{
+      const m=parseInt(c.dataset.month);
+      if(!allSelected){selectedMonths.add(m);c.classList.add('active');}
+      else{selectedMonths.delete(m);c.classList.remove('active');}
+    });
+  });
+}
+
+/* ─── Data helpers ─── */
+function getOtbYoy(otbName, month){
+  if(!DATA.otb) return null;
+  const row = DATA.otb.yoyTable.find(r=>r.name===otbName);
+  if(!row) return null;
+  return row.months[String(month)] || null;
+}
+
+function getOtbByProp(otbName){
+  if(!DATA.otb) return null;
+  return DATA.otb.byProperty.find(r=>r.name===otbName) || null;
+}
+
+function getOcc(occName, month){
+  if(!DATA.occ) return null;
+  const key = `2026-${String(month).padStart(2,'0')}`;
+  const props = DATA.occ.properties || {};
+  if(props[occName]) return props[occName][key] ?? null;
+  return null;
+}
+
+function getGsData(dbName, month, segs){
+  if(!DATA.db) return null;
+  const bps = DATA.db.by_property_segment;
+  if(!bps[dbName]) return null;
+  const mKey = `2026${String(month).padStart(2,'0')}`;
+  let totalRn=0, totalRev=0;
+  segs.forEach(seg=>{
+    if(bps[dbName][seg] && bps[dbName][seg][mKey]){
+      const d = bps[dbName][seg][mKey];
+      totalRn += d.net_rn||0;
+      totalRev += d.net_rev||0;
+    }
+  });
+  const adr = totalRn>0 ? totalRev/totalRn : 0;
+  return {rn:totalRn, rev:totalRev, adr:Math.round(adr*1000)}; // rev is in 백만, adr in 원
+}
+
+function getRmFcst(otbName, month){
+  if(!DATA.fcst) return null;
+  const props = DATA.fcst.properties;
+  // Match by otb name
+  const key = `2026-${String(month).padStart(2,'0')}`;
+  // find matching property in rm_fcst
+  const matchKey = Object.keys(props).find(k=>k===otbName);
+  if(matchKey && props[matchKey][key]) return props[matchKey][key];
+  return null;
+}
+
+/* ─── Format helpers ─── */
+const fmt = (n,dec=0)=>{
+  if(n==null || isNaN(n)) return '—';
+  return n.toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+};
+const fmtPct = (n,dec=1)=>{
+  if(n==null || isNaN(n)) return '—';
+  return n.toFixed(dec)+'%';
+};
+const fmtRev = (n)=>{
+  if(n==null || isNaN(n)) return '—';
+  // n is in 백만원 → 억원 표시
+  return (n/100).toFixed(1)+'억';
+};
+const fmtRevWon = (n)=>{
+  if(n==null || isNaN(n)) return '—';
+  // n is in 원
+  return Math.round(n/100000000).toLocaleString('ko-KR')+'억';
+};
+const pctClass = (v)=> v==null?'':v>=100?'pos':'neg';
+
+/* ─── Generate tables ─── */
+function generateTables(){
+  const output = document.getElementById('output-area');
+  if(selectedProps.size===0 || selectedMonths.size===0){
+    output.innerHTML='<div class="empty-state"><div class="icon">⚠️</div>사업장과 월을 선택해주세요</div>';
+    return;
+  }
+
+  const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
+  const selMonthsArr = [...selectedMonths].sort((a,b)=>a-b);
+  const segsArr = [...selectedSegs];
+  const multiProp = selPropsArr.length > 1;
+  const propLabel = multiProp ? selPropsArr.map(p=>p.label).join(' + ') : selPropsArr[0].label;
+
+  let html = '';
+
+  selMonthsArr.forEach(month=>{
+    // Aggregate data across selected properties
+    let total_rm_budget_rn=0, total_act_rn=0, total_rm_fcst_rn=0, total_last_rn=0;
+    let total_gs_rn=0, total_gs_rev=0;
+    let occ_sum=0, occ_cnt=0;
+
+    selPropsArr.forEach(p=>{
+      // 전체 (RM)
+      const yoy = getOtbYoy(p.otb, month);
+      if(yoy){
+        total_rm_budget_rn += yoy.rm_budget_rn||0;
+        total_act_rn += yoy.act_rn||0;
+        total_rm_fcst_rn += yoy.rm_fcst_rn||0;
+        total_last_rn += yoy.last_rn||0;
+      }
+      // OCC
+      const occ = getOcc(p.occ, month);
+      if(occ!=null){occ_sum+=occ; occ_cnt++;}
+      // GS
+      const gs = getGsData(p.db, month, segsArr);
+      if(gs){
+        total_gs_rn += gs.rn;
+        total_gs_rev += gs.rev;
+      }
+    });
+
+    const avg_occ = occ_cnt>0 ? occ_sum/occ_cnt : null;
+    const total_gs_adr = total_gs_rn>0 ? Math.round(total_gs_rev/total_gs_rn*1000) : null;
+    const rn_ach = total_rm_budget_rn>0 ? (total_act_rn/total_rm_budget_rn*100) : null;
+    const fcst_ach = total_rm_budget_rn>0 ? (total_rm_fcst_rn/total_rm_budget_rn*100) : null;
+    const fcst_diff_rn = total_rm_fcst_rn - total_rm_budget_rn;
+
+    // GS budget: no direct data, so show as proportion of total OTB
+    const gs_ratio_rn = total_act_rn>0 ? total_gs_rn/total_act_rn : 0;
+    const gs_budget_rn = Math.round(total_rm_budget_rn * gs_ratio_rn);
+    const gs_rn_ach = gs_budget_rn>0 ? (total_gs_rn/gs_budget_rn*100) : null;
+
+    // REV: GS rev is in 백만원
+    const gs_rev_display = total_gs_rev; // 백만원
+
+    html += `
+    <div class="table-block">
+      <div class="table-block-header">
+        <span class="table-block-title">Forecast — ${propLabel}</span>
+        <span class="table-block-sub">2026년 ${month}월</span>
+      </div>
+      <div class="table-wrap">
+        <table class="forecast-table" data-month="${month}">
+          <thead>
+            <tr>
+              <th colspan="2" style="text-align:left;">구분</th>
+              <th colspan="3" style="border-bottom:2px solid var(--gold);">OTB</th>
+              <th colspan="3" style="border-bottom:2px solid var(--info);">FCST</th>
+            </tr>
+            <tr>
+              <th style="width:60px;text-align:left;">채널</th>
+              <th style="width:60px;text-align:left;">항목</th>
+              <th style="width:100px;">목표</th>
+              <th style="width:100px;">현재 OTB</th>
+              <th style="width:80px;">진행률</th>
+              <th style="width:100px;">예상실적</th>
+              <th style="width:100px;">증감</th>
+              <th style="width:80px;">달성률</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section-header"><td colspan="8">전체 (Revenue Meeting 기준)</td></tr>
+            <tr>
+              <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:13px;font-weight:800;color:var(--gold);">전체</td>
+              <td class="row-label">OCC</td>
+              <td>—</td>
+              <td>${fmtPct(avg_occ)}</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">RNs</td>
+              <td>${fmt(total_rm_budget_rn)}</td>
+              <td>${fmt(total_act_rn)}</td>
+              <td class="pct-cell ${pctClass(rn_ach)}">${fmtPct(rn_ach)}</td>
+              <td>${fmt(total_rm_fcst_rn)}</td>
+              <td class="${fcst_diff_rn>=0?'pos':'neg'}">${fcst_diff_rn>=0?'+':''}${fmt(fcst_diff_rn)}</td>
+              <td class="pct-cell ${pctClass(fcst_ach)}">${fmtPct(fcst_ach)}</td>
+            </tr>
+            <tr>
+              <td class="row-label">ADR</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">REV</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr class="section-header"><td colspan="8">GS (${segsArr.join(' + ')})</td></tr>
+            <tr>
+              <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:13px;font-weight:800;color:var(--info);">GS</td>
+              <td class="row-label">OCC</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">RNs</td>
+              <td>—</td>
+              <td>${fmt(total_gs_rn)}</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">ADR</td>
+              <td>—</td>
+              <td>${total_gs_adr ? fmt(total_gs_adr)+'원' : '—'}</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">REV</td>
+              <td>—</td>
+              <td>${fmtRev(gs_rev_display)}</td>
+              <td class="pct-cell">—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="pct-cell">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  output.innerHTML = html;
+  document.getElementById('btn-download').disabled = false;
+}
+
+/* ─── Excel download ─── */
+function downloadExcel(){
+  const tables = document.querySelectorAll('.forecast-table');
+  if(!tables.length) return;
+
+  const wb = XLSX.utils.book_new();
+  const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
+  const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
+
+  tables.forEach(tbl=>{
+    const month = tbl.dataset.month;
+    const sheetName = `${month}월`;
+    const ws = XLSX.utils.table_to_sheet(tbl);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const fname = `Forecast_${propLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+/* ─── Boot ─── */
+loadData();
+</script>
+</body>
+</html>
