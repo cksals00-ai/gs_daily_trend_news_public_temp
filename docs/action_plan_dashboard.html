@@ -139,17 +139,32 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .cal-event.start{background:rgba(76,175,111,.2);color:var(--positive);border-left-color:var(--positive)}
 .cal-event.end{background:rgba(229,115,115,.18);color:var(--negative);border-left-color:var(--negative)}
 .cal-event.middle{background:rgba(90,159,196,.12);color:var(--ink-soft);border-left-color:var(--info);opacity:.85}
-.cal-event-more{font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;text-align:center;margin-top:2px}
+.cal-event-more{font-family:var(--mono);font-size:9px;color:var(--gold-bright);font-weight:700;text-align:center;margin-top:2px;cursor:pointer;padding:1px 4px;border-radius:3px;background:rgba(201,160,99,.1);border:1px solid rgba(201,160,99,.25);user-select:none}
+.cal-event-more:hover{background:rgba(201,160,99,.22);color:var(--gold);border-color:var(--gold)}
+.cal-event-more.expanded{background:rgba(122,126,133,.15);color:var(--ink-soft);border-color:var(--rule-strong)}
 
 /* Gantt container */
 .gantt-wrap{overflow-x:auto;overflow-y:auto;max-height:75vh;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:16px;position:relative}
 .gantt-table{border-collapse:separate;border-spacing:0;font-size:11px;width:max-content;min-width:100%}
 .gantt-table th{position:sticky;top:0;background:var(--bg-deep);z-index:4;padding:6px 8px;font-size:9.5px;font-weight:700;color:var(--ink-faint);text-align:center;border-bottom:2px solid var(--rule-strong);white-space:nowrap;letter-spacing:.04em}
-.gantt-table th.freeze{position:sticky;left:0;z-index:5;background:var(--bg-deep)}
+.gantt-table th.freeze{position:sticky;z-index:5;background:var(--bg-deep)}
 .gantt-table td{padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap;vertical-align:middle}
-.gantt-table td.freeze{position:sticky;left:0;z-index:2;background:var(--bg-card)}
+.gantt-table td.freeze{position:sticky;z-index:2;background:var(--bg-card)}
 .gantt-table tr:hover td{background:var(--bg-hover)}
 .gantt-table tr:hover td.freeze{background:var(--bg-hover)}
+/* 좌측 6컬럼 틀고정: 누적 left 오프셋 (32+130+70+220+96+96 = 644px) */
+.gantt-table .fz-0{left:0}
+.gantt-table .fz-1{left:32px}
+.gantt-table .fz-2{left:162px}
+.gantt-table .fz-3{left:232px}
+.gantt-table .fz-4{left:452px}
+.gantt-table .fz-5{left:548px}
+.gantt-table .fz-end{border-right:2px solid var(--rule-strong)!important;box-shadow:4px 0 6px -2px rgba(0,0,0,.45)}
+.gantt-fw-num{width:32px;min-width:32px;max-width:32px}
+.gantt-fw-ch{width:130px;min-width:130px;max-width:130px}
+.gantt-fw-prop{width:70px;min-width:70px;max-width:70px}
+.gantt-fw-title{width:220px;min-width:220px;max-width:220px}
+.gantt-fw-period{width:96px;min-width:96px;max-width:96px}
 
 .gantt-cell{width:24px;min-width:24px;max-width:24px;padding:0!important;position:relative;border-left:1px solid rgba(255,255,255,.04)}
 .gantt-cell.weekend{background:rgba(255,255,255,.03)}
@@ -323,6 +338,7 @@ let curView = 'table';
 let selStatus = '전체';
 let calCursor = null;        // Date cursor for calendar (1st of displayed month)
 let calMode = 'sale';        // 'sale' or 'stay'
+let calExpanded = new Set(); // dayKey('YYYY-MM-DD') 모음 — 더보기로 펼친 날짜
 const today = new Date(); today.setHours(0,0,0,0);
 const todayStr = ymdStr(today);
 
@@ -675,7 +691,9 @@ function renderCalendar(data){
     html+=`<div class="${dayCls}"><div class="cal-day-num ${dayNumCls}">${cur.getDate()}</div>`;
 
     const maxShow=3;
-    events.slice(0,maxShow).forEach(ev=>{
+    const isExpanded=calExpanded.has(dayKey);
+    const eventsToShow=isExpanded?events:events.slice(0,maxShow);
+    eventsToShow.forEach(ev=>{
       const s=calMode==='sale'?ev.saleStart:ev.stayStart;
       const e=calMode==='sale'?ev.saleEnd:ev.stayEnd;
       const sk=ymdStr(s),ek=ymdStr(e);
@@ -689,7 +707,11 @@ function renderCalendar(data){
       html+=`<div class="${evCls}" data-tip="${escapeHtml(tip)}" title="${escapeHtml(label)}">${escapeHtml(label)}</div>`;
     });
     if(events.length>maxShow){
-      html+=`<div class="cal-event-more">+${events.length-maxShow}건</div>`;
+      if(isExpanded){
+        html+=`<div class="cal-event-more expanded" onclick="toggleCalDay('${dayKey}')">접기 ▲</div>`;
+      }else{
+        html+=`<div class="cal-event-more" onclick="toggleCalDay('${dayKey}')">+${events.length-maxShow}건 ▼</div>`;
+      }
     }
     html+='</div>';
     cur.setDate(cur.getDate()+1);
@@ -717,6 +739,11 @@ function calToday(){
   render();
 }
 function setCalMode(m){calMode=m;render()}
+function toggleCalDay(dayKey){
+  if(calExpanded.has(dayKey))calExpanded.delete(dayKey);
+  else calExpanded.add(dayKey);
+  render();
+}
 
 /* ── Gantt view ── */
 function renderGantt(data){
@@ -737,22 +764,22 @@ function renderGantt(data){
   });
 
   let html='<div class="gantt-wrap" id="gantt-scroll"><table class="gantt-table">';
-  // Month header
-  html+='<tr><th class="freeze" colspan="6" style="text-align:left;border-right:2px solid var(--rule-strong)">기획전 정보</th>';
+  // Month header — colspan=6 단일 셀이 좌측 6컬럼(644px) 전체를 sticky로 덮음
+  html+='<tr><th class="freeze fz-0 fz-end" colspan="6" style="text-align:left">기획전 정보</th>';
   const bgs=['rgba(59,130,246,.08)','rgba(245,158,11,.06)','rgba(76,175,111,.06)','rgba(168,146,200,.06)'];
   months.forEach((m,i)=>{
     html+=`<th colspan="${m.count}" style="background:${bgs[i%bgs.length]};font-size:11px;color:var(--ink-soft);font-weight:800">${m.label}</th>`;
   });
   html+='</tr>';
 
-  // Day header
+  // Day header — 6컬럼 모두 freeze + 누적 fz-N + 고정폭
   html+='<tr>';
-  html+='<th class="freeze" style="border-right:1px solid var(--rule)">#</th>';
-  html+='<th style="border-right:1px solid var(--rule)">채널</th>';
-  html+='<th style="border-right:1px solid var(--rule)">사업장</th>';
-  html+='<th style="border-right:1px solid var(--rule);text-align:left">기획전명</th>';
-  html+='<th style="border-right:1px solid var(--rule)">판매기간</th>';
-  html+='<th style="border-right:2px solid var(--rule-strong)">투숙기간</th>';
+  html+='<th class="freeze fz-0 gantt-fw-num" style="border-right:1px solid var(--rule)">#</th>';
+  html+='<th class="freeze fz-1 gantt-fw-ch" style="border-right:1px solid var(--rule)">채널</th>';
+  html+='<th class="freeze fz-2 gantt-fw-prop" style="border-right:1px solid var(--rule)">사업장</th>';
+  html+='<th class="freeze fz-3 gantt-fw-title" style="border-right:1px solid var(--rule);text-align:left">기획전명</th>';
+  html+='<th class="freeze fz-4 gantt-fw-period" style="border-right:1px solid var(--rule)">판매기간</th>';
+  html+='<th class="freeze fz-5 fz-end gantt-fw-period">투숙기간</th>';
   days.forEach(d=>{
     const dow=d.getDay(),isWe=dow===0||dow===6,isToday=ymdStr(d)===todayStr;
     const color=isToday?'var(--red)':isWe?'rgba(229,115,115,.6)':'var(--ink-faint)';
@@ -765,12 +792,12 @@ function renderGantt(data){
   data.forEach((d,rowIdx)=>{
     const tip=`${d.title||'—'}\n사업장: ${d.property||'—'}\n채널: ${d.channel||'—'}\n판매: ${fmtYMD(d.saleStart)} ~ ${fmtYMD(d.saleEnd)}\n투숙: ${fmtYMD(d.stayStart)} ~ ${fmtYMD(d.stayEnd)}`;
     html+='<tr>';
-    html+=`<td class="freeze" style="border-right:1px solid var(--rule);width:32px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:10px"><span class="st-badge ${d.status}" style="font-size:8px;padding:1px 4px">●</span></td>`;
-    html+=`<td style="border-right:1px solid var(--rule);width:130px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-soft);font-size:10.5px" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`;
-    html+=`<td style="border-right:1px solid var(--rule);width:80px;color:var(--gold-bright);font-weight:700;white-space:nowrap;font-size:10.5px">${escapeHtml(d.property||'—')}</td>`;
-    html+=`<td style="border-right:1px solid var(--rule);min-width:200px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`;
-    html+=`<td style="border-right:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--gold-bright);white-space:nowrap">${fmtMD(d.saleStart)}~${fmtMD(d.saleEnd)}</td>`;
-    html+=`<td style="border-right:2px solid var(--rule-strong);font-family:var(--mono);font-size:10px;color:var(--info);white-space:nowrap">${fmtMD(d.stayStart)}~${fmtMD(d.stayEnd)}</td>`;
+    html+=`<td class="freeze fz-0 gantt-fw-num" style="border-right:1px solid var(--rule);text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:10px"><span class="st-badge ${d.status}" style="font-size:8px;padding:1px 4px">●</span></td>`;
+    html+=`<td class="freeze fz-1 gantt-fw-ch" style="border-right:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;color:var(--ink-soft);font-size:10.5px" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`;
+    html+=`<td class="freeze fz-2 gantt-fw-prop" style="border-right:1px solid var(--rule);color:var(--gold-bright);font-weight:700;font-size:10.5px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.property||'—')}</td>`;
+    html+=`<td class="freeze fz-3 gantt-fw-title" style="border-right:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:600" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`;
+    html+=`<td class="freeze fz-4 gantt-fw-period" style="border-right:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--gold-bright)">${fmtMD(d.saleStart)}~${fmtMD(d.saleEnd)}</td>`;
+    html+=`<td class="freeze fz-5 fz-end gantt-fw-period" style="font-family:var(--mono);font-size:10px;color:var(--info)">${fmtMD(d.stayStart)}~${fmtMD(d.stayEnd)}</td>`;
     days.forEach(day=>{
       const isWe=day.getDay()===0||day.getDay()===6,isToday=ymdStr(day)===todayStr;
       const ds=ymdStr(day);
@@ -803,7 +830,7 @@ function renderGantt(data){
   const todayIdx=days.findIndex(d=>ymdStr(d)===todayStr);
   if(todayIdx>=0){
     const wrap=document.getElementById('gantt-scroll');
-    setTimeout(()=>{wrap.scrollLeft=Math.max(0,560+(todayIdx-5)*24)},80);
+    setTimeout(()=>{wrap.scrollLeft=Math.max(0,644+(todayIdx-5)*24)},80);
   }
 }
 function getDateRange(data){
