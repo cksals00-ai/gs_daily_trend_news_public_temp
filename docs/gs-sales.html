@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS Sales Support Page (GSSP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  --bg:#0f1117;--bg2:#161921;--bg3:#1c1f2a;--bg4:#242836;
+  --glass:rgba(255,255,255,.04);--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.10);
+  --ink:#f0f0f4;--ink2:#c8cad0;--ink3:#8b8f9a;--ink4:#5c6070;
+  --gold:#d4a74a;--gold2:#ecc06a;--gold3:#f5d98a;--gold-glow:rgba(212,167,74,.15);
+  --rose:#e87a8a;--violet:#a07ee8;--cyan:#5cc4d0;--mint:#5cc49a;
+  --rule:rgba(255,255,255,.08);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
+  --pen:'Nanum Pen Script',cursive;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ═══ GSN NAVIGATOR ═══ */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+/* ═══ TOP BAR ═══ */
+.top-bar{
+  background:var(--bg);border-bottom:1px solid var(--rule);
+  padding:0 36px;height:48px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.top-brand{
+  font-family:var(--mono);font-size:11px;letter-spacing:.25em;color:var(--ink3);font-weight:700;
+  display:flex;align-items:center;gap:10px;
+}
+.top-brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block}
+.top-back{
+  font-family:var(--mono);font-size:11px;color:var(--ink3);text-decoration:none;
+  padding:6px 14px;border:1px solid var(--rule);border-radius:20px;
+  transition:all .2s;letter-spacing:.05em;
+}
+.top-back:hover{color:var(--gold2);border-color:var(--gold)}
+
+/* ═══ HERO ═══ */
+.hero{
+  position:relative;overflow:hidden;
+  background:linear-gradient(165deg,#1a1028 0%,#0f1117 35%,#0d1520 70%,#0f1117 100%);
+  padding:72px 36px 64px;
+}
+.hero::before{
+  content:'';position:absolute;top:-120px;right:-80px;width:600px;height:600px;
+  background:radial-gradient(circle,rgba(212,167,74,.12) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-200px;left:-100px;width:500px;height:500px;
+  background:radial-gradient(circle,rgba(92,196,208,.08) 0%,transparent 60%);
+  pointer-events:none;
+}
+.hero-inner{
+  max-width:1400px;margin:0 auto;width:100%;position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;gap:40px;
+}
+.hero-left{flex:1;min-width:0}
+.hero-right{flex-shrink:0}
+.hero-eyebrow{
+  font-family:var(--mono);font-size:10px;letter-spacing:.35em;color:var(--ink4);font-weight:600;
+  margin-bottom:16px;text-transform:uppercase;
+}
+.hero h1{
+  font-size:clamp(34px,4.5vw,52px);font-weight:800;line-height:1.08;letter-spacing:-.03em;
+  background:linear-gradient(135deg,#fff 30%,var(--gold2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:14px;
+}
+.hero-sub{
+  font-size:14px;color:var(--ink3);font-weight:400;max-width:520px;line-height:1.8;
+}
+.hero-stats{
+  display:flex;flex-direction:column;gap:20px;
+  padding:24px 28px;background:var(--glass);border:1px solid var(--rule);border-radius:14px;
+  min-width:180px;
+}
+.hero-stat{display:flex;align-items:baseline;gap:10px}
+.hero-stat-val{font-family:var(--mono);font-size:32px;font-weight:800;color:var(--ink)}
+.hero-stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--ink4);font-weight:600;text-transform:uppercase}
+
+/* ═══ CONTENT ═══ */
+.content{max-width:1400px;margin:0 auto;padding:0 36px 80px}
+
+/* ═══ SECTION HEADERS ═══ */
+.cat-section{margin-bottom:52px}
+.cat-head{
+  display:flex;align-items:baseline;gap:14px;margin-bottom:20px;
+  padding-bottom:12px;border-bottom:1px solid var(--rule);
+}
+.cat-title{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+.cat-accent{width:3px;height:18px;border-radius:2px;align-self:center}
+.cat-count{
+  font-family:var(--mono);font-size:10px;color:var(--ink4);margin-left:auto;
+  letter-spacing:.1em;font-weight:600;
+}
+
+/* ═══ BENTO GRID ═══ */
+.fav-section{
+  margin:-28px 0 52px;position:relative;z-index:5;
+  background:var(--glass);border:1px solid var(--rule);border-radius:16px;
+  padding:24px 24px 20px;
+}
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bento-card{
+  background:var(--glass2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--rule);border-radius:14px;padding:22px 24px;
+  text-decoration:none;color:inherit;position:relative;overflow:hidden;
+  transition:all .35s cubic-bezier(.25,.46,.45,.94);cursor:pointer;
+  display:flex;flex-direction:column;justify-content:space-between;min-height:110px;
+}
+.bento-card::before{
+  content:'';position:absolute;inset:0;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,255,255,.04),transparent 60%);
+  pointer-events:none;opacity:0;transition:opacity .35s;
+}
+.bento-card:hover{
+  transform:translateY(-4px);border-color:rgba(212,167,74,.35);
+  box-shadow:0 16px 48px rgba(0,0,0,.3),0 0 0 1px rgba(212,167,74,.15);
+}
+.bento-card:hover::before{opacity:1}
+.bento-icon{font-size:24px;margin-bottom:auto}
+.bento-title{font-size:14px;font-weight:700;color:var(--ink);margin-top:12px;line-height:1.3}
+.bento-desc{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5}
+.bento-tag{
+  position:absolute;top:14px;right:14px;
+  font-family:var(--mono);font-size:8px;letter-spacing:.15em;font-weight:700;
+  padding:3px 8px;border-radius:10px;
+}
+.tag-gold{background:rgba(212,167,74,.15);color:var(--gold2)}
+.tag-cyan{background:rgba(92,196,208,.15);color:var(--cyan)}
+.tag-rose{background:rgba(232,122,138,.12);color:var(--rose)}
+.tag-violet{background:rgba(160,126,232,.15);color:var(--violet)}
+.tag-mint{background:rgba(92,196,154,.12);color:var(--mint)}
+
+/* ═══ LINK GRID ═══ */
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.link-item{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border-radius:10px;text-decoration:none;color:inherit;
+  background:var(--glass);border:1px solid transparent;
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.link-item:hover{
+  background:var(--glass2);border-color:var(--rule);
+  transform:translateX(4px);
+}
+.link-icon{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.link-icon.daily{background:rgba(232,122,138,.1)}
+.link-icon.perform{background:rgba(160,126,232,.1)}
+.link-icon.admin{background:rgba(92,196,208,.1)}
+.link-icon.tool{background:rgba(92,196,154,.1)}
+.link-info{flex:1;min-width:0}
+.link-name{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-desc{font-size:11px;color:var(--ink4);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-arrow{
+  font-family:var(--mono);font-size:14px;color:var(--ink4);
+  opacity:0;transform:translateX(-6px);transition:all .25s;flex-shrink:0;
+}
+.link-item:hover .link-arrow{opacity:1;transform:translateX(0)}
+
+/* ═══ GUIDE SECTIONS ═══ */
+.guide-section{
+  background:var(--glass);border:1px solid var(--rule);border-radius:14px;
+  padding:24px 28px;margin-bottom:16px;
+}
+.guide-toggle{
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+  padding:0;background:none;border:none;color:inherit;width:100%;
+  font-family:var(--sans);
+}
+.guide-toggle-left{display:flex;align-items:center;gap:12px}
+.guide-toggle-icon{font-size:22px}
+.guide-toggle-title{font-size:15px;font-weight:700;color:var(--ink)}
+.guide-toggle-sub{font-size:11px;color:var(--ink4);margin-top:2px}
+.guide-chevron{
+  font-family:var(--mono);font-size:16px;color:var(--ink4);
+  transition:transform .3s;
+}
+.guide-chevron.open{transform:rotate(180deg)}
+.guide-body{
+  max-height:0;overflow:hidden;transition:max-height .4s ease;
+  margin-top:0;
+}
+.guide-body.open{max-height:2000px;margin-top:20px}
+.guide-content{
+  padding:20px 24px;background:var(--bg2);border-radius:10px;
+  font-size:13px;color:var(--ink2);line-height:1.85;
+}
+.guide-content h4{
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--gold2);
+  font-weight:700;margin:18px 0 10px;text-transform:uppercase;
+}
+.guide-content h4:first-child{margin-top:0}
+.guide-content ol,.guide-content ul{margin:8px 0 8px 20px}
+.guide-content li{margin-bottom:6px;font-size:12.5px}
+.guide-content code{
+  font-family:var(--mono);font-size:11px;background:var(--glass3);
+  padding:2px 6px;border-radius:4px;color:var(--gold);
+}
+.guide-content .step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;background:var(--gold-glow);
+  color:var(--gold2);font-family:var(--mono);font-size:11px;font-weight:700;
+  margin-right:8px;flex-shrink:0;
+}
+.guide-content .step-row{display:flex;align-items:flex-start;gap:4px;margin-bottom:10px}
+
+/* ═══ FOOTER ═══ */
+.map-footer{
+  border-top:1px solid var(--rule);padding:32px 0;margin-top:24px;
+  text-align:center;
+}
+.map-footer p{font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:.15em}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1024px){
+  .bento{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .top-bar{padding:0 20px}
+  .hero{padding:48px 20px}
+  .hero-inner{flex-direction:column;gap:24px}
+  .hero-stats{flex-direction:row;gap:24px;min-width:auto;width:100%}
+  .hero-stat{flex:1;align-items:center;flex-direction:column;gap:2px}
+  .hero-stat-val{font-size:24px}
+  .content{padding:0 20px 60px}
+  .bento{grid-template-columns:1fr 1fr}
+  .link-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .bento{grid-template-columns:1fr}
+  .hero h1{font-size:28px}
+  .hero-stats{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ GSN NAVIGATOR ═══ -->
+<nav class="gsn"><div class="gsn-wrap">
+  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+  <div class="gsn-links" id="gsn-links">
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy.html" data-gsn="gs-strategy">영업기획 대시보드</a>
+    <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-sales.html" data-gsn="gs-sales">Sales Support</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
+  </div>
+  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+</div></nav>
+
+<!-- ═══ TOP BAR ═══ -->
+<div class="top-bar">
+  <div class="top-brand"><span class="top-brand-dot"></span> SONO & TRINITY · GS팀</div>
+  <a href="gs-map.html" class="top-back">← Navigation Map</a>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Sales Support Hub</div>
+      <h1>GS Sales<br>Support Page</h1>
+      <p class="hero-sub">
+        <span style="font-family:'Playfair Display','Cormorant Garamond',Georgia,serif;font-style:italic;font-size:17px;color:rgba(255,255,255,.55);letter-spacing:.03em">세일즈 업무의 모든 것, 한 곳에서</span>
+        <br><span style="font-size:13px;color:var(--ink4)">대시보드 · FCST 키인 · 품의 작성 · 업무 가이드 · 요청사항 관리</span>
+      </p>
+    </div>
+    <div class="hero-right">
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="hero-stat-val">6</span><span class="hero-stat-lbl">Dashboards</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">2</span><span class="hero-stat-lbl">Tools</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">2</span><span class="hero-stat-lbl">Guides</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTENT ═══ -->
+<div class="content">
+
+  <!-- ★ 주요 도구 — Bento Grid -->
+  <div class="fav-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--gold)"></div>
+      <div class="cat-title">주요 도구</div>
+      <div class="cat-count">QUICK ACCESS</div>
+    </div>
+    <div class="bento">
+      <a href="fcst-admin.html" class="bento-card">
+        <span class="bento-tag tag-cyan">TOOL</span>
+        <span class="bento-icon">📝</span>
+        <span class="bento-title">FCST 키인</span>
+        <span class="bento-desc">예측 데이터 입력 및 수정</span>
+      </a>
+      <a href="pumui.html" class="bento-card">
+        <span class="bento-tag tag-violet">TOOL</span>
+        <span class="bento-icon">📋</span>
+        <span class="bento-title">품의 작성</span>
+        <span class="bento-desc">결재 문서 작성 및 생성</span>
+      </a>
+      <a href="gs-request.html" class="bento-card">
+        <span class="bento-tag tag-rose">REQUEST</span>
+        <span class="bento-icon">💬</span>
+        <span class="bento-title">요청사항</span>
+        <span class="bento-desc">세일즈 요청 접수 및 관리</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 대시보드 세트 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--rose)"></div>
+      <div class="cat-title">대시보드</div>
+      <div class="cat-count">6 PAGES</div>
+    </div>
+    <div class="link-grid">
+      <a href="index.html" class="link-item">
+        <div class="link-icon daily">📰</div>
+        <div class="link-info"><div class="link-name">트렌드 뉴스</div><div class="link-desc">뉴스 자동 수집, 권역별 분석, OTA TOP4</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="otb.html" class="link-item">
+        <div class="link-icon daily">📈</div>
+        <div class="link-info"><div class="link-name">GS 실적 리포트</div><div class="link-desc">Daily OTB, 사업장별 달성률, YoY 비교</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="booking-status.html" class="link-item">
+        <div class="link-icon daily">🔖</div>
+        <div class="link-info"><div class="link-name">Booking Status</div><div class="link-desc">좌측 사이드바 필터, 4개월 예약현황</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="fcst-trend.html" class="link-item">
+        <div class="link-icon daily">📅</div>
+        <div class="link-info"><div class="link-name">FCST 추이 분석</div><div class="link-desc">Revenue Meeting PDF 파싱, 사이드바 필터</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="gs-strategy.html" class="link-item">
+        <div class="link-icon daily">🎯</div>
+        <div class="link-info"><div class="link-name">운영전략 대시보드</div><div class="link-desc">3대 인사이트 + 사업계획 F/U + 4개년 트렌드</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="fcst-status.html" class="link-item">
+        <div class="link-icon daily">📊</div>
+        <div class="link-info"><div class="link-name">FCST 키인 현황</div><div class="link-desc">담당자별 키인 완료 현황 및 비교</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 세일즈 도구 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--cyan)"></div>
+      <div class="cat-title">세일즈 도구</div>
+      <div class="cat-count">3 TOOLS</div>
+    </div>
+    <div class="link-grid">
+      <a href="fcst-admin.html" class="link-item">
+        <div class="link-icon admin">📝</div>
+        <div class="link-info"><div class="link-name">FCST 키인</div><div class="link-desc">예측 데이터 입력 및 수정</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="pumui.html" class="link-item">
+        <div class="link-icon admin">📋</div>
+        <div class="link-info"><div class="link-name">품의 작성</div><div class="link-desc">결재 문서 작성 및 생성</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="gs-request.html" class="link-item">
+        <div class="link-icon tool">💬</div>
+        <div class="link-info"><div class="link-name">요청사항 관리</div><div class="link-desc">세일즈 요청 접수, 상태 추적, 답글 관리</div></div>
+        <span class="link-arrow">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 업무 가이드 ── -->
+  <div class="cat-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--mint)"></div>
+      <div class="cat-title">업무 가이드</div>
+      <div class="cat-count">GUIDES</div>
+    </div>
+
+    <!-- FCST 키인 가이드 -->
+    <div class="guide-section">
+      <button class="guide-toggle" onclick="toggleGuide(this)">
+        <div class="guide-toggle-left">
+          <span class="guide-toggle-icon">📝</span>
+          <div>
+            <div class="guide-toggle-title">FCST 키인 가이드</div>
+            <div class="guide-toggle-sub">FCST 데이터 입력 절차 및 주의사항</div>
+          </div>
+        </div>
+        <span class="guide-chevron">▼</span>
+      </button>
+      <div class="guide-body">
+        <div class="guide-content">
+          <h4>개요</h4>
+          <p>FCST(Forecast) 키인은 각 사업장 담당자가 향후 매출 예측 데이터를 입력하는 프로세스입니다. 정확한 예측은 전사 경영계획 수립의 핵심 기초 데이터가 됩니다.</p>
+
+          <h4>키인 절차</h4>
+          <div class="step-row"><span class="step-num">1</span><span><strong>FCST 키인 페이지 접속</strong> — 상단 "FCST 키인" 카드 또는 <code>fcst-admin.html</code>로 접속</span></div>
+          <div class="step-row"><span class="step-num">2</span><span><strong>사업장 선택</strong> — 담당 사업장을 드롭다운에서 선택</span></div>
+          <div class="step-row"><span class="step-num">3</span><span><strong>기간 설정</strong> — 예측 대상 월을 선택 (당월+1 ~ +3개월)</span></div>
+          <div class="step-row"><span class="step-num">4</span><span><strong>데이터 입력</strong> — 객실 매출, F&B, 부대시설 등 항목별 예측값 입력</span></div>
+          <div class="step-row"><span class="step-num">5</span><span><strong>저장 및 확인</strong> — 입력 데이터 검증 후 저장</span></div>
+
+          <h4>주의사항</h4>
+          <ul>
+            <li>키인 마감일: 매월 <strong>25일</strong>까지 완료</li>
+            <li>수정이 필요한 경우, 마감일 전까지 자유롭게 재입력 가능</li>
+            <li>전년 동기 대비 ±30% 이상 차이 시 사유 코멘트 필수</li>
+            <li>키인 현황은 <code>fcst-status.html</code>에서 실시간 확인 가능</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 품의 작성 가이드 -->
+    <div class="guide-section">
+      <button class="guide-toggle" onclick="toggleGuide(this)">
+        <div class="guide-toggle-left">
+          <span class="guide-toggle-icon">📋</span>
+          <div>
+            <div class="guide-toggle-title">품의 작성 가이드</div>
+            <div class="guide-toggle-sub">품의서 작성 절차 및 양식 안내</div>
+          </div>
+        </div>
+        <span class="guide-chevron">▼</span>
+      </button>
+      <div class="guide-body">
+        <div class="guide-content">
+          <h4>개요</h4>
+          <p>품의서는 가격 조정, 특별 할인, 프로모션 등 영업 관련 의사결정을 위한 결재 문서입니다. 정확한 양식 작성이 신속한 결재의 핵심입니다.</p>
+
+          <h4>작성 절차</h4>
+          <div class="step-row"><span class="step-num">1</span><span><strong>품의 작성 페이지 접속</strong> — 상단 "품의 작성" 카드 또는 <code>pumui.html</code>로 접속</span></div>
+          <div class="step-row"><span class="step-num">2</span><span><strong>품의 유형 선택</strong> — 가격조정 / 프로모션 / 특별요청 등 유형 선택</span></div>
+          <div class="step-row"><span class="step-num">3</span><span><strong>기본 정보 입력</strong> — 대상 사업장, 적용 기간, 대상 상품 입력</span></div>
+          <div class="step-row"><span class="step-num">4</span><span><strong>상세 내용 작성</strong> — 조정 내역, 사유, 예상 효과 기술</span></div>
+          <div class="step-row"><span class="step-num">5</span><span><strong>첨부 및 생성</strong> — 관련 자료 첨부 후 품의서 PDF 생성</span></div>
+
+          <h4>작성 팁</h4>
+          <ul>
+            <li>사유란에 <strong>경쟁사 동향, 시장 상황</strong> 등 객관적 근거를 포함하면 결재 속도 향상</li>
+            <li>예상 매출 효과를 <strong>수치화</strong>하여 기재 권장</li>
+            <li>긴급 건의 경우 제목에 <code>[긴급]</code> 표기</li>
+            <li>이전 승인 사례 참고 시 품의번호를 함께 기재</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="map-footer">
+    <p>SONO & TRINITY · GS팀 · Sales Support Page (GSSP) v1.0 · 2026</p>
+  </div>
+
+</div>
+
+<script>
+function toggleGuide(btn){
+  var body = btn.parentElement.querySelector('.guide-body');
+  var chevron = btn.querySelector('.guide-chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+</script>
+</body>
+</html>

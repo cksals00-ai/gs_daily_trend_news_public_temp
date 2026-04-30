@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>요청사항 관리 · GS Sales Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  --bg:#0f1117;--bg2:#161921;--bg3:#1c1f2a;--bg4:#242836;
+  --glass:rgba(255,255,255,.04);--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.10);
+  --ink:#f0f0f4;--ink2:#c8cad0;--ink3:#8b8f9a;--ink4:#5c6070;
+  --gold:#d4a74a;--gold2:#ecc06a;--gold3:#f5d98a;--gold-glow:rgba(212,167,74,.15);
+  --rose:#e87a8a;--violet:#a07ee8;--cyan:#5cc4d0;--mint:#5cc49a;
+  --rule:rgba(255,255,255,.08);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ═══ GSN NAVIGATOR ═══ */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+/* ═══ MASTHEAD ═══ */
+.mast{background:var(--bg2);border-bottom:1px solid var(--rule);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.mast-logo{display:flex;align-items:baseline;gap:10px}
+.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold2)}
+.mast-sub{font-size:12px;color:var(--ink3);font-weight:600}
+.mast-nav{display:flex;align-items:center;gap:8px}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink3);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
+.nav-btn:hover{color:var(--gold);border-color:rgba(212,167,74,.5)}
+
+/* ═══ WRAP ═══ */
+.wrap{max-width:960px;margin:0 auto;padding:26px 18px 60px}
+
+/* ═══ PAGE TITLE ═══ */
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink4);margin-bottom:6px;font-weight:700;text-transform:uppercase}
+.page-title h1{font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:12.5px;color:var(--ink3);line-height:1.75}
+
+/* ═══ ADMIN TOGGLE ═══ */
+.admin-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--glass);border:1px solid var(--rule);border-radius:8px;
+  margin-bottom:20px;
+}
+.admin-bar-label{font-size:12px;color:var(--ink3);font-weight:600}
+.admin-toggle-wrap{display:flex;align-items:center;gap:8px}
+.admin-toggle-label{font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:.1em}
+.toggle-switch{
+  position:relative;width:40px;height:22px;cursor:pointer;
+}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;background:var(--bg4);border-radius:11px;
+  transition:.3s;border:1px solid var(--rule);
+}
+.toggle-slider::before{
+  content:'';position:absolute;width:16px;height:16px;border-radius:50%;
+  left:2px;bottom:2px;background:var(--ink3);transition:.3s;
+}
+.toggle-switch input:checked + .toggle-slider{background:rgba(212,167,74,.25);border-color:var(--gold)}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);background:var(--gold2)}
+
+/* ═══ FORM ═══ */
+.form-card{
+  background:var(--bg2);border:1px solid var(--rule);border-radius:10px;
+  padding:24px;margin-bottom:28px;
+}
+.form-title{
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--gold2);
+  font-weight:700;margin-bottom:16px;text-transform:uppercase;
+}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11px;font-weight:700;color:var(--ink3)}
+.form-input,.form-select,.form-textarea{
+  background:var(--bg);border:1px solid var(--rule);border-radius:6px;
+  padding:10px 12px;color:var(--ink);font-family:var(--sans);font-size:13px;
+  transition:border-color .2s;outline:none;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold)}
+.form-select{cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b8f9a' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;
+}
+.form-select option{background:var(--bg);color:var(--ink)}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.6}
+.form-submit{
+  margin-top:8px;padding:10px 28px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0f1117;
+  border:none;border-radius:6px;font-family:var(--sans);font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .2s;letter-spacing:.02em;
+}
+.form-submit:hover{box-shadow:0 4px 16px rgba(212,167,74,.3);transform:translateY(-1px)}
+.form-submit:active{transform:translateY(0)}
+
+/* ═══ FILTER BAR ═══ */
+.filter-bar{
+  display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;
+}
+.filter-btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+  padding:5px 12px;border-radius:4px;border:1px solid var(--rule);
+  background:transparent;color:var(--ink4);cursor:pointer;transition:all .15s;
+}
+.filter-btn.active{background:rgba(212,167,74,.12);border-color:var(--gold);color:var(--gold2)}
+.filter-btn:hover:not(.active){border-color:var(--ink4);color:var(--ink3)}
+.req-count{font-family:var(--mono);font-size:10px;color:var(--ink4);margin-left:auto;letter-spacing:.1em}
+
+/* ═══ REQUEST CARDS ═══ */
+.req-list{display:flex;flex-direction:column;gap:12px}
+.req-card{
+  background:var(--bg2);border:1px solid var(--rule);border-radius:10px;
+  padding:20px;transition:border-color .2s;
+}
+.req-card:hover{border-color:rgba(255,255,255,.15)}
+.req-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.req-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.req-name{font-size:13px;font-weight:700;color:var(--ink)}
+.req-prop{font-size:11px;color:var(--ink3);font-weight:500}
+.req-date{font-family:var(--mono);font-size:10px;color:var(--ink4)}
+.req-badge{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  padding:3px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0;
+}
+.badge-pending{background:rgba(236,192,106,.12);color:var(--gold2)}
+.badge-review{background:rgba(92,196,208,.12);color:var(--cyan)}
+.badge-done{background:rgba(92,196,154,.12);color:var(--mint)}
+.req-cat{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  padding:2px 8px;border-radius:4px;background:var(--glass2);color:var(--ink3);
+}
+.req-body{font-size:13px;color:var(--ink2);line-height:1.75;margin-bottom:12px;white-space:pre-wrap}
+
+/* ═══ STATUS CHANGER (admin) ═══ */
+.req-actions{display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.status-btn{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;
+  padding:4px 10px;border-radius:4px;border:1px solid var(--rule);
+  background:transparent;cursor:pointer;transition:all .15s;
+}
+.status-btn.s-pending{color:var(--gold2)}.status-btn.s-pending:hover,.status-btn.s-pending.active{background:rgba(236,192,106,.12);border-color:var(--gold)}
+.status-btn.s-review{color:var(--cyan)}.status-btn.s-review:hover,.status-btn.s-review.active{background:rgba(92,196,208,.12);border-color:var(--cyan)}
+.status-btn.s-done{color:var(--mint)}.status-btn.s-done:hover,.status-btn.s-done.active{background:rgba(92,196,154,.12);border-color:var(--mint)}
+.status-btn.s-delete{color:var(--rose)}.status-btn.s-delete:hover{background:rgba(232,122,138,.12);border-color:var(--rose)}
+
+/* ═══ REPLIES ═══ */
+.replies{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.reply-item{
+  display:flex;gap:10px;padding:10px 14px;margin-bottom:6px;
+  background:var(--glass);border-radius:8px;
+}
+.reply-avatar{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  background:rgba(92,196,208,.15);
+}
+.reply-content{flex:1;min-width:0}
+.reply-author{font-size:11px;font-weight:700;color:var(--cyan)}
+.reply-date{font-family:var(--mono);font-size:9px;color:var(--ink4);margin-left:8px}
+.reply-text{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.6;white-space:pre-wrap}
+
+/* ═══ REPLY FORM ═══ */
+.reply-form{display:flex;gap:8px;margin-top:10px}
+.reply-input{
+  flex:1;background:var(--bg);border:1px solid var(--rule);border-radius:6px;
+  padding:8px 12px;color:var(--ink);font-family:var(--sans);font-size:12px;
+  outline:none;transition:border-color .2s;resize:none;min-height:36px;
+}
+.reply-input:focus{border-color:var(--gold)}
+.reply-submit{
+  padding:8px 16px;background:rgba(92,196,208,.15);color:var(--cyan);
+  border:1px solid rgba(92,196,208,.3);border-radius:6px;font-size:11px;font-weight:700;
+  cursor:pointer;transition:all .2s;white-space:nowrap;font-family:var(--sans);
+}
+.reply-submit:hover{background:rgba(92,196,208,.25)}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-state{
+  text-align:center;padding:48px 20px;
+  color:var(--ink4);font-size:14px;
+}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .mast{padding:0 14px}
+  .mast-sub{display:none}
+  .wrap{padding:14px 12px 36px}
+  .form-grid{grid-template-columns:1fr}
+  .req-header{flex-direction:column;gap:6px}
+  .filter-bar{gap:4px}
+  .filter-btn{padding:4px 8px;font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ GSN NAVIGATOR ═══ -->
+<nav class="gsn"><div class="gsn-wrap">
+  <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+  <div class="gsn-links" id="gsn-links">
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy.html" data-gsn="gs-strategy">영업기획 대시보드</a>
+    <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-sales.html" data-gsn="gs-sales">Sales Support</a>
+    <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
+  </div>
+  <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+</div></nav>
+
+<!-- ═══ MASTHEAD ═══ -->
+<div class="mast">
+  <div class="mast-logo">
+    <span class="mast-name">GSSP</span>
+    <span class="mast-sub">요청사항 관리</span>
+  </div>
+  <div class="mast-nav">
+    <a href="gs-sales.html" class="nav-btn">← Sales Support</a>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="wrap">
+
+  <div class="page-title">
+    <div class="eyebrow">Request Management</div>
+    <h1>요청사항 관리</h1>
+    <p>세일즈 담당자가 요청사항을 작성하고, 영업기획이 검토·답변하는 커뮤니케이션 채널입니다.</p>
+  </div>
+
+  <!-- 관리자 토글 -->
+  <div class="admin-bar">
+    <span class="admin-bar-label">모드 전환</span>
+    <div class="admin-toggle-wrap">
+      <span class="admin-toggle-label">담당자</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="adminToggle" onchange="onAdminToggle()">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="admin-toggle-label">관리자</span>
+    </div>
+  </div>
+
+  <!-- 새 요청 폼 -->
+  <div class="form-card" id="requestForm">
+    <div class="form-title">새 요청 작성</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">담당자명</label>
+        <input type="text" class="form-input" id="reqName" placeholder="이름 입력">
+      </div>
+      <div class="form-group">
+        <label class="form-label">사업장</label>
+        <select class="form-select" id="reqProp">
+          <option value="">선택</option>
+          <option>비발디파크</option>
+          <option>소노캄 고양</option>
+          <option>소노캄 여수</option>
+          <option>소노캄 거제</option>
+          <option>소노캄 제주</option>
+          <option>소노벨 비발디파크</option>
+          <option>소노벨 천안</option>
+          <option>소노벨 변산</option>
+          <option>소노벨 거제</option>
+          <option>소노벨 제주</option>
+          <option>소노펠리체 비발디파크</option>
+          <option>소노펠리체 천안</option>
+          <option>소노문 단양</option>
+          <option>소노문 해운대</option>
+          <option>델피노</option>
+          <option>마리나</option>
+          <option>트리니티</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">요청 카테고리</label>
+        <select class="form-select" id="reqCat">
+          <option value="">선택</option>
+          <option value="가격조정">가격조정</option>
+          <option value="특별요청">특별요청</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <button class="form-submit" onclick="submitRequest()">요청 제출</button>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">요청 내용</label>
+        <textarea class="form-textarea" id="reqContent" placeholder="요청 내용을 상세히 기입해 주세요..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 필터 -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">전체</button>
+    <button class="filter-btn" data-filter="대기중" onclick="setFilter('대기중',this)">대기중</button>
+    <button class="filter-btn" data-filter="검토중" onclick="setFilter('검토중',this)">검토중</button>
+    <button class="filter-btn" data-filter="완료" onclick="setFilter('완료',this)">완료</button>
+    <span class="req-count" id="reqCount"></span>
+  </div>
+
+  <!-- 요청 목록 -->
+  <div class="req-list" id="reqList">
+    <div class="empty-state">
+      <div class="empty-icon">💬</div>
+      <div>아직 등록된 요청사항이 없습니다.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'gs_requests_v1';
+  var isAdmin = false;
+  var currentFilter = 'all';
+
+  window.onAdminToggle = function(){
+    isAdmin = document.getElementById('adminToggle').checked;
+    render();
+  };
+
+  function loadData(){
+    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; }
+  }
+  function saveData(data){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  window.submitRequest = function(){
+    var name = document.getElementById('reqName').value.trim();
+    var prop = document.getElementById('reqProp').value;
+    var cat = document.getElementById('reqCat').value;
+    var content = document.getElementById('reqContent').value.trim();
+    if(!name||!prop||!cat||!content){alert('모든 항목을 입력해 주세요.');return;}
+    var data = loadData();
+    var req = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2,4),
+      name: name,
+      property: prop,
+      category: cat,
+      content: content,
+      status: '대기중',
+      created: new Date().toISOString(),
+      replies: []
+    };
+    data.unshift(req);
+    saveData(data);
+    document.getElementById('reqContent').value = '';
+    render();
+  };
+
+  window.setFilter = function(f, btn){
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+    render();
+  };
+
+  window.changeStatus = function(id, status){
+    var data = loadData();
+    for(var i=0;i<data.length;i++){
+      if(data[i].id===id){data[i].status=status;break;}
+    }
+    saveData(data);
+    render();
+  };
+
+  window.deleteRequest = function(id){
+    if(!confirm('이 요청을 삭제하시겠습니까?')) return;
+    var data = loadData();
+    data = data.filter(function(r){return r.id!==id});
+    saveData(data);
+    render();
+  };
+
+  window.submitReply = function(id){
+    var input = document.getElementById('reply-'+id);
+    if(!input) return;
+    var text = input.value.trim();
+    if(!text) return;
+    var data = loadData();
+    for(var i=0;i<data.length;i++){
+      if(data[i].id===id){
+        if(!data[i].replies) data[i].replies=[];
+        data[i].replies.push({
+          author:'영업기획',
+          text:text,
+          date:new Date().toISOString()
+        });
+        break;
+      }
+    }
+    saveData(data);
+    render();
+  };
+
+  function fmtDate(iso){
+    var d=new Date(iso);
+    var m=d.getMonth()+1,dd=d.getDate(),hh=d.getHours(),mi=d.getMinutes();
+    return d.getFullYear()+'.'+(m<10?'0':'')+m+'.'+(dd<10?'0':'')+dd+' '+(hh<10?'0':'')+hh+':'+(mi<10?'0':'')+mi;
+  }
+
+  function badgeClass(s){
+    if(s==='대기중') return 'badge-pending';
+    if(s==='검토중') return 'badge-review';
+    return 'badge-done';
+  }
+
+  function render(){
+    var data = loadData();
+    var filtered = currentFilter==='all' ? data : data.filter(function(r){return r.status===currentFilter});
+    var countEl = document.getElementById('reqCount');
+    countEl.textContent = filtered.length + ' / ' + data.length + ' ITEMS';
+
+    var list = document.getElementById('reqList');
+    if(filtered.length===0){
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div>표시할 요청사항이 없습니다.</div></div>';
+      return;
+    }
+
+    var html = '';
+    filtered.forEach(function(r){
+      html += '<div class="req-card">';
+      html += '<div class="req-header">';
+      html += '<div class="req-meta">';
+      html += '<span class="req-name">'+esc(r.name)+'</span>';
+      html += '<span class="req-prop">'+esc(r.property)+'</span>';
+      html += '<span class="req-cat">'+esc(r.category)+'</span>';
+      html += '<span class="req-date">'+fmtDate(r.created)+'</span>';
+      html += '</div>';
+      html += '<span class="req-badge '+badgeClass(r.status)+'">'+r.status+'</span>';
+      html += '</div>';
+      html += '<div class="req-body">'+esc(r.content)+'</div>';
+
+      // Admin actions
+      if(isAdmin){
+        html += '<div class="req-actions">';
+        html += '<button class="status-btn s-pending'+(r.status==='대기중'?' active':'')+'" onclick="changeStatus(\''+r.id+'\',\'대기중\')">대기중</button>';
+        html += '<button class="status-btn s-review'+(r.status==='검토중'?' active':'')+'" onclick="changeStatus(\''+r.id+'\',\'검토중\')">검토중</button>';
+        html += '<button class="status-btn s-done'+(r.status==='완료'?' active':'')+'" onclick="changeStatus(\''+r.id+'\',\'완료\')">완료</button>';
+        html += '<button class="status-btn s-delete" onclick="deleteRequest(\''+r.id+'\')">삭제</button>';
+        html += '</div>';
+      }
+
+      // Replies
+      if(r.replies && r.replies.length > 0){
+        html += '<div class="replies">';
+        r.replies.forEach(function(rp){
+          html += '<div class="reply-item">';
+          html += '<div class="reply-avatar">🛡️</div>';
+          html += '<div class="reply-content">';
+          html += '<span class="reply-author">'+esc(rp.author)+'</span>';
+          html += '<span class="reply-date">'+fmtDate(rp.date)+'</span>';
+          html += '<div class="reply-text">'+esc(rp.text)+'</div>';
+          html += '</div></div>';
+        });
+        html += '</div>';
+      }
+
+      // Reply form (admin only)
+      if(isAdmin){
+        html += '<div class="reply-form">';
+        html += '<textarea class="reply-input" id="reply-'+r.id+'" placeholder="답글 작성..." rows="1"></textarea>';
+        html += '<button class="reply-submit" onclick="submitReply(\''+r.id+'\')">답글</button>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+    });
+
+    list.innerHTML = html;
+  }
+
+  function esc(s){
+    if(!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init
+  render();
+})();
+</script>
+</body>
+</html>
