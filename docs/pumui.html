@@ -327,9 +327,12 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 
       <div class="form-msg" id="form-msg"></div>
       <div class="form-actions">
-        <button class="btn-action" onclick="addToExcelDownload()">품의서 엑셀 포함</button>
+        <input type="file" id="xlsx-upload" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(event)">
+        <button class="btn-action" onclick="document.getElementById('xlsx-upload').click()">요금안 엑셀 업로드</button>
+        <button class="btn-action" onclick="addToExcelDownload()" style="opacity:0.7;">품의서 다운로드</button>
         <button class="btn-submit" id="btn-submit-sheet" onclick="submitToSheet()" style="display:none;">구글시트 제출</button>
       </div>
+      <div id="xlsx-preview" style="margin-top:16px;"></div>
     </div>
 
     <!-- Apps Script 설정 (숨김) -->
@@ -826,6 +829,146 @@ async function submitToSheet(){
   }finally{
     btn.disabled=false; btn.textContent='구글시트 제출';
   }
+}
+
+/* ─── 요금안 엑셀 업로드 & 파싱 ─── */
+let uploadedYokumData = null;
+
+function handleXlsxUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      uploadedYokumData = parseYokumXlsx(wb);
+      renderYokumPreview(uploadedYokumData, file.name);
+      showFormMsg('요금안 업로드 완료','success');
+    } catch(err){
+      showFormMsg('엑셀 파싱 오류: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value=''; // reset for re-upload
+}
+
+function parseYokumXlsx(wb){
+  const result = {갑지:null, 상품:[]};
+
+  // 갑지 시트 파싱
+  const gapjiName = wb.SheetNames.find(s=>s.trim().startsWith('갑지') && !s.includes('기존') && !s.includes('목표'));
+  if(gapjiName){
+    const ws = wb.Sheets[gapjiName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    const info = {};
+    rows.forEach(r=>{
+      const label = String(r[1]||'').trim();
+      const val = String(r[3]||'').trim();
+      if(label==='판매채널') info.channel=val;
+      if(label==='판매기간') info.salePeriod=val;
+      if(label==='투숙기간') info.stayPeriod=val;
+      if(label==='상품구성') info.product=val;
+      if(label==='기준인원') info.people=val;
+    });
+    // 부대시설 요금
+    const facilityRows = [];
+    let inFacility=false;
+    rows.forEach(r=>{
+      if(String(r[1]||'').includes('부대시설 요금')) inFacility=true;
+      if(inFacility && (String(r[1]||'').trim()==='정상가'||String(r[1]||'').trim()==='')){
+        const vals = r.slice(1).map(v=>v);
+        if(vals.some(v=>typeof v==='number')) facilityRows.push(r);
+      }
+    });
+    info.facilityRows = facilityRows;
+    result.갑지 = info;
+  }
+
+  // 상품① ② ③ 시트 파싱
+  wb.SheetNames.filter(s=>/^상품[①②③]$/.test(s.trim())).forEach(sn=>{
+    const ws = wb.Sheets[sn];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    const product = {name:sn, items:[]};
+    // 요금 데이터: row 21+ (0-indexed: 20+), columns based on header
+    // 정상가: col 7(기명), 8(무기명), 9(FIT)
+    // 배분가: col 22(기명), 24(무기명), 26(FIT)
+    // 판매가 3인: col 37(기명), 38(무기명), 39(FIT)
+    for(let i=20; i<rows.length; i++){
+      const r = rows[i];
+      if(!r || r.length<10) continue;
+      const month = r[1]; const roomType = r[3]||''; const viewType = r[4]||''; const season = r[6]||'';
+      if(!season && !month) continue;
+      const item = {
+        month: month||'', roomType: roomType||'', viewType: viewType||'', season: String(season),
+        regular: {named:r[7], unnamed:r[8], fit:r[9]},
+        distributed: {named:r[22], unnamed:r[24], fit:r[26]},
+        selling3: {named:r[37]||r[41], unnamed:r[38]||r[42], fit:r[39]||r[43]},
+      };
+      if(typeof item.regular.named==='number' || typeof item.distributed.named==='number'){
+        product.items.push(item);
+      }
+    }
+    result.상품.push(product);
+  });
+
+  return result;
+}
+
+function renderYokumPreview(data, filename){
+  const preview = document.getElementById('xlsx-preview');
+  if(!data || !data.상품.length){
+    preview.innerHTML='<div style="color:var(--ink-faint);font-size:12px;">파싱된 요금 데이터가 없습니다.</div>';
+    return;
+  }
+
+  const fmtW = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : '—';
+  const fmtP = v => typeof v==='number' ? v.toLocaleString('ko-KR') : '—';
+
+  let html = `<div class="table-block">
+    <div class="table-block-header">
+      <span class="table-block-title">요금안 — ${filename}</span>
+      <span class="table-block-sub">${data.갑지?.salePeriod||''} · ${data.갑지?.channel||''}</span>
+    </div>`;
+
+  data.상품.forEach(prod=>{
+    html += `<div style="margin:12px 0 4px 0;font-size:12px;font-weight:700;color:var(--gold);">${prod.name}</div>`;
+    html += `<div class="table-wrap"><table class="forecast-table" style="font-size:11px;">
+      <thead><tr>
+        <th>월</th><th>타입</th><th>뷰</th><th>시즌</th>
+        <th colspan="3" style="border-bottom:1px solid var(--gold);color:var(--gold-bright);">정상가 [천원]</th>
+        <th colspan="3" style="border-bottom:1px solid var(--info);color:var(--info);">배분가 [천원]</th>
+        <th colspan="3" style="border-bottom:1px solid #4ade80;color:#4ade80;">판매가 [천원]</th>
+      </tr>
+      <tr>
+        <th></th><th></th><th></th><th></th>
+        <th>기명</th><th>무기명</th><th>FIT</th>
+        <th>기명</th><th>무기명</th><th>FIT</th>
+        <th>기명</th><th>무기명</th><th>FIT</th>
+      </tr></thead><tbody>`;
+    let prevMonth='', prevRoom='', prevView='';
+    prod.items.forEach(it=>{
+      const m = it.month||'';
+      const rt = it.roomType||'';
+      const vt = it.viewType||'';
+      html += `<tr>
+        <td>${m!==prevMonth?m:''}</td>
+        <td>${rt!==prevRoom?rt:''}</td>
+        <td>${vt!==prevView?vt:''}</td>
+        <td>${it.season}</td>
+        <td>${fmtW(it.regular.named)}</td><td>${fmtW(it.regular.unnamed)}</td><td>${fmtW(it.regular.fit)}</td>
+        <td>${fmtW(it.distributed.named)}</td><td>${fmtW(it.distributed.unnamed)}</td><td>${fmtW(it.distributed.fit)}</td>
+        <td>${fmtW(it.selling3.named)}</td><td>${fmtW(it.selling3.unnamed)}</td><td>${fmtW(it.selling3.fit)}</td>
+      </tr>`;
+      if(m) prevMonth=m;
+      if(rt) prevRoom=rt;
+      if(vt) prevView=vt;
+    });
+    html += '</tbody></table></div>';
+  });
+
+  html += '</div>';
+  preview.innerHTML = html;
 }
 
 function addToExcelDownload(){
