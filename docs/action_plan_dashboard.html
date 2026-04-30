@@ -436,24 +436,34 @@ function mapRow(raw,idx){
 /* ── Load ── */
 async function loadCSV(){
   const url=document.getElementById('csv-url').value.trim();
-  if(!url)return;
+  if(!url){console.error('[ActionPlan] CSV URL 비어있음');return;}
   document.getElementById('load-status').textContent='⏳ 로딩 중...';
+  console.log('[ActionPlan] fetch:',url);
   try{
     const r=await fetch(url,{cache:'no-store'});
+    console.log('[ActionPlan] HTTP',r.status,r.statusText);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const txt=await r.text();
+    console.log('[ActionPlan] 응답 크기:',txt.length,'bytes / 첫 200자:',txt.slice(0,200));
     const raw=parseCSV(txt);
-    if(!raw.length)throw new Error('빈 데이터');
-    allRows=raw.map((row,i)=>mapRow(row,i)).filter(r=>r.title||r.property||r.channel);
+    console.log('[ActionPlan] parseCSV 결과:',raw.length,'행 / 샘플 키:',raw[0]?Object.keys(raw[0]):[]);
+    if(!raw.length)throw new Error('빈 데이터 (헤더에 사업장+채널 컬럼이 없음 · CSV URL 확인 필요)');
+    const mapped=raw.map((row,i)=>mapRow(row,i));
+    allRows=mapped.filter(r=>r.title||r.property||r.channel);
+    console.log('[ActionPlan] 매핑 후:',mapped.length,'/ 유효 행:',allRows.length);
+    if(!allRows.length){
+      console.warn('[ActionPlan] 유효 행 0 — 첫 raw 행:',raw[0]);
+      throw new Error('유효 행 0건 (사업장/채널/기획전명 모두 비어있음 · 시트 구조 확인 필요)');
+    }
     document.getElementById('load-status').innerHTML=`✅ <strong>${allRows.length}</strong>건 · ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
-    try{localStorage.setItem('ap_csv_url',url)}catch(e){}
     populateFilters();
     updateKPIs();
     renderCharts();
     render();
   }catch(e){
+    console.error('[ActionPlan] 로드 실패:',e);
     document.getElementById('load-status').innerHTML='❌ '+e.message;
-    document.getElementById('view-table').innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">데이터 로드 실패</div><div class="empty-state-sub">${e.message}</div></div>`;
+    document.getElementById('view-table').innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">데이터 로드 실패</div><div class="empty-state-sub">${e.message}<br><span style="font-size:10px;color:var(--ink-faint)">콘솔(F12) 확인</span></div></div>`;
   }
 }
 
@@ -827,8 +837,8 @@ function escapeHtml(s){
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('today-label').textContent=fmtYMD(today)+' ('+'일월화수목금토'[today.getDay()]+')';
   buildStatusChips();
-  const saved=(()=>{try{return localStorage.getItem('ap_csv_url')}catch(e){return null}})();
-  if(saved)document.getElementById('csv-url').value=saved;
+  // HTML default URL이 항상 우선. 과거 stale localStorage 캐시 제거 (gid 누락 URL이 저장되어 있던 케이스).
+  try{localStorage.removeItem('ap_csv_url')}catch(e){}
   loadCSV();
 });
 </script>
