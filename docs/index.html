@@ -115,6 +115,11 @@
     font-weight: 700;
   }
 
+  /* scroll offset for sticky masthead */
+  [id^="news-"], [id^="sec-"], [id^="region-"] {
+    scroll-margin-top: 70px;
+  }
+
   /* ============= MASTHEAD ============= */
   .masthead {
     background: var(--bg-deep);
@@ -11082,7 +11087,7 @@
   </div>
   <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 0;margin-bottom:24px;overflow-x:auto;">
     <div style="padding:0 20px 10px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">OCCUPANCY HEATMAP &mdash; 사업장별 OCC%</div>
-    <table style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
+    <table id="occ-heatmap-table" style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
       <thead><tr>
         <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:left;border-bottom:2px solid var(--rule-strong);">사업장</th>
         <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;border-bottom:2px solid var(--rule-strong);">4월 OCC</th><th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;border-bottom:2px solid var(--rule-strong);">5월 OCC</th><th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;border-bottom:2px solid var(--rule-strong);">6월 OCC</th><th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:center;border-bottom:2px solid var(--rule-strong);">7월 OCC</th>
@@ -11092,7 +11097,7 @@
   </div>
   <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 0;overflow-x:auto;">
     <div style="padding:0 20px 10px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">YoY COMPARISON &mdash; 4월 사업장별 전년 동기 대비</div>
-    <table style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
+    <table id="yoy-comparison-table" style="width:100%;border-collapse:collapse;font-family:var(--sans);min-width:600px;">
       <thead><tr style="border-bottom:2px solid var(--rule-strong);">
         <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:left;">사업장</th>
         <th style="padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--ink-muted);text-align:right;">금년</th>
@@ -14326,6 +14331,32 @@ function toggleNewsMore(btn, id) {
       btn.textContent = expanded ? '접기 ▲' : '더보기 (+' + (rows.length - LIMIT) + '개)';
     };
     tbl.parentNode.insertBefore(btn, tbl.nextSibling);
+  });
+})();
+</script>
+
+<!-- OCC Heatmap + YoY Comparison 더보기 -->
+<script>
+(function(){
+  var LIMIT = 5;
+  ['occ-heatmap-table','yoy-comparison-table'].forEach(function(id){
+    var tbl = document.getElementById(id);
+    if (!tbl) return;
+    var rows = Array.from(tbl.querySelectorAll('tbody tr'));
+    if (rows.length <= LIMIT) return;
+    rows.forEach(function(r, i){ if (i >= LIMIT) r.style.display = 'none'; });
+    var btn = document.createElement('button');
+    btn.textContent = '더보기 (+' + (rows.length - LIMIT) + '개)';
+    btn.style.cssText = 'display:block;width:calc(100% - 40px);margin:8px 20px 12px;padding:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.08em;transition:all .15s';
+    btn.onmouseover = function(){ this.style.background='var(--bg-hover)'; this.style.color='var(--ink)'; };
+    btn.onmouseout = function(){ this.style.background='var(--bg-soft)'; this.style.color='var(--ink-muted)'; };
+    var expanded = false;
+    btn.onclick = function(){
+      expanded = !expanded;
+      rows.forEach(function(r, i){ if (i >= LIMIT) r.style.display = expanded ? '' : 'none'; });
+      btn.textContent = expanded ? '접기 ▲' : '더보기 (+' + (rows.length - LIMIT) + '개)';
+    };
+    tbl.parentNode.appendChild(btn);
   });
 })();
 </script>
