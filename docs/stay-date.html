@@ -307,17 +307,17 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
           <thead style="position:sticky;top:0;background:var(--bg-deep);z-index:10;">
             <tr>
               <th style="text-align:left;position:sticky;left:0;background:var(--bg-deep);z-index:11;">투숙일</th>
+              <th style="text-align:center;">시즌</th>
               <th class="border-left-group" colspan="5" style="text-align:center;">Total</th>
               <th class="border-left-group" colspan="5" style="text-align:center;">OTA</th>
               <th class="border-left-group" colspan="5" style="text-align:center;">G-OTA</th>
               <th class="border-left-group" colspan="5" style="text-align:center;">Inbound</th>
               <th class="border-left-group" style="text-align:center;">전체OCC</th>
               <th style="text-align:center;">GS OCC</th>
-              <th style="text-align:center;">시즌</th>
-              <th style="text-align:center;">ADR</th>
             </tr>
             <tr style="background:rgba(255,255,255,0.02);">
               <th style="text-align:left;">—</th>
+              <th style="font-size:10px;">—</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
               <th style="font-size:10px;">객실(LY)</th>
@@ -340,12 +340,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th style="font-size:10px;">YoY%</th>
               <th class="border-left-group" style="font-size:10px;">%</th>
               <th style="font-size:10px;">%</th>
-              <th style="font-size:10px;">—</th>
-              <th style="font-size:10px;">원</th>
             </tr>
           </thead>
           <tbody id="daily-detail-tbody">
-            <tr><td colspan="24" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+            <tr><td colspan="23" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -596,7 +594,7 @@ function renderDailyDetailTable() {
 
   const tbody = document.getElementById('daily-detail-tbody');
   if (!tbody || !targetKey || !stayDaily[targetKey]) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 없음</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:32px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 없음</td></tr>';
     return;
   }
 
@@ -671,9 +669,6 @@ function renderDailyDetailTable() {
     const gotaYoY = calcYoY(gotaRn, gotaRnLy);
     const inboundYoY = calcYoY(inboundRn, inboundRnLy);
 
-    // ADR: 매출(백만원) * 1000000 / 객실수 = 원 단위
-    const adr = totalRn > 0 ? Math.round(totalRev * 1000000 / totalRn) : 0;
-
     const occVal = dailyOcc && dailyOcc[i] ? dailyOcc[i] : null;
     const occHtml = occVal != null ? occVal.toFixed(1) : '—';
     const occColor = occVal != null ? (occVal >= 70 ? 'var(--positive)' : occVal >= 50 ? 'var(--warning)' : 'var(--negative)') : 'var(--ink-faint)';
@@ -689,6 +684,7 @@ function renderDailyDetailTable() {
 
     rows += `<tr${occClass}>
       <td style="text-align:left;position:sticky;left:0;background:inherit;z-index:1;">${d}일</td>
+      <td>${season}</td>
       <td class="border-left-group">${fmt.num(totalRn)}</td>
       <td>${fmtRev(totalRev)}</td>
       <td>${totalRnLy > 0 ? fmt.num(totalRnLy) : '—'}</td>
@@ -711,8 +707,6 @@ function renderDailyDetailTable() {
       ${yoyCell(inboundYoY)}
       <td class="border-left-group" style="color:${occColor};">${occHtml}</td>
       <td>—</td>
-      <td>${season}</td>
-      <td>${adr > 0 ? fmt.num(adr) : '—'}</td>
     </tr>`;
   }
 
