@@ -283,6 +283,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <div class="kpi-card-value" id="kpi-occ" style="color:var(--info);">—<span class="unit">%</span></div>
         <div class="kpi-card-sub" id="kpi-occ-sub">Booking Status 기준</div>
       </div>
+      <div class="kpi-card" style="border-left:3px solid var(--gold);">
+        <div class="kpi-card-label">우리OCC</div>
+        <div class="kpi-card-value" id="kpi-our-occ" style="color:var(--gold);">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub" id="kpi-our-occ-sub">사업계획 가용객실 기준</div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -359,6 +364,8 @@ let activeProps = new Set();
 
 const SEGS = ['OTA', 'G-OTA', 'Inbound'];
 const SEG_COLORS = { 'OTA': '#e6b970', 'G-OTA': '#5a9fc4', 'Inbound': '#4caf6f' };
+// 사업계획 전체 가용객실수 (월별)
+const PLAN_AVAIL = {1:320695,2:289660,3:309994,4:299280,5:309256,6:299280,7:333569,8:334676,9:323880,10:347448,11:336240,12:347448};
 
 const REGION_DEFS = [
   { key: '전체', label: '전체' },
@@ -573,6 +580,18 @@ function render() {
   } else {
     setText('kpi-occ', '—');
     setText('kpi-occ-sub', 'OCC 로드 실패');
+  }
+
+  // 우리 OCC = 우리 Net RN / 사업계획 가용객실수
+  const ourMonths = months.map(m => parseInt(m.slice(4)));
+  const ourAvail = ourMonths.reduce((s, m) => s + (PLAN_AVAIL[m] || 0), 0);
+  if (ourAvail > 0 && totAll > 0) {
+    const ourOcc = (totAll / ourAvail * 100).toFixed(1);
+    setText('kpi-our-occ', ourOcc);
+    setText('kpi-our-occ-sub', months.length + '개월 · ' + (activeSegment !== '전체' ? activeSegment + ' 기준' : '3세그 합계'));
+  } else {
+    setText('kpi-our-occ', '—');
+    setText('kpi-our-occ-sub', '데이터 없음');
   }
 
   if (segChart) segChart.destroy();
