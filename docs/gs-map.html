@@ -575,11 +575,22 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   var results = [];
   var done = 0;
 
+  function deepGet(obj, path) {
+    if (!obj || !path) return null;
+    var parts = path.split('.');
+    var cur = obj;
+    for (var p = 0; p < parts.length; p++) {
+      if (cur == null) return null;
+      cur = cur[parts[p]];
+    }
+    return cur || null;
+  }
+
   files.forEach(function(f, i){
     fetch(f.url + '?t=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
-        var ts = d ? (d[f.key] || d._timestamp || d.generated || null) : null;
+        var ts = d ? (deepGet(d, f.key) || d._generated || d._extracted_at || d._timestamp || d.generated || null) : null;
         results[i] = {label:f.label, ts:ts, file:f.url.split('/').pop(), ok:!!ts};
       })
       .catch(function(){ results[i] = {label:f.label, ts:null, file:f.url.split('/').pop(), ok:false}; })
