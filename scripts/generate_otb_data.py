@@ -29,6 +29,19 @@ OUTPUT_JSON = DOCS_DATA_DIR / "otb_data.json"
 
 KST = timezone(timedelta(hours=9))
 
+def _calc_target_months_tuple():
+    """매월 2일부터 다음 3개월로 롤링. 1일은 전월 마감 실적 확인용."""
+    now = datetime.now(KST)
+    base_month = now.month if now.day >= 2 else (now.month - 1 if now.month > 1 else 12)
+    months = []
+    for i in range(3):
+        m = base_month + i
+        if m > 12: m -= 12
+        months.append(m)
+    return tuple(months)
+
+TARGET_MONTHS = _calc_target_months_tuple()
+
 # BI 26OTB 시트 사업장 순서 (compare_and_update.py PROPERTY_DEFS 동일)
 PROPERTY_DEFS = [
     ("소노벨 비발디파크(A,B,C,호텔)",    "01.벨비발디",      "vivaldi", ["소노벨 비발디파크", "소노문 비발디파크"]),
@@ -1299,10 +1312,10 @@ def main():
         db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps, adj_by_prop=adj_by_prop
     )
 
-    # YoY 사업장별 추이 테이블 (4·5·6월)
+    # YoY 사업장별 추이 테이블 (자동 롤링)
     yoy_table = build_yoy_table(
         db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
-        months=(4, 5, 6), now_kst=now_kst, rm_fcst_props=rm_fcst_props,
+        months=TARGET_MONTHS, now_kst=now_kst, rm_fcst_props=rm_fcst_props,
     )
 
     output = {
