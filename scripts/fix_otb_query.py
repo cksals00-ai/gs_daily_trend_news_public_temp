@@ -431,7 +431,12 @@ def main():
     logger.info("기준일: 2026-04-21 (어제)")
     logger.info("=" * 60)
 
-    MONTHS = [4, 5, 6]
+    # 매월 2일부터 다음 3개월로 자동 롤링
+    from datetime import datetime, timezone, timedelta
+    _kst = timezone(timedelta(hours=9))
+    _now = datetime.now(_kst)
+    _base = _now.month if _now.day >= 2 else (_now.month - 1 if _now.month > 1 else 12)
+    MONTHS = [(_base + i - 1) % 12 + 1 for i in range(3)]
 
     # ── Step 1: data_cxl_2mthraw 테이블 탐색 ──
     logger.info("\n[Step 1] data_cxl_2mthraw 컬럼 탐색")

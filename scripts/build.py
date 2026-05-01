@@ -35,8 +35,27 @@ DOCS_DIR = ROOT / "docs"
 HTML_FILE = DOCS_DIR / "index.html"
 OTB_FILE = DOCS_DIR / "otb.html"
 KST = timezone(timedelta(hours=9))
-STAY_MONTHS = ["2026-04", "2026-05", "2026-06"]
-MONTH_LABELS = {"2026-04": "4월", "2026-05": "5월", "2026-06": "6월"}
+
+def _calc_target_months():
+    """매월 2일부터 다음 3개월로 롤링. 1일은 전월 마감 실적 확인용으로 이전 3개월 유지."""
+    now = datetime.now(KST)
+    # 2일 이전이면 이전달 기준, 2일 이후면 당월 기준
+    base_month = now.month if now.day >= 2 else (now.month - 1 if now.month > 1 else 12)
+    base_year = now.year if not (now.day < 2 and now.month == 1) else now.year - 1
+    months = []
+    labels = {}
+    for i in range(3):
+        m = base_month + i
+        y = base_year
+        if m > 12:
+            m -= 12
+            y += 1
+        key = f"{y}-{m:02d}"
+        months.append(key)
+        labels[key] = f"{m}월"
+    return months, labels
+
+STAY_MONTHS, MONTH_LABELS = _calc_target_months()
 
 
 def load_json(path: Path, default=None):
@@ -322,7 +341,7 @@ def inject_property_matrix(html: str, prop_data: dict) -> str:
 # ─────────────────────────────────────────────
 def inject_region_monthly(html: str, prop_data: dict) -> str:
     """권역 카드에 월별 실적/목표/달성률 3행 표 주입"""
-    month_labels = {"2026-04": "4월", "2026-05": "5월", "2026-06": "6월"}
+    month_labels = MONTH_LABELS
 
     for region_key in ("vivaldi", "central", "south", "apac"):
         properties = prop_data.get(region_key, [])
@@ -2053,8 +2072,8 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
         return "<p style='color:#888;font-size:12px;'>YoY 데이터 없음</p>"
 
     base_disp = f"{base_date[:4]}.{base_date[4:6]}.{base_date[6:]}" if len(base_date) == 8 else base_date
-    months = [4, 5, 6]
-    month_labels = {4: "4월", 5: "5월", 6: "6월"}
+    months = [int(m.split('-')[1]) for m in STAY_MONTHS]
+    month_labels = {int(m.split('-')[1]): f"{int(m.split('-')[1])}월" for m in STAY_MONTHS}
     rm_props = (rm_fcst_data or {}).get("properties", {})
 
     def arrow(yoy):
