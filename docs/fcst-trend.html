@@ -120,8 +120,6 @@ td,th{font-weight:600}th{font-weight:800}
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy.html" data-gsn="gs-strategy">영업기획 대시보드</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-sales.html" data-gsn="gs-sales">Sales Support</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
   </div>
   <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -175,7 +173,7 @@ td,th{font-weight:600}th{font-weight:800}
   <div class="page-title">
     <div class="eyebrow">FCST · TREND ANALYSIS</div>
     <h1>FCST 추이 분석</h1>
-    <p>Revenue Meeting PDF 시점별 FCST 변동 추이를 투숙월 단위로 추적합니다. 2025년 vs 2026년 YoY 비교를 지원합니다.</p>
+    <p>Revenue Meeting PDF 시점별 FCST 변동 추이를 투숙월 단위로 추적합니다. 2025년 vs 2026년 YoY 비교를 지원합니다. 세그먼트(OTA/G-OTA/Inbound/기타) 필터는 과거 실적 비율 기반 추정치입니다.</p>
   </div>
 
   <!-- hidden container for old month-tabs reference (no longer rendered here) -->
@@ -394,7 +392,10 @@ function initUI() {
     divChips.appendChild(btn);
   });
 
-  // Build 세그 chips - 데이터에서 자동 검출 (예: ['Inbound', 'OTA'])
+  // Build 세그 chips - 고정 순서: GS전체 → OTA → G-OTA → Inbound → 기타(Direct)
+  const SEG_ORDER = ['GS', 'OTA', 'G-OTA', 'Inbound', '기타(Direct)'];
+  const SEG_LABELS = { 'GS': 'GS전체', 'OTA': 'OTA', 'G-OTA': 'G-OTA', 'Inbound': 'Inbound', '기타(Direct)': '기타(Direct)' };
+  // 데이터에서 실제 존재하는 세그 확인
   const segSet = new Set();
   trendData.snapshots.forEach(snap => {
     if (!snap.segments) return;
@@ -402,12 +403,12 @@ function initUI() {
       Object.keys(monthSegs).forEach(s => segSet.add(s));
     });
   });
-  availableSegs = [...segSet].sort();
+  availableSegs = SEG_ORDER.filter(s => s === 'GS' || segSet.has(s));
   const segChips = document.getElementById('seg-chips');
-  ['GS', ...availableSegs].forEach(s => {
+  availableSegs.forEach(s => {
     const btn = document.createElement('button');
     btn.className = 'ftab' + (s === selectedSeg ? ' active' : '');
-    btn.textContent = s === 'GS' ? 'GS (사업장 합계)' : s;
+    btn.textContent = SEG_LABELS[s] || s;
     btn.onclick = () => {
       selectedSeg = s;
       document.querySelectorAll('#seg-chips .ftab').forEach(c => c.classList.remove('active'));
@@ -527,7 +528,7 @@ function renderAll() {
   // 카드 제목 (사업장별 vs 세그)
   const titleEl = document.getElementById('trend-table-title');
   if (titleEl) {
-    titleEl.textContent = selectedSeg === 'GS' ? '사업장별 FCST 추이 테이블' : `${selectedSeg} 세그 FCST 추이`;
+    titleEl.textContent = selectedSeg === 'GS' ? '사업장별 FCST 추이 테이블' : `${selectedSeg} 세그 FCST 추이 (추정)`;
   }
 
   renderKPI(series, lySeries);
@@ -653,8 +654,8 @@ function renderAchChart(series, monthLabel, yearLabel) {
   destroyChart('ach');
   const ctx = document.getElementById('chart-ach').getContext('2d');
   const stayYear = parseInt(currentStayMonth.split('-')[0]);
-  const SEG_COLORS = { 'OTA': '#6ba3c4', 'G-OTA': '#7ab891', 'Inbound': '#a892c8' };
-  const SEGS = ['OTA', 'G-OTA', 'Inbound'];
+  const SEG_COLORS = { 'OTA': '#6ba3c4', 'G-OTA': '#7ab891', 'Inbound': '#a892c8', '기타(Direct)': '#d4a574' };
+  const SEGS = ['OTA', 'G-OTA', 'Inbound', '기타(Direct)'];
 
   const relevantSnaps = trendData.snapshots.filter(s => s._year === stayYear);
   if (!relevantSnaps.length) return;
@@ -759,8 +760,7 @@ function renderYoYChart(series, lySeries, monthLabel, curYear) {
 /* ── Rank Cards ── */
 function renderRankCards(stayMonth, lyMonth) {
   const container = document.getElementById('rank-cards');
-  // 세그 모드는 사업장 breakdown 미제공 → rank 비표시
-  if (selectedSeg !== 'GS') { container.innerHTML = ''; return; }
+  // 세그 모드에서도 사업장별 rank 표시 (추정치 기반)
   // Use latest snapshot for this year
   const stayYear = parseInt(stayMonth.split('-')[0]);
   const latestSnap = [...trendData.snapshots].reverse().find(s => s._year === stayYear);
@@ -769,21 +769,27 @@ function renderRankCards(stayMonth, lyMonth) {
   const [yr, mm] = stayMonth.split('-');
   const divProps = getFilteredProps();
   const rankings = [];
+  const isSegMode = selectedSeg !== 'GS';
   Object.entries(latestSnap.properties).forEach(([prop, months]) => {
     if (divProps && !divProps.includes(prop)) return; // division filter
     const entry = months[stayMonth];
     if (!entry) return;
-    const ach = entry.rm_budget_rn > 0 ? entry.rm_fcst_rn / entry.rm_budget_rn * 100 : 0;
-    const r = { name: prop, fcst: entry.rm_fcst_rn, budget: entry.rm_budget_rn, ach: Math.round(ach * 10) / 10 };
+    // 세그 모드: segments 하위에서 해당 세그 데이터 사용
+    const fcstRn = isSegMode ? (entry.segments?.[selectedSeg]?.rm_fcst_rn ?? null) : entry.rm_fcst_rn;
+    const budgetRn = isSegMode ? (entry.segments?.[selectedSeg]?.rm_budget_rn ?? 0) : entry.rm_budget_rn;
+    if (fcstRn === null) return;
+    const ach = budgetRn > 0 ? fcstRn / budgetRn * 100 : 0;
+    const r = { name: prop, fcst: fcstRn, budget: budgetRn, ach: Math.round(ach * 10) / 10 };
 
     // YoY: find LY latest snapshot
     const lyYear = stayYear - 1;
     const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
     if (lySnap) {
       const lyEntry = lySnap.properties[prop]?.[lyMonth];
-      if (lyEntry) {
-        r.lyFcst = lyEntry.rm_fcst_rn;
-        r.yoyPct = lyEntry.rm_fcst_rn > 0 ? ((entry.rm_fcst_rn / lyEntry.rm_fcst_rn - 1) * 100).toFixed(1) : null;
+      const lyFcstVal = isSegMode ? (lyEntry?.segments?.[selectedSeg]?.rm_fcst_rn ?? null) : (lyEntry?.rm_fcst_rn ?? null);
+      if (lyFcstVal !== null) {
+        r.lyFcst = lyFcstVal;
+        r.yoyPct = lyFcstVal > 0 ? ((fcstRn / lyFcstVal - 1) * 100).toFixed(1) : null;
       }
     }
 
@@ -791,7 +797,8 @@ function renderRankCards(stayMonth, lyMonth) {
     const earliestSnap = trendData.snapshots.find(s => s._year === stayYear && s.properties[prop]?.[stayMonth]);
     if (earliestSnap && earliestSnap !== latestSnap) {
       const earlyEntry = earliestSnap.properties[prop]?.[stayMonth];
-      if (earlyEntry) r.delta = entry.rm_fcst_rn - earlyEntry.rm_fcst_rn;
+      const earlyFcst = isSegMode ? (earlyEntry?.segments?.[selectedSeg]?.rm_fcst_rn ?? null) : (earlyEntry?.rm_fcst_rn ?? null);
+      if (earlyFcst !== null) r.delta = fcstRn - earlyFcst;
     }
     rankings.push(r);
   });
@@ -806,7 +813,7 @@ function renderRankCards(stayMonth, lyMonth) {
 
   container.innerHTML = `
     <div class="rank-box">
-      <div class="rank-title top">▲ TOP 5 달성률 (${parseInt(mm)}월, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
+      <div class="rank-title top">▲ TOP 5 달성률 (${parseInt(mm)}월${isSegMode ? ' · '+selectedSeg : ''}, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
       ${top5.map((r, i) => `
         <div class="rank-item">
           <span class="rank-name">${i + 1}. ${esc(r.name)}</span>
@@ -818,7 +825,7 @@ function renderRankCards(stayMonth, lyMonth) {
         </div>`).join('')}
     </div>
     <div class="rank-box">
-      <div class="rank-title bottom">▼ BOTTOM 5 달성률 (${parseInt(mm)}월, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
+      <div class="rank-title bottom">▼ BOTTOM 5 달성률 (${parseInt(mm)}월${isSegMode ? ' · '+selectedSeg : ''}, ${parseInt(sd_m)}/${parseInt(sd_d)} 기준)</div>
       ${bottom5.map((r, i) => `
         <div class="rank-item">
           <span class="rank-name">${rankings.length - 4 + i}. ${esc(r.name)}</span>
