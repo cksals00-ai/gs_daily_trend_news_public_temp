@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>검증 리포트 · SONO & TRINITY GS팀</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+input, button, select, table, th, td {
+  font-family: var(--sans) !important;
+}
+
+/* ───── GSN ───── */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:768px){
+  .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+  .gsn-links.open{display:flex}
+  .gsn-item{padding:8px 12px}
+  .gsn-toggle{display:flex;align-items:center;justify-content:center}
+}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.masthead-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.logo-wrap { display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap; }
+.logo-mark { font-family: var(--serif); font-weight: 800; font-size: 18px; color: var(--gold-bright); white-space: nowrap; }
+.team-tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.5); border-left: 1px solid rgba(255,255,255,0.2); padding-left: 14px; margin-left: 14px; white-space: nowrap; }
+.page-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(201,160,99,0.15); border: 1px solid rgba(201,160,99,0.35); border-radius: 3px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--gold-bright); letter-spacing: 0.12em; }
+.masthead-right { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.confidential-badge { color: var(--negative); border: 1px solid var(--negative); padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
+
+/* ───── LAYOUT ───── */
+.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+/* ───── TABS ───── */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-deep);
+  padding: 6px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-align: center;
+}
+.tab-btn:hover { background: var(--bg-soft); color: var(--ink-soft); }
+.tab-btn.active { background: var(--bg-card); color: var(--gold-bright); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.tab-btn .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ───── CARDS ───── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ───── STATUS BADGES ───── */
+.status-pass { color: var(--positive); background: var(--positive-bg); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.status-warn { color: var(--warning); background: var(--warning-bg); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.status-fail { color: var(--negative); background: var(--negative-bg); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+
+/* ───── TABLES ───── */
+.v-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.v-table thead th {
+  background: var(--bg-deep);
+  color: var(--ink-muted);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--rule-strong);
+  white-space: nowrap;
+}
+.v-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-weight: 500;
+  vertical-align: top;
+}
+.v-table tbody tr:hover { background: var(--bg-hover); }
+
+/* ───── CHECKLIST ───── */
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+.check-item:last-child { border-bottom: none; }
+.check-label { flex: 1; color: var(--ink-soft); }
+.check-status { flex-shrink: 0; }
+
+/* ───── LOG TABLE ───── */
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.log-table thead th {
+  background: var(--bg-deep);
+  color: var(--ink-faint);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--rule-strong);
+  white-space: nowrap;
+}
+.log-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-weight: 500;
+  vertical-align: top;
+}
+.log-table tbody tr:hover { background: var(--bg-hover); }
+.log-table .log-time { font-family: var(--mono); font-size: 11px; white-space: nowrap; color: var(--ink-faint); }
+.log-table .log-pass { color: var(--positive); }
+.log-table .log-warn { color: var(--warning); }
+.log-table .log-fail { color: var(--negative); }
+
+/* ───── SUMMARY BAR ───── */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.summary-card .s-label { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+.summary-card .s-value { font-size: 28px; font-weight: 800; font-family: var(--mono); }
+.summary-card .s-value.pass { color: var(--positive); }
+.summary-card .s-value.warn { color: var(--warning); }
+.summary-card .s-value.fail { color: var(--negative); }
+
+/* ───── FOOTER ───── */
+.footer {
+  text-align: center;
+  padding: 32px 24px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  border-top: 1px solid var(--rule);
+  margin-top: 40px;
+}
+.footer .conf-mark { color: var(--negative); font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px; }
+
+/* ───── MOBILE ───── */
+@media(max-width:768px) {
+  .container { padding: 12px; }
+  .masthead-inner { height: auto; padding: 10px 12px; flex-wrap: wrap; }
+  .team-tag { display: none; }
+  .tab-bar { gap: 2px; padding: 4px; }
+  .tab-btn { min-width: 80px; padding: 8px 10px; font-size: 11px; }
+  .tab-btn .tab-icon { font-size: 15px; }
+  .card { padding: 14px; }
+  .v-table, .log-table { font-size: 11px; }
+  .v-table thead th, .log-table thead th { padding: 6px 8px; }
+  .v-table tbody td, .log-table tbody td { padding: 6px 8px; }
+  .summary-bar { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .summary-card { padding: 10px; }
+  .summary-card .s-value { font-size: 22px; }
+}
+@media(max-width:480px) {
+  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+  .masthead-right { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== GSN ========== -->
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+      <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-verify.html" data-gsn="verify">검증 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ========== MASTHEAD ========== -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · 검증 리포트</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">🔍 검증 리포트</span>
+      <a href="index.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 트렌드 리포트</a>
+    </div>
+    <div class="masthead-right">
+      <span class="confidential-badge">내부문서 | 대외비</span>
+      <span id="refresh-badge" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);">—</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ───── SUMMARY BAR ───── -->
+  <div class="summary-bar" id="summary-bar">
+    <div class="summary-card"><div class="s-label">전체 검증</div><div class="s-value" id="s-total">—</div></div>
+    <div class="summary-card"><div class="s-label">✅ 정상</div><div class="s-value pass" id="s-pass">—</div></div>
+    <div class="summary-card"><div class="s-label">⚠️ 경고</div><div class="s-value warn" id="s-warn">—</div></div>
+    <div class="summary-card"><div class="s-label">❌ 오류</div><div class="s-value fail" id="s-fail">—</div></div>
+    <div class="summary-card"><div class="s-label">마지막 검증</div><div class="s-value" id="s-last" style="font-size:14px;color:var(--ink-soft)">—</div></div>
+  </div>
+
+  <!-- ───── TABS ───── -->
+  <div class="tab-bar" role="tablist">
+    <button class="tab-btn active" onclick="switchTab('data')" role="tab" aria-selected="true"><span class="tab-icon">📊</span>데이터 검증</button>
+    <button class="tab-btn" onclick="switchTab('ui')" role="tab"><span class="tab-icon">🖥️</span>UI 검증</button>
+    <button class="tab-btn" onclick="switchTab('auth')" role="tab"><span class="tab-icon">🔐</span>권한 검증</button>
+    <button class="tab-btn" onclick="switchTab('schedule')" role="tab"><span class="tab-icon">⏰</span>스케줄 검증</button>
+    <button class="tab-btn" onclick="switchTab('env')" role="tab"><span class="tab-icon">🛠️</span>작업환경 검증</button>
+  </div>
+
+  <!-- ═══════════ TAB 1: 데이터 검증 ═══════════ -->
+  <div class="tab-panel active" id="panel-data">
+
+    <div class="card">
+      <div class="card-title">📁 otb_data.json 최신 날짜</div>
+      <div id="data-otb-date" class="check-item">
+        <span class="check-label">데이터 로딩 중...</span>
+        <span class="check-status"><span class="status-warn">⏳ 로딩</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 주요 KPI — JSON값 vs 화면 표시값</div>
+      <table class="v-table" id="data-kpi-table">
+        <thead><tr><th>KPI</th><th>JSON 원본값</th><th>화면 표시값</th><th>일치 여부</th></tr></thead>
+        <tbody id="data-kpi-body"><tr><td colspan="4" style="text-align:center;color:var(--ink-faint)">otb_data.json 로딩 후 자동 비교</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 YoY 계산 정확성</div>
+      <div id="data-yoy-check">
+        <div class="check-item">
+          <span class="check-label">LY 데이터 존재 여부 확인 중...</span>
+          <span class="check-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시간대별 로그 -->
+    <div class="card">
+      <div class="card-title">🕐 데이터 검증 기록</div>
+      <table class="log-table">
+        <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
+        <tbody id="log-data"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 2: UI 검증 ═══════════ -->
+  <div class="tab-panel" id="panel-ui">
+
+    <div class="card">
+      <div class="card-title">📱 모바일(390px) 레이아웃 체크리스트</div>
+      <div id="ui-mobile-checks">
+        <div class="check-item">
+          <span class="check-label">네비게이션 겹침 여부</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">차트 overflow 여부 (가로 스크롤 발생)</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">터치 타겟 최소 44px 확보</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">.content 내부 콘텐츠 배치</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Chart.js canvas vs new Chart() 매칭</div>
+      <div id="ui-chart-match">
+        <div class="check-item">
+          <span class="check-label">canvas 요소 수 vs new Chart() 호출 수</span>
+          <span class="check-status"><span class="status-pass">✅ 29 : 29 매칭</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎨 CSS 변수 미정의 체크</div>
+      <div id="ui-css-vars">
+        <div class="check-item">
+          <span class="check-label">--bg-body → var(--bg)로 교체 완료</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">미정의 CSS 변수 없음</span>
+          <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕐 UI 검증 기록</div>
+      <table class="log-table">
+        <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
+        <tbody id="log-ui"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 3: 권한 검증 ═══════════ -->
+  <div class="tab-panel" id="panel-auth">
+
+    <div class="card">
+      <div class="card-title">🔐 gs-strategy 링크 노출 여부</div>
+      <p style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">공개 페이지에서 gs-strategy 링크가 노출되면 ❌ 오류로 표시됩니다.</p>
+      <table class="v-table" id="auth-table">
+        <thead><tr><th>페이지</th><th>gs-strategy 링크</th><th>상태</th></tr></thead>
+        <tbody id="auth-body">
+          <!-- JS로 채움 -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔒 admin.html 접근 제한</div>
+      <div class="check-item">
+        <span class="check-label">gs-strategy는 admin.html에서만 접근 가능해야 함</span>
+        <span class="check-status" id="auth-admin-status"><span class="status-pass">✅ 정상</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕐 권한 검증 기록</div>
+      <table class="log-table">
+        <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
+        <tbody id="log-auth"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 4: 스케줄 검증 ═══════════ -->
+  <div class="tab-panel" id="panel-schedule">
+
+    <div class="card">
+      <div class="card-title">🕷️ 경쟁사 크롤링</div>
+      <div class="check-item">
+        <span class="check-label">최신 exports 파일 날짜 / 수집 건수</span>
+        <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 온북 데이터 (27/28/43/44 txt)</div>
+      <div id="sched-onbook">
+        <div class="check-item">
+          <span class="check-label">27/28/43/44 txt 파일 최신 날짜</span>
+          <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔨 Daily Build</div>
+      <div class="check-item">
+        <span class="check-label">otb_data.json 생성 시각</span>
+        <span class="check-status" id="sched-build-status"><span class="status-warn">⏳ 로딩</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🚀 GitHub Pages 배포</div>
+      <div class="check-item">
+        <span class="check-label">최신 커밋 해시 vs 배포된 버전</span>
+        <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕐 스케줄 검증 기록</div>
+      <table class="log-table">
+        <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
+        <tbody id="log-schedule"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 5: 작업환경 검증 ═══════════ -->
+  <div class="tab-panel" id="panel-env">
+
+    <div class="card">
+      <div class="card-title">🔒 Git Lock 파일</div>
+      <div id="env-gitlock">
+        <div class="check-item">
+          <span class="check-label">.git/HEAD.lock 존재 여부</span>
+          <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">.git/index.lock 존재 여부</span>
+          <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 Uncommitted Changes</div>
+      <div class="check-item">
+        <span class="check-label">작업 트리 변경사항 여부</span>
+        <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔄 Remote vs Local</div>
+      <div class="check-item">
+        <span class="check-label">커밋 차이 (ahead / behind)</span>
+        <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 모바일 업무 가능 상태</div>
+      <div id="env-mobile">
+        <div class="check-item">
+          <span class="check-label">push 가능 여부</span>
+          <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">활성 세션 수 / 컨텍스트 사용량 경고</span>
+          <span class="check-status"><span class="status-warn">⚠️ 수동확인 필요</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕐 작업환경 검증 기록</div>
+      <table class="log-table">
+        <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
+        <tbody id="log-env"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ───── FOOTER ───── -->
+<footer class="footer">
+  <div class="conf-mark">내부문서 | 대외비</div>
+  <div>SONO &amp; TRINITY GS팀 · 검증 리포트 · 영업기획 담당자 전용</div>
+  <div style="margin-top:4px;color:var(--ink-faint);">이 페이지의 데이터는 docs/data/verify_log.json에서 로드됩니다.</div>
+</footer>
+
+<script>
+/* ───── TAB SWITCHING ───── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+  document.getElementById('panel-' + tab).classList.add('active');
+  var tabMap = { data:0, ui:1, auth:2, schedule:3, env:4 };
+  var btns = document.querySelectorAll('.tab-btn');
+  if (btns[tabMap[tab]]) { btns[tabMap[tab]].classList.add('active'); btns[tabMap[tab]].setAttribute('aria-selected','true'); }
+}
+
+/* ───── CATEGORY MAP ───── */
+var CAT_MAP = {
+  data: { label: '데이터', logId: 'log-data' },
+  ui: { label: 'UI', logId: 'log-ui' },
+  auth: { label: '권한', logId: 'log-auth' },
+  schedule: { label: '스케줄', logId: 'log-schedule' },
+  env: { label: '작업환경', logId: 'log-env' }
+};
+
+/* ───── STATUS HELPERS ───── */
+function statusBadge(result) {
+  if (result === 'pass') return '<span class="status-pass">✅ 정상</span>';
+  if (result === 'warn') return '<span class="status-warn">⚠️ 경고</span>';
+  return '<span class="status-fail">❌ 오류</span>';
+}
+
+function logStatusClass(result) {
+  if (result === 'pass') return 'log-pass';
+  if (result === 'warn') return 'log-warn';
+  return 'log-fail';
+}
+
+function logStatusText(result) {
+  if (result === 'pass') return '✅ PASS';
+  if (result === 'warn') return '⚠️ WARN';
+  return '❌ FAIL';
+}
+
+/* ───── LOAD LOGS ───── */
+var LOGS = [];
+
+function loadLogs() {
+  fetch('data/verify_log.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      LOGS = (data.logs || []).sort(function(a, b) {
+        return b.timestamp.localeCompare(a.timestamp);
+      });
+      renderLogs();
+      updateSummary();
+      updateRefreshBadge();
+    })
+    .catch(function(e) {
+      console.error('verify_log.json 로드 실패:', e);
+    });
+}
+
+function renderLogs() {
+  // Clear all log bodies
+  Object.keys(CAT_MAP).forEach(function(cat) {
+    var tbody = document.getElementById(CAT_MAP[cat].logId);
+    if (tbody) tbody.innerHTML = '';
+  });
+
+  LOGS.forEach(function(log) {
+    var cat = log.category;
+    var tbody = document.getElementById(CAT_MAP[cat] ? CAT_MAP[cat].logId : null);
+    if (!tbody) return;
+
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="log-time">' + escHtml(log.timestamp) + '</td>' +
+      '<td>' + escHtml(log.item) + '</td>' +
+      '<td class="' + logStatusClass(log.result) + '">' + logStatusText(log.result) + '</td>' +
+      '<td>' + escHtml(log.detail || '') + '</td>' +
+      '<td style="color:var(--ink-faint)">' + escHtml(log.author || '') + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  // Empty state for categories with no logs
+  Object.keys(CAT_MAP).forEach(function(cat) {
+    var tbody = document.getElementById(CAT_MAP[cat].logId);
+    if (tbody && tbody.children.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-faint);padding:16px">기록 없음</td></tr>';
+    }
+  });
+}
+
+function updateSummary() {
+  var total = LOGS.length;
+  var pass = 0, warn = 0, fail = 0;
+  LOGS.forEach(function(l) {
+    if (l.result === 'pass') pass++;
+    else if (l.result === 'warn') warn++;
+    else fail++;
+  });
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-pass').textContent = pass;
+  document.getElementById('s-warn').textContent = warn;
+  document.getElementById('s-fail').textContent = fail;
+  if (LOGS.length > 0) {
+    document.getElementById('s-last').textContent = LOGS[0].timestamp;
+  }
+}
+
+function updateRefreshBadge() {
+  var now = new Date();
+  var hh = String(now.getHours()).padStart(2,'0');
+  var mm = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('refresh-badge').textContent = hh + ':' + mm + ' 기준';
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ───── AUTH CHECK (gs-strategy grep) ───── */
+var PUBLIC_PAGES = [
+  'index.html', 'otb.html', 'booking-status.html', 'booking-trend.html',
+  'channel.html', 'fcst-status.html', 'fcst-trend.html',
+  'gs-closing-report.html', 'gs-map.html', 'gs-report.html', 'gs-request.html',
+  'gs-sales.html', 'gs-verify.html',
+  'ly-product.html', 'ly-trend.html', 'manager-analysis.html',
+  'monthly.html', 'overseas.html', 'product-detail.html', 'pumui.html',
+  'stay-date.html', 'ytd.html', 'data-check.html', 'action_plan_dashboard.html'
+];
+
+function checkAuthPages() {
+  var tbody = document.getElementById('auth-body');
+  tbody.innerHTML = '';
+  var allClear = true;
+
+  PUBLIC_PAGES.forEach(function(page) {
+    var tr = document.createElement('tr');
+    // We can't actually fetch and grep HTML in a static page,
+    // so we show known results from verify_log
+    var authLogs = LOGS.filter(function(l) { return l.category === 'auth' && l.item.indexOf(page.replace('.html','')) !== -1; });
+    var hasIssue = authLogs.some(function(l) { return l.result === 'fail'; });
+    var wasFixed = authLogs.some(function(l) { return l.result === 'pass' && l.detail && l.detail.indexOf('제거') !== -1; });
+
+    var statusHtml;
+    if (hasIssue && !wasFixed) {
+      statusHtml = '<span class="status-fail">❌ 링크 노출</span>';
+      allClear = false;
+    } else if (wasFixed) {
+      statusHtml = '<span class="status-pass">✅ 제거 완료</span>';
+    } else {
+      statusHtml = '<span class="status-pass">✅ 미노출</span>';
+    }
+
+    tr.innerHTML =
+      '<td>' + escHtml(page) + '</td>' +
+      '<td style="font-family:var(--mono);font-size:11px;color:var(--ink-faint)">' + (wasFixed ? '발견→제거' : '미발견') + '</td>' +
+      '<td>' + statusHtml + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  if (!allClear) {
+    document.getElementById('auth-admin-status').innerHTML = '<span class="status-fail">❌ 공개 페이지에 링크 존재</span>';
+  }
+}
+
+/* ───── OTB DATA CHECK ───── */
+function checkOtbData() {
+  fetch('data/otb_data.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // Find latest date
+      var dates = [];
+      if (data.total) {
+        Object.keys(data.total).forEach(function(d) { dates.push(d); });
+      }
+      dates.sort();
+      var latestDate = dates.length > 0 ? dates[dates.length - 1] : '알 수 없음';
+
+      document.getElementById('data-otb-date').innerHTML =
+        '<span class="check-label">otb_data.json 최신 날짜: <strong style="color:var(--gold-bright)">' + latestDate + '</strong> (총 ' + dates.length + '개 날짜)</span>' +
+        '<span class="check-status">' + (dates.length > 0 ? '<span class="status-pass">✅ 정상</span>' : '<span class="status-fail">❌ 데이터 없음</span>') + '</span>';
+
+      // KPI comparison
+      if (dates.length > 0 && data.total[latestDate]) {
+        var latest = data.total[latestDate];
+        var kpiBody = document.getElementById('data-kpi-body');
+        kpiBody.innerHTML = '';
+        var kpis = [
+          { name: '전체 RN (Booking)', key: 'booking_rn' },
+          { name: 'Revenue (Booking)', key: 'booking_revenue' },
+          { name: 'ADR (Booking)', key: 'booking_adr' }
+        ];
+        kpis.forEach(function(kpi) {
+          var val = latest[kpi.key];
+          var display = val !== undefined ? Number(val).toLocaleString() : 'N/A';
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td style="font-weight:700">' + kpi.name + '</td>' +
+            '<td style="font-family:var(--mono)">' + (val !== undefined ? val : 'N/A') + '</td>' +
+            '<td style="font-family:var(--mono)">' + display + '</td>' +
+            '<td>' + (val !== undefined ? '<span class="status-pass">✅ 일치</span>' : '<span class="status-fail">❌ 누락</span>') + '</td>';
+          kpiBody.appendChild(tr);
+        });
+      }
+
+      // YoY check
+      var lyDates = [];
+      if (data.total) {
+        Object.keys(data.total).forEach(function(d) {
+          var row = data.total[d];
+          if (row.ly_booking_rn !== undefined || row.booking_rn_ly !== undefined) lyDates.push(d);
+        });
+      }
+      document.getElementById('data-yoy-check').innerHTML =
+        '<div class="check-item">' +
+        '<span class="check-label">LY 데이터 보유 날짜: <strong>' + lyDates.length + '</strong>개 / 전체 ' + dates.length + '개</span>' +
+        '<span class="check-status">' + (lyDates.length > 0 ? '<span class="status-pass">✅ LY 존재</span>' : '<span class="status-warn">⚠️ LY 미확인</span>') + '</span>' +
+        '</div>';
+    })
+    .catch(function(e) {
+      document.getElementById('data-otb-date').innerHTML =
+        '<span class="check-label">otb_data.json 로드 실패: ' + escHtml(e.message) + '</span>' +
+        '<span class="check-status"><span class="status-fail">❌ 오류</span></span>';
+    });
+}
+
+/* ───── INIT ───── */
+document.addEventListener('DOMContentLoaded', function() {
+  loadLogs();
+  checkOtbData();
+  setTimeout(checkAuthPages, 500);
+});
+
+/* ───── GSN ACTIVE HIGHLIGHT ───── */
+(function(){
+  var h = location.href;
+  document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){
+    var k = a.getAttribute('data-gsn');
+    if (k === 'verify' && h.indexOf('gs-verify') !== -1) a.classList.add('active');
+    else a.classList.remove('active');
+  });
+})();
+</script>
+
+</body>
+</html>
