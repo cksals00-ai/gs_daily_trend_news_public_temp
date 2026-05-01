@@ -10606,19 +10606,19 @@ function renderBizPlanCharts() {
         document.getElementById('cross-matrix').innerHTML=crossHTML;
         
         // Simulation impact chart
+        const simDatasets = [{label:'ADR +5% 효과',data:sims.map(s=>s.sim_adr?.rev_change||0),backgroundColor:pos}];
+        const hasNr = sims.some(s=>s.sim_nr && s.sim_nr.rev_change);
+        if(hasNr) simDatasets.push({label:'취소율 -5%p 효과',data:sims.map(s=>s.sim_nr?.rev_change||0),backgroundColor:blue});
         new Chart(document.getElementById('chart-sim-impact'),{
           type:'bar',
           data:{
             labels:sims.map(s=>shortName(s.prop)),
-            datasets:[
-              {label:'ADR +5% 효과',data:sims.map(s=>s.sim_adr?.rev_change||0),backgroundColor:pos},
-              {label:'취소율 -5%p 효과',data:sims.map(s=>s.sim_nr?.rev_change||0),backgroundColor:blue}
-            ]
+            datasets:simDatasets
           },
           options:{
             responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'사업장별 시뮬레이션 효과 (만원)',color:darkTxt}},
-            scales:{x:{stacked:true,ticks:{color:mutedTxt,font:{size:8}}},y:{stacked:true,ticks:{color:mutedTxt,callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.05)'}}}
+            plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'사업장별 ADR +5% 시뮬레이션 효과 (만원)',color:darkTxt}},
+            scales:{x:{ticks:{color:mutedTxt,font:{size:8},maxRotation:45,minRotation:30}},y:{ticks:{color:mutedTxt,callback:v=>v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}
           }
         });
         
