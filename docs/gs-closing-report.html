@@ -140,8 +140,9 @@ body {
 
 /* ───── TABLES ───── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 700px; }
-thead { position: sticky; top: 96px; z-index: 8; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.full-table { min-width: 1200px; }
+thead { z-index: 8; }
 th { background: var(--bg-deep); color: var(--ink-muted); font-weight: 700; font-size: 10.5px; letter-spacing: 0.06em; padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; text-transform: uppercase; }
 th:first-child { text-align: left; }
 th.group-header { background: var(--bg-surface); color: var(--gold-bright); font-size: 11px; font-weight: 800; text-align: center; border-bottom: 2px solid rgba(201,160,99,0.3); letter-spacing: 0.1em; padding: 10px 8px; }
@@ -496,12 +497,12 @@ function renderPropertyTable(props, containerId, showToggle = true) {
   const topN = byYoY.slice(0, 3).map(p => p.name);
   const btmN = byYoY.slice(-3).map(p => p.name);
 
-  let html = `<table><thead>
+  let html = `<table class="full-table"><thead>
     <tr>
-      <th rowspan="2" style="vertical-align:bottom">사업장</th>
-      <th class="group-header" colspan="5">Room Nights</th>
+      <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">사업장</th>
+      <th class="group-header" colspan="5">ROOM NIGHTS</th>
       <th class="group-header" colspan="4">ADR</th>
-      <th class="group-header" colspan="5">Revenue</th>
+      <th class="group-header" colspan="5">REVENUE</th>
     </tr>
     <tr>
       <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
@@ -568,12 +569,12 @@ function renderChannelTable(months, containerId) {
     .sort((a, b) => (b.rns_actual||0) - (a.rns_actual||0));
   const all = [...primary, ...others];
 
-  let html = `<table><thead>
+  let html = `<table class="full-table"><thead>
     <tr>
-      <th rowspan="2" style="vertical-align:bottom">채널</th>
-      <th class="group-header" colspan="5">Room Nights</th>
+      <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">채널</th>
+      <th class="group-header" colspan="5">ROOM NIGHTS</th>
       <th class="group-header" colspan="4">ADR</th>
-      <th class="group-header" colspan="5">Revenue</th>
+      <th class="group-header" colspan="5">REVENUE</th>
     </tr>
     <tr>
       <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
