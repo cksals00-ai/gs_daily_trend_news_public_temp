@@ -552,6 +552,82 @@ select option{background:var(--bg-deep);}
     </div>
   </div>
 
+  <!-- 취소/예약변경 매칭 설정 -->
+  <div class="card" id="cancelMatchConfig">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">CANCEL MATCHING CONFIG</div>
+    <h3 style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:14px;">취소/예약변경 매칭 설정</h3>
+    <p style="font-size:13px;color:var(--ink-muted);margin-bottom:16px;line-height:1.6;">
+      취소 리드타임 기반 예약변경 추정 시 매칭 윈도우를 설정합니다. 설정 변경 후 JSON 내보내기 → data/ 폴더에 저장하면 gs-strategy.html에 자동 반영됩니다.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;cursor:pointer;transition:all 0.2s;">
+        <input type="radio" name="cancelWindow" value="0" style="accent-color:var(--gold);">
+        <span style="font-size:13px;color:var(--ink-soft);"><strong>당일만</strong> (0일)</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:rgba(201,160,99,0.08);border:2px solid var(--gold);border-radius:6px;cursor:pointer;transition:all 0.2s;">
+        <input type="radio" name="cancelWindow" value="1" checked style="accent-color:var(--gold);">
+        <span style="font-size:13px;color:var(--gold-bright);font-weight:600;"><strong>당일+익일</strong> (1일) ★추천</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;cursor:pointer;transition:all 0.2s;">
+        <input type="radio" name="cancelWindow" value="2" style="accent-color:var(--gold);">
+        <span style="font-size:13px;color:var(--ink-soft);"><strong>당일+2일</strong></span>
+      </label>
+    </div>
+    <div id="cancelMatchPreview" style="padding:14px;background:rgba(90,159,196,0.08);border-left:3px solid var(--info);border-radius:2px;font-size:13px;color:var(--ink-soft);line-height:1.7;">
+      <strong style="color:var(--info);">현재 설정 (당일+익일):</strong> 표면취소율 54.8% → 예약변경 추정 203,167건 → <strong>실질취소율 23.5%</strong>
+    </div>
+    <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;text-align:center;">
+        <div style="font-size:11px;color:var(--ink-faint);font-family:var(--mono);">WINDOW 0</div>
+        <div style="font-size:15px;font-weight:700;color:var(--warning);">26.2%</div>
+        <div style="font-size:10px;color:var(--ink-faint);">mod: 185,950</div>
+      </div>
+      <div style="padding:10px;background:rgba(201,160,99,0.1);border:1px solid var(--gold);border-radius:4px;text-align:center;">
+        <div style="font-size:11px;color:var(--gold);font-family:var(--mono);">WINDOW 1 ★</div>
+        <div style="font-size:15px;font-weight:700;color:var(--positive);">23.5%</div>
+        <div style="font-size:10px;color:var(--ink-faint);">mod: 203,167</div>
+      </div>
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;text-align:center;">
+        <div style="font-size:11px;color:var(--ink-faint);font-family:var(--mono);">WINDOW 2</div>
+        <div style="font-size:15px;font-weight:700;color:var(--positive);">20.9%</div>
+        <div style="font-size:10px;color:var(--ink-faint);">mod: 220,385</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 수수료율 설정 -->
+  <div class="card" id="commissionConfig">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">COMMISSION RATE CONFIG</div>
+    <h3 style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:14px;">채널별 수수료율 설정</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:4px;">G-OTA (여기어때·아고다 등)</div>
+        <input type="number" id="commGOTA" value="15" min="0" max="100" step="0.1" style="width:100%;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;">
+        <div style="font-size:10px;color:var(--ink-faint);text-align:center;margin-top:2px;">%</div>
+      </div>
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:4px;">OTA (야놀자 등)</div>
+        <input type="number" id="commOTA" value="11" min="0" max="100" step="0.1" style="width:100%;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;">
+        <div style="font-size:10px;color:var(--ink-faint);text-align:center;margin-top:2px;">%</div>
+      </div>
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:4px;">쿠팡</div>
+        <input type="number" id="commCoupang" value="9.9" min="0" max="100" step="0.1" style="width:100%;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;">
+        <div style="font-size:10px;color:var(--ink-faint);text-align:center;margin-top:2px;">%</div>
+      </div>
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:4px;">네이버</div>
+        <input type="number" id="commNaver" value="7" min="0" max="100" step="0.1" style="width:100%;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;">
+        <div style="font-size:10px;color:var(--ink-faint);text-align:center;margin-top:2px;">%</div>
+      </div>
+      <div style="padding:10px;background:var(--bg-soft);border-radius:4px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:4px;">Direct/자사</div>
+        <input type="number" id="commDirect" value="3" min="0" max="100" step="0.1" style="width:100%;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;">
+        <div style="font-size:10px;color:var(--ink-faint);text-align:center;margin-top:2px;">%</div>
+      </div>
+    </div>
+  </div>
+
   <!-- FCST 키인은 별도 페이지(fcst-admin.html)로 이동했습니다 -->
   <div class="card" style="text-align:center;padding:30px 20px;">
     <div style="font-size:13px;color:var(--ink-muted);margin-bottom:10px;">FCST 키인 기능이 별도 페이지로 분리되었습니다.</div>
@@ -1029,6 +1105,14 @@ function getFormData() {
       vivaldi: radio('sv'), central: radio('sc'),
       south:   radio('ss'), apac:    radio('sa'),
     },
+    cancel_match_window: parseInt(document.querySelector('input[name="cancelWindow"]:checked')?.value || '1'),
+    commission_rates: {
+      g_ota: parseFloat(document.getElementById('commGOTA')?.value || '15'),
+      ota: parseFloat(document.getElementById('commOTA')?.value || '11'),
+      coupang: parseFloat(document.getElementById('commCoupang')?.value || '9.9'),
+      naver: parseFloat(document.getElementById('commNaver')?.value || '7'),
+      direct: parseFloat(document.getElementById('commDirect')?.value || '3'),
+    },
   };
 }
 
@@ -1045,6 +1129,20 @@ function applyFormData(d, reRenderInsights = true) {
   setVal('action-central', d.action_alerts?.central);
   setVal('action-south',   d.action_alerts?.south);
   setVal('action-apac',    d.action_alerts?.apac);
+
+  // Cancel match window
+  if (d.cancel_match_window !== undefined) {
+    const r = document.querySelector(`input[name="cancelWindow"][value="${d.cancel_match_window}"]`);
+    if (r) r.checked = true;
+  }
+  // Commission rates
+  if (d.commission_rates) {
+    if (d.commission_rates.g_ota !== undefined) setVal('commGOTA', d.commission_rates.g_ota);
+    if (d.commission_rates.ota !== undefined) setVal('commOTA', d.commission_rates.ota);
+    if (d.commission_rates.coupang !== undefined) setVal('commCoupang', d.commission_rates.coupang);
+    if (d.commission_rates.naver !== undefined) setVal('commNaver', d.commission_rates.naver);
+    if (d.commission_rates.direct !== undefined) setVal('commDirect', d.commission_rates.direct);
+  }
 
   if (d.property_strategy) {
     const m = { vivaldi:'sv', central:'sc', south:'ss', apac:'sa' };

@@ -520,6 +520,36 @@
           dashboard_generator.py에 통합, 모든 페이지에서 자동 로드
         </div>
       </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">운영전략 심층분석 (6/7/8월)</div>
+        <div class="status-card-desc">
+          취소/예약변경 분리분석, 메가채널 의존도 시뮬레이션, G-OTA vs OTA 추이, 월별 운영전략, 취소이익모델, 5대 시나리오 시뮬레이션
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">취소/예약변경 분리 분석</div>
+        <div class="status-card-desc">
+          cancel_lead_time 기반 표면취소율(54.8%) → 실질취소율(23.5%) 분리. 매칭윈도우 설정 가능 (0/1/2일). 수수료율 G-OTA 15%, OTA 11%, 쿠팡 9.9% 반영.
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">수수료 시뮬레이션 엔진</div>
+        <div class="status-card-desc">
+          채널별 수수료율 기반 Gross→Net 순수익 시뮬레이션. 채널믹스 최적화 5개 시나리오. db_aggregated.json 실데이터 연동.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -601,6 +631,37 @@
         <div class="status-card-desc">
           키인 페이지 통합, 권한 관리, 감사 로그
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 데이터 파이프라인 & 자동 업데이트 -->
+  <div class="report-section">
+    <h2 class="section-title">🔄 데이터 파이프라인 & 자동 업데이트</h2>
+    <div class="detail-list">
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📊</div>
+        <div><strong>db_aggregated.json:</strong> 온북 DB 일일 파싱 → 채널별/사업장별/세그먼트별 월간 집계 + cancel_lead_time + pickup_daily. gs-strategy.html · gs-report.html 공통 소스.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📈</div>
+        <div><strong>otb_data.json:</strong> OTB 현황 일일 업데이트 → Budget Gap, YoY 달성률, FCST 비교 자동 반영.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">📉</div>
+        <div><strong>rm_fcst_trend.json:</strong> Revenue Meeting FCST 추이 → 4개년 트렌드 자동 차트 갱신.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🔍</div>
+        <div><strong>취소/예약변경 분석:</strong> cancel_lead_time 데이터 기반 → 표면취소율(54.8%) vs 실질취소율(23.5%) 자동 산출. 매칭 윈도우: 당일+익일(1일) 기본 설정.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">💰</div>
+        <div><strong>수수료 시뮬레이션:</strong> 채널별 수수료율(G-OTA 15%, OTA 11%, 쿠팡 9.9%, 네이버 7%, Direct 3%) 기반 Gross→Net 순수익 자동 계산.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">⏰</div>
+        <div><strong>업데이트 주기:</strong> GitHub Actions 매일 06:00 KST 자동 빌드 → JSON 갱신 → 모든 대시보드 자동 반영. 수동 트리거 가능.</div>
       </div>
     </div>
   </div>
