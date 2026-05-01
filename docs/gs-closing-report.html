@@ -272,7 +272,9 @@ tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: v
    DATA & CONFIG
    ══════════════════════════════════════ */
 let DATA = null;
+let PKG_DATA = null; // package_series_trend.json
 const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
+const CATEGORIES = ['룸온니/프로모션','연박/투나잇','올인클루시브','조식패키지','세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
 const MONTH_KO = ['전체','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 const CLOSED_MONTHS = [1, 2, 3, 4]; // months with actual closing data
 const LATEST_MONTH = 4;
@@ -628,35 +630,80 @@ function renderChannelTable(months, containerId) {
 }
 
 /* ══════════════════════════════════════
-   RENDER: CATEGORY / SEGMENT PIE (3-3)
+   RENDER: CATEGORY / PRODUCT PIE (3-3)
    ══════════════════════════════════════ */
-function renderCategorySection(months, chartId, tableId) {
-  const segMap = combineSegments(months);
-  const data = SEGMENTS.map(seg => ({ name: seg, rn: segMap[seg]?.rns_actual || 0, rev: segMap[seg]?.rev_actual || 0, adr: segMap[seg]?.adr_actual || 0, yoy: segMap[seg]?.rns_yoy || 0 }));
-  const total = data.reduce((s, d) => s + d.rn, 0);
+function getCategoryData(months) {
+  if (!PKG_DATA || !PKG_DATA.by_category) return null;
+  const byCat = PKG_DATA.by_category;
+  // Convert months array [1,2,3] to YYYYMM keys like ['202601','202602','202603']
+  const monthKeys = months.map(m => '2026' + String(m).padStart(2, '0'));
+  const lastYearKeys = months.map(m => '2025' + String(m).padStart(2, '0'));
 
+  const result = [];
+  CATEGORIES.forEach(cat => {
+    const catData = byCat[cat];
+    if (!catData) return;
+    let rn = 0, rev = 0, rnLast = 0, revLast = 0;
+    // 2026
+    const y26 = catData['2026'] || {};
+    monthKeys.forEach(mk => { if (y26[mk]) { rn += y26[mk].rn || 0; rev += y26[mk].rev || 0; } });
+    // 2025
+    const y25 = catData['2025'] || {};
+    lastYearKeys.forEach(mk => { if (y25[mk]) { rnLast += y25[mk].rn || 0; revLast += y25[mk].rev || 0; } });
+
+    const adr = rn > 0 ? Math.round((rev * 1000000) / rn) : 0; // rev in 백만원 → won
+    const adrLast = rnLast > 0 ? Math.round((revLast * 1000000) / rnLast) : 0;
+    const yoy = rnLast > 0 ? (rn - rnLast) / rnLast * 100 : null;
+    result.push({ name: cat, rn, rev, adr, rnLast, revLast, adrLast, yoy });
+  });
+  return result;
+}
+
+function renderCategorySection(months, chartId, tableId) {
+  const data = getCategoryData(months);
+  const el = document.getElementById(tableId);
   const ctx = document.getElementById(chartId)?.getContext('2d');
+
+  if (!data || data.every(d => d.rn === 0)) {
+    if (ctx) { const key = chartId; if (chartInstances[key]) chartInstances[key].destroy(); ctx.canvas.parentElement.innerHTML = '<div class="data-missing"><strong>데이터 미수신</strong>해당 기간의 상품 카테고리 데이터가 없습니다.</div>'; }
+    if (el) el.innerHTML = '<div class="data-missing"><strong>데이터 미수신</strong>해당 기간의 상품 카테고리 데이터가 없습니다.</div>';
+    return;
+  }
+
+  const sorted = [...data].sort((a, b) => b.rn - a.rn);
+  const total = sorted.reduce((s, d) => s + d.rn, 0);
+
+  // Donut chart
   if (ctx) {
     const key = chartId;
     if (chartInstances[key]) chartInstances[key].destroy();
+    const colors = [
+      'rgba(201,160,99,0.75)', 'rgba(96,165,250,0.75)', 'rgba(52,211,153,0.75)',
+      'rgba(251,191,36,0.7)', 'rgba(248,113,113,0.7)', 'rgba(129,140,248,0.7)',
+      'rgba(244,114,182,0.7)', 'rgba(34,211,238,0.7)', 'rgba(163,163,163,0.6)'
+    ];
     chartInstances[key] = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: data.map(d => d.name),
-        datasets: [{ data: data.map(d => d.rn), backgroundColor: ['rgba(201,160,99,0.7)','rgba(96,165,250,0.7)','rgba(52,211,153,0.7)'], borderColor: ['rgba(201,160,99,1)','rgba(96,165,250,1)','rgba(52,211,153,1)'], borderWidth: 2, hoverOffset: 8 }]
+        labels: sorted.map(d => d.name),
+        datasets: [{ data: sorted.map(d => d.rn), backgroundColor: colors.slice(0, sorted.length), borderWidth: 1, borderColor: 'rgba(0,0,0,0.3)', hoverOffset: 8 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 }, padding: 16 } } } }
+      options: { responsive: true, maintainAspectRatio: false, cutout: '50%', plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, padding: 12, boxWidth: 14 } } } }
     });
   }
 
-  let html = `<table><thead><tr><th>세그먼트</th><th>RN</th><th>구성비</th><th>YoY</th><th>Revenue</th><th>ADR</th></tr></thead><tbody>`;
-  data.forEach(d => {
+  // Table
+  let html = `<table><thead><tr><th>카테고리</th><th>RN</th><th>구성비</th><th>YoY</th><th>Revenue</th><th>ADR</th></tr></thead><tbody>`;
+  sorted.forEach(d => {
     const share = total > 0 ? (d.rn / total * 100).toFixed(1) + '%' : '—';
-    const yoyColor = d.yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
-    html += `<tr><td style="font-weight:700">${d.name}</td><td>${fmt.n(d.rn)}</td><td>${share}</td><td style="color:${yoyColor};font-weight:700">${fmt.pct(d.yoy)}</td><td>${fmt.rev(d.rev)}</td><td>${fmt.won(d.adr)}</td></tr>`;
+    const yoyColor = d.yoy != null ? (d.yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+    html += `<tr><td style="font-weight:700">${d.name}</td><td>${fmt.n(d.rn)}</td><td>${share}</td><td style="color:${yoyColor};font-weight:700">${d.yoy != null ? fmt.pct(d.yoy) : '—'}</td><td>${fmt.rev(d.rev * 1000000)}</td><td>${fmt.won(d.adr)}</td></tr>`;
   });
+  // Total row
+  const totalRev = sorted.reduce((s, d) => s + d.rev, 0);
+  const totalAdr = total > 0 ? Math.round((totalRev * 1000000) / total) : 0;
+  html += `<tr class="total-row"><td>합계</td><td>${fmt.n(total)}</td><td>100%</td><td>—</td><td>${fmt.rev(totalRev * 1000000)}</td><td>${fmt.won(totalAdr)}</td></tr>`;
   html += '</tbody></table>';
-  const el = document.getElementById(tableId);
   if (el) el.innerHTML = html;
 }
 
@@ -768,7 +815,7 @@ function renderTrendChart(chartId) {
 }
 
 /* ══════════════════════════════════════
-   MARKET ANALYSIS (Section 2)
+   MARKET ANALYSIS (Section 2) — ENHANCED
    ══════════════════════════════════════ */
 function getMarketPoints(months) {
   const s = combineSummary(months);
@@ -776,11 +823,60 @@ function getMarketPoints(months) {
   const ota = segMap['OTA'] || {};
   const gota = segMap['G-OTA'] || {};
   const ib = segMap['Inbound'] || {};
-  return [
-    `<span class="insight-kw">OTA 채널</span> YoY ${fmt.pct(ota.rns_yoy)} · G-OTA ${fmt.pct(gota.rns_yoy)} · 온라인 직판 채널 중심 성장세 ${s.rns_yoy > 0 ? '지속' : '둔화'}`,
-    `<span class="insight-kw">ADR</span> 전년동기 대비 ${fmt.pct(s.adr_yoy)} · 객단가 ${s.adr_yoy >= 0 ? '개선 신호' : '하락 압력 주의'}`,
-    `<span class="insight-kw">Inbound</span> YoY ${fmt.pct(ib.rns_yoy)} · 인바운드 ${ib.rns_yoy > 0 ? '회복세' : '둔화'} · 글로벌 수요 모니터링 필요`
-  ];
+  const total = (ota.rns_actual||0) + (gota.rns_actual||0) + (ib.rns_actual||0);
+  const otaShare = total > 0 ? ((ota.rns_actual||0) / total * 100).toFixed(1) : '—';
+  const gotaShare = total > 0 ? ((gota.rns_actual||0) / total * 100).toFixed(1) : '—';
+  const ibShare = total > 0 ? ((ib.rns_actual||0) / total * 100).toFixed(1) : '—';
+
+  const points = [];
+
+  // 1. OTA 시장 동향 — 점유율 + YoY
+  points.push(`<span class="insight-kw">OTA 시장동향</span> 점유율 ${otaShare}% (YoY ${fmt.pct(ota.rns_yoy)}) · 온라인 직판 채널 ${ota.rns_yoy > 0 ? '성장 지속' : '둔화'} · ADR ${fmt.won(ota.adr_actual)}`);
+
+  // 2. G-OTA 성장세
+  points.push(`<span class="insight-kw">G-OTA 성장</span> 점유율 ${gotaShare}% (YoY ${fmt.pct(gota.rns_yoy)}) · ${gota.rns_yoy > 10 ? '두 자릿수 급성장' : gota.rns_yoy > 0 ? '안정 성장세' : '성장 정체'} · ADR ${fmt.won(gota.adr_actual)} ${gota.adr_yoy >= 0 ? '단가 유지' : '단가 하락 주의'}`);
+
+  // 3. ADR 트렌드
+  const premiumProps = combineProperties(months).filter(p => p.adr_actual > 0).sort((a,b) => b.adr_actual - a.adr_actual);
+  const topAdrProp = premiumProps[0];
+  const btmAdrProp = premiumProps[premiumProps.length - 1];
+  const adrGap = topAdrProp && btmAdrProp ? Math.round(topAdrProp.adr_actual - btmAdrProp.adr_actual) : 0;
+  points.push(`<span class="insight-kw">ADR 트렌드</span> 전년동기 대비 ${fmt.pct(s.adr_yoy)} · ${s.adr_yoy >= 0 ? '객단가 개선' : '하락 압력'} · 프리미엄↔이코노미 격차 ${fmt.won(adrGap)} → 가격 분화 ${adrGap > 100000 ? '심화' : '유지'}`);
+
+  // 4. Inbound 회복세
+  points.push(`<span class="insight-kw">Inbound 회복</span> 점유율 ${ibShare}% · YoY ${fmt.pct(ib.rns_yoy)} · ${ib.rns_yoy > 5 ? '뚜렷한 회복세' : ib.rns_yoy > 0 ? '완만한 회복' : '수요 감소'} · ADR ${fmt.won(ib.adr_actual)} (${ib.adr_yoy >= 0 ? '단가 방어' : '단가 약세'})`);
+
+  // 5. 상품 트렌드 (from PKG_DATA)
+  const catData = getCategoryData(months);
+  if (catData && catData.some(d => d.rn > 0)) {
+    const catTotal = catData.reduce((s, d) => s + d.rn, 0);
+    const topCat = [...catData].sort((a, b) => b.rn - a.rn)[0];
+    const topCatShare = catTotal > 0 ? (topCat.rn / catTotal * 100).toFixed(0) : '—';
+    const growCat = [...catData].filter(d => d.yoy != null && d.rnLast > 100).sort((a, b) => (b.yoy||0) - (a.yoy||0))[0];
+    let catInsight = `<span class="insight-kw">상품 트렌드</span> ${topCat.name} 점유 ${topCatShare}%`;
+    if (growCat && growCat.name !== topCat.name) catInsight += ` · ${growCat.name} 성장 ${fmt.pct(growCat.yoy)}`;
+    else if (growCat) catInsight += ` (YoY ${fmt.pct(growCat.yoy)})`;
+    const decCat = [...catData].filter(d => d.yoy != null && d.yoy < 0 && d.rnLast > 100).sort((a, b) => a.yoy - b.yoy)[0];
+    if (decCat) catInsight += ` · ${decCat.name} 감소 ${fmt.pct(decCat.yoy)}`;
+    points.push(catInsight);
+  }
+
+  // 6. 계절성 패턴
+  const lastMonth = months[months.length - 1];
+  const prevMonthSummary = lastMonth > 1 ? getMonthSummary(lastMonth - 1) : null;
+  const curMonthSummary = getMonthSummary(lastMonth);
+  if (prevMonthSummary && curMonthSummary.rns_actual > 0 && prevMonthSummary.rns_actual > 0) {
+    const momChange = ((curMonthSummary.rns_actual - prevMonthSummary.rns_actual) / prevMonthSummary.rns_actual * 100);
+    const seasonDir = momChange > 10 ? '성수기 진입' : momChange > 0 ? '소폭 상승' : momChange > -10 ? '소폭 하락' : '비수기 전환';
+    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} MoM ${fmt.pct(momChange)} · ${seasonDir} 패턴 · 전년 동월 대비 ${s.rns_yoy >= 0 ? '수요 확대' : '수요 위축'}`);
+  } else {
+    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} 전년동기 대비 RN ${fmt.pct(s.rns_yoy)} · ${s.rns_yoy > 5 ? '성수기 수요 확대' : s.rns_yoy >= 0 ? '수요 안정' : '수요 위축 주의'}`);
+  }
+
+  // 7. 전체 시장 성장률
+  points.push(`<span class="insight-kw">총 시장규모</span> GS 총 RN ${fmt.n(s.rns_actual)} (YoY ${fmt.pct(s.rns_yoy)}) · 매출 ${fmt.rev(s.rev_actual)} (YoY ${fmt.pct(s.rev_yoy)}) · ${s.rns_yoy > 0 && s.rev_yoy > 0 ? '양적·질적 동반 성장' : s.rev_yoy > 0 ? '질적 성장 (단가 상승)' : '성장 모멘텀 확보 필요'}`);
+
+  return points;
 }
 
 /* ══════════════════════════════════════
@@ -848,7 +944,7 @@ function buildTabHTML(tabId, months, label, showCumul) {
         <span class="section-num">SECTION 02</span>
         <h2 class="section-title"><span class="st-icon">🌐</span> 시장 환경 분석</h2>
         <div class="insight-box">
-          <h3>3-Point 시장 동향</h3>
+          <h3>시장 동향 · 채널 · 상품 · 계절성</h3>
           <ul id="market-${uid}"></ul>
         </div>
       </section>
@@ -887,7 +983,7 @@ function buildTabHTML(tabId, months, label, showCumul) {
           <div class="card-header"><h3>3-3. 상품(카테고리)별 구성</h3></div>
           <div class="card-body">
             <div class="chart-row">
-              <div class="chart-wrap"><h4>세그먼트 구성 (RN)</h4><div class="chart-container"><canvas id="catpie-${uid}"></canvas></div></div>
+              <div class="chart-wrap"><h4>상품 카테고리 구성 (RN)</h4><div class="chart-container"><canvas id="catpie-${uid}"></canvas></div></div>
               <div class="table-wrap" id="cattbl-${uid}"></div>
             </div>
           </div>
@@ -1081,10 +1177,13 @@ function switchPeriod(type) {
 /* ══════════════════════════════════════
    INIT
    ══════════════════════════════════════ */
-fetch('data/otb_data.json')
-  .then(r => r.json())
-  .then(d => {
-    DATA = d;
+Promise.all([
+  fetch('data/otb_data.json').then(r => r.json()),
+  fetch('data/package_series_trend.json').then(r => r.json()).catch(() => null)
+])
+  .then(([otbData, pkgData]) => {
+    DATA = otbData;
+    PKG_DATA = pkgData;
     document.getElementById('refreshTime').textContent = DATA.meta?.refreshTime || '—';
     switchPeriod('monthly');
   })

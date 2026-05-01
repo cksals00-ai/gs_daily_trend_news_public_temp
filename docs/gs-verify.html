@@ -602,6 +602,10 @@ input, button, select, table, th, td {
         <span class="check-label">gs-strategy는 admin.html에서만 접근 가능해야 함</span>
         <span class="check-status" id="auth-admin-status"><span class="status-pass">✅ 정상</span></span>
       </div>
+      <div class="check-item">
+        <span class="check-label">트렌드 리포트(index.html)에 ADMIN/영업기획 링크 노출 여부</span>
+        <span class="check-status" id="auth-trend-admin-status"><span class="status-pass">✅ 정상</span></span>
+      </div>
     </div>
 
     <div class="card">
@@ -888,6 +892,18 @@ function checkAuthPages() {
   if (!allClear) {
     document.getElementById('auth-admin-status').innerHTML = '<span class="status-fail">❌ 공개 페이지에 링크 존재</span>';
   }
+
+  // 트렌드 리포트(index.html) ADMIN 링크 노출 여부 검증
+  var adminLinks = ['gs-map.html', 'gs-report.html', 'fcst-status.html', 'gs-sales.html', 'gs-request.html'];
+  fetch('index.html?t=' + Date.now()).then(function(r) { return r.text(); }).then(function(html) {
+    var exposed = adminLinks.filter(function(link) { return html.indexOf('href="' + link + '"') !== -1; });
+    var el = document.getElementById('auth-trend-admin-status');
+    if (exposed.length > 0) {
+      el.innerHTML = '<span class="status-fail">❌ ADMIN 링크 노출: ' + exposed.join(', ') + '</span>';
+    } else {
+      el.innerHTML = '<span class="status-pass">✅ 정상 (ADMIN 링크 미노출)</span>';
+    }
+  }).catch(function() {});
 }
 
 /* ───── OTB DATA CHECK ───── */
