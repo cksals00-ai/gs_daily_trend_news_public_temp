@@ -25,6 +25,7 @@ BUDGET_XLSX = DATA_DIR / "raw_db" / "budget" / "★최종★(검토완료)_2026�
 DB_JSON = DATA_DIR / "db_aggregated.json"
 RM_FCST_JSON = DATA_DIR / "rm_fcst.json"
 HOLIDAYS_KR_JSON = DATA_DIR / "holidays_kr.json"
+DAILY_BOOKING_JSON = DATA_DIR / "daily_booking.json"
 OUTPUT_JSON = DOCS_DATA_DIR / "otb_data.json"
 
 KST = timezone(timedelta(hours=9))
@@ -67,6 +68,7 @@ PROPERTY_DEFS = [
     ("소노문 해운대",                     "21.소노문해운대",  "south",   ["소노문 해운대"]),
     ("쏠비치 남해",                       "22.쏠비치남해",    "south",   ["쏠비치 남해"]),
     ("르네블루 바이 쏠비치",              "23.르네블루",      "central", ["르네블루"]),
+    ("팔라티움 해운대",                   "25.팔라티움",      "south",   []),  # 온북 DB 미포함 — daily_booking.json에서 보정
 ]
 
 BUDGET_GRAND_TOTAL_ROWS = [26, 50, 74, 98, 122, 146, 170, 194, 218, 242, 266, 290]
@@ -457,9 +459,10 @@ def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
 
 
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
-                    months=(4, 5, 6), now_kst=None, rm_fcst_props=None):
+                    months=(4, 5, 6), now_kst=None, rm_fcst_props=None, daily_bk=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성.
     rm_fcst_props: RM FCST 데이터 (load_rm_fcst() 결과)
+    daily_bk: 온북 DB 미포함 사업장 보정 데이터
     """
     if now_kst is None:
         now_kst = datetime.now(KST)
@@ -518,6 +521,29 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "rm_budget_rn": rm_budget,
                 "rm_fcst_ach":  rm_ach,
             }
+        # 온북 DB 미포함 사업장: daily_booking 보정
+        if daily_bk and display_name in daily_bk and not db_props:
+            for m in months:
+                bk = daily_bk[display_name].get(m, {})
+                if bk:
+                    act_rn = bk.get("actual_rns", 0)
+                    bud_rn = bk.get("budget_rns", 0)
+                    lst_rn = bk.get("ly_actual", 0)
+                    yoy_v = round((act_rn / lst_rn - 1) * 100, 1) if lst_rn > 0 else None
+                    month_data[m] = {
+                        "act_rn":       act_rn,
+                        "last_rn":      lst_rn,
+                        "yoy":          yoy_v,
+                        "bud_rn":       bud_rn,
+                        "rns_fcst":     act_rn,
+                        "fcst_ach":     round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0,
+                        "rns_fcst_ai":  act_rn,
+                        "fcst_ach_ai":  round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0,
+                        "rm_fcst_rn":   None,
+                        "rm_budget_rn": None,
+                        "rm_fcst_ach":  None,
+                    }
+
         rows.append({"name": display_name, "region": region, "months": month_data})
 
         # 세그먼트별 sub-row 추가
@@ -1149,6 +1175,136 @@ def get_today_summary_by_month(db, now_kst, stay_month):
     return 0, 0, 0
 
 
+def load_daily_booking():
+    """daily_booking.json에서 팔라티움 등 온북 DB 미포함 사업장 데이터 로드.
+    Returns: {display_name: {month_idx: {budget_rns, actual_rns, ly_actual, daily_change, ...}}}
+    """
+    if not DAILY_BOOKING_JSON.exists():
+        return {}
+    try:
+        data = json.loads(DAILY_BOOKING_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    # 온북 DB에 없는 사업장만 수집 (db_props가 빈 사업장)
+    no_db_names = {dn for _, dn, _, dp in PROPERTY_DEFS if not dp}
+    display_map = {}
+    for _, dn, _, _ in PROPERTY_DEFS:
+        if dn in no_db_names:
+            # daily_booking에서의 이름 매핑
+            if "팔라티움" in dn:
+                display_map["팔라티움 해운대"] = dn
+    result = {}
+    for md in data.get("months_detail", []):
+        month_idx = md.get("month", 0)
+        year = md.get("year", 0)
+        if year != 2026 or month_idx < 1 or month_idx > 12:
+            continue
+        for entry in md.get("properties", []):
+            name = entry.get("name", "")
+            if name in display_map:
+                dn = display_map[name]
+                if dn not in result:
+                    result[dn] = {}
+                result[dn][month_idx] = {
+                    "budget_rns":  entry.get("budget_rns", 0),
+                    "actual_rns":  entry.get("actual_rns", 0),
+                    "ly_actual":   entry.get("ly_actual", 0),
+                    "daily_change": entry.get("daily_change", 0),
+                    "budget_achievement": entry.get("budget_achievement", 0),
+                    "occ_budget":  entry.get("occ_budget", 0),
+                    "occ_actual":  entry.get("occ_actual", 0),
+                    "occ_ly":      entry.get("occ_ly", 0),
+                    "daily_occ":   entry.get("daily_occ", []),
+                }
+    return result
+
+
+def overlay_daily_booking(all_months, daily_bk, now_kst):
+    """온북 DB 미포함 사업장의 OTB 데이터를 daily_booking.json으로 보정.
+    byProperty 내 해당 사업장의 rns_budget/actual/achievement 등을 덮어씀.
+    summary 합산도 재계산.
+    """
+    if not daily_bk:
+        return
+    no_db_names = {dn for _, dn, _, dp in PROPERTY_DEFS if not dp}
+
+    for m_str, snap in all_months.items():
+        m_idx = int(m_str)
+        props = snap.get("byProperty", [])
+
+        # summary 보정을 위해 추가분 추적
+        delta_bud_rn = 0
+        delta_act_rn = 0
+        delta_lst_rn = 0
+
+        for prop in props:
+            dn = prop.get("name", "")
+            if dn not in no_db_names or dn not in daily_bk:
+                continue
+
+            if m_idx == 0:
+                # 전체: 모든 월 합산
+                bud_rn = sum(daily_bk[dn].get(mi, {}).get("budget_rns", 0) for mi in range(1, 13))
+                act_rn = sum(daily_bk[dn].get(mi, {}).get("actual_rns", 0) for mi in range(1, 13))
+                lst_rn = sum(daily_bk[dn].get(mi, {}).get("ly_actual", 0) for mi in range(1, 13))
+                today_net = sum(daily_bk[dn].get(mi, {}).get("daily_change", 0) for mi in range(1, 13))
+            else:
+                bk = daily_bk[dn].get(m_idx, {})
+                bud_rn = bk.get("budget_rns", 0)
+                act_rn = bk.get("actual_rns", 0)
+                lst_rn = bk.get("ly_actual", 0)
+                today_net = bk.get("daily_change", 0)
+
+            old_bud = prop.get("rns_budget", 0)
+            old_act = prop.get("rns_actual", 0)
+            old_lst = prop.get("rns_last", 0)
+
+            prop["rns_budget"] = bud_rn
+            prop["rns_actual"] = act_rn
+            prop["rns_achievement"] = round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+            prop["rns_last"] = lst_rn
+            prop["rns_yoy"] = round((act_rn / lst_rn - 1) * 100, 1) if lst_rn > 0 else 0.0
+            prop["today_net"] = today_net
+            prop["today_booking"] = max(today_net, 0)
+            prop["today_cancel"] = max(-today_net, 0)
+
+            # FCST: 현재월은 elapsed 기반, 미래월은 실적 그대로
+            if m_idx > 0:
+                cur_month = now_kst.month
+                if m_idx == cur_month:
+                    import calendar as _cal
+                    days = _cal.monthrange(2026, m_idx)[1]
+                    ratio = now_kst.day / days
+                    if ratio > 0.1:
+                        fcst_rn = round(act_rn / ratio)
+                    else:
+                        fcst_rn = act_rn
+                elif m_idx < cur_month:
+                    fcst_rn = act_rn
+                else:
+                    fcst_rn = act_rn  # 미래월: 현재 예약 그대로
+                prop["rns_fcst"] = fcst_rn
+                prop["fcst_achievement"] = round(fcst_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+                prop["ai_fcst_rn"] = fcst_rn
+                prop["ai_fcst_ach"] = prop["fcst_achievement"]
+
+            delta_bud_rn += (bud_rn - old_bud)
+            delta_act_rn += (act_rn - old_act)
+            delta_lst_rn += (lst_rn - old_lst)
+
+        # summary 재계산
+        if delta_bud_rn != 0 or delta_act_rn != 0:
+            summary = snap.get("summary", {})
+            summary["rns_budget"] = summary.get("rns_budget", 0) + delta_bud_rn
+            summary["rns_actual"] = summary.get("rns_actual", 0) + delta_act_rn
+            summary["rns_last"]   = summary.get("rns_last", 0) + delta_lst_rn
+            sb = summary["rns_budget"]
+            sa = summary["rns_actual"]
+            sl = summary["rns_last"]
+            summary["rns_achievement"] = round(sa / sb * 100, 1) if sb > 0 else 0.0
+            summary["rns_yoy"] = round((sa / sl - 1) * 100, 1) if sl > 0 else 0.0
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -1307,6 +1463,15 @@ def main():
                     seg_summary["today_cancel_rev"]  = round((cd_entry.get("rev", 0.0) or 0) * 1_000_000)
                 seg_summary["today_net_rev"]     = seg_summary["today_booking_rev"] - seg_summary["today_cancel_rev"]
 
+    # ── 온북 DB 미포함 사업장(팔라티움 등) daily_booking.json 보정 ──
+    print("Daily Booking 보정 (온북 DB 미포함 사업장)...")
+    daily_bk = load_daily_booking()
+    if daily_bk:
+        overlay_daily_booking(all_months, daily_bk, now_kst)
+        print(f"  보정 대상: {list(daily_bk.keys())}")
+    else:
+        print("  daily_booking.json 없음 — 보정 건너뜀")
+
     # Chart data (동기간 보정 반영)
     monthly_chart = build_monthly_chart(
         db_bp, budgets, seg_budgets=seg_budgets, db_bps=db_bps, adj_by_prop=adj_by_prop
@@ -1316,6 +1481,7 @@ def main():
     yoy_table = build_yoy_table(
         db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
         months=TARGET_MONTHS, now_kst=now_kst, rm_fcst_props=rm_fcst_props,
+        daily_bk=daily_bk,
     )
 
     output = {

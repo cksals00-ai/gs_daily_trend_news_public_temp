@@ -2604,7 +2604,8 @@ def main():
             docs_agg = load_json(docs_agg_path)
             synced_keys = []
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
-                         "by_segment", "by_region_segment", "by_property_segment", "meta"):
+                         "by_segment", "by_region_segment", "by_property_segment", "meta",
+                         "yoy_adjusted"):
                 if key in agg_data:
                     docs_agg[key] = agg_data[key]
                     synced_keys.append(key)

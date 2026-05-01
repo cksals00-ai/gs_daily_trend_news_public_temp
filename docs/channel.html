@@ -114,6 +114,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
+@media(max-width:480px){.mobile-sheet-tab{padding:8px 10px;font-size:10px;letter-spacing:0.03em}.mobile-sheet-tabs{-webkit-mask-image:linear-gradient(to right,#000 90%,transparent 100%);mask-image:linear-gradient(to right,#000 90%,transparent 100%);}}
 </style>
 </head>
 <body>
@@ -128,6 +129,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
 .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 @media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
 </style>
 <nav class="gsn">
   <div class="gsn-wrap">
@@ -321,7 +324,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div class="mid-row">
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title">채널별 YoY RNS 변화율</span>
+          <span class="chart-card-title">채널별 YoY RNS 변화율 (동기간)</span>
           <div class="chart-legend">
             <div class="chart-legend-item"><div class="legend-dot" style="background:var(--positive);"></div>증가</div>
             <div class="chart-legend-item"><div class="legend-dot" style="background:var(--negative);"></div>감소</div>
@@ -496,12 +499,50 @@ function render() {
   const allChannelData = aggregateChannels(months);
   const channelData = filterBySegment(allChannelData);
 
-  // LY months 계산
+  // LY months 계산 (동기간 비율 보정 포함)
   const lyMonths = months.map(m => {
     const yr = parseInt(m.substring(0,4));
     return (yr - 1) + m.substring(4);
   });
-  const allChannelDataLY = aggregateChannels(lyMonths);
+  const allChannelDataLY_raw = aggregateChannels(lyMonths);
+
+  // 동기간 비율 보정: yoy_adjusted 데이터 활용
+  const lyYear = String(parseInt(activeYear) - 1);
+  const yoyAdjLY = db.yoy_adjusted && db.yoy_adjusted[lyYear];
+  const spRatiosTable = {};
+  if (yoyAdjLY && yoyAdjLY.by_month) {
+    for (const m of lyMonths) {
+      const adjRn = yoyAdjLY.by_month[m] ? yoyAdjLY.by_month[m].booking_rn : null;
+      const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
+      if (adjRn != null && normRn > 0) {
+        spRatiosTable[m] = adjRn / normRn;
+      }
+    }
+  }
+
+  // LY 채널 데이터에 동기간 비율 적용
+  const allChannelDataLY = {};
+  for (const [ch, d] of Object.entries(allChannelDataLY_raw)) {
+    const chData = db.by_channel[ch];
+    if (!chData) { allChannelDataLY[ch] = { ...d }; continue; }
+    let adj_booking_rn = 0, adj_booking_rev = 0, adj_net_rn = 0, adj_net_rev = 0;
+    for (const m of lyMonths) {
+      if (!chData[m]) continue;
+      const ratio = spRatiosTable[m] != null ? spRatiosTable[m] : 1;
+      adj_booking_rn += Math.round((chData[m].booking_rn || 0) * ratio);
+      adj_booking_rev += (chData[m].booking_rev || 0) * ratio;
+      adj_net_rn += Math.round((chData[m].net_rn || 0) * ratio);
+      adj_net_rev += (chData[m].net_rev || 0) * ratio;
+    }
+    allChannelDataLY[ch] = {
+      ...d,
+      booking_rn: adj_booking_rn,
+      booking_rev: adj_booking_rev,
+      net_rn: adj_net_rn,
+      net_rev: adj_net_rev,
+      adr: adj_net_rn > 0 ? adj_net_rev * 1000 / adj_net_rn : 0,
+    };
+  }
   const channelDataLY = filterBySegment(allChannelDataLY);
 
   // Sort by booking_rn desc
@@ -726,13 +767,26 @@ function buildYoYChangeChart(allChannelData, months) {
   if (!ctx) return;
   if (yoyChangeChart) yoyChangeChart.destroy();
 
-  // 전년 동기 데이터 계산
+  // 전년 동기 데이터 계산 (동기간 보정 적용)
   const prevYear = String(parseInt(activeYear) - 1);
   const prevMonths = months.map(m => prevYear + m.slice(4)).filter(m => db.meta.months.includes(m));
 
   if (prevMonths.length === 0) {
     yoyChangeChart = new Chart(ctx, { type: 'bar', data: { labels: ['전년 데이터 없음'], datasets: [{ data: [0] }] }, options: { responsive: true, maintainAspectRatio: false } });
     return;
+  }
+
+  // 동기간 비율 계산: yoy_adjusted[prevYear].by_month[m] / monthly_total[m]
+  const yoyAdj = db.yoy_adjusted && db.yoy_adjusted[prevYear];
+  const samePeriodRatios = {};
+  if (yoyAdj && yoyAdj.by_month) {
+    for (const m of prevMonths) {
+      const adjRn = yoyAdj.by_month[m] ? yoyAdj.by_month[m].booking_rn : null;
+      const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
+      if (adjRn != null && normRn > 0) {
+        samePeriodRatios[m] = adjRn / normRn;
+      }
+    }
   }
 
   const prevChannelData = {};
@@ -742,7 +796,12 @@ function buildYoYChangeChart(allChannelData, months) {
     if (!chData) continue;
     let net_rn = 0;
     for (const m of prevMonths) {
-      if (chData[m]) net_rn += chData[m].net_rn || 0;
+      if (chData[m]) {
+        const raw = chData[m].net_rn || 0;
+        // 동기간 비율 보정 적용
+        const ratio = samePeriodRatios[m] != null ? samePeriodRatios[m] : 1;
+        net_rn += Math.round(raw * ratio);
+      }
     }
     prevChannelData[ch] = net_rn;
   }

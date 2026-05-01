@@ -1,0 +1,100 @@
+{
+  "validation_date": "2026-05-01",
+  "validator": "auto-crosscheck",
+  "data_sources": {
+    "otb_data.json": {
+      "refreshTime": "2026-05-01 06:41 KST",
+      "source": "온북 DB + 사업계획 Budget"
+    },
+    "rm_fcst.json": {
+      "extracted_at": "2026-04-30T10:07:36.748009Z",
+      "source_pdf": "Revenue Meeting_2026.04.27.pdf"
+    },
+    "daily_booking.json": {
+      "report_date": "2026-04-30",
+      "source": "Daily_Booking_Report"
+    },
+    "occ_data.json": {
+      "generated": "2026-04-30",
+      "source": "Daily Booking Report_2026.04.30.pdf"
+    }
+  },
+  "understanding": {
+    "otb_rns_budget": "온북DB 사업계획 Budget (투숙일 기준, 27+43 데이터) — OTB 당일까지 예약된 객실 목표",
+    "rm_budget_rn": "Revenue Meeting PDF의 Budget Room Nights (사업계획 전체 월간 목표)",
+    "daily_booking_budget": "Daily Booking Report PDF의 Budget — RM budget_rn과 동일 소스",
+    "key_difference": "OTB budget은 온북DB 기준 세그먼트별 투숙일 Budget, RM/DB budget은 RM PDF 전체 월간 사업계획 목표. 서로 다른 소스임."
+  },
+  "checks": {
+    "rm_fcst_vs_otb": {
+      "description": "RM FCST JSON rm_fcst_rn vs OTB 대시보드 rm_fcst_rn — 동일 소스이므로 일치해야 함",
+      "result": "PASS",
+      "match": 69,
+      "mismatch": 0,
+      "details": []
+    },
+    "daily_budget_vs_rm": {
+      "description": "Daily Booking Report budget_rns vs RM PDF budget_rn — 동일 소스(사업계획)이므로 일치해야 함",
+      "result": "PASS",
+      "match": 69,
+      "mismatch": 0,
+      "details": []
+    },
+    "occ_comparison": {
+      "description": "occ_data.json = Budget OCC (사업계획 점유율), Daily Booking의 occ_budget과 정확히 일치",
+      "result": "PASS (Budget OCC 확인됨)",
+      "note": "occ_data.json 값은 Budget OCC이며, Daily Booking Report의 occ_budget 컬럼과 동일. occ_actual(실적 OCC)과는 당연히 다름.",
+      "verified_match": true
+    },
+    "budget_source_difference": {
+      "description": "OTB rns_budget(온북 Budget)과 RM/DB budget(사업계획)은 다른 소스 — 구조적 차이 확인",
+      "result": "INFO",
+      "ratio_summary": {
+        "2026-04": {
+          "otb_budget": 58125,
+          "rm_budget": 183238,
+          "ratio": 3.15,
+          "note": "온북 투숙일 Budget vs RM 사업계획 Budget"
+        },
+        "2026-05": {
+          "otb_budget": 61205,
+          "rm_budget": 215280,
+          "ratio": 3.52,
+          "note": "온북 투숙일 Budget vs RM 사업계획 Budget"
+        },
+        "2026-06": {
+          "otb_budget": 73340,
+          "rm_budget": 214269,
+          "ratio": 2.92,
+          "note": "온북 투숙일 Budget vs RM 사업계획 Budget"
+        }
+      }
+    },
+    "grand_total_consistency": {
+      "description": "Grand Total vs 사업장 합계 — Grand Total은 23개 사업장 기준, 개별 목록은 25개(파나크/팔라티움 포함)",
+      "result": "INFO",
+      "note": "Grand Total(183,238)은 RM PDF 23개 사업장 합계. 개별 사업장 목록에는 파나크 영덕, 팔라티움 해운대가 추가되어 합계(188,716)가 더 큼. 구조적 차이이며 데이터 오류 아님.",
+      "gt_budget": 183238,
+      "prop_sum_budget": 188716,
+      "extra_properties": [
+        "파나크 영덕",
+        "팔라티움 해운대"
+      ]
+    }
+  },
+  "final_summary": {
+    "overall_status": "PASS",
+    "key_findings": [
+      "RM FCST RN → OTB 대시보드: 69건 전수 일치 ✓",
+      "RM Budget RN → Daily Booking Budget: 69건 전수 일치 ✓",
+      "OCC 데이터 = Budget OCC (사업계획 점유율) — Daily Booking occ_budget과 일치 ✓",
+      "OTB rns_budget(온북 투숙일 Budget)과 RM budget_rn(사업계획)은 다른 소스 — 3x 차이 정상",
+      "Grand Total은 23개 사업장, 개별 목록은 25개(파나크/팔라티움 추가) — 구조적 차이"
+    ],
+    "data_integrity": "모든 파이프라인 데이터 정합성 확인 완료. 소스 간 전달 과정에서 숫자 손실/변형 없음.",
+    "action_items": [
+      "occ_data.json에 Actual OCC 추가 검토 (현재 Budget만 포함)",
+      "Grand Total 산출 시 파나크/팔라티움 포함 여부 확인"
+    ]
+  }
+}

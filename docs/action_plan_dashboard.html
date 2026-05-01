@@ -60,6 +60,33 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .kpi-card.total .kpi-value{color:var(--gold-bright)}
 .kpi-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px;font-weight:600}
 
+/* 실적 KPI Strip */
+.perf-section{margin-bottom:14px}
+.perf-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.perf-section-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.perf-section-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--gold);border-radius:2px}
+.perf-section-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.perf-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.perf-kpi{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s}
+.perf-kpi:hover{border-color:rgba(201,160,99,.35)}
+.perf-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.perf-kpi.rn::before{background:var(--positive)}
+.perf-kpi.adr::before{background:var(--info)}
+.perf-kpi.rev::before{background:var(--gold)}
+.perf-kpi.ach::before{background:var(--warning)}
+.perf-kpi-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.1em;margin-bottom:6px}
+.perf-kpi-value{font-family:var(--mono);font-size:24px;font-weight:800;line-height:1.1;margin-bottom:4px}
+.perf-kpi.rn .perf-kpi-value{color:var(--positive)}
+.perf-kpi.adr .perf-kpi-value{color:var(--info)}
+.perf-kpi.rev .perf-kpi-value{color:var(--gold-bright)}
+.perf-kpi.ach .perf-kpi-value{color:var(--warning)}
+.perf-kpi-unit{font-size:.4em;color:var(--ink-faint);font-weight:500;margin-left:2px}
+.perf-kpi-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:4px}
+.perf-kpi-sub .pos{color:var(--positive)}
+.perf-kpi-sub .neg{color:var(--negative)}
+@media(max-width:900px){.perf-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.perf-kpi-grid{grid-template-columns:1fr}}
+
 /* Charts */
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:12px 14px}
@@ -97,7 +124,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
 /* Table view */
 .tbl-wrap{overflow-x:auto;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:16px}
-.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;min-width:1200px}
+.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;min-width:1800px}
 .tbl th{position:sticky;top:0;background:var(--bg-deep);z-index:2;padding:8px 10px;font-size:10px;font-weight:700;color:var(--ink-faint);text-align:left;border-bottom:2px solid var(--rule-strong);white-space:nowrap;letter-spacing:.04em;font-family:var(--mono)}
 .tbl td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.45}
 .tbl tr:hover td{background:var(--bg-hover)}
@@ -112,6 +139,27 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .tbl .col-period .period-sub{color:var(--ink-faint);font-size:9.5px}
 .tbl .col-note{min-width:140px;max-width:240px;color:var(--ink-muted);font-size:11px}
 .tbl .col-actual{width:64px;font-family:var(--mono);font-size:10px;color:var(--info);text-align:right;white-space:nowrap}
+/* KPI group columns */
+.tbl .kpi-group-header{text-align:center;font-size:10px;font-weight:800;letter-spacing:.1em;padding:6px 8px;border-bottom:1px solid var(--rule)}
+.tbl .kpi-group-header.rn{color:var(--positive);border-left:2px solid var(--positive)}
+.tbl .kpi-group-header.adr{color:var(--info);border-left:2px solid var(--info)}
+.tbl .kpi-group-header.rev{color:var(--gold-bright);border-left:2px solid var(--gold)}
+.tbl .kpi-sub-header{text-align:center;font-size:9px;font-weight:700;color:var(--ink-faint);padding:4px 6px;letter-spacing:.06em}
+.tbl .kpi-sub-header.kpi-bl{border-left:2px solid rgba(255,255,255,.06)}
+.tbl .kpi-val{font-family:var(--mono);font-size:10px;text-align:right;white-space:nowrap;padding:8px 6px;color:var(--ink-muted)}
+.tbl .kpi-val.kpi-bl{border-left:2px solid rgba(255,255,255,.06)}
+.tbl .kpi-val.has-data{color:var(--ink-soft)}
+.kpi-ach-wrap{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.kpi-bar{width:36px;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;flex-shrink:0}
+.kpi-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.kpi-bar-fill.green{background:var(--positive)}
+.kpi-bar-fill.yellow{background:var(--warning)}
+.kpi-bar-fill.red{background:var(--negative)}
+.kpi-ach-text{font-family:var(--mono);font-size:10px;font-weight:700;min-width:32px;text-align:right}
+.kpi-ach-text.green{color:var(--positive)}
+.kpi-ach-text.yellow{color:var(--warning)}
+.kpi-ach-text.red{color:var(--negative)}
+.kpi-ach-text.empty{color:var(--ink-faint)}
 .tbl .row-active td{background:rgba(76,175,111,.04)}
 .tbl .row-active:hover td{background:rgba(76,175,111,.09)}
 
@@ -205,6 +253,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   .tbl th,.tbl td{padding:6px 7px}
   .kpi-value{font-size:20px}
 }
+
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -283,6 +333,36 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <div class="kpi-label">종료</div>
       <div class="kpi-value" id="kpi-ended">—</div>
       <div class="kpi-sub" id="kpi-ended-sub">판매 종료</div>
+    </div>
+  </div>
+
+  <!-- 실적 KPI (from OTB data) -->
+  <div class="perf-section" id="perf-section" style="display:none">
+    <div class="perf-section-header">
+      <div class="perf-section-title">실적 현황 · OTB Performance</div>
+      <div class="perf-section-meta" id="perf-base-date">—</div>
+    </div>
+    <div class="perf-kpi-grid">
+      <div class="perf-kpi rn">
+        <div class="perf-kpi-label">객실수 ROOM NIGHTS</div>
+        <div class="perf-kpi-value" id="perf-rn">—<span class="perf-kpi-unit">실</span></div>
+        <div class="perf-kpi-sub">목표 <span id="perf-rn-budget">—</span>실 대비</div>
+      </div>
+      <div class="perf-kpi adr">
+        <div class="perf-kpi-label">ADR</div>
+        <div class="perf-kpi-value" id="perf-adr">—<span class="perf-kpi-unit">원</span></div>
+        <div class="perf-kpi-sub">전년 <span id="perf-adr-yoy">—</span></div>
+      </div>
+      <div class="perf-kpi rev">
+        <div class="perf-kpi-label">매출 REVENUE</div>
+        <div class="perf-kpi-value" id="perf-rev">—<span class="perf-kpi-unit">억</span></div>
+        <div class="perf-kpi-sub">목표 <span id="perf-rev-budget">—</span>억 대비</div>
+      </div>
+      <div class="perf-kpi ach">
+        <div class="perf-kpi-label">달성률 ACHIEVEMENT</div>
+        <div class="perf-kpi-value" id="perf-ach">—<span class="perf-kpi-unit">%</span></div>
+        <div class="perf-kpi-sub">매출 달성률 <span id="perf-rev-ach">—</span></div>
+      </div>
     </div>
   </div>
 
@@ -440,12 +520,24 @@ function mapRow(raw,idx){
   // Title: 노출영역 > 상품 > '—'
   const title=exhibition||product||'';
 
+  // KPI: 구글시트 CSV에 직접 포함된 경우도 매핑, 없으면 kpiDataMap에서 탐색
+  const kpiFromCSV={
+    rns_actual:parseFloat(findCol(raw,'rns_actual','객실실적','RNS실적'))||null,
+    rns_target:parseFloat(findCol(raw,'rns_target','객실목표','RNS목표'))||null,
+    adr_actual:parseFloat(findCol(raw,'adr_actual','ADR실적'))||null,
+    adr_target:parseFloat(findCol(raw,'adr_target','ADR목표'))||null,
+    rev_actual:parseFloat(findCol(raw,'rev_actual','매출실적','REV실적'))||null,
+    rev_target:parseFloat(findCol(raw,'rev_target','매출목표','REV목표'))||null
+  };
+  const hasCSVKpi=Object.values(kpiFromCSV).some(v=>v!=null);
+  const kpi=hasCSVKpi?kpiFromCSV:(kpiDataMap[title]||kpiDataMap[key]||{});
+
   return{
     idx,key,region,property,channel,
     saleStart,saleEnd,stayStart,stayEnd,
     saleStartStr,saleEndStr,stayStartStr,stayEndStr,
     venue,product,exhibition,note,actual,
-    title,status,_raw:raw
+    title,status,kpi,_raw:raw
   };
 }
 
@@ -592,6 +684,63 @@ function render(){
   else if(curView==='gantt')renderGantt(data);
 }
 
+/* ── KPI cell renderer ── */
+function renderKpiCells(actual,target,isCurrency){
+  const hasA=actual!=null&&actual!==''&&!isNaN(actual);
+  const hasT=target!=null&&target!==''&&!isNaN(target);
+  let achPct=null;
+  if(hasA&&hasT&&Number(target)>0)achPct=Math.round((Number(actual)/Number(target))*100);
+
+  const fmtV=(v,cur)=>{
+    if(v==null||v===''||isNaN(v))return '—';
+    const n=Number(v);
+    if(cur)return (n/10000).toLocaleString('ko-KR',{maximumFractionDigits:0})+'만';
+    return n.toLocaleString('ko-KR');
+  };
+  const achColor=(p)=>{
+    if(p==null)return 'empty';
+    if(p>=100)return 'green';
+    if(p>=80)return 'yellow';
+    return 'red';
+  };
+  const barW=(p)=>Math.min(100,Math.max(0,p||0));
+  const cls=achColor(achPct);
+  const achHtml=achPct!=null
+    ?`<div class="kpi-ach-wrap"><div class="kpi-bar"><div class="kpi-bar-fill ${cls}" style="width:${barW(achPct)}%"></div></div><span class="kpi-ach-text ${cls}">${achPct}%</span></div>`
+    :`<span class="kpi-ach-text empty">—</span>`;
+
+  return `<td class="kpi-val kpi-bl ${hasA?'has-data':''}">${fmtV(actual,isCurrency)}</td>`+
+    `<td class="kpi-val ${hasT?'has-data':''}">${fmtV(target,isCurrency)}</td>`+
+    `<td class="kpi-val">${achHtml}</td>`;
+}
+
+/* ── KPI data store (from Google Sheet JSON — placeholder) ── */
+let kpiDataMap={}; // key: 기획전명 or unique key → {rns_actual,rns_target,adr_actual,adr_target,rev_actual,rev_target}
+
+async function loadKpiData(){
+  // TODO: 구글시트 연동 시 아래 URL을 실제 Published JSON URL로 변경
+  // const url='https://docs.google.com/spreadsheets/d/.../pub?output=csv';
+  // try{
+  //   const r=await fetch(url,{cache:'no-store'});
+  //   const txt=await r.text();
+  //   const rows=parseCSV(txt);
+  //   rows.forEach(row=>{
+  //     const key=(findCol(row,'기획전명','기획전','노출영역')||'').trim();
+  //     if(!key)return;
+  //     kpiDataMap[key]={
+  //       rns_target:parseFloat(findCol(row,'rns_target','객실목표'))||null,
+  //       rns_actual:parseFloat(findCol(row,'rns_actual','객실실적'))||null,
+  //       adr_target:parseFloat(findCol(row,'adr_target','ADR목표'))||null,
+  //       adr_actual:parseFloat(findCol(row,'adr_actual','ADR실적'))||null,
+  //       rev_target:parseFloat(findCol(row,'rev_target','매출목표'))||null,
+  //       rev_actual:parseFloat(findCol(row,'rev_actual','매출실적'))||null
+  //     };
+  //   });
+  //   console.log('[ActionPlan] KPI 데이터 로드:',Object.keys(kpiDataMap).length,'건');
+  // }catch(e){console.warn('[ActionPlan] KPI 로드 실패:',e.message)}
+  console.log('[ActionPlan] KPI 데이터: 구글시트 연동 대기 중 (빈 값)');
+}
+
 /* ── Table view ── */
 function renderTable(data){
   if(!data.length){
@@ -599,34 +748,51 @@ function renderTable(data){
     return;
   }
   const stLabel={active:'진행중',upcoming:'예정',ended:'종료',unknown:'—'};
-  let html='<div class="tbl-wrap"><table class="tbl"><thead><tr>'+
-    '<th class="col-num">#</th>'+
-    '<th class="col-status">상태</th>'+
-    '<th class="col-channel">채널</th>'+
-    '<th class="col-region">구분</th>'+
-    '<th class="col-prop">사업장</th>'+
-    '<th class="col-title">기획전명</th>'+
-    '<th class="col-product">상품</th>'+
-    '<th class="col-period">판매기간</th>'+
-    '<th class="col-period">투숙기간</th>'+
-    '<th class="col-note">비고</th>'+
-    '<th class="col-actual">실적</th>'+
-    '</tr></thead><tbody>';
+  const baseCols=11; // 기본 컬럼 수
+  let html='<div class="tbl-wrap"><table class="tbl"><thead>'+
+    // Row 1: 기본 컬럼 + KPI 그룹 헤더
+    '<tr>'+
+    '<th class="col-num" rowspan="2">#</th>'+
+    '<th class="col-status" rowspan="2">상태</th>'+
+    '<th class="col-channel" rowspan="2">채널</th>'+
+    '<th class="col-region" rowspan="2">구분</th>'+
+    '<th class="col-prop" rowspan="2">사업장</th>'+
+    '<th class="col-actual" rowspan="2">실적</th>'+
+    '<th class="col-title" rowspan="2">기획전명</th>'+
+    '<th class="col-product" rowspan="2">상품</th>'+
+    '<th class="col-period" rowspan="2">판매기간</th>'+
+    '<th class="col-period" rowspan="2">투숙기간</th>'+
+    '<th class="col-note" rowspan="2">비고</th>'+
+    '<th class="kpi-group-header rn" colspan="3">객실수 RNS</th>'+
+    '<th class="kpi-group-header adr" colspan="3">ADR</th>'+
+    '<th class="kpi-group-header rev" colspan="3">매출 REV</th>'+
+    '</tr>'+
+    // Row 2: KPI 서브 헤더
+    '<tr>'+
+    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '</tr>'+
+    '</thead><tbody>';
   data.forEach((d,i)=>{
     const rowCls=d.status==='active'?'row-active':'';
     const tip=`기획전: ${d.title||'—'}\n채널: ${d.channel||'—'}\n사업장: ${d.property||'—'}\n구분: ${d.region||'—'}\n영업장: ${d.venue||'—'}\n상품: ${d.product||'—'}\n비고: ${d.note||'—'}`;
+    const k=d.kpi||{};
     html+=`<tr class="${rowCls}">`+
       `<td class="col-num">${i+1}</td>`+
       `<td class="col-status"><span class="st-badge ${d.status}">${stLabel[d.status]||'—'}</span></td>`+
       `<td class="col-channel" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`+
       `<td class="col-region">${escapeHtml(d.region||'—')}</td>`+
       `<td class="col-prop">${escapeHtml(d.property||'—')}</td>`+
+      `<td class="col-actual">${escapeHtml(d.actual||'—')}</td>`+
       `<td class="col-title" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`+
       `<td class="col-product">${escapeHtml(d.product||'—')}</td>`+
       `<td class="col-period">${fmtYMD(d.saleStart)} <span class="period-sub">~ ${fmtYMD(d.saleEnd)}</span></td>`+
       `<td class="col-period">${fmtYMD(d.stayStart)} <span class="period-sub">~ ${fmtYMD(d.stayEnd)}</span></td>`+
       `<td class="col-note">${escapeHtml(d.note||'—')}</td>`+
-      `<td class="col-actual">${escapeHtml(d.actual||'—')}</td>`+
+      renderKpiCells(k.rns_actual,k.rns_target)+
+      renderKpiCells(k.adr_actual,k.adr_target)+
+      renderKpiCells(k.rev_actual,k.rev_target,true)+
       `</tr>`;
   });
   html+='</tbody></table></div>';
@@ -860,13 +1026,64 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* ── 실적 KPI (OTB data) ── */
+function fmtNum(n){if(n==null||isNaN(n))return '—';return Number(n).toLocaleString('ko-KR')}
+function fmtBillion(n){if(n==null||isNaN(n))return '—';return (n/100000000).toFixed(0)}
+function fmtBillionDec(n){if(n==null||isNaN(n))return '—';return (n/100000000).toLocaleString('ko-KR',{maximumFractionDigits:0})}
+async function loadOTBData(){
+  try{
+    const r=await fetch('data/otb_data.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const otb=await r.json();
+    const s=otb.summary;
+    if(!s){console.warn('[ActionPlan] otb_data.json에 summary 없음');return}
+
+    // 객실수
+    document.getElementById('perf-rn').innerHTML=fmtNum(s.rns_actual)+'<span class="perf-kpi-unit">실</span>';
+    document.getElementById('perf-rn-budget').textContent=fmtNum(s.rns_budget);
+
+    // ADR
+    document.getElementById('perf-adr').innerHTML=fmtNum(s.adr_actual)+'<span class="perf-kpi-unit">원</span>';
+    const adrYoy=s.adr_yoy;
+    const adrYoyEl=document.getElementById('perf-adr-yoy');
+    if(adrYoy!=null){
+      const cls=adrYoy>=0?'pos':'neg';
+      adrYoyEl.innerHTML=`<span class="${cls}">${adrYoy>=0?'+':''}${adrYoy.toFixed(1)}%</span> YoY`;
+    }
+
+    // 매출
+    document.getElementById('perf-rev').innerHTML=fmtBillionDec(s.rev_actual)+'<span class="perf-kpi-unit">억</span>';
+    document.getElementById('perf-rev-budget').textContent=fmtBillionDec(s.rev_budget);
+
+    // 달성률 (RNS 기준)
+    document.getElementById('perf-ach').innerHTML=(s.rns_achievement!=null?s.rns_achievement.toFixed(1):'—')+'<span class="perf-kpi-unit">%</span>';
+    const revAchEl=document.getElementById('perf-rev-ach');
+    if(s.rev_achievement!=null){
+      const cls=s.rev_achievement>=100?'pos':s.rev_achievement>=80?'':'neg';
+      revAchEl.innerHTML=`<span class="${cls}">${s.rev_achievement.toFixed(1)}%</span>`;
+    }
+
+    // 기준일 표시
+    if(otb.meta&&otb.meta.baseDate){
+      document.getElementById('perf-base-date').textContent='기준일 '+otb.meta.baseDate;
+    }
+
+    // 섹션 표시
+    document.getElementById('perf-section').style.display='block';
+    console.log('[ActionPlan] OTB KPI 로드 완료');
+  }catch(e){
+    console.warn('[ActionPlan] OTB 데이터 로드 실패:',e.message);
+  }
+}
+
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('today-label').textContent=fmtYMD(today)+' ('+'일월화수목금토'[today.getDay()]+')';
   buildStatusChips();
   // HTML default URL이 항상 우선. 과거 stale localStorage 캐시 제거 (gid 누락 URL이 저장되어 있던 케이스).
   try{localStorage.removeItem('ap_csv_url')}catch(e){}
-  loadCSV();
+  loadKpiData().then(()=>loadCSV());
+  loadOTBData();
 });
 </script>
 </body>

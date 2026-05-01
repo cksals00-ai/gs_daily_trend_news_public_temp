@@ -99,6 +99,49 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .badge-error{background:var(--negative-bg);color:var(--negative)}
 .badge-info{background:var(--info-bg);color:var(--info)}
 
+/* === AUTO CROSS-CHECK ADDITIONS === */
+.check-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.check-card{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden}
+.check-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.check-card.pass::before{background:var(--positive)}
+.check-card.fail::before{background:var(--negative)}
+.check-card.info::before{background:var(--info)}
+.check-card.loading::before{background:var(--warning);animation:pulse-bar 1.2s ease-in-out infinite}
+@keyframes pulse-bar{0%,100%{opacity:.3}50%{opacity:1}}
+
+.check-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.check-num{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--ink-faint)}
+.check-badge{font-family:var(--mono);font-size:10px;font-weight:800;padding:2px 10px;border-radius:3px}
+.check-badge.pass{background:var(--positive-bg);color:var(--positive)}
+.check-badge.fail{background:var(--negative-bg);color:var(--negative)}
+.check-badge.info{background:var(--info-bg);color:var(--info)}
+.check-badge.loading{background:var(--warning-bg);color:var(--warning)}
+
+.check-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.check-desc{font-size:10.5px;color:var(--ink-muted);margin-bottom:10px;line-height:1.5}
+.check-stat{display:flex;gap:16px;font-family:var(--mono);font-size:11px}
+.check-stat .stat-item{display:flex;align-items:center;gap:4px}
+.check-stat .stat-val{font-weight:800}
+.stat-ok{color:var(--positive)}.stat-err{color:var(--negative)}.stat-info{color:var(--info)}
+
+.check-detail-toggle{margin-top:10px;background:none;border:none;color:var(--gold);font-size:10px;font-family:var(--mono);font-weight:700;cursor:pointer;padding:0;letter-spacing:.05em}
+.check-detail-toggle:hover{color:var(--gold-bright)}
+.check-detail{display:none;margin-top:10px}
+.check-detail.open{display:block}
+
+.summary-box.pass{border-color:rgba(76,175,111,.3)}.summary-box.pass .summary-val{color:var(--positive)}
+.summary-box.fail{border-color:rgba(229,115,115,.3)}.summary-box.fail .summary-val{color:var(--negative)}
+.summary-box.warn{border-color:rgba(232,162,86,.3)}.summary-box.warn .summary-val{color:var(--warning)}
+
+.history-card{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.history-card:hover{border-color:var(--gold);background:var(--bg-hover)}
+.history-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.history-card-date{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink)}
+.history-card-status{font-family:var(--mono);font-size:9px;font-weight:800}
+.history-card-body{font-size:10px;color:var(--ink-muted);line-height:1.5}
+
+.section-divider{border:none;border-top:1px solid var(--rule);margin:28px 0 20px}
+
 @media(max-width:768px){
   .mast{padding:0 14px}
   .mast-sub{display:none}
@@ -108,6 +151,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   .page-title h1{font-size:18px}
   .upload-grid{grid-template-columns:1fr}
   .upload-zone{padding:20px 12px}
+  .check-grid{grid-template-columns:1fr}
 }
 @media(max-width:380px){
   .summary-row{grid-template-columns:1fr}
@@ -125,6 +169,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
 @media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
 </style>
 <nav class="gsn"><div class="gsn-wrap">
   <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
@@ -151,14 +197,93 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
 <main class="wrap">
   <div class="page-title">
-    <div class="eyebrow">DATA · ANALYSIS & VALIDATION</div>
-    <h1>실시간 현황 분석 대시보드</h1>
-    <p>4개 파일(Excel + PDF 3종)을 업로드하면 자동으로 월별/사업장별 분석, RM FCST 교차검증, Booking Status 비교를 수행합니다.</p>
+    <div class="eyebrow">DATA · AUTO CROSS-CHECK</div>
+    <h1>데이터 파이프라인 크로스체크</h1>
+    <p>4개 JSON 데이터소스(OTB, RM FCST, Daily Booking, OCC)를 자동 fetch하여 실시간 정합성을 검증합니다.</p>
   </div>
 
-  <!-- 1. File Upload (2x2 Grid) -->
+  <!-- ============================================= -->
+  <!-- 1. SUMMARY CARDS                              -->
+  <!-- ============================================= -->
+  <div class="card" id="card-summary">
+    <div class="card-head"><span class="card-icon">◈</span><span class="card-title">VALIDATION SUMMARY</span><span class="card-desc" id="summary-timestamp">검증 중...</span></div>
+    <div class="summary-row">
+      <div class="summary-box" id="sbox-checks"><div class="summary-val" id="sv-checks">—</div><div class="summary-lbl">검증 항목</div></div>
+      <div class="summary-box" id="sbox-pass"><div class="summary-val" id="sv-pass">—</div><div class="summary-lbl">PASS</div></div>
+      <div class="summary-box" id="sbox-fail"><div class="summary-val" id="sv-fail">—</div><div class="summary-lbl">FAIL / WARN</div></div>
+      <div class="summary-box" id="sbox-items"><div class="summary-val" id="sv-items">—</div><div class="summary-lbl">비교 항목 수</div></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="runAutoCheck()">↻ 재검증</button>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- 2. AUTO CROSS-CHECK RESULTS (4 cards)         -->
+  <!-- ============================================= -->
+  <div class="card" id="card-crosscheck">
+    <div class="card-head"><span class="card-icon">⚡</span><span class="card-title">AUTO CROSS-CHECK</span><span class="card-desc">4개 데이터소스 교차 검증</span></div>
+    <div class="check-grid" id="check-grid">
+      <!-- Check 1 -->
+      <div class="check-card loading" id="chk1">
+        <div class="check-header"><span class="check-num">CHECK 01</span><span class="check-badge loading" id="chk1-badge">LOADING</span></div>
+        <div class="check-title">RM FCST vs OTB rm_fcst_rn</div>
+        <div class="check-desc">rm_fcst.json의 사업장별 rm_fcst_rn과 otb_data.json allMonths 내 rm_fcst_rn 비교 (동일 소스 → 일치해야 함)</div>
+        <div class="check-stat" id="chk1-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk1')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk1-detail"></div>
+      </div>
+      <!-- Check 2 -->
+      <div class="check-card loading" id="chk2">
+        <div class="check-header"><span class="check-num">CHECK 02</span><span class="check-badge loading" id="chk2-badge">LOADING</span></div>
+        <div class="check-title">Daily Booking Budget vs RM Budget</div>
+        <div class="check-desc">daily_booking.json의 budget_rns와 rm_fcst.json의 budget_rn 비교 (동일 사업계획 소스 → 일치해야 함)</div>
+        <div class="check-stat" id="chk2-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk2')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk2-detail"></div>
+      </div>
+      <!-- Check 3 -->
+      <div class="check-card loading" id="chk3">
+        <div class="check-header"><span class="check-num">CHECK 03</span><span class="check-badge loading" id="chk3-badge">LOADING</span></div>
+        <div class="check-title">OCC 데이터 확인</div>
+        <div class="check-desc">occ_data.json의 Budget OCC와 daily_booking.json의 occ_budget 비교 (동일 소스 → 일치해야 함)</div>
+        <div class="check-stat" id="chk3-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk3')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk3-detail"></div>
+      </div>
+      <!-- Check 4 -->
+      <div class="check-card loading" id="chk4">
+        <div class="check-header"><span class="check-num">CHECK 04</span><span class="check-badge loading" id="chk4-badge">LOADING</span></div>
+        <div class="check-title">OTB Budget vs RM Budget 구조 차이</div>
+        <div class="check-desc">OTB rns_budget(온북 투숙일 Budget)과 RM budget_rn(사업계획 월간 목표) — 다른 소스이므로 비율만 표시</div>
+        <div class="check-stat" id="chk4-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk4')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk4-detail"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- 3. VALIDATION HISTORY                         -->
+  <!-- ============================================= -->
+  <div class="card" id="card-history">
+    <div class="card-head"><span class="card-icon">📜</span><span class="card-title">검증 히스토리</span><span class="card-desc" id="history-count"></span></div>
+    <div id="history-container">
+      <div id="history-empty" style="text-align:center;padding:24px 0;color:var(--ink-faint);font-size:12px">히스토리 로드 중...</div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- DIVIDER                                       -->
+  <!-- ============================================= -->
+  <hr class="section-divider">
+
+  <!-- ============================================= -->
+  <!-- 4. MANUAL UPLOAD (기존 기능 유지)               -->
+  <!-- ============================================= -->
   <div class="card" id="card-upload">
-    <div class="card-head"><span class="card-icon">📤</span><span class="card-title">FILE UPLOAD</span><span class="card-desc">Excel 1 + PDF 3</span></div>
+    <div class="card-head"><span class="card-icon">📤</span><span class="card-title">MANUAL UPLOAD</span><span class="card-desc">Excel / PDF 수동 비교</span></div>
+    <p style="font-size:11px;color:var(--ink-muted);margin-bottom:14px">추가적인 수동 검증이 필요한 경우 파일을 업로드하여 비교할 수 있습니다.</p>
 
     <div class="upload-grid">
       <!-- Excel -->
@@ -167,48 +292,45 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
           <input type="file" class="file-input" data-type="excel" accept=".xlsx,.xls,.csv">
           <div class="uz-icon">📊</div>
           <div class="uz-title">GS 실시간 현황 Excel</div>
-          <div class="uz-desc">.xlsx / .xls / .csv<br>월별 현황 및 채널별 데이터</div>
+          <div class="uz-desc">.xlsx / .xls / .csv</div>
           <div class="uz-file-name"></div>
           <div class="uz-status"></div>
         </div>
         <div class="upload-preview-mini" id="preview-excel"></div>
       </div>
-
       <!-- Booking Status PDF -->
       <div>
         <div class="upload-zone" id="uz-booking" data-type="booking">
           <input type="file" class="file-input" data-type="booking" accept=".pdf">
           <div class="uz-icon">📋</div>
           <div class="uz-title">Booking Status PDF</div>
-          <div class="uz-desc">.pdf<br>월별 RN, OCC, ADR 검증</div>
+          <div class="uz-desc">.pdf — RN, OCC, ADR 검증</div>
           <div class="uz-file-name"></div>
           <div class="uz-status"></div>
         </div>
         <div class="upload-preview-mini" id="preview-booking"></div>
         <div class="pdf-extract" id="extract-booking"></div>
       </div>
-
       <!-- Revenue Meeting PDF -->
       <div>
         <div class="upload-zone" id="uz-revenue" data-type="revenue">
           <input type="file" class="file-input" data-type="revenue" accept=".pdf">
           <div class="uz-icon">📈</div>
           <div class="uz-title">Revenue Meeting PDF</div>
-          <div class="uz-desc">.pdf<br>RM FCST/Budget 교차검증</div>
+          <div class="uz-desc">.pdf — RM FCST/Budget 교차검증</div>
           <div class="uz-file-name"></div>
           <div class="uz-status"></div>
         </div>
         <div class="upload-preview-mini" id="preview-revenue"></div>
         <div class="pdf-extract" id="extract-revenue"></div>
       </div>
-
       <!-- Daily Booking Report PDF -->
       <div>
         <div class="upload-zone" id="uz-daily" data-type="daily">
           <input type="file" class="file-input" data-type="daily" accept=".pdf">
           <div class="uz-icon">📅</div>
           <div class="uz-title">Daily Booking Report PDF</div>
-          <div class="uz-desc">.pdf<br>당일 예약/취소 추이 검증</div>
+          <div class="uz-desc">.pdf — 당일 예약/취소 추이</div>
           <div class="uz-file-name"></div>
           <div class="uz-status"></div>
         </div>
@@ -243,60 +365,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     </div>
 
     <div class="btn-group" style="margin-top:16px">
-      <button class="btn btn-primary" id="btn-validate" onclick="runFullValidation()" disabled>검증 실행</button>
-      <button class="btn btn-secondary" onclick="resetAll()">⟳ 초기화</button>
+      <button class="btn btn-primary" id="btn-validate" onclick="runManualValidation()" disabled>수동 검증 실행</button>
+      <button class="btn btn-secondary" onclick="resetManual()">⟳ 초기화</button>
     </div>
   </div>
 
-  <!-- 2. Monthly Summary -->
-  <div class="card" id="card-monthly" style="display:none">
-    <div class="card-head"><span class="card-icon">📅</span><span class="card-title">월별 실적 요약</span><span class="card-desc" id="monthly-timestamp"></span></div>
-    <div class="result-wrap"><table class="result-tbl" id="monthly-tbl"></table></div>
-  </div>
-
-  <!-- 3. Property Comparison -->
-  <div class="card" id="card-property" style="display:none">
-    <div class="card-head"><span class="card-icon">🏨</span><span class="card-title">사업장별 실적 비교</span></div>
-    <div class="month-selector">
-      <label for="month-select">선택 월:</label>
-      <select id="month-select" onchange="renderPropertyComparison()"></select>
-    </div>
-    <div class="result-wrap"><table class="result-tbl" id="property-tbl"></table></div>
-  </div>
-
-  <!-- 4. RM FCST Cross-Check -->
-  <div class="card" id="card-fcst" style="display:none">
-    <div class="card-head"><span class="card-icon">📊</span><span class="card-title">RM FCST 교차검증</span><span class="card-desc" id="fcst-timestamp"></span></div>
-    <div class="month-selector">
-      <label for="fcst-month-select">검증 월:</label>
-      <select id="fcst-month-select" onchange="renderFcstComparison()"></select>
-    </div>
-    <div class="result-wrap"><table class="result-tbl" id="fcst-tbl"></table></div>
-  </div>
-
-  <!-- 5. Booking Status Check -->
-  <div class="card" id="card-booking-result" style="display:none">
-    <div class="card-head"><span class="card-icon">🔍</span><span class="card-title">Booking Status 비교</span><span class="card-desc" id="booking-timestamp"></span></div>
-    <div class="result-wrap"><table class="result-tbl" id="booking-tbl"></table></div>
-  </div>
-
-  <!-- 6. Daily Booking Check -->
-  <div class="card" id="card-daily-result" style="display:none">
-    <div class="card-head"><span class="card-icon">📅</span><span class="card-title">Daily Booking 검증</span><span class="card-desc" id="daily-timestamp"></span></div>
-    <div class="result-wrap"><table class="result-tbl" id="daily-tbl"></table></div>
-  </div>
-
-  <!-- 7. Validation History -->
-  <div class="card" id="card-history">
-    <div class="card-head"><span class="card-icon">📜</span><span class="card-title">검증 히스토리</span><span class="card-desc" id="history-count"></span></div>
-    <div id="history-empty" style="text-align:center;padding:24px 0;color:var(--ink-faint);font-size:12px">아직 검증 기록이 없습니다. 파일을 업로드하고 검증을 실행하세요.</div>
-    <div style="overflow-x:auto">
-      <table class="result-tbl" id="history-tbl" style="display:none"></table>
-    </div>
-    <div class="btn-group" style="margin-top:14px">
-      <button class="btn btn-secondary" onclick="downloadHistoryJSON()" id="btn-download-history" style="display:none">📥 히스토리 JSON 다운로드</button>
-      <button class="btn btn-secondary" onclick="clearHistory()" id="btn-clear-history" style="display:none">🗑 히스토리 초기화</button>
-    </div>
+  <!-- Manual Results (hidden until validation) -->
+  <div class="card" id="card-manual-result" style="display:none">
+    <div class="card-head"><span class="card-icon">📊</span><span class="card-title">수동 검증 결과</span><span class="card-desc" id="manual-timestamp"></span></div>
+    <div class="result-wrap"><table class="result-tbl" id="manual-tbl"></table></div>
   </div>
 
 </main>
@@ -305,42 +382,482 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 (function(){
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  /* State */
-  let uploadedFiles = { excel: null, booking: null, revenue: null, daily: null };
-  let parsedData = { excel: null, booking: null, revenue: null, daily: null, rmFcst: null, otbData: null };
-  let workbook = null;
-  let currentSheet = null;
-  let sheetData = [];
-  let headers = [];
-  let validationHistory = [];
+  /* ========================================================
+     NAME MAPPING: OTB/RM short codes ↔ Daily Booking names
+     ======================================================== */
+  const NAME_MAP = {
+    '01.벨비발디': '소노벨 비발디파크',
+    '02.캄비발디': '소노캄 비발디파크',
+    '03.펫비발디': '소노펫 비발디파크',
+    '04.펠리체비발디': '소노펠리체 비발디파크',
+    '05.빌리지비발디': '소노펠리체빌리지 비발디파크',
+    '06.양평': '소노벨 양평',
+    '07.델피노': '델피노',
+    '08.쏠비치양양': '쏠비치 양양',
+    '09.쏠비치삼척': '쏠비치 삼척',
+    '10.소노벨단양': '소노벨 단양',
+    '11.소노캄경주': '소노캄 경주',
+    '12.소노벨청송': '소노벨 청송',
+    '13.소노벨천안': '소노벨 천안',
+    '14.소노벨변산': '소노벨 변산',
+    '15.소노캄여수': '소노캄 여수',
+    '16.소노캄거제': '소노캄 거제',
+    '17.쏠비치진도': '쏠비치 진도',
+    '18.소노벨제주': '소노벨 제주',
+    '19.소노캄제주': '소노캄 제주',
+    '20.소노캄고양': '소노캄 고양',
+    '21.소노문해운대': '소노문 해운대',
+    '22.쏠비치남해': '쏠비치 남해',
+    '23.르네블루': '르네블루'
+  };
+  // Reverse map
+  const REVERSE_NAME = {};
+  Object.entries(NAME_MAP).forEach(([k,v]) => REVERSE_NAME[v] = k);
 
-  const FILE_TYPES = ['excel', 'booking', 'revenue', 'daily'];
-  const FILE_LABELS = { excel: 'GS 실시간 현황', booking: 'Booking Status', revenue: 'Revenue Meeting', daily: 'Daily Booking' };
+  /* ========================================================
+     DATA STORE
+     ======================================================== */
+  let DATA = { otb: null, rm: null, daily: null, occ: null };
+  let checkResults = {};
+  let totalMatch = 0, totalMismatch = 0, totalInfo = 0;
 
-  const propMapping = {
-    '비발디(벨)':'01.벨비발디','비발디(캄)':'02.캄비발디','비발디(펫)':'03.펫비발디',
-    '비발디(펠리체)':'04.펠리체비발디','비발디(빌리지)':'05.빌리지비발디','양평':'06.양평',
-    '델피노(문,벨)':'07.델피노','양양':'08.쏠비치양양','삼척':'09.쏠비치삼척',
-    '단양':'10.소노벨단양','경주':'11.소노캄경주','청송':'12.소노벨청송',
-    '천안':'13.소노벨천안','변산':'14.소노벨변산','여수':'15.쏠비치여수',
-    '거제':'16.소노캄거제','진도':'17.쏠비치진도','제주(벨)':'18.소노벨제주',
-    '제주(캄)':'19.소노캄제주','고양':'20.소노캄고양','해운대':'21.소노문해운대',
-    '남해':'22.쏠비치남해','르네블루':'23.르네블루'
+  /* ========================================================
+     AUTO CROSS-CHECK: FETCH & RUN
+     ======================================================== */
+  async function fetchAllData() {
+    const urls = {
+      otb: 'data/otb_data.json',
+      rm: 'data/rm_fcst.json',
+      daily: 'data/daily_booking.json',
+      occ: 'data/occ_data.json'
+    };
+    const results = {};
+    for (const [key, url] of Object.entries(urls)) {
+      try {
+        const r = await fetch(url + '?t=' + Date.now());
+        if (r.ok) results[key] = await r.json();
+        else results[key] = null;
+      } catch(e) { results[key] = null; }
+    }
+    return results;
+  }
+
+  window.runAutoCheck = async function() {
+    // Reset
+    totalMatch = 0; totalMismatch = 0; totalInfo = 0;
+    document.getElementById('summary-timestamp').textContent = '검증 중...';
+    ['chk1','chk2','chk3','chk4'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'check-card loading';
+      document.getElementById(id+'-badge').className = 'check-badge loading';
+      document.getElementById(id+'-badge').textContent = 'LOADING';
+      document.getElementById(id+'-stat').innerHTML = '';
+      document.getElementById(id+'-detail').innerHTML = '';
+      document.getElementById(id+'-detail').classList.remove('open');
+    });
+
+    DATA = await fetchAllData();
+
+    // Run 4 checks
+    runCheck1();
+    runCheck2();
+    runCheck3();
+    runCheck4();
+
+    // Update summary
+    updateSummary();
   };
 
-  /* Load Reference Data */
-  async function loadReferenceData() {
-    try { const r = await fetch('data/rm_fcst_trend.json'); if(r.ok) parsedData.rmFcst = await r.json(); } catch(e){}
-    try { const r = await fetch('data/otb_data.json'); if(r.ok) parsedData.otbData = await r.json(); } catch(e){}
-    // Load saved history from localStorage
-    try {
-      const saved = localStorage.getItem('gs_validation_history');
-      if(saved) { validationHistory = JSON.parse(saved); renderHistoryTable(); }
-    } catch(e){}
-  }
-  loadReferenceData();
+  /* ---- CHECK 1: RM FCST rm_fcst_rn vs OTB rm_fcst_rn ---- */
+  function runCheck1() {
+    const id = 'chk1';
+    if (!DATA.rm || !DATA.otb) return setCheckError(id, 'DATA MISSING');
 
-  /* File Upload Handlers */
+    const rmProps = DATA.rm.properties;
+    const otbMonths = DATA.otb.allMonths;
+    const rmMonthsCovered = DATA.rm._months_covered || [];
+    let match = 0, mismatch = 0;
+    const details = [];
+
+    // For each RM month, find matching OTB allMonths key
+    rmMonthsCovered.forEach(monthKey => {
+      const monthNum = parseInt(monthKey.split('-')[1]);
+      const otbMonth = otbMonths[String(monthNum)];
+      if (!otbMonth) return;
+
+      const otbByProp = otbMonth.byProperty || [];
+
+      Object.entries(rmProps).forEach(([propCode, months]) => {
+        const rmData = months[monthKey];
+        if (!rmData) return;
+        const rmVal = rmData.rm_fcst_rn;
+
+        // Find matching OTB property
+        const otbProp = otbByProp.find(p => p.name === propCode);
+        const otbVal = otbProp ? otbProp.rm_fcst_rn : null;
+
+        if (otbVal === null || otbVal === undefined) {
+          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: '—', status: 'na' });
+          return;
+        }
+
+        if (rmVal === otbVal) {
+          match++;
+          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: otbVal, status: 'match' });
+        } else {
+          mismatch++;
+          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: otbVal, diff: otbVal - rmVal, status: 'mismatch' });
+        }
+      });
+    });
+
+    totalMatch += match; totalMismatch += mismatch;
+    const pass = mismatch === 0;
+    setCheckResult(id, pass ? 'PASS' : 'FAIL', pass ? 'pass' : 'fail', match, mismatch);
+    renderCheck1Detail(details);
+    checkResults.check1 = { result: pass ? 'PASS' : 'FAIL', match, mismatch };
+  }
+
+  function renderCheck1Detail(details) {
+    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>월</th><th>RM FCST RN</th><th>OTB RN</th><th>차이</th><th>상태</th></tr></thead><tbody>';
+    // Show mismatches first
+    const sorted = [...details].sort((a,b) => (a.status==='mismatch'?0:1) - (b.status==='mismatch'?0:1));
+    sorted.forEach(d => {
+      const cls = d.status === 'match' ? 'cell-green' : d.status === 'mismatch' ? 'cell-red' : 'cell-na';
+      const statusText = d.status === 'match' ? '✓ 일치' : d.status === 'mismatch' ? '✗ 불일치' : '—';
+      html += `<tr>
+        <td class="prop-col">${esc(d.prop)}</td>
+        <td>${d.month}</td>
+        <td>${fmtNum(d.rm)}</td>
+        <td>${d.otb === '—' ? '<span class="cell-na">—</span>' : fmtNum(d.otb)}</td>
+        <td class="${cls}">${d.diff !== undefined ? fmtNum(d.diff) : '0'}</td>
+        <td class="${cls}">${statusText}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('chk1-detail').innerHTML = html;
+  }
+
+  /* ---- CHECK 2: Daily Booking budget_rns vs RM budget_rn ---- */
+  function runCheck2() {
+    const id = 'chk2';
+    if (!DATA.rm || !DATA.daily) return setCheckError(id, 'DATA MISSING');
+
+    const rmProps = DATA.rm.properties;
+    const dbMonths = DATA.daily.months_detail || [];
+    const rmMonthsCovered = DATA.rm._months_covered || [];
+    let match = 0, mismatch = 0;
+    const details = [];
+
+    dbMonths.forEach(md => {
+      const monthKey = md.month_key;
+      if (!rmMonthsCovered.includes(monthKey)) return;
+
+      const props = md.properties || [];
+      props.forEach(p => {
+        if (p.name === 'Grand Total') return;
+        const propCode = REVERSE_NAME[p.name];
+        if (!propCode) return;
+
+        const rmProp = rmProps[propCode];
+        if (!rmProp || !rmProp[monthKey]) return;
+
+        const dbBudget = p.budget_rns;
+        const rmBudget = rmProp[monthKey].budget_rn;
+
+        if (dbBudget === rmBudget) {
+          match++;
+          details.push({ prop: propCode, fullName: p.name, month: monthKey, db: dbBudget, rm: rmBudget, status: 'match' });
+        } else {
+          mismatch++;
+          details.push({ prop: propCode, fullName: p.name, month: monthKey, db: dbBudget, rm: rmBudget, diff: dbBudget - rmBudget, status: 'mismatch' });
+        }
+      });
+    });
+
+    totalMatch += match; totalMismatch += mismatch;
+    const pass = mismatch === 0;
+    setCheckResult(id, pass ? 'PASS' : 'FAIL', pass ? 'pass' : 'fail', match, mismatch);
+    renderCheck2Detail(details);
+    checkResults.check2 = { result: pass ? 'PASS' : 'FAIL', match, mismatch };
+  }
+
+  function renderCheck2Detail(details) {
+    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>월</th><th>DB Budget</th><th>RM Budget</th><th>차이</th><th>상태</th></tr></thead><tbody>';
+    const sorted = [...details].sort((a,b) => (a.status==='mismatch'?0:1) - (b.status==='mismatch'?0:1));
+    sorted.forEach(d => {
+      const cls = d.status === 'match' ? 'cell-green' : 'cell-red';
+      const statusText = d.status === 'match' ? '✓ 일치' : '✗ 불일치';
+      html += `<tr>
+        <td class="prop-col">${esc(d.prop)}</td>
+        <td>${d.month}</td>
+        <td>${fmtNum(d.db)}</td>
+        <td>${fmtNum(d.rm)}</td>
+        <td class="${cls}">${d.diff !== undefined ? fmtNum(d.diff) : '0'}</td>
+        <td class="${cls}">${statusText}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('chk2-detail').innerHTML = html;
+  }
+
+  /* ---- CHECK 3: OCC Data vs Daily Booking occ_budget ---- */
+  function runCheck3() {
+    const id = 'chk3';
+    if (!DATA.occ || !DATA.daily) return setCheckError(id, 'DATA MISSING');
+
+    const occProps = DATA.occ.properties || {};
+    const dbMonths = DATA.daily.months_detail || [];
+    let match = 0, mismatch = 0;
+    const details = [];
+
+    dbMonths.forEach(md => {
+      const monthKey = md.month_key;
+      const props = md.properties || [];
+      props.forEach(p => {
+        if (p.name === 'Grand Total') return;
+        const propCode = REVERSE_NAME[p.name];
+        if (!propCode || !occProps[propCode]) return;
+
+        const occVal = occProps[propCode][monthKey];
+        const dbOcc = p.occ_budget;
+
+        if (occVal === undefined || dbOcc === undefined) return;
+
+        // Compare with tolerance for floating point
+        const isMatch = Math.abs(occVal - dbOcc) < 0.1;
+        if (isMatch) {
+          match++;
+          details.push({ prop: propCode, month: monthKey, occ: occVal, db: dbOcc, status: 'match' });
+        } else {
+          mismatch++;
+          details.push({ prop: propCode, month: monthKey, occ: occVal, db: dbOcc, diff: (occVal - dbOcc).toFixed(1), status: 'mismatch' });
+        }
+      });
+    });
+
+    totalMatch += match; totalMismatch += mismatch;
+    const pass = mismatch === 0;
+    setCheckResult(id, pass ? 'PASS' : 'FAIL', pass ? 'pass' : 'fail', match, mismatch);
+    renderCheck3Detail(details);
+    checkResults.check3 = { result: pass ? 'PASS' : 'FAIL', match, mismatch };
+  }
+
+  function renderCheck3Detail(details) {
+    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>월</th><th>OCC Data (%)</th><th>DB occ_budget (%)</th><th>차이</th><th>상태</th></tr></thead><tbody>';
+    const sorted = [...details].sort((a,b) => (a.status==='mismatch'?0:1) - (b.status==='mismatch'?0:1));
+    sorted.forEach(d => {
+      const cls = d.status === 'match' ? 'cell-green' : 'cell-red';
+      const statusText = d.status === 'match' ? '✓ 일치' : '✗ 불일치';
+      html += `<tr>
+        <td class="prop-col">${esc(d.prop)}</td>
+        <td>${d.month}</td>
+        <td>${d.occ}%</td>
+        <td>${d.db}%</td>
+        <td class="${cls}">${d.diff || '0'}%p</td>
+        <td class="${cls}">${statusText}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('chk3-detail').innerHTML = html;
+  }
+
+  /* ---- CHECK 4: OTB Budget vs RM Budget (ratio, INFO) ---- */
+  function runCheck4() {
+    const id = 'chk4';
+    if (!DATA.rm || !DATA.otb) return setCheckError(id, 'DATA MISSING');
+
+    const rmProps = DATA.rm.properties;
+    const rmMonths = DATA.rm._months_covered || [];
+    const otbMonths = DATA.otb.allMonths;
+    const details = [];
+
+    rmMonths.forEach(monthKey => {
+      const monthNum = parseInt(monthKey.split('-')[1]);
+      const otbMonth = otbMonths[String(monthNum)];
+      if (!otbMonth) return;
+
+      const otbBudget = otbMonth.summary?.rns_budget || 0;
+
+      // Sum RM budget for this month
+      let rmBudgetSum = 0;
+      Object.values(rmProps).forEach(months => {
+        if (months[monthKey]) rmBudgetSum += months[monthKey].budget_rn || 0;
+      });
+
+      const ratio = otbBudget > 0 ? (rmBudgetSum / otbBudget).toFixed(2) : '—';
+      details.push({ month: monthKey, otb: otbBudget, rm: rmBudgetSum, ratio });
+    });
+
+    totalInfo += details.length;
+    setCheckResult(id, 'INFO', 'info', details.length, 0, true);
+    renderCheck4Detail(details);
+    checkResults.check4 = { result: 'INFO', items: details.length };
+  }
+
+  function renderCheck4Detail(details) {
+    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>월</th><th>OTB rns_budget<br><span style="font-weight:400;color:var(--ink-faint)">(온북 투숙일 Budget)</span></th><th>RM budget_rn 합계<br><span style="font-weight:400;color:var(--ink-faint)">(사업계획 월간 목표)</span></th><th>비율<br><span style="font-weight:400;color:var(--ink-faint)">(RM/OTB)</span></th><th>비고</th></tr></thead><tbody>';
+    details.forEach(d => {
+      html += `<tr>
+        <td class="prop-col" style="text-align:center">${d.month}</td>
+        <td>${fmtNum(d.otb)}</td>
+        <td>${fmtNum(d.rm)}</td>
+        <td class="cell-yellow">${d.ratio}x</td>
+        <td style="font-size:9px;color:var(--ink-faint)">다른 소스 — 구조적 차이</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('chk4-detail').innerHTML = html;
+  }
+
+  /* ========================================================
+     CHECK HELPERS
+     ======================================================== */
+  function setCheckResult(id, label, cls, matchCount, mismatchCount, isInfo) {
+    const card = document.getElementById(id);
+    card.className = 'check-card ' + cls;
+    const badge = document.getElementById(id + '-badge');
+    badge.className = 'check-badge ' + cls;
+    badge.textContent = label;
+
+    const stat = document.getElementById(id + '-stat');
+    if (isInfo) {
+      stat.innerHTML = `<span class="stat-item"><span class="stat-val stat-info">${matchCount}</span> 항목 비교</span>`;
+    } else {
+      stat.innerHTML = `<span class="stat-item"><span class="stat-val stat-ok">${matchCount}</span> 일치</span>` +
+        (mismatchCount > 0 ? `<span class="stat-item"><span class="stat-val stat-err">${mismatchCount}</span> 불일치</span>` : '');
+    }
+  }
+
+  function setCheckError(id, msg) {
+    const card = document.getElementById(id);
+    card.className = 'check-card fail';
+    document.getElementById(id + '-badge').className = 'check-badge fail';
+    document.getElementById(id + '-badge').textContent = 'ERROR';
+    document.getElementById(id + '-stat').innerHTML = `<span style="color:var(--negative);font-size:10px">${msg}</span>`;
+  }
+
+  window.toggleDetail = function(id) {
+    const detail = document.getElementById(id + '-detail');
+    const btn = detail.previousElementSibling;
+    detail.classList.toggle('open');
+    btn.textContent = detail.classList.contains('open') ? '▾ 세부 결과 숨기기' : '▸ 세부 결과 보기';
+  };
+
+  function updateSummary() {
+    const totalChecks = 4;
+    const passCount = ['check1','check2','check3'].filter(k => checkResults[k]?.result === 'PASS').length;
+    const failCount = ['check1','check2','check3'].filter(k => checkResults[k]?.result === 'FAIL').length;
+    const infoCount = checkResults.check4 ? 1 : 0;
+    const totalItems = totalMatch + totalMismatch + totalInfo;
+
+    document.getElementById('sv-checks').textContent = totalChecks;
+    document.getElementById('sv-pass').textContent = passCount + (infoCount ? ' + ' + infoCount + ' INFO' : '');
+    document.getElementById('sv-fail').textContent = failCount;
+    document.getElementById('sv-items').textContent = totalItems;
+
+    document.getElementById('sbox-pass').className = 'summary-box ' + (passCount > 0 ? 'pass' : '');
+    document.getElementById('sbox-fail').className = 'summary-box ' + (failCount > 0 ? 'fail' : 'pass');
+
+    const now = new Date();
+    document.getElementById('summary-timestamp').textContent = now.toLocaleString('ko-KR') + ' 검증 완료';
+  }
+
+  /* ========================================================
+     VALIDATION HISTORY (from validation/ folder)
+     ======================================================== */
+  async function loadValidationHistory() {
+    const container = document.getElementById('history-container');
+    const knownFiles = [];
+
+    // Try known patterns: YYYYMMDD_crosscheck.json, YYYYMMDD_validation.json
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      knownFiles.push(ds + '_crosscheck.json');
+      knownFiles.push(ds + '_validation.json');
+    }
+
+    const loaded = [];
+    for (const fname of knownFiles) {
+      try {
+        const r = await fetch('data/validation/' + fname + '?t=' + Date.now());
+        if (r.ok) {
+          const data = await r.json();
+          loaded.push({ filename: fname, data });
+        }
+      } catch(e) {}
+    }
+
+    if (loaded.length === 0) {
+      document.getElementById('history-empty').textContent = '검증 히스토리 파일이 없습니다.';
+      document.getElementById('history-count').textContent = '0건';
+      return;
+    }
+
+    document.getElementById('history-count').textContent = loaded.length + '건';
+    let html = '';
+    loaded.forEach(item => {
+      const d = item.data;
+      const isCrosscheck = item.filename.includes('crosscheck');
+
+      if (isCrosscheck) {
+        const status = d.final_summary?.overall_status || 'UNKNOWN';
+        const statusCls = status === 'PASS' ? 'badge-success' : status === 'FAIL' ? 'badge-error' : 'badge-info';
+        const findings = d.final_summary?.key_findings || [];
+
+        html += `<div class="history-card" onclick="this.querySelector('.hc-body-full').classList.toggle('open')">
+          <div class="history-card-head">
+            <span class="history-card-date">${d.validation_date || item.filename} — 크로스체크</span>
+            <span class="history-badge ${statusCls}">${status}</span>
+          </div>
+          <div class="history-card-body">
+            ${Object.entries(d.checks || {}).map(([k,v]) => {
+              const r = v.result || '—';
+              const rc = r === 'PASS' ? 'stat-ok' : r.includes('INFO') ? 'stat-info' : 'stat-err';
+              return `<span style="margin-right:12px"><span class="${rc}" style="font-weight:800;font-family:var(--mono)">${r}</span> ${v.description ? v.description.substring(0,40) : k}</span>`;
+            }).join('<br>')}
+          </div>
+          <div class="hc-body-full" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--rule);font-size:10px;color:var(--ink-muted);line-height:1.7">
+            ${findings.map(f => '• ' + f).join('<br>')}
+            ${d.final_summary?.data_integrity ? '<br><strong style="color:var(--gold-bright)">결론:</strong> ' + d.final_summary.data_integrity : ''}
+          </div>
+        </div>`;
+      } else {
+        // validation.json - simpler format
+        const status = d.overall_status || d.status || 'INFO';
+        const statusCls = status === 'PASS' ? 'badge-success' : 'badge-info';
+        html += `<div class="history-card">
+          <div class="history-card-head">
+            <span class="history-card-date">${d.validation_date || item.filename} — 상세 검증</span>
+            <span class="history-badge ${statusCls}">${status}</span>
+          </div>
+          <div class="history-card-body" style="font-size:10px;color:var(--ink-faint)">파일: ${item.filename}</div>
+        </div>`;
+      }
+    });
+
+    // Fix toggle display
+    html = html.replace(/style="display:none;/g, 'style="display:none;');
+    container.innerHTML = html;
+
+    // Style the toggle
+    const style = document.createElement('style');
+    style.textContent = '.hc-body-full.open{display:block!important}';
+    document.head.appendChild(style);
+  }
+
+  /* ========================================================
+     MANUAL UPLOAD (kept from original)
+     ======================================================== */
+  let uploadedFiles = { excel: null, booking: null, revenue: null, daily: null };
+  let parsedData = { excel: null, booking: null, revenue: null, daily: null };
+  let workbook = null, currentSheet = null, sheetData = [], headers = [];
+
+  const FILE_TYPES = ['excel', 'booking', 'revenue', 'daily'];
+
   document.querySelectorAll('.file-input').forEach(input => {
     const type = input.getAttribute('data-type');
     const zone = document.getElementById('uz-' + type);
@@ -361,18 +878,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     const zone = document.getElementById('uz-' + type);
     const nameEl = zone.querySelector('.uz-file-name');
     const statusEl = zone.querySelector('.uz-status');
-
     nameEl.textContent = file.name + ' (' + formatBytes(file.size) + ')';
     nameEl.style.display = 'block';
     statusEl.textContent = '파싱 중...';
     statusEl.style.display = 'block';
     statusEl.style.color = 'var(--warning)';
 
-    if(type === 'excel') {
-      parseExcel(file);
-    } else {
-      parsePDF(file, type);
-    }
+    if(type === 'excel') parseExcel(file);
+    else parsePDF(file, type);
     zone.classList.add('loaded');
     updateUploadSummary();
   }
@@ -382,11 +895,6 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('sum-files').textContent = loaded + '/4';
     document.getElementById('upload-summary').style.display = '';
     document.getElementById('btn-validate').disabled = !uploadedFiles.excel;
-
-    if(parsedData.excel) {
-      document.getElementById('sum-months').textContent = (parsedData.excel.monthlyTotals?.length || 0) + '개월';
-      document.getElementById('sum-props').textContent = (parsedData.excel.properties?.length || 0) + '개';
-    }
   }
 
   function formatBytes(b) {
@@ -395,7 +903,6 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     return (b/1048576).toFixed(1) + ' MB';
   }
 
-  /* Parse Excel */
   function parseExcel(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -429,29 +936,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     const ws = workbook.Sheets[name];
     const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     if(json.length < 1) return;
-
     let headerIdx = 0;
     for(let i = 0; i < Math.min(json.length, 15); i++) {
       const row = json[i].map(c => String(c).toLowerCase());
       if(row.some(c => c.includes('사업장')||c.includes('호텔')||c.includes('rn')||c.includes('매출')||c.includes('adr')||c.includes('occ')||c.includes('채널')||c.includes('월')||c.includes('계'))) { headerIdx = i; break; }
     }
-
     headers = json[headerIdx].map((h,i) => h ? String(h).trim() : 'Col_'+i);
     sheetData = json.slice(headerIdx+1).filter(r => r.some(c => c !== ''));
-
     renderExcelPreview();
-    parsedData.excel = extractExcelData(sheetData, headers);
-
-    const previewEl = document.getElementById('preview-excel');
-    previewEl.innerHTML = '<strong>✓ Excel 파싱 완료:</strong> ' + (parsedData.excel?.monthlyTotals?.length||0) + '개월 × ' + (parsedData.excel?.properties?.length||0) + '사업장';
-    previewEl.style.display = 'block';
-
     updateUploadSummary();
-    // Auto-render analysis on Excel upload
-    renderMonthlyAnalysis();
-    renderPropertySelector();
-    renderFcstMonthSelector();
-    renderFcstComparison();
   }
 
   function renderExcelPreview() {
@@ -470,36 +963,6 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('preview-info').textContent = sheetData.length + '행 × ' + headers.length + '열';
   }
 
-  function extractExcelData(data, hdrs) {
-    const result = { monthlyTotals:[], properties:new Set(), byProperty:{}, byMonth:{} };
-
-    data.forEach(row => {
-      const channel = String(row[0]||'').trim();
-      const metric = String(row[1]||'').trim();
-      if(!channel || !metric) return;
-
-      const monthMatch = channel.match(/(\d{2})월/);
-      const monthNum = monthMatch ? parseInt(monthMatch[1]) : null;
-
-      for(let i = 2; i < row.length; i++) {
-        const val = parseNumeric(row[i]);
-        if(val !== null) {
-          const propName = hdrs[i] ? String(hdrs[i]).trim() : 'Prop_'+i;
-          result.properties.add(propName);
-          if(!result.byProperty[propName]) result.byProperty[propName] = {};
-          if(!result.byMonth[monthNum]) result.byMonth[monthNum] = {};
-          result.byProperty[propName][channel+'_'+metric] = val;
-          result.byMonth[monthNum][channel+'_'+metric] = (result.byMonth[monthNum][channel+'_'+metric]||0) + val;
-        }
-      }
-    });
-
-    result.properties = Array.from(result.properties).sort();
-    result.monthlyTotals = Object.keys(result.byMonth).map(m => ({month:parseInt(m), data:result.byMonth[m]})).sort((a,b) => a.month - b.month);
-    return result;
-  }
-
-  /* Parse PDF */
   async function parsePDF(file, type) {
     const reader = new FileReader();
     reader.onload = async function(e) {
@@ -512,28 +975,21 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
           const tc = await page.getTextContent();
           fullText += tc.items.map(item => item.str).join(' ') + '\n';
         }
-
-        parsedData[type] = { text: fullText, numbers: extractNumbers(fullText), pageCount: pdf.numPages };
-
+        parsedData[type] = { text: fullText, pageCount: pdf.numPages };
         const statusEl = document.querySelector('#uz-'+type+' .uz-status');
         statusEl.textContent = '✓ 파싱 완료 (' + pdf.numPages + '페이지)';
         statusEl.style.color = 'var(--positive)';
-
         const previewEl = document.getElementById('preview-'+type);
-        previewEl.innerHTML = '<strong>✓ PDF 파싱:</strong> ' + pdf.numPages + '페이지, 숫자 ' + parsedData[type].numbers.length + '개 추출';
+        previewEl.innerHTML = '<strong>✓ PDF 파싱:</strong> ' + pdf.numPages + '페이지';
         previewEl.style.display = 'block';
-
-        // Show PDF extract preview
         const extractEl = document.getElementById('extract-'+type);
         if(extractEl) {
           const preview = fullText.substring(0, 400).replace(/\n/g, '<br>');
           extractEl.innerHTML = '<strong>텍스트 미리보기:</strong><br>' + preview + (fullText.length > 400 ? '...' : '');
           extractEl.style.display = 'block';
         }
-
         updateUploadSummary();
       } catch(err) {
-        console.error('[data-check] PDF parse error:', err);
         const statusEl = document.querySelector('#uz-'+type+' .uz-status');
         statusEl.textContent = '❌ 파싱 실패';
         statusEl.style.color = 'var(--negative)';
@@ -542,399 +998,27 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     reader.readAsArrayBuffer(file);
   }
 
-  function extractNumbers(text) {
-    const nums = text.match(/[\d,]+\.?\d*/g) || [];
-    return nums.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => !isNaN(n));
-  }
-
-  /* Monthly Summary */
-  function renderMonthlyAnalysis() {
-    if(!parsedData.excel) return;
-    const excel = parsedData.excel;
-    let html = '<thead><tr><th>월</th><th>총계 목표</th><th>예상실적</th><th>달성률</th><th>OTA</th><th>G-OTA</th><th>Inbound</th><th>GS 합계</th><th>전년</th><th>YoY</th></tr></thead><tbody>';
-
-    excel.monthlyTotals.forEach(mt => {
-      const m = mt.month;
-      const ms = String(m).padStart(2,'0');
-      const goal = mt.data[`총계(${ms}월)_목표`]||0;
-      const fcst = mt.data[`총계(${ms}월)_예상실적(GS)`]||0;
-      const ota = mt.data[`OTA(${ms}월)_예상실적(GS)`]||0;
-      const gota = mt.data[`GOTA(${ms}월)_예상실적(GS)`]||0;
-      const inb = mt.data[`INBOUND(${ms}월)_예상실적(GS)`]||0;
-      const gs = ota + gota + inb;
-      const ly = mt.data[`총계(${ms}월)_전년 ACTUAL`]||0;
-      const achv = goal > 0 ? (fcst/goal*100) : 0;
-      const yoy = ly > 0 ? ((fcst-ly)/ly*100) : 0;
-
-      let ac = achv >= 100 ? 'cell-green' : achv >= 90 ? 'cell-yellow' : 'cell-red';
-      html += `<tr>
-        <td class="prop-col">${ms}월</td>
-        <td>${fmtNum(goal)}</td><td>${fmtNum(fcst)}</td>
-        <td class="${ac}">${achv.toFixed(1)}%</td>
-        <td>${fmtNum(ota)}</td><td>${fmtNum(gota)}</td><td>${fmtNum(inb)}</td>
-        <td style="font-weight:700">${fmtNum(gs)}</td>
-        <td>${fmtNum(ly)}</td>
-        <td class="${yoy >= 0 ? 'cell-green' : 'cell-red'}">${yoy.toFixed(1)}%</td>
-      </tr>`;
-    });
-
-    html += '</tbody>';
-    document.getElementById('monthly-tbl').innerHTML = html;
-    document.getElementById('monthly-timestamp').textContent = '갱신: ' + new Date().toLocaleString('ko-KR');
-    document.getElementById('card-monthly').style.display = '';
-  }
-
-  /* Property Comparison */
-  function renderPropertySelector() {
-    if(!parsedData.excel) return;
-    const select = document.getElementById('month-select');
-    select.innerHTML = '';
-    parsedData.excel.monthlyTotals.forEach(mt => {
-      const opt = document.createElement('option');
-      opt.value = mt.month;
-      opt.textContent = String(mt.month).padStart(2,'0') + '월';
-      select.appendChild(opt);
-    });
-    if(parsedData.excel.monthlyTotals.length > 0)
-      select.value = parsedData.excel.monthlyTotals[parsedData.excel.monthlyTotals.length - 1].month;
-    document.getElementById('card-property').style.display = '';
-    renderPropertyComparison();
-  }
-
-  window.renderPropertyComparison = function() {
-    if(!parsedData.excel) return;
-    const monthNum = parseInt(document.getElementById('month-select').value);
-    if(!monthNum) return;
-    const ms = String(monthNum).padStart(2,'0');
-    const excel = parsedData.excel;
-
-    let html = '<thead><tr><th>사업장</th><th>목표</th><th>예상실적</th><th>GAP</th><th>달성률</th><th>전년</th><th>YoY</th></tr></thead><tbody>';
-
-    const results = [];
-    excel.properties.forEach(prop => {
-      const goal = excel.byProperty[prop]?.[`총계(${ms}월)_목표`]||0;
-      const fcst = excel.byProperty[prop]?.[`총계(${ms}월)_예상실적(GS)`]||0;
-      const ly = excel.byProperty[prop]?.[`총계(${ms}월)_전년 ACTUAL`]||0;
-      results.push({ prop, goal, fcst, gap: fcst-goal, achv: goal>0?(fcst/goal*100):0, ly, yoy: ly>0?((fcst-ly)/ly*100):0 });
-    });
-    results.sort((a,b) => a.achv - b.achv);
-
-    results.forEach(r => {
-      let ac = r.achv >= 100 ? 'cell-green' : r.achv >= 80 ? 'cell-yellow' : 'cell-red';
-      html += `<tr>
-        <td class="prop-col">${esc(r.prop)}</td>
-        <td>${fmtNum(r.goal)}</td><td>${fmtNum(r.fcst)}</td>
-        <td style="color:${r.gap>=0?'var(--positive)':'var(--negative)'};font-weight:700">${fmtNum(r.gap)}</td>
-        <td class="${ac}">${r.achv.toFixed(1)}%</td>
-        <td>${fmtNum(r.ly)}</td>
-        <td class="${r.yoy>=0?'cell-green':'cell-red'}">${r.yoy.toFixed(1)}%</td>
-      </tr>`;
-    });
-    html += '</tbody>';
-    document.getElementById('property-tbl').innerHTML = html;
-  };
-
-  /* RM FCST Cross-Check (dynamic month) */
-  function renderFcstMonthSelector() {
-    if(!parsedData.excel) return;
-    const select = document.getElementById('fcst-month-select');
-    select.innerHTML = '';
-    parsedData.excel.monthlyTotals.forEach(mt => {
-      const opt = document.createElement('option');
-      opt.value = mt.month;
-      opt.textContent = String(mt.month).padStart(2,'0') + '월';
-      select.appendChild(opt);
-    });
-    if(parsedData.excel.monthlyTotals.length > 0) {
-      // Default to current month or latest
-      const now = new Date();
-      const cm = now.getMonth() + 1;
-      const hasCurrentMonth = parsedData.excel.monthlyTotals.some(mt => mt.month === cm);
-      select.value = hasCurrentMonth ? cm : parsedData.excel.monthlyTotals[parsedData.excel.monthlyTotals.length - 1].month;
-    }
-  }
-
-  window.renderFcstComparison = function() {
-    if(!parsedData.excel || !parsedData.rmFcst) return;
-
-    const monthNum = parseInt(document.getElementById('fcst-month-select')?.value);
-    if(!monthNum) return;
-
-    const ms = String(monthNum).padStart(2,'0');
-    const year = new Date().getFullYear();
-    const monthKey = year + '-' + ms;
-
-    const excel = parsedData.excel;
-    const rmFcst = parsedData.rmFcst;
-
-    // Get latest snapshot
-    const latestSnapshot = rmFcst.snapshots ? rmFcst.snapshots[rmFcst.snapshots.length - 1] : null;
-    if(!latestSnapshot) return;
-
-    let html = '<thead><tr><th>사업장</th><th>Excel 목표</th><th>RM Budget</th><th>Budget 차이</th><th>Excel 예상</th><th>RM FCST</th><th>FCST 차이</th><th>상태</th></tr></thead><tbody>';
-
-    let mismatchCount = 0;
-    const props = excel.properties.filter(p => propMapping[p]);
-
-    props.forEach(prop => {
-      const rmName = propMapping[prop];
-      const rmPropData = latestSnapshot.properties?.[rmName];
-      if(!rmPropData) return;
-
-      const rmMonthData = rmPropData[monthKey];
-      if(!rmMonthData) return;
-
-      const excelGoal = excel.byProperty[prop]?.[`총계(${ms}월)_목표`]||0;
-      const excelFcst = excel.byProperty[prop]?.[`총계(${ms}월)_예상실적(GS)`]||0;
-      const rmBudget = rmMonthData.rm_budget_rn || 0;
-      const rmFcstVal = rmMonthData.rm_fcst_rn || 0;
-
-      const budgetDiff = excelGoal - rmBudget;
-      const fcstDiff = excelFcst - rmFcstVal;
-
-      const budgetOk = Math.abs(budgetDiff) < 100;
-      const fcstOk = Math.abs(fcstDiff) < 100;
-      const status = budgetOk && fcstOk ? '✓' : '⚠️';
-      if(!budgetOk || !fcstOk) mismatchCount++;
-
-      html += `<tr>
-        <td class="prop-col">${esc(prop)}</td>
-        <td>${fmtNum(excelGoal)}</td>
-        <td>${fmtNum(rmBudget)}</td>
-        <td class="${budgetOk?'cell-green':'cell-red'}">${fmtNum(budgetDiff)}</td>
-        <td>${fmtNum(excelFcst)}</td>
-        <td>${fmtNum(rmFcstVal)}</td>
-        <td class="${fcstOk?'cell-green':'cell-red'}">${fmtNum(fcstDiff)}</td>
-        <td style="font-weight:700;color:${budgetOk&&fcstOk?'var(--positive)':'var(--negative)'}">${status}</td>
-      </tr>`;
-    });
-
-    html += '</tbody>';
-    document.getElementById('fcst-tbl').innerHTML = html;
-    document.getElementById('fcst-timestamp').textContent = ms + '월 기준 · 최신 RM snapshot: ' + (latestSnapshot._snapshot_date || '—');
-    document.getElementById('card-fcst').style.display = '';
-
-    document.getElementById('sum-mismatches').textContent = mismatchCount + '건';
-  };
-
-  /* Booking Status Comparison */
-  function renderBookingComparison() {
-    if(!parsedData.excel || !parsedData.booking) return;
-
-    const excel = parsedData.excel;
-    const text = parsedData.booking.text || '';
-
-    // Try to extract structured data from Booking Status PDF
-    let html = '<thead><tr><th>항목</th><th>Excel 값</th><th>PDF 추출 값</th><th>차이</th><th>상태</th></tr></thead><tbody>';
-
-    // Extract total RNS from PDF text
-    const totalMatch = text.match(/(?:Total|합계|전체)[\s:]*(\d[\d,]*)/i);
-    const pdfTotal = totalMatch ? parseInt(totalMatch[1].replace(/,/g,'')) : null;
-
-    excel.monthlyTotals.forEach(mt => {
-      const ms = String(mt.month).padStart(2,'0');
-      const excelRns = mt.data[`총계(${ms}월)_OTB`] || mt.data[`총계(${ms}월)_예상실적(GS)`] || 0;
-
-      html += `<tr>
-        <td class="prop-col">${ms}월 RNS</td>
-        <td>${fmtNum(excelRns)}</td>
-        <td class="cell-na">PDF 참조</td>
-        <td>—</td>
-        <td><span class="history-badge badge-info">수동 확인</span></td>
-      </tr>`;
-    });
-
-    if(pdfTotal) {
-      const excelTotal = excel.monthlyTotals.reduce((s,mt) => {
-        const ms = String(mt.month).padStart(2,'0');
-        return s + (mt.data[`총계(${ms}월)_예상실적(GS)`]||0);
-      }, 0);
-      const diff = Math.abs(excelTotal - pdfTotal);
-      html += `<tr style="font-weight:700">
-        <td class="prop-col">PDF 총계</td>
-        <td>${fmtNum(excelTotal)}</td>
-        <td>${fmtNum(pdfTotal)}</td>
-        <td class="${diff < 500 ? 'cell-green' : 'cell-red'}">${fmtNum(diff)}</td>
-        <td>${diff < 500 ? '<span class="history-badge badge-success">일치</span>' : '<span class="history-badge badge-warning">차이</span>'}</td>
-      </tr>`;
-    }
-
-    html += '</tbody>';
-    document.getElementById('booking-tbl').innerHTML = html;
-    document.getElementById('booking-timestamp').textContent = '갱신: ' + new Date().toLocaleString('ko-KR');
-    document.getElementById('card-booking-result').style.display = '';
-  }
-
-  /* Daily Booking Comparison */
-  function renderDailyComparison() {
-    if(!parsedData.daily) return;
-
-    const text = parsedData.daily.text || '';
-    const nums = parsedData.daily.numbers || [];
-
-    // Daily Booking Report PDF 구조:
-    // 사업장별 RNs행(Budget, Actual, diff, 누적예약, 변동) + OCC행
-    // 사업장명 패턴으로 추출 시도
-    const PROPS = [
-      'Grand Total','소노벨 비발디','소노캄 비발디','소노펫 비발디','소노펠리체 비발디',
-      '소노펠리체빌리지','소노벨 양평','델피노','쏠비치 양양','쏠비치 삼척',
-      '소노벨 단양','소노캄 경주','소노벨 청송','소노벨 천안','소노벨 변산',
-      '소노캄 여수','소노캄 거제','쏠비치 진도','소노벨 제주','소노캄 제주',
-      '소노캄 고양','소노문 해운대','쏠비치 남해','파나크 영덕','르네블루','팔라티움'
-    ];
-
-    // 사업장 키워드 매칭
-    const foundProps = [];
-    PROPS.forEach(p => {
-      const shortName = p.replace(/파크$/, '').replace(/빌리지$/, '');
-      if (text.includes(p) || text.includes(shortName)) {
-        foundProps.push(p);
-      }
-    });
-
-    let html = '<thead><tr><th>항목</th><th>값</th><th>상태</th></tr></thead><tbody>';
-
-    // PDF 기본 정보
-    html += `<tr><td class="prop-col">PDF 페이지 수</td><td>${parsedData.daily.pageCount}</td><td>${parsedData.daily.pageCount >= 4 ? '<span class="cell-green">정상 (4+)</span>' : '<span class="cell-red">부족</span>'}</td></tr>`;
-    html += `<tr><td class="prop-col">추출 숫자 개수</td><td>${nums.length.toLocaleString()}개</td><td>${nums.length > 100 ? '<span class="cell-green">정상</span>' : '<span class="cell-red">부족</span>'}</td></tr>`;
-    html += `<tr><td class="prop-col">인식된 사업장</td><td>${foundProps.length}개</td><td>${foundProps.length >= 20 ? '<span class="cell-green">정상 (20+)</span>' : '<span class="cell-red">' + foundProps.length + '/26</span>'}</td></tr>`;
-
-    // 큰 숫자들 = Budget/Actual/누적 추정
-    const bigNums = nums.filter(n => n >= 1000 && n <= 500000).sort((a,b) => b - a);
-    if (bigNums.length > 0) {
-      // Grand Total 추정 (가장 큰 숫자들)
-      html += `<tr><td class="prop-col">최대값 (Grand Total 추정)</td><td style="font-weight:600;">${bigNums[0].toLocaleString()}</td><td>Budget 또는 Actual 추정</td></tr>`;
-      if (bigNums.length > 1) {
-        html += `<tr><td class="prop-col">2번째 큰 값</td><td>${bigNums[1].toLocaleString()}</td><td>Budget 또는 Actual 추정</td></tr>`;
-      }
-    }
-
-    // OCC% 범위 추정 (0~100 사이 소수점 포함)
-    const occCandidates = nums.filter(n => n > 0 && n <= 100);
-    if (occCandidates.length > 0) {
-      const avgOcc = (occCandidates.reduce((a,b) => a+b, 0) / occCandidates.length).toFixed(1);
-      html += `<tr><td class="prop-col">OCC% 추정 평균</td><td>${avgOcc}%</td><td>0~100 범위 숫자 ${occCandidates.length}개 기준</td></tr>`;
-    }
-
-    // Excel과 교차 비교
-    if (parsedData.excel && parsedData.excel.properties) {
-      const excelProps = parsedData.excel.properties.map(p => p.name || p);
-      const matched = foundProps.filter(fp => excelProps.some(ep => ep.includes(fp) || fp.includes(ep)));
-      html += `<tr><td class="prop-col">Excel ↔ PDF 사업장 매칭</td><td>${matched.length}개</td><td>${matched.length >= 20 ? '<span class="cell-green">일치</span>' : '<span class="cell-red">확인 필요 (' + matched.length + '/' + excelProps.length + ')</span>'}</td></tr>`;
-    }
-
-    // 발견된 사업장 목록
-    if (foundProps.length > 0) {
-      html += `<tr><td class="prop-col">발견 사업장 목록</td><td colspan="2" style="font-size:12px; color:var(--ink-muted);">${foundProps.join(', ')}</td></tr>`;
-    }
-
-    html += '</tbody>';
-    document.getElementById('daily-tbl').innerHTML = html;
-    document.getElementById('daily-timestamp').textContent = '갱신: ' + new Date().toLocaleString('ko-KR');
-    document.getElementById('card-daily-result').style.display = '';
-  }
-
-  /* Full Validation */
-  window.runFullValidation = function() {
-    if(!parsedData.excel) return;
-
-    renderMonthlyAnalysis();
-    renderPropertyComparison();
-    renderFcstComparison();
-
-    if(parsedData.booking) renderBookingComparison();
-    if(parsedData.daily) renderDailyComparison();
-
-    // Build history entry
-    const entry = {
-      timestamp: new Date().toISOString(),
-      files: {},
-      excelMonths: parsedData.excel.monthlyTotals.length,
-      excelProps: parsedData.excel.properties.length,
-      fcstMismatches: parseInt(document.getElementById('sum-mismatches')?.textContent) || 0,
-      status: 'success'
-    };
+  window.runManualValidation = function() {
+    // Basic manual comparison — show uploaded data summary
+    let html = '<thead><tr><th>파일</th><th>상태</th><th>정보</th></tr></thead><tbody>';
     FILE_TYPES.forEach(t => {
-      if(uploadedFiles[t]) entry.files[t] = uploadedFiles[t].name;
-    });
-    if(entry.fcstMismatches > 3) entry.status = 'warning';
-
-    validationHistory.unshift(entry);
-    if(validationHistory.length > 50) validationHistory = validationHistory.slice(0, 50);
-
-    // Save to localStorage
-    try { localStorage.setItem('gs_validation_history', JSON.stringify(validationHistory)); } catch(e){}
-
-    renderHistoryTable();
-    window.scrollTo({ top: document.getElementById('card-monthly').offsetTop - 60, behavior: 'smooth' });
-  };
-
-  /* History Table */
-  function renderHistoryTable() {
-    if(validationHistory.length === 0) {
-      document.getElementById('history-empty').style.display = '';
-      document.getElementById('history-tbl').style.display = 'none';
-      document.getElementById('btn-download-history').style.display = 'none';
-      document.getElementById('btn-clear-history').style.display = 'none';
-      document.getElementById('history-count').textContent = '';
-      return;
-    }
-
-    document.getElementById('history-empty').style.display = 'none';
-    document.getElementById('history-tbl').style.display = '';
-    document.getElementById('btn-download-history').style.display = '';
-    document.getElementById('btn-clear-history').style.display = '';
-    document.getElementById('history-count').textContent = validationHistory.length + '건';
-
-    let html = '<thead><tr><th>검증 시각</th><th>Excel</th><th>Booking PDF</th><th>Revenue PDF</th><th>Daily PDF</th><th>월수</th><th>사업장</th><th>불일치</th><th>상태</th></tr></thead><tbody>';
-
-    validationHistory.forEach(entry => {
-      const dt = new Date(entry.timestamp).toLocaleString('ko-KR');
-      const badgeClass = entry.status === 'success' ? 'badge-success' : entry.status === 'warning' ? 'badge-warning' : 'badge-error';
-      const badgeText = entry.status === 'success' ? '정상' : entry.status === 'warning' ? '경고' : '오류';
-
+      const loaded = !!uploadedFiles[t];
       html += `<tr>
-        <td style="font-size:9px;white-space:nowrap">${dt}</td>
-        <td style="font-size:9px;color:${entry.files?.excel ? 'var(--positive)' : 'var(--ink-faint)'}">${entry.files?.excel ? '✓' : '—'}</td>
-        <td style="font-size:9px;color:${entry.files?.booking ? 'var(--positive)' : 'var(--ink-faint)'}">${entry.files?.booking ? '✓' : '—'}</td>
-        <td style="font-size:9px;color:${entry.files?.revenue ? 'var(--positive)' : 'var(--ink-faint)'}">${entry.files?.revenue ? '✓' : '—'}</td>
-        <td style="font-size:9px;color:${entry.files?.daily ? 'var(--positive)' : 'var(--ink-faint)'}">${entry.files?.daily ? '✓' : '—'}</td>
-        <td>${entry.excelMonths || '—'}</td>
-        <td>${entry.excelProps || '—'}</td>
-        <td class="${(entry.fcstMismatches||0) > 0 ? 'cell-red' : 'cell-green'}">${entry.fcstMismatches || 0}</td>
-        <td><span class="history-badge ${badgeClass}">${badgeText}</span></td>
+        <td class="prop-col">${t}</td>
+        <td class="${loaded ? 'cell-green' : 'cell-na'}">${loaded ? '✓ 로드됨' : '—'}</td>
+        <td style="font-size:9px">${loaded ? uploadedFiles[t].name : '미업로드'}</td>
       </tr>`;
     });
-
     html += '</tbody>';
-    document.getElementById('history-tbl').innerHTML = html;
-  }
-
-  /* Download / Clear History */
-  window.downloadHistoryJSON = function() {
-    const json = JSON.stringify(validationHistory, null, 2);
-    const blob = new Blob([json], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'validation_history_' + new Date().toISOString().slice(0,10) + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    document.getElementById('manual-tbl').innerHTML = html;
+    document.getElementById('manual-timestamp').textContent = new Date().toLocaleString('ko-KR');
+    document.getElementById('card-manual-result').style.display = '';
   };
 
-  window.clearHistory = function() {
-    if(!confirm('검증 히스토리를 모두 삭제하시겠습니까?')) return;
-    validationHistory = [];
-    try { localStorage.removeItem('gs_validation_history'); } catch(e){}
-    renderHistoryTable();
-  };
-
-  /* Reset */
-  window.resetAll = function() {
+  window.resetManual = function() {
     uploadedFiles = { excel:null, booking:null, revenue:null, daily:null };
-    parsedData = { excel:null, booking:null, revenue:null, daily:null, rmFcst:parsedData.rmFcst, otbData:parsedData.otbData };
+    parsedData = { excel:null, booking:null, revenue:null, daily:null };
     workbook = null; currentSheet = null; sheetData = []; headers = [];
-
     document.querySelectorAll('.uz-file-name').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.uz-status').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.upload-zone').forEach(z => z.classList.remove('loaded'));
@@ -943,27 +1027,17 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('sheet-selector').style.display = 'none';
     document.getElementById('preview-area').style.display = 'none';
     document.getElementById('upload-summary').style.display = 'none';
-    document.getElementById('card-monthly').style.display = 'none';
-    document.getElementById('card-property').style.display = 'none';
-    document.getElementById('card-fcst').style.display = 'none';
-    document.getElementById('card-booking-result').style.display = 'none';
-    document.getElementById('card-daily-result').style.display = 'none';
+    document.getElementById('card-manual-result').style.display = 'none';
     document.getElementById('btn-validate').disabled = true;
     document.querySelectorAll('.file-input').forEach(el => el.value = '');
-    window.scrollTo({top:0, behavior:'smooth'});
   };
 
-  /* Helpers */
-  function parseNumeric(v) {
-    if(v === null || v === undefined || v === '') return null;
-    if(typeof v === 'number') return v;
-    const s = String(v).replace(/[,\s%]/g,'');
-    const n = parseFloat(s);
-    return isNaN(n) ? null : n;
-  }
+  /* ========================================================
+     UTILS
+     ======================================================== */
   function fmtNum(v) {
     if(v === null || v === undefined || v === '—') return '—';
-    if(typeof v !== 'number') v = parseInt(v);
+    if(typeof v !== 'number') v = parseFloat(v);
     if(isNaN(v)) return '—';
     if(Math.abs(v) >= 100000000) return (v/100000000).toFixed(1) + '억';
     if(Math.abs(v) >= 10000) return Math.round(v).toLocaleString('ko-KR');
@@ -973,6 +1047,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  /* ========================================================
+     INIT: Auto-run on page load
+     ======================================================== */
+  runAutoCheck();
+  loadValidationHistory();
 
 })();
 </script>

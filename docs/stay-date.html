@@ -101,6 +101,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
+@media(max-width:480px){.mobile-sheet-tab{padding:8px 10px;font-size:10px;letter-spacing:0.03em}.mobile-sheet-tabs{-webkit-mask-image:linear-gradient(to right,#000 90%,transparent 100%);mask-image:linear-gradient(to right,#000 90%,transparent 100%);}}
 .prop-chips .chip{font-size:9px;padding:3px 7px;}
 </style>
 </head>
@@ -116,6 +117,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .gsn-item:hover{background:#1a2232;color:#c9d1d9}
 .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
 @media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
 </style>
 <nav class="gsn">
   <div class="gsn-wrap">
@@ -286,7 +289,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="chart-card">
       <div class="chart-card-header">
-        <span class="chart-card-title" id="insight-yoy-title">일별 YoY% 변화 (전년 대비)</span>
+        <span class="chart-card-title" id="insight-yoy-title">일별 YoY% 변화 (동기간 대비)</span>
         <div class="chart-legend">
           <div class="chart-legend-item"><div class="legend-dot" style="background:var(--positive);"></div>증가</div>
           <div class="chart-legend-item"><div class="legend-dot" style="background:var(--negative);"></div>감소</div>
@@ -322,22 +325,22 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th style="font-size:10px;">매출</th>
               <th style="font-size:10px;">객실(LY)</th>
               <th style="font-size:10px;">매출(LY)</th>
-              <th style="font-size:10px;">YoY%</th>
+              <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
               <th style="font-size:10px;">객실(LY)</th>
               <th style="font-size:10px;">매출(LY)</th>
-              <th style="font-size:10px;">YoY%</th>
+              <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
               <th style="font-size:10px;">객실(LY)</th>
               <th style="font-size:10px;">매출(LY)</th>
-              <th style="font-size:10px;">YoY%</th>
+              <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
               <th style="font-size:10px;">객실(LY)</th>
               <th style="font-size:10px;">매출(LY)</th>
-              <th style="font-size:10px;">YoY%</th>
+              <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">%</th>
               <th style="font-size:10px;">%</th>
             </tr>
@@ -818,7 +821,7 @@ function renderInsightCharts() {
   if (insightYoyChart) insightYoyChart.destroy();
   const ctx3 = document.getElementById('insight-yoy-chart');
   if (ctx3) {
-    setText('insight-yoy-title', mn + '월 일별 YoY% (전년 대비 객실)');
+    setText('insight-yoy-title', mn + '월 일별 YoY% (동기간 대비 객실)');
     const yoyData = days.map((d, i) => {
       if (lyRn[i] === 0) return null;
       return ((tyRn[i] / lyRn[i]) - 1) * 100;
