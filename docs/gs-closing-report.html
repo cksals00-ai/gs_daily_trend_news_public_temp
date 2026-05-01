@@ -107,7 +107,6 @@ body {
 .kpi-card.kpi-rn::before { background: linear-gradient(90deg, var(--gold), transparent); }
 .kpi-card.kpi-rev::before { background: linear-gradient(90deg, var(--info), transparent); }
 .kpi-card.kpi-adr::before { background: linear-gradient(90deg, var(--positive), transparent); }
-.kpi-card.kpi-occ::before { background: linear-gradient(90deg, var(--warning), transparent); }
 .kpi-label { font-size: 11px; color: var(--ink-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
 .kpi-value { font-size: 26px; font-weight: 900; font-family: var(--mono); color: var(--ink); line-height: 1.1; }
 .kpi-sub { font-size: 12px; color: var(--ink-muted); margin-top: 6px; font-family: var(--mono); border-top: 1px dashed var(--rule); padding-top: 6px; }
@@ -418,14 +417,6 @@ function renderKPI(summary, id, cumulSummary) {
       <div class="kpi-prev">전년 ${fmt.won(summary.adr_last)} | 목표 ${fmt.won(summary.adr_budget)}</div>
       ${cumulBlock('ADR', fmt.won(cumulSummary?.adr_actual))}
     </div>
-    <div class="kpi-card kpi-occ">
-      <div class="kpi-label">목표 달성률 (RN)</div>
-      <div class="kpi-value" style="color:${summary.rns_achievement >= 100 ? 'var(--positive)' : 'var(--gold-bright)'}">${summary.rns_achievement ? summary.rns_achievement.toFixed(1) + '%' : '—'}</div>
-      <div class="kpi-keywords">
-        <span class="kpi-tag tag-neutral">목표 기준</span>
-      </div>
-      ${cumulBlock('달성률', (cumulSummary?.rns_achievement?.toFixed(1)||'—') + '%')}
-    </div>
   `;
 }
 
@@ -564,16 +555,11 @@ function renderPropertyTable(props, containerId, showToggle = true) {
    ══════════════════════════════════════ */
 function renderChannelTable(months, containerId) {
   const segMap = combineSegments(months);
-  const primary = SEGMENTS.map(seg => ({ name: seg, ...(segMap[seg] || {}) }));
-  const others = Object.keys(segMap)
-    .filter(k => !SEGMENTS.includes(k))
-    .map(k => ({ name: k, ...segMap[k] }))
-    .sort((a, b) => (b.rns_actual||0) - (a.rns_actual||0));
-  const all = [...primary, ...others];
+  const rows = SEGMENTS.map(seg => ({ name: seg, ...(segMap[seg] || {}) }));
 
   let html = `<table class="full-table"><thead>
     <tr>
-      <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">채널</th>
+      <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">세그먼트</th>
       <th class="group-header" colspan="5">ROOM NIGHTS</th>
       <th class="group-header" colspan="4">ADR</th>
       <th class="group-header" colspan="5">REVENUE</th>
@@ -585,15 +571,12 @@ function renderChannelTable(months, containerId) {
     </tr>
   </thead><tbody>`;
 
-  all.forEach((s, i) => {
-    const isPrimary = SEGMENTS.includes(s.name);
-    const hide = (!isPrimary && i >= SEGMENTS.length + 10) ? ' style="display:none" data-extra-ch' : '';
-    const nameStyle = isPrimary ? 'font-weight:800;color:var(--gold-bright)' : '';
+  rows.forEach(s => {
     const rnsYoyColor = s.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
     const adrYoyColor = s.adr_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
     const revYoyColor = s.rev_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
-    html += `<tr${hide}>
-      <td style="${nameStyle}">${s.name}</td>
+    html += `<tr>
+      <td style="font-weight:800;color:var(--gold-bright)">${s.name}</td>
       <td>${fmt.n(s.rns_budget)}</td>
       <td style="font-weight:700">${fmt.n(s.rns_actual)}</td>
       <td>${s.rns_ach ? s.rns_ach.toFixed(1) + '%' : '—'}</td>
@@ -612,21 +595,7 @@ function renderChannelTable(months, containerId) {
   });
   html += '</tbody></table>';
 
-  const container = document.getElementById(containerId);
-  container.innerHTML = html;
-
-  const extraRows = container.querySelectorAll('tr[data-extra-ch]');
-  if (extraRows.length > 0) {
-    const btn = document.createElement('button');
-    btn.className = 'toggle-more';
-    btn.textContent = `더보기 (${extraRows.length}개 채널)`;
-    btn.onclick = () => {
-      const show = extraRows[0]?.style.display === 'none';
-      extraRows.forEach(r => r.style.display = show ? '' : 'none');
-      btn.textContent = show ? '접기' : `더보기 (${extraRows.length}개 채널)`;
-    };
-    container.appendChild(btn);
-  }
+  document.getElementById(containerId).innerHTML = html;
 }
 
 /* ══════════════════════════════════════
@@ -966,15 +935,18 @@ function buildTabHTML(tabId, months, label, showCumul) {
           </div>
         </div>
 
-        <!-- 3-2 채널별 -->
+        <!-- 3-2 세그먼트별 -->
         <div class="card">
-          <div class="card-header"><h3>3-2. 채널별 실적 (OTA · G-OTA · Inbound 중심)</h3></div>
+          <div class="card-header"><h3>3-2. 세그먼트별 실적 (OTA · G-OTA · Inbound)</h3></div>
           <div class="card-body">
             <div class="insight-box" style="margin-bottom:12px" id="insight-chan-wrap-${uid}">
-              <h3>채널 인사이트</h3>
+              <h3>세그먼트 인사이트</h3>
               <ul id="insight-chan-${uid}"></ul>
             </div>
             <div class="table-wrap" id="chan-${uid}"></div>
+            <div style="margin-top:12px;text-align:right">
+              <a href="channel.html" style="font-size:12px;color:var(--info);text-decoration:none;border:1px solid rgba(96,165,250,0.25);padding:6px 14px;border-radius:6px;font-weight:600;transition:all .2s" onmouseover="this.style.background='rgba(96,165,250,0.08)'" onmouseout="this.style.background='none'">거래처별 상세 → 채널 분석 리포트</a>
+            </div>
           </div>
         </div>
 
