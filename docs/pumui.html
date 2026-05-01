@@ -211,62 +211,8 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
           <tr><th>상품 비고</th><td><input type="text" id="f-product-note" placeholder="예: 기준인원(3,4인), 셀러특전 등"></td></tr>
         </table>
 
-        <!-- 요금안 (엑셀 업로드 시 표시) -->
-        <div id="pricing-section" style="display:none;">
-
-        <!-- 객실가 -->
-        <div style="margin-top:16px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원]</span>
-          </div>
-          <table class="sub-table" id="room-price-table">
-            <thead>
-              <tr><th rowspan="2" style="width:80px;">객 실</th><th colspan="2">회원(무기명)</th><th colspan="2">FIT</th></tr>
-              <tr><th>정상기</th><th>비수기</th><th>정상기</th><th>비수기</th></tr>
-            </thead>
-            <tbody>
-              <tr><th>정상가</th><td id="f-room-mem-peak">—</td><td id="f-room-mem-off">—</td><td id="f-room-fit-peak">—</td><td id="f-room-fit-off">—</td></tr>
-              <tr><th>배분가</th><td id="f-room-mem-peak-dist">—</td><td id="f-room-mem-off-dist">—</td><td id="f-room-fit-peak-dist">—</td><td id="f-room-fit-off-dist">—</td></tr>
-              <tr><th>할인율</th><td id="f-room-disc-mem-peak">—</td><td id="f-room-disc-mem-off">—</td><td id="f-room-disc-fit-peak">—</td><td id="f-room-disc-fit-off">—</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 식음/부대 -->
-        <div style="margin-top:16px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">식음/부대 [단위:천원]</span>
-          </div>
-          <table class="sub-table" id="fb-price-table">
-            <thead>
-              <tr><th style="width:80px;">구 분</th><th>조식</th><th>석식</th><th>오션(요트)</th><th>레전드</th><th>비고</th></tr>
-            </thead>
-            <tbody>
-              <tr><th>정상가</th><td id="f-fb-bk-peak">—</td><td id="f-fb-dn-peak">—</td><td id="f-fb-ocean-peak">—</td><td id="f-fb-legend-peak">—</td><td id="f-fb-note" rowspan="3">—</td></tr>
-              <tr><th>배분가</th><td id="f-fb-bk-off">—</td><td id="f-fb-dn-off">—</td><td id="f-fb-ocean-off">—</td><td id="f-fb-legend-off">—</td></tr>
-              <tr><th>할인율</th><td id="f-fb-disc-bk">—</td><td id="f-fb-disc-dn">—</td><td id="f-fb-disc-ocean">—</td><td id="f-fb-disc-legend">—</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 판매가 -->
-        <div style="margin-top:16px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">판매가 [단위:천원 / 구성 3인기준]</span>
-          </div>
-          <table class="sub-table" id="sell-price-table">
-            <thead>
-              <tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr>
-            </thead>
-            <tbody>
-              <tr><th>정상기</th><td id="f-sell-mem-peak">—</td><td id="f-sell-fit-peak">—</td></tr>
-              <tr><th>배분기</th><td id="f-sell-mem-off">—</td><td id="f-sell-fit-off">—</td></tr>
-              <tr><th>할인율</th><td id="f-sell-disc-mem">—</td><td id="f-sell-disc-fit">—</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        </div><!-- /pricing-section -->
+        <!-- 요금안 (엑셀 업로드 시 동적 생성) -->
+        <div id="pricing-section" style="display:none;"></div>
       </div>
 
       <div class="form-msg" id="form-msg"></div>
@@ -724,22 +670,6 @@ function getFormData(){
     property:g('f-property'), channel:g('f-channel'),
     salePeriod:g('f-sale-period'), stayPeriod:g('f-stay-period'),
     product:g('f-product'), productNote:g('f-product-note'),
-    roomMemPeak:g('f-room-mem-peak'), roomMemOff:g('f-room-mem-off'),
-    roomFitPeak:g('f-room-fit-peak'), roomFitOff:g('f-room-fit-off'),
-    roomMemPeakDist:g('f-room-mem-peak-dist'), roomMemOffDist:g('f-room-mem-off-dist'),
-    roomFitPeakDist:g('f-room-fit-peak-dist'), roomFitOffDist:g('f-room-fit-off-dist'),
-    roomDiscMemPeak:g('f-room-disc-mem-peak'), roomDiscMemOff:g('f-room-disc-mem-off'),
-    roomDiscFitPeak:g('f-room-disc-fit-peak'), roomDiscFitOff:g('f-room-disc-fit-off'),
-    fbBkPeak:g('f-fb-bk-peak'), fbDnPeak:g('f-fb-dn-peak'),
-    fbOceanPeak:g('f-fb-ocean-peak'), fbLegendPeak:g('f-fb-legend-peak'),
-    fbBkOff:g('f-fb-bk-off'), fbDnOff:g('f-fb-dn-off'),
-    fbOceanOff:g('f-fb-ocean-off'), fbLegendOff:g('f-fb-legend-off'),
-    fbDiscBk:g('f-fb-disc-bk'), fbDiscDn:g('f-fb-disc-dn'),
-    fbDiscOcean:g('f-fb-disc-ocean'), fbDiscLegend:g('f-fb-disc-legend'),
-    fbNote:g('f-fb-note'),
-    sellMemPeak:g('f-sell-mem-peak'), sellFitPeak:g('f-sell-fit-peak'),
-    sellMemOff:g('f-sell-mem-off'), sellFitOff:g('f-sell-fit-off'),
-    sellDiscMem:g('f-sell-disc-mem'), sellDiscFit:g('f-sell-disc-fit'),
     submittedAt:new Date().toISOString()
   };
 }
@@ -782,6 +712,7 @@ async function submitToSheet(){
 
 /* ─── 요금안 엑셀 업로드 & 파싱 ─── */
 let uploadedYokumData = null;
+let uploadedYokumRendered = null;
 
 function handleXlsxUpload(e){
   const file = e.target.files[0];
@@ -803,7 +734,7 @@ function handleXlsxUpload(e){
 }
 
 function parseYokumXlsx(wb){
-  const result = {갑지:null, 상품:[], facility:null, facDist:null};
+  const result = {갑지:null, 상품:[], facility:null, facDist:null, commission:null, kpi:null};
 
   // 갑지 시트 파싱
   const gapjiName = wb.SheetNames.find(s=>s.trim().startsWith('갑지') && !s.includes('기존') && !s.includes('목표'));
@@ -813,7 +744,7 @@ function parseYokumXlsx(wb){
     const info = {};
     rows.forEach(r=>{
       const label = String(r[1]||'').trim();
-      const val = String(r[3]||'').trim();
+      const val = String(r[3]||r[2]||'').trim();
       if(label==='판매채널') info.channel=val;
       if(label==='판매기간') info.salePeriod=val;
       if(label==='투숙기간') info.stayPeriod=val;
@@ -827,7 +758,6 @@ function parseYokumXlsx(wb){
       if(String(r[1]||'').includes('부대시설 요금')) facSection=true;
       if(!facSection) return;
       const lbl = String(r[1]||'').trim();
-      // "기 준" 대인2+소인1 행에서 3인 합산 정상가 추출
       if(lbl==='기 준' && String(r[2]||'').includes('소인1')){
         if(typeof r[4]==='number') fac.조식=r[4];
         if(typeof r[6]==='number') fac.석식=r[6];
@@ -835,111 +765,194 @@ function parseYokumXlsx(wb){
         if(typeof r[10]==='number') fac.레전드=r[10];
       }
     });
+    // 수수료, KPI 추출
+    rows.forEach(r=>{
+      for(let c=0; c<Math.min(r.length,6); c++){
+        const lbl = String(r[c]||'').trim();
+        if(lbl.includes('수수료') && !result.commission){
+          const v = String(r[c+1]||r[c+2]||'').trim();
+          if(v) result.commission = v;
+        }
+        if((lbl.includes('KPI')||lbl.includes('kpi')) && !result.kpi){
+          const v = String(r[c+1]||r[c+2]||'').trim();
+          if(v) result.kpi = v;
+        }
+      }
+    });
     result.갑지 = info;
     result.facility = fac;
   }
 
-  // 상품① ② ③ 시트 파싱
-  wb.SheetNames.filter(s=>/^상품[①②③]$/.test(s.trim())).forEach(sn=>{
+  // 상품 시트 탐색: 갑지, 패키지번호요청 제외한 모든 시트를 후보로
+  const excludePatterns = ['갑지','패키지번호','패키지 번호'];
+  const productSheetNames = wb.SheetNames.filter(s=>{
+    const t = s.trim();
+    if(/^상품[①②③④⑤⑥⑦⑧⑨⑩]$/.test(t)) return true;
+    if(excludePatterns.some(ex=>t.includes(ex))) return false;
+    return true;
+  });
+
+  productSheetNames.forEach(sn=>{
     const ws = wb.Sheets[sn];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
     const product = {name:sn, items:[]};
     const n = v => { const x=Number(v); return (v!=null&&v!==''&&!isNaN(x)&&x>1000)?x:null; };
+    const pct = v => { const x=Number(v); return (v!=null&&v!==''&&!isNaN(x))?x:null; };
 
-    // 동적 컬럼 탐색: 배분가 객실, 판매가 3인
-    const hdr18 = rows[17]||[];
-    const hdr19 = rows[18]||[];
-    // 배분가 객실: "객 실" in R19 after col 20
+    // 헤더 패턴 탐색: Row 16~25 범위에서 "정상가" 포함 행 찾기
+    let headerRowIdx = -1;
+    for(let ri=14; ri<Math.min(28, rows.length); ri++){
+      const r = rows[ri]||[];
+      if(r.some(c=>String(c||'').includes('정상가'))){
+        headerRowIdx = ri;
+        break;
+      }
+    }
+    if(headerRowIdx<0){
+      console.log('[요금안파서] '+sn+': 헤더 패턴 미발견, skip');
+      return;
+    }
+
+    const hdr18 = rows[headerRowIdx]||[];
+    const hdr19 = rows[headerRowIdx+1]||[];
+    const hdr20 = rows[headerRowIdx+2]||[];
+
+    // 정상가 객실 컬럼: hdr18에서 "정상가", hdr19에서 "객실", hdr20에서 "기명"
+    let regCol = -1;
+    for(let c=5; c<hdr18.length; c++){
+      if(String(hdr18[c]||'').includes('정상가')){
+        for(let j=c; j<c+5&&j<hdr19.length; j++){
+          if(String(hdr19[j]||'').replace(/\s/g,'').includes('객실')){
+            for(let k=j; k<j+5&&k<hdr20.length; k++){
+              if(String(hdr20[k]||'').includes('기명')&&!String(hdr20[k]||'').includes('무기명')){
+                regCol=k; break;
+              }
+            }
+            if(regCol>0) break;
+          }
+        }
+        if(regCol>0) break;
+      }
+    }
+    if(regCol<0) regCol = 6;
+
+    // 배분가 컬럼 탐색
     let distCol = -1;
-    for(let c=20; c<hdr19.length; c++){
-      if(String(hdr19[c]||'').includes('객 실')||String(hdr19[c]||'').includes('객실')){
-        // 다음 3칸: 기명, 무기명?, FIT? — 실제 "기명" 위치 찾기
-        const h20 = rows[19]||[];
-        for(let j=c; j<c+5; j++){
-          if(String(h20[j]||'').includes('기명')){distCol=j; break;}
+    for(let c=10; c<hdr18.length; c++){
+      if(String(hdr18[c]||'').includes('배분가')){
+        for(let j=c; j<c+6&&j<hdr20.length; j++){
+          if(String(hdr20[j]||'').includes('기명')&&!String(hdr20[j]||'').includes('무기명')){distCol=j; break;}
         }
-        break;
+        if(distCol>0) break;
       }
     }
-    // 판매가 3인: "3인" in R18
+    if(distCol<0){
+      for(let c=14; c<hdr19.length; c++){
+        if(String(hdr19[c]||'').replace(/\s/g,'').includes('객실')){
+          const above = String(hdr18[c]||'').trim();
+          if(above===''||above.includes('배분')){
+            for(let j=c; j<c+5&&j<hdr20.length; j++){
+              if(String(hdr20[j]||'').includes('기명')&&!String(hdr20[j]||'').includes('무기명')){distCol=j; break;}
+            }
+            if(distCol>0) break;
+          }
+        }
+      }
+    }
+
+    // 판매가 3인 컬럼
     let sellCol = -1;
-    for(let c=30; c<hdr18.length; c++){
+    for(let c=25; c<hdr18.length; c++){
       if(String(hdr18[c]||'').includes('3인')||String(hdr18[c]||'').includes('소인1')){
-        const h20 = rows[19]||[];
-        for(let j=c; j<c+5; j++){
-          if(String(h20[j]||'').includes('기명')){sellCol=j; break;}
+        for(let j=c; j<c+5&&j<hdr20.length; j++){
+          if(String(hdr20[j]||'').includes('기명')){sellCol=j; break;}
         }
         break;
       }
     }
 
-    for(let i=20; i<rows.length; i++){
+    // 시즌 컬럼
+    let seasonCol = -1;
+    for(let c=0; c<10; c++){
+      const h = String(hdr18[c]||hdr20[c]||'').trim();
+      if(h.includes('시즌')){seasonCol=c; break;}
+    }
+    if(seasonCol<0) seasonCol = 5;
+
+    // 데이터 행 파싱
+    const dataStartRow = headerRowIdx + 3;
+    for(let i=dataStartRow; i<rows.length; i++){
       const r = rows[i];
       if(!r || r.length<10) continue;
-      const season = String(r[6]||'').trim();
+      const season = String(r[seasonCol]||'').trim();
       if(!season) continue;
       const item = {
         season,
-        regular: {named:n(r[7]), unnamed:n(r[8]), fit:n(r[9])},
+        regular: {named:n(r[regCol]), unnamed:n(r[regCol+1]), fit:n(r[regCol+2])},
         distributed: distCol>0 ? {named:n(r[distCol]), unnamed:n(r[distCol+2]), fit:n(r[distCol+4])} : {named:null,unnamed:null,fit:null},
+        distDiscount: distCol>0 ? {named:pct(r[distCol+1]), unnamed:pct(r[distCol+3]), fit:pct(r[distCol+5])} : {named:null,unnamed:null,fit:null},
         selling3: sellCol>0 ? {named:n(r[sellCol]), unnamed:n(r[sellCol+1]), fit:n(r[sellCol+2])} : {named:null,unnamed:null,fit:null},
       };
-      if(item.regular.named!=null) product.items.push(item);
+      if(item.regular.named!=null || item.regular.unnamed!=null) product.items.push(item);
     }
-    console.log('[요금안파서]', sn, 'distCol='+distCol, 'sellCol='+sellCol, 'items='+product.items.length);
-    if(product.items.length>0) console.log('[요금안파서] 첫 아이템:', JSON.stringify(product.items[0]));
-    result.상품.push(product);
+    console.log('[요금안파서]', sn, 'headerRow='+(headerRowIdx+1), 'regCol='+regCol, 'distCol='+distCol, 'sellCol='+sellCol, 'items='+product.items.length);
+    if(product.items.length>0){
+      console.log('[요금안파서] 첫 아이템:', JSON.stringify(product.items[0]));
+      result.상품.push(product);
+    }
   });
 
-  // 부대시설 배분가 추출 (상품③ 우선, 3인 기준 = "성인2+소인1")
-  const fullSheet = wb.SheetNames.find(s=>s.trim()==='상품③') || wb.SheetNames.find(s=>s.trim()==='상품②');
-  if(fullSheet){
-    const ws = wb.Sheets[fullSheet];
+  // 부대시설 배분가 추출 — 모든 상품 시트 탐색, 첫 발견 사용
+  const facDist = {조식:null,석식:null,오션:null,레전드:null};
+  const facSheetOrder = ['상품③','상품②','상품①', ...productSheetNames];
+  const facSheetUniq = [...new Set(facSheetOrder)].filter(s=>wb.SheetNames.includes(s));
+  for(const sn of facSheetUniq){
+    const ws = wb.Sheets[sn];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-    const hdr19 = rows[18]||[]; // R19 (0-based 18): "부대시설(성인2+소인1)" 위치
-    const hdr20 = rows[19]||[]; // R20: 조식, 석식, 오션, 레전드
-    const r = rows[20]||[];
-    const fd = {조식:null,석식:null,오션:null,레전드:null};
-    // "부대시설(성인2+소인1)" 3인기준 배분가 섹션 찾기
-    let secStart = -1;
-    for(let c=24; c<hdr19.length; c++){
-      if(String(hdr19[c]||'').includes('소인1')){secStart=c; break;}
+    let hdrIdx = -1;
+    for(let ri=14; ri<Math.min(28,rows.length); ri++){
+      if(rows[ri]&&rows[ri].some(c=>String(c||'').includes('정상가'))){hdrIdx=ri; break;}
     }
-    if(secStart>0){
-      for(let c=secStart; c<secStart+10&&c<hdr20.length; c++){
-        const h = String(hdr20[c]||'').trim();
-        const val = Number(r[c]);
-        if(isNaN(val)||val<=0) continue;
-        if(val>5000 && val<500000){
-          if(h.includes('조식')&&!fd.조식) fd.조식=val;
-          else if(h.includes('석식')&&!fd.석식) fd.석식=val;
-          else if((h.includes('오션')||h.includes('요트'))&&!fd.오션) fd.오션=val;
-          else if(h.includes('레전드')&&!fd.레전드) fd.레전드=val;
-        }
+    if(hdrIdx<0) continue;
+    const hdr19 = rows[hdrIdx+1]||[];
+    const hdr20 = rows[hdrIdx+2]||[];
+    const dataRow = rows[hdrIdx+3]||[];
+    let secStart = -1;
+    for(let c=20; c<hdr19.length; c++){
+      const h = String(hdr19[c]||'').trim();
+      if((h.includes('부대시설')&&h.includes('소인1'))||h.includes('소인1')){secStart=c; break;}
+    }
+    if(secStart<0) continue;
+    for(let c=secStart; c<secStart+12&&c<hdr20.length; c++){
+      const h = String(hdr20[c]||'').trim();
+      const val = Number(dataRow[c]);
+      if(isNaN(val)||val<=0) continue;
+      if(val>3000 && val<500000){
+        if(h.includes('조식')&&!facDist.조식) facDist.조식=val;
+        else if(h.includes('석식')&&!facDist.석식) facDist.석식=val;
+        else if((h.includes('오션')||h.includes('요트'))&&!facDist.오션) facDist.오션=val;
+        else if(h.includes('레전드')&&!facDist.레전드) facDist.레전드=val;
       }
     }
-    result.facDist = fd;
+    if(Object.values(facDist).some(v=>v!=null)) break;
   }
+  result.facDist = facDist;
 
   return result;
 }
 
 function renderYokumPreview(data, filename){
   const preview = document.getElementById('xlsx-preview');
+  const pricingSection = document.getElementById('pricing-section');
   if(!data || !data.상품.length){
     preview.innerHTML='<div style="color:var(--ink-faint);font-size:12px;">파싱된 요금 데이터가 없습니다.</div>';
+    pricingSection.style.display='none';
     return;
   }
 
-  // 모든 상품 시트의 아이템을 합쳐서 min/max 계산
+  // 모든 상품 시트의 아이템 합치기 — 전시즌 range
   const allItems = data.상품.flatMap(p=>p.items);
   console.log('[요금안렌더] allItems='+allItems.length, 'seasons:', [...new Set(allItems.map(i=>i.season))]);
-  const peakSeasons = ['토요일','골드'];
-  const offSeasons = ['주중'];
-  const peak = allItems.filter(it=>peakSeasons.includes(it.season));
-  const off = allItems.filter(it=>offSeasons.includes(it.season));
-  console.log('[요금안렌더] peak='+peak.length, 'off='+off.length);
-  if(peak.length>0) console.log('[요금안렌더] peak[0] unnamed:', peak[0].regular.unnamed, 'dist:', peak[0].distributed.unnamed, 'sell:', peak[0].selling3.unnamed);
 
   const minMax = (arr, fn) => {
     const nums = arr.map(fn).filter(v=>v!=null&&!isNaN(v)&&v>0);
@@ -953,92 +966,184 @@ function renderYokumPreview(data, filename){
     const a=fmtK(mm.min), b=fmtK(mm.max);
     return a===b ? a : `${a}~${b}`;
   };
-  const discRange = (regMM, distMM) => {
-    if(!regMM||!distMM) return '—';
-    const d1 = Math.round((1-distMM.min/regMM.max)*100);
-    const d2 = Math.round((1-distMM.max/regMM.min)*100);
-    const lo=Math.min(d1,d2), hi=Math.max(d1,d2);
-    return lo===hi ? `${lo}%` : `${lo}%~${hi}%`;
+  // 아이템별 할인율 계산 후 min~max
+  const discRangeFromItems = (arr, regFn, distFn) => {
+    const rates = arr.map(it=>{
+      const reg = regFn(it), dist = distFn(it);
+      if(!reg||!dist||reg<=0) return null;
+      return Math.round((1-dist/reg)*100);
+    }).filter(v=>v!=null);
+    if(!rates.length) return '—';
+    const lo=Math.min(...rates), hi=Math.max(...rates);
+    if(lo===hi) return `${lo}%`;
+    return `${hi}%~${lo}%`;
   };
 
-  // 객실 정상가/배분가
-  const room = {
-    mem_peak: minMax(peak, i=>i.regular.unnamed),
-    mem_off: minMax(off, i=>i.regular.unnamed),
-    fit_peak: minMax(peak, i=>i.regular.fit),
-    fit_off: minMax(off, i=>i.regular.fit),
-    mem_peak_d: minMax(peak, i=>i.distributed.unnamed),
-    mem_off_d: minMax(off, i=>i.distributed.unnamed),
-    fit_peak_d: minMax(peak, i=>i.distributed.fit),
-    fit_off_d: minMax(off, i=>i.distributed.fit),
-  };
+  // ── 객실 전체 시즌 range ──
+  const roomRegUnnamed = minMax(allItems, i=>i.regular.unnamed);
+  const roomRegFit = minMax(allItems, i=>i.regular.fit);
+  const roomDistUnnamed = minMax(allItems, i=>i.distributed.unnamed);
+  const roomDistFit = minMax(allItems, i=>i.distributed.fit);
+  const roomDiscUnnamed = discRangeFromItems(allItems, i=>i.regular.unnamed, i=>i.distributed.unnamed);
+  const roomDiscFit = discRangeFromItems(allItems, i=>i.regular.fit, i=>i.distributed.fit);
+
+  // ── 배분적부가기준비율: (배분가/정상가)*100 min~max ──
+  const ratios = allItems.map(it=>{
+    const reg = it.regular.unnamed, dist = it.distributed.unnamed;
+    if(!reg||!dist||reg<=0) return null;
+    return Math.round(dist/reg*100);
+  }).filter(v=>v!=null);
+  const ratioMin = ratios.length ? Math.min(...ratios) : null;
+  const ratioMax = ratios.length ? Math.max(...ratios) : null;
+  const ratioStr = ratioMin!=null ? (ratioMin===ratioMax ? `${ratioMin}` : `${ratioMin}~${ratioMax}`) : '—';
+
+  // ── 부대시설 ──
+  const fac = data.facility || {};
+  const facD = data.facDist || {};
+  const facTotal = (fac.조식||0)+(fac.석식||0)+(fac.오션||0)+(fac.레전드||0);
+  const facDistTotal = (facD.조식||0)+(facD.석식||0)+(facD.오션||0)+(facD.레전드||0);
+  const facNote = data.갑지?.people || '구성3인기준';
+  const facDisc = (reg,dist) => (reg&&dist&&reg>0) ? Math.round((1-dist/reg)*100)+'%' : '—';
+
+  // ── 패키지 합산 (객실+부대) ──
+  const pkgRegUnnamed = minMax(allItems, i=>i.regular.unnamed ? i.regular.unnamed+facTotal : null);
+  const pkgRegFit = minMax(allItems, i=>i.regular.fit ? i.regular.fit+facTotal : null);
+  const pkgDistUnnamed = minMax(allItems, i=>i.distributed.unnamed ? i.distributed.unnamed+facDistTotal : null);
+  const pkgDistFit = minMax(allItems, i=>i.distributed.fit ? i.distributed.fit+facDistTotal : null);
+  const pkgDiscUnnamed = discRangeFromItems(allItems,
+    i=>i.regular.unnamed ? i.regular.unnamed+facTotal : null,
+    i=>i.distributed.unnamed ? i.distributed.unnamed+facDistTotal : null);
+  const pkgDiscFit = discRangeFromItems(allItems,
+    i=>i.regular.fit ? i.regular.fit+facTotal : null,
+    i=>i.distributed.fit ? i.distributed.fit+facDistTotal : null);
+
+  // ── 판매가 ──
+  const sellUnnamed = minMax(allItems, i=>i.selling3?.unnamed);
+  const sellFit = minMax(allItems, i=>i.selling3?.fit);
+  const sellDiscUnnamed = discRangeFromItems(allItems, i=>i.regular.unnamed, i=>i.selling3?.unnamed);
+  const sellDiscFit = discRangeFromItems(allItems, i=>i.regular.fit, i=>i.selling3?.fit);
+
+  // 수수료 / KPI
+  const commission = data.commission || '';
+  const kpi = data.kpi || '';
+
+  // ── HTML 생성 ──
+  let html = '';
+
+  // 객실
+  html += `
+  <div style="margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gold-bright);font-weight:700;">객실</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원]</span>
+    </div>
+    <table class="sub-table">
+      <thead><tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr></thead>
+      <tbody>
+        <tr><th>정상가</th><td>${rangeK(roomRegUnnamed)}</td><td>${rangeK(roomRegFit)}</td></tr>
+        <tr><th>배분가</th><td>${rangeK(roomDistUnnamed)}</td><td>${rangeK(roomDistFit)}</td></tr>
+        <tr><th>할인율</th><td>${roomDiscUnnamed}</td><td>${roomDiscFit}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  // 배분적부가기준비율
+  html += `
+  <div style="margin-top:12px;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:4px;display:flex;align-items:center;gap:8px;">
+    <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;">배분적부가기준비율</span>
+    <span style="font-family:var(--mono);font-size:13px;color:var(--gold-bright);font-weight:800;">${ratioStr}</span>
+  </div>`;
+
+  // 식음/액티
+  html += `
+  <div style="margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gold-bright);font-weight:700;">식음/액티</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원]</span>
+    </div>
+    <table class="sub-table">
+      <thead><tr><th style="width:80px;">구 분</th><th>조식</th><th>오션</th><th>석식</th><th>레전드</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><th>정상가</th><td>${fac.조식?fmtK(fac.조식):'—'}</td><td>${fac.오션?fmtK(fac.오션):'—'}</td><td>${fac.석식?fmtK(fac.석식):'—'}</td><td>${fac.레전드?fmtK(fac.레전드):'—'}</td><td rowspan="3">${facNote}</td></tr>
+        <tr><th>배분가</th><td>${facD.조식?fmtK(facD.조식):'—'}</td><td>${facD.오션?fmtK(facD.오션):'—'}</td><td>${facD.석식?fmtK(facD.석식):'—'}</td><td>${facD.레전드?fmtK(facD.레전드):'—'}</td></tr>
+        <tr><th>할인율</th><td>${facDisc(fac.조식,facD.조식)}</td><td>${facDisc(fac.오션,facD.오션)}</td><td>${facDisc(fac.석식,facD.석식)}</td><td>${facDisc(fac.레전드,facD.레전드)}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  // 패키지 합산
+  html += `
+  <div style="margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gold-bright);font-weight:700;">패키지 (객실+부대 합산)</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원]</span>
+    </div>
+    <table class="sub-table">
+      <thead><tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr></thead>
+      <tbody>
+        <tr><th>정상가</th><td>${rangeK(pkgRegUnnamed)}</td><td>${rangeK(pkgRegFit)}</td></tr>
+        <tr><th>배분가</th><td>${rangeK(pkgDistUnnamed)}</td><td>${rangeK(pkgDistFit)}</td></tr>
+        <tr><th>할인율</th><td>${pkgDiscUnnamed}</td><td>${pkgDiscFit}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
 
   // 판매가
-  const sell = {
-    mem_peak: minMax(peak, i=>i.selling3.unnamed),
-    mem_off: minMax(off, i=>i.selling3.unnamed),
-    fit_peak: minMax(peak, i=>i.selling3.fit),
-    fit_off: minMax(off, i=>i.selling3.fit),
-  };
+  html += `
+  <div style="margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gold-bright);font-weight:700;">판매가</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:0.08em;">[단위:천원 / 구성 3인기준]</span>
+    </div>
+    <table class="sub-table">
+      <thead><tr><th style="width:80px;">구 분</th><th>회원(무기명)</th><th>FIT</th></tr></thead>
+      <tbody>
+        <tr><th>정상가</th><td>${rangeK(sellUnnamed)}</td><td>${rangeK(sellFit)}</td></tr>
+        <tr><th>할인율</th><td>${sellDiscUnnamed}</td><td>${sellDiscFit}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
 
-  // 요금안 표시 (display-only cells)
-  document.getElementById('pricing-section').style.display='';
-  const setVal = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  setVal('f-room-mem-peak', rangeK(room.mem_peak));
-  setVal('f-room-mem-off', rangeK(room.mem_off));
-  setVal('f-room-fit-peak', rangeK(room.fit_peak));
-  setVal('f-room-fit-off', rangeK(room.fit_off));
-  setVal('f-room-mem-peak-dist', rangeK(room.mem_peak_d));
-  setVal('f-room-mem-off-dist', rangeK(room.mem_off_d));
-  setVal('f-room-fit-peak-dist', rangeK(room.fit_peak_d));
-  setVal('f-room-fit-off-dist', rangeK(room.fit_off_d));
-  setVal('f-room-disc-mem-peak', discRange(room.mem_peak, room.mem_peak_d));
-  setVal('f-room-disc-mem-off', discRange(room.mem_off, room.mem_off_d));
-  setVal('f-room-disc-fit-peak', discRange(room.fit_peak, room.fit_peak_d));
-  setVal('f-room-disc-fit-off', discRange(room.fit_off, room.fit_off_d));
-  // 판매가
-  setVal('f-sell-mem-peak', rangeK(sell.mem_peak));
-  setVal('f-sell-mem-off', rangeK(sell.mem_off));
-  setVal('f-sell-fit-peak', rangeK(sell.fit_peak));
-  setVal('f-sell-fit-off', rangeK(sell.fit_off));
-  setVal('f-sell-disc-mem', discRange(room.mem_peak, sell.mem_peak));
-  setVal('f-sell-disc-fit', discRange(room.fit_peak, sell.fit_peak));
-  // 부대시설 정상가 (갑지 기준 3인)
-  if(data.facility){
-    const f=data.facility;
-    setVal('f-fb-bk-peak', f.조식?fmtK(f.조식):'—');
-    setVal('f-fb-dn-peak', f.석식?fmtK(f.석식):'—');
-    setVal('f-fb-ocean-peak', f.오션?fmtK(f.오션):'—');
-    setVal('f-fb-legend-peak', f.레전드?fmtK(f.레전드):'—');
-    // 배분가/할인율: 상품③(가장 완전)에서 추출
-    const facDist = data.facDist;
-    if(facDist){
-      setVal('f-fb-bk-off', facDist.조식?fmtK(facDist.조식):'—');
-      setVal('f-fb-dn-off', facDist.석식?fmtK(facDist.석식):'—');
-      setVal('f-fb-ocean-off', facDist.오션?fmtK(facDist.오션):'—');
-      setVal('f-fb-legend-off', facDist.레전드?fmtK(facDist.레전드):'—');
-      // 할인율
-      if(f.조식&&facDist.조식) setVal('f-fb-disc-bk', Math.round((1-facDist.조식/f.조식)*100)+'%');
-      if(f.석식&&facDist.석식) setVal('f-fb-disc-dn', Math.round((1-facDist.석식/f.석식)*100)+'%');
-      if(f.오션&&facDist.오션) setVal('f-fb-disc-ocean', Math.round((1-facDist.오션/f.오션)*100)+'%');
-      if(f.레전드&&facDist.레전드) setVal('f-fb-disc-legend', Math.round((1-facDist.레전드/f.레전드)*100)+'%');
-    }
-    setVal('f-fb-note', data.갑지?.people||'3인기준');
+  // 수수료 / KPI
+  if(commission || kpi){
+    html += `
+    <div style="margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-family:var(--mono);font-size:12px;color:var(--gold-bright);font-weight:700;">수수료 / KPI</span>
+      </div>
+      <div style="display:flex;gap:24px;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:12px;">
+        ${commission?`<div><span style="color:var(--ink-muted);">수수료:</span> <span style="color:var(--ink);font-weight:700;">${commission}</span></div>`:''}
+        ${kpi?`<div><span style="color:var(--ink-muted);">KPI:</span> <span style="color:var(--ink);font-weight:700;">${kpi}</span></div>`:''}
+      </div>
+    </div>`;
   }
-  // 갑지 정보
+
+  // 렌더링 데이터 저장 (Excel 다운로드용)
+  uploadedYokumRendered = {
+    room:{regUnnamed:roomRegUnnamed, regFit:roomRegFit, distUnnamed:roomDistUnnamed, distFit:roomDistFit, discUnnamed:roomDiscUnnamed, discFit:roomDiscFit},
+    ratio:ratioStr, fac, facD, facNote,
+    pkg:{regUnnamed:pkgRegUnnamed, regFit:pkgRegFit, distUnnamed:pkgDistUnnamed, distFit:pkgDistFit, discUnnamed:pkgDiscUnnamed, discFit:pkgDiscFit},
+    sell:{unnamed:sellUnnamed, fit:sellFit, discUnnamed:sellDiscUnnamed, discFit:sellDiscFit},
+    commission, kpi
+  };
+
+  pricingSection.innerHTML = html;
+  pricingSection.style.display = '';
+
+  // 갑지 정보 폼에 자동 입력
   if(data.갑지){
     const g=data.갑지;
-    setVal('f-channel', g.channel||'');
-    setVal('f-sale-period', g.salePeriod||'');
-    setVal('f-stay-period', g.stayPeriod||'');
-    setVal('f-product', g.product||'');
+    const setInput = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
+    setInput('f-channel', g.channel);
+    setInput('f-sale-period', g.salePeriod);
+    setInput('f-stay-period', g.stayPeriod);
+    setInput('f-product', g.product);
   }
 
-  // 요약 프리뷰 표시
+  // 프리뷰 요약
   preview.innerHTML = `<div style="padding:8px 12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;font-size:11px;color:var(--ink-muted);">
     <span style="color:var(--gold);font-weight:700;">✓ ${filename}</span> —
     상품 ${data.상품.length}개 시트, ${allItems.length}개 요금행 파싱 완료.
-    위 폼에 min~max 자동입력됨.
   </div>`;
 }
 
@@ -1128,6 +1233,11 @@ function addToExcelDownload(){
 
   // 기획전 상세 sheet
   const fd=getFormData();
+  const yk = uploadedYokumRendered || {};
+  const rkK = mm => { if(!mm) return '—'; const a=Math.round(mm.min/1000), b=Math.round(mm.max/1000); return a===b?a.toLocaleString('ko-KR'):`${a.toLocaleString('ko-KR')}~${b.toLocaleString('ko-KR')}`; };
+  const fK = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : '—';
+  const facD2 = (reg,dist) => (reg&&dist&&reg>0) ? Math.round((1-dist/reg)*100)+'%' : '—';
+  const yFac = yk.fac||{}, yFacD = yk.facD||{};
   const detailRows=[
     ['3. 내 용'],
     ['구 분','내 용'],
@@ -1138,27 +1248,29 @@ function addToExcelDownload(){
     ['상 품',fd.product],
     ['상품 비고',fd.productNote],
     [],
-    ['객실 [단위:천원]','','회원(무기명)','','FIT',''],
-    ['','','정상기','비수기','정상기','비수기'],
-    ['','정상가',fd.roomMemPeak,fd.roomMemOff,fd.roomFitPeak,fd.roomFitOff],
-    ['','배분가',fd.roomMemPeakDist,fd.roomMemOffDist,fd.roomFitPeakDist,fd.roomFitOffDist],
-    ['','할인율',fd.roomDiscMemPeak,fd.roomDiscMemOff,fd.roomDiscFitPeak,fd.roomDiscFitOff],
+    ['객실 [단위:천원]','','회원(무기명)','FIT'],
+    ['','정상가',rkK(yk.room?.regUnnamed),rkK(yk.room?.regFit)],
+    ['','배분가',rkK(yk.room?.distUnnamed),rkK(yk.room?.distFit)],
+    ['','할인율',yk.room?.discUnnamed||'—',yk.room?.discFit||'—'],
     [],
-    ['화원가(무기명)比',fd.memberRatio],
+    ['배분적부가기준비율',yk.ratio||'—'],
     [],
-    ['식음/부대 [단위:천원]','','조식','석식','오션(요트)','레전드','비고'],
-    ['','정상기',fd.fbBkPeak,fd.fbDnPeak,fd.fbOceanPeak,fd.fbLegendPeak,fd.fbNote],
-    ['','배분기',fd.fbBkOff,fd.fbDnOff,fd.fbOceanOff,fd.fbLegendOff,''],
-    ['','할인율',fd.fbDiscBk,fd.fbDiscDn,fd.fbDiscOcean,fd.fbDiscLegend,''],
+    ['식음/액티 [단위:천원]','','조식','오션','석식','레전드','비고'],
+    ['','정상가',fK(yFac.조식),fK(yFac.오션),fK(yFac.석식),fK(yFac.레전드),yk.facNote||''],
+    ['','배분가',fK(yFacD.조식),fK(yFacD.오션),fK(yFacD.석식),fK(yFacD.레전드),''],
+    ['','할인율',facD2(yFac.조식,yFacD.조식),facD2(yFac.오션,yFacD.오션),facD2(yFac.석식,yFacD.석식),facD2(yFac.레전드,yFacD.레전드),''],
+    [],
+    ['패키지 (객실+부대) [단위:천원]','','회원(무기명)','FIT'],
+    ['','정상가',rkK(yk.pkg?.regUnnamed),rkK(yk.pkg?.regFit)],
+    ['','배분가',rkK(yk.pkg?.distUnnamed),rkK(yk.pkg?.distFit)],
+    ['','할인율',yk.pkg?.discUnnamed||'—',yk.pkg?.discFit||'—'],
     [],
     ['판매가 [단위:천원]','','회원(무기명)','FIT'],
-    ['','정상기',fd.sellMemPeak,fd.sellFitPeak],
-    ['','배분기',fd.sellMemOff,fd.sellFitOff],
-    ['','할인율',fd.sellDiscMem,fd.sellDiscFit],
+    ['','정상가',rkK(yk.sell?.unnamed),rkK(yk.sell?.fit)],
+    ['','할인율',yk.sell?.discUnnamed||'—',yk.sell?.discFit||'—'],
     [],
-    ['수수료',fd.commission],
-    ['KPI',fd.kpi],
-    ['비 고',fd.remarks]
+    ['수수료',yk.commission||''],
+    ['KPI',yk.kpi||'']
   ];
   const ws2=XLSX.utils.aoa_to_sheet(detailRows);
   ws2['!cols']=[{wch:18},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14}];

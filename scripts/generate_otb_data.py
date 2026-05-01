@@ -207,20 +207,97 @@ def _count_weekday_holidays_local(holidays_dict, year, month):
     return count
 
 
+def _count_weekends_in_month(year, month):
+    """해당 월의 토요일·일요일 수 반환 (토, 일 각각)."""
+    from datetime import date as _date
+    days = calendar.monthrange(year, month)[1]
+    sat = sun = 0
+    for d in range(1, days + 1):
+        wd = _date(year, month, d).weekday()
+        if wd == 5:
+            sat += 1
+        elif wd == 6:
+            sun += 1
+    return sat, sun
+
+
+def _count_consecutive_holidays(holidays_dict, year, month):
+    """해당 월에서 연휴 블록(공휴일+주말 연속)의 최대 길이와 총 연휴일수 반환.
+    Returns: (max_consecutive, total_holiday_days, holiday_blocks)
+      holiday_blocks: [(start_day, end_day, length), ...]
+    """
+    from datetime import date as _date, timedelta as _td
+    days_in_month = calendar.monthrange(year, month)[1]
+    # 해당 월의 "쉬는 날" 세트 (주말 + 공휴일)
+    off_days = set()
+    for d in range(1, days_in_month + 1):
+        dt = _date(year, month, d)
+        ds = f"{year}{month:02d}{d:02d}"
+        if dt.weekday() >= 5 or ds in holidays_dict:
+            off_days.add(d)
+    # 연속 블록 추출
+    blocks = []
+    if off_days:
+        sorted_days = sorted(off_days)
+        start = sorted_days[0]
+        prev = start
+        for d in sorted_days[1:]:
+            if d == prev + 1:
+                prev = d
+            else:
+                blocks.append((start, prev, prev - start + 1))
+                start = d
+                prev = d
+        blocks.append((start, prev, prev - start + 1))
+    max_consec = max((b[2] for b in blocks), default=0)
+    return max_consec, len(off_days), blocks
+
+
 def build_holiday_factors(target_months=None, cur_year=2026, base_year=2025):
-    """올해 vs 작년 평일 공휴일 차이 → FCST 보정 계수 {month_num: factor}
-    평일 공휴일 1일당 +3% 조정, ±10% 캡 적용.
-    로컬 holidays_kr.json 사용 (외부 API 미사용).
+    """올해 vs 작년 평일 공휴일 차이 + 주말 분포 + 연휴 길이 → FCST 보정 계수.
+
+    보정 요소:
+    1) 평일 공휴일 수 차이: 1일당 +3%
+    2) 토요일 수 차이: 1일당 +2.5% (리조트 특성상 토요일 영향 큼)
+    3) 연휴 블록 길이 보너스: 3일 연휴 → +1%, 5일+ → +3%, 9일+ → +5%
+    4) 대체공휴일 가산: 대체공휴일 1건당 +1.5% 추가
+    ±15% 캡 적용.
     """
     if target_months is None:
         target_months = tuple(range(1, 13))
     holidays_dict = _load_local_holidays()
     factors = {}
     for m in target_months:
-        delta = (_count_weekday_holidays_local(holidays_dict, cur_year, m)
-               - _count_weekday_holidays_local(holidays_dict, base_year, m))
-        raw = 1.0 + delta * 0.03
-        factors[m] = round(max(0.90, min(1.10, raw)), 4)
+        # (1) 평일 공휴일 차이
+        hol_delta = (_count_weekday_holidays_local(holidays_dict, cur_year, m)
+                   - _count_weekday_holidays_local(holidays_dict, base_year, m))
+        adj = hol_delta * 0.03
+
+        # (2) 토요일 수 차이
+        sat_cur, _ = _count_weekends_in_month(cur_year, m)
+        sat_base, _ = _count_weekends_in_month(base_year, m)
+        adj += (sat_cur - sat_base) * 0.025
+
+        # (3) 연휴 블록 길이 보너스 (올해 vs 작년 비교)
+        max_c_cur, _, _ = _count_consecutive_holidays(holidays_dict, cur_year, m)
+        max_c_base, _, _ = _count_consecutive_holidays(holidays_dict, base_year, m)
+        def _block_bonus(max_c):
+            if max_c >= 9: return 0.05
+            if max_c >= 5: return 0.03
+            if max_c >= 3: return 0.01
+            return 0.0
+        adj += _block_bonus(max_c_cur) - _block_bonus(max_c_base)
+
+        # (4) 대체공휴일 가산
+        prefix_cur = f"{cur_year}{m:02d}"
+        prefix_base = f"{base_year}{m:02d}"
+        sub_cur = sum(1 for ds, info in holidays_dict.items()
+                      if ds.startswith(prefix_cur) and "대체" in info.get("name", ""))
+        sub_base = sum(1 for ds, info in holidays_dict.items()
+                       if ds.startswith(prefix_base) and "대체" in info.get("name", ""))
+        adj += (sub_cur - sub_base) * 0.015
+
+        factors[m] = round(max(0.85, min(1.15, 1.0 + adj)), 4)
     return factors
 
 
@@ -265,19 +342,87 @@ def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
     return rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach
 
 
-def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
-                         holiday_factors=None, db_bps=None):
-    """4개년 과거 데이터 + 공휴일/연휴 보정 기반 AI FCST.
-
-    전략:
-    1) 과거 4개년(2022~2025) 동월 실적 수집 → 추세(trend) 계산
-    2) 진행중 월: 전년 동월 실적 × YoY 성장률(올해 경과 실적 기반) + 휴일보정
-       → 단순외삽과 가중평균 (elapsed 비율에 따라 비중 조절)
-    3) 미래월: 전년 동월 실적 × 최근 완료 2개월 평균 YoY 성장률 + 휴일보정
-    4) 완료월: 실적 = AI FCST
-
-    OTA+G-OTA+Inbound 3세그먼트 기준 (db_bps 우선, 없으면 db_bp fallback).
+def _detect_outlier_years(hist, threshold=0.4):
+    """과거 실적에서 이상치 연도 감지 (코로나 등).
+    중앙값 대비 ±threshold 이상 벗어나면 이상치로 판정.
+    Returns: {year: weight} — 이상치는 낮은 가중치, 정상은 1.0.
     """
+    if len(hist) < 3:
+        return {y: 1.0 for y in hist}
+    vals = sorted(hist.values())
+    median = vals[len(vals) // 2]
+    weights = {}
+    for y, v in hist.items():
+        if median > 0:
+            deviation = abs(v - median) / median
+            if deviation > threshold:
+                weights[y] = 0.2  # 이상치 → 가중치 대폭 축소
+            else:
+                weights[y] = 1.0
+        else:
+            weights[y] = 1.0
+    return weights
+
+
+def _time_weighted_avg(hist, outlier_weights=None):
+    """시간 가중 이동평균. 최근 연도에 높은 가중치 부여.
+    2022→1, 2023→2, 2024→3, 2025→4 (선형 가중).
+    outlier_weights로 이상치 연도 가중치 추가 축소.
+    Returns: weighted average RN.
+    """
+    if not hist:
+        return 0
+    years = sorted(hist.keys())
+    min_yr = min(years)
+    w_total = 0.0
+    v_total = 0.0
+    for y in years:
+        time_w = (y - min_yr + 1)  # 2022→1, 2023→2, ...
+        ow = (outlier_weights or {}).get(y, 1.0)
+        w = time_w * ow
+        w_total += w
+        v_total += hist[y] * w
+    return v_total / w_total if w_total > 0 else 0
+
+
+def _calc_seasonality_share(db_bp, db_bps, db_props, year):
+    """특정 연도의 월별 비중 패턴 계산.
+    Returns: {month_num: share} (12개월 합=1.0)
+    """
+    monthly = {}
+    total = 0
+    for m in range(1, 13):
+        mk = f"{year}{m:02d}"
+        if db_bps is not None:
+            rn = sum_db_segments(db_bps, db_props, mk)["rn"]
+        else:
+            rn = sum_db(db_bp, db_props, mk)["rn"]
+        monthly[m] = rn
+        total += rn
+    if total > 0:
+        return {m: monthly[m] / total for m in range(1, 13)}
+    return {m: 1.0 / 12 for m in range(1, 13)}
+
+
+def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
+                         holiday_factors=None, db_bps=None,
+                         rm_trend_snapshots=None):
+    """고도화된 AI FCST — 8가지 보정 로직 적용.
+
+    핵심 개선:
+    1) 요일 분포 보정: build_holiday_factors에서 토요일 수 차이 반영 (외부)
+    2) 세그먼트별 트렌드 분화: OTA/G-OTA/Inbound 각각 성장률 계산 후 합산
+    3) 계절성 패턴: 4개년 월별 비중 패턴 → 연간 추정치 × 비중
+    4) 시간 가중 이동평균: 2025 > 2024 > 2023 > 2022 순 가중치
+    5) 이상치 필터링: 코로나(2022) 등 비정상 연도 자동 감지 + 가중치 축소
+    6) Confidence Interval: 과거 4년 분산 기반 상한/하한 (fcst_lo, fcst_hi)
+    7) 리드타임 반영: RM 스냅샷에서 pickup 패턴 활용 (미래월)
+    8) 연휴 길이 세분화: build_holiday_factors에서 연휴 블록 길이 반영 (외부)
+
+    Returns: (fcst_rn, fcst_ach, fcst_lo, fcst_hi)
+    """
+    import math
+
     cur_year = now_kst.year
     cur_month = now_kst.month
     day = now_kst.day
@@ -294,7 +439,7 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
     # 완료 월 → 실적 그대로
     if elapsed_ratio == 1.0:
         fcst_ach = round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
-        return act_rn, fcst_ach
+        return act_rn, fcst_ach, act_rn, act_rn
 
     # ── helper: 3세그먼트 합산 실적 ──
     def _seg_rn(props, mk):
@@ -302,7 +447,16 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
             return sum_db_segments(db_bps, props, mk)["rn"]
         return sum_db(db_bp, props, mk)["rn"]
 
-    # ── 과거 4년 동월 실적 수집 ──
+    def _seg_rn_by_segment(props, mk, seg):
+        """단일 세그먼트 실적 조회."""
+        if db_bps is not None:
+            total = 0
+            for pname in props:
+                total += db_bps.get(pname, {}).get(seg, {}).get(mk, {}).get("booking_rn", 0)
+            return total
+        return 0
+
+    # ── [5] 이상치 필터링 + [4] 시간 가중 과거 데이터 수집 ──
     hist = {}  # {year: rn}
     for yr in [2022, 2023, 2024, 2025]:
         mk = f"{yr}{month_num:02d}"
@@ -310,13 +464,63 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
         if rn > 0:
             hist[yr] = rn
 
+    outlier_w = _detect_outlier_years(hist)
+    tw_avg = _time_weighted_avg(hist, outlier_w)
+
     # ── 방법 1: 단순 elapsed_ratio 외삽 ──
     if elapsed_ratio > 0.1:
         fcst_simple = round(act_rn / elapsed_ratio)
     else:
         fcst_simple = act_rn
 
-    # ── 방법 2: 과거 패턴 기반 ──
+    # ── [2] 세그먼트별 트렌드 분화 ──
+    segments = ["OTA", "G-OTA", "Inbound"]
+    seg_fcst_total = 0
+    seg_has_data = False
+
+    if db_bps is not None and elapsed_ratio == 0:
+        # 미래월: 세그먼트별로 개별 YoY 계산
+        for seg in segments:
+            seg_hist = {}
+            for yr in [2022, 2023, 2024, 2025]:
+                mk = f"{yr}{month_num:02d}"
+                srn = _seg_rn_by_segment(db_props, mk, seg)
+                if srn > 0:
+                    seg_hist[yr] = srn
+
+            if not seg_hist:
+                continue
+
+            seg_outlier_w = _detect_outlier_years(seg_hist)
+            seg_last_yr = seg_hist.get(2025, 0)
+
+            # 세그먼트별 최근 완료 2개월 YoY
+            seg_yoy_ratios = []
+            for lookback in range(1, 4):
+                rm = cur_month - lookback
+                if rm < 1:
+                    rm += 12
+                r26 = _seg_rn_by_segment(db_props, f"2026{rm:02d}", seg)
+                r25 = _seg_rn_by_segment(db_props, f"2025{rm:02d}", seg)
+                if r25 > 0 and r26 > 0:
+                    seg_yoy_ratios.append(r26 / r25)
+                if len(seg_yoy_ratios) >= 2:
+                    break
+
+            if seg_last_yr > 0 and seg_yoy_ratios:
+                avg_yoy = sum(seg_yoy_ratios) / len(seg_yoy_ratios)
+                seg_fcst_total += round(seg_last_yr * avg_yoy)
+                seg_has_data = True
+            elif seg_last_yr > 0:
+                seg_tw = _time_weighted_avg(seg_hist, seg_outlier_w)
+                if seg_tw > 0 and seg_hist.get(2025, 0) > 0:
+                    trend = seg_hist[2025] / seg_tw
+                    seg_fcst_total += round(seg_last_yr * max(0.8, min(1.3, trend)))
+                else:
+                    seg_fcst_total += seg_last_yr
+                seg_has_data = True
+
+    # ── 방법 2: 과거 패턴 기반 (통합) ──
     mk_25 = f"2025{month_num:02d}"
     last_yr_rn = hist.get(2025, 0)
     if last_yr_rn == 0:
@@ -327,22 +531,19 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
         if last_yr_rn > 0 and act_rn > 0:
             yoy_growth = act_rn / (last_yr_rn * elapsed_ratio) if elapsed_ratio > 0.1 else 1.0
             fcst_pattern = round(last_yr_rn * yoy_growth)
-        elif hist:
-            avg_past = sum(hist.values()) / len(hist)
-            fcst_pattern = round(avg_past * (act_rn / (avg_past * elapsed_ratio))) if (avg_past > 0 and elapsed_ratio > 0.1) else act_rn
+        elif tw_avg > 0 and elapsed_ratio > 0.1:
+            fcst_pattern = round(tw_avg * (act_rn / (tw_avg * elapsed_ratio)))
         else:
             fcst_pattern = fcst_simple
     elif elapsed_ratio == 0 and hist:
-        # 미래월: 최근 완료 2개월 평균 YoY 성장률 적용
+        # 미래월
         yoy_ratios = []
         for lookback in range(1, 4):
             rm = cur_month - lookback
             if rm < 1:
                 rm += 12
-            mk_26_r = f"2026{rm:02d}"
-            mk_25_r = f"2025{rm:02d}"
-            r26 = _seg_rn(db_props, mk_26_r)
-            r25 = _seg_rn(db_props, mk_25_r)
+            r26 = _seg_rn(db_props, f"2026{rm:02d}")
+            r25 = _seg_rn(db_props, f"2025{rm:02d}")
             if r25 > 0 and r26 > 0:
                 yoy_ratios.append(r26 / r25)
             if len(yoy_ratios) >= 2:
@@ -352,9 +553,13 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
             avg_yoy = sum(yoy_ratios) / len(yoy_ratios)
             fcst_pattern = round(last_yr_rn * avg_yoy)
         elif last_yr_rn > 0:
-            fcst_pattern = last_yr_rn  # YoY 데이터 부족 → 전년과 동일 추정
+            # [4] 시간 가중 이동평균 기반 트렌드 적용
+            if tw_avg > 0:
+                trend = last_yr_rn / tw_avg
+                fcst_pattern = round(last_yr_rn * max(0.8, min(1.3, trend)))
+            else:
+                fcst_pattern = last_yr_rn
         else:
-            # 전년도 없으면 과거 4년 평균의 추세 사용
             vals = [hist[y] for y in sorted(hist)]
             if len(vals) >= 2:
                 trend = vals[-1] / vals[-2]
@@ -364,7 +569,78 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
     else:
         fcst_pattern = fcst_simple
 
-    # ── 공휴일/연휴 보정 ──
+    # ── [3] 계절성 패턴 보정 (미래월에만 적용) ──
+    if elapsed_ratio == 0 and len(hist) >= 2:
+        # 4개년 월별 비중 평균 계산
+        shares = []
+        for yr in sorted(hist.keys()):
+            if outlier_w.get(yr, 1.0) >= 0.5:  # 이상치 연도 제외
+                s = _calc_seasonality_share(db_bp, db_bps, db_props, yr)
+                if s.get(month_num, 0) > 0:
+                    shares.append(s[month_num])
+        if shares:
+            avg_share = sum(shares) / len(shares)
+            # 올해 1~(cur_month-1)월 합산으로 연간 추정
+            ytd_rn = 0
+            ytd_share = 0.0
+            for m_past in range(1, cur_month):
+                ytd_rn += _seg_rn(db_props, f"2026{m_past:02d}")
+                # 평균 비중 합산
+                past_shares = []
+                for yr in sorted(hist.keys()):
+                    if outlier_w.get(yr, 1.0) >= 0.5:
+                        s = _calc_seasonality_share(db_bp, db_bps, db_props, yr)
+                        past_shares.append(s.get(m_past, 0))
+                if past_shares:
+                    ytd_share += sum(past_shares) / len(past_shares)
+
+            if ytd_rn > 0 and ytd_share > 0.05:
+                annual_est = ytd_rn / ytd_share
+                fcst_seasonal = round(annual_est * avg_share)
+                # 계절성 FCST를 패턴 FCST와 블렌딩 (30:70)
+                fcst_pattern = round(fcst_pattern * 0.7 + fcst_seasonal * 0.3)
+
+    # ── [2] 세그먼트별 분화 결과 블렌딩 (미래월) ──
+    if elapsed_ratio == 0 and seg_has_data and seg_fcst_total > 0:
+        # 세그먼트별 결과와 통합 결과를 50:50 블렌딩
+        fcst_pattern = round(fcst_pattern * 0.5 + seg_fcst_total * 0.5)
+
+    # ── [7] 리드타임 반영 (미래월, RM 스냅샷 기반) ──
+    if elapsed_ratio == 0 and rm_trend_snapshots and last_yr_rn > 0:
+        # 과거 동월의 RM 스냅샷에서 pickup 패턴 분석
+        # D-14 시점 FCST 대비 최종 실적의 평균 uplift 비율 계산
+        pickup_ratios = []
+        for snap in rm_trend_snapshots:
+            snap_date_str = snap.get("_snapshot_date", "")
+            snap_year = snap.get("_year", 0)
+            if snap_year not in [2025, 2026]:
+                continue
+            # 스냅샷 월 추출
+            try:
+                snap_month = int(snap_date_str.split("-")[1])
+            except (IndexError, ValueError):
+                continue
+            # 동월 스냅샷의 FCST vs 실적 비교
+            if snap_month == month_num and snap_year == 2025:
+                snap_props = snap.get("properties", {})
+                for _, display_name, _, dp in PROPERTY_DEFS:
+                    if dp != db_props:
+                        continue
+                    rm_key = f"{snap_year}-{month_num:02d}"
+                    rm_entry = snap_props.get(display_name, {}).get(rm_key, {})
+                    rm_fcst = rm_entry.get("rm_fcst_rn", 0)
+                    if rm_fcst > 0 and last_yr_rn > 0:
+                        pickup_ratios.append(last_yr_rn / rm_fcst)
+                    break
+
+        if pickup_ratios:
+            avg_pickup = sum(pickup_ratios) / len(pickup_ratios)
+            # pickup 비율이 1보다 크면 추가 유입 예상
+            if 0.8 < avg_pickup < 1.5:
+                # 현재 시점 RM FCST가 있으면 그것에 pickup 비율 적용
+                fcst_pattern = round(fcst_pattern * min(1.15, max(0.9, avg_pickup)))
+
+    # ── 공휴일/연휴 보정 (요일 분포 + 연휴 길이 포함) ──
     hf = holiday_factors.get(month_num, 1.0) if holiday_factors else 1.0
     fcst_pattern = round(fcst_pattern * hf)
 
@@ -380,8 +656,38 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
     else:
         fcst_final = fcst_pattern
 
+    # ── [6] Confidence Interval (과거 4년 분산 기반) ──
+    if len(hist) >= 2:
+        # 시간 가중 분산 계산
+        years_sorted = sorted(hist.keys())
+        min_yr = min(years_sorted)
+        weighted_vals = []
+        for y in years_sorted:
+            tw = (y - min_yr + 1) * outlier_w.get(y, 1.0)
+            weighted_vals.append((hist[y], tw))
+        w_sum = sum(w for _, w in weighted_vals)
+        w_mean = sum(v * w for v, w in weighted_vals) / w_sum if w_sum > 0 else 0
+        w_var = sum(w * (v - w_mean) ** 2 for v, w in weighted_vals) / w_sum if w_sum > 0 else 0
+        std_dev = math.sqrt(w_var)
+
+        # 성장 트렌드 적용된 std_dev → 현재 FCST 대비 비율로 변환
+        if w_mean > 0:
+            cv = std_dev / w_mean  # 변동계수
+            fcst_lo = round(fcst_final * (1.0 - cv))
+            fcst_hi = round(fcst_final * (1.0 + cv))
+        else:
+            fcst_lo = fcst_final
+            fcst_hi = fcst_final
+
+        # 하한은 0 이하가 되지 않도록
+        fcst_lo = max(0, fcst_lo)
+    else:
+        # 데이터 부족 시 ±10% 기본 구간
+        fcst_lo = round(fcst_final * 0.9)
+        fcst_hi = round(fcst_final * 1.1)
+
     fcst_ach = round(fcst_final / bud_rn * 100, 1) if bud_rn > 0 else 0.0
-    return fcst_final, fcst_ach
+    return fcst_final, fcst_ach, fcst_lo, fcst_hi
 
 
 def load_rm_fcst():
@@ -459,10 +765,12 @@ def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
 
 
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
-                    months=(4, 5, 6), now_kst=None, rm_fcst_props=None, daily_bk=None):
+                    months=(4, 5, 6), now_kst=None, rm_fcst_props=None, daily_bk=None,
+                    rm_trend_snapshots=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성.
     rm_fcst_props: RM FCST 데이터 (load_rm_fcst() 결과)
     daily_bk: 온북 DB 미포함 사업장 보정 데이터
+    rm_trend_snapshots: RM FCST 트렌드 스냅샷 (리드타임 반영용)
     """
     if now_kst is None:
         now_kst = datetime.now(KST)
@@ -495,10 +803,10 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
 
             rns_fcst, _, _, fcst_ach, _ = _calc_fcst(act_rn, 0, m, now_kst, bud_rn)
 
-            # AI FCST (4개년 패턴 + 휴일 보정)
-            rns_fcst_ai, fcst_ach_ai = _calc_fcst_enhanced(
+            # AI FCST (고도화: 세그먼트 분화 + 계절성 + 이상치 필터 + CI)
+            rns_fcst_ai, fcst_ach_ai, fcst_lo, fcst_hi = _calc_fcst_enhanced(
                 act_rn, m, now_kst, bud_rn, db_bp, db_props, holiday_factors,
-                db_bps=db_bps)
+                db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots)
 
             # RM FCST (전체 세그먼트 기준 — rm_budget_rn 대비 달성률)
             rm_key = f"2026-{m:02d}"
@@ -517,6 +825,8 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "fcst_ach":     fcst_ach if fcst_ach else (fcst_ach_ai or 0),
                 "rns_fcst_ai":  rns_fcst_ai,
                 "fcst_ach_ai":  fcst_ach_ai,
+                "fcst_lo":      fcst_lo,
+                "fcst_hi":      fcst_hi,
                 "rm_fcst_rn":   rm_rn,
                 "rm_budget_rn": rm_budget,
                 "rm_fcst_ach":  rm_ach,
@@ -654,7 +964,7 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, 
 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
                          adj_by_prop=None, adj_by_segment=None, holiday_factors=None, lead_time_by_prop=None, now_kst=None,
-                         rm_fcst_props=None):
+                         rm_fcst_props=None, rm_trend_snapshots=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
     """
@@ -676,6 +986,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     tot_bud_rn = tot_act_rn = tot_lst_rn = tot_rns_fcst = 0
     tot_bud_rev = tot_act_rev = tot_lst_rev = tot_rev_fcst = 0.0
     tot_ai_fcst_rn = 0
+    tot_ai_fcst_lo = 0
+    tot_ai_fcst_hi = 0
     tot_rm_fcst_rn = 0
     tot_rm_budget_rn = 0
 
@@ -768,6 +1080,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         # FCST: elapsed_ratio 기반
         # AI FCST: 항상 독립 계산 (비교 표시용)
         ai_fcst_rn, ai_fcst_ach = 0, 0.0
+        ai_fcst_lo, ai_fcst_hi = 0, 0  # Confidence Interval
         # RM FCST: rm_fcst.json에서 로드
         rm_rn_prop = None
         rm_budget_prop = None
@@ -778,10 +1091,10 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rn, act_rev, month_idx, now_kst, bud_rn, bud_rev
             )
 
-            # AI FCST 독립 계산
-            ai_fcst_rn, ai_fcst_ach = _calc_fcst_enhanced(
+            # AI FCST 독립 계산 (고도화)
+            ai_fcst_rn, ai_fcst_ach, ai_fcst_lo, ai_fcst_hi = _calc_fcst_enhanced(
                 act_rn, month_idx, now_kst, bud_rn, db_bp, db_props,
-                holiday_factors, db_bps=db_bps
+                holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots
             )
 
             # RM FCST 로드 (전체 세그먼트 기준)
@@ -829,13 +1142,15 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     mi_bud_rn = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
                     mi_bud_rev = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rev_m", 0)
 
-                # AI FCST (월별 합산)
-                mi_ai, _ = _calc_fcst_enhanced(
+                # AI FCST (월별 합산, 고도화)
+                mi_ai, _, mi_lo, mi_hi = _calc_fcst_enhanced(
                     mi_rn, mi, now_kst, mi_bud_rn, db_bp, db_props,
-                    holiday_factors, db_bps=db_bps
+                    holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots
                 )
                 if mi_ai is not None and mi_ai > 0:
                     ai_fcst_rn += mi_ai
+                    ai_fcst_lo += mi_lo if mi_lo is not None else 0
+                    ai_fcst_hi += mi_hi if mi_hi is not None else 0
 
                 # RM FCST (월별 합산)
                 mi_rm_key = f"2026-{mi:02d}"
@@ -882,6 +1197,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "fcst_achievement": fcst_ach,
             "ai_fcst_rn":      ai_fcst_rn,
             "ai_fcst_ach":     ai_fcst_ach,
+            "ai_fcst_lo":      ai_fcst_lo,
+            "ai_fcst_hi":      ai_fcst_hi,
             "rm_fcst_rn":      rm_rn_prop,
             "rm_budget_rn":    rm_budget_prop,
             "rm_fcst_ach":     rm_ach_prop,
@@ -916,6 +1233,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         tot_lst_rev  += lst_rev
         tot_rev_fcst += rev_fcst if rev_fcst is not None else 0.0
         tot_ai_fcst_rn += ai_fcst_rn if ai_fcst_rn is not None else 0
+        tot_ai_fcst_lo += ai_fcst_lo if ai_fcst_lo is not None else 0
+        tot_ai_fcst_hi += ai_fcst_hi if ai_fcst_hi is not None else 0
         if rm_rn_prop is not None:
             tot_rm_fcst_rn += rm_rn_prop
         if rm_budget_prop is not None:
@@ -960,6 +1279,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "fcst_achievement": tot_fcst_ach,
         "ai_fcst_rn":      tot_ai_fcst_rn,
         "ai_fcst_ach":     tot_ai_fcst_ach,
+        "ai_fcst_lo":      tot_ai_fcst_lo,
+        "ai_fcst_hi":      tot_ai_fcst_hi,
         "rm_fcst_rn":      tot_rm_fcst_rn if tot_rm_fcst_rn > 0 else None,
         "rm_budget_rn":    tot_rm_budget_rn if tot_rm_budget_rn > 0 else None,
         "rm_fcst_ach":     tot_rm_fcst_ach,
@@ -1352,6 +1673,17 @@ def main():
     rm_fcst_props = load_rm_fcst()
     print(f"  RM FCST 사업장 수: {len(rm_fcst_props)}")
 
+    # RM FCST Trend 스냅샷 로드 (리드타임 pickup 패턴 분석용)
+    rm_trend_snapshots = []
+    rm_trend_path = DATA_DIR / "rm_fcst_trend.json"
+    if rm_trend_path.exists():
+        try:
+            rm_trend_data = json.loads(rm_trend_path.read_text(encoding="utf-8"))
+            rm_trend_snapshots = rm_trend_data.get("snapshots", [])
+            print(f"  RM FCST Trend 스냅샷: {len(rm_trend_snapshots)}개")
+        except Exception:
+            print("  RM FCST Trend 로드 실패 — 리드타임 반영 건너뜀")
+
     # 공휴일 보정 계수 (전월 대상)
     print("  공휴일 보정 계수 계산 중 (로컬 holidays_kr.json)...")
     holiday_factors = build_holiday_factors(target_months=tuple(range(1, 13)), cur_year=2026, base_year=2025)
@@ -1372,6 +1704,7 @@ def main():
             holiday_factors=holiday_factors,
             lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
             rm_fcst_props=rm_fcst_props,
+            rm_trend_snapshots=rm_trend_snapshots,
         )
 
     # today 데이터를 월 스냅샷에 주입 (월별로 stay_month 필터 적용)
@@ -1481,7 +1814,7 @@ def main():
     yoy_table = build_yoy_table(
         db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
         months=TARGET_MONTHS, now_kst=now_kst, rm_fcst_props=rm_fcst_props,
-        daily_bk=daily_bk,
+        daily_bk=daily_bk, rm_trend_snapshots=rm_trend_snapshots,
     )
 
     output = {
@@ -1519,8 +1852,12 @@ def main():
     print(f"  총 실적 RNS: {output['summary']['rns_actual']:,}")
     print(f"  달성률: {output['summary']['rns_achievement']}%")
     ai_rn = output['summary'].get('ai_fcst_rn')
+    ai_lo = output['summary'].get('ai_fcst_lo')
+    ai_hi = output['summary'].get('ai_fcst_hi')
     rm_rn = output['summary'].get('rm_fcst_rn')
     print(f"  AI FCST RN: {ai_rn:,}" if ai_rn else "  AI FCST RN: N/A")
+    if ai_lo and ai_hi:
+        print(f"  AI FCST CI: [{ai_lo:,} ~ {ai_hi:,}]")
     print(f"  RM FCST RN: {rm_rn:,}" if rm_rn else "  RM FCST RN: N/A")
 
 
