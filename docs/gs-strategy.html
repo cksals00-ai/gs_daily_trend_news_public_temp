@@ -8747,7 +8747,6 @@ function renderBizPlanCharts() {
       // ── 6-4: Pickup Curve Chart ──
       const pickCtx = document.getElementById('chartPickup');
       if (pickCtx && DEEP.pickupJuly) {
-        const colors2 = ['#e57373','#5a9fc4','#4caf6f','#e8a256','#c9a063','rgba(160,126,232,0.9)','#81d4fa','#ffb74d','#a5d6a7','#ef9a9a'];
         const datasets2 = [];
         let i = 0;
         for (const [prop, points] of Object.entries(DEEP.pickupJuly)) {
@@ -9023,8 +9022,6 @@ function renderBizPlanCharts() {
         });
       }
 
-      const colors2 = ['#e57373','#5a9fc4','#4caf6f','#e8a256','#c9a063','rgba(160,126,232,0.9)','#81d4fa','#ffb74d','#a5d6a7','#ef9a9a'];
-
     })();
     </script>
 
@@ -9148,8 +9145,9 @@ function renderBizPlanCharts() {
       const fmtP = n => { if(n==null||isNaN(n)) return '-'; return (n>0?'+':'')+n.toFixed(1)+'%'; };
       const cls = n => n >= 0 ? 'color:#4caf6f' : 'color:#e57373';
       const sign = n => n >= 0 ? '+' : '';
-      
+
       const darkTxt = '#a8acb3';
+      const mutedTxt = '#a8acb3';
       const gridClr = 'rgba(255,255,255,0.06)';
       const gold = '#c9a063';
       const pos = '#4caf6f';
@@ -10082,7 +10080,8 @@ function renderBizPlanCharts() {
 
         const container = table.parentElement;
         if (container) {
-          container.insertBefore(btn, table.nextSibling.nextSibling);
+          const refNode = table.nextSibling ? table.nextSibling.nextSibling : null;
+          container.insertBefore(btn, refNode);
         }
 
         btn.addEventListener('click', () => {
