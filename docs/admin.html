@@ -595,6 +595,67 @@ select option{background:var(--bg-deep);}
     </div>
   </div>
 
+  <!-- 취소율 기준 설정 -->
+  <div class="card" id="cancelRateConfig">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">CANCEL RATE CRITERIA</div>
+    <h3 style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px;">취소율 기준 설정</h3>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:16px;line-height:1.6;">
+      리포트에 표시할 취소율 판단 기준을 입력합니다. 사업장별/월별 취소율이 이 기준을 초과하면 위험으로 표시됩니다.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">표면 취소율 기준 (위험)</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateHigh" value="55" min="0" max="100" step="1" style="flex:1;padding:8px;background:var(--bg);color:var(--negative);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">이 이상이면 🔴 위험</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">표면 취소율 기준 (경고)</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateWarn" value="45" min="0" max="100" step="1" style="flex:1;padding:8px;background:var(--bg);color:var(--warning);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">이 이상이면 🟡 경고</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">실질 취소율 목표</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateTarget" value="20" min="0" max="100" step="1" style="flex:1;padding:8px;background:var(--bg);color:var(--positive);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">예약변경 제외 순수 취소 목표</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">사업계획 취소율 (Annual)</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateBudget" value="38" min="0" max="100" step="0.1" style="flex:1;padding:8px;background:var(--bg);color:var(--gold-bright);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">연간 사업계획상 취소율 목표</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">현재 실적 취소율</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateActual" value="54.8" min="0" max="100" step="0.1" style="flex:1;padding:8px;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">최근 실적 기준 표면 취소율</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">취소율 1%p 개선 = 실 증가</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="cancelRateImpact" value="6496" min="0" step="1" style="flex:1;padding:8px;background:var(--bg);color:var(--info);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">실</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">취소율 1%p 개선 시 순증 효과</div>
+      </div>
+    </div>
+  </div>
+
   <!-- 수수료율 설정 -->
   <div class="card" id="commissionConfig">
     <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">COMMISSION RATE CONFIG</div>
@@ -1106,6 +1167,14 @@ function getFormData() {
       south:   radio('ss'), apac:    radio('sa'),
     },
     cancel_match_window: parseInt(document.querySelector('input[name="cancelWindow"]:checked')?.value || '1'),
+    cancel_rate_criteria: {
+      high_threshold: parseFloat(document.getElementById('cancelRateHigh')?.value || '55'),
+      warn_threshold: parseFloat(document.getElementById('cancelRateWarn')?.value || '45'),
+      target_real: parseFloat(document.getElementById('cancelRateTarget')?.value || '20'),
+      budget_annual: parseFloat(document.getElementById('cancelRateBudget')?.value || '38'),
+      actual_current: parseFloat(document.getElementById('cancelRateActual')?.value || '54.8'),
+      impact_per_1pp: parseInt(document.getElementById('cancelRateImpact')?.value || '6496'),
+    },
     commission_rates: {
       g_ota: parseFloat(document.getElementById('commGOTA')?.value || '15'),
       ota: parseFloat(document.getElementById('commOTA')?.value || '11'),
@@ -1134,6 +1203,15 @@ function applyFormData(d, reRenderInsights = true) {
   if (d.cancel_match_window !== undefined) {
     const r = document.querySelector(`input[name="cancelWindow"][value="${d.cancel_match_window}"]`);
     if (r) r.checked = true;
+  }
+  // Cancel rate criteria
+  if (d.cancel_rate_criteria) {
+    if (d.cancel_rate_criteria.high_threshold !== undefined) setVal('cancelRateHigh', d.cancel_rate_criteria.high_threshold);
+    if (d.cancel_rate_criteria.warn_threshold !== undefined) setVal('cancelRateWarn', d.cancel_rate_criteria.warn_threshold);
+    if (d.cancel_rate_criteria.target_real !== undefined) setVal('cancelRateTarget', d.cancel_rate_criteria.target_real);
+    if (d.cancel_rate_criteria.budget_annual !== undefined) setVal('cancelRateBudget', d.cancel_rate_criteria.budget_annual);
+    if (d.cancel_rate_criteria.actual_current !== undefined) setVal('cancelRateActual', d.cancel_rate_criteria.actual_current);
+    if (d.cancel_rate_criteria.impact_per_1pp !== undefined) setVal('cancelRateImpact', d.cancel_rate_criteria.impact_per_1pp);
   }
   // Commission rates
   if (d.commission_rates) {

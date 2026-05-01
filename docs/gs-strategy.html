@@ -1890,9 +1890,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 function renderInsight01(otbData) {
   if (!otbData.yoyTable) return;
 
-  // 6월 데이터 필터
+  // 6월 데이터 필터 — months 하위에 월 키가 있음
   const june = '6';
-  const properties = otbData.yoyTable.filter(row => row[june]);
+  const _m = r => r.months ? r.months[june] : r[june];
+  const properties = otbData.yoyTable.filter(row => _m(row) && row.name && row.name.match(/^\d/));
+
+  if (properties.length === 0) return;
 
   // Budget gap 계산
   let totalBudgetGap = 0;
@@ -1901,7 +1904,7 @@ function renderInsight01(otbData) {
   const budgetGapList = [];
 
   properties.forEach(prop => {
-    const monthData = prop[june];
+    const monthData = _m(prop);
     const budGap = (monthData.bud_rn || 0) - (monthData.act_rn || 0);
     const yoy = monthData.yoy || 0;
     const fcst = monthData.rns_fcst || 0;
@@ -1924,44 +1927,45 @@ function renderInsight01(otbData) {
 
   // YoY Top 5
   const yoyList = properties
-    .filter(p => p[june].yoy)
+    .filter(p => _m(p).yoy)
     .map(p => ({
       name: p.name,
-      yoy: p[june].yoy
+      yoy: _m(p).yoy
     }))
     .sort((a, b) => b.yoy - a.yoy)
     .slice(0, 5);
 
   // UI 업데이트
+  const avgYoY = properties.length > 0 ? (totalYoY / properties.length) : 0;
   document.getElementById('budgetGap').textContent = totalBudgetGap.toLocaleString();
-  document.getElementById('yoyRate').textContent = (totalYoY / properties.length).toFixed(1) + '%';
-  document.getElementById('fcstRN').textContent = (totalFcst / 1000).toFixed(1) + '만';
+  document.getElementById('yoyRate').textContent = avgYoY.toFixed(1) + '%';
+  document.getElementById('fcstRN').textContent = (totalFcst / 10000).toFixed(1) + '만';
 
   document.getElementById('insight01Text').textContent =
-    `6월까지 ${Math.abs(totalBudgetGap)}실 부족, 전년 대비 ${(totalYoY / properties.length).toFixed(1)}% 수준. ` +
+    `6월까지 ${Math.abs(totalBudgetGap).toLocaleString()}실 부족, 전년 대비 ${avgYoY.toFixed(1)}% 수준. ` +
     `집중 필요 사업장: ${topGapList.map(p => p.name).join(', ')}`;
 
   // Budget Gap 리스트
-  document.getElementById('insight01Properties').innerHTML = topGapList
+  document.getElementById('insight01Properties').innerHTML = topGapList.length > 0 ? topGapList
     .map(p => `
       <div class="property-item">
         <div class="property-name">${p.name}</div>
-        <div class="property-value" style="color: var(--negative);">-${p.gap}실 (${p.achievement}%)</div>
+        <div class="property-value" style="color: var(--negative);">-${p.gap.toLocaleString()}실 (${p.achievement}%)</div>
       </div>
-    `).join('');
+    `).join('') : '<div style="padding:12px;color:var(--ink-faint);text-align:center">Budget 미달성 사업장 없음</div>';
 
   // YoY 리스트
-  document.getElementById('insight01YoY').innerHTML = yoyList
+  document.getElementById('insight01YoY').innerHTML = yoyList.length > 0 ? yoyList
     .map(p => `
       <div class="property-item">
         <div class="property-name">${p.name}</div>
         <div class="property-value" style="color: var(--positive);">+${p.yoy.toFixed(1)}%</div>
       </div>
-    `).join('');
+    `).join('') : '<div style="padding:12px;color:var(--ink-faint);text-align:center">데이터 없음</div>';
 
   // Chart 01: Top 10 속성들의 6월 Budget vs Actual vs FCST
   const chartData = properties
-    .sort((a, b) => (b[june].bud_rn || 0) - (a[june].bud_rn || 0))
+    .sort((a, b) => (_m(b).bud_rn || 0) - (_m(a).bud_rn || 0))
     .slice(0, 10);
 
   const ctx = document.getElementById('chart01').getContext('2d');
@@ -1972,21 +1976,21 @@ function renderInsight01(otbData) {
       datasets: [
         {
           label: 'Budget',
-          data: chartData.map(p => p[june].bud_rn || 0),
+          data: chartData.map(p => _m(p).bud_rn || 0),
           backgroundColor: 'rgba(201, 160, 99, 0.6)',
           borderColor: '#c9a063',
           borderWidth: 1
         },
         {
           label: 'Actual',
-          data: chartData.map(p => p[june].act_rn || 0),
+          data: chartData.map(p => _m(p).act_rn || 0),
           backgroundColor: 'rgba(76, 175, 111, 0.6)',
           borderColor: '#4caf6f',
           borderWidth: 1
         },
         {
           label: 'FCST',
-          data: chartData.map(p => p[june].rns_fcst || 0),
+          data: chartData.map(p => _m(p).rns_fcst || 0),
           backgroundColor: 'rgba(90, 159, 196, 0.6)',
           borderColor: '#5a9fc4',
           borderWidth: 1
@@ -2021,9 +2025,10 @@ function renderInsight02(otbData) {
   otbData.yoyTable.forEach(row => {
     if (row.segment) {
       if (!segments[row.segment]) segments[row.segment] = 0;
-      const lastMonth = Object.keys(row).filter(k => !isNaN(k)).pop();
-      if (lastMonth) {
-        segments[row.segment] += (row[lastMonth].rns_fcst || 0);
+      const mObj = row.months || row;
+      const lastMonth = Object.keys(mObj).filter(k => !isNaN(k)).pop();
+      if (lastMonth && mObj[lastMonth]) {
+        segments[row.segment] += (mObj[lastMonth].rns_fcst || 0);
       }
     }
   });
@@ -2071,13 +2076,19 @@ function renderInsight02(otbData) {
 function renderInsight03(otbData) {
   if (!otbData.yoyTable) return;
 
-  const currentMonth = Math.max(...otbData.yoyTable.map(r => Math.max(...Object.keys(r).filter(k => !isNaN(k)).map(Number))));
+  // months 구조 지원: row.months || row 에서 숫자 키 추출
+  const _getMonthKeys = r => Object.keys(r.months || r).filter(k => !isNaN(k));
+  const allMonths = otbData.yoyTable.flatMap(r => _getMonthKeys(r).map(Number));
+  const currentMonth = allMonths.length > 0 ? Math.max(...allMonths) : null;
+  if (!currentMonth) return;
 
   let riskHigh = 0, riskMedium = 0;
   const riskList = [];
 
   otbData.yoyTable.forEach(prop => {
-    const data = prop[String(currentMonth)];
+    if (!prop.name || !prop.name.match(/^\d/)) return; // 사업장만 (01.벨비발디 등)
+    const mObj = prop.months || prop;
+    const data = mObj[String(currentMonth)];
     if (data) {
       const achievement = ((data.act_rn || 0) / (data.bud_rn || 1) * 100);
       if (achievement < 40) riskHigh++;
