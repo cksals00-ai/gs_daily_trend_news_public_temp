@@ -624,6 +624,254 @@ function renderChannelTable(months, containerId) {
 }
 
 /* ══════════════════════════════════════
+   RENDER: CHANNEL DETAIL TABLE (3-2 거래처별)
+   ══════════════════════════════════════ */
+function getChannelDetailData(months) {
+  if (!DB_DATA || !DB_DATA.by_channel_segment) return null;
+  const cs = DB_DATA.by_channel_segment;
+  const byChannel = DB_DATA.by_channel || {};
+  const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
+  const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
+
+  const segGroups = { 'OTA': [], 'G-OTA': [] };
+
+  Object.keys(cs).forEach(chName => {
+    if (chName === '기타') return; // 기타 제외
+    const segs = Object.keys(cs[chName]);
+    const seg = segs.includes('OTA') ? 'OTA' : segs.includes('G-OTA') ? 'G-OTA' : null;
+    if (!seg || !segGroups[seg]) return;
+
+    const chData = byChannel[chName] || {};
+    let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
+    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
+    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+    const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
+    const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
+    const rnsYoy = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
+    const revYoy = rev25 > 0 ? (rev26 - rev25) / rev25 * 100 : null;
+    const adrYoy = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
+
+    segGroups[seg].push({ name: chName, segment: seg, rn26, rev26, adr26, rn25, rev25, adr25, rnsYoy, revYoy, adrYoy });
+  });
+
+  // Sort each group by rn26 descending
+  Object.values(segGroups).forEach(arr => arr.sort((a, b) => b.rn26 - a.rn26));
+  return segGroups;
+}
+
+function renderChannelDetailTable(months, containerId) {
+  const data = getChannelDetailData(months);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!data) {
+    el.innerHTML = '<div class="data-missing"><strong>데이터 미수신</strong>db_aggregated.json을 확인해주세요.</div>';
+    return;
+  }
+
+  let html = `<table class="full-table"><thead>
+    <tr>
+      <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:100px">거래처</th>
+      <th class="group-header" colspan="3">객실수 (RN)</th>
+      <th class="group-header" colspan="3">ADR (천원)</th>
+      <th class="group-header" colspan="3">매출 (백만원)</th>
+    </tr>
+    <tr>
+      <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
+      <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
+      <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
+    </tr>
+  </thead><tbody>`;
+
+  let grandRn26 = 0, grandRn25 = 0, grandRev26 = 0, grandRev25 = 0;
+  let visibleCount = 0;
+
+  ['OTA', 'G-OTA'].forEach(seg => {
+    const channels = data[seg] || [];
+    if (channels.length === 0) return;
+
+    // Segment header
+    html += `<tr class="seg-header-row"><td colspan="10" style="text-align:left;padding-left:16px">${seg} 채널</td></tr>`;
+
+    let segRn26 = 0, segRn25 = 0, segRev26 = 0, segRev25 = 0;
+    channels.forEach((ch, i) => {
+      segRn26 += ch.rn26; segRn25 += ch.rn25; segRev26 += ch.rev26; segRev25 += ch.rev25;
+      const rnsCol = ch.rnsYoy != null ? (ch.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+      const adrCol = ch.adrYoy != null ? (ch.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+      const revCol = ch.revYoy != null ? (ch.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+      const hide = (visibleCount + i >= 10) ? ' style="display:none" data-extra-ch' : '';
+      html += `<tr${hide}>
+        <td style="padding-left:20px">${ch.name}</td>
+        <td style="font-weight:700">${fmt.n(ch.rn26)}</td><td>${fmt.n(ch.rn25)}</td><td style="color:${rnsCol};font-weight:700">${ch.rnsYoy != null ? fmt.pct(ch.rnsYoy) : '—'}</td>
+        <td style="font-weight:700">${fmt.won(ch.adr26)}</td><td>${fmt.won(ch.adr25)}</td><td style="color:${adrCol};font-weight:700">${ch.adrYoy != null ? fmt.pct(ch.adrYoy) : '—'}</td>
+        <td style="font-weight:700">${fmt.n(Math.round(ch.rev26))}</td><td>${fmt.n(Math.round(ch.rev25))}</td><td style="color:${revCol};font-weight:700">${ch.revYoy != null ? fmt.pct(ch.revYoy) : '—'}</td>
+      </tr>`;
+    });
+    visibleCount += channels.length;
+
+    // Subtotal
+    const segAdr26 = segRn26 > 0 ? Math.round((segRev26 * 1000000) / segRn26) : 0;
+    const segAdr25 = segRn25 > 0 ? Math.round((segRev25 * 1000000) / segRn25) : 0;
+    const segRnYoy = segRn25 > 0 ? (segRn26 - segRn25) / segRn25 * 100 : null;
+    const segRevYoy = segRev25 > 0 ? (segRev26 - segRev25) / segRev25 * 100 : null;
+    const segAdrYoy = segAdr25 > 0 ? (segAdr26 - segAdr25) / segAdr25 * 100 : null;
+    html += `<tr class="seg-subtotal">
+      <td>${seg} 소계</td>
+      <td>${fmt.n(segRn26)}</td><td>${fmt.n(segRn25)}</td><td style="color:${segRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRnYoy != null ? fmt.pct(segRnYoy) : '—'}</td>
+      <td>${fmt.won(segAdr26)}</td><td>${fmt.won(segAdr25)}</td><td style="color:${segAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segAdrYoy != null ? fmt.pct(segAdrYoy) : '—'}</td>
+      <td>${fmt.n(Math.round(segRev26))}</td><td>${fmt.n(Math.round(segRev25))}</td><td style="color:${segRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRevYoy != null ? fmt.pct(segRevYoy) : '—'}</td>
+    </tr>`;
+    grandRn26 += segRn26; grandRn25 += segRn25; grandRev26 += segRev26; grandRev25 += segRev25;
+  });
+
+  // Grand Total
+  const gAdr26 = grandRn26 > 0 ? Math.round((grandRev26 * 1000000) / grandRn26) : 0;
+  const gAdr25 = grandRn25 > 0 ? Math.round((grandRev25 * 1000000) / grandRn25) : 0;
+  const gRnYoy = grandRn25 > 0 ? (grandRn26 - grandRn25) / grandRn25 * 100 : null;
+  const gRevYoy = grandRev25 > 0 ? (grandRev26 - grandRev25) / grandRev25 * 100 : null;
+  const gAdrYoy = gAdr25 > 0 ? (gAdr26 - gAdr25) / gAdr25 * 100 : null;
+  html += `<tr class="total-row">
+    <td>Grand Total</td>
+    <td>${fmt.n(grandRn26)}</td><td>${fmt.n(grandRn25)}</td><td style="color:${gRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gRnYoy != null ? fmt.pct(gRnYoy) : '—'}</td>
+    <td>${fmt.won(gAdr26)}</td><td>${fmt.won(gAdr25)}</td><td style="color:${gAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gAdrYoy != null ? fmt.pct(gAdrYoy) : '—'}</td>
+    <td>${fmt.n(Math.round(grandRev26))}</td><td>${fmt.n(Math.round(grandRev25))}</td><td style="color:${gRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gRevYoy != null ? fmt.pct(gRevYoy) : '—'}</td>
+  </tr>`;
+  html += '</tbody></table>';
+  el.innerHTML = html;
+
+  // Toggle for >10 rows
+  const extras = el.querySelectorAll('tr[data-extra-ch]');
+  if (extras.length > 0) {
+    const btn = document.createElement('button');
+    btn.className = 'toggle-more';
+    btn.textContent = `더보기 (${extras.length}개 거래처)`;
+    btn.onclick = () => { const show = extras[0]?.style.display === 'none'; extras.forEach(r => r.style.display = show ? '' : 'none'); btn.textContent = show ? '접기' : `더보기 (${extras.length}개 거래처)`; };
+    el.appendChild(btn);
+  }
+}
+
+/* ── Channel Detail Insight (거래처 성장/역성장) ── */
+function generateChannelDetailInsight(months) {
+  const data = getChannelDetailData(months);
+  if (!data) return [];
+  const items = [];
+  const all = [...(data['OTA']||[]), ...(data['G-OTA']||[])].filter(c => c.rn26 > 0);
+  const sorted = [...all].sort((a, b) => (b.rnsYoy||0) - (a.rnsYoy||0));
+  const growing = sorted.filter(c => c.rnsYoy != null && c.rnsYoy > 5).slice(0, 3);
+  const declining = sorted.filter(c => c.rnsYoy != null && c.rnsYoy < -5).reverse().slice(0, 3);
+  if (growing.length > 0) {
+    items.push(`<span class="insight-kw">성장 채널</span> ${growing.map(c => c.name + ' RN ' + fmt.pct(c.rnsYoy)).join(' · ')}`);
+  }
+  if (declining.length > 0) {
+    items.push(`<span class="insight-kw">역성장 채널</span> ${declining.map(c => c.name + ' RN ' + fmt.pct(c.rnsYoy)).join(' · ')}`);
+  }
+  // ADR 변동 큰 채널
+  const adrUp = [...all].filter(c => c.adrYoy != null && c.adrYoy > 10).sort((a,b) => b.adrYoy - a.adrYoy).slice(0, 2);
+  const adrDown = [...all].filter(c => c.adrYoy != null && c.adrYoy < -10).sort((a,b) => a.adrYoy - b.adrYoy).slice(0, 2);
+  if (adrUp.length > 0) items.push(`<span class="insight-kw">ADR 상승</span> ${adrUp.map(c => c.name + ' ' + fmt.pct(c.adrYoy)).join(' · ')}`);
+  if (adrDown.length > 0) items.push(`<span class="insight-kw">ADR 하락</span> ${adrDown.map(c => c.name + ' ' + fmt.pct(c.adrYoy)).join(' · ')}`);
+  return items;
+}
+
+/* ══════════════════════════════════════
+   RENDER: HEADLINE BANNER (Section 1)
+   ══════════════════════════════════════ */
+function generateHeadline(summary, months) {
+  const lines = [];
+  // Budget achievement
+  if (summary.rns_achievement >= 100 && summary.rev_achievement >= 100) {
+    lines.push('전 Seg 목표 초과 달성');
+  } else if (summary.rev_achievement >= 100) {
+    lines.push('매출 목표 초과 달성');
+  } else if (summary.rns_achievement >= 100) {
+    lines.push('RN 목표 초과 달성');
+  }
+  // YoY growth
+  if (summary.rns_yoy > 0 && summary.rev_yoy > 0) {
+    lines.push(`YoY 객실수 +${summary.rns_yoy.toFixed(1)}%, 매출 +${summary.rev_yoy.toFixed(1)}%`);
+  }
+  // OTA/GOTA growth from segments
+  const segMap = combineSegments(months);
+  const ota = segMap['OTA'] || {};
+  const gota = segMap['G-OTA'] || {};
+  if (ota.rns_yoy > 0 && gota.rns_yoy > 0) lines.push('OTA, G-OTA 성장세 유지');
+  if (ota.rev_actual > 0 && (ota.rev_ach||0) >= 100) lines.push('OTA 매출 목표 초과');
+  return lines;
+}
+
+/* ══════════════════════════════════════
+   RENDER: PROPERTY INSIGHT CARDS
+   ══════════════════════════════════════ */
+function renderPropertyInsightCards(props, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const withYoY = props.filter(p => p.rns_yoy != null && p.rns_last > 100);
+  if (withYoY.length === 0) return;
+  const sorted = [...withYoY].sort((a, b) => (b.rns_yoy||0) - (a.rns_yoy||0));
+  const top3 = sorted.slice(0, 3);
+  const btm3 = sorted.slice(-3).reverse();
+
+  let html = '<div class="prop-insight-grid">';
+  top3.forEach(p => {
+    const nm = p.name.replace(/^\d+\./, '');
+    const adrPrev = p.adr_last > 0 ? Math.round(p.adr_last/1000) : '—';
+    const adrCur = p.adr_actual > 0 ? Math.round(p.adr_actual/1000) : '—';
+    html += `<div class="prop-insight-card pic-top">
+      <div class="pic-label">TOP 성장</div>
+      <div class="pic-name">${nm}</div>
+      <div class="pic-metrics">
+        <div class="pic-metric">RNS <strong style="color:var(--positive)">${p.rns_yoy != null ? fmt.pct(p.rns_yoy) : '—'}</strong></div>
+        <div class="pic-metric">REV <strong style="color:${(p.rev_yoy||0)>=0?'var(--positive)':'var(--negative)'}">${p.rev_yoy != null ? fmt.pct(p.rev_yoy) : '—'}</strong></div>
+        <div class="pic-metric">ADR <strong>${adrPrev}→${adrCur}천</strong></div>
+      </div>
+    </div>`;
+  });
+  btm3.forEach(p => {
+    const nm = p.name.replace(/^\d+\./, '');
+    const adrPrev = p.adr_last > 0 ? Math.round(p.adr_last/1000) : '—';
+    const adrCur = p.adr_actual > 0 ? Math.round(p.adr_actual/1000) : '—';
+    html += `<div class="prop-insight-card pic-check">
+      <div class="pic-label">체크 사업장</div>
+      <div class="pic-name">${nm}</div>
+      <div class="pic-metrics">
+        <div class="pic-metric">RNS <strong style="color:var(--negative)">${p.rns_yoy != null ? fmt.pct(p.rns_yoy) : '—'}</strong></div>
+        <div class="pic-metric">REV <strong style="color:${(p.rev_yoy||0)>=0?'var(--positive)':'var(--negative)'}">${p.rev_yoy != null ? fmt.pct(p.rev_yoy) : '—'}</strong></div>
+        <div class="pic-metric">ADR <strong>${adrPrev}→${adrCur}천</strong></div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+/* ══════════════════════════════════════
+   RENDER: ADR TREND LINE CHART
+   ══════════════════════════════════════ */
+function renderADRTrendChart(chartId) {
+  const labels = CLOSED_MONTHS.map(m => MONTH_KO[m]);
+  const adr26 = CLOSED_MONTHS.map(m => { const s = getMonthSummary(m); return s.rns_actual > 0 ? Math.round((s.rev_actual || 0) / (s.rns_actual || 1)) : 0; });
+  const adr25 = CLOSED_MONTHS.map(m => { const s = getMonthSummary(m); return s.rns_last > 0 ? Math.round((s.rev_last || 0) / (s.rns_last || 1)) : 0; });
+  const ctx = document.getElementById(chartId)?.getContext('2d');
+  if (!ctx) return;
+  const key = chartId;
+  if (chartInstances[key]) chartInstances[key].destroy();
+  chartInstances[key] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '2026 ADR', data: adr26, borderColor: 'rgba(201,160,99,1)', backgroundColor: 'rgba(201,160,99,0.15)', fill: true, tension: 0.3, pointRadius: 5, pointBackgroundColor: 'rgba(201,160,99,1)', borderWidth: 2.5 },
+        { label: '2025 ADR', data: adr25, borderColor: 'rgba(96,165,250,0.7)', backgroundColor: 'rgba(96,165,250,0.08)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: 'rgba(96,165,250,0.7)', borderWidth: 2, borderDash: [5, 3] }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt.won(ctx.raw) } } },
+      scales: { y: { beginAtZero: false, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => fmt.won(v) }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { display: false } } }
+    }
+  });
+}
+
+/* ══════════════════════════════════════
    RENDER: CATEGORY / PRODUCT PIE (3-3)
    ══════════════════════════════════════ */
 function getCategoryData(months) {
@@ -921,6 +1169,7 @@ function buildTabHTML(tabId, months, label, showCumul) {
       <section class="section">
         <span class="section-num">SECTION 01</span>
         <h2 class="section-title"><span class="st-icon">📊</span> 전체 실적 리뷰</h2>
+        <div id="headline-${uid}"></div>
         <div class="kpi-grid" id="kpi-${uid}"></div>
         <div class="insight-box" id="insight-overview-${uid}">
           <h3>핵심 실적 요약</h3>
@@ -952,6 +1201,7 @@ function buildTabHTML(tabId, months, label, showCumul) {
         <div class="card">
           <div class="card-header"><h3>3-1. 사업장별 실적 (RN · ADR · 매출 — 목표/실적/전년비)</h3></div>
           <div class="card-body">
+            <div id="prop-cards-${uid}"></div>
             <div class="insight-box" style="margin-bottom:12px" id="insight-prop-wrap-${uid}">
               <h3>사업장 인사이트</h3>
               <ul id="insight-prop-${uid}"></ul>
@@ -960,18 +1210,20 @@ function buildTabHTML(tabId, months, label, showCumul) {
           </div>
         </div>
 
-        <!-- 3-2 세그먼트별 -->
+        <!-- 3-2 채널(거래처)별 실적 -->
         <div class="card">
-          <div class="card-header"><h3>3-2. 세그먼트별 실적 (OTA · G-OTA · Inbound)</h3></div>
+          <div class="card-header"><h3>3-2. 채널(거래처)별 실적</h3></div>
           <div class="card-body">
             <div class="insight-box" style="margin-bottom:12px" id="insight-chan-wrap-${uid}">
               <h3>세그먼트 인사이트</h3>
               <ul id="insight-chan-${uid}"></ul>
             </div>
-            <div class="table-wrap" id="chan-${uid}"></div>
-            <div style="margin-top:12px;text-align:right">
-              <a href="channel.html" style="font-size:12px;color:var(--info);text-decoration:none;border:1px solid rgba(96,165,250,0.25);padding:6px 14px;border-radius:6px;font-weight:600;transition:all .2s" onmouseover="this.style.background='rgba(96,165,250,0.08)'" onmouseout="this.style.background='none'">거래처별 상세 → 채널 분석 리포트</a>
+            <div class="table-wrap" id="chan-${uid}" style="margin-bottom:16px"></div>
+            <div class="insight-box" style="margin-bottom:12px;border-left-color:var(--info)" id="insight-chdetail-wrap-${uid}">
+              <h3 style="color:var(--info)">거래처별 특이사항</h3>
+              <ul id="insight-chdetail-${uid}"></ul>
             </div>
+            <div class="table-wrap" id="chan-detail-${uid}"></div>
           </div>
         </div>
 
@@ -1002,6 +1254,10 @@ function buildTabHTML(tabId, months, label, showCumul) {
               <h3>ADR 인사이트</h3>
               <ul id="insight-adr-${uid}"></ul>
             </div>
+            <div class="chart-wrap" style="margin-bottom:16px">
+              <h4>월별 ADR 추이 — 2025 vs 2026</h4>
+              <div class="chart-container"><canvas id="adr-trend-${uid}"></canvas></div>
+            </div>
             <div class="table-wrap" id="adr-${uid}"></div>
           </div>
         </div>
@@ -1020,15 +1276,30 @@ function buildTabHTML(tabId, months, label, showCumul) {
           <div class="card-body" id="ib-${uid}"></div>
         </div>
 
-        <!-- 3-8 기타 분석자료 -->
+        <!-- 3-8 경쟁사 분석 -->
         <div class="card">
-          <div class="card-header"><h3>3-8. 기타 분석자료</h3></div>
+          <div class="card-header"><h3>3-8. 경쟁사 분석</h3></div>
+          <div class="card-body">
+            <div class="insight-box" style="border-left-color:var(--warning)">
+              <h3 style="color:var(--warning)">경쟁사 모니터링</h3>
+              <ul>
+                <li><span class="insight-kw">경쟁사 동향</span> 한화, 롯데 등 주요 경쟁사 프로모션 분석은 별도 경쟁사 모니터링 대시보드에서 확인</li>
+                <li><a href="https://cksals00-ai.github.io/sono-competitor-crawler/" target="_blank" style="color:var(--info);font-weight:700;text-decoration:none;border-bottom:1px dashed var(--info)">경쟁사 모니터링 대시보드 바로가기 →</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-9 기타 분석자료 -->
+        <div class="card">
+          <div class="card-header"><h3>3-9. 기타 분석자료</h3></div>
           <div class="card-body">
             <div class="insight-box" style="border-left-color:var(--info)">
               <h3 style="color:var(--info)">분석 참고사항</h3>
               <ul>
                 <li>전체 세그먼트 = OTA + G-OTA + Inbound 3개 중심 분석</li>
                 <li>FIT 채널은 OTA/G-OTA에 포함하여 분석 · 기타 세그먼트는 채널별 테이블 참조</li>
+                <li>채널 거래처별 데이터: db_aggregated.json 기반 실적 집계</li>
                 <li>데이터 소스: 온북 DB + 사업계획 목표</li>
               </ul>
             </div>
@@ -1066,6 +1337,15 @@ function populateTab(tabId, months, showCumul) {
     cumulSummary = combineSummary(cumulMonths);
   }
 
+  // Headline banner
+  const hlEl = document.getElementById(`headline-${uid}`);
+  if (hlEl) {
+    const headlines = generateHeadline(summary, months);
+    if (headlines.length > 0) {
+      hlEl.innerHTML = `<div class="headline-banner"><span class="headline-icon">🏆</span><div><div class="headline-text">${headlines.join(' · ')}</div><div class="headline-sub">${months.length === 1 ? MONTH_KO[months[0]] : months.map(m => MONTH_KO[m]).join('~')} 마감 | RN ${fmt.n(summary.rns_actual)}실 · 매출 ${fmt.rev(summary.rev_actual)} · 목표대비 RN ${summary.rns_achievement.toFixed(1)}% / REV ${summary.rev_achievement.toFixed(1)}%</div></div></div>`;
+    }
+  }
+
   renderKPI(summary, `kpi-${uid}`, cumulSummary);
   renderTrendChart(`trend-${uid}`);
 
@@ -1084,15 +1364,24 @@ function populateTab(tabId, months, showCumul) {
   const mEl = document.getElementById(`market-${uid}`);
   if (mEl) mEl.innerHTML = getMarketPoints(months).map(p => `<li>${p}</li>`).join('');
 
-  // 3-1 Property
+  // 3-1 Property — cards + insight + table
+  renderPropertyInsightCards(props, `prop-cards-${uid}`);
   renderPropertyTable(props, `prop-${uid}`);
   const pInsEl = document.getElementById(`insight-prop-${uid}`);
   if (pInsEl) pInsEl.innerHTML = generatePropertyInsight(props).map(p => `<li>${p}</li>`).join('');
 
-  // 3-2 Channel
+  // 3-2 Channel — segment table + detail table
   renderChannelTable(months, `chan-${uid}`);
   const cInsEl = document.getElementById(`insight-chan-${uid}`);
   if (cInsEl) cInsEl.innerHTML = generateChannelInsight(months).map(p => `<li>${p}</li>`).join('');
+
+  // 3-2 Channel detail (거래처별)
+  renderChannelDetailTable(months, `chan-detail-${uid}`);
+  const cdInsEl = document.getElementById(`insight-chdetail-${uid}`);
+  if (cdInsEl) {
+    const cdItems = generateChannelDetailInsight(months);
+    cdInsEl.innerHTML = cdItems.length > 0 ? cdItems.map(p => `<li>${p}</li>`).join('') : '<li>거래처별 상세 데이터 분석 중</li>';
+  }
 
   // 3-3 Category
   renderCategorySection(months, `catpie-${uid}`, `cattbl-${uid}`);
@@ -1100,7 +1389,8 @@ function populateTab(tabId, months, showCumul) {
   // 3-4 Lead time
   renderLeadTime(props, `lt-${uid}`);
 
-  // 3-5 ADR
+  // 3-5 ADR — trend chart + table
+  renderADRTrendChart(`adr-trend-${uid}`);
   renderADRTable(props, `adr-${uid}`);
   const aInsEl = document.getElementById(`insight-adr-${uid}`);
   if (aInsEl) aInsEl.innerHTML = generateADRInsight(props, summary).map(p => `<li>${p}</li>`).join('');
@@ -1176,11 +1466,13 @@ function switchPeriod(type) {
    ══════════════════════════════════════ */
 Promise.all([
   fetch('data/otb_data.json').then(r => r.json()),
-  fetch('data/package_series_trend.json').then(r => r.json()).catch(() => null)
+  fetch('data/package_series_trend.json').then(r => r.json()).catch(() => null),
+  fetch('data/db_aggregated.json').then(r => r.json()).catch(() => null)
 ])
-  .then(([otbData, pkgData]) => {
+  .then(([otbData, pkgData, dbData]) => {
     DATA = otbData;
     PKG_DATA = pkgData;
+    DB_DATA = dbData;
     document.getElementById('refreshTime').textContent = DATA.meta?.refreshTime || '—';
     switchPeriod('monthly');
   })
