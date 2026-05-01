@@ -6792,8 +6792,7 @@ function renderInsight02(otbData) {
   });
 
   const segmentList = Object.entries(segments)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
+    .sort((a, b) => b[1] - a[1]);
 
   document.getElementById('insight02Properties').innerHTML = segmentList
     .map(([seg, val]) => `
@@ -6811,9 +6810,7 @@ function renderInsight02(otbData) {
       labels: segmentList.map(s => s[0]),
       datasets: [{
         data: segmentList.map(s => s[1]),
-        backgroundColor: [
-          '#c9a063', '#e6b970', '#4caf6f', '#5a9fc4', '#e8a256', '#e57373', '#fdd835', '#66bb6a'
-        ],
+        backgroundColor: segmentList.map((_, i) => ['#c9a063','#e6b970','#4caf6f','#5a9fc4','#e8a256','#e57373','#fdd835','#66bb6a','#ab47bc','#26a69a','#ef5350','#42a5f5','#78909c','#d4e157','#8d6e63','#29b6f6','#ffa726','#ec407a','#7e57c2','#9ccc65'][i % 20]),
         borderColor: '#252932',
         borderWidth: 2
       }]
@@ -6823,7 +6820,8 @@ function renderInsight02(otbData) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { color: '#a8acb3', font: { size: 11 } }
+          position: segmentList.length > 10 ? 'right' : 'bottom',
+          labels: { color: '#a8acb3', font: { size: 10 } }
         }
       }
     }
@@ -7788,7 +7786,7 @@ function renderChannelGrowthChart(data) {
   const ctx = document.getElementById('chartChannelGrowth');
   if (!ctx) return;
   
-  const channels = Object.keys(data).sort((a,b) => (data[b][2025]?.rn||0) - (data[a][2025]?.rn||0)).slice(0,10);
+  const channels = Object.keys(data).sort((a,b) => (data[b][2025]?.rn||0) - (data[a][2025]?.rn||0));
   const years = [2022,2023,2024,2025];
   const yearColors = ['rgba(122,126,133,0.6)','rgba(90,159,196,0.7)','rgba(201,160,99,0.8)','rgba(76,175,111,0.9)'];
   
@@ -8047,12 +8045,15 @@ function renderCampaignCharts(data) {
   const ctx1 = document.getElementById('chartCampaignByChannel');
   if (ctx1) {
     const chData = data.by_channel_type || {};
-    const sorted = Object.entries(chData).sort((a,b) => b[1]-a[1]).slice(0, 12);
+    const sorted = Object.entries(chData).sort((a,b) => b[1]-a[1]);
     const colors = [
       'rgba(232,162,86,0.85)', 'rgba(90,159,196,0.8)', 'rgba(76,175,111,0.8)',
       'rgba(229,115,115,0.8)', 'rgba(201,160,99,0.8)', 'rgba(160,126,232,0.8)',
       'rgba(122,126,133,0.7)', 'rgba(255,193,7,0.7)', 'rgba(0,188,212,0.7)',
-      'rgba(156,39,176,0.7)', 'rgba(255,87,34,0.7)', 'rgba(63,81,181,0.7)'
+      'rgba(156,39,176,0.7)', 'rgba(255,87,34,0.7)', 'rgba(63,81,181,0.7)',
+      'rgba(121,85,72,0.7)', 'rgba(38,166,154,0.7)', 'rgba(239,83,80,0.7)',
+      'rgba(66,165,245,0.7)', 'rgba(102,187,106,0.7)', 'rgba(255,167,38,0.7)',
+      'rgba(171,71,188,0.7)', 'rgba(41,182,246,0.7)'
     ];
     new Chart(ctx1, {
       type: 'bar',
@@ -8480,17 +8481,17 @@ function renderROIAndMixCharts() {
     new Chart(ctx4, {
       type: 'bar',
       data: {
-        labels: ['Direct', 'OTA', 'G-OTA', 'Member', '기타'],
+        labels: ['Direct', 'OTA', 'G-OTA', 'Member', 'Inbound', 'B2B/단체', '일반개인'],
         datasets: [
           {
             label: '2025 현황',
-            data: [5.1, 45.2, 18.5, 26.1, 5.1],
+            data: [5.1, 45.2, 18.5, 26.1, 2.3, 1.6, 1.2],
             backgroundColor: 'rgba(122,126,133,0.8)',
             borderRadius: 2
           },
           {
             label: '2027 목표',
-            data: [18.0, 38.0, 22.0, 18.0, 4.0],
+            data: [18.0, 38.0, 22.0, 18.0, 2.0, 1.0, 1.0],
             backgroundColor: 'rgba(76,175,111,0.85)',
             borderRadius: 2
           }
@@ -8637,6 +8638,13 @@ function renderBizPlanCharts() {
         });
         const el = document.getElementById('obPotentialRN');
         if (el) el.textContent = '+' + totalOBRN.toLocaleString();
+        if (DEEP.obMatrix.length > 10) {
+          const table = obBody.closest('table');
+          if (table) {
+            table.id = 'ob-matrix-table';
+            setTimeout(() => toggleTableExpand('ob-matrix-table', 10), 100);
+          }
+        }
       }
 
       // ── 6-1B: Segment Cancel Trend Chart ──
@@ -8800,6 +8808,13 @@ function renderBizPlanCharts() {
             <td style="text-align:right; padding:6px 8px; color:var(--ink-faint);">${r.rd.toLocaleString()}</td>`;
           vulnBody.appendChild(tr);
         });
+        if (DEEP.vulnTop.length > 10) {
+          const table = vulnBody.closest('table');
+          if (table) {
+            table.id = 'vuln-matrix-table';
+            setTimeout(() => toggleTableExpand('vuln-matrix-table', 10), 100);
+          }
+        }
       }
       const growthBody = document.getElementById('growthMatrixBody');
       if (growthBody && DEEP.growthTop) {
@@ -8816,12 +8831,19 @@ function renderBizPlanCharts() {
             <td style="text-align:right; padding:6px 8px; color:var(--ink-faint);">+${r.rd.toLocaleString()}</td>`;
           growthBody.appendChild(tr);
         });
+        if (DEEP.growthTop.length > 10) {
+          const table = growthBody.closest('table');
+          if (table) {
+            table.id = 'growth-matrix-table';
+            setTimeout(() => toggleTableExpand('growth-matrix-table', 10), 100);
+          }
+        }
       }
 
       // ── 6-2C: Channel Shift Chart ──
       const csCtx = document.getElementById('chartChannelShift');
       if (csCtx && DEEP.chShift) {
-        const filtered = DEEP.chShift.filter(c => c.ch !== '기타');
+        const filtered = DEEP.chShift;
         new Chart(csCtx, {
           type: 'bar',
           data: {
@@ -9084,7 +9106,7 @@ function renderBizPlanCharts() {
       // Channel behavior chart
       const chCtx = document.getElementById('chartChBehavior');
       if (chCtx && DEEP.chBehavior) {
-        const chs = DEEP.chBehavior.filter(c => c.ch !== '기타').slice(0, 12);
+        const chs = DEEP.chBehavior.slice(0, 20);
         new Chart(chCtx, {
           type: 'bar',
           data: {
@@ -10210,6 +10232,58 @@ function renderBizPlanCharts() {
       const colors10 = [gold,'#e57373','#64b5f6','#81c784','#ffb74d','#ba68c8','#4dd0e1','#f06292','#aed581','#ff8a65'];
       const shortName = n => n.replace(/소노벨 |소노캄 |소노문 |소노펠리체 |쏠비치 |소노펫 |소노휴 |빌리지 |비발디파크/g,'').trim();
 
+      // ── Expandable table helper function ──
+      const toggleTableExpand = (tableId, limit = 10) => {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length <= limit) return;
+
+        // Show only first 10 rows initially
+        rows.forEach((row, idx) => {
+          row.style.display = idx < limit ? '' : 'none';
+          row.classList.add('expandable-row');
+          if (idx === limit) {
+            row.dataset.isHidden = 'true';
+          }
+        });
+
+        // Create toggle button
+        const btn = document.createElement('button');
+        btn.className = 'expand-btn';
+        btn.style.cssText = `
+          display: block;
+          margin-top: 12px;
+          padding: 8px 16px;
+          background: var(--bg-soft);
+          color: var(--ink);
+          border: 1px solid var(--rule);
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+        `;
+        btn.textContent = '더보기';
+
+        const container = table.parentElement;
+        if (container) {
+          container.insertBefore(btn, table.nextSibling.nextSibling);
+        }
+
+        btn.addEventListener('click', () => {
+          const isExpanded = btn.textContent === '접기';
+          rows.forEach((row, idx) => {
+            if (idx >= limit) {
+              row.style.display = isExpanded ? 'none' : '';
+            }
+          });
+          btn.textContent = isExpanded ? '더보기' : '접기';
+        });
+      };
+
       /* ── 8-1: BCG ── */
       try{
         const d=CH8.bcg; if(!d||!d.length) throw 0;
@@ -10322,10 +10396,13 @@ function renderBizPlanCharts() {
           options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'채널 포트폴리오 (ADR × 성장률)',color:darkTxt},tooltip:{callbacks:{label:ctx=>{const c=ctx.raw;return c.ch+': ADR '+c.x.toLocaleString()+'원, YoY '+(ctx.parsed.y>0?'+':'')+ctx.parsed.y.toFixed(1)+'%, '+c.rn.toLocaleString()+'RN'}}}},scales:{x:{title:{display:true,text:'Net ADR (원)',color:mutedTxt},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:mutedTxt}},y:{title:{display:true,text:'YoY 성장률 (%)',color:mutedTxt},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:mutedTxt}}}}
         });
         const sorted=[...d].sort((a,b)=>b.adr-a.adr);
-        let t='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid var(--rule);"><th style="text-align:left;padding:6px;color:var(--ink-muted);">채널</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">2025 RN</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">ADR</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">YoY</th></tr></thead><tbody>';
+        let t='<table id="chport-data-table" style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid var(--rule);"><th style="text-align:left;padding:6px;color:var(--ink-muted);">채널</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">2025 RN</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">ADR</th><th style="text-align:right;padding:6px;color:var(--ink-muted);">YoY</th></tr></thead><tbody>';
         sorted.forEach(c=>{t+='<tr style="border-bottom:1px solid rgba(255,255,255,0.03);"><td style="padding:5px;color:var(--ink);">'+c.ch+'</td><td style="text-align:right;padding:5px;color:var(--ink);">'+c.rn25.toLocaleString()+'</td><td style="text-align:right;padding:5px;color:var(--ink);">'+c.adr.toLocaleString()+'원</td><td style="text-align:right;padding:5px;color:'+(c.yoy>0?pos:neg)+';">'+(c.yoy>0?'+':'')+c.yoy.toFixed(1)+'%</td></tr>';});
         t+='</tbody></table>';
         document.getElementById('chport-table').innerHTML=t;
+        if(sorted.length > 10) {
+          setTimeout(() => toggleTableExpand('chport-data-table', 10), 100);
+        }
         const hv=d.filter(c=>c.adr>2000&&c.yoy>0);
         document.getElementById('chport-insight').innerHTML='<strong>채널 포트폴리오 시사점:</strong><br>① <strong>고수익·고성장 ('+hv.length+'개)</strong>: '+hv.map(c=>c.ch).join(', ')+' — 투자 확대 대상.<br>② <strong>ADR 최고</strong>: '+sorted[0].ch+' ('+sorted[0].adr.toLocaleString()+'원) — 프리미엄 채널.<br>③ <strong>볼륨 최대</strong>: '+[...d].sort((a,b)=>b.rn25-a.rn25)[0].ch+' — 기반 채널, 수수료 협상력.<br>④ 채널간 ADR 격차 최대 '+(sorted[0].adr-sorted[sorted.length-1].adr).toLocaleString()+'원 → 가격 전략 차별화 필요.';
       }catch(e){console.warn('ChPort error',e)}
@@ -10353,7 +10430,7 @@ function renderBizPlanCharts() {
         const allSegs=new Set(); channels.forEach(ch=>Object.keys(data[ch]).forEach(s=>allSegs.add(s)));
         const segments=[...allSegs].sort();
         let mx=0; channels.forEach(ch=>segments.forEach(s=>{const v=data[ch]?.[s]||0;if(v>mx)mx=v;}));
-        let h='<table style="border-collapse:collapse;font-size:11px;width:100%;"><thead><tr><th style="padding:4px 6px;color:var(--ink-muted);text-align:left;">채널\세그</th>';
+        let h='<table id="pmf-heatmap-table" style="border-collapse:collapse;font-size:11px;width:100%;"><thead><tr><th style="padding:4px 6px;color:var(--ink-muted);text-align:left;">채널\세그</th>';
         segments.forEach(s=>h+='<th style="padding:4px;color:var(--ink-muted);text-align:center;font-size:9px;">'+s+'</th>');
         h+='</tr></thead><tbody>';
         channels.forEach(ch=>{h+='<tr><td style="padding:4px 6px;color:var(--ink);font-weight:600;">'+ch+'</td>';
@@ -10361,6 +10438,9 @@ function renderBizPlanCharts() {
             h+='<td style="padding:3px;text-align:center;background:'+bg+';color:'+tc+';font-size:10px;">'+(v>0?v.toLocaleString():'-')+'</td>';});h+='</tr>';});
         h+='</tbody></table>';
         document.getElementById('pmf-heatmap').innerHTML=h;
+        if(channels.length > 10) {
+          setTimeout(() => toggleTableExpand('pmf-heatmap-table', 10), 100);
+        }
         const fits=[]; channels.forEach(ch=>segments.forEach(s=>{const v=data[ch]?.[s]||0;if(v>5000)fits.push({ch,seg:s,rn:v});})); fits.sort((a,b)=>b.rn-a.rn);
         document.getElementById('pmf-insight').innerHTML='<strong>PMF 시사점:</strong><br>① <strong>Top Fit</strong>: '+fits.slice(0,5).map(f=>f.ch+'×'+f.seg+' ('+f.rn.toLocaleString()+'RN)').join(' / ')+'<br>② OTA 세그먼트는 야놀자·여기어때·아고다에 집중 — 이 3개 채널이 핵심.<br>③ G-OTA는 채널 분포 넓어 <strong>다변화 기회</strong> 존재.<br>④ Inbound는 기타 채널 의존 높아 → 트립닷컴·아고다로 이전 필요.';
       }catch(e){console.warn('PMF error',e)}
@@ -10402,10 +10482,10 @@ function renderBizPlanCharts() {
       try{
         const cp=CH8.chProf; if(!cp||!Object.keys(cp).length) throw 0;
         const sorted=Object.entries(cp).filter(([ch,d])=>d.rn>500).sort((a,b)=>b[1].gross_rev-a[1].gross_rev);
-        const top8=sorted.slice(0,8);
-        new Chart(document.getElementById('chart-ch-waterfall'),{type:'bar',data:{labels:top8.map(([ch])=>ch),datasets:[{label:'Gross Revenue',data:top8.map(([,d])=>Math.round(d.gross_rev)),backgroundColor:'rgba(52,152,219,0.6)'},{label:'수수료 차감',data:top8.map(([,d])=>-Math.round(d.commission_amount)),backgroundColor:neg},{label:'Net Revenue',data:top8.map(([,d])=>Math.round(d.net_rev)),backgroundColor:pos}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'채널별 Revenue Waterfall',color:darkTxt},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(Math.abs(ctx.parsed.y))+'만원'}}},scales:{x:{ticks:{color:mutedTxt}},y:{ticks:{color:mutedTxt,callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.05)'}}}}});
+        const topAll=sorted;
+        new Chart(document.getElementById('chart-ch-waterfall'),{type:'bar',data:{labels:topAll.map(([ch])=>ch),datasets:[{label:'Gross Revenue',data:topAll.map(([,d])=>Math.round(d.gross_rev)),backgroundColor:'rgba(52,152,219,0.6)'},{label:'수수료 차감',data:topAll.map(([,d])=>-Math.round(d.commission_amount)),backgroundColor:neg},{label:'Net Revenue',data:topAll.map(([,d])=>Math.round(d.net_rev)),backgroundColor:pos}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'채널별 Revenue Waterfall (전체)',color:darkTxt},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(Math.abs(ctx.parsed.y))+'만원'}}},scales:{x:{ticks:{color:mutedTxt,font:{size:9},maxRotation:45}},y:{ticks:{color:mutedTxt,callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.05)'}}}}});
         // Commission sim
-        const simCh=sorted.filter(([,d])=>d.commission_rate>0).slice(0,6);
+        const simCh=sorted.filter(([,d])=>d.commission_rate>0);
         new Chart(document.getElementById('chart-commission-sim'),{type:'bar',data:{labels:simCh.map(([ch])=>ch),datasets:[0,0.02,0.05].map((delta,i)=>({label:delta===0?'현재':'수수료 +'+Math.round(delta*100)+'%p',data:simCh.map(([,d])=>Math.round(d.gross_rev*(1-d.commission_rate-delta))),backgroundColor:[gold,warn,neg][i]}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'수수료 인상 시나리오별 Net Revenue',color:darkTxt}},scales:{x:{ticks:{color:mutedTxt,font:{size:9}}},y:{ticks:{color:mutedTxt,callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.05)'}}}}});
         // Net ADR
         new Chart(document.getElementById('chart-net-adr'),{type:'bar',data:{labels:sorted.slice(0,10).map(([ch])=>ch),datasets:[{label:'Gross ADR',data:sorted.slice(0,10).map(([,d])=>d.gross_adr||0),backgroundColor:'rgba(52,152,219,0.5)'},{label:'Net ADR',data:sorted.slice(0,10).map(([,d])=>d.net_adr||0),backgroundColor:gold}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:darkTxt}},title:{display:true,text:'Gross vs Net ADR',color:darkTxt}},scales:{x:{ticks:{color:mutedTxt,font:{size:9}}},y:{ticks:{color:mutedTxt},grid:{color:'rgba(255,255,255,0.05)'}}}}});
@@ -10561,7 +10641,7 @@ function renderBizPlanCharts() {
           cardHTML+='<div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;">채널별 분해 — "어떤 채널이 빠졌나?"</div>';
           const chData=Object.entries(decomp[p].channels).sort((a,b)=>a[1].diff-b[1].diff);
           cardHTML+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:12px;">';
-          chData.slice(0,8).forEach(([ch,d])=>{
+          chData.forEach(([ch,d])=>{
             const c=d.diff>=0?pos:neg;
             cardHTML+='<div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;padding:8px;"><div style="font-size:10px;color:var(--ink-muted);">'+ch+'</div><div style="font-size:14px;font-weight:700;color:'+c+';">'+(d.diff>=0?'+':'')+d.diff.toLocaleString()+' RN</div><div style="font-size:9px;color:var(--ink-muted);">'+d.rn24.toLocaleString()+'→'+d.rn25.toLocaleString()+'</div></div>';
           });
@@ -10571,7 +10651,7 @@ function renderBizPlanCharts() {
           cardHTML+='<div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;">세그먼트별 분해 — "어떤 세그먼트가 빠졌나?"</div>';
           const segData=Object.entries(decomp[p].segments).sort((a,b)=>a[1].diff-b[1].diff);
           cardHTML+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:12px;">';
-          segData.slice(0,8).forEach(([seg,d])=>{
+          segData.forEach(([seg,d])=>{
             const c=d.diff>=0?pos:neg;
             const adrChange=d.adr24>0?((d.adr25/d.adr24-1)*100).toFixed(0):'N/A';
             cardHTML+='<div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;padding:8px;"><div style="font-size:10px;color:var(--ink-muted);">'+seg+'</div><div style="font-size:14px;font-weight:700;color:'+c+';">'+(d.diff>=0?'+':'')+d.diff.toLocaleString()+' RN</div><div style="font-size:9px;color:var(--ink-muted);">ADR '+(d.adr25>0?d.adr25.toLocaleString()+'원':'N/A')+' ('+adrChange+'%)</div></div>';

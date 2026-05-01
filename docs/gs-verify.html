@@ -374,6 +374,56 @@ input, button, select, table, th, td {
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">🚫 전체 행 0값 (데이터 미수신) 체크</div>
+      <div id="data-all-zero">
+        <div class="check-item">
+          <span class="check-label">테이블/차트에서 모든 행이 0인 경우 → ❌ 데이터 미수신 경고</span>
+          <span class="check-status" id="data-allzero-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚠️ 동일 값 컬럼 의심 체크</div>
+      <div id="data-same-value">
+        <div class="check-item">
+          <span class="check-label">특정 컬럼이 전부 동일 값인 경우 → ⚠️ 의심 (수동 확인 필요)</span>
+          <span class="check-status" id="data-sameval-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔑 취소율/취소건수 핵심 지표 체크</div>
+      <div id="data-cancel-kpi">
+        <div class="check-item">
+          <span class="check-label">취소율·취소건수 핵심 지표가 null 또는 0이면 → ❌ 점검 필요</span>
+          <span class="check-status" id="data-cancel-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 2026 실적 누락 여부</div>
+      <div id="data-2026-check">
+        <div class="check-item">
+          <span class="check-label">성장 인덱스 등에서 최신 연도(2026) 데이터 존재 여부</span>
+          <span class="check-status" id="data-2026-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕰️ JSON 파일 최신 날짜 vs 오늘 날짜</div>
+      <div id="data-freshness">
+        <div class="check-item">
+          <span class="check-label">JSON 데이터 최신 날짜와 오늘 날짜 차이 → 1일 이상이면 ⚠️ 경고</span>
+          <span class="check-status" id="data-freshness-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
     <!-- 시간대별 로그 -->
     <div class="card">
       <div class="card-title">🕐 데이터 검증 기록</div>
@@ -429,6 +479,36 @@ input, button, select, table, th, td {
         <div class="check-item">
           <span class="check-label">미정의 CSS 변수 없음</span>
           <span class="check-status"><span class="status-pass">✅ 정상</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏷️ "기타" 카테고리 사용 여부</div>
+      <div id="ui-etc-category">
+        <div class="check-item">
+          <span class="check-label">"기타" 카테고리가 테이블/차트에 노출되면 ❌ — 세분화 필요</span>
+          <span class="check-status" id="ui-etc-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📜 10행 초과 테이블 더보기 버튼</div>
+      <div id="ui-table-more">
+        <div class="check-item">
+          <span class="check-label">10행 초과 테이블에 "더보기" 버튼이 존재해야 함</span>
+          <span class="check-status" id="ui-more-btn-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 세그먼트 차트 표시 항목</div>
+      <div id="ui-segment-chart">
+        <div class="check-item">
+          <span class="check-label">세그먼트 차트가 OTA / G-OTA / Inbound 3개만 표시해야 함 (D멤버스 등 불필요 세그 노출 시 ❌)</span>
+          <span class="check-status" id="ui-segment-status"><span class="status-warn">⏳ 로딩</span></span>
         </div>
       </div>
     </div>
@@ -636,6 +716,7 @@ function loadLogs() {
       renderLogs();
       updateSummary();
       updateRefreshBadge();
+      setTimeout(checkUIExtended, 100);
     })
     .catch(function(e) {
       console.error('verify_log.json 로드 실패:', e);
@@ -789,6 +870,9 @@ function checkOtbData() {
         });
       }
 
+      // Extended data checks
+      checkDataExtended(data);
+
       // YoY check
       var lyDates = [];
       if (data.total) {
@@ -808,6 +892,106 @@ function checkOtbData() {
         '<span class="check-label">otb_data.json 로드 실패: ' + escHtml(e.message) + '</span>' +
         '<span class="check-status"><span class="status-fail">❌ 오류</span></span>';
     });
+}
+
+/* ───── NEW DATA CHECKS ───── */
+function checkDataExtended(data) {
+  var dates = [];
+  if (data.total) {
+    Object.keys(data.total).forEach(function(d) { dates.push(d); });
+  }
+  dates.sort();
+  var latestDate = dates.length > 0 ? dates[dates.length - 1] : null;
+
+  // 1) 전체 행 0값 체크 — 모든 날짜의 주요 KPI가 0이면 ❌
+  var allZero = true;
+  var zeroKeys = ['booking_rn', 'booking_revenue', 'cancel_rn', 'cancel_count'];
+  if (data.total && dates.length > 0) {
+    dates.forEach(function(d) {
+      var row = data.total[d];
+      zeroKeys.forEach(function(k) {
+        if (row[k] !== undefined && row[k] !== 0 && row[k] !== null && row[k] !== '0') allZero = false;
+      });
+    });
+  }
+  document.getElementById('data-allzero-status').innerHTML = allZero && dates.length > 0
+    ? '<span class="status-fail">❌ 전체 0 — 데이터 미수신</span>'
+    : '<span class="status-pass">✅ 정상</span>';
+
+  // 2) 동일 값 컬럼 의심 체크
+  var sameValSuspect = [];
+  if (data.total && dates.length > 2) {
+    var sampleKeys = Object.keys(data.total[dates[0]] || {});
+    sampleKeys.forEach(function(k) {
+      var vals = dates.map(function(d) { return data.total[d] ? data.total[d][k] : undefined; }).filter(function(v) { return v !== undefined; });
+      if (vals.length > 2) {
+        var allSame = vals.every(function(v) { return v === vals[0]; });
+        if (allSame) sameValSuspect.push(k);
+      }
+    });
+  }
+  document.getElementById('data-sameval-status').innerHTML = sameValSuspect.length > 0
+    ? '<span class="status-warn">⚠️ 의심 컬럼: ' + sameValSuspect.slice(0, 5).join(', ') + '</span>'
+    : '<span class="status-pass">✅ 정상</span>';
+
+  // 3) 취소율/취소건수 null/0 체크
+  var cancelOk = false;
+  if (latestDate && data.total[latestDate]) {
+    var latest = data.total[latestDate];
+    var cancelKeys = ['cancel_rate', 'cancel_rn', 'cancel_count', 'cancel_revenue'];
+    cancelKeys.forEach(function(k) {
+      if (latest[k] !== undefined && latest[k] !== null && latest[k] !== 0 && latest[k] !== '0') cancelOk = true;
+    });
+  }
+  document.getElementById('data-cancel-status').innerHTML = cancelOk
+    ? '<span class="status-pass">✅ 정상</span>'
+    : '<span class="status-fail">❌ 취소 지표 null/0 — 점검 필요</span>';
+
+  // 4) 2026 실적 누락 여부
+  var has2026 = dates.some(function(d) { return d.indexOf('2026') !== -1; });
+  document.getElementById('data-2026-status').innerHTML = has2026
+    ? '<span class="status-pass">✅ 2026 데이터 존재</span>'
+    : '<span class="status-fail">❌ 2026 실적 누락</span>';
+
+  // 5) JSON 최신 날짜 vs 오늘 날짜 비교
+  if (latestDate) {
+    var today = new Date();
+    var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    var latestMs = new Date(latestDate.replace(/\//g, '-')).getTime();
+    var todayMs = new Date(todayStr).getTime();
+    var diffDays = Math.floor((todayMs - latestMs) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 1) {
+      document.getElementById('data-freshness-status').innerHTML = '<span class="status-pass">✅ 최신 (' + latestDate + ', ' + diffDays + '일 차이)</span>';
+    } else {
+      document.getElementById('data-freshness-status').innerHTML = '<span class="status-warn">⚠️ ' + diffDays + '일 경과 (최신: ' + latestDate + ', 오늘: ' + todayStr + ')</span>';
+    }
+  } else {
+    document.getElementById('data-freshness-status').innerHTML = '<span class="status-fail">❌ 날짜 확인 불가</span>';
+  }
+}
+
+/* ───── NEW UI CHECKS (from verify_log) ───── */
+function checkUIExtended() {
+  // "기타" 카테고리 — log에서 관련 이슈 확인
+  var etcLogs = LOGS.filter(function(l) { return l.category === 'ui' && l.item.indexOf('기타') !== -1; });
+  var etcFail = etcLogs.some(function(l) { return l.result === 'fail'; });
+  document.getElementById('ui-etc-status').innerHTML = etcFail
+    ? '<span class="status-fail">❌ "기타" 카테고리 노출됨</span>'
+    : '<span class="status-pass">✅ 미사용</span>';
+
+  // 10행 초과 테이블 더보기 버튼
+  var moreLogs = LOGS.filter(function(l) { return l.category === 'ui' && (l.item.indexOf('더보기') !== -1 || l.item.indexOf('10행') !== -1); });
+  var moreFail = moreLogs.some(function(l) { return l.result === 'fail'; });
+  document.getElementById('ui-more-btn-status').innerHTML = moreFail
+    ? '<span class="status-fail">❌ 더보기 버튼 누락</span>'
+    : '<span class="status-pass">✅ 정상</span>';
+
+  // 세그먼트 차트 — OTA/G-OTA/Inbound만 허용
+  var segLogs = LOGS.filter(function(l) { return l.category === 'ui' && (l.item.indexOf('세그먼트') !== -1 || l.item.indexOf('세그') !== -1); });
+  var segFail = segLogs.some(function(l) { return l.result === 'fail'; });
+  document.getElementById('ui-segment-status').innerHTML = segFail
+    ? '<span class="status-fail">❌ 불필요 세그먼트 노출</span>'
+    : '<span class="status-pass">✅ OTA/G-OTA/Inbound만 표시</span>';
 }
 
 /* ───── INIT ───── */
