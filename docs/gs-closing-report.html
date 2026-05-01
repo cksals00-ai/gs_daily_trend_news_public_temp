@@ -79,6 +79,11 @@ body {
 .tab-btn{font-family:var(--sans);font-size:14px;font-weight:600;color:var(--ink-muted);background:none;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .2s}
 .tab-btn:hover{color:var(--ink);background:var(--bg-soft)}
 .tab-btn.active{color:var(--gold-bright);background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.3)}
+.new-badge{display:inline-block;background:var(--info);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:4px;letter-spacing:0.05em;vertical-align:middle;animation:pulse-new 2s ease-in-out infinite}
+@keyframes pulse-new{0%,100%{opacity:1}50%{opacity:0.6}}
+.period-selector select{background:var(--bg-soft);color:var(--gold-bright);border:1px solid rgba(201,160,99,0.3);padding:8px 12px;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;outline:none}
+.period-selector select:hover{background:var(--bg-hover)}
+.tab-divider{width:1px;height:24px;background:var(--rule);margin:0 8px}
 .tab-content{display:none;max-width:1640px;margin:0 auto;padding:36px 28px}
 .tab-content.active{display:block}
 
@@ -210,11 +215,20 @@ tr.total-row td{font-weight:800;border-top:2px solid var(--gold);color:var(--ink
 
 <!-- TABS -->
 <div class="tab-bar">
+  <div class="period-selector">
+    <select id="periodType" onchange="switchPeriod(this.value)">
+      <option value="monthly" selected>월별 마감</option>
+      <option value="quarterly">분기 마감</option>
+      <option value="half">반기 마감</option>
+      <option value="yearly">연간 마감</option>
+    </select>
+  </div>
+  <div class="tab-divider"></div>
   <button class="tab-btn active" data-tab="0">1~4월 통합</button>
   <button class="tab-btn" data-tab="1">1월 마감</button>
   <button class="tab-btn" data-tab="2">2월 마감</button>
   <button class="tab-btn" data-tab="3">3월 마감</button>
-  <button class="tab-btn" data-tab="4">4월 마감</button>
+  <button class="tab-btn" data-tab="4">4월 마감 <span class="new-badge">NEW</span></button>
 </div>
 
 <!-- TAB CONTENT -->
@@ -736,9 +750,35 @@ function renderSegmentPie(monthNum = 0) {
   });
 }
 
+// Get combined properties for months 1-4
+function getCombinedProperties() {
+  const combined = {};
+  for (let m = 1; m <= 4; m++) {
+    const mp = DATA.allMonths?.[m]?.byProperty || [];
+    mp.forEach(p => {
+      if (!combined[p.name]) combined[p.name] = { name: p.name, rns_actual: 0, rns_last: 0, rev_actual: 0, rev_last: 0, rns_budget: 0, rev_budget: 0, avg_lead_time: 0, _count: 0, lead_time: {} };
+      combined[p.name].rns_actual += p.rns_actual || 0;
+      combined[p.name].rns_last += p.rns_last || 0;
+      combined[p.name].rev_actual += p.rev_actual || 0;
+      combined[p.name].rev_last += p.rev_last || 0;
+      combined[p.name].rns_budget += p.rns_budget || 0;
+      combined[p.name].rev_budget += p.rev_budget || 0;
+      combined[p.name].avg_lead_time += p.avg_lead_time || 0;
+      combined[p.name]._count++;
+    });
+  }
+  return Object.values(combined).map(p => ({
+    ...p,
+    adr_actual: p.rns_actual > 0 ? Math.round(p.rev_actual / p.rns_actual) : 0,
+    adr_last: p.rns_last > 0 ? Math.round(p.rev_last / p.rns_last) : 0,
+    adr_budget: p.rns_budget > 0 ? Math.round(p.rev_budget / p.rns_budget) : 0,
+    avg_lead_time: p._count > 0 ? (p.avg_lead_time / p._count) : 0
+  }));
+}
+
 // Render lead time chart
 function renderLeadTimeChart(monthNum = 0) {
-  const props = monthNum === 0 ? DATA.byProperty || [] : (DATA.allMonths?.[monthNum]?.byProperty || DATA.byProperty || []);
+  const props = monthNum === 0 ? getCombinedProperties() : (DATA.allMonths?.[monthNum]?.byProperty || []);
   const sorted = [...props].sort((a, b) => (b.avg_lead_time || 0) - (a.avg_lead_time || 0)).slice(0, 15);
 
   const labels = sorted.map(p => p.name.substring(0, 8));
@@ -776,7 +816,7 @@ function renderLeadTimeChart(monthNum = 0) {
 
 // Render ADR table
 function renderADRTable(container, monthNum = 0) {
-  const props = monthNum === 0 ? DATA.byProperty || [] : (DATA.allMonths?.[monthNum]?.byProperty || DATA.byProperty || []);
+  const props = monthNum === 0 ? getCombinedProperties() : (DATA.allMonths?.[monthNum]?.byProperty || []);
   const sorted = [...props].sort((a, b) => (b.adr_actual || 0) - (a.adr_actual || 0));
 
   let html = '<thead><tr><th>사업장</th><th>ADR</th><th>2025 ADR</th><th>YoY %</th><th>Budget</th><th>vs Budget %</th></tr></thead><tbody>';
@@ -800,7 +840,7 @@ function renderADRTable(container, monthNum = 0) {
 
 // Render ADR chart
 function renderADRChart(monthNum = 0) {
-  const props = monthNum === 0 ? DATA.byProperty || [] : (DATA.allMonths?.[monthNum]?.byProperty || DATA.byProperty || []);
+  const props = monthNum === 0 ? getCombinedProperties() : (DATA.allMonths?.[monthNum]?.byProperty || []);
   const sorted = [...props].sort((a, b) => (b.adr_actual || 0) - (a.adr_actual || 0)).slice(0, 10);
 
   const labels = sorted.map(p => p.name.substring(0, 8));
