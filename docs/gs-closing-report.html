@@ -110,6 +110,9 @@ body {
 .kpi-card.kpi-occ::before { background: linear-gradient(90deg, var(--warning), transparent); }
 .kpi-label { font-size: 11px; color: var(--ink-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
 .kpi-value { font-size: 26px; font-weight: 900; font-family: var(--mono); color: var(--ink); line-height: 1.1; }
+.kpi-sub { font-size: 12px; color: var(--ink-muted); margin-top: 6px; font-family: var(--mono); border-top: 1px dashed var(--rule); padding-top: 6px; }
+.kpi-sub .kpi-sub-label { font-size: 9px; color: var(--ink-faint); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; font-family: var(--font); }
+.kpi-sub .kpi-sub-value { font-size: 16px; font-weight: 800; color: var(--ink-soft); }
 .kpi-keywords { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .kpi-tag { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
 .tag-yoy-up { color: var(--positive); background: var(--positive-bg); }
@@ -136,15 +139,18 @@ body {
 .card-body.flush { padding: 0; }
 
 /* ───── TABLES ───── */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 700px; }
 thead { position: sticky; top: 96px; z-index: 8; }
 th { background: var(--bg-deep); color: var(--ink-muted); font-weight: 700; font-size: 10.5px; letter-spacing: 0.06em; padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; text-transform: uppercase; }
 th:first-child { text-align: left; }
+th.group-header { background: var(--bg-surface); color: var(--gold-bright); font-size: 11px; font-weight: 800; text-align: center; border-bottom: 2px solid rgba(201,160,99,0.3); letter-spacing: 0.1em; padding: 10px 8px; }
+th.sub-header { background: var(--bg-deep); font-size: 9.5px; padding: 7px 10px; }
 td { padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--ink-soft); }
 td:first-child { text-align: left; font-family: var(--font); font-weight: 600; color: var(--ink); }
 tr:hover td { background: rgba(255,255,255,0.02); }
 tr.total-row td { font-weight: 800; border-top: 2px solid var(--gold); color: var(--ink); background: rgba(201,160,99,0.04); }
+tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: var(--gold-bright); background: rgba(201,160,99,0.03); font-style: italic; }
 
 /* ───── BADGES ───── */
 .badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; display: inline-block; vertical-align: middle; margin-right: 3px; }
@@ -166,6 +172,12 @@ tr.total-row td { font-weight: 800; border-top: 2px solid var(--gold); color: va
 .data-missing { background: var(--bg-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--ink-muted); font-size: 13px; }
 .data-missing strong { display: block; color: var(--ink-soft); margin-bottom: 4px; font-size: 14px; }
 
+/* ───── CUMUL DIVIDER ───── */
+.cumul-divider { margin: 32px 0 24px; padding: 12px 20px; background: rgba(201,160,99,0.05); border: 1px solid rgba(201,160,99,0.15); border-radius: var(--radius); display: flex; align-items: center; gap: 10px; }
+.cumul-divider .cd-icon { font-size: 16px; }
+.cumul-divider .cd-text { font-size: 13px; font-weight: 700; color: var(--gold-bright); }
+.cumul-divider .cd-sub { font-size: 11px; color: var(--ink-muted); margin-left: auto; }
+
 /* ───── FOOTER ───── */
 .footer { background: var(--bg-deep); border-top: 1px solid var(--rule); padding: 20px 28px; text-align: center; font-size: 11px; color: var(--ink-faint); }
 
@@ -181,7 +193,7 @@ tr.total-row td { font-weight: 800; border-top: 2px solid var(--gold); color: va
   .content-wrap { padding: 20px 14px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .chart-row { grid-template-columns: 1fr; }
-  table { font-size: 11px; }
+  table { font-size: 11px; min-width: 900px; }
   th, td { padding: 7px 8px; }
 }
 
@@ -281,9 +293,9 @@ function yoyTag(val, label) {
   return `<span class="kpi-tag ${cls}">${label ? label + ' ' : ''}YoY ${arrow}${fmt.pct(val)}</span>`;
 }
 
-function budgetTag(ach) {
+function targetTag(ach) {
   if (ach == null) return '';
-  return `<span class="kpi-tag tag-budget">예산 ${fmt.pct(ach - 100, 0)}</span>`;
+  return `<span class="kpi-tag tag-budget">목표 ${fmt.pct(ach - 100, 0)}</span>`;
 }
 
 /* ══════════════════════════════════════
@@ -294,7 +306,7 @@ function getMonthSummary(m) {
 }
 
 function combineSummary(months) {
-  const c = { rns_budget:0, rns_actual:0, rns_last:0, rev_budget:0, rev_actual:0, rev_last:0 };
+  const c = { rns_budget:0, rns_actual:0, rns_last:0, rev_budget:0, rev_actual:0, rev_last:0, adr_budget:0 };
   months.forEach(m => {
     const s = getMonthSummary(m);
     c.rns_budget += s.rns_budget||0; c.rns_actual += s.rns_actual||0; c.rns_last += s.rns_last||0;
@@ -302,6 +314,7 @@ function combineSummary(months) {
   });
   c.adr_actual = c.rns_actual > 0 ? c.rev_actual / c.rns_actual : 0;
   c.adr_last = c.rns_last > 0 ? c.rev_last / c.rns_last : 0;
+  c.adr_budget = c.rns_budget > 0 ? c.rev_budget / c.rns_budget : 0;
   c.rns_achievement = c.rns_budget > 0 ? c.rns_actual / c.rns_budget * 100 : 0;
   c.rns_yoy = c.rns_last > 0 ? (c.rns_actual - c.rns_last) / c.rns_last * 100 : 0;
   c.rev_achievement = c.rev_budget > 0 ? c.rev_actual / c.rev_budget * 100 : 0;
@@ -331,6 +344,7 @@ function combineProperties(months) {
     rev_yoy: p.rev_last > 0 ? (p.rev_actual - p.rev_last) / p.rev_last * 100 : null,
     adr_yoy: (p.rns_last > 0 && p.rns_actual > 0) ? ((p.rev_actual/p.rns_actual) - (p.rev_last/p.rns_last)) / (p.rev_last/p.rns_last) * 100 : null,
     rns_ach: p.rns_budget > 0 ? p.rns_actual / p.rns_budget * 100 : null,
+    rev_ach: p.rev_budget > 0 ? p.rev_actual / p.rev_budget * 100 : null,
   }));
 }
 
@@ -348,59 +362,132 @@ function combineSegments(months) {
   Object.values(map).forEach(s => {
     s.adr_actual = s.rns_actual > 0 ? Math.round(s.rev_actual / s.rns_actual) : 0;
     s.adr_last = s.rns_last > 0 ? Math.round(s.rev_last / s.rns_last) : 0;
+    s.adr_budget = s.rns_budget > 0 ? Math.round(s.rev_budget / s.rns_budget) : 0;
     s.rns_yoy = s.rns_last > 0 ? (s.rns_actual - s.rns_last) / s.rns_last * 100 : 0;
     s.rev_yoy = s.rev_last > 0 ? (s.rev_actual - s.rev_last) / s.rev_last * 100 : 0;
+    s.adr_yoy = s.adr_last > 0 ? (s.adr_actual - s.adr_last) / s.adr_last * 100 : 0;
     s.rns_ach = s.rns_budget > 0 ? s.rns_actual / s.rns_budget * 100 : 0;
+    s.rev_ach = s.rev_budget > 0 ? s.rev_actual / s.rev_budget * 100 : 0;
   });
   return map;
 }
 
 /* ══════════════════════════════════════
-   RENDER: KPI CARDS
+   RENDER: KPI CARDS (with optional cumulative)
    ══════════════════════════════════════ */
-function renderKPI(summary, id) {
+function renderKPI(summary, id, cumulSummary) {
   const el = document.getElementById(id);
   if (!el) return;
+
+  function cumulBlock(label, value) {
+    if (!cumulSummary) return '';
+    return `<div class="kpi-sub"><div class="kpi-sub-label">${label} 누계</div><div class="kpi-sub-value">${value}</div></div>`;
+  }
+
   el.innerHTML = `
     <div class="kpi-card kpi-rn">
       <div class="kpi-label">Room Nights</div>
       <div class="kpi-value">${fmt.n(summary.rns_actual)}</div>
       <div class="kpi-keywords">
         ${yoyTag(summary.rns_yoy, 'RN')}
-        ${budgetTag(summary.rns_achievement)}
+        ${targetTag(summary.rns_achievement)}
       </div>
-      <div class="kpi-prev">전년 ${fmt.n(summary.rns_last)}</div>
+      <div class="kpi-prev">전년 ${fmt.n(summary.rns_last)} | 목표 ${fmt.n(summary.rns_budget)}</div>
+      ${cumulBlock('RN', fmt.n(cumulSummary?.rns_actual) + ' <span style="font-size:10px;color:var(--ink-faint)">달성 ' + (cumulSummary?.rns_achievement?.toFixed(1)||'—') + '%</span>')}
     </div>
     <div class="kpi-card kpi-rev">
       <div class="kpi-label">Revenue</div>
       <div class="kpi-value">${fmt.rev(summary.rev_actual)}</div>
       <div class="kpi-keywords">
         ${yoyTag(summary.rev_yoy, 'Rev')}
-        ${budgetTag(summary.rev_achievement)}
+        ${targetTag(summary.rev_achievement)}
       </div>
-      <div class="kpi-prev">전년 ${fmt.rev(summary.rev_last)}</div>
+      <div class="kpi-prev">전년 ${fmt.rev(summary.rev_last)} | 목표 ${fmt.rev(summary.rev_budget)}</div>
+      ${cumulBlock('매출', fmt.rev(cumulSummary?.rev_actual) + ' <span style="font-size:10px;color:var(--ink-faint)">달성 ' + (cumulSummary?.rev_achievement?.toFixed(1)||'—') + '%</span>')}
     </div>
     <div class="kpi-card kpi-adr">
       <div class="kpi-label">ADR</div>
-      <div class="kpi-value">${fmt.n(summary.adr_actual)}</div>
+      <div class="kpi-value">${fmt.won(summary.adr_actual)}</div>
       <div class="kpi-keywords">
         ${yoyTag(summary.adr_yoy, '')}
         <span class="kpi-tag tag-neutral">₩/박</span>
       </div>
-      <div class="kpi-prev">전년 ${fmt.n(summary.adr_last)}</div>
+      <div class="kpi-prev">전년 ${fmt.won(summary.adr_last)} | 목표 ${fmt.won(summary.adr_budget)}</div>
+      ${cumulBlock('ADR', fmt.won(cumulSummary?.adr_actual))}
     </div>
     <div class="kpi-card kpi-occ">
-      <div class="kpi-label">예산 달성률 (RN)</div>
+      <div class="kpi-label">목표 달성률 (RN)</div>
       <div class="kpi-value" style="color:${summary.rns_achievement >= 100 ? 'var(--positive)' : 'var(--gold-bright)'}">${summary.rns_achievement ? summary.rns_achievement.toFixed(1) + '%' : '—'}</div>
       <div class="kpi-keywords">
-        <span class="kpi-tag tag-neutral">Budget 기준</span>
+        <span class="kpi-tag tag-neutral">목표 기준</span>
       </div>
+      ${cumulBlock('달성률', (cumulSummary?.rns_achievement?.toFixed(1)||'—') + '%')}
     </div>
   `;
 }
 
 /* ══════════════════════════════════════
-   RENDER: PROPERTY TABLE (3-1)
+   INSIGHT GENERATORS (Dynamic, data-driven)
+   ══════════════════════════════════════ */
+function generateOverviewInsight(summary) {
+  const items = [];
+  const rnDir = summary.rns_yoy >= 0 ? '▲' : '▼';
+  const revDir = summary.rev_yoy >= 0 ? '▲' : '▼';
+  items.push(`<span class="insight-kw">RN 성장</span> 전년대비 ${rnDir}${Math.abs(summary.rns_yoy).toFixed(1)}% | 실적 ${fmt.n(summary.rns_actual)}박 vs 전년 ${fmt.n(summary.rns_last)}박`);
+  items.push(`<span class="insight-kw">목표 달성</span> RN 달성률 ${summary.rns_achievement.toFixed(1)}% | 매출 달성률 ${summary.rev_achievement.toFixed(1)}%`);
+  const adrDiff = summary.adr_actual - summary.adr_last;
+  items.push(`<span class="insight-kw">ADR</span> ${fmt.won(summary.adr_actual)} 전년비 ${adrDiff >= 0 ? '+' : ''}${fmt.won(adrDiff)} (${fmt.pct(summary.adr_yoy)}) | ${summary.adr_yoy >= 0 ? '객단가 개선' : '객단가 하락 주의'}`);
+  items.push(`<span class="insight-kw">매출</span> ${fmt.rev(summary.rev_actual)} 전년비 ${revDir}${Math.abs(summary.rev_yoy).toFixed(1)}% | 목표 대비 ${summary.rev_achievement >= 100 ? '초과 달성' : (100 - summary.rev_achievement).toFixed(1) + '%p 갭'}`);
+  return items;
+}
+
+function generatePropertyInsight(props) {
+  const items = [];
+  const withYoY = props.filter(p => p.rns_yoy != null && p.rns_last > 0);
+  const sorted = [...withYoY].sort((a,b) => (b.rns_yoy||0) - (a.rns_yoy||0));
+  const top3 = sorted.slice(0, 3);
+  const btm3 = sorted.slice(-3).reverse();
+  if (top3.length > 0) {
+    items.push(`<span class="insight-kw">TOP 성장</span> ${top3.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.pct(p.rns_yoy)).join(' · ')}`);
+  }
+  if (btm3.length > 0) {
+    items.push(`<span class="insight-kw">하락 주의</span> ${btm3.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.pct(p.rns_yoy)).join(' · ')}`);
+  }
+  const highADR = [...props].sort((a,b) => (b.adr_actual||0) - (a.adr_actual||0)).slice(0, 2);
+  if (highADR.length > 0) {
+    items.push(`<span class="insight-kw">고단가 사업장</span> ${highADR.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.won(p.adr_actual)).join(' · ')}`);
+  }
+  return items;
+}
+
+function generateChannelInsight(months) {
+  const segMap = combineSegments(months);
+  const items = [];
+  const ota = segMap['OTA'] || {};
+  const gota = segMap['G-OTA'] || {};
+  const ib = segMap['Inbound'] || {};
+  const total = (ota.rns_actual||0) + (gota.rns_actual||0) + (ib.rns_actual||0);
+  if (total > 0) {
+    const otaShare = ((ota.rns_actual||0) / total * 100).toFixed(1);
+    items.push(`<span class="insight-kw">OTA</span> 점유율 ${otaShare}% 주도 | YoY ${fmt.pct(ota.rns_yoy)} | ADR ${fmt.won(ota.adr_actual)}`);
+    items.push(`<span class="insight-kw">G-OTA</span> YoY ${fmt.pct(gota.rns_yoy)} ${gota.rns_yoy > 10 ? '급성장' : gota.rns_yoy > 0 ? '성장세' : '둔화'} | ADR ${fmt.won(gota.adr_actual)}`);
+    items.push(`<span class="insight-kw">Inbound</span> YoY ${fmt.pct(ib.rns_yoy)} ${ib.rns_yoy > 0 ? '회복세' : '감소'} | ADR ${fmt.won(ib.adr_actual)}`);
+  }
+  return items;
+}
+
+function generateADRInsight(props, summary) {
+  const items = [];
+  items.push(`<span class="insight-kw">전체 ADR</span> ${fmt.won(summary.adr_actual)} 전년비 ${fmt.pct(summary.adr_yoy)} | 목표 ${fmt.won(summary.adr_budget)}`);
+  const topADR = [...props].filter(p => p.adr_actual > 0).sort((a,b) => b.adr_actual - a.adr_actual).slice(0, 3);
+  if (topADR.length) items.push(`<span class="insight-kw">TOP 고단가</span> ${topADR.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.won(p.adr_actual)).join(' · ')}`);
+  const dropping = [...props].filter(p => p.adr_yoy != null && p.adr_yoy < -3).sort((a,b) => a.adr_yoy - b.adr_yoy).slice(0, 3);
+  if (dropping.length) items.push(`<span class="insight-kw">하락 주의</span> ${dropping.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.pct(p.adr_yoy)).join(' · ')}`);
+  return items;
+}
+
+/* ══════════════════════════════════════
+   RENDER: PROPERTY TABLE (3-1) — ENHANCED
    ══════════════════════════════════════ */
 function renderPropertyTable(props, containerId, showToggle = true) {
   const sorted = [...props].sort((a, b) => (b.rns_actual||0) - (a.rns_actual||0));
@@ -409,23 +496,45 @@ function renderPropertyTable(props, containerId, showToggle = true) {
   const topN = byYoY.slice(0, 3).map(p => p.name);
   const btmN = byYoY.slice(-3).map(p => p.name);
 
-  let html = `<table><thead><tr>
-    <th>사업장</th><th>2026 RN</th><th>2025 RN</th><th>YoY</th><th>Budget</th><th>달성률</th><th>Revenue</th><th>ADR</th>
-  </tr></thead><tbody>`;
+  let html = `<table><thead>
+    <tr>
+      <th rowspan="2" style="vertical-align:bottom">사업장</th>
+      <th class="group-header" colspan="5">Room Nights</th>
+      <th class="group-header" colspan="4">ADR</th>
+      <th class="group-header" colspan="5">Revenue</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+    </tr>
+  </thead><tbody>`;
 
   sorted.forEach((p, i) => {
-    const yoy = p.rns_yoy;
-    const ach = p.rns_ach;
-    const yoyColor = yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const rnsAch = p.rns_ach;
+    const revAch = p.rev_ach;
+    const rnsYoyColor = p.rns_yoy != null ? (p.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+    const adrYoyColor = p.adr_yoy != null ? (p.adr_yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+    const revYoyColor = p.rev_yoy != null ? (p.rev_yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
     const topB = topN.includes(p.name) ? '<span class="badge badge-top">TOP</span>' : '';
     const btmB = btmN.includes(p.name) ? '<span class="badge badge-btm">BTM</span>' : '';
     const hide = (showToggle && i >= 10) ? ' style="display:none" data-extra' : '';
     html += `<tr${hide}>
       <td>${topB}${btmB}${p.name}</td>
-      <td>${fmt.n(p.rns_actual)}</td><td>${fmt.n(p.rns_last)}</td>
-      <td style="color:${yoyColor};font-weight:700">${yoy != null ? fmt.pct(yoy) : '—'}</td>
-      <td>${fmt.n(p.rns_budget)}</td><td>${ach != null ? fmt.pct(ach, 0) : '—'}</td>
-      <td>${fmt.rev(p.rev_actual)}</td><td>${fmt.n(p.adr_actual)}</td>
+      <td>${fmt.n(p.rns_budget)}</td>
+      <td style="font-weight:700">${fmt.n(p.rns_actual)}</td>
+      <td>${rnsAch != null ? rnsAch.toFixed(1) + '%' : '—'}</td>
+      <td>${fmt.n(p.rns_last)}</td>
+      <td style="color:${rnsYoyColor};font-weight:700">${p.rns_yoy != null ? fmt.pct(p.rns_yoy) : '—'}</td>
+      <td>${fmt.won(p.adr_budget)}</td>
+      <td style="font-weight:700">${fmt.won(p.adr_actual)}</td>
+      <td>${fmt.won(p.adr_last)}</td>
+      <td style="color:${adrYoyColor};font-weight:700">${p.adr_yoy != null ? fmt.pct(p.adr_yoy) : '—'}</td>
+      <td>${fmt.rev(p.rev_budget)}</td>
+      <td style="font-weight:700">${fmt.rev(p.rev_actual)}</td>
+      <td>${revAch != null ? revAch.toFixed(1) + '%' : '—'}</td>
+      <td>${fmt.rev(p.rev_last)}</td>
+      <td style="color:${revYoyColor};font-weight:700">${p.rev_yoy != null ? fmt.pct(p.rev_yoy) : '—'}</td>
     </tr>`;
   });
   html += '</tbody></table>';
@@ -448,35 +557,54 @@ function renderPropertyTable(props, containerId, showToggle = true) {
 }
 
 /* ══════════════════════════════════════
-   RENDER: CHANNEL TABLE (3-2) — FIT = OTA + G-OTA
+   RENDER: CHANNEL TABLE (3-2) — ENHANCED
    ══════════════════════════════════════ */
 function renderChannelTable(months, containerId) {
   const segMap = combineSegments(months);
-  // Primary segments
   const primary = SEGMENTS.map(seg => ({ name: seg, ...(segMap[seg] || {}) }));
-  // All others (except primary)
   const others = Object.keys(segMap)
     .filter(k => !SEGMENTS.includes(k))
     .map(k => ({ name: k, ...segMap[k] }))
     .sort((a, b) => (b.rns_actual||0) - (a.rns_actual||0));
-
   const all = [...primary, ...others];
 
-  let html = `<table><thead><tr>
-    <th>채널</th><th>RN</th><th>2025 RN</th><th>YoY</th><th>Budget</th><th>달성률</th><th>Revenue</th><th>ADR</th>
-  </tr></thead><tbody>`;
+  let html = `<table><thead>
+    <tr>
+      <th rowspan="2" style="vertical-align:bottom">채널</th>
+      <th class="group-header" colspan="5">Room Nights</th>
+      <th class="group-header" colspan="4">ADR</th>
+      <th class="group-header" colspan="5">Revenue</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+    </tr>
+  </thead><tbody>`;
 
   all.forEach((s, i) => {
-    const yoyColor = s.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
     const isPrimary = SEGMENTS.includes(s.name);
     const hide = (!isPrimary && i >= SEGMENTS.length + 10) ? ' style="display:none" data-extra-ch' : '';
     const nameStyle = isPrimary ? 'font-weight:800;color:var(--gold-bright)' : '';
+    const rnsYoyColor = s.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const adrYoyColor = s.adr_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
+    const revYoyColor = s.rev_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
     html += `<tr${hide}>
       <td style="${nameStyle}">${s.name}</td>
-      <td>${fmt.n(s.rns_actual)}</td><td>${fmt.n(s.rns_last)}</td>
-      <td style="color:${yoyColor};font-weight:700">${fmt.pct(s.rns_yoy)}</td>
-      <td>${fmt.n(s.rns_budget)}</td><td>${s.rns_ach ? fmt.pct(s.rns_ach, 0) : '—'}</td>
-      <td>${fmt.rev(s.rev_actual)}</td><td>${fmt.n(s.adr_actual)}</td>
+      <td>${fmt.n(s.rns_budget)}</td>
+      <td style="font-weight:700">${fmt.n(s.rns_actual)}</td>
+      <td>${s.rns_ach ? s.rns_ach.toFixed(1) + '%' : '—'}</td>
+      <td>${fmt.n(s.rns_last)}</td>
+      <td style="color:${rnsYoyColor};font-weight:700">${fmt.pct(s.rns_yoy)}</td>
+      <td>${fmt.won(s.adr_budget)}</td>
+      <td style="font-weight:700">${fmt.won(s.adr_actual)}</td>
+      <td>${fmt.won(s.adr_last)}</td>
+      <td style="color:${adrYoyColor};font-weight:700">${fmt.pct(s.adr_yoy)}</td>
+      <td>${fmt.rev(s.rev_budget)}</td>
+      <td style="font-weight:700">${fmt.rev(s.rev_actual)}</td>
+      <td>${s.rev_ach ? s.rev_ach.toFixed(1) + '%' : '—'}</td>
+      <td>${fmt.rev(s.rev_last)}</td>
+      <td style="color:${revYoyColor};font-weight:700">${fmt.pct(s.rev_yoy)}</td>
     </tr>`;
   });
   html += '</tbody></table>';
@@ -506,7 +634,6 @@ function renderCategorySection(months, chartId, tableId) {
   const data = SEGMENTS.map(seg => ({ name: seg, rn: segMap[seg]?.rns_actual || 0, rev: segMap[seg]?.rev_actual || 0, adr: segMap[seg]?.adr_actual || 0, yoy: segMap[seg]?.rns_yoy || 0 }));
   const total = data.reduce((s, d) => s + d.rn, 0);
 
-  // Pie chart
   const ctx = document.getElementById(chartId)?.getContext('2d');
   if (ctx) {
     const key = chartId;
@@ -521,12 +648,11 @@ function renderCategorySection(months, chartId, tableId) {
     });
   }
 
-  // Table
   let html = `<table><thead><tr><th>세그먼트</th><th>RN</th><th>구성비</th><th>YoY</th><th>Revenue</th><th>ADR</th></tr></thead><tbody>`;
   data.forEach(d => {
     const share = total > 0 ? (d.rn / total * 100).toFixed(1) + '%' : '—';
     const yoyColor = d.yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
-    html += `<tr><td style="font-weight:700">${d.name}</td><td>${fmt.n(d.rn)}</td><td>${share}</td><td style="color:${yoyColor};font-weight:700">${fmt.pct(d.yoy)}</td><td>${fmt.rev(d.rev)}</td><td>${fmt.n(d.adr)}</td></tr>`;
+    html += `<tr><td style="font-weight:700">${d.name}</td><td>${fmt.n(d.rn)}</td><td>${share}</td><td style="color:${yoyColor};font-weight:700">${fmt.pct(d.yoy)}</td><td>${fmt.rev(d.rev)}</td><td>${fmt.won(d.adr)}</td></tr>`;
   });
   html += '</tbody></table>';
   const el = document.getElementById(tableId);
@@ -557,18 +683,24 @@ function renderLeadTime(props, chartId) {
 }
 
 /* ══════════════════════════════════════
-   RENDER: ADR TABLE (3-5)
+   RENDER: ADR TABLE (3-5) — ENHANCED
    ══════════════════════════════════════ */
 function renderADRTable(props, containerId) {
   const sorted = [...props].sort((a, b) => (b.adr_actual||0) - (a.adr_actual||0));
-  let html = `<table><thead><tr><th>사업장</th><th>2026 ADR</th><th>2025 ADR</th><th>YoY</th><th>Budget ADR</th><th>vs Budget</th></tr></thead><tbody>`;
+  let html = `<table><thead>
+    <tr>
+      <th rowspan="2" style="vertical-align:bottom">사업장</th>
+      <th class="group-header" colspan="4">ADR</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+    </tr>
+  </thead><tbody>`;
   sorted.forEach((p, i) => {
     const yoy = p.adr_yoy;
-    const vsBgt = p.adr_budget > 0 ? (p.adr_actual - p.adr_budget) / p.adr_budget * 100 : null;
     const yoyColor = yoy != null ? (yoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
-    const vColor = vsBgt != null ? (vsBgt >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
     const hide = i >= 10 ? ' style="display:none" data-extra-adr' : '';
-    html += `<tr${hide}><td>${p.name}</td><td>${fmt.won(p.adr_actual)}</td><td>${fmt.won(p.adr_last)}</td><td style="color:${yoyColor};font-weight:700">${yoy != null ? fmt.pct(yoy) : '—'}</td><td>${fmt.won(p.adr_budget)}</td><td style="color:${vColor};font-weight:700">${vsBgt != null ? fmt.pct(vsBgt) : '—'}</td></tr>`;
+    html += `<tr${hide}><td>${p.name}</td><td>${fmt.won(p.adr_budget)}</td><td style="font-weight:700">${fmt.won(p.adr_actual)}</td><td>${fmt.won(p.adr_last)}</td><td style="color:${yoyColor};font-weight:700">${yoy != null ? fmt.pct(yoy) : '—'}</td></tr>`;
   });
   html += '</tbody></table>';
   const container = document.getElementById(containerId);
@@ -584,7 +716,7 @@ function renderADRTable(props, containerId) {
 }
 
 /* ══════════════════════════════════════
-   RENDER: COUNTRY / INBOUND (3-7)
+   RENDER: INBOUND (3-7)
    ══════════════════════════════════════ */
 function renderInboundSection(months, containerId) {
   const segMap = combineSegments(months);
@@ -597,7 +729,7 @@ function renderInboundSection(months, containerId) {
       <div class="kpi-grid" style="margin-bottom:16px">
         <div class="kpi-card kpi-rn"><div class="kpi-label">Inbound RN</div><div class="kpi-value">${fmt.n(ib.rns_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rns_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.n(ib.rns_last)}</div></div>
         <div class="kpi-card kpi-rev"><div class="kpi-label">Inbound Revenue</div><div class="kpi-value">${fmt.rev(ib.rev_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rev_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.rev(ib.rev_last)}</div></div>
-        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.n(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">₩/박</span></div><div class="kpi-prev">전년 ${fmt.n(ib.adr_last)}</div></div>
+        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">₩/박</span></div><div class="kpi-prev">전년 ${fmt.won(ib.adr_last)}</div></div>
       </div>
       <div class="data-missing"><strong>국가별 상세 미수신</strong>국가별 세부 내역은 별도 OTA 채널 분석 보고서를 참조해주세요.</div>
     `;
@@ -656,20 +788,40 @@ function getMarketPoints(months) {
 function getStrategyPoints(months) {
   const s = combineSummary(months);
   const segMap = combineSegments(months);
+  const props = combineProperties(months);
   const gota = segMap['G-OTA'] || {};
+  const ota = segMap['OTA'] || {};
+  const ib = segMap['Inbound'] || {};
+
+  const topProps = [...props].filter(p => p.rns_yoy != null).sort((a,b) => b.rns_yoy - a.rns_yoy).slice(0, 2);
+  const btmProps = [...props].filter(p => p.rns_yoy != null).sort((a,b) => a.rns_yoy - b.rns_yoy).slice(0, 2);
+
   return [
-    `<span class="insight-kw">채널 다각화</span> G-OTA YoY ${fmt.pct(gota.rns_yoy)}의 강한 성장 → OTA 외 채널 투자 확대 · Inbound 집중 마케팅`,
-    `<span class="insight-kw">가격 전략</span> ADR YoY ${fmt.pct(s.adr_yoy)} → 프리미엄 상품 개발 · 계절별 다이내믹 프라이싱 고도화`,
-    `<span class="insight-kw">사업장 최적화</span> TOP/BOTTOM 격차 분석 기반 사업장별 맞춤 전략 수립 · 성수기 대비 객실 운영 효율화`,
-    `<span class="insight-kw">예산 재검토</span> 현 달성률 ${s.rns_achievement.toFixed(0)}% 기반 하반기 예산 재조정 검토 필요`
+    `<span class="insight-kw">채널 전략</span> OTA YoY ${fmt.pct(ota.rns_yoy)} 안정 | G-OTA ${fmt.pct(gota.rns_yoy)} 성장 채널 → 투자 확대 | Inbound ${fmt.pct(ib.rns_yoy)} → ${ib.rns_yoy > 0 ? '마케팅 강화' : '원인 분석 필요'}`,
+    `<span class="insight-kw">가격 전략</span> ADR ${fmt.pct(s.adr_yoy)} → ${s.adr_yoy >= 0 ? '프리미엄 상품 확대 · 다이내믹 프라이싱 고도화' : '가격 하락 방어 · 부가상품 번들링'}`,
+    `<span class="insight-kw">사업장 집중</span> 성장: ${topProps.map(p => p.name.replace(/^\d+\./,'') + '(' + fmt.pct(p.rns_yoy) + ')').join(', ')} | 보강: ${btmProps.map(p => p.name.replace(/^\d+\./,'') + '(' + fmt.pct(p.rns_yoy) + ')').join(', ')}`,
+    `<span class="insight-kw">목표 재검토</span> 현 달성률 RN ${s.rns_achievement.toFixed(0)}% · 매출 ${s.rev_achievement.toFixed(0)}% → ${s.rns_achievement < 90 ? '하반기 목표 재조정 검토 필요' : '연간 목표 달성 가시권'}`
   ];
 }
 
 /* ══════════════════════════════════════
    BUILD TAB HTML
    ══════════════════════════════════════ */
-function buildTabHTML(tabId, months, label) {
-  const uid = tabId; // unique prefix for IDs
+function buildTabHTML(tabId, months, label, showCumul) {
+  const uid = tabId;
+  const cumulSection = showCumul ? `
+      <div class="cumul-divider">
+        <span class="cd-icon">📈</span>
+        <span class="cd-text">누계 실적 (1~${months[months.length-1]}월)</span>
+        <span class="cd-sub">YTD Cumulative</span>
+      </div>
+      <div class="kpi-grid" id="kpi-cumul-${uid}"></div>
+      <div class="insight-box" style="border-left-color:var(--info); margin-top:16px">
+        <h3 style="color:var(--info)">누계 실적 요약</h3>
+        <ul id="insight-cumul-${uid}"></ul>
+      </div>
+  ` : '';
+
   return `
   <div id="tab-${tabId}" class="tab-content">
     <div class="content-wrap">
@@ -679,6 +831,11 @@ function buildTabHTML(tabId, months, label) {
         <span class="section-num">SECTION 01</span>
         <h2 class="section-title"><span class="st-icon">📊</span> 전체 실적 리뷰</h2>
         <div class="kpi-grid" id="kpi-${uid}"></div>
+        <div class="insight-box" id="insight-overview-${uid}">
+          <h3>핵심 실적 요약</h3>
+          <ul id="insight-overview-list-${uid}"></ul>
+        </div>
+        ${cumulSection}
         <div class="chart-wrap">
           <h4>월별 RN 추이 — 2025 vs 2026</h4>
           <div class="chart-container"><canvas id="trend-${uid}"></canvas></div>
@@ -702,14 +859,26 @@ function buildTabHTML(tabId, months, label) {
 
         <!-- 3-1 사업장별 -->
         <div class="card">
-          <div class="card-header"><h3>3-1. 사업장별 실적 (YoY · TOP/BOTTOM)</h3></div>
-          <div class="card-body flush"><div class="table-wrap" id="prop-${uid}"></div></div>
+          <div class="card-header"><h3>3-1. 사업장별 실적 (RN · ADR · 매출 — 목표/실적/전년비)</h3></div>
+          <div class="card-body">
+            <div class="insight-box" style="margin-bottom:12px" id="insight-prop-wrap-${uid}">
+              <h3>사업장 인사이트</h3>
+              <ul id="insight-prop-${uid}"></ul>
+            </div>
+            <div class="table-wrap" id="prop-${uid}"></div>
+          </div>
         </div>
 
         <!-- 3-2 채널별 -->
         <div class="card">
           <div class="card-header"><h3>3-2. 채널별 실적 (OTA · G-OTA · Inbound 중심)</h3></div>
-          <div class="card-body flush"><div class="table-wrap" id="chan-${uid}"></div></div>
+          <div class="card-body">
+            <div class="insight-box" style="margin-bottom:12px" id="insight-chan-wrap-${uid}">
+              <h3>채널 인사이트</h3>
+              <ul id="insight-chan-${uid}"></ul>
+            </div>
+            <div class="table-wrap" id="chan-${uid}"></div>
+          </div>
         </div>
 
         <!-- 3-3 상품(카테고리)별 -->
@@ -734,7 +903,13 @@ function buildTabHTML(tabId, months, label) {
         <!-- 3-5 ADR -->
         <div class="card">
           <div class="card-header"><h3>3-5. ADR 분석</h3></div>
-          <div class="card-body flush"><div class="table-wrap" id="adr-${uid}"></div></div>
+          <div class="card-body">
+            <div class="insight-box" style="margin-bottom:12px" id="insight-adr-wrap-${uid}">
+              <h3>ADR 인사이트</h3>
+              <ul id="insight-adr-${uid}"></ul>
+            </div>
+            <div class="table-wrap" id="adr-${uid}"></div>
+          </div>
         </div>
 
         <!-- 3-6 취소율 -->
@@ -760,17 +935,17 @@ function buildTabHTML(tabId, months, label) {
               <ul>
                 <li>전체 세그먼트 = OTA + G-OTA + Inbound 3개 중심 분석</li>
                 <li>FIT 채널은 OTA/G-OTA에 포함하여 분석 · 기타 세그먼트는 채널별 테이블 참조</li>
-                <li>데이터 소스: 온북 DB + 사업계획 Budget</li>
+                <li>데이터 소스: 온북 DB + 사업계획 목표</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ── 4. 내년 해당월 전략 ── -->
+      <!-- ── 4. 전략 방향 ── -->
       <section class="section">
         <span class="section-num">SECTION 04</span>
-        <h2 class="section-title"><span class="st-icon">🎯</span> 내년 해당월 전략</h2>
+        <h2 class="section-title"><span class="st-icon">🎯</span> 전략 방향</h2>
         <div class="insight-box" style="border-left-color:var(--positive)">
           <h3 style="color:var(--positive)">전략적 시사점</h3>
           <ul id="strat-${uid}"></ul>
@@ -784,13 +959,32 @@ function buildTabHTML(tabId, months, label) {
 /* ══════════════════════════════════════
    POPULATE TAB DATA
    ══════════════════════════════════════ */
-function populateTab(tabId, months) {
+function populateTab(tabId, months, showCumul) {
   const uid = tabId;
   const summary = combineSummary(months);
   const props = combineProperties(months);
 
-  renderKPI(summary, `kpi-${uid}`);
+  // Cumulative: 1 ~ last month in this tab
+  let cumulSummary = null;
+  if (showCumul && months.length === 1) {
+    const cumulMonths = [];
+    for (let i = 1; i <= months[0]; i++) cumulMonths.push(i);
+    cumulSummary = combineSummary(cumulMonths);
+  }
+
+  renderKPI(summary, `kpi-${uid}`, cumulSummary);
   renderTrendChart(`trend-${uid}`);
+
+  // Overview insight
+  const oEl = document.getElementById(`insight-overview-list-${uid}`);
+  if (oEl) oEl.innerHTML = generateOverviewInsight(summary).map(p => `<li>${p}</li>`).join('');
+
+  // Cumulative KPI + insight
+  if (showCumul && cumulSummary) {
+    renderKPI(cumulSummary, `kpi-cumul-${uid}`, null);
+    const cEl = document.getElementById(`insight-cumul-${uid}`);
+    if (cEl) cEl.innerHTML = generateOverviewInsight(cumulSummary).map(p => `<li>${p}</li>`).join('');
+  }
 
   // Market
   const mEl = document.getElementById(`market-${uid}`);
@@ -798,9 +992,13 @@ function populateTab(tabId, months) {
 
   // 3-1 Property
   renderPropertyTable(props, `prop-${uid}`);
+  const pInsEl = document.getElementById(`insight-prop-${uid}`);
+  if (pInsEl) pInsEl.innerHTML = generatePropertyInsight(props).map(p => `<li>${p}</li>`).join('');
 
   // 3-2 Channel
   renderChannelTable(months, `chan-${uid}`);
+  const cInsEl = document.getElementById(`insight-chan-${uid}`);
+  if (cInsEl) cInsEl.innerHTML = generateChannelInsight(months).map(p => `<li>${p}</li>`).join('');
 
   // 3-3 Category
   renderCategorySection(months, `catpie-${uid}`, `cattbl-${uid}`);
@@ -810,6 +1008,8 @@ function populateTab(tabId, months) {
 
   // 3-5 ADR
   renderADRTable(props, `adr-${uid}`);
+  const aInsEl = document.getElementById(`insight-adr-${uid}`);
+  if (aInsEl) aInsEl.innerHTML = generateADRInsight(props, summary).map(p => `<li>${p}</li>`).join('');
 
   // 3-7 Inbound
   renderInboundSection(months, `ib-${uid}`);
@@ -826,28 +1026,23 @@ function buildTabs(configs) {
   const bar = document.getElementById('tabBar');
   const cont = document.getElementById('tabContents');
 
-  // Remove old tab buttons
   bar.querySelectorAll('.tab-btn').forEach(b => b.remove());
   cont.innerHTML = '';
 
-  // Build HTML for each tab
   configs.forEach((cfg, i) => {
-    cont.innerHTML += buildTabHTML(cfg.id, cfg.months, cfg.label);
+    cont.innerHTML += buildTabHTML(cfg.id, cfg.months, cfg.label, cfg.showCumul || false);
     const btn = document.createElement('button');
-    btn.className = 'tab-btn' + (i === configs.length - 1 && cfg.isNew ? '' : '') + (i === 0 ? ' active' : '');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
     btn.dataset.tab = cfg.id;
     btn.innerHTML = cfg.label + (cfg.isNew ? ' <span class="new-badge">NEW</span>' : '');
     bar.appendChild(btn);
   });
 
-  // Activate first
   const first = cont.querySelector('.tab-content');
   if (first) first.classList.add('active');
 
-  // Populate all tabs
-  configs.forEach(cfg => populateTab(cfg.id, cfg.months));
+  configs.forEach(cfg => populateTab(cfg.id, cfg.months, cfg.showCumul || false));
 
-  // Tab click handlers
   bar.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -862,15 +1057,15 @@ function buildTabs(configs) {
 function switchPeriod(type) {
   const tabConfigs = {
     monthly: [
-      { id: 'm1', label: '1월 마감', months: [1] },
-      { id: 'm2', label: '2월 마감', months: [2] },
-      { id: 'm3', label: '3월 마감', months: [3] },
-      { id: 'm4', label: '4월 마감', months: [4], isNew: true },
+      { id: 'm1', label: '1월 마감', months: [1], showCumul: false },
+      { id: 'm2', label: '2월 마감', months: [2], showCumul: true },
+      { id: 'm3', label: '3월 마감', months: [3], showCumul: true },
+      { id: 'm4', label: '4월 마감', months: [4], isNew: true, showCumul: true },
       { id: 'q1', label: 'Q1 분기 마감', months: [1,2,3] },
     ],
     quarterly: [
       { id: 'q1', label: 'Q1 (1~3월)', months: [1,2,3] },
-      { id: 'm4', label: '4월 마감', months: [4], isNew: true },
+      { id: 'm4', label: '4월 마감', months: [4], isNew: true, showCumul: true },
     ],
     half: [
       { id: 'h1', label: '상반기 진행 중 (1~4월)', months: [1,2,3,4] },
