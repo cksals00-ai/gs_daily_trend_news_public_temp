@@ -142,10 +142,10 @@ body {
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 table.full-table { min-width: 1200px; }
 thead { z-index: 8; }
-th { background: var(--bg-deep); color: var(--ink-muted); font-weight: 700; font-size: 10.5px; letter-spacing: 0.06em; padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; text-transform: uppercase; }
-th:first-child { text-align: left; }
+th { background: var(--bg-deep); color: var(--ink-muted); font-weight: 700; font-size: 10.5px; letter-spacing: 0.06em; padding: 9px 12px; text-align: center; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; text-transform: uppercase; }
+th:first-child { text-align: center; }
 th.group-header { background: var(--bg-surface); color: var(--gold-bright); font-size: 11px; font-weight: 800; text-align: center; border-bottom: 2px solid rgba(201,160,99,0.3); letter-spacing: 0.1em; padding: 10px 8px; }
-th.sub-header { background: var(--bg-deep); font-size: 9.5px; padding: 7px 10px; }
+th.sub-header { background: var(--bg-deep); font-size: 9.5px; padding: 7px 10px; text-align: center; }
 td { padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--ink-soft); }
 td:first-child { text-align: left; font-family: var(--font); font-weight: 600; color: var(--ink); }
 tr:hover td { background: rgba(255,255,255,0.02); }
@@ -196,6 +196,30 @@ tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: v
   table { font-size: 11px; min-width: 900px; }
   th, td { padding: 7px 8px; }
 }
+
+/* ───── HEADLINE BANNER ───── */
+.headline-banner { background: linear-gradient(135deg, rgba(201,160,99,0.12), rgba(52,211,153,0.06)); border: 1px solid rgba(201,160,99,0.3); border-radius: var(--radius); padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.headline-icon { font-size: 22px; }
+.headline-text { font-size: 15px; font-weight: 800; color: var(--gold-bright); line-height: 1.5; }
+.headline-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; font-weight: 500; }
+
+/* ───── PROPERTY INSIGHT CARDS ───── */
+.prop-insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.prop-insight-card { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; position: relative; overflow: hidden; }
+.prop-insight-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.prop-insight-card.pic-top::before { background: linear-gradient(90deg, var(--positive), transparent); }
+.prop-insight-card.pic-check::before { background: linear-gradient(90deg, var(--negative), transparent); }
+.pic-label { font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+.pic-top .pic-label { color: var(--positive); }
+.pic-check .pic-label { color: var(--negative); }
+.pic-name { font-size: 14px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.pic-metrics { display: flex; gap: 10px; flex-wrap: wrap; }
+.pic-metric { font-size: 11px; color: var(--ink-muted); font-family: var(--mono); }
+.pic-metric strong { color: var(--ink-soft); font-weight: 700; }
+
+/* ───── CHANNEL DETAIL TABLE ───── */
+tr.seg-subtotal td { font-weight: 700; border-top: 1.5px solid rgba(201,160,99,0.4); color: var(--gold-bright); background: rgba(201,160,99,0.04); }
+tr.seg-header-row td { background: var(--bg-surface); font-weight: 800; color: var(--gold); font-size: 11px; letter-spacing: 0.08em; border-bottom: 1px solid rgba(201,160,99,0.2); }
 
 @media print {
   .gsn, .tab-bar, .toggle-more, .copyright-bar { display: none !important; }
@@ -272,6 +296,7 @@ tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: v
    ══════════════════════════════════════ */
 let DATA = null;
 let PKG_DATA = null; // package_series_trend.json
+let DB_DATA = null;  // db_aggregated.json (채널 거래처별)
 const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
 const CATEGORIES = ['룸온니/프로모션','연박/투나잇','올인클루시브','조식패키지','세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
 const MONTH_KO = ['전체','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -282,9 +307,9 @@ let chartInstances = {};
 /* ── Formatters ── */
 const fmt = {
   n: (v, d=0) => v == null ? '—' : (d > 0 ? v.toFixed(d) : Math.round(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
-  rev: v => v == null ? '—' : (v / 1e8).toFixed(1) + '억',
+  rev: v => v == null ? '—' : Math.round(v / 1e6).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '백만',
   pct: (v, d=1) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(d) + '%',
-  won: v => v == null ? '—' : '₩' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+  won: v => v == null ? '—' : Math.round(v / 1000).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '천',
 };
 
 /* ── YoY tag builder ── */
@@ -388,7 +413,7 @@ function renderKPI(summary, id, cumulSummary) {
 
   el.innerHTML = `
     <div class="kpi-card kpi-rn">
-      <div class="kpi-label">Room Nights</div>
+      <div class="kpi-label">객실수</div>
       <div class="kpi-value">${fmt.n(summary.rns_actual)}</div>
       <div class="kpi-keywords">
         ${yoyTag(summary.rns_yoy, 'RN')}
@@ -412,7 +437,7 @@ function renderKPI(summary, id, cumulSummary) {
       <div class="kpi-value">${fmt.won(summary.adr_actual)}</div>
       <div class="kpi-keywords">
         ${yoyTag(summary.adr_yoy, '')}
-        <span class="kpi-tag tag-neutral">₩/박</span>
+        <span class="kpi-tag tag-neutral">천원</span>
       </div>
       <div class="kpi-prev">전년 ${fmt.won(summary.adr_last)} | 목표 ${fmt.won(summary.adr_budget)}</div>
       ${cumulBlock('ADR', fmt.won(cumulSummary?.adr_actual))}
@@ -484,7 +509,7 @@ function generateADRInsight(props, summary) {
    RENDER: PROPERTY TABLE (3-1) — ENHANCED
    ══════════════════════════════════════ */
 function renderPropertyTable(props, containerId, showToggle = true) {
-  const sorted = [...props].sort((a, b) => (b.rns_actual||0) - (a.rns_actual||0));
+  const sorted = [...props].sort((a, b) => a.name.localeCompare(b.name, 'ko', {numeric: true}));
   const withYoY = props.filter(p => p.rns_last > 0);
   const byYoY = [...withYoY].sort((a, b) => (b.rns_yoy||0) - (a.rns_yoy||0));
   const topN = byYoY.slice(0, 3).map(p => p.name);
@@ -493,7 +518,7 @@ function renderPropertyTable(props, containerId, showToggle = true) {
   let html = `<table class="full-table"><thead>
     <tr>
       <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">사업장</th>
-      <th class="group-header" colspan="5">ROOM NIGHTS</th>
+      <th class="group-header" colspan="5">객실수</th>
       <th class="group-header" colspan="4">ADR</th>
       <th class="group-header" colspan="5">REVENUE</th>
     </tr>
@@ -560,7 +585,7 @@ function renderChannelTable(months, containerId) {
   let html = `<table class="full-table"><thead>
     <tr>
       <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:120px">세그먼트</th>
-      <th class="group-header" colspan="5">ROOM NIGHTS</th>
+      <th class="group-header" colspan="5">객실수</th>
       <th class="group-header" colspan="4">ADR</th>
       <th class="group-header" colspan="5">REVENUE</th>
     </tr>
@@ -703,7 +728,7 @@ function renderLeadTime(props, chartId) {
    RENDER: ADR TABLE (3-5) — ENHANCED
    ══════════════════════════════════════ */
 function renderADRTable(props, containerId) {
-  const sorted = [...props].sort((a, b) => (b.adr_actual||0) - (a.adr_actual||0));
+  const sorted = [...props].sort((a, b) => a.name.localeCompare(b.name, 'ko', {numeric: true}));
   let html = `<table><thead>
     <tr>
       <th rowspan="2" style="vertical-align:bottom">사업장</th>
@@ -746,7 +771,7 @@ function renderInboundSection(months, containerId) {
       <div class="kpi-grid" style="margin-bottom:16px">
         <div class="kpi-card kpi-rn"><div class="kpi-label">Inbound RN</div><div class="kpi-value">${fmt.n(ib.rns_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rns_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.n(ib.rns_last)}</div></div>
         <div class="kpi-card kpi-rev"><div class="kpi-label">Inbound Revenue</div><div class="kpi-value">${fmt.rev(ib.rev_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rev_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.rev(ib.rev_last)}</div></div>
-        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">₩/박</span></div><div class="kpi-prev">전년 ${fmt.won(ib.adr_last)}</div></div>
+        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">천원</span></div><div class="kpi-prev">전년 ${fmt.won(ib.adr_last)}</div></div>
       </div>
       <div class="data-missing"><strong>국가별 상세 미수신</strong>국가별 세부 내역은 별도 OTA 채널 분석 보고서를 참조해주세요.</div>
     `;
