@@ -564,6 +564,16 @@ input, button, select, table, th, td {
     </div>
 
     <div class="card">
+      <div class="card-title">🚫 "예산" 용어 사용 금지</div>
+      <div id="ui-budget-term">
+        <div class="check-item">
+          <span class="check-label">모든 리포트에서 "예산"이 아닌 "목표"를 사용해야 함. "Budget"도 "목표"로 표기. "예산"이라는 단어가 UI에 노출되면 ❌</span>
+          <span class="check-status" id="ui-budget-status"><span class="status-warn">⏳ 로딩</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">🕐 UI 검증 기록</div>
       <table class="log-table">
         <thead><tr><th>날짜·시간</th><th>검증 항목</th><th>결과</th><th>상세</th><th>검증자</th></tr></thead>
@@ -1150,6 +1160,13 @@ function checkUIExtended() {
   document.getElementById('ui-segment-status').innerHTML = segFail
     ? '<span class="status-fail">❌ 불필요 세그먼트 노출</span>'
     : '<span class="status-pass">✅ OTA/G-OTA/Inbound만 표시</span>';
+
+  // "예산" 용어 사용 금지 — "예산" 또는 "Budget"이 UI에 노출되면 ❌
+  var budgetLogs = LOGS.filter(function(l) { return l.category === 'ui' && (l.item.indexOf('예산') !== -1 || l.item.indexOf('Budget') !== -1 || l.item.indexOf('budget') !== -1 || l.item.indexOf('목표') !== -1); });
+  var budgetFail = budgetLogs.some(function(l) { return l.result === 'fail'; });
+  document.getElementById('ui-budget-status').innerHTML = budgetFail
+    ? '<span class="status-fail">❌ "예산" 용어 노출됨 → "목표"로 수정 필요</span>'
+    : '<span class="status-pass">✅ "목표" 용어 사용 중</span>';
 }
 
 /* ───── INIT ───── */
