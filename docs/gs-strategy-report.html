@@ -1475,18 +1475,21 @@ function renderKpiDiagnosis(){
     const trendArrow = fcstChange == null ? '—' : (fcstChange >= 1 ? '↗ 개선' : fcstChange <= -1 ? '↘ 하락' : '→ 정체');
     const trendColor = fcstChange == null ? 'var(--ink-faint)' : (fcstChange >= 1 ? 'var(--positive)' : fcstChange <= -1 ? 'var(--negative)' : 'var(--ink-faint)');
 
-    // 채널별 액션
+    // 채널별 액션 — 회사 기준 매핑
+    //  OTA = 국내 채널 (여기어때, 야놀자(놀유니버스), 쿠팡, 인터파크, 티몬, 네이버, 스마트인피니, 종이비행기, 프리즘)
+    //  G-OTA = 글로벌 채널 (아고다, 트립닷컴, 익스피디아, 부킹닷컴, 트립비토즈)
+    //  Inbound = 여행사 물량 (트립닷컴/아고다는 G-OTA, Inbound 아님)
     let action = '';
     if (sn === 'OTA'){
-      if (gap != null && gap < -3) action = `OTA 갭 ${gap.toFixed(1)}% — 아고다·부킹닷컴 광고 입찰 +20% 상향, 카카오/G마켓 메인 노출 확보. 단가 협상 우선.`;
+      if (gap != null && gap < -3) action = `OTA 갭 ${gap.toFixed(1)}% — 여기어때·야놀자(놀) 광고 입찰 +20% 상향, 라이브방송 추가 편성. 쿠팡 와우 단독 기획전 발주.`;
       else if (gap != null && gap >= 3) action = `OTA 초과 페이싱 ${gap.toFixed(1)}% — Mega channel 추가 push 자제, 단가 인상 검토 (ADR 최적화).`;
-      else action = `OTA 페이싱 안정 — 기존 채널 유지, OTA 광고 ROAS 모니터링.`;
+      else action = `OTA 페이싱 안정 — 여기어때·야놀자 ROAS 모니터링, 카카오/G마켓 push 유지.`;
     } else if (sn === 'G-OTA'){
-      if (gap != null && gap < -3) action = `G-OTA 갭 ${gap.toFixed(1)}% — 여기어때·놀유니버스 라이브방송 추가 편성, 인플루언서 패키지 즉시 발주.`;
-      else if (gap != null && gap >= 3) action = `G-OTA 초과 — 가격 마진 확보, 패키지 단가 5% 상향 검토.`;
-      else action = `G-OTA 안정 — 카카오메이커스/티딜 분기 1회 push 유지.`;
+      if (gap != null && gap < -3) action = `G-OTA 갭 ${gap.toFixed(1)}% — 아고다·트립닷컴·익스피디아 키워드 광고 +20% 입찰, 글로벌 트래픽 확대. 외국인 전용 패키지 영문 노출 강화.`;
+      else if (gap != null && gap >= 3) action = `G-OTA 초과 — 글로벌 OTA 단가 마진 확보, 패키지 단가 5% 상향 검토.`;
+      else action = `G-OTA 안정 — 아고다/트립닷컴 ESG·B2B 패키지 contracting 분기 점검.`;
     } else {
-      // Inbound = 여행사 물량 (트립닷컴/아고다는 G-OTA, Inbound 아님)
+      // Inbound = 여행사 물량
       if (otbYoy != null && otbYoy < -10) action = `Inbound YoY ${otbYoy.toFixed(1)}% 감소 — 글로벌 여행사 contracting 점검, 인바운드 단체·MICE 기획전 신규 발주.`;
       else action = `Inbound 여행사 물량 모니터링 — 글로벌 여행사 송객 페이스, 단체 inquiry 추적.`;
     }
@@ -1611,14 +1614,15 @@ function renderMonthlyStrategy(){
     const priority = fAch < 95 ? 'A' : fAch < 100 ? 'B' : 'C';
     const title = `${m}월 (익월) — Pre-launch 윈도우 / FCST 갭 ${fmt.signed(gap)}`;
     const desc = priority === 'A'
-      ? `익월 FCST 갭 확대 우려. 4~5주 lead time 채널(여기어때·놀유니버스·카카오메이커스) 즉시 발주가 효과적인 시점. 인플루언서 contracting 도 지금이 마지노선.`
+      ? `익월 FCST 갭 확대 우려. 4~5주 lead time 채널 즉시 발주가 효과적인 시점 — OTA(여기어때·야놀자 라이브방송) + G-OTA(아고다·트립닷컴 키워드 광고) + 카카오메이커스 + 인플루언서 contracting 까지 동시 가동.`
       : priority === 'B'
       ? `익월 FCST 안정권 진입 중. 추가 push 보다 단가/믹스 점검 + 사업장별 약점 보강 우선.`
       : `익월 FCST 안정. 단가 인상 여력 확보, ADR 최적화 집중.`;
     const actions = [];
     if (priority !== 'C'){
-      actions.push(`<b>여기어때 라이브방송</b> — 발주 후 7일 내 노출 가능, 즉시 협의`);
-      actions.push(`<b>놀유니버스 소노위크</b> — 항공+숙박+레저 패키지, lead time 길어 지금이 적기`);
+      actions.push(`<b>OTA · 여기어때 라이브방송</b> — 발주 후 7일 내 노출, 즉시 협의 (국내 OTA)`);
+      actions.push(`<b>OTA · 야놀자(놀) 슈퍼세일</b> — 단독 기획전 발주, lead time 4~5주`);
+      actions.push(`<b>G-OTA · 아고다/트립닷컴</b> — 키워드 광고 +20% 입찰, 글로벌 트래픽 확보`);
       actions.push(`<b>카카오메이커스</b> — 4주 lead time, 발주 today`);
       actions.push(`<b>인플루언서 contracting</b> — @요미맘/@마이아 등 고성과 인플루언서 우선 확보`);
     } else {
