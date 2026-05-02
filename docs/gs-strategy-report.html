@@ -285,7 +285,7 @@
   .fcst-mini-meta{font-family:var(--mono);font-size:9px;color:var(--ink-faint)}
   .fcst-mini-meta .pos{color:var(--positive);font-weight:700}
   .fcst-mini-meta .neg{color:var(--negative);font-weight:700}
-  .fcst-mini-canvas{position:relative;height:80px}
+  .fcst-mini-canvas{position:relative;height:120px}
   .fcst-mini-foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);padding-top:4px;border-top:1px dashed var(--rule)}
   .fcst-mini-foot b{color:var(--gold-bright);font-weight:700}
   /* 기존 단일 차트 (사용 안 함, hidden) */
@@ -1553,7 +1553,7 @@ function renderFcstTrend(){
           tooltip: { mode: 'index', callbacks: { label: c => c.dataset.label + ' ' + Math.round(c.raw).toLocaleString() + '실' } }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 8 }, maxRotation: 35, minRotation: 35, autoSkip: true, maxTicksLimit: 6 } },
+          x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, callback: function(v,i){ const d=this.getLabelForValue(v); if(!d) return d; const p=d.split('-'); return p.length>=3 ? parseInt(p[1])+'/'+parseInt(p[2]) : d; } } },
           y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxTicksLimit: 4, callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v } }
         }
       }
