@@ -68,6 +68,25 @@
   .chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright)}
   .sb-divider{height:1px;background:var(--rule)}
   .prop-list{display:flex;flex-direction:column;gap:2px}
+  /* 권역 → 사업장 2뎁스 트리 */
+  .region-tree{display:flex;flex-direction:column;gap:3px}
+  .region-group{border-radius:4px;overflow:hidden}
+  .region-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:12px;font-weight:700;color:var(--ink);background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;cursor:pointer;transition:.15s;width:100%;text-align:left;font-family:var(--sans)}
+  .region-toggle:hover{background:var(--bg-hover);border-color:var(--gold)}
+  .region-toggle.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright)}
+  .region-toggle .arr{font-family:var(--mono);font-size:10px;color:var(--ink-faint);transition:transform .15s}
+  .region-toggle.open .arr{transform:rotate(180deg)}
+  .region-toggle .cnt{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);margin-left:auto;margin-right:6px;background:var(--bg-deep);padding:1px 5px;border-radius:3px}
+  .region-children{display:none;flex-direction:column;gap:2px;padding:4px 0 4px 10px;border-left:2px solid var(--rule);margin-left:6px;margin-top:2px}
+  .region-children.open{display:flex}
+  .region-children .prop-item{padding:4px 8px;font-size:11.5px}
+  /* 페이지 앵커 네비 */
+  .anchor-nav{display:flex;flex-direction:column;gap:2px}
+  .anchor-item{padding:5px 9px;font-size:11.5px;color:var(--ink-muted);text-decoration:none;border-radius:4px;border-left:2px solid transparent;transition:.15s;font-family:var(--sans)}
+  .anchor-item:hover{background:var(--bg-soft);color:var(--ink);border-left-color:var(--gold)}
+  .anchor-item.active-section{background:rgba(201,160,99,0.10);color:var(--gold-bright);border-left-color:var(--gold);font-weight:700}
+  html{scroll-behavior:smooth}
+  section.card,.summary-wrap{scroll-margin-top:60px}
   .prop-item{padding:5px 9px;font-size:12px;color:var(--ink-muted);background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;text-align:left;font-family:var(--sans);transition:.15s}
   .prop-item:hover{background:var(--bg-soft);color:var(--ink)}
   .prop-item.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);font-weight:700}
@@ -365,18 +384,28 @@
     </div>
     <div class="sb-divider"></div>
     <div class="sb-section">
-      <div class="sb-label">권역</div>
-      <div class="chips" id="region-chips"></div>
+      <div class="sb-label">사업장 <span id="prop-cnt" style="color:var(--gold);"></span></div>
+      <button class="prop-item" data-p="ALL" id="prop-all-btn" style="margin-bottom:4px">전체</button>
+      <div class="region-tree" id="region-tree"></div>
     </div>
     <div class="sb-divider"></div>
     <div class="sb-section">
-      <div class="sb-label">사업장 <span id="prop-cnt" style="color:var(--gold);"></span></div>
-      <div class="prop-list" id="prop-list"></div>
+      <div class="sb-label">페이지 이동</div>
+      <div class="anchor-nav" id="anchor-nav">
+        <a href="#sec-summary" class="anchor-item">0 · 핵심 지표 요약</a>
+        <a href="#sec-matrix" class="anchor-item">1 · 거래처×시기 매트릭스</a>
+        <a href="#sec-kpi" class="anchor-item">2 · 채널 KPI 진단</a>
+        <a href="#sec-monthly" class="anchor-item">3 · 월별 차별화 전략</a>
+        <a href="#sec-camp" class="anchor-item">4 · 기획전 상세</a>
+        <a href="#sec-channel" class="anchor-item">5 · 거래처별 현황</a>
+        <a href="#sec-fcst" class="anchor-item">6 · RM FCST 추이</a>
+        <a href="#sec-sug" class="anchor-item">7 · 임박 기획전 제안</a>
+      </div>
     </div>
     <div class="sb-meta">
       DATA<br>
       otb_data · campaign_data<br>
-      admin_input
+      admin_input · rm_fcst
     </div>
   </aside>
 
@@ -389,7 +418,7 @@
       </div>
     </div>
 
-    <div class="summary-wrap" id="summary-wrap">
+    <div class="summary-wrap" id="sec-summary">
       <h3><span class="num">0</span> 핵심 지표 요약 — <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:500">선택 월·사업장 기준</span></h3>
       <table class="summary-tbl">
         <thead><tr>
@@ -421,7 +450,7 @@
       </div>
     </div>
 
-    <section class="card">
+    <section class="card" id="sec-matrix">
       <h2><span class="num">1</span> 거래처 × 시기 매트릭스</h2>
       <div class="sub">투숙일이 선택 월에 하루라도 걸치는 기획전 — 막대 hover 시 사업장 실적까지 / 노란 라인 = 오늘</div>
       <div class="timeline-wrap" id="timeline-wrap"></div>
@@ -431,25 +460,25 @@
       <div id="gap-fcst" style="display:none"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-kpi">
       <h2><span class="num">2</span> 채널 × 사업장 KPI 추이 (전략 진단)</h2>
       <div class="sub">세그먼트(OTA/G-OTA/Inbound) FCST 변화 추세 + 채널별 평가 + 권역별 진단 — 4개년 동월 비교 포함</div>
       <div id="kpi-diagnosis-wrap"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-monthly">
       <h2><span class="num">3</span> 월별 차별화 전략 + 액션 제안</h2>
       <div class="sub">선택 월(<b id="ctx-strategy-month">5</b>월)의 시기 특성에 맞춘 구체 액션 — FCST 갭별 채널·기획전·타이밍 명시</div>
       <div id="monthly-strategy-wrap"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-camp">
       <h2><span class="num">4</span> 기획전 상세 (투숙월 기준)</h2>
       <div class="sub">진행 상태별 카드 — <b id="camp-count">0</b>건 매칭 · 사업장 실적도 함께 표기 / 데이터: campaign_data + individual_analysis</div>
       <div class="camp-grid" id="camp-grid"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-channel">
       <h2><span class="num">5</span> <span id="seg-title">거래처별 진행 현황</span></h2>
       <div class="sub" id="seg-sub">세그먼트 선택 → 해당 세그먼트 거래처만 표시 / 데이터: db_aggregated.by_channel_segment</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
@@ -460,7 +489,7 @@
       <div class="perf-tbl-wrap"><table class="perf-table" id="perf-table"></table></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-fcst">
       <h2><span class="num">6</span> RM FCST 추이 (Budget vs Forecast)</h2>
       <div class="sub" id="fcst-sub">RM 미팅 PDF 스냅샷 시계열 — 세그먼트별 5개 mini chart (자체 스케일 → 변화량 명확) · 점선=Budget · 실선=FCST</div>
       <div class="fcst-mini-grid" id="fcst-mini-grid"></div>
@@ -471,7 +500,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="sec-sug">
       <h2><span class="num">7</span> 임박 기획전 제안 (전년 데이터 기반)</h2>
       <div class="sub">전년/금년도 채널·인플루언서 실적 분석을 토대로 한 즉시 실행 가능한 제안 — 우선순위 A→B→C</div>
       <div class="sug-grid" id="sug-grid"></div>
@@ -564,53 +593,135 @@ function buildMonthChips(){
   });
 }
 
-// 권역 chips
-function buildRegionChips(){
-  const host = document.getElementById('region-chips');
-  host.innerHTML = REGION_DEFS.map(r => `<button class="chip ${r.key === 'ALL' ? 'active' : ''}" data-r="${r.key}">${r.label}</button>`).join('');
-  host.querySelectorAll('.chip').forEach(b => {
+// (구) buildRegionChips — region-tree 로 통합되어 더 이상 필요 없음, no-op 으로 유지
+function buildRegionChips(){ /* deprecated — buildRegionTree 로 대체 */ }
+
+// 사업장 리스트 — 권역→사업장 2뎁스 트리 (collapsible)
+function buildPropList(){
+  buildRegionTree();
+}
+
+function buildRegionTree(){
+  const host = document.getElementById('region-tree');
+  const allBtn = document.getElementById('prop-all-btn');
+  const sel = document.getElementById('prop-select-m');
+  if (!DATA.otb || !host){ return; }
+  const props = DATA.otb.byProperty || [];
+  document.getElementById('prop-cnt').textContent = '· ' + props.length;
+
+  // 전체 버튼 active 상태
+  if (allBtn){
+    allBtn.classList.toggle('active', STATE.prop === 'ALL');
+    allBtn.onclick = () => {
+      STATE.prop = 'ALL';
+      STATE.region = 'ALL';
+      buildRegionTree();
+      if (sel) sel.value = 'ALL';
+      render();
+    };
+  }
+
+  // 권역별 그룹화
+  const regionDefs = [
+    { key:'vivaldi', label:'비발디' },
+    { key:'central', label:'중부' },
+    { key:'south', label:'남부' },
+    { key:'apac', label:'APAC' },
+  ];
+  const byRegion = {};
+  regionDefs.forEach(r => byRegion[r.key] = []);
+  props.forEach(p => { if (byRegion[p.region]) byRegion[p.region].push(p); });
+
+  // 현재 선택된 사업장의 권역 = 자동 펼침
+  const curProp = props.find(p => p.name === STATE.prop);
+  const expandedRegion = curProp ? curProp.region : (STATE.region !== 'ALL' ? STATE.region : null);
+
+  host.innerHTML = regionDefs.map(r => {
+    const list = byRegion[r.key];
+    const isOpen = expandedRegion === r.key;
+    const isActive = STATE.region === r.key;
+    return `
+      <div class="region-group">
+        <button class="region-toggle ${isOpen ? 'open' : ''} ${isActive ? 'active' : ''}" data-r="${r.key}">
+          ${r.label}
+          <span class="cnt">${list.length}</span>
+          <span class="arr">▼</span>
+        </button>
+        <div class="region-children ${isOpen ? 'open' : ''}" data-r="${r.key}">
+          ${list.map(p => `<button class="prop-item ${STATE.prop === p.name ? 'active' : ''}" data-p="${p.name}">${p.name}</button>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  // 권역 토글: 클릭 시 펼침/접힘 + 권역 필터로 설정
+  host.querySelectorAll('.region-toggle').forEach(b => {
     b.addEventListener('click', () => {
-      STATE.region = b.dataset.r;
-      host.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x === b));
-      buildPropList();  // 권역 필터링된 사업장 리스트
-      // 만약 현재 선택된 사업장이 새 권역에 없으면 ALL 로
-      if (STATE.prop !== 'ALL') {
-        const props = (DATA.otb && DATA.otb.byProperty) || [];
-        const cur = props.find(p => p.name === STATE.prop);
-        if (!cur || (STATE.region !== 'ALL' && cur.region !== STATE.region)){
-          STATE.prop = 'ALL';
-        }
+      const rkey = b.dataset.r;
+      const children = host.querySelector(`.region-children[data-r="${rkey}"]`);
+      const wasOpen = b.classList.contains('open');
+      // 모두 접고 클릭한 것만 토글
+      host.querySelectorAll('.region-toggle').forEach(x => x.classList.remove('open'));
+      host.querySelectorAll('.region-children').forEach(x => x.classList.remove('open'));
+      if (!wasOpen){
+        b.classList.add('open');
+        children.classList.add('open');
+        // 권역 필터 적용 + 사업장 ALL 로
+        STATE.region = rkey;
+        STATE.prop = 'ALL';
+      } else {
+        // 다시 클릭 시 권역 ALL 로
+        STATE.region = 'ALL';
       }
+      buildRegionTree();
       render();
     });
   });
-}
 
-// 사업장 리스트 (권역 필터 적용)
-function buildPropList(){
-  const host = document.getElementById('prop-list');
-  const sel = document.getElementById('prop-select-m');
-  if (!DATA.otb){ host.innerHTML = ''; return; }
-  const props = DATA.otb.byProperty || [];
-  const filtered = STATE.region === 'ALL' ? props : props.filter(p => p.region === STATE.region);
-  document.getElementById('prop-cnt').textContent = '· ' + filtered.length;
-  // ALL 항목 + 사업장
-  const items = [{ name: 'ALL', label: '전체' }].concat(filtered.map(p => ({ name: p.name, label: p.name })));
-  host.innerHTML = items.map(it => `<button class="prop-item ${STATE.prop === it.name ? 'active' : ''}" data-p="${it.name}">${it.label}</button>`).join('');
+  // 사업장 클릭
   host.querySelectorAll('.prop-item').forEach(b => {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
       STATE.prop = b.dataset.p;
-      host.querySelectorAll('.prop-item').forEach(x => x.classList.toggle('active', x === b));
+      // 사업장의 권역도 자동 설정
+      const p = props.find(pp => pp.name === STATE.prop);
+      if (p) STATE.region = p.region;
+      buildRegionTree();
       if (sel) sel.value = STATE.prop;
       render();
     });
   });
-  // 모바일 dropdown
+
+  // 모바일 dropdown 동기화
   if (sel){
-    sel.innerHTML = items.map(it => `<option value="${it.name}">${it.label}</option>`).join('');
+    sel.innerHTML = '<option value="ALL">전체</option>' + props.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
     sel.value = STATE.prop;
-    sel.onchange = () => { STATE.prop = sel.value; buildPropList(); render(); };
+    sel.onchange = () => {
+      STATE.prop = sel.value;
+      const p = props.find(pp => pp.name === STATE.prop);
+      STATE.region = p ? p.region : 'ALL';
+      buildRegionTree();
+      render();
+    };
   }
+}
+
+// 페이지 앵커 active 하이라이트 — IntersectionObserver
+function setupAnchorObserver(){
+  const sections = document.querySelectorAll('#sec-summary, #sec-matrix, #sec-kpi, #sec-monthly, #sec-camp, #sec-channel, #sec-fcst, #sec-sug');
+  if (!sections.length || !window.IntersectionObserver) return;
+  const links = document.querySelectorAll('.anchor-item');
+  const linkMap = {};
+  links.forEach(a => { const id = a.getAttribute('href').replace('#',''); linkMap[id] = a; });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        links.forEach(a => a.classList.remove('active-section'));
+        const id = e.target.id;
+        if (linkMap[id]) linkMap[id].classList.add('active-section');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+  sections.forEach(s => obs.observe(s));
 }
 
 function getSelectedSummary(){
@@ -1931,9 +2042,9 @@ function render(){
   DATA.campAnalysis = campAnalysis;
   DATA.db = db;
   buildMonthChips();
-  buildRegionChips();
-  buildPropList();
+  buildPropList();          // = buildRegionTree() 호출 (region tree)
   buildChSegChips();
+  setupAnchorObserver();    // 페이지 앵커 active 하이라이트
   render();
 
   // ─── strategy-keyin 의 담당자 수정 자동 반영 ───
