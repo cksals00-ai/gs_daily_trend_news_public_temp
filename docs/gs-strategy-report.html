@@ -1073,23 +1073,78 @@ function buildChSegChips(){
 }
 
 // strategy-keyin localStorage 에서 거래처별 목표 추출
+// ============================================================
+//  AI 1차 배분 — strategy-keyin.html 의 calcAISuggest 와 동일 로직
+//  근거: 전년 동월 LY (db_aggregated) × YoY 보정률 (CH_YOY_RATES)
+//  전략 보정: 급감(-20% 미만) → 감소폭 50%만 반영, 급성장(+50% 초과) → 성장폭 80% 반영
+// ============================================================
+const CH_YOY_RATES = {
+  '야놀자':       -3.4,
+  '여기어때':      5.2,
+  '네이버':       -1.1,
+  '쿠팡':         39.6,
+  '스마트인피니':  158.1,
+  '종이비행기':   -13.1,
+  '프리즘':       -8.5,
+  '아고다':        6.8,
+  '트립닷컴':     12.3,
+  '트립비토즈':   -5.2,
+  '익스피디아':  -33.0,
+  '부킹닷컴':    -34.6,
+  '여행사(합산)': 15.0
+};
+
+function calcAITargetRn(channel, month){
+  if (!DATA.db) return null;
+  const monthStr = String(month).padStart(2, '0');
+  const lyKey = `2025${monthStr}`; // 전년 동월
+  const bc = DATA.db.by_channel || {};
+  const lyMonthly = ((bc[channel] || {})[lyKey] || {}).net_rn || 0;
+  if (lyMonthly === 0) return null;
+  const rate = CH_YOY_RATES[channel] != null ? CH_YOY_RATES[channel] : 0;
+  // 전략 보정 (strategy-keyin 의 calcAISuggest 와 동일)
+  let adjustedRate = rate;
+  if (rate < -20) adjustedRate = rate * 0.5;       // 급감 보수적
+  else if (rate > 50) adjustedRate = rate * 0.8;    // 급성장 현실적
+  else if (rate > 20) adjustedRate = rate * 0.9;    // 성장 소폭 보수적
+  return Math.round(lyMonthly * (1 + adjustedRate / 100));
+}
+
 function getChannelTargetsFromKeyin(month){
+  // 1) user 입력 (localStorage) 우선
+  const userTargets = {};
   try {
     const raw = localStorage.getItem('gs_strategy_keyin_v2');
-    if (!raw) return {};
-    const data = JSON.parse(raw);
-    // strategy-keyin 은 month key 를 'YYYY-MM' 형식으로 저장 (예: '2026-06')
-    // gs-strategy-report 는 month 를 number(5/6/7) 로 보내므로 다양한 형식 시도
-    const monthStr = String(month).padStart(2, '0');
-    const monthData = data[`2026-${monthStr}`] || data[month] || data[String(month)] || {};
-    const channels = monthData.channels || {};
-    const out = {};
-    Object.entries(channels).forEach(([ch, v]) => {
-      const t = (v && v.target_rn) || null;
-      if (t != null && t !== '' && !isNaN(+t)) out[ch] = +t;
+    if (raw){
+      const data = JSON.parse(raw);
+      const monthStr = String(month).padStart(2, '0');
+      const monthData = data[`2026-${monthStr}`] || data[month] || data[String(month)] || {};
+      const channels = monthData.channels || {};
+      Object.entries(channels).forEach(([ch, v]) => {
+        const t = (v && v.target_rn) || null;
+        if (t != null && t !== '' && !isNaN(+t)) userTargets[ch] = +t;
+      });
+    }
+  } catch(e){ console.warn('keyin parse fail', e); }
+  // 2) AI 자동 배분 — db_aggregated.by_channel[ch][LY 동월] × YoY 보정
+  const out = {};
+  if (DATA.db){
+    const bc = DATA.db.by_channel || {};
+    Object.keys(bc).forEach(ch => {
+      if (ch === '기타') return;
+      // user 우선, 없으면 AI
+      if (userTargets[ch] != null) out[ch] = { value: userTargets[ch], source: 'keyin' };
+      else {
+        const ai = calcAITargetRn(ch, month);
+        if (ai != null) out[ch] = { value: ai, source: 'ai' };
+      }
     });
-    return out;
-  } catch(e){ console.warn('keyin parse fail', e); return {}; }
+  }
+  // user 입력만 있고 db 데이터 없는 경우도 fallback
+  Object.entries(userTargets).forEach(([ch, v]) => {
+    if (!out[ch]) out[ch] = { value: v, source: 'keyin' };
+  });
+  return out;
 }
 
 function renderPerfTable(){
@@ -1122,16 +1177,14 @@ function renderPerfTable(){
   });
 
   // strategy-keyin 목표 (localStorage)
-  const keyinTargets = getChannelTargetsFromKeyin(m);
-  const hasKeyin = Object.keys(keyinTargets).length > 0;
+  const keyinTargets = getChannelTargetsFromKeyin(m); // {ch: {value, source: 'keyin'|'ai'}}
+  const keyinCount = Object.values(keyinTargets).filter(v => v.source === 'keyin').length;
+  const aiCount = Object.values(keyinTargets).filter(v => v.source === 'ai').length;
 
   titleEl.textContent = `${m}월 거래처별 진행 현황 ${STATE.chSegment === 'ALL' ? '(OTA + G-OTA)' : '(' + STATE.chSegment + ')'}`;
-  // strategy-keyin 은 6/7/8월만 입력 가능 — 5월은 키인 대상 아님을 명시
-  const keyinNote = hasKeyin
-    ? `✓ strategy-keyin 목표 ${Object.keys(keyinTargets).length}개 거래처 적용`
-    : (m < 6 || m > 8)
-      ? `ℹ strategy-keyin 은 6/7/8월만 입력 (현재 ${m}월 — Budget "—")`
-      : `⚠ ${m}월 strategy-keyin 미입력 — Budget "—" / strategy-keyin.html 에서 거래처별 목표 키인 시 자동 반영`;
+  const keyinNote = keyinCount + aiCount > 0
+    ? `✓ 목표 ${keyinCount + aiCount}개 거래처 적용 — strategy-keyin 키인 ${keyinCount}건 + AI 1차 배분 ${aiCount}건 (전년 동월 LY × YoY 보정)`
+    : `⚠ 목표 데이터 없음 — db_aggregated.by_channel 의 LY 데이터 확인 필요`;
   subEl.textContent = `${channels.length}개 거래처 · ${keyinNote}`;
 
   if (!channels.length){
@@ -1169,13 +1222,21 @@ function renderPerfTable(){
         const adr = cur.adr || 0;
         const wkPickup = Math.round(net / 4);
         const cnt = cleanCount[ch] || 0;
-        const target_rn = keyinTargets[ch];
+        const tgtObj = keyinTargets[ch];
+        const target_rn = tgtObj ? tgtObj.value : null;
+        const tgtSrc = tgtObj ? tgtObj.source : null;
         const ach = target_rn ? (net / target_rn * 100) : null;
         const c = ach != null ? achClass(ach) : null;
+        // 목표 셀: keyin = gold + 별표, ai = muted + AI 배지
+        const tgtCell = target_rn != null
+          ? (tgtSrc === 'keyin'
+             ? `<span style="color:var(--gold-bright);font-weight:700" title="strategy-keyin 사용자 입력">${fmt.num(target_rn)} ★</span>`
+             : `<span style="color:var(--ink-soft)" title="AI 1차 배분 (전년 동월 LY × YoY 보정)">${fmt.num(target_rn)} <span style="font-size:9px;color:var(--info);background:var(--info-bg);padding:1px 4px;border-radius:2px;font-weight:700">AI</span></span>`)
+          : '<span style="color:var(--ink-faint)">—</span>';
         return `<tr>
           <td class="name">${ch}</td>
           <td style="font-family:var(--mono);font-size:11px;color:${seg==='OTA'?'#5a9fc4':seg==='G-OTA'?'#a855f7':'var(--ink-faint)'};font-weight:700">${seg}</td>
-          <td>${target_rn ? fmt.num(target_rn) : '<span style="color:var(--ink-faint)">—</span>'}</td>
+          <td>${tgtCell}</td>
           <td>${fmt.num(net)}</td>
           <td>${ach != null ? '<span class="ach-cell"><span class="mini-bar"><span class="mini-fill ' + c + '" style="width:' + Math.min(ach,100) + '%"></span></span><span class="badge ' + c + '">' + fmt.pct(ach) + '</span></span>' : '<span style="color:var(--ink-faint)">—</span>'}</td>
           <td>${fmt.num(lyNet)}</td>
@@ -1826,6 +1887,21 @@ function render(){
   buildPropList();
   buildChSegChips();
   render();
+
+  // ─── strategy-keyin 의 담당자 수정 자동 반영 ───
+  // (a) 다른 탭/창에서 strategy-keyin 저장 시 → storage event 발화
+  window.addEventListener('storage', e => {
+    if (e.key === 'gs_strategy_keyin_v2'){
+      console.log('[strategy-report] keyin 데이터 변경 감지 → 재렌더');
+      render();
+    }
+  });
+  // (b) 사용자가 탭 전환 후 돌아올 때 (visibilitychange)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') render();
+  });
+  // (c) 창 focus (보조)
+  window.addEventListener('focus', () => render());
 })();
 </script>
 </body>
