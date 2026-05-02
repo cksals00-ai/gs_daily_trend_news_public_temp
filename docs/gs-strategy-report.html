@@ -274,19 +274,19 @@
   .strategy-row .stargets .tg{background:var(--bg-soft);padding:3px 8px;border-radius:3px;color:var(--ink-muted)}
   .strategy-row .stargets .tg b{color:var(--positive);font-weight:700}
 
-  /* RM FCST 추이 차트 — 세그먼트별 mini chart 5개 (스케일 차이 해결) */
-  .fcst-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
-  .fcst-mini{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column}
+  /* RM FCST 추이 차트 — 세그먼트별 행 레이아웃 (좌측 세그 라벨 + 우측 차트) */
+  .fcst-mini-grid{display:flex;flex-direction:column;gap:8px}
+  .fcst-mini{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:100px 1fr;grid-template-rows:auto auto;gap:0 14px;align-items:center}
   .fcst-mini.tier-bad{border-left:3px solid var(--negative)}
   .fcst-mini.tier-warn{border-left:3px solid var(--warning)}
   .fcst-mini.tier-good{border-left:3px solid var(--positive)}
-  .fcst-mini-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:6px}
-  .fcst-mini-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--gold-bright)}
-  .fcst-mini-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+  .fcst-mini-label{grid-row:1/3;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px}
+  .fcst-mini-title{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--gold-bright);line-height:1.2}
+  .fcst-mini-meta{font-family:var(--mono);font-size:9px;color:var(--ink-faint)}
   .fcst-mini-meta .pos{color:var(--positive);font-weight:700}
   .fcst-mini-meta .neg{color:var(--negative);font-weight:700}
-  .fcst-mini-canvas{position:relative;height:120px;margin-top:4px}
-  .fcst-mini-foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);margin-top:5px;padding-top:5px;border-top:1px dashed var(--rule)}
+  .fcst-mini-canvas{position:relative;height:80px}
+  .fcst-mini-foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);padding-top:4px;border-top:1px dashed var(--rule)}
   .fcst-mini-foot b{color:var(--gold-bright);font-weight:700}
   /* 기존 단일 차트 (사용 안 함, hidden) */
   .fcst-chart-wrap{display:none}
@@ -1516,14 +1516,14 @@ function renderFcstTrend(){
     }
     return `
       <div class="fcst-mini ${tier}">
-        <div class="fcst-mini-h">
+        <div class="fcst-mini-label">
           <span class="fcst-mini-title">${spec.title}</span>
           <span class="fcst-mini-meta">전주비 ${wow}</span>
+          <span class="fcst-mini-meta ${gapClass}" style="font-weight:700;font-size:11px">${gapText}</span>
         </div>
         <div class="fcst-mini-canvas"><canvas id="fcst-mini-${spec.key}"></canvas></div>
-        <div class="fcst-mini-foot">
+        <div class="fcst-mini-foot" style="grid-column:2">
           <span>F <b>${Math.round(lastF).toLocaleString()}</b> / B ${Math.round(lastB).toLocaleString()}</span>
-          <span class="${gapClass}" style="font-weight:700">${gapText}</span>
         </div>
       </div>
     `;
