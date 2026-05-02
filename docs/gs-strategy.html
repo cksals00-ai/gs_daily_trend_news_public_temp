@@ -83,7 +83,7 @@
     padding: 16px 0;
     border-bottom: 3px solid var(--gold);
     position: sticky;
-    top: 42px;
+    top: 0;
     z-index: 100;
   }
   .masthead-inner {
@@ -894,8 +894,8 @@
   .nav-l2.active { color:var(--gold-bright) !important; border-left-color:var(--gold-bright) !important; }
   .nav-l2:hover { color:var(--ink) !important; }
   .nav-l2.nav-chapter { border-left:none; margin-left:0 !important; padding-left:22px !important; font-weight:600; color:var(--gold); }
-  body.sidebar-open { margin-left:200px; }
-  body.sidebar-open #sectionNav { display:block !important; }
+  body { margin-left:200px; }
+  #sectionNav { display:block !important; }
 
   /* Chapter Nav Tabs */
   .btn-tab {
@@ -913,28 +913,14 @@
   }
 
   @media (max-width: 768px) {
-    #sectionNav { width:160px !important; }
-    body.sidebar-open { margin-left:160px; }
+    #sectionNav { display:none !important; }
+    body { margin-left:0 !important; }
     .nav-l1, .nav-l2 { font-size: 11px !important; }
-    .admin-nav { display:none; }
   }
 </style>
 <!-- GSN CSS 제거됨 -->
 </head>
 <body>
-
-<!-- 영업기획 관리자 네비 -->
-<nav class="admin-nav">
-  <div class="admin-nav-wrap">
-    <a href="gs-map.html" class="admin-nav-back">◈ 영업기획 맵</a>
-    <div class="admin-nav-links">
-      <a href="gs-strategy.html" class="admin-nav-item active">운영전략 대시보드</a>
-      <a href="gs-strategy-report.html" class="admin-nav-item">전략 리포트</a>
-      <a href="strategy-keyin.html" class="admin-nav-item">전략 키인</a>
-      <a href="admin.html" class="admin-nav-item">관리자 키인</a>
-    </div>
-  </div>
-</nav>
 
 <!-- MASTHEAD -->
 <div class="masthead">
@@ -6511,19 +6497,7 @@ try { renderNewDepthCharts(); } catch(e) { console.warn('New depth charts error:
   const l2Rows = document.querySelectorAll('.nav-l2-row');
   const l2Links = document.querySelectorAll('.nav-l2');
 
-  const hero = document.querySelector('.hero');
-  if (!hero || !nav) return;
-
-  const showNav = () => {
-    const heroBottom = hero.getBoundingClientRect().bottom;
-    if (heroBottom < 0) {
-      document.body.classList.add('sidebar-open');
-    } else {
-      document.body.classList.remove('sidebar-open');
-    }
-  };
-  window.addEventListener('scroll', showNav, { passive: true });
-  showNav();
+  if (!nav) return;
 
   // L1 섹션 → 스크롤 감지 앵커
   const l1Sections = [
