@@ -11584,8 +11584,13 @@ function toggleNewsMore(btn, id) {
                 tooltip: { callbacks: { label: function(c) { return c.dataset.label + ' ' + c.raw.toLocaleString() + ' 실'; } } }
               },
               scales: {
-                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 7 } } },
-                y: { display: false }
+                x: {
+                  grid: { display: false },
+                  ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 7 } },
+                  // 0 baseline 강조 — 음수 바 가독성 개선
+                  border: { color: 'rgba(255,255,255,0.55)', width: 1 }
+                },
+                y: { display: false, beginAtZero: true }
               }
             }
           });
