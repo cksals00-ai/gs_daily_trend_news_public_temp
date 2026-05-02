@@ -36,6 +36,149 @@ HTML_FILE = DOCS_DIR / "index.html"
 OTB_FILE = DOCS_DIR / "otb.html"
 KST = timezone(timedelta(hours=9))
 
+# ─────────────��───────────────────────────────
+# 데일리 인사���트 문구 자동 생성
+# ─────────���───────────────────────────────────
+def generate_daily_insights(otb_data: dict, weekly_data: dict, rm_fcst: dict) -> list:
+    """OTB/주간/RM FCST 데이터 기반 3~5개 인사��트 문구를 자동 생성한다."""
+    insights = []
+    summary = otb_data.get("summary", {})
+    by_property = otb_data.get("byProperty", [])
+    monthly = otb_data.get("monthly", [])
+    now = datetime.now(KST)
+    base_month = now.month if now.day >= 2 else (now.month - 1 if now.month > 1 else 12)
+
+    # ── 1. 당월 OTB 달성률 + 전일 순증 인사이트 ──
+    cur_month = next((m for m in monthly if m.get("month") == base_month), None)
+    if cur_month and summary:
+        ach = summary.get("rns_achievement")
+        today_net = summary.get("today_net", 0)
+        # 전일 순증이 높은 TOP 2 사업장
+        top_props = sorted(
+            [p for p in by_property if (p.get("today_net") or 0) > 0],
+            key=lambda p: p.get("today_net", 0), reverse=True
+        )[:2]
+        top_names = "/".join(p["name"].split(".")[-1] for p in top_props) if top_props else ""
+        sign = "+" if today_net >= 0 else ""
+        text = f"{base_month}월 OTB {ach:.1f}% 달성, 전일 대비 {sign}{today_net:,}실 순증"
+        if top_names:
+            text += f". {top_names} 견인 중"
+        insights.append({
+            "id": "auto-otb-achievement",
+            "type": "positive" if (ach or 0) >= 40 else "warning",
+            "source": "OTB",
+            "text": text,
+        })
+
+    # ── 2. FCST 갭 인사이트 (Budget vs FCST) ──
+    fcst_ach = summary.get("fcst_achievement")
+    if fcst_ach is not None:
+        gap = round(fcst_ach - 100, 1)
+        # 차월(M+1) 찾기
+        next_month_idx = base_month + 1 if base_month < 12 else 1
+        next_m = next((m for m in monthly if m.get("month") == next_month_idx), None)
+        if next_m:
+            next_budget = next_m.get("rns_budget", 0)
+            next_actual = next_m.get("rns_actual", 0)
+            next_ach = round(next_actual / next_budget * 100, 1) if next_budget else 0
+            if next_ach < 30:
+                sign = "+" if gap >= 0 else ""
+                text = f"{next_month_idx}월 FCST 갭 확대 주의 — 목표 대비 FCST {sign}{gap}%, 기획전 보강 필요"
+                insights.append({
+                    "id": "auto-fcst-gap",
+                    "type": "negative" if gap < -3 else "warning",
+                    "source": "FCST",
+                    "text": text,
+                })
+            elif fcst_ach >= 103:
+                text = f"연간 FCST {fcst_ach:.1f}% 달성 전망, Budget 초과 페이싱 유지 중"
+                insights.append({
+                    "id": "auto-fcst-gap",
+                    "type": "positive",
+                    "source": "FCST",
+                    "text": text,
+                })
+
+    # ── 3. TOP/BOTTOM 사업장 인사이트 ──
+    active_props = [p for p in by_property if (p.get("rns_actual") or 0) > 0]
+    if active_props:
+        top = max(active_props, key=lambda p: p.get("rns_achievement", 0))
+        bot = min(active_props, key=lambda p: p.get("rns_achievement", 0))
+        top_name = top["name"].split(".")[-1]
+        bot_name = bot["name"].split(".")[-1]
+        top_ach = top.get("rns_achievement", 0)
+        bot_ach = bot.get("rns_achievement", 0)
+        if top_ach - bot_ach > 10:
+            text = f"사업장 편차 주의 — TOP {top_name} {top_ach:.1f}% vs BOTTOM {bot_name} {bot_ach:.1f}%"
+            insights.append({
+                "id": "auto-prop-spread",
+                "type": "warning",
+                "source": "OTB",
+                "text": text,
+            })
+
+    # ── 4. ADR YoY 인사이트 ──
+    adr_yoy = summary.get("adr_yoy")
+    adr_actual = summary.get("adr_actual")
+    if adr_yoy is not None and adr_actual:
+        sign = "+" if adr_yoy >= 0 else ""
+        text = f"평균 ADR {adr_actual:,.0f}원, YoY {sign}{adr_yoy:.1f}%"
+        if adr_yoy > 3:
+            text += " — 단가 상승세 지속"
+        elif adr_yoy < -3:
+            text += " — 단가 하락 모니터링 필요"
+        insights.append({
+            "id": "auto-adr-yoy",
+            "type": "positive" if adr_yoy > 0 else "negative",
+            "source": "OTB",
+            "text": text,
+        })
+
+    # ── 5. RM FCST vs Budget 권역별 갭 ──
+    regions = rm_fcst.get("regions", {})
+    if regions:
+        target_key = f"{now.year}-{base_month:02d}"
+        for region_name, months_data in regions.items():
+            m_data = months_data.get(target_key, {})
+            budget_rn = m_data.get("budget_rn", 0)
+            rm_rn = m_data.get("rm_fcst_rn", 0)
+            if budget_rn and rm_rn:
+                gap_pct = round((rm_rn - budget_rn) / budget_rn * 100, 1)
+                if gap_pct < -5:
+                    text = f"{region_name} RM전망 Budget 대비 {gap_pct:+.1f}% ({rm_rn:,}실 vs {budget_rn:,}실)"
+                    insights.append({
+                        "id": f"auto-rm-{region_name}",
+                        "type": "negative",
+                        "source": "RM FCST",
+                        "text": text,
+                    })
+                    break  # 가장 심한 것만
+
+    # 최대 5개로 제한
+    return insights[:5]
+
+
+def build_admin_suggestions(otb_data: dict, weekly_data: dict, rm_fcst: dict,
+                            news_data: dict = None, comp_data: dict = None) -> dict:
+    """admin_suggestions.json에 저장할 전체 구조를 생성한다."""
+    insights = generate_daily_insights(otb_data, weekly_data, rm_fcst)
+
+    # 기존 전략 옵션 유지 (weekly_report의 strategies)
+    strategies = weekly_data.get("weekly_strategies", [])
+    strategy_options = []
+    for s in strategies:
+        opt = dict(s)
+        opt["_current"] = True
+        strategy_options.append(opt)
+
+    return {
+        "generated_at": datetime.now(KST).isoformat(),
+        "insights": insights,
+        "strategy_options": strategy_options,
+        "current_strategies": strategies,
+    }
+
+
 def _calc_target_months():
     """매월 2일부터 다음 3개월로 롤링. 1일은 전월 마감 실적 확인용으로 이전 3개월 유지."""
     now = datetime.now(KST)
@@ -1044,6 +1187,11 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             html = html.replace(f"OTB_M{m_idx}_FACH_CLASS", _ach_class(fcst_ach))
             net_clr = "var(--positive)" if t_net >= 0 else "var(--negative)"
             html = html.replace(f"OTB_M{m_idx}_NET_CLR", net_clr)
+
+        # 월 라벨 동적 주입 (하드코딩 방지)
+        for m_idx, mkey in enumerate(month_keys):
+            m_label = f"{int(mkey)}월"
+            html = apply_tpl(html, f"otb-m{m_idx}-label", m_label)
 
         # 당월 인사이트 주입
         cur_snap = all_months.get(str(cur_month), {})
@@ -2563,6 +2711,38 @@ def main():
     agg_data = load_json(DATA_DIR / "db_aggregated.json")
     admin_data = load_json(DATA_DIR / "admin_input.json")
     otb_data = load_json(DOCS_DIR / "data" / "otb_data.json")
+    rm_fcst = load_json(DOCS_DIR / "data" / "rm_fcst.json")
+
+    # ── admin_suggestions.json 자동 생성 (데���리 인사이트 문구) ──
+    if otb_data:
+        try:
+            suggestions = build_admin_suggestions(
+                otb_data, weekly_data, rm_fcst,
+                news_data=news_data, comp_data=comp_data,
+            )
+            suggestions_path = DOCS_DIR / "admin_suggestions.json"
+            suggestions_path.write_text(
+                json.dumps(suggestions, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            logger.info(f"✓ admin_suggestions.json 생성 ({len(suggestions.get('insights', []))}개 인사이트)")
+
+            # admin_input.json에도 daily_insights 필드 동기화
+            admin_data["daily_insights"] = suggestions.get("insights", [])
+            (DATA_DIR / "admin_input.json").write_text(
+                json.dumps(admin_data, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            # docs/data/에도 admin_input.json 동기화 (index.html에서 fetch용)
+            docs_admin_path = DOCS_DIR / "data" / "admin_input.json"
+            docs_admin_path.parent.mkdir(parents=True, exist_ok=True)
+            docs_admin_path.write_text(
+                json.dumps(admin_data, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            logger.info("✓ admin_input.json daily_insights 동기화 완료")
+        except Exception as e:
+            logger.warning(f"✗ admin_suggestions.json 생성 실패: {e}")
 
     data = enriched if enriched else notes
     if not data:
