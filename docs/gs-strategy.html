@@ -64,6 +64,18 @@
     word-break: keep-all;
   }
 
+  /* ============= ADMIN NAV ============= */
+  .admin-nav{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:var(--sans);font-size:13px;position:relative;z-index:200}
+  .admin-nav-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center;gap:2px}
+  .admin-nav-back{color:#1a1a2e;text-decoration:none;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;margin-right:20px;padding:5px 14px;background:linear-gradient(135deg,#c9a063,#e6b970);border-radius:5px;letter-spacing:.03em}
+  .admin-nav-back:hover{filter:brightness(1.1)}
+  .admin-nav-links{display:flex;align-items:center;gap:2px;flex:1}
+  .admin-nav-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:.15s}
+  .admin-nav-item:hover{background:#1a2232;color:#c9d1d9}
+  .admin-nav-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+  @media(max-width:900px){.admin-nav-wrap{overflow-x:auto}.admin-nav-links{gap:0}.admin-nav-item{font-size:12px;padding:4px 8px}}
+  @media(max-width:480px){.admin-nav-wrap{padding:0 10px}.admin-nav-back{font-size:11px;padding:4px 10px}}
+
   /* ============= MASTHEAD ============= */
   .masthead {
     background: var(--bg-deep);
@@ -71,7 +83,7 @@
     padding: 16px 0;
     border-bottom: 3px solid var(--gold);
     position: sticky;
-    top: 0;
+    top: 42px;
     z-index: 100;
   }
   .masthead-inner {
@@ -869,15 +881,21 @@
     opacity: 0.5;
   }
 
-  /* Section Navigator */
-  #sectionNav { -webkit-overflow-scrolling: touch; }
-  #sectionNav::-webkit-scrollbar { height: 0; }
-  .nav-l1.active { color: var(--gold) !important; border-bottom-color: var(--gold) !important; }
-  .nav-l1:hover { color: var(--ink) !important; }
-  .nav-l2.active { color: var(--gold-bright) !important; border-bottom-color: var(--gold-bright) !important; }
-  .nav-l2:hover { color: var(--ink) !important; }
-  .nav-l2.nav-chapter { border-left: 1px solid var(--rule); margin-left: 4px; padding-left: 14px !important; }
-  .nav-l2.nav-chapter:first-child { border-left: none; margin-left: 0; }
+  /* Section Navigator — 좌측 사이드바 */
+  #sectionNav { position:fixed; left:0; top:0; width:200px; height:100vh; background:var(--bg); border-right:1px solid var(--rule); overflow-y:auto; z-index:200; padding:16px 0; display:none; }
+  #sectionNav::-webkit-scrollbar { width:3px; }
+  #sectionNav::-webkit-scrollbar-thumb { background:var(--rule); border-radius:2px; }
+  #sectionNav #navLevel1 { border-bottom:1px solid var(--rule); padding-bottom:4px; margin-bottom:4px; }
+  #sectionNav .nav-l1 { display:block !important; padding:8px 16px !important; font-size:12px; font-weight:600; color:var(--ink-soft); text-decoration:none; border-bottom:none !important; border-left:3px solid transparent; transition:all .15s; white-space:nowrap; }
+  #sectionNav .nav-l1.active { color:var(--gold) !important; border-left-color:var(--gold) !important; background:rgba(201,160,99,0.08); }
+  #sectionNav .nav-l1:hover { color:var(--ink) !important; background:rgba(255,255,255,0.04); }
+  .nav-l2-row { flex-direction:column !important; padding:0 0 6px 0 !important; border-top:none !important; }
+  .nav-l2 { display:block !important; padding:4px 16px 4px 28px !important; font-size:11px; color:var(--ink-muted); text-decoration:none; border-bottom:none !important; border-left:2px solid transparent; transition:all .15s; white-space:nowrap; }
+  .nav-l2.active { color:var(--gold-bright) !important; border-left-color:var(--gold-bright) !important; }
+  .nav-l2:hover { color:var(--ink) !important; }
+  .nav-l2.nav-chapter { border-left:none; margin-left:0 !important; padding-left:22px !important; font-weight:600; color:var(--gold); }
+  body.sidebar-open { margin-left:200px; }
+  body.sidebar-open #sectionNav { display:block !important; }
 
   /* Chapter Nav Tabs */
   .btn-tab {
@@ -895,52 +913,28 @@
   }
 
   @media (max-width: 768px) {
-    #sectionNav { padding: 0; }
-    .nav-l1, .nav-l2 { padding: 8px 10px !important; font-size: 11px !important; }
+    #sectionNav { width:160px !important; }
+    body.sidebar-open { margin-left:160px; }
+    .nav-l1, .nav-l2 { font-size: 11px !important; }
+    .admin-nav { display:none; }
   }
 </style>
-<style>
-.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
-.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
-.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
-.gsn-brand:hover{color:#c9d1d9}
-.gsn-brand-dot{color:#58a6ff}
-.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:.15s;display:flex;align-items:center;gap:6px}
-.gsn-item:hover{background:#1a2232;color:#c9d1d9}
-.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
-.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
-@media(max-width:900px){
-  .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
-  .gsn-links.open{display:flex}
-  .gsn-item{padding:8px 12px}
-  .gsn-toggle{display:flex;align-items:center;justify-content:center}
-}
-@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
-</style>
+<!-- GSN CSS 제거됨 -->
 </head>
 <body>
 
-<nav class="gsn">
-  <div class="gsn-wrap">
-    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
-    <div class="gsn-links" id="gsn-links">
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+<!-- 영업기획 관리자 네비 -->
+<nav class="admin-nav">
+  <div class="admin-nav-wrap">
+    <a href="gs-map.html" class="admin-nav-back">◈ 영업기획 맵</a>
+    <div class="admin-nav-links">
+      <a href="gs-strategy.html" class="admin-nav-item active">운영전략 대시보드</a>
+      <a href="gs-strategy-report.html" class="admin-nav-item">전략 리포트</a>
+      <a href="strategy-keyin.html" class="admin-nav-item">전략 키인</a>
+      <a href="admin.html" class="admin-nav-item">관리자 키인</a>
     </div>
-    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
   </div>
 </nav>
-<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1||h.indexOf('gs-strategy.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend.html')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;if(hit)a.classList.add('active');});})();</script>
 
 <!-- MASTHEAD -->
 <div class="masthead">
@@ -948,14 +942,6 @@
     <div style="display: flex; align-items: center;">
       <div class="logo-mark">SONO <span class="amp">&</span> TRINITY</div>
       <div class="team-tag">GS팀 · 운영전략 <span style="font-size:10px; color:var(--negative); margin-left:8px; border:1px solid var(--negative); padding:1px 6px; border-radius:2px;">내부문서 | 대외비</span></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <a href="gs-sales.html" class="map-nav-btn" title="Sales Support">
-        🛒 Sales Support
-      </a>
-      <a href="gs-map.html" class="map-nav-btn" title="전체 페이지 맵">
-        📋 전체 페이지 맵
-      </a>
     </div>
   </div>
 </div>
@@ -973,97 +959,70 @@
 </div>
 
 <!-- SECTION NAVIGATOR (2-depth) -->
-<nav id="sectionNav" style="
-  position:sticky; top:0; z-index:100;
-  background:var(--bg); border-bottom:1px solid var(--rule);
-  padding:0; overflow-x:auto; white-space:nowrap;
-  display:none;
-">
-  <div style="max-width:1200px; margin:0 auto; padding:0 20px;">
+<nav id="sectionNav">
+  <div>
     <!-- Level 1: 깊이별 탭 -->
-    <div id="navLevel1" style="display:flex; gap:0; border-bottom:1px solid var(--rule); overflow-x:auto;">
-      <a href="#deep-ch10" class="nav-l1" data-section="exec" style="
-        padding:10px 16px; font-size:13px; font-weight:700; color:var(--gold-bright);
-        text-decoration:none; border-bottom:2px solid var(--gold); transition:all 0.2s;
-        background:rgba(201,160,99,0.08);
-      ">★ 보고용</a>
-      <a href="#summerDeepDive" class="nav-l1" data-section="summer" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">심층분석</a>
-      <a href="#deep-ch6" class="nav-l1" data-section="ultra" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">초심층</a>
-      <a href="#deep-ch8" class="nav-l1" data-section="matrix" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">매트릭스+</a>
-      <a href="#deep-ch11" class="nav-l1" data-section="action" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">실행</a>
-      <a href="#strategySection" class="nav-l1" data-section="strategy" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">3대전략</a>
-      <a href="#trendSection" class="nav-l1" data-section="trend" style="
-        padding:10px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
-        text-decoration:none; border-bottom:2px solid transparent; transition:all 0.2s;
-      ">4개년</a>
+    <div id="navLevel1">
+      <a href="#deep-ch10" class="nav-l1 active" data-section="exec">★ 보고용</a>
+      <a href="#summerDeepDive" class="nav-l1" data-section="summer">심층분석</a>
+      <a href="#deep-ch6" class="nav-l1" data-section="ultra">초심층</a>
+      <a href="#deep-ch8" class="nav-l1" data-section="matrix">매트릭스+</a>
+      <a href="#deep-ch11" class="nav-l1" data-section="action">실행</a>
+      <a href="#strategySection" class="nav-l1" data-section="strategy">3대전략</a>
+      <a href="#trendSection" class="nav-l1" data-section="trend">4개년</a>
     </div>
 
     <!-- Level 2: ★ 보고용 하위 -->
-    <div id="navL2-exec" class="nav-l2-row" data-parent="exec" style="display:flex; gap:0; overflow-x:auto;">
-      <a href="#deep-ch10" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">Executive</a>
-      <a href="#deep-ch13" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--positive);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">QuickWin</a>
+    <div id="navL2-exec" class="nav-l2-row" data-parent="exec">
+      <a href="#deep-ch10" class="nav-l2 nav-chapter">Executive</a>
+      <a href="#deep-ch13" class="nav-l2">QuickWin</a>
     </div>
 
     <!-- Level 2: 심층분석 하위 (Steps 1~5) -->
-    <div id="navL2-summer" class="nav-l2-row" data-parent="summer" style="display:none; gap:0; overflow-x:auto;">
-      <a href="#ch-status" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">1.현황</a>
-      <a href="#ch-cause" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">2.원인</a>
-      <a href="#depth-cancel" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">취소</a>
-      <a href="#depth-mega" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">채널</a>
-      <a href="#depth-48channel" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">48채널</a>
-      <a href="#depth-leadtime" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">리드타임</a>
-      <a href="#depth-campaign" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">기획전</a>
-      <a href="#ch-strategy" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">3.전략</a>
-      <a href="#agenda-cards" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">Agenda</a>
-      <a href="#depth-monthly" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">월별</a>
-      <a href="#ch-simulation" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">4.시뮬레이션</a>
-      <a href="#depth-profit" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">이익모델</a>
-      <a href="#depth-simulation" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">시나리오</a>
-      <a href="#sim-engine" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--gold-bright);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">실행시뮬레이터</a>
-      <a href="#depth-property" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">사업장별</a>
-      <a href="#depth-rmfcst" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">FCST갭</a>
-      <a href="#ch-validation" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">5.검증</a>
+    <div id="navL2-summer" class="nav-l2-row" data-parent="summer" style="display:none;">
+      <a href="#ch-status" class="nav-l2 nav-chapter">1.현황</a>
+      <a href="#ch-cause" class="nav-l2 nav-chapter">2.원인</a>
+      <a href="#depth-cancel" class="nav-l2">취소</a>
+      <a href="#depth-mega" class="nav-l2">채널</a>
+      <a href="#depth-48channel" class="nav-l2">48채널</a>
+      <a href="#depth-leadtime" class="nav-l2">리드타임</a>
+      <a href="#depth-campaign" class="nav-l2">기획전</a>
+      <a href="#ch-strategy" class="nav-l2 nav-chapter">3.전략</a>
+      <a href="#agenda-cards" class="nav-l2">Agenda</a>
+      <a href="#depth-monthly" class="nav-l2">월별</a>
+      <a href="#ch-simulation" class="nav-l2 nav-chapter">4.시뮬레이션</a>
+      <a href="#depth-profit" class="nav-l2">이익모델</a>
+      <a href="#depth-simulation" class="nav-l2">시나리오</a>
+      <a href="#sim-engine" class="nav-l2">실행시뮬레이터</a>
+      <a href="#depth-property" class="nav-l2">사업장별</a>
+      <a href="#depth-rmfcst" class="nav-l2">FCST갭</a>
+      <a href="#ch-validation" class="nav-l2 nav-chapter">5.검증</a>
     </div>
 
     <!-- Level 2: 초심층 하위 (Steps 6~7) -->
-    <div id="navL2-ultra" class="nav-l2-row" data-parent="ultra" style="display:none; gap:0; overflow-x:auto;">
-      <a href="#deep-ch6" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">6.극한분석</a>
-      <a href="#deep-cancel-util" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">취소활용</a>
-      <a href="#deep-cross5d" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">5차원교차</a>
-      <a href="#deep-roi" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">전략ROI</a>
-      <a href="#deep-leadtime2" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">Pickup곡선</a>
-      <a href="#deep-campaign2" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">캠페인심층</a>
-      <a href="#deep-segment" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">세그먼트행태</a>
-      <a href="#deep-benchmark" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">벤치마크</a>
-      <a href="#deep-structural" class="nav-l2" style="padding:8px 14px;font-size:12px;color:var(--ink-muted);text-decoration:none;border-bottom:2px solid transparent;">구조변화</a>
-      <a href="#deep-ch7" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold-bright);font-weight:700;text-decoration:none;border-bottom:2px solid transparent;">7.초심층</a>
+    <div id="navL2-ultra" class="nav-l2-row" data-parent="ultra" style="display:none;">
+      <a href="#deep-ch6" class="nav-l2 nav-chapter">6.극한분석</a>
+      <a href="#deep-cancel-util" class="nav-l2">취소활용</a>
+      <a href="#deep-cross5d" class="nav-l2">5차원교차</a>
+      <a href="#deep-roi" class="nav-l2">전략ROI</a>
+      <a href="#deep-leadtime2" class="nav-l2">Pickup곡선</a>
+      <a href="#deep-campaign2" class="nav-l2">캠페인심층</a>
+      <a href="#deep-segment" class="nav-l2">세그먼트행태</a>
+      <a href="#deep-benchmark" class="nav-l2">벤치마크</a>
+      <a href="#deep-structural" class="nav-l2">구조변화</a>
+      <a href="#deep-ch7" class="nav-l2 nav-chapter">7.초심층</a>
     </div>
 
     <!-- Level 2: 매트릭스+ 하위 (Steps 8~9) -->
-    <div id="navL2-matrix" class="nav-l2-row" data-parent="matrix" style="display:none; gap:0; overflow-x:auto;">
-      <a href="#deep-ch8" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">8.매트릭스</a>
-      <a href="#deep-ch9" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">9.경쟁사분석</a>
+    <div id="navL2-matrix" class="nav-l2-row" data-parent="matrix" style="display:none;">
+      <a href="#deep-ch8" class="nav-l2 nav-chapter">8.매트릭스</a>
+      <a href="#deep-ch9" class="nav-l2 nav-chapter">9.경쟁사분석</a>
     </div>
 
     <!-- Level 2: 실행 하위 (Steps 11~12) -->
-    <div id="navL2-action" class="nav-l2-row" data-parent="action" style="display:none; gap:0; overflow-x:auto;">
-      <a href="#deep-ch11" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">11.ActionCard</a>
-      <a href="#deep-ch12" class="nav-l2 nav-chapter" style="padding:8px 14px;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none;border-bottom:2px solid transparent;">12.로드맵</a>
+    <div id="navL2-action" class="nav-l2-row" data-parent="action" style="display:none;">
+      <a href="#deep-ch11" class="nav-l2 nav-chapter">11.ActionCard</a>
+      <a href="#deep-ch12" class="nav-l2 nav-chapter">12.로드맵</a>
     </div>
 
   </div>
@@ -6557,7 +6516,11 @@ try { renderNewDepthCharts(); } catch(e) { console.warn('New depth charts error:
 
   const showNav = () => {
     const heroBottom = hero.getBoundingClientRect().bottom;
-    nav.style.display = heroBottom < 0 ? 'block' : 'none';
+    if (heroBottom < 0) {
+      document.body.classList.add('sidebar-open');
+    } else {
+      document.body.classList.remove('sidebar-open');
+    }
   };
   window.addEventListener('scroll', showNav, { passive: true });
   showNav();
@@ -6611,7 +6574,7 @@ try { renderNewDepthCharts(); } catch(e) { console.warn('New depth charts error:
     // L2 행 토글: 해당 L1의 L2만 표시
     l2Rows.forEach(row => {
       const parent = row.dataset.parent;
-      row.style.display = parent === activeL1 ? 'flex' : 'none';
+      row.style.display = parent === activeL1 ? 'block' : 'none';
     });
 
     // L2 active 하이라이트
@@ -6636,7 +6599,7 @@ try { renderNewDepthCharts(); } catch(e) { console.warn('New depth charts error:
       const key = a.dataset.section;
       // L2 토글
       l2Rows.forEach(row => {
-        row.style.display = row.dataset.parent === key ? 'flex' : 'none';
+        row.style.display = row.dataset.parent === key ? 'block' : 'none';
       });
       l1Links.forEach(x => x.classList.remove('active'));
       a.classList.add('active');
