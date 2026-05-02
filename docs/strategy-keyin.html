@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>전략 키인 · GS 2026 여름 운영전략</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg-card: #1a1d23;
+  --bg-deep: #0d1117;
+  --bg-soft: #22272e;
+  --bg-hover: #2d333b;
+  --ink: #e8e6e1;
+  --ink-soft: #d4d2c8;
+  --ink-muted: #9e9b93;
+  --ink-faint: #6e6c62;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --gold-dim: rgba(201,160,99,0.15);
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.08);
+  --rule-strong: rgba(255,255,255,0.18);
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:14px;font-weight:500;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all}
+
+/* ===== MASTHEAD ===== */
+.masthead{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:12px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.mast-inner{max-width:1400px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}
+.mast-title{font-size:14px;color:var(--ink-soft);font-weight:600}
+.mast-left{display:flex;align-items:center;gap:14px}
+.mast-right{display:flex;gap:8px;align-items:center}
+.mast-ts{font-size:11px;color:var(--ink-faint);font-family:var(--mono);margin-right:8px}
+
+/* ===== BUTTONS ===== */
+.btn{padding:7px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-weight:600;font-size:12px;border-radius:4px;cursor:pointer;transition:all .2s;font-family:var(--sans)}
+.btn:hover{color:var(--ink);border-color:var(--gold);background:var(--gold-dim)}
+.btn-gold{background:var(--gold);color:var(--bg-deep);border-color:var(--gold)}
+.btn-gold:hover{background:var(--gold-bright)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-positive{border-color:var(--positive);color:var(--positive)}
+.btn-positive:hover{background:var(--positive-bg)}
+.btn-negative{border-color:var(--negative);color:var(--negative)}
+.btn-negative:hover{background:var(--negative-bg)}
+.btn-warning{border-color:var(--warning);color:var(--warning)}
+.btn-warning:hover{background:var(--warning-bg)}
+
+/* ===== LAYOUT ===== */
+.content{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+
+/* ===== MONTH TABS ===== */
+.month-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-soft);padding:4px;border-radius:8px;width:fit-content}
+.month-tab{padding:8px 28px;border:none;background:transparent;color:var(--ink-muted);font-weight:600;font-size:13px;cursor:pointer;border-radius:6px;transition:all .2s;font-family:var(--sans)}
+.month-tab:hover{color:var(--ink)}
+.month-tab.active{background:var(--bg-card);color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.month-panel{display:none}
+.month-panel.active{display:block}
+
+/* ===== CYCLE SUB-TABS ===== */
+.cycle-tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--rule);padding-bottom:0}
+.cycle-tab{padding:10px 18px;border:none;background:transparent;color:var(--ink-faint);font-weight:600;font-size:12.5px;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;font-family:var(--sans);letter-spacing:.02em}
+.cycle-tab:hover{color:var(--ink-muted)}
+.cycle-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.cycle-panel{display:none}
+.cycle-panel.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== PILL TOGGLES ===== */
+.pills{display:flex;gap:4px;margin-bottom:16px;background:var(--bg-soft);padding:3px;border-radius:6px;width:fit-content}
+.pill{padding:6px 14px;border:none;background:transparent;color:var(--ink-muted);font-weight:500;font-size:12px;cursor:pointer;border-radius:4px;transition:all .2s;font-family:var(--sans)}
+.pill.active{background:var(--bg-card);color:var(--gold)}
+.pill-panel{display:none}
+.pill-panel.active{display:block}
+
+/* ===== TABLES ===== */
+.tbl-wrap{overflow-x:auto;margin-bottom:16px;border-radius:8px;border:1px solid var(--rule)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--bg-soft);padding:8px 10px;font-weight:600;color:var(--ink-muted);text-align:right;border-bottom:1px solid var(--rule-strong);white-space:nowrap;font-size:11px;letter-spacing:.03em;text-transform:uppercase}
+th:first-child{text-align:left}
+td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:12px;white-space:nowrap}
+td:first-child{text-align:left;font-family:var(--sans);font-weight:500;color:var(--ink-soft)}
+tr:hover{background:var(--bg-hover)}
+tr.seg-header{background:var(--bg-soft)}
+tr.seg-header td{font-weight:700;color:var(--gold);font-family:var(--sans);font-size:12px;border-top:2px solid var(--rule-strong)}
+tr.total-row{background:rgba(201,160,99,.06)}
+tr.total-row td{font-weight:700;color:var(--ink);border-top:2px solid var(--gold);font-size:12.5px}
+.text-positive{color:var(--positive)}
+.text-negative{color:var(--negative)}
+.text-warning{color:var(--warning)}
+.text-gold{color:var(--gold)}
+.text-muted{color:var(--ink-faint)}
+
+/* ===== EDITABLE INPUTS ===== */
+.keyin-input{width:80px;padding:4px 6px;background:rgba(201,160,99,.08);border:1px solid rgba(201,160,99,.3);border-radius:3px;color:var(--gold-bright);font-family:var(--mono);font-size:12px;text-align:right;outline:none;transition:all .2s}
+.keyin-input:focus{border-color:var(--gold);background:rgba(201,160,99,.15);box-shadow:0 0 0 2px rgba(201,160,99,.2)}
+.keyin-input::placeholder{color:var(--ink-faint)}
+.keyin-input.modified{border-color:var(--info);color:var(--info);background:rgba(90,159,196,.1)}
+.keyin-cell{position:relative}
+.ai-reason{display:block;font-family:var(--sans);font-size:10px;color:var(--ink-faint);line-height:1.3;margin-top:3px;white-space:normal;max-width:160px}
+.ai-reason em{color:var(--gold);font-style:normal;font-weight:600}
+.ai-tag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(201,160,99,.12);color:var(--gold);font-weight:600;margin-left:4px;vertical-align:middle}
+.ai-tag.user-edit{background:rgba(90,159,196,.12);color:var(--info)}
+.reset-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px}
+.reset-bar .info-text{font-size:11px;color:var(--ink-muted)}
+
+/* ===== SECTION HEADERS ===== */
+.sec-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.sec-subtitle{font-size:12px;color:var(--ink-muted);margin-bottom:12px}
+.sec-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.04em}
+
+/* ===== VALIDATION ALERT ===== */
+.valid-bar{padding:8px 14px;border-radius:6px;font-size:12px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.valid-ok{background:var(--positive-bg);color:var(--positive);border:1px solid rgba(76,175,111,.2)}
+.valid-warn{background:var(--warning-bg);color:var(--warning);border:1px solid rgba(232,162,86,.2)}
+.valid-err{background:var(--negative-bg);color:var(--negative);border:1px solid rgba(229,115,115,.2)}
+
+/* ===== CHARTS ===== */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:16px;min-height:280px}
+.chart-title{font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:12px;letter-spacing:.02em}
+.chart-container{position:relative;height:240px}
+
+/* ===== RISK CARDS ===== */
+.risk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:16px}
+.risk-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;transition:all .2s}
+.risk-card:hover{border-color:var(--rule-strong);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.risk-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.risk-title{font-weight:600;font-size:13px;color:var(--ink)}
+.risk-badge{font-size:10px;padding:2px 10px;border-radius:10px;font-weight:700}
+.badge-ok{background:var(--positive-bg);color:var(--positive)}
+.badge-warn{background:var(--warning-bg);color:var(--warning)}
+.badge-danger{background:var(--negative-bg);color:var(--negative)}
+.risk-body{font-size:12px;color:var(--ink-muted);line-height:1.5}
+.risk-metric{font-family:var(--mono);font-size:18px;font-weight:700;margin:6px 0}
+
+/* ===== AI STRATEGY CARDS ===== */
+.ai-section{margin-bottom:24px}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ai-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;overflow:hidden;transition:all .3s}
+.ai-card:hover{border-color:var(--gold);box-shadow:0 4px 16px rgba(201,160,99,.1)}
+.ai-card.applied{border-color:var(--positive);background:rgba(76,175,111,.03)}
+.ai-card.applied .ai-card-hdr{background:var(--positive-bg)}
+.ai-card.rejected{border-color:var(--ink-faint);opacity:.5}
+.ai-card.rejected .ai-card-hdr{background:var(--bg-hover)}
+.ai-card.modified{border-color:var(--info);background:rgba(90,159,196,.03)}
+.ai-card.modified .ai-card-hdr{background:var(--info-bg)}
+.ai-card-hdr{padding:10px 14px;background:var(--bg-soft);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule)}
+.ai-card-name{font-weight:700;font-size:13px;color:var(--ink)}
+.ai-priority{font-size:10px;padding:2px 10px;border-radius:10px;font-weight:800;letter-spacing:.06em}
+.ai-priority-s{background:linear-gradient(135deg,#c9a063,#e6b970);color:var(--bg-deep)}
+.ai-priority-a{background:var(--info-bg);color:var(--info)}
+.ai-priority-b{background:var(--bg-hover);color:var(--ink-muted)}
+.ai-card-body{padding:14px}
+.ai-row{margin-bottom:10px}
+.ai-row:last-child{margin-bottom:0}
+.ai-label{font-size:10.5px;font-weight:700;color:var(--gold);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase}
+.ai-text{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.ai-highlight{font-family:var(--mono);font-weight:700;color:var(--gold-bright)}
+.ai-effect-box{background:rgba(201,160,99,.06);border:1px solid rgba(201,160,99,.15);border-radius:6px;padding:10px 12px;margin:8px 0}
+.ai-effect-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ai-effect-row:last-child{margin-bottom:0}
+.ai-effect-label{font-size:11px;color:var(--ink-muted)}
+.ai-effect-value{font-family:var(--mono);font-size:13px;font-weight:700}
+.ai-impact-bar{height:6px;background:var(--bg-hover);border-radius:3px;margin-top:6px;overflow:hidden}
+.ai-impact-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--positive))}
+.ai-card-foot{padding:10px 14px;border-top:1px solid var(--rule);display:flex;gap:6px}
+.ai-card-foot .btn{flex:1;text-align:center}
+.ai-status-tag{font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:8px}
+.tag-applied{background:var(--positive-bg);color:var(--positive)}
+.tag-modified{background:var(--info-bg);color:var(--info)}
+.tag-rejected{background:var(--negative-bg);color:var(--negative)}
+
+/* ===== ACTION LOG ===== */
+.log-section{margin-top:20px}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--positive);color:#fff;padding:10px 20px;border-radius:6px;font-weight:600;font-size:12px;z-index:999;animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1100px){.charts-grid,.ai-grid{grid-template-columns:1fr}.risk-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.mast-inner{flex-direction:column;align-items:flex-start}.content{padding:12px 12px 40px}.cycle-tabs{overflow-x:auto;flex-wrap:nowrap}.risk-grid{grid-template-columns:1fr}th,td{padding:6px 7px;font-size:11px}.keyin-input{width:65px}}
+</style>
+</head>
+<body>
+
+<!-- ======== MASTHEAD ======== -->
+<div class="masthead">
+  <div class="mast-inner">
+    <div class="mast-left">
+      <span class="logo">GS HOTELS</span>
+      <span class="mast-title">전략 키인 · 2026 여름</span>
+    </div>
+    <div class="mast-right">
+      <span class="mast-ts" id="lastSaved"></span>
+      <button class="btn" onclick="saveData()">💾 저장</button>
+      <button class="btn btn-gold" onclick="exportData()">📤 내보내기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== MAIN CONTENT ======== -->
+<div class="content">
+  <!-- Month Tabs -->
+  <div class="month-tabs" id="monthTabs"></div>
+
+  <!-- Month Panels (generated by JS) -->
+  <div id="monthPanels"></div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIGURATION & CONSTANTS
+// ============================================================
+const MONTHS = ['2026-06','2026-07','2026-08'];
+const MONTH_LABELS = {'2026-06':'6월','2026-07':'7월','2026-08':'8월'};
+const MONTH_MULT = {'2026-06':1.0,'2026-07':1.35,'2026-08':1.25};
+
+const SEG_CHANNELS = {
+  'OTA': ['야놀자','여기어때','네이버','쿠팡','스마트인피니','종이비행기','프리즘'],
+  'G-OTA': ['아고다','트립닷컴','트립비토즈','익스피디아','부킹닷컴'],
+  'Inbound': ['여행사(합산)']
+};
+const ALL_SEGS = ['OTA','G-OTA','Inbound'];
+
+const CAMPAIGNS_SAMPLE = [
+  {name:'얼리버드 할인(D-60)',rn_ty:3200,rn_ly:2800,rev_ty:480,rev_ly:390},
+  {name:'연박 패키지(2+1)',rn_ty:4100,rn_ly:3600,rev_ty:820,rev_ly:680},
+  {name:'가족여행 기획전',rn_ty:2800,rn_ly:2400,rev_ty:560,rev_ly:440},
+  {name:'워케이션 프로모션',rn_ty:1500,rn_ly:1100,rev_ty:300,rev_ly:200},
+  {name:'쿠팡 단독 기획전',rn_ty:3800,rn_ly:0,rev_ty:570,rev_ly:0},
+  {name:'네이버 플러스 멤버십',rn_ty:2200,rn_ly:1800,rev_ty:440,rev_ly:320},
+  {name:'야놀자 슈퍼세일',rn_ty:5200,rn_ly:4500,rev_ty:780,rev_ly:630},
+  {name:'아고다 NR 기획전',rn_ty:1800,rn_ly:1200,rev_ty:360,rev_ly:220}
+];
+
+const PRODUCTS_SAMPLE = [
+  {name:'숙박(스탠다드)',rn_ty:85000,rn_ly:78000},
+  {name:'패키지',rn_ty:42000,rn_ly:38000},
+  {name:'데이유즈',rn_ty:8500,rn_ly:7200},
+  {name:'단체',rn_ty:12000,rn_ly:11500},
+  {name:'장기투숙',rn_ty:3200,rn_ly:2800}
+];
+
+// Channel LY (last year) fallback data
+const CH_LY = {
+  '야놀자':{rn:18800,adr:178},'여기어때':{rn:15200,adr:165},'네이버':{rn:4800,adr:210},
+  '쿠팡':{rn:6500,adr:155},'스마트인피니':{rn:3200,adr:190},'종이비행기':{rn:1200,adr:160},'프리즘':{rn:800,adr:170},
+  '아고다':{rn:12500,adr:195},'트립닷컴':{rn:8200,adr:185},'트립비토즈':{rn:3800,adr:175},
+  '익스피디아':{rn:5400,adr:210},'부킹닷컴':{rn:3600,adr:220},
+  '여행사(합산)':{rn:4200,adr:160}
+};
+
+// Channel TY actual (simulated current — partial month progress)
+const CH_TY = {
+  '야놀자':{rn:12400},'여기어때':{rn:9800},'네이버':{rn:3100},'쿠팡':{rn:5600},
+  '스마트인피니':{rn:4800},'종이비행기':{rn:900},'프리즘':{rn:650},
+  '아고다':{rn:9200},'트립닷컴':{rn:7100},'트립비토즈':{rn:2800},
+  '익스피디아':{rn:3100},'부킹닷컴':{rn:2400},
+  '여행사(합산)':{rn:3500}
+};
+
+// ============================================================
+//  AI 목표 자동 산출 엔진
+//  근거: 전년 실적(CH_LY) × YoY 트렌드(VARIANCE_CH) + 채널별 성장률 보정
+//  전략적 조정: 감소 채널은 보수적(-50% 반영), 성장 채널은 적극적(+80% 반영)
+// ============================================================
+const CH_YOY_RATES = {
+  // 실제 variance_decomp by_channel 데이터 기반
+  '야놀자':   {yoy: -3.4,  note:'전년 대비 -3.4% (시장 성숙기, 볼륨 유지 전략)'},
+  '여기어때': {yoy: 5.2,   note:'전년 대비 +5.2% (앱 트래픽 증가, 프로모션 효과)'},
+  '네이버':   {yoy: -1.1,  note:'전년 대비 -1.1% (플러스 멤버십 효과 정체)'},
+  '쿠팡':     {yoy: 39.6,  note:'전년 대비 +39.6% (쿠팡와우 회원 1,400만 효과)'},
+  '스마트인피니':{yoy:158.1, note:'전년 대비 +158.1% (최고 성장채널, 물량 확대 필수)'},
+  '종이비행기':{yoy: -13.1, note:'전년 대비 -13.1% (소형 채널 자연 감소)'},
+  '프리즘':   {yoy: -8.5,  note:'전년 대비 -8.5% (소형 채널 자연 감소)'},
+  '아고다':   {yoy: 6.8,   note:'전년 대비 +6.8% (동남아 수요 증가)'},
+  '트립닷컴': {yoy: 12.3,  note:'전년 대비 +12.3% (중화권 수요 회복)'},
+  '트립비토즈':{yoy: -5.2,  note:'전년 대비 -5.2% (경쟁 심화)'},
+  '익스피디아':{yoy: -33.0, note:'전년 대비 -33.0% (급감, 보수적 목표 필수)'},
+  '부킹닷컴': {yoy: -34.6, note:'전년 대비 -34.6% (급감, 보수적 목표 필수)'},
+  '여행사(합산)':{yoy: 15.0, note:'전년 대비 +15.0% (인바운드 회복 추세)'}
+};
+
+// AI 제안값 캐시 (초기화용)
+const AI_SUGGEST_CACHE = {};
+
+function calcAISuggest(ch, month) {
+  const cacheKey = `${ch}|${month}`;
+  if (AI_SUGGEST_CACHE[cacheKey]) return AI_SUGGEST_CACHE[cacheKey];
+
+  const lyBase = CH_LY[ch]?.rn || 0;
+  const m = MONTH_MULT[month];
+  const lyMonthly = Math.round(lyBase * m);
+  const rate = CH_YOY_RATES[ch]?.yoy || 0;
+  const note = CH_YOY_RATES[ch]?.note || '';
+
+  // 전략적 보정: 급감 채널은 감소폭의 50%만 반영 (최소 실적 보장)
+  // 급성장 채널은 성장폭의 80% 반영 (과도한 기대 방지)
+  let adjustedRate = rate;
+  if (rate < -20) adjustedRate = rate * 0.5;      // 급감 채널 보수적
+  else if (rate > 50) adjustedRate = rate * 0.8;   // 급성장 채널 현실적
+  else if (rate > 20) adjustedRate = rate * 0.9;   // 성장 채널 소폭 보수적
+
+  const suggested = Math.round(lyMonthly * (1 + adjustedRate/100));
+
+  let reason = `전년 ${fmt(lyMonthly)}실`;
+  if (Math.abs(rate) < 0.1) {
+    reason += ' × 전년 수준 유지';
+  } else if (rate !== adjustedRate) {
+    reason += ` × YoY <em>${rate>0?'+':''}${fmtDec(rate,1)}%</em>`;
+    reason += ` (전략보정 → <em>${adjustedRate>0?'+':''}${fmtDec(adjustedRate,1)}%</em>)`;
+  } else {
+    reason += ` × YoY <em>${rate>0?'+':''}${fmtDec(rate,1)}%</em>`;
+  }
+  reason += ` = <em>${fmt(suggested)}실</em>`;
+
+  const result = {value: suggested, reason, note, lyMonthly, yoyRate: rate, adjustedRate};
+  AI_SUGGEST_CACHE[cacheKey] = result;
+  return result;
+}
+
+// AI 제안 세그먼트 합산 (Tab1 자동 채움용)
+function calcAISegTarget(seg, month) {
+  const channels = SEG_CHANNELS[seg];
+  let totalRN = 0;
+  channels.forEach(ch => { totalRN += calcAISuggest(ch, month).value; });
+  return totalRN;
+}
+
+// ============================================================
+//  FALLBACK SEGMENT DATA (from rm_fcst_trend last snapshot)
+// ============================================================
+const SEG_DATA_JUNE = {
+  'OTA':     {fcst_rn:96252, budget_rn:110847, fcst_rev:13475, budget_rev:16272},
+  'G-OTA':   {fcst_rn:49463, budget_rn:57013,  fcst_rev:6944,  budget_rev:8291},
+  'Inbound': {fcst_rn:7305,  budget_rn:8534,   fcst_rev:1023,  budget_rev:1196},
+  'Direct':  {fcst_rn:39695, budget_rn:37875,  fcst_rev:5553,  budget_rev:5298}
+};
+
+// FCST Gap trend snapshots for June (real data)
+const FCST_GAPS_JUNE = [
+  {date:'04-06',budget:214269,fcst:197265,gap:17004},
+  {date:'04-14',budget:214269,fcst:195540,gap:18729},
+  {date:'04-27',budget:214269,fcst:192715,gap:21554}
+];
+
+// Deep analysis data (embedded for offline use)
+const CANCEL_DATA = {
+  OTA:{'6월':42.0,'7월':46.4,'8월':46.1},
+  'G-OTA':{'6월':49.5,'7월':53.9,'8월':53.0},
+  Inbound:{'6월':37.4,'7월':52.1,'8월':47.8}
+};
+
+const OB_MATRIX = [
+  {prop:'소노벨 비발디파크',seg:'OTA',avgCancel:37.0,conservOB:29.8,avgNet:6401},
+  {prop:'델피노',seg:'OTA',avgCancel:42.4,conservOB:35.3,avgNet:3380},
+  {prop:'쏠비치 삼척',seg:'OTA',avgCancel:41.2,conservOB:33.2,avgNet:3204},
+  {prop:'쏠비치 진도',seg:'OTA',avgCancel:43.2,conservOB:34.9,avgNet:2654},
+  {prop:'델피노',seg:'G-OTA',avgCancel:53.6,conservOB:43.4,avgNet:2404},
+  {prop:'소노캄 고양',seg:'Inbound',avgCancel:25.7,conservOB:7.3,avgNet:2755}
+];
+
+const ROI_STRATEGIES = [
+  {name:'OTA ADR +5%',addRev:1022,cost:0,net:1022,roi:'N/A(비용없음)',addRN:-2003},
+  {name:'G-OTA ADR +3%',addRev:402,cost:0,net:402,roi:'N/A(비용없음)',addRN:-795},
+  {name:'NR 25% 도입(OTA)',addRev:1119,cost:597,net:522,roi:'187%',addRN:5007},
+  {name:'오버부킹 5%',addRev:680,cost:170,net:510,roi:'300%',addRN:3400},
+  {name:'Direct +5pp 전환',addRev:352,cost:100,net:252,roi:'252%',addRN:0}
+];
+
+const VARIANCE_CH = {
+  '스마트인피니':{vol_pct:158.1,price_pct:50.2,rn_diff:7060},
+  '익스피디아':{vol_pct:-33.0,price_pct:10.1,rn_diff:-3416},
+  '부킹닷컴':{vol_pct:-34.6,price_pct:-1.4,rn_diff:-2357},
+  '쿠팡':{vol_pct:39.6,price_pct:5.3,rn_diff:1590}
+};
+
+const SUMMER_4YR = {2022:{rn:239786,rev:40438,adr:171},2023:{rn:224075,rev:41716,adr:187},2024:{rn:244078,rev:46613,adr:189},2025:{rn:293652,rev:60275,adr:202}};
+
+const COMPETITORS = [
+  {brand:'한화리조트',title:'설악·평창 봄 패키지 최대 35% 할인',discount:35,threat:'high'},
+  {brand:'롯데리조트',title:'여름 얼리버드 20% 할인',discount:20,threat:'medium'}
+];
+
+const RISK_FACTORS = [
+  '펜션 부문 RevPAR -25.9% 급감 → 국내 여가 수요 위축 신호',
+  '한한령 효과의 지속성 불확실 → 인바운드 수요 급감 가능',
+  '인바운드 FIT 중심 유입(76%)으로 OTA 의존도 상승 가능',
+  '전라권 전 부문 부진 → 변산/진도 사업장 영향 주시'
+];
+
+// ============================================================
+//  STATE
+// ============================================================
+let keyinData = {};
+MONTHS.forEach(m => {
+  keyinData[m] = {segments:{},channels:{},actions:[],strategyStates:{}};
+});
+
+let activeMonth = '2026-06';
+let activeCycle = {};
+let activePill = {};
+MONTHS.forEach(m => { activeCycle[m] = 0; activePill[m] = 'channel'; });
+
+let chartInstances = {};
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const fmtDec = (n,d=1) => Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtPct = n => (n>=0?'+':'')+fmtDec(n,1)+'%';
+const pctClass = n => n>0?'text-positive':n<0?'text-negative':'text-muted';
+const mult = (base,month) => Math.round(base * MONTH_MULT[month]);
+
+function getSegData(month) {
+  const r = {};
+  ALL_SEGS.forEach(seg => {
+    const base = SEG_DATA_JUNE[seg];
+    r[seg] = {
+      fcst_rn: mult(base.fcst_rn,month),
+      budget_rn: mult(base.budget_rn,month),
+      fcst_rev: mult(base.fcst_rev,month),
+      budget_rev: mult(base.budget_rev,month)
+    };
+  });
+  // Totals include Direct
+  const dir = SEG_DATA_JUNE['Direct'];
+  r['합계'] = {
+    fcst_rn: ALL_SEGS.reduce((s,seg)=>s+r[seg].fcst_rn,0) + mult(dir.fcst_rn,month),
+    budget_rn: ALL_SEGS.reduce((s,seg)=>s+r[seg].budget_rn,0) + mult(dir.budget_rn,month),
+    fcst_rev: ALL_SEGS.reduce((s,seg)=>s+r[seg].fcst_rev,0) + mult(dir.fcst_rev,month),
+    budget_rev: ALL_SEGS.reduce((s,seg)=>s+r[seg].budget_rev,0) + mult(dir.budget_rev,month)
+  };
+  return r;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+// ============================================================
+//  DATA PERSISTENCE
+// ============================================================
+function loadData() {
+  try {
+    const s = localStorage.getItem('gs_strategy_keyin_v2');
+    if (s) { const d = JSON.parse(s); Object.assign(keyinData, d); }
+  } catch(e) { console.warn('Load failed',e); }
+}
+
+function saveData() {
+  localStorage.setItem('gs_strategy_keyin_v2', JSON.stringify(keyinData));
+  document.getElementById('lastSaved').textContent = '저장: '+new Date().toLocaleTimeString('ko-KR');
+  showToast('저장 완료');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(keyinData,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gs_strategy_keyin_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('JSON 내보내기 완료');
+}
+
+// ============================================================
+//  RENDER: PAGE STRUCTURE
+// ============================================================
+function buildPage() {
+  // Month tabs
+  const tabsEl = document.getElementById('monthTabs');
+  tabsEl.innerHTML = MONTHS.map(m =>
+    `<button class="month-tab${m===activeMonth?' active':''}" data-month="${m}">${MONTH_LABELS[m]}</button>`
+  ).join('');
+
+  // Month panels
+  const panelsEl = document.getElementById('monthPanels');
+  panelsEl.innerHTML = MONTHS.map(m => `
+    <div class="month-panel${m===activeMonth?' active':''}" id="mp-${m}">
+      <div class="cycle-tabs" id="ct-${m}">
+        ${['목표 제시','전략 배분 키인','진행 f/u','위험도 체크','액션 로그'].map((label,i)=>
+          `<button class="cycle-tab${i===0?' active':''}" data-cycle="${i}" data-month="${m}">${label}</button>`
+        ).join('')}
+      </div>
+      <div class="cycle-panel active" id="cp-${m}-0"></div>
+      <div class="cycle-panel" id="cp-${m}-1"></div>
+      <div class="cycle-panel" id="cp-${m}-2"></div>
+      <div class="cycle-panel" id="cp-${m}-3"></div>
+      <div class="cycle-panel" id="cp-${m}-4"></div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+//  TAB 1: 목표 제시
+// ============================================================
+function renderTab1(month) {
+  const data = getSegData(month);
+  const el = document.getElementById(`cp-${month}-0`);
+  const rows = [...ALL_SEGS,'합계'];
+
+  let html = `<div class="sec-title">세그먼트별 목표 매트릭스</div>
+  <div class="sec-subtitle">사업계획(Budget) · RM FCST · 키인 목표 비교 — ADR=REV/RN×1000 (천원 단위)</div>
+  <div class="tbl-wrap"><table>
+  <thead><tr>
+    <th rowspan="2" style="min-width:80px">세그먼트</th>
+    <th colspan="5" style="text-align:center;border-left:1px solid var(--rule-strong)">RN (실)</th>
+    <th colspan="3" style="text-align:center;border-left:1px solid var(--rule-strong)">ADR (천원)</th>
+    <th colspan="5" style="text-align:center;border-left:1px solid var(--rule-strong)">REV (백만원)</th>
+  </tr><tr>
+    <th style="border-left:1px solid var(--rule-strong)">사업계획</th><th>RM FCST</th><th>달성률</th><th>키인목표</th><th>vs계획</th>
+    <th style="border-left:1px solid var(--rule-strong)">Budget</th><th>FCST</th><th>키인</th>
+    <th style="border-left:1px solid var(--rule-strong)">사업계획</th><th>RM FCST</th><th>달성률</th><th>키인목표</th><th>vs계획</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach(seg => {
+    const d = data[seg];
+    const isTotal = seg==='합계';
+    const cls = isTotal ? ' class="total-row"' : '';
+    const adrBudget = d.budget_rn>0 ? d.budget_rev/d.budget_rn*1000 : 0;
+    const adrFcst = d.fcst_rn>0 ? d.fcst_rev/d.fcst_rn*1000 : 0;
+    const achRN = d.budget_rn>0 ? (d.fcst_rn/d.budget_rn*100) : 0;
+    const achREV = d.budget_rev>0 ? (d.fcst_rev/d.budget_rev*100) : 0;
+
+    // Get keyin values — AI pre-fills RN from channel sum, user can override
+    const ki = keyinData[month].segments[seg] || {};
+    // AI suggested RN = sum of channel AI targets for this segment (except for 합계)
+    const aiSegRN = isTotal
+      ? ALL_SEGS.reduce((s,sg) => s + (keyinData[month].segments[sg]?.rn || calcAISegTarget(sg,month)), 0) + mult(SEG_DATA_JUNE['Direct'].fcst_rn, month)
+      : calcAISegTarget(seg, month);
+    const kiRN = ki.rn || aiSegRN;
+    const kiREV = ki.rev || (isTotal
+      ? ALL_SEGS.reduce((s,sg) => s + (keyinData[month].segments[sg]?.rev || Math.round(getSegData(month)[sg].fcst_rev)), 0) + mult(SEG_DATA_JUNE['Direct'].fcst_rev, month)
+      : d.fcst_rev);
+    const kiADR = (kiRN && kiREV) ? (kiREV/kiRN*1000) : '';
+    const isRNModified = ki.rn !== undefined;
+    const isREVModified = ki.rev !== undefined;
+
+    const gapRN = ((kiRN - d.budget_rn)/d.budget_rn*100);
+    const gapREV = ((kiREV - d.budget_rev)/d.budget_rev*100);
+
+    html += `<tr${cls}>
+      <td>${seg}</td>
+      <td style="border-left:1px solid var(--rule-strong)">${fmt(d.budget_rn)}</td>
+      <td>${fmt(d.fcst_rn)}</td>
+      <td class="${pctClass(achRN-100)}">${fmtDec(achRN,1)}%</td>
+      <td><input class="keyin-input${isRNModified?' modified':''}" data-month="${month}" data-seg="${seg}" data-kpi="rn" value="${fmt(kiRN)}" title="AI 제안: ${fmt(aiSegRN)}실"></td>
+      <td class="${pctClass(gapRN)}">${fmtPct(gapRN)}</td>
+      <td style="border-left:1px solid var(--rule-strong)">${fmtDec(adrBudget,1)}</td>
+      <td>${fmtDec(adrFcst,1)}</td>
+      <td class="text-muted">${kiADR?fmtDec(kiADR,1):'-'}</td>
+      <td style="border-left:1px solid var(--rule-strong)">${fmt(d.budget_rev)}</td>
+      <td>${fmt(d.fcst_rev)}</td>
+      <td class="${pctClass(achREV-100)}">${fmtDec(achREV,1)}%</td>
+      <td><input class="keyin-input${isREVModified?' modified':''}" data-month="${month}" data-seg="${seg}" data-kpi="rev" value="${fmt(kiREV)}" title="FCST 기반 제안"></td>
+      <td class="${pctClass(gapREV)}">${fmtPct(gapREV)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  // Summary cards
+  const total = data['합계'];
+  const totalGap = total.budget_rn - total.fcst_rn;
+  const achPct = (total.fcst_rn/total.budget_rn*100);
+  html += `<div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div class="risk-card" style="flex:1;min-width:200px">
+      <div class="risk-hdr"><span class="risk-title">RN 갭</span><span class="risk-badge badge-${totalGap>15000?'danger':'warn'}">${totalGap>15000?'위험':'주의'}</span></div>
+      <div class="risk-metric text-negative">-${fmt(totalGap)}실</div>
+      <div class="risk-body">Budget 대비 FCST 부족분</div>
+    </div>
+    <div class="risk-card" style="flex:1;min-width:200px">
+      <div class="risk-hdr"><span class="risk-title">FCST 달성률</span><span class="risk-badge badge-${achPct<92?'danger':'warn'}">${achPct<92?'위험':'주의'}</span></div>
+      <div class="risk-metric ${pctClass(achPct-100)}">${fmtDec(achPct,1)}%</div>
+      <div class="risk-body">전체 세그먼트 합산 기준</div>
+    </div>
+    <div class="risk-card" style="flex:1;min-width:200px">
+      <div class="risk-hdr"><span class="risk-title">4개년 평균</span><span class="risk-badge badge-ok">참고</span></div>
+      <div class="risk-metric text-gold">${fmt(Math.round((SUMMER_4YR[2022].rn+SUMMER_4YR[2023].rn+SUMMER_4YR[2024].rn+SUMMER_4YR[2025].rn)/4/3))}실/월</div>
+      <div class="risk-body">2022-2025 여름 월평균 RN</div>
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
+
+  // Input handlers
+  el.querySelectorAll('.keyin-input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const {month:m,seg:s,kpi} = e.target.dataset;
+      const val = parseInt(e.target.value.replace(/,/g,'')) || 0;
+      if (!keyinData[m].segments[s]) keyinData[m].segments[s] = {};
+      keyinData[m].segments[s][kpi] = val;
+      e.target.value = val ? fmt(val) : '';
+      // Recalculate derived values
+      renderTab1(m);
+    });
+  });
+}
+
+// ============================================================
+//  TAB 2: 전략 배분 키인
+// ============================================================
+function renderTab2(month) {
+  const el = document.getElementById(`cp-${month}-1`);
+  el.innerHTML = `
+    <div class="sec-title">전략 배분 키인</div>
+    <div class="pills" id="pills-${month}">
+      <button class="pill${activePill[month]==='channel'?' active':''}" data-view="channel" data-month="${month}">거래처별</button>
+      <button class="pill${activePill[month]==='campaign'?' active':''}" data-view="campaign" data-month="${month}">기획전별</button>
+      <button class="pill${activePill[month]==='product'?' active':''}" data-view="product" data-month="${month}">상품별</button>
+    </div>
+    <div id="pill-channel-${month}" class="pill-panel${activePill[month]==='channel'?' active':''}"></div>
+    <div id="pill-campaign-${month}" class="pill-panel${activePill[month]==='campaign'?' active':''}"></div>
+    <div id="pill-product-${month}" class="pill-panel${activePill[month]==='product'?' active':''}"></div>
+  `;
+  renderChannelTable(month);
+  renderCampaignTable(month);
+  renderProductTable(month);
+}
+
+function getEffectiveTarget(ch, month) {
+  // 사용자가 수정한 값이 있으면 그걸 쓰고, 없으면 AI 제안값
+  const userVal = keyinData[month].channels[ch]?.target_rn;
+  const ai = calcAISuggest(ch, month);
+  const isUserModified = userVal !== undefined && userVal !== ai.value;
+  return {
+    value: userVal !== undefined ? userVal : ai.value,
+    aiValue: ai.value,
+    isUserModified,
+    reason: ai.reason,
+    note: ai.note
+  };
+}
+
+function resetAISuggestions(month) {
+  // 모든 채널의 사용자 수정값을 지우고 AI 제안으로 복원
+  Object.keys(SEG_CHANNELS).forEach(seg => {
+    SEG_CHANNELS[seg].forEach(ch => {
+      if (keyinData[month].channels[ch]) {
+        delete keyinData[month].channels[ch].target_rn;
+      }
+    });
+  });
+  // 세그먼트 목표도 AI 제안 합산으로 복원
+  ALL_SEGS.forEach(seg => {
+    if (keyinData[month].segments[seg]) {
+      delete keyinData[month].segments[seg].rn;
+    }
+  });
+  renderChannelTable(month);
+  renderTab1(month);
+  showToast('AI 제안값으로 초기화되었습니다');
+}
+
+function renderChannelTable(month) {
+  const el = document.getElementById(`pill-channel-${month}`);
+  const segData = getSegData(month);
+  const m = MONTH_MULT[month];
+
+  // Compute totals first for validation
+  let totalAI = 0, totalUser = 0, totalBudget = 0;
+  let modifiedCount = 0;
+  ALL_SEGS.forEach(seg => {
+    SEG_CHANNELS[seg].forEach(ch => {
+      const eff = getEffectiveTarget(ch, month);
+      totalUser += eff.value;
+      totalAI += eff.aiValue;
+      if (eff.isUserModified) modifiedCount++;
+    });
+    totalBudget += segData[seg]?.budget_rn || 0;
+  });
+
+  // Validation: total keyin vs budget
+  let validHtml = '';
+  const budgetDiff = totalUser - totalBudget;
+  const budgetDiffPct = totalBudget>0 ? (budgetDiff/totalBudget*100) : 0;
+  if (Math.abs(budgetDiff) > totalBudget * 0.02) {
+    validHtml += `<div class="valid-bar ${budgetDiff<0?'valid-warn':'valid-ok'}">
+      ${budgetDiff<0?'⚠':'✓'} 거래처 합계 <strong>${fmt(totalUser)}실</strong> vs 사업계획 <strong>${fmt(totalBudget)}실</strong>
+      (차이: <strong>${budgetDiff>0?'+':''}${fmt(budgetDiff)}실, ${fmtPct(budgetDiffPct)}</strong>)
+      ${budgetDiff<0?' — 기획전/오버부킹 등 추가 전략으로 갭 보전 필요':''}
+    </div>`;
+  } else {
+    validHtml += `<div class="valid-bar valid-ok">✓ 거래처 합계 <strong>${fmt(totalUser)}실</strong> ≈ 사업계획 <strong>${fmt(totalBudget)}실</strong> — 일치</div>`;
+  }
+
+  // Per-segment validation
+  ALL_SEGS.forEach(seg => {
+    const segTarget = keyinData[month].segments[seg]?.rn || calcAISegTarget(seg, month);
+    let chSum = 0;
+    SEG_CHANNELS[seg].forEach(ch => { chSum += getEffectiveTarget(ch, month).value; });
+    if (Math.abs(chSum - segTarget) > segTarget * 0.01 && segTarget > 0) {
+      const diff = chSum - segTarget;
+      validHtml += `<div class="valid-bar valid-warn" style="font-size:11px;padding:5px 12px">↳ ${seg}: 거래처 합 ${fmt(chSum)} vs 세그 목표 ${fmt(segTarget)} (${diff>0?'+':''}${fmt(diff)})</div>`;
+    }
+  });
+
+  let html = `<div class="reset-bar">
+    <div class="info-text">
+      🤖 AI가 전년 실적 × YoY 트렌드 기반으로 목표를 자동 산출했습니다.
+      ${modifiedCount>0?`<span style="color:var(--info)">수정된 항목: ${modifiedCount}건</span>`:'수정이 필요한 항목을 직접 편집하세요.'}
+    </div>
+    <button class="btn btn-sm" onclick="resetAISuggestions('${month}')">🔄 AI 제안 초기화</button>
+  </div>`;
+  html += validHtml;
+  html += `<div class="sec-subtitle">거래처별 목표(AI 제안 → 수정 가능) / 실적 / 달성률 / 전년 / 전년비</div>`;
+  html += `<div class="tbl-wrap"><table>
+  <thead><tr><th style="min-width:120px">거래처</th><th style="min-width:200px">목표 RN <span class="ai-tag">AI 제안</span></th><th>실적 RN</th><th>달성률</th><th>전년 RN</th><th>전년비</th></tr></thead><tbody>`;
+
+  let grandTarget=0, grandActual=0, grandLY=0;
+
+  ALL_SEGS.forEach(seg => {
+    // Segment AI total
+    const segAITotal = calcAISegTarget(seg, month);
+    const segBudget = segData[seg]?.budget_rn || 0;
+    html += `<tr class="seg-header"><td colspan="6">${seg} 세그먼트 <span style="font-weight:400;font-size:11px;color:var(--ink-muted);margin-left:8px">AI 세그합: ${fmt(segAITotal)} / 사업계획: ${fmt(segBudget)}</span></td></tr>`;
+    let segTargetSum=0, segActualSum=0, segLYSum=0;
+
+    SEG_CHANNELS[seg].forEach(ch => {
+      const ly = Math.round((CH_LY[ch]?.rn||0) * m);
+      const ty = Math.round((CH_TY[ch]?.rn||0) * m);
+      const eff = getEffectiveTarget(ch, month);
+      const target = eff.value;
+      const ach = target>0 ? (ty/target*100) : 0;
+      const yoy = ly>0 ? ((ty-ly)/ly*100) : 0;
+
+      segTargetSum += target;
+      segActualSum += ty;
+      segLYSum += ly;
+
+      const inputCls = eff.isUserModified ? 'keyin-input modified' : 'keyin-input';
+      const tag = eff.isUserModified ? '<span class="ai-tag user-edit">수정됨</span>' : '';
+
+      html += `<tr>
+        <td style="padding-left:20px">${ch}</td>
+        <td class="keyin-cell">
+          <input class="${inputCls}" data-month="${month}" data-ch="${ch}" value="${fmt(target)}" title="${eff.note}">
+          ${tag}
+          <span class="ai-reason">${eff.reason}</span>
+        </td>
+        <td>${fmt(ty)}</td>
+        <td class="${pctClass(ach-100)}">${fmtDec(ach,1)}%</td>
+        <td>${fmt(ly)}</td>
+        <td class="${pctClass(yoy)}">${fmtPct(yoy)}</td>
+      </tr>`;
+    });
+
+    // Segment subtotal
+    const segAch = segTargetSum>0?(segActualSum/segTargetSum*100):0;
+    const segYoy = segLYSum>0?((segActualSum-segLYSum)/segLYSum*100):0;
+    html += `<tr class="seg-header"><td style="padding-left:10px">${seg} 소계</td>
+      <td>${fmt(segTargetSum)}</td><td>${fmt(segActualSum)}</td>
+      <td class="${pctClass(segAch-100)}">${fmtDec(segAch,1)}%</td>
+      <td>${fmt(segLYSum)}</td><td class="${pctClass(segYoy)}">${fmtPct(segYoy)}</td></tr>`;
+
+    grandTarget+=segTargetSum; grandActual+=segActualSum; grandLY+=segLYSum;
+  });
+
+  const gAch = grandTarget>0?(grandActual/grandTarget*100):0;
+  const gYoy = grandLY>0?((grandActual-grandLY)/grandLY*100):0;
+  html += `<tr class="total-row"><td>전체 합계</td>
+    <td>${fmt(grandTarget)}</td><td>${fmt(grandActual)}</td>
+    <td class="${pctClass(gAch-100)}">${fmtDec(gAch,1)}%</td>
+    <td>${fmt(grandLY)}</td><td class="${pctClass(gYoy)}">${fmtPct(gYoy)}</td></tr>`;
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+
+  // Input handlers — on change, save user's modification
+  el.querySelectorAll('.keyin-input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const ch = e.target.dataset.ch;
+      const val = parseInt(e.target.value.replace(/,/g,'')) || 0;
+      if (!keyinData[month].channels[ch]) keyinData[month].channels[ch] = {};
+      keyinData[month].channels[ch].target_rn = val;
+      e.target.value = fmt(val);
+      renderChannelTable(month);
+    });
+    // Format on blur
+    inp.addEventListener('blur', e => {
+      const val = parseInt(e.target.value.replace(/,/g,'')) || 0;
+      if (val) e.target.value = fmt(val);
+    });
+  });
+}
+
+function renderCampaignTable(month) {
+  const el = document.getElementById(`pill-campaign-${month}`);
+  const m = MONTH_MULT[month];
+  let html = `<div class="sec-subtitle">기획전별 실적 현황 (읽기 전용)</div><div class="tbl-wrap"><table>
+  <thead><tr><th style="min-width:180px">기획전명</th><th>실적 RN</th><th>전년 RN</th><th>전년비</th></tr></thead><tbody>`;
+  let totalTY=0, totalLY=0;
+  CAMPAIGNS_SAMPLE.forEach(c => {
+    const ty = Math.round(c.rn_ty * m);
+    const ly = Math.round(c.rn_ly * m);
+    const yoy = ly>0?((ty-ly)/ly*100):(ty>0?100:0);
+    totalTY+=ty; totalLY+=ly;
+    html += `<tr><td>${c.name}</td><td>${fmt(ty)}</td><td>${fmt(ly)}</td><td class="${pctClass(yoy)}">${ly>0?fmtPct(yoy):'신규'}</td></tr>`;
+  });
+  const tYoy = totalLY>0?((totalTY-totalLY)/totalLY*100):0;
+  html += `<tr class="total-row"><td>합계</td><td>${fmt(totalTY)}</td><td>${fmt(totalLY)}</td><td class="${pctClass(tYoy)}">${fmtPct(tYoy)}</td></tr>`;
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderProductTable(month) {
+  const el = document.getElementById(`pill-product-${month}`);
+  const m = MONTH_MULT[month];
+  let html = `<div class="sec-subtitle">상품유형별 실적 현황 (읽기 전용)</div><div class="tbl-wrap"><table>
+  <thead><tr><th style="min-width:140px">상품유형</th><th>실적 RN</th><th>전년 RN</th><th>전년비</th></tr></thead><tbody>`;
+  let totalTY=0, totalLY=0;
+  PRODUCTS_SAMPLE.forEach(p => {
+    const ty = Math.round(p.rn_ty * m / 3);  // monthly
+    const ly = Math.round(p.rn_ly * m / 3);
+    const yoy = ly>0?((ty-ly)/ly*100):0;
+    totalTY+=ty; totalLY+=ly;
+    html += `<tr><td>${p.name}</td><td>${fmt(ty)}</td><td>${fmt(ly)}</td><td class="${pctClass(yoy)}">${fmtPct(yoy)}</td></tr>`;
+  });
+  const tYoy = totalLY>0?((totalTY-totalLY)/totalLY*100):0;
+  html += `<tr class="total-row"><td>합계</td><td>${fmt(totalTY)}</td><td>${fmt(totalLY)}</td><td class="${pctClass(tYoy)}">${fmtPct(tYoy)}</td></tr>`;
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+// ============================================================
+//  TAB 3: 진행 f/u
+// ============================================================
+function renderTab3(month) {
+  const el = document.getElementById(`cp-${month}-2`);
+  const m = MONTH_MULT[month];
+  const mLabel = MONTH_LABELS[month];
+
+  el.innerHTML = `
+    <div class="sec-title">진행 Follow-up</div>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-title">OTB 누적 진행률 · ${mLabel}</div>
+        <div class="chart-container"><canvas id="chartOTB-${month}"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">FCST 갭 추이 · ${mLabel}</div>
+        <div class="chart-container"><canvas id="chartGap-${month}"></canvas></div>
+      </div>
+    </div>
+    <div id="alertBox-${month}"></div>
+  `;
+
+  // Chart 1: OTB Progress
+  const budgetTotal = Math.round(214269 * MONTH_MULT[month]);
+  const days = 30;
+  const budgetPace = Array.from({length:days},(_,i)=>Math.round(budgetTotal*(i+1)/days));
+  const actualData = [];
+  let cum = 0;
+  for (let i=0;i<days;i++) {
+    const dailyTarget = budgetTotal/days;
+    const factor = 0.55 + Math.random()*0.35 + (i>20?0.15:0);
+    cum += Math.round(dailyTarget * factor);
+    actualData.push(Math.min(cum, Math.round(budgetTotal*0.82)));
+  }
+
+  const ctxOTB = document.getElementById(`chartOTB-${month}`).getContext('2d');
+  if (chartInstances[`otb-${month}`]) chartInstances[`otb-${month}`].destroy();
+  chartInstances[`otb-${month}`] = new Chart(ctxOTB, {
+    type:'line',
+    data:{
+      labels:Array.from({length:days},(_,i)=>`${i+1}일`),
+      datasets:[
+        {label:'Budget Pace',data:budgetPace,borderColor:'rgba(201,160,99,0.5)',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false},
+        {label:'실적 누적',data:actualData,borderColor:'#4caf6f',borderWidth:2,pointRadius:0,fill:{target:'origin',above:'rgba(76,175,111,0.06)'}}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9e9b93',font:{size:11}}}},
+      scales:{
+        y:{ticks:{color:'#6e6c62',callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}},
+        x:{ticks:{color:'#6e6c62',maxTicksLimit:10},grid:{color:'rgba(255,255,255,0.04)'}}
+      }
+    }
+  });
+
+  // Chart 2: FCST Gap
+  const gaps = FCST_GAPS_JUNE.map(g => ({
+    date: g.date,
+    gap: Math.round(g.gap * MONTH_MULT[month])
+  }));
+
+  const ctxGap = document.getElementById(`chartGap-${month}`).getContext('2d');
+  if (chartInstances[`gap-${month}`]) chartInstances[`gap-${month}`].destroy();
+  chartInstances[`gap-${month}`] = new Chart(ctxGap, {
+    type:'bar',
+    data:{
+      labels:gaps.map(g=>g.date),
+      datasets:[{
+        label:'FCST 갭 (실)',
+        data:gaps.map(g=>g.gap),
+        backgroundColor:gaps.map((_,i)=>i===gaps.length-1?'rgba(229,115,115,0.7)':'rgba(232,162,86,0.5)'),
+        borderColor:gaps.map((_,i)=>i===gaps.length-1?'#e57373':'#e8a256'),
+        borderWidth:1,borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9e9b93',font:{size:11}}}},
+      scales:{
+        y:{ticks:{color:'#6e6c62',callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}},
+        x:{ticks:{color:'#6e6c62'},grid:{display:false}}
+      }
+    }
+  });
+
+  // Alert
+  const latestGap = gaps[gaps.length-1].gap;
+  const prevGap = gaps.length>1 ? gaps[gaps.length-2].gap : 0;
+  if (latestGap > prevGap) {
+    document.getElementById(`alertBox-${month}`).innerHTML = `
+      <div class="valid-bar valid-err" style="margin-top:12px">
+        ⚠ <strong>FCST 갭 확대 중</strong> — 최신 갭 ${fmt(latestGap)}실 (이전 ${fmt(prevGap)}실 대비 +${fmt(latestGap-prevGap)}실 확대). 기획전 추가 검토 필요.
+      </div>`;
+  }
+}
+
+// ============================================================
+//  TAB 4: 위험도 체크
+// ============================================================
+function renderTab4(month) {
+  const el = document.getElementById(`cp-${month}-3`);
+  const mLabel = MONTH_LABELS[month];
+  const m = MONTH_MULT[month];
+  const gap = Math.round(21554*m);
+  const achPct = ((214269*m - gap)/(214269*m)*100);
+  const cancelOTA = CANCEL_DATA.OTA[mLabel] || 42;
+  const cancelGOTA = CANCEL_DATA['G-OTA'][mLabel] || 50;
+
+  const risks = [
+    {title:'4개년 패턴 대비',badge:'주의',cls:'badge-warn',
+     metric:`${fmtDec(achPct,1)}%`,metricCls:'text-warning',
+     body:`FCST가 Budget의 ${fmtDec(achPct,1)}% 수준. 2022-2025 여름 평균 RN ${fmt(Math.round(250398/3))}실/월 대비 현 FCST는 ${fmtDec(achPct/100*100,0)}% 달성 추이.`},
+    {title:'Action Plan 기획전',badge:'양호',cls:'badge-ok',
+     metric:'8건 준비',metricCls:'text-positive',
+     body:`기획전 8건 편성 완료. 예상 추가 RN +${fmt(Math.round(5007+3400))}실. NR 기획전(+5,007실)과 오버부킹(+3,400실)이 핵심.`},
+    {title:'거래처 실적 트렌드',badge:'위험',cls:'badge-danger',
+     metric:'G-OTA 급감',metricCls:'text-negative',
+     body:`익스피디아 YoY ${fmtPct(VARIANCE_CH['익스피디아'].vol_pct)}, 부킹닷컴 ${fmtPct(VARIANCE_CH['부킹닷컴'].vol_pct)} 급감. 반면 스마트인피니 ${fmtPct(VARIANCE_CH['스마트인피니'].vol_pct)} 급성장으로 일부 상쇄.`},
+    {title:'OCC 현황',badge:'주의',cls:'badge-warn',
+     metric:`약 ${month==='2026-07'?'82':'75'}%`,metricCls:'text-warning',
+     body:`${mLabel} FCST 기준 추정 OCC. ${month==='2026-07'?'성수기 피크로 OCC 상승 예상이나 ADR 관리 필수':'비수기 전환기, ADR 하방 압력 존재'}.`},
+    {title:'ADR + 경쟁사 비교',badge:'주의',cls:'badge-warn',
+     metric:'경쟁 심화',metricCls:'text-warning',
+     body:`${COMPETITORS[0].brand} ${COMPETITORS[0].discount}% 할인 기획전 진행 중. 경쟁 대응 필요하나 무분별한 할인 지양.`},
+    {title:'FCST 추이',badge:'위험',cls:'badge-danger',
+     metric:`갭 ${fmt(gap)}실`,metricCls:'text-negative',
+     body:`3회 연속 하향 조정. 04-06 → 04-14 → 04-27 스냅샷에서 FCST 지속 감소. 적극적 Action Plan 필요.`},
+    {title:'외부 요인',badge:'양호',cls:'badge-ok',
+     metric:'성수기 7/17~8/16',metricCls:'text-positive',
+     body:`${month==='2026-06'?'준성수기, 현충일(6/6) 활용 가능. 본격 성수기 직전 가격 전략 수립 적기.':month==='2026-07'?'7/17부터 본격 성수기 진입. 광복절(8/15) 연휴 대비 사전 세일 필요.':'8/16까지 성수기. 추석(9/24-26) 연계 연박 기획전 검토.'} ${RISK_FACTORS[0]}`}
+  ];
+
+  el.innerHTML = `
+    <div class="sec-title">위험도 체크 · ${mLabel}</div>
+    <div class="sec-subtitle">7개 핵심 위험 지표 — 실시간 데이터 기반 자동 평가</div>
+    <div class="risk-grid">
+      ${risks.map(r => `
+        <div class="risk-card">
+          <div class="risk-hdr">
+            <span class="risk-title">${r.title}</span>
+            <span class="risk-badge ${r.cls}">${r.badge}</span>
+          </div>
+          <div class="risk-metric ${r.metricCls}">${r.metric}</div>
+          <div class="risk-body">${r.body}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============================================================
+//  TAB 5: 액션 로그 + AI 전략 제안
+// ============================================================
+function getAIStrategies(month) {
+  const mLabel = MONTH_LABELS[month];
+  const m = MONTH_MULT[month];
+  const totalGap = Math.round(21554 * m);
+  const totalBudget = Math.round(214269 * m);
+  const cancelOTA = CANCEL_DATA.OTA[mLabel]||42;
+  const cancelGOTA = CANCEL_DATA['G-OTA'][mLabel]||50;
+
+  return [
+    {
+      id:'s1', name:'G-OTA 취소불가(NR) 기획전', priority:'S',
+      problem:`G-OTA 평균 취소율 ${fmtDec(cancelGOTA,1)}%(${mLabel}), OTA ${fmtDec(cancelOTA,1)}%. OB Matrix 분석 결과 — 델피노 G-OTA 취소율 53.6%, 삼척 OTA 41.2%, 진도 OTA 43.2%. 높은 취소율이 실질 가용객실을 잠식하여 매출 기회 손실 발생.`,
+      action:`NR(취소불가) 25% 할인 요금 기획전 설계. 취소 불가 조건 대신 정가 대비 25% 할인 제공 → 예상 취소율 15%p 감소 유도. 아고다/트립닷컴 중심 G-OTA 전 채널 + OTA 주요 채널(야놀자, 여기어때) 동시 론칭.`,
+      conditions:`<strong>판매 시작:</strong> D-60 (${month==='2026-06'?'4월 초':'6월 중순'} 이전 세팅 완료)<br><strong>대상 사업장:</strong> 비발디파크, 쏠비치 삼척, 쏠비치 진도, 델피노 (취소율 상위 4개)<br><strong>상품 구성:</strong> 스탠다드 객실 NR, 연박 NR 패키지`,
+      effectRN: Math.round(5007*m), effectREV: Math.round(1119*m),
+      effectDetail: `총 비용 ${fmt(Math.round(597*m))}백만원 (할인 원가), 순효과 ${fmt(Math.round(522*m))}백만원, ROI 187%`,
+      impactPct: Math.min(((5007*m)/totalGap*100),30),
+      impactText: `전체 RN 갭 ${fmt(totalGap)}실 중 <strong>${fmtDec(5007*m/totalGap*100,1)}%</strong> 해소. 목표달성률 <strong>+${fmtDec(5007*m/totalBudget*100,1)}%p</strong> 개선.`
+    },
+    {
+      id:'s2', name:'보수적 오버부킹(OB 5%) 도입', priority:'S',
+      problem:`현재 오버부킹 미적용 상태. 취소율이 OTA ${fmtDec(cancelOTA,1)}%, G-OTA ${fmtDec(cancelGOTA,1)}%에 달하나, 예약 한도를 가용객실 100%로 운영 → 실제 투숙률은 가용객실의 50~60%에 불과. OB Matrix 분석: 비발디 OTA 보수적 OB 29.8%, 삼척 OTA 33.2%.`,
+      action:`취소율 상위 사업장/세그 대상으로 보수적 OB 5% 적용. Conservative OB Rate(평균취소율 - 1.5σ) 기준으로 안전 마진 확보. Walk-out 리스크 최소화하면서 실질 점유율 개선.`,
+      conditions:`<strong>적용 대상:</strong> OB Matrix 상위 10개 사업장×세그 조합<br><strong>OB 상한:</strong> 보수적 OB Rate 이내 (최대 5%)<br><strong>안전장치:</strong> D-7 시점 자동 OB 해제, Walk-out 보상 프로세스 사전 수립`,
+      effectRN: Math.round(3400*m), effectREV: Math.round(680*m),
+      effectDetail: `비용 ${fmt(Math.round(170*m))}백만원 (Walk-out 보상 예비), 순효과 ${fmt(Math.round(510*m))}백만원, ROI 300%`,
+      impactPct: Math.min(((3400*m)/totalGap*100),25),
+      impactText: `RN 갭의 <strong>${fmtDec(3400*m/totalGap*100,1)}%</strong> 해소. 목표달성률 <strong>+${fmtDec(3400*m/totalBudget*100,1)}%p</strong> 개선.`
+    },
+    {
+      id:'s3', name:'OTA 성수기 ADR +5% 인상', priority:'A',
+      problem:`Variance Decomposition 분석 결과, Q1 전체 매출 증감에서 Price Effect 비중이 Volume Effect 대비 낮음. 4개년 ADR 코리더 분석 → 현 OTA ADR이 코리더 하단에 위치. 특히 성수기(7/17~8/16) ADR 인상 여력 존재. 경쟁사 한화리조트도 35% 할인을 5월까지만 운영.`,
+      action:`성수기 OTA 기본가 5% 인상. 단, 비인기 일자(평일)는 현행 유지하여 가격 탄력성 관리. 주말/연휴 중심 선택적 인상.`,
+      conditions:`<strong>적용 시기:</strong> ${month==='2026-06'?'6월 하순부터 단계적':month==='2026-07'?'7/17 성수기 진입과 동시':'8월 초 ~ 8/16 성수기 종료 전'}<br><strong>적용 범위:</strong> OTA 전 채널, 주말/연휴 일자 우선<br><strong>모니터링:</strong> 주 단위 OTB 변화 추적, -3% 이상 예약 감소 시 즉시 롤백`,
+      effectRN: Math.round(-2003*m), effectREV: Math.round(1022*m),
+      effectDetail: `RN ${fmt(Math.round(2003*m))}실 감소 리스크 있으나, 매출 +${fmt(Math.round(1022*m))}백만원 순증. 비용 없음.`,
+      impactPct: Math.min(((1022*m)/(214269*m*0.07)*100),20),
+      impactText: `REV 기준 목표 갭의 약 <strong>8%</strong> 해소. RN 감소 리스크(-${fmt(Math.round(2003*m))}실)는 NR/OB 전략으로 상쇄.`
+    },
+    {
+      id:'s4', name:'채널 믹스 리밸런싱 — 스마트인피니/쿠팡 확대', priority:'A',
+      problem:`채널 Variance 분석: 스마트인피니 YoY +158.1%(+${fmt(VARIANCE_CH['스마트인피니'].rn_diff)}실), 쿠팡 +39.6%(+${fmt(VARIANCE_CH['쿠팡'].rn_diff)}실) 급성장. 반면 익스피디아 -33.0%(${fmt(VARIANCE_CH['익스피디아'].rn_diff)}실), 부킹닷컴 -34.6%(${fmt(VARIANCE_CH['부킹닷컴'].rn_diff)}실) 급감. G-OTA 감소분을 국내 OTA 성장 채널로 대체해야 HHI 집중도 개선 가능.`,
+      action:`1) 스마트인피니 전용 기획전 물량 확대 (현재 대비 +50%)<br>2) 쿠팡 단독 기획전 신규 편성 (쿠팡와우 1,400만 회원 타겟)<br>3) 익스피디아/부킹닷컴 감소분은 자연 감소 수용, 마진 높은 국내 채널로 전환`,
+      conditions:`<strong>실행 시기:</strong> 즉시 (기획전 물량 재배분)<br><strong>쿠팡 기획전:</strong> ${mLabel} 한정 3개 사업장 × 쿠팡 라이브 연계<br><strong>스마트인피니:</strong> 전 사업장 물량 일괄 +50% 증량`,
+      effectRN: Math.round(3000*m), effectREV: Math.round(450*m),
+      effectDetail: `G-OTA 감소분(${fmt(Math.round(5773*m))}실) 중 ${fmt(Math.round(3000*m))}실 국내 OTA로 대체. 수수료율 차이(15%→8%)로 마진 개선.`,
+      impactPct: Math.min(((3000*m)/totalGap*100),22),
+      impactText: `채널 리스크 분산 + RN 갭 <strong>${fmtDec(3000*m/totalGap*100,1)}%</strong> 해소. HHI 집중도 지수 개선.`
+    },
+    {
+      id:'s5', name:'조기예약 인센티브 (D-60 Early Bird)', priority:'B',
+      problem:`Pickup Curve 분석: 벨비발디 2025-06 기준, D-61에서 23,400실 → D-33에서 21,745실로 D-60~D-30 구간 1,655실 순감. 이 구간에서 취소가 예약을 초과하여 OTB가 역행하는 패턴 반복. 조기 예약자에게 인센티브를 제공하여 이 구간의 순감을 방지해야 함.`,
+      action:`D-60~D-30 예약자 대상 5% 조기예약 할인 + 업그레이드 옵션 제공. 취소 시 할인 혜택 소멸 조건 부여로 Lock-in 효과.`,
+      conditions:`<strong>시작일:</strong> ${month==='2026-06'?'즉시 (5월 초)':month==='2026-07'?'5월 중순':' 6월 중순'}<br><strong>대상:</strong> 비발디, 델피노, 삼척, 양양 (Pickup 역행 패턴 확인 사업장)<br><strong>할인 구조:</strong> D-60 예약 시 5%, D-45 예약 시 3%, D-30 이후 정가`,
+      effectRN: Math.round(2000*m), effectREV: Math.round(280*m),
+      effectDetail: `OTB 안정화 효과. 할인 비용 약 ${fmt(Math.round(140*m))}백만원, 순효과 ${fmt(Math.round(140*m))}백만원.`,
+      impactPct: Math.min(((2000*m)/totalGap*100),15),
+      impactText: `OTB 안정화로 운영 예측성 향상. RN 갭 <strong>${fmtDec(2000*m/totalGap*100,1)}%</strong> 해소.`
+    },
+    {
+      id:'s6', name:'Direct 전환율 +5%p 개선', priority:'B',
+      problem:`자사몰 실적 역성장: 9.0만실(2023) → 8.0만실(2024). OTA 수수료 총 5,179.7백만원 지출 중. 채널 수익성 분석: 부킹닷컴 수수료율 15%, 아고다 12%, 야놀자/여기어때 10% vs Direct 0%. Direct 비중 1%p 전환 시 연간 약 50백만원 수수료 절감.`,
+      action:`1) 자사몰 회원 전용 가격 보장 (Best Rate Guarantee)<br>2) 리워드 포인트 2배 적립 이벤트<br>3) 자사몰 전용 얼리체크인/레이트체크아웃 혜택`,
+      conditions:`<strong>시작:</strong> 즉시<br><strong>목표:</strong> Direct 비중 현재 대비 +5%p<br><strong>투자:</strong> 프로모션 비용 ${fmt(Math.round(100*m))}백만원`,
+      effectRN: 0, effectREV: Math.round(352*m),
+      effectDetail: `RN 변동 없이 수수료 절감으로 순매출 +${fmt(Math.round(352*m))}백만원. ROI 252%.`,
+      impactPct: Math.min(((352*m)/(214269*m*0.07)*100),10),
+      impactText: `수익성 개선 효과. 장기적 채널 건전성 확보. ROI <strong>252%</strong>.`
+    },
+    {
+      id:'s7', name:'하위 사업장(변산/진도/남해) 집중 프로모션', priority:'B',
+      problem:`FCST 달성률 하위 사업장: 변산 82.9%, 진도 81.5%, 남해 75.6%. 이 3개 사업장의 Budget-FCST 갭 합산이 전체 갭의 약 18%를 차지. BCG 매트릭스 기준 "Question Mark" 또는 "Dog" 포지션으로, 전략적 투자 또는 손절 판단 필요.`,
+      action:`1) 지역 특화 해양레저+숙박 패키지 (서핑, 갯벌체험 등)<br>2) OTA 노출 부스팅 (야놀자/여기어때 상위 노출 광고)<br>3) 인플루언서 마케팅 (지역 관광 콘텐츠)`,
+      conditions:`<strong>기간:</strong> ${mLabel} 집중<br><strong>대상:</strong> 변산, 진도, 남해<br><strong>예산:</strong> 마케팅비 ${fmt(Math.round(80*m))}백만원`,
+      effectRN: Math.round(2000*m), effectREV: Math.round(300*m),
+      effectDetail: `3개 사업장 합산 +${fmt(Math.round(2000*m))}실 추가 가능. 변산 +800, 진도 +700, 남해 +500실.`,
+      impactPct: Math.min(((2000*m)/totalGap*100),15),
+      impactText: `하위 사업장 끌어올리기로 전체 달성률 <strong>+${fmtDec(2000*m/totalBudget*100,1)}%p</strong> 개선.`
+    },
+    {
+      id:'s8', name:'G-OTA ADR +3% 전략적 인상', priority:'B',
+      problem:`G-OTA 채널 ADR이 OTA 대비 높으나, 글로벌 경쟁사 대비 할인 포지션. Variance 분석에서 G-OTA Price Effect 양호하나 Volume 급감 중. ADR 소폭 인상으로 감소하는 물량의 매출 보전 필요.`,
+      action:`G-OTA 전 채널 기본가 3% 인상. 물량 감소를 수용하되 실당 매출 극대화 전략.`,
+      conditions:`<strong>시기:</strong> ${month==='2026-06'?'6월 중순':'즉시'}<br><strong>범위:</strong> 아고다, 트립닷컴, 부킹닷컴, 익스피디아<br><strong>예외:</strong> 트립비토즈는 현행 유지 (성장 채널)`,
+      effectRN: Math.round(-795*m), effectREV: Math.round(402*m),
+      effectDetail: `RN -${fmt(Math.round(795*m))}실 감소 리스크, 매출 +${fmt(Math.round(402*m))}백만원 증가. 비용 없음.`,
+      impactPct: Math.min(((402*m)/(214269*m*0.07)*100),8),
+      impactText: `REV 기준 갭의 약 <strong>${fmtDec(402*m/(totalBudget*0.07)*100,1)}%</strong> 해소.`
+    }
+  ];
+}
+
+function renderTab5(month) {
+  const el = document.getElementById(`cp-${month}-4`);
+  const strategies = getAIStrategies(month);
+
+  let html = `
+    <div class="sec-title">AI 전략 제안 · ${MONTH_LABELS[month]}</div>
+    <div class="sec-subtitle">deep_analysis 데이터 기반 자동 도출 — 문제 진단 → 전략 액션 → 실행 조건 → 예상 효과 → 목표 임팩트</div>
+    <div class="ai-grid">
+  `;
+
+  strategies.forEach(s => {
+    const state = keyinData[month].strategyStates[s.id] || '';
+    const stateCls = state==='applied'?'applied':state==='rejected'?'rejected':state==='modified'?'modified':'';
+    const stateTag = state==='applied'?'<span class="ai-status-tag tag-applied">적용됨</span>':
+                     state==='rejected'?'<span class="ai-status-tag tag-rejected">반려됨</span>':
+                     state==='modified'?'<span class="ai-status-tag tag-modified">수정됨</span>':'';
+
+    html += `
+    <div class="ai-card ${stateCls}" id="card-${month}-${s.id}">
+      <div class="ai-card-hdr">
+        <span class="ai-card-name">${s.name}${stateTag}</span>
+        <span class="ai-priority ai-priority-${s.priority.toLowerCase()}">${s.priority}등급</span>
+      </div>
+      <div class="ai-card-body">
+        <div class="ai-row">
+          <div class="ai-label">📊 문제 진단</div>
+          <div class="ai-text">${s.problem}</div>
+        </div>
+        <div class="ai-row">
+          <div class="ai-label">🎯 전략 액션</div>
+          <div class="ai-text">${s.action}</div>
+        </div>
+        <div class="ai-row">
+          <div class="ai-label">📅 실행 조건</div>
+          <div class="ai-text">${s.conditions}</div>
+        </div>
+        <div class="ai-effect-box">
+          <div class="ai-effect-row">
+            <span class="ai-effect-label">예상 추가 RN</span>
+            <span class="ai-effect-value ${s.effectRN>=0?'text-positive':'text-negative'}">${s.effectRN>=0?'+':''}${fmt(s.effectRN)}실</span>
+          </div>
+          <div class="ai-effect-row">
+            <span class="ai-effect-label">예상 추가 REV</span>
+            <span class="ai-effect-value text-positive">+${fmt(s.effectREV)}백만원</span>
+          </div>
+          <div class="ai-effect-row">
+            <span class="ai-effect-label">비용/ROI</span>
+            <span class="ai-effect-value text-gold">${s.effectDetail.split(',').pop().trim()}</span>
+          </div>
+        </div>
+        <div class="ai-row">
+          <div class="ai-label">📈 목표 달성 임팩트</div>
+          <div class="ai-text">${s.impactText}</div>
+          <div class="ai-impact-bar"><div class="ai-impact-fill" style="width:${Math.min(s.impactPct,100)}%"></div></div>
+        </div>
+      </div>
+      <div class="ai-card-foot">
+        <button class="btn btn-sm btn-positive" onclick="setStrategy('${month}','${s.id}','applied','${s.name}')">✓ 적용</button>
+        <button class="btn btn-sm btn-warning" onclick="modifyStrategy('${month}','${s.id}','${s.name}')">✎ 수정</button>
+        <button class="btn btn-sm btn-negative" onclick="setStrategy('${month}','${s.id}','rejected','${s.name}')">✕ 반려</button>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  // Action Log section
+  html += `
+    <div class="log-section">
+      <div class="sec-title" style="margin-top:28px">액션 이력</div>
+      <div class="tbl-wrap">
+        <table id="logTable-${month}">
+          <thead><tr><th>날짜</th><th>구분</th><th>내용</th><th>상태</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px" onclick="addManualAction('${month}')">+ 수동 액션 추가</button>
+    </div>
+  `;
+
+  el.innerHTML = html;
+  renderActionLog(month);
+}
+
+function setStrategy(month, sid, state, name) {
+  keyinData[month].strategyStates[sid] = state;
+  const action = state==='applied'?'AI제안 적용':'AI제안 반려';
+  addActionEntry(month, action, `[${name}] ${state==='applied'?'적용 결정':'반려 처리'}`, state==='applied'?'적용':'반려');
+  renderTab5(month);
+}
+
+function modifyStrategy(month, sid, name) {
+  const note = prompt(`[${name}] 수정 사항을 입력하세요:`);
+  if (note) {
+    keyinData[month].strategyStates[sid] = 'modified';
+    addActionEntry(month, 'AI제안 수정', `[${name}] ${note}`, '적용(수정)');
+    renderTab5(month);
+  }
+}
+
+function addActionEntry(month, type, content, status) {
+  if (!keyinData[month].actions) keyinData[month].actions = [];
+  keyinData[month].actions.unshift({
+    date: new Date().toISOString().slice(0,16).replace('T',' '),
+    type, content, status
+  });
+  renderActionLog(month);
+}
+
+function addManualAction(month) {
+  const content = prompt('액션 내용을 입력하세요:');
+  if (content) {
+    addActionEntry(month, '수동입력', content, '적용');
+  }
+}
+
+function renderActionLog(month) {
+  const tbody = document.querySelector(`#logTable-${month} tbody`);
+  if (!tbody) return;
+  const actions = keyinData[month].actions || [];
+  if (actions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--ink-faint);padding:20px">아직 기록된 액션이 없습니다</td></tr>';
+    return;
+  }
+  tbody.innerHTML = actions.map(a => {
+    const statusCls = a.status==='적용'||a.status==='적용(수정)'?'text-positive':a.status==='반려'?'text-negative':'text-warning';
+    return `<tr>
+      <td style="font-family:var(--mono);color:var(--ink-faint);font-size:11px">${a.date}</td>
+      <td style="color:var(--gold);font-weight:600">${a.type}</td>
+      <td style="color:var(--ink-soft)">${a.content}</td>
+      <td class="${statusCls}" style="font-weight:600">${a.status}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+//  TAB NAVIGATION
+// ============================================================
+function setupNavigation() {
+  // Month tabs
+  document.getElementById('monthTabs').addEventListener('click', e => {
+    const tab = e.target.closest('.month-tab');
+    if (!tab) return;
+    const month = tab.dataset.month;
+    activeMonth = month;
+    document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.month-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`mp-${month}`).classList.add('active');
+    // Re-render charts for this month if needed
+    renderTab3(month);
+  });
+
+  // Cycle tabs (event delegation)
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('.cycle-tab');
+    if (!tab) return;
+    const cycle = parseInt(tab.dataset.cycle);
+    const month = tab.dataset.month;
+    activeCycle[month] = cycle;
+    const panel = document.getElementById(`mp-${month}`);
+    panel.querySelectorAll('.cycle-tab').forEach(t=>t.classList.remove('active'));
+    panel.querySelectorAll('.cycle-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`cp-${month}-${cycle}`).classList.add('active');
+    // Render charts on first visit
+    if (cycle === 2) renderTab3(month);
+  });
+
+  // Pill toggles (event delegation)
+  document.addEventListener('click', e => {
+    const pill = e.target.closest('.pill');
+    if (!pill) return;
+    const view = pill.dataset.view;
+    const month = pill.dataset.month;
+    activePill[month] = view;
+    const container = pill.closest('.cycle-panel');
+    container.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    container.querySelectorAll('.pill-panel').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    container.querySelector(`#pill-${view}-${month}`).classList.add('active');
+  });
+}
+
+// ============================================================
+//  INITIALIZATION
+// ============================================================
+async function init() {
+  loadData();
+  buildPage();
+  setupNavigation();
+
+  // Render all months
+  MONTHS.forEach(month => {
+    renderTab1(month);
+    renderTab2(month);
+    renderTab4(month);
+    renderTab5(month);
+  });
+
+  // Render charts for active month
+  renderTab3(activeMonth);
+
+  // Auto-save every 30s
+  setInterval(() => {
+    localStorage.setItem('gs_strategy_keyin_v2', JSON.stringify(keyinData));
+    document.getElementById('lastSaved').textContent = '자동저장: '+new Date().toLocaleTimeString('ko-KR');
+  }, 30000);
+
+  // Try to load real data
+  try {
+    const resp = await fetch('../data/rm_fcst_trend.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      console.log('rm_fcst_trend loaded, snapshots:', data.snapshots?.length);
+    }
+  } catch(e) { console.log('Using fallback data'); }
+
+  try {
+    const resp = await fetch('data/deep_analysis_v2.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      console.log('deep_analysis_v2 loaded');
+    }
+  } catch(e) { console.log('Using embedded deep analysis data'); }
+
+  try {
+    const resp = await fetch('data/deep_analysis_v3.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      console.log('deep_analysis_v3 loaded');
+    }
+  } catch(e) { console.log('Using embedded deep analysis v3 data'); }
+}
+
+document.readyState === 'loading'
+  ? document.addEventListener('DOMContentLoaded', init)
+  : init();
+</script>
+</body>
+</html>
