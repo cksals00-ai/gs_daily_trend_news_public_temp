@@ -81,17 +81,34 @@
   .page-context{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em}
   .page-context b{color:var(--gold-bright)}
 
-  /* KPI STRIP */
-  .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-  .kpi{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
-  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
-  .kpi.green::before{background:var(--positive)}
-  .kpi.red::before{background:var(--negative)}
-  .kpi.blue::before{background:var(--info)}
-  .kpi-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:6px}
-  .kpi-val{font-family:var(--mono);font-size:24px;font-weight:800;color:var(--ink);line-height:1}
-  .kpi-val small{font-size:0.5em;color:var(--ink-faint);font-weight:500;margin-left:3px}
-  .kpi-sub{font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-top:4px}
+  /* 핵심 지표 요약 테이블 */
+  .summary-wrap{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:16px;margin-bottom:18px}
+  .summary-wrap h3{font-size:13px;font-weight:800;letter-spacing:-.01em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .summary-wrap h3 .num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#1a1d23;font-size:10px;font-weight:900;font-family:var(--mono)}
+  .summary-tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  .summary-tbl th{background:var(--bg-deep);color:var(--gold);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;text-align:right;border-bottom:1px solid var(--rule);font-weight:700}
+  .summary-tbl th:first-child,.summary-tbl td:first-child{text-align:left;font-family:var(--sans);font-weight:700;color:var(--ink)}
+  .summary-tbl td{padding:9px 10px;border-bottom:1px solid var(--rule);color:var(--ink-soft);text-align:right}
+  .summary-tbl tr:last-child td{border-bottom:none}
+  .summary-tbl td.muted{color:var(--ink-faint)}
+  .summary-tbl td.pos{color:var(--positive);font-weight:700}
+  .summary-tbl td.neg{color:var(--negative);font-weight:700}
+  .summary-tbl .badge{display:inline-block;padding:1px 7px;border-radius:3px;font-size:11px;font-weight:700}
+  .summary-tbl .badge.hi{background:var(--positive-bg);color:var(--positive)}
+  .summary-tbl .badge.md{background:var(--warning-bg);color:var(--warning)}
+  .summary-tbl .badge.lo{background:var(--negative-bg);color:var(--negative)}
+  .summary-extra{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .extra-card{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+  .extra-card .l{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+  .extra-card .v{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--ink)}
+  .extra-card .v.pos{color:var(--positive)}
+  .extra-card .v.neg{color:var(--negative)}
+  .extra-card .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-top:2px}
+  @media(max-width:620px){
+    .summary-tbl{font-size:11px}
+    .summary-tbl th,.summary-tbl td{padding:6px 5px}
+    .summary-extra{grid-template-columns:1fr}
+  }
 
   /* SECTION CARD */
   section.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:18px;margin-bottom:18px}
@@ -197,8 +214,10 @@
   .perf-table td.neg{color:var(--negative)}
   .perf-tbl-wrap{max-height:520px;overflow:auto;border:1px solid var(--rule);border-radius:6px}
 
-  /* KPI 진단 — 채널/권역별 카드 */
-  .diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  /* KPI 진단 — 채널/권역별 카드 (2줄 분리: 세그 3 / 권역 4) */
+  .diag-grid{display:grid;gap:10px}
+  @media(max-width:1100px){.diag-grid{grid-template-columns:repeat(2,1fr) !important}}
+  @media(max-width:680px){.diag-grid{grid-template-columns:1fr !important}}
   .diag-card{background:var(--bg-deep);border:1px solid var(--rule);border-radius:7px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
   .diag-card.tier-good{border-left:3px solid var(--positive)}
   .diag-card.tier-warn{border-left:3px solid var(--warning)}
@@ -357,23 +376,46 @@
       </div>
     </div>
 
-    <div class="kpi-strip" id="kpi-strip"></div>
-
-    <section class="card">
-      <h2><span class="num">1</span> FCST 갭 + 거래처 × 시기 매트릭스</h2>
-      <div class="sub">상단: FCST 갭 + Budget vs Actual / 거래처 × 시기 매트릭스 — 하단: 데이터 인사이트 2열</div>
-      <div class="top-grid">
-        <div class="gap-block">
-          <h3>FCST 갭 + Budget vs Actual</h3>
-          <div id="gap-fcst"></div>
-          <div id="gap-progress" style="margin-top:14px;border-top:1px solid var(--rule);padding-top:12px"></div>
+    <div class="summary-wrap" id="summary-wrap">
+      <h3><span class="num">0</span> 핵심 지표 요약 — <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:500">선택 월·사업장 기준</span></h3>
+      <table class="summary-tbl">
+        <thead><tr>
+          <th>지표</th>
+          <th>목표 (Budget)</th>
+          <th>FCST</th>
+          <th>실적 (Actual)</th>
+          <th>달성률</th>
+          <th>전년 (LY)</th>
+          <th>전년비 (YoY)</th>
+        </tr></thead>
+        <tbody id="summary-tbody"></tbody>
+      </table>
+      <div class="summary-extra">
+        <div class="extra-card">
+          <div>
+            <div class="l">주간 픽업 (최근 7일 net_rn)</div>
+            <div class="sub" id="weekly-pickup-sub">—</div>
+          </div>
+          <div class="v" id="weekly-pickup-v">—</div>
         </div>
-        <div class="gap-block" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
-          <h3 style="padding:14px 14px 0">거래처 × 시기 매트릭스 <span style="float:right;font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:400">noon line = 오늘</span></h3>
-          <div class="timeline-wrap" id="timeline-wrap" style="border:none;border-radius:0;flex:1"></div>
+        <div class="extra-card">
+          <div>
+            <div class="l">FCST 전주비 (RM PDF)</div>
+            <div class="sub" id="fcst-wow-sub">—</div>
+          </div>
+          <div class="v" id="fcst-wow-v">—</div>
         </div>
       </div>
-      <div class="insights-grid" id="gap-insights"></div>
+    </div>
+
+    <section class="card">
+      <h2><span class="num">1</span> 거래처 × 시기 매트릭스</h2>
+      <div class="sub">투숙일이 선택 월에 하루라도 걸치는 기획전 — 막대 hover 시 사업장 실적까지 / 노란 라인 = 오늘</div>
+      <div class="timeline-wrap" id="timeline-wrap"></div>
+      <div class="insights-grid" id="gap-insights" style="margin-top:14px"></div>
+      <!-- gap-progress / gap-fcst 는 더 이상 표시 안 함 (KPI strip 이 핵심 숫자 대체) -->
+      <div id="gap-progress" style="display:none"></div>
+      <div id="gap-fcst" style="display:none"></div>
     </section>
 
     <section class="card">
@@ -588,38 +630,122 @@ function renderHeaderContext(){
   document.getElementById('ctx-prop').textContent = STATE.prop === 'ALL' ? '전체' : STATE.prop.replace(/^\d+\./, '');
 }
 
+// 주간 픽업 — db_aggregated.net_daily_by_month[targetMonth] 의 최근 7일 net_rn 합
+function getWeeklyPickup(){
+  if (!DATA.db) return null;
+  const ndm = DATA.db.net_daily_by_month || {};
+  const target = '2026' + String(STATE.month).padStart(2,'0');
+  const md = ndm[target];
+  if (!md) return null;
+  const today = new Date();
+  let sum = 0, daysWithData = 0;
+  for (let i = 0; i < 7; i++){
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const k = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    if (md[k]){
+      sum += md[k].net_rn || 0;
+      daysWithData++;
+    }
+  }
+  return { sum, daysWithData };
+}
+
+// FCST 전주비 — rm_fcst_trend 의 마지막 2개 5월 스냅샷 비교
+function getFcstWoW(){
+  if (!DATA.fcstTrend) return null;
+  const snaps = DATA.fcstTrend.snapshots || [];
+  const target = '2026-' + String(STATE.month).padStart(2,'0');
+  const usePropertyLevel = STATE.prop !== 'ALL';
+  const totalFcst = (s) => {
+    if (usePropertyLevel){
+      const md = (s.properties[STATE.prop] || {})[target];
+      return md ? (md.rm_fcst_rn || 0) : null;
+    }
+    let t = 0, has = false;
+    for (const p of Object.values(s.properties || {})){
+      const md = p[target];
+      if (md){ t += md.rm_fcst_rn || 0; has = true; }
+    }
+    return has ? t : null;
+  };
+  const filt = snaps.filter(s => totalFcst(s) != null);
+  if (filt.length < 2) return null;
+  const last = filt[filt.length - 1];
+  const prev = filt[filt.length - 2];
+  const lastF = totalFcst(last);
+  const prevF = totalFcst(prev);
+  return { lastF, prevF, delta: lastF - prevF, deltaPct: prevF ? (lastF - prevF) / prevF * 100 : 0, lastDate: last._snapshot_date, prevDate: prev._snapshot_date };
+}
+
 function renderKPI(){
   const s = getSelectedSummary();
-  const host = document.getElementById('kpi-strip');
+  const tbody = document.getElementById('summary-tbody');
   if (!s){
-    host.innerHTML = '<div class="empty" style="grid-column:span 4">선택 월·사업장 데이터 없음</div>';
+    tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:18px">선택 월·사업장 데이터 없음</td></tr>';
     return;
   }
-  const camps = filteredCampaigns().length;
-  const ach = s.rns_achievement;
-  const fAch = s.fcst_achievement;
-  host.innerHTML = `
-    <div class="kpi ${ach >= 90 ? 'green' : ach < 70 ? 'red' : ''}">
-      <div class="kpi-label">${STATE.month}월 OTB 달성률</div>
-      <div class="kpi-val">${fmt.pct(ach)}</div>
-      <div class="kpi-sub">실적 ${fmt.num(s.rns_actual)}실 / Budget ${fmt.num(s.rns_budget)}실</div>
-    </div>
-    <div class="kpi ${fAch >= 100 ? 'green' : fAch < 90 ? 'red' : ''}">
-      <div class="kpi-label">FCST 달성</div>
-      <div class="kpi-val">${fmt.pct(fAch)}</div>
-      <div class="kpi-sub">FCST ${fmt.num(s.rns_fcst)}실 vs Budget</div>
-    </div>
-    <div class="kpi blue">
-      <div class="kpi-label">전일 순증</div>
-      <div class="kpi-val">${(s.today_net||0) >= 0 ? '+' : ''}${fmt.num(s.today_net)}<small>실</small></div>
-      <div class="kpi-sub">예약 ${fmt.num(s.today_booking)} − 취소 ${fmt.num(s.today_cancel)}</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">투숙월 매칭 기획전</div>
-      <div class="kpi-val">${camps}<small>건</small></div>
-      <div class="kpi-sub">투숙일이 ${STATE.month}월에 걸침</div>
-    </div>
-  `;
+  // 행 정의
+  const rows = [
+    {
+      name: 'RN (객실)',
+      budget: s.rns_budget, fcst: s.rns_fcst, actual: s.rns_actual,
+      ach: s.rns_achievement, last: s.rns_last, yoy: s.rns_yoy,
+      fmt: fmt.num
+    },
+    {
+      name: 'ADR (단가, 원)',
+      budget: s.adr_budget, fcst: s.adr_fcst, actual: s.adr_actual,
+      ach: s.adr_actual && s.adr_budget ? (s.adr_actual / s.adr_budget * 100) : null,
+      last: s.adr_last, yoy: s.adr_yoy,
+      fmt: fmt.num
+    },
+    {
+      name: 'Revenue (백만원)',
+      budget: s.rev_budget ? s.rev_budget / 1000000 : null,
+      fcst: s.rev_fcst ? s.rev_fcst / 1000000 : null,
+      actual: s.rev_actual ? s.rev_actual / 1000000 : null,
+      ach: s.rev_achievement,
+      last: s.rev_last ? s.rev_last / 1000000 : null,
+      yoy: s.rev_yoy,
+      fmt: fmt.num
+    }
+  ];
+  tbody.innerHTML = rows.map(r => {
+    const c = r.ach != null ? (r.ach >= 90 ? 'hi' : r.ach >= 70 ? 'md' : 'lo') : null;
+    return `<tr>
+      <td>${r.name}</td>
+      <td>${r.budget != null ? r.fmt(r.budget) : '<span class="muted">—</span>'}</td>
+      <td>${r.fcst != null ? r.fmt(r.fcst) : '<span class="muted">—</span>'}</td>
+      <td>${r.actual != null ? r.fmt(r.actual) : '<span class="muted">—</span>'}</td>
+      <td>${r.ach != null ? `<span class="badge ${c}">${fmt.pct(r.ach)}</span>` : '<span class="muted">—</span>'}</td>
+      <td>${r.last != null ? r.fmt(r.last) : '<span class="muted">—</span>'}</td>
+      <td class="${(r.yoy||0)>=0?'pos':'neg'}">${r.yoy != null ? fmt.signed(r.yoy) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  // 주간 픽업
+  const wp = getWeeklyPickup();
+  const wpV = document.getElementById('weekly-pickup-v');
+  const wpSub = document.getElementById('weekly-pickup-sub');
+  if (wp){
+    wpV.textContent = (wp.sum >= 0 ? '+' : '') + fmt.num(wp.sum) + '실';
+    wpV.className = 'v ' + (wp.sum >= 0 ? 'pos' : 'neg');
+    wpSub.textContent = `${STATE.month}월 stay · 최근 ${wp.daysWithData}일 booking date 합산`;
+  } else {
+    wpV.textContent = '—'; wpV.className = 'v'; wpSub.textContent = '데이터 없음';
+  }
+
+  // FCST 전주비
+  const wow = getFcstWoW();
+  const wowV = document.getElementById('fcst-wow-v');
+  const wowSub = document.getElementById('fcst-wow-sub');
+  if (wow){
+    wowV.textContent = (wow.delta >= 0 ? '+' : '') + fmt.num(wow.delta) + '실 (' + (wow.deltaPct >= 0 ? '+' : '') + wow.deltaPct.toFixed(1) + '%)';
+    wowV.className = 'v ' + (wow.delta >= 0 ? 'pos' : 'neg');
+    wowSub.textContent = `${wow.prevDate} → ${wow.lastDate} · ${fmt.num(wow.prevF)} → ${fmt.num(wow.lastF)}실`;
+  } else {
+    wowV.textContent = '—'; wowV.className = 'v'; wowSub.textContent = '스냅샷 부족';
+  }
 }
 
 function renderGapPlan(){
@@ -1115,10 +1241,10 @@ function renderFcstTrend(){
   const segColors = { 'OTA': '#5a9fc4', 'G-OTA': '#a855f7', 'Inbound': '#4caf6f' };
 
   const datasets = [];
-  // Budget 점선 (전체 budget — 거의 일정)
+  // Budget 점선 (RM PDF — 215,280실 · 회사 권역 합산)
   const lastSnap = last12[last12.length - 1];
   datasets.push({
-    label: 'Budget(전체)',
+    label: 'Budget(RM PDF · 회사 권역 합산)',
     data: last12.map(x => x.totalBudget),
     borderColor: '#c9a063',
     borderDash: [6, 4],
@@ -1127,6 +1253,23 @@ function renderFcstTrend(){
     fill: false,
     tension: 0
   });
+  // Budget 점선 2 — otb_data (GS 운영) 64,017실 — 사업장 ALL 일 때만
+  if (!usePropertyLevel && DATA.otb){
+    const otbBudget = ((DATA.otb.allMonths || {})[String(STATE.month)] || {}).summary || {};
+    const otbBudgetRn = otbBudget.rns_budget;
+    if (otbBudgetRn){
+      datasets.push({
+        label: 'Budget(otb_data · GS 운영)',
+        data: last12.map(() => otbBudgetRn),
+        borderColor: '#7a8794',
+        borderDash: [3, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+        tension: 0
+      });
+    }
+  }
   // 전체 FCST (properties 합)
   datasets.push({
     label: '전체 FCST',
@@ -1208,6 +1351,8 @@ function renderKpiDiagnosis(){
   const targetMonth = `2026-${String(m).padStart(2,'0')}`;
   const monthSnap = (DATA.otb.allMonths || {})[String(m)] || {};
 
+  const segCards = [];
+  const regionCards = [];
   // 1) 세그먼트별 FCST 추이 진단 (rm_fcst_trend.json)
   const snaps = DATA.fcstTrend.snapshots || [];
   const segNames = ['OTA', 'G-OTA', 'Inbound'];
@@ -1236,8 +1381,6 @@ function renderKpiDiagnosis(){
   // 4개년 동월 비교 (db_aggregated.monthly_total — 우리 데이터는 otb_data.monthly 만 있음)
   // otb_data.monthly = 단년 — 4년 비교는 byPropertySegment 로 yoy 만 추출
   const segData = monthSnap.segmentData || {};
-
-  const cards = [];
 
   segNames.forEach(sn => {
     const hist = segHistory[sn];
@@ -1275,7 +1418,7 @@ function renderKpiDiagnosis(){
       else action = `Inbound 모니터링 — 트립닷컴/아고다 부킹 페이스 주간 단위 추적.`;
     }
 
-    cards.push(`
+    segCards.push(`
       <div class="diag-card tier-${tier}">
         <div class="dh"><div class="dn">${sn}</div><div class="dt">${tierLabel}</div></div>
         <div class="dv ${gap == null ? '' : (gap >= 0 ? 'pos' : 'neg')}">${gap == null ? '—' : (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%'}</div>
@@ -1318,7 +1461,7 @@ function renderKpiDiagnosis(){
       } else {
         action = `평균 OTB ${ach != null ? ach.toFixed(1) : '—'}%, 사업장 ${agg.props.length}개 — ${best ? best.name.replace(/^\d+\./,'') + ' 견인' : ''}, ${worst ? worst.name.replace(/^\d+\./,'') + ' 점검' : ''}`;
       }
-      cards.push(`
+      regionCards.push(`
         <div class="diag-card tier-${tier}">
           <div class="dh"><div class="dn">${regionLabels[r] || r}</div><div class="dt">${agg.props.length}개 사업장</div></div>
           <div class="dv ${ach != null && ach >= 90 ? 'pos' : ach != null && ach < 70 ? 'neg' : 'warn'}">${fmt.pct(ach)}</div>
@@ -1331,8 +1474,18 @@ function renderKpiDiagnosis(){
     });
   }
 
-  host.innerHTML = `<div class="diag-grid">${cards.join('')}</div>`;
-  if (!cards.length) host.innerHTML = '<div class="empty">진단 데이터 없음</div>';
+  // 2줄 분리: 위 = 세그먼트 (3개), 아래 = 권역 (4개)
+  let html = '';
+  if (segCards.length){
+    html += `<div style="font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--ink-faint);text-transform:uppercase;margin:0 0 8px;font-weight:700">SEGMENT — RM FCST 갭 추이</div>`;
+    html += `<div class="diag-grid" style="grid-template-columns:repeat(${Math.min(segCards.length, 3)}, 1fr)">${segCards.join('')}</div>`;
+  }
+  if (regionCards.length){
+    html += `<div style="font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--ink-faint);text-transform:uppercase;margin:18px 0 8px;font-weight:700">REGION — OTB 달성 진단</div>`;
+    html += `<div class="diag-grid" style="grid-template-columns:repeat(${Math.min(regionCards.length, 4)}, 1fr)">${regionCards.join('')}</div>`;
+  }
+  if (!segCards.length && !regionCards.length) html = '<div class="empty">진단 데이터 없음</div>';
+  host.innerHTML = html;
 }
 
 // === Section 3: 월별 차별화 전략 ===
