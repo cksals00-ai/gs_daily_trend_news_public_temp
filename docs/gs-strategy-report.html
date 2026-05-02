@@ -1078,14 +1078,18 @@ function getChannelTargetsFromKeyin(month){
     const raw = localStorage.getItem('gs_strategy_keyin_v2');
     if (!raw) return {};
     const data = JSON.parse(raw);
-    const monthData = data[month] || data[String(month)] || {};
+    // strategy-keyin 은 month key 를 'YYYY-MM' 형식으로 저장 (예: '2026-06')
+    // gs-strategy-report 는 month 를 number(5/6/7) 로 보내므로 다양한 형식 시도
+    const monthStr = String(month).padStart(2, '0');
+    const monthData = data[`2026-${monthStr}`] || data[month] || data[String(month)] || {};
     const channels = monthData.channels || {};
     const out = {};
     Object.entries(channels).forEach(([ch, v]) => {
-      out[ch] = (v && v.target_rn) || null;
+      const t = (v && v.target_rn) || null;
+      if (t != null && t !== '' && !isNaN(+t)) out[ch] = +t;
     });
     return out;
-  } catch(e){ return {}; }
+  } catch(e){ console.warn('keyin parse fail', e); return {}; }
 }
 
 function renderPerfTable(){
@@ -1122,7 +1126,13 @@ function renderPerfTable(){
   const hasKeyin = Object.keys(keyinTargets).length > 0;
 
   titleEl.textContent = `${m}월 거래처별 진행 현황 ${STATE.chSegment === 'ALL' ? '(OTA + G-OTA)' : '(' + STATE.chSegment + ')'}`;
-  subEl.textContent = `${channels.length}개 거래처 · ${hasKeyin ? '✓ strategy-keyin 목표 적용' : '⚠ strategy-keyin 미입력 (Budget "—")'} · 데이터: db_aggregated + localStorage`;
+  // strategy-keyin 은 6/7/8월만 입력 가능 — 5월은 키인 대상 아님을 명시
+  const keyinNote = hasKeyin
+    ? `✓ strategy-keyin 목표 ${Object.keys(keyinTargets).length}개 거래처 적용`
+    : (m < 6 || m > 8)
+      ? `ℹ strategy-keyin 은 6/7/8월만 입력 (현재 ${m}월 — Budget "—")`
+      : `⚠ ${m}월 strategy-keyin 미입력 — Budget "—" / strategy-keyin.html 에서 거래처별 목표 키인 시 자동 반영`;
+  subEl.textContent = `${channels.length}개 거래처 · ${keyinNote}`;
 
   if (!channels.length){
     tbl.innerHTML = '<tbody><tr><td class="empty" colspan="10">선택 세그먼트의 거래처 없음</td></tr></tbody>';
