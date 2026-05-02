@@ -758,15 +758,14 @@ function renderTable(data){
     '<th class="col-channel" rowspan="2">채널</th>'+
     '<th class="col-region" rowspan="2">구분</th>'+
     '<th class="col-prop" rowspan="2">사업장</th>'+
-    '<th class="col-actual" rowspan="2">실적</th>'+
+    '<th class="kpi-group-header rn" colspan="3">객실수 RNS</th>'+
+    '<th class="kpi-group-header adr" colspan="3">ADR</th>'+
+    '<th class="kpi-group-header rev" colspan="3">매출 REV</th>'+
     '<th class="col-title" rowspan="2">기획전명</th>'+
     '<th class="col-product" rowspan="2">상품</th>'+
     '<th class="col-period" rowspan="2">판매기간</th>'+
     '<th class="col-period" rowspan="2">투숙기간</th>'+
     '<th class="col-note" rowspan="2">비고</th>'+
-    '<th class="kpi-group-header rn" colspan="3">객실수 RNS</th>'+
-    '<th class="kpi-group-header adr" colspan="3">ADR</th>'+
-    '<th class="kpi-group-header rev" colspan="3">매출 REV</th>'+
     '</tr>'+
     // Row 2: KPI 서브 헤더
     '<tr>'+
@@ -785,15 +784,14 @@ function renderTable(data){
       `<td class="col-channel" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`+
       `<td class="col-region">${escapeHtml(d.region||'—')}</td>`+
       `<td class="col-prop">${escapeHtml(d.property||'—')}</td>`+
-      `<td class="col-actual">${escapeHtml(d.actual||'—')}</td>`+
+      renderKpiCells(k.rns_actual,k.rns_target)+
+      renderKpiCells(k.adr_actual,k.adr_target)+
+      renderKpiCells(k.rev_actual,k.rev_target,true)+
       `<td class="col-title" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`+
       `<td class="col-product">${escapeHtml(d.product||'—')}</td>`+
       `<td class="col-period">${fmtYMD(d.saleStart)} <span class="period-sub">~ ${fmtYMD(d.saleEnd)}</span></td>`+
       `<td class="col-period">${fmtYMD(d.stayStart)} <span class="period-sub">~ ${fmtYMD(d.stayEnd)}</span></td>`+
       `<td class="col-note">${escapeHtml(d.note||'—')}</td>`+
-      renderKpiCells(k.rns_actual,k.rns_target)+
-      renderKpiCells(k.adr_actual,k.adr_target)+
-      renderKpiCells(k.rev_actual,k.rev_target,true)+
       `</tr>`;
   });
   html+='</tbody></table></div>';
