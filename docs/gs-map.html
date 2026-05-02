@@ -595,12 +595,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     var now = Date.now();
     grid.innerHTML = results.map(function(r){
       if(!r) return '';
-      var age = r.ts ? (now - new Date(r.ts).getTime()) : Infinity;
+      function parseTS(s) { if(!s) return null; s = s.replace(/\s*KST\s*$/i,''); var m = s.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]); return new Date(s); }
+      var parsedTs = parseTS(r.ts);
+      var age = parsedTs && !isNaN(parsedTs.getTime()) ? (now - parsedTs.getTime()) : Infinity;
       var fresh = age < 86400000 * 2; // 2일 이내
       var dotClass = r.ok ? (fresh ? 'ok' : 'old') : 'na';
       var timeStr = '—';
-      if(r.ts){
-        var d = new Date(r.ts);
+      if(parsedTs && !isNaN(parsedTs.getTime())){
+        var d = parsedTs;
         var mm = d.getMonth()+1, dd = d.getDate(), hh = d.getHours(), mi = d.getMinutes();
         timeStr = mm+'/'+dd+' '+(hh<10?'0':'')+hh+':'+(mi<10?'0':'')+mi;
         var diffH = Math.floor(age/3600000);

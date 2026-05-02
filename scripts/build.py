@@ -1253,12 +1253,21 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         bot_items = " / ".join(_fmt_tb(p) for p in cur_tb["bot"]) or "—"
         html = apply_tpl(html, "otb-top3", top_items)
         html = apply_tpl(html, "otb-bot3", bot_items)
-        # JSON 주입 (JS 토글용)
+        # JSON 주입 (JS 토글용) — 기존 값 or 플레이스홀더 모두 대체
+        import re as _re
         tb_json = _json.dumps(tb_by_month, ensure_ascii=False)
-        html = html.replace("/*__TB_BY_MONTH__*/", f"const TB_BY_MONTH = {tb_json};")
+        tb_replacement = f"const TB_BY_MONTH = {tb_json};"
+        if "/*__TB_BY_MONTH__*/" in html:
+            html = html.replace("/*__TB_BY_MONTH__*/", tb_replacement)
+        else:
+            html = _re.sub(r'const TB_BY_MONTH\s*=\s*\{.*?\};', tb_replacement, html, count=1, flags=_re.DOTALL)
         # 월 라벨 주입
         month_labels_json = _json.dumps({mkey: f"{int(mkey)}월" for mkey in month_keys}, ensure_ascii=False)
-        html = html.replace("/*__TB_MONTH_LABELS__*/", f"const TB_MONTH_LABELS = {month_labels_json};")
+        ml_replacement = f"const TB_MONTH_LABELS = {month_labels_json};"
+        if "/*__TB_MONTH_LABELS__*/" in html:
+            html = html.replace("/*__TB_MONTH_LABELS__*/", ml_replacement)
+        else:
+            html = _re.sub(r'const TB_MONTH_LABELS\s*=\s*\{.*?\};', ml_replacement, html, count=1)
 
         logger.info("✓ Daily OTB (otb_data.json allMonths) 주입")
 
