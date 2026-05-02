@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS 전략 리포트 (관리자) — SONO</title>
+<meta name="robots" content="noindex,nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+  :root{
+    --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
+    --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+    --gold:#c9a063;--gold-bright:#e6b970;
+    --positive:#4caf6f;--positive-bg:#1f3a28;
+    --warning:#e8a256;--warning-bg:#3d2e1a;
+    --negative:#e57373;--negative-bg:#3d1f1f;
+    --info:#5a9fc4;--info-bg:#1a2e3d;
+    --rule:rgba(255,255,255,0.12);
+    --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+    --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+    --script:'Nanum Pen Script','Pretendard Variable',cursive;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+  .admin-banner{background:linear-gradient(90deg,#3d1f1f 0%,#3d2e1a 100%);border-bottom:1px solid var(--negative);padding:8px 20px;text-align:center;font-size:12px;letter-spacing:.05em;color:var(--gold-bright);font-weight:600}
+  .admin-banner b{color:#fff;letter-spacing:.15em}
+
+  header.hdr{max-width:1280px;margin:0 auto;padding:36px 24px 18px;border-bottom:1px solid var(--rule)}
+  .hdr-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.25em;color:var(--gold);font-weight:700;margin-bottom:8px}
+  .hdr-title{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:-0.02em;line-height:1.1;margin-bottom:6px}
+  .hdr-title em{font-family:var(--script);font-style:normal;color:var(--gold);font-weight:400;padding-left:8px}
+  .hdr-meta{display:flex;flex-wrap:wrap;gap:14px;color:var(--ink-muted);font-size:12px;margin-top:14px}
+  .hdr-meta span{display:inline-flex;align-items:center;gap:6px}
+  .hdr-meta b{color:var(--ink-soft);font-weight:700}
+
+  main{max-width:1280px;margin:0 auto;padding:24px}
+
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px}
+  .toc a{color:var(--ink-muted);text-decoration:none;font-size:12px;padding:6px 10px;border-radius:5px;border:1px solid var(--rule);transition:.15s}
+  .toc a:hover{color:var(--gold);border-color:var(--gold);background:var(--bg-soft)}
+
+  section.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;padding:24px;margin-bottom:20px}
+  section.card h2{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px;color:var(--ink);display:flex;align-items:center;gap:10px}
+  section.card h2 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--gold);color:#1a1d23;font-size:13px;font-weight:900;font-family:var(--mono)}
+  section.card .sub{color:var(--ink-muted);font-size:13px;margin-bottom:16px}
+
+  .grid-month{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+  .mcard{background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:14px}
+  .mcard .m-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .mcard .m-name{font-weight:800;font-size:14px}
+  .mcard .m-tag{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
+  .mcard .row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:4px 0;border-bottom:1px dotted var(--rule)}
+  .mcard .row:last-child{border-bottom:none}
+  .mcard .row b{font-family:var(--mono);font-weight:700}
+  .ach{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-family:var(--mono);font-weight:700}
+  .ach-hi{background:var(--positive-bg);color:var(--positive)}
+  .ach-md{background:var(--warning-bg);color:var(--warning)}
+  .ach-lo{background:var(--negative-bg);color:var(--negative)}
+
+  .story{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .story-block{background:var(--bg-deep);border-left:3px solid var(--gold);padding:14px 16px;border-radius:0 6px 6px 0}
+  .story-block h3{font-size:14px;font-weight:800;color:var(--gold-bright);margin-bottom:8px}
+  .story-block p{font-size:13px;color:var(--ink-soft);line-height:1.65}
+  .story-block .insight-tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin-bottom:6px}
+
+  .chain{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:stretch}
+  .chain-col{background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:14px}
+  .chain-col h3{font-size:12px;letter-spacing:.18em;color:var(--gold);font-weight:700;margin-bottom:10px;font-family:var(--mono);text-transform:uppercase}
+  .chain-col ul{list-style:none}
+  .chain-col li{padding:8px 0;border-bottom:1px dotted var(--rule);font-size:13px;color:var(--ink-soft)}
+  .chain-col li:last-child{border-bottom:none}
+  .chain-col li b{color:var(--ink);font-weight:700}
+  .chain-col .source{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px;display:block}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tbl th,table.tbl td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--rule);font-family:var(--mono)}
+  table.tbl th{background:var(--bg-deep);color:var(--gold);font-weight:700;font-size:11px;letter-spacing:.05em;text-align:right;position:sticky;top:0}
+  table.tbl th:first-child,table.tbl td:first-child{text-align:left;font-family:var(--sans)}
+  table.tbl tr:hover td{background:var(--bg-soft)}
+  table.tbl td.pos{color:var(--positive)}
+  table.tbl td.neg{color:var(--negative)}
+  table.tbl td.muted{color:var(--ink-faint)}
+  .tbl-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--rule);max-height:520px}
+
+  .camp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:16px}
+  .camp-pill{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:10px;text-align:center}
+  .camp-pill .k{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--gold-bright)}
+  .camp-pill .l{font-size:11px;color:var(--ink-muted);margin-top:2px}
+
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+  .action{background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:14px}
+  .action .a-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .action .a-region{font-family:var(--mono);font-size:11px;font-weight:800;background:var(--gold);color:#1a1d23;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+  .action .a-status{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:3px;letter-spacing:.08em}
+  .action .a-status.s-hold{background:var(--bg-soft);color:var(--ink-faint)}
+  .action .a-status.s-active{background:var(--positive-bg);color:var(--positive)}
+  .action .a-status.s-watch{background:var(--warning-bg);color:var(--warning)}
+  .action .a-text{font-size:13px;color:var(--ink-soft);line-height:1.55}
+  .action .a-empty{color:var(--ink-faint);font-style:italic;font-size:12.5px}
+
+  .empty{padding:18px;text-align:center;color:var(--ink-faint);font-size:13px;border:1px dashed var(--rule);border-radius:6px}
+  .err{padding:18px;text-align:center;color:var(--negative);font-size:13px;border:1px solid var(--negative);border-radius:6px;background:var(--negative-bg)}
+
+  footer{max-width:1280px;margin:24px auto;padding:18px 24px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:11px;font-family:var(--mono);text-align:center;letter-spacing:.05em}
+
+  @media(max-width:760px){
+    .chain{grid-template-columns:1fr}
+    section.card{padding:16px}
+    .hdr-title{font-size:24px}
+    main{padding:16px}
+    table.tbl{font-size:11.5px}
+    table.tbl th,table.tbl td{padding:7px 6px}
+  }
+
+  /* ───── GSN NAV BAR (index.html과 동일) ───── */
+  .gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+  .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+  .gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+  .gsn-brand:hover{color:#c9d1d9}
+  .gsn-brand-dot{color:#58a6ff}
+  .gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+  .gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+  .gsn-item:hover{background:#1a2232;color:#c9d1d9}
+  .gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+  .gsn-soon{pointer-events:none;opacity:.4}
+  .gsn-badge{background:#2d3a48;color:#7d8590;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;letter-spacing:.3px}
+  .gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+  .gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+  @media(max-width:900px){
+    .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+    .gsn-links.open{display:flex}
+    .gsn-item[style*="display:none"]{display:none!important}
+    .gsn-item{padding:8px 12px}
+    .gsn-toggle{display:flex;align-items:center;justify-content:center}
+  }
+  @media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+</style>
+</head>
+<body>
+
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas" style="display:none">해외사업장</a>
+</div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\/?$/)||h.match(/gs_daily_trend_news_public_temp\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;if(hit)a.classList.add('active');});})();</script>
+
+<div class="admin-banner">🔒 <b>ADMIN-ONLY</b> · 외부 비공개 · 본 페이지는 운영 전략 검토용입니다</div>
+
+<header class="hdr">
+  <div class="hdr-eyebrow">GS STRATEGY REPORT · INTERNAL</div>
+  <h1 class="hdr-title">전략 리포트 <em>관리자용</em></h1>
+  <div class="hdr-meta">
+    <span>📅 발행 <b id="hdr-date">—</b></span>
+    <span>🏨 데이터 <b>otb_data.json · campaign_data.json · admin_input.json · rm_fcst.json</b></span>
+    <span>👁️ 대상 <b>운영 매니저</b></span>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <a href="#sec1">1. 월별 목표 요약</a>
+  <a href="#sec2">2. 전략 스토리</a>
+  <a href="#sec3">3. 외부요인→전략→지표</a>
+  <a href="#sec4">4. 거래처별 목표/실적</a>
+  <a href="#sec5">5. 기획전별 현황</a>
+  <a href="#sec6">6. 전략 제안·실행</a>
+</nav>
+
+<section class="card" id="sec1">
+  <h2><span class="num">1</span> 월별 목표 요약</h2>
+  <div class="sub">당월·익월·익익월 Budget 대비 OTB 진행 (단위: 실)</div>
+  <div class="grid-month" id="month-cards"><div class="empty">로딩 중…</div></div>
+</section>
+
+<section class="card" id="sec2">
+  <h2><span class="num">2</span> 전략 스토리</h2>
+  <div class="sub">데이터 기반 자동 생성된 오늘의 핵심 인사이트 (admin_input.daily_insights)</div>
+  <div class="story" id="story-blocks"><div class="empty">로딩 중…</div></div>
+</section>
+
+<section class="card" id="sec3">
+  <h2><span class="num">3</span> 외부 요인 → 전략 → 지표</h2>
+  <div class="sub">RM Forecast 권역 가이드 → 운영 전략 → 모니터링 지표</div>
+  <div class="chain" id="chain-grid"><div class="empty">로딩 중…</div></div>
+</section>
+
+<section class="card" id="sec4">
+  <h2><span class="num">4</span> 거래처별 목표/실적</h2>
+  <div class="sub">사업장별 당년 누적 Budget·실적·달성률·YoY (otb_data.byProperty)</div>
+  <div class="tbl-wrap"><table class="tbl" id="prop-tbl"><tbody><tr><td class="empty" colspan="6">로딩 중…</td></tr></tbody></table></div>
+</section>
+
+<section class="card" id="sec5">
+  <h2><span class="num">5</span> 기획전별 현황</h2>
+  <div class="sub">진행 중·예정 기획전 현황 (campaign_data.summer_detail · by_month)</div>
+  <div class="camp-grid" id="camp-summary"></div>
+  <div class="tbl-wrap"><table class="tbl" id="camp-tbl"><tbody><tr><td class="empty" colspan="6">로딩 중…</td></tr></tbody></table></div>
+</section>
+
+<section class="card" id="sec6">
+  <h2><span class="num">6</span> 전략 제안 · 실행 현황</h2>
+  <div class="sub">권역별 전략 키인 상태 (admin_input.property_strategy · action_alerts)</div>
+  <div class="actions" id="actions-grid"><div class="empty">로딩 중…</div></div>
+</section>
+
+</main>
+
+<footer>
+  GENERATED BY gs-strategy-report.html · DATA SOURCE: docs/data/*.json · NOT FOR EXTERNAL DISTRIBUTION
+</footer>
+
+<script>
+const fmt = {
+  num: v => v == null || isNaN(v) ? '—' : Math.round(v).toLocaleString('ko-KR'),
+  pct: v => v == null || isNaN(v) ? '—' : v.toFixed(1) + '%',
+  money: v => v == null || isNaN(v) ? '—' : (v / 100000000).toFixed(1) + '억',
+  signed: v => v == null || isNaN(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%',
+};
+function achClass(v){
+  if (v == null) return 'ach-lo';
+  if (v >= 90) return 'ach-hi';
+  if (v >= 70) return 'ach-md';
+  return 'ach-lo';
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+async function loadJSON(path){
+  try {
+    const r = await fetch(path + '?_=' + Date.now());
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e){
+    console.warn('load fail', path, e);
+    return null;
+  }
+}
+
+function renderMonthCards(otb){
+  const host = document.getElementById('month-cards');
+  if (!otb || !otb.allMonths){
+    host.innerHTML = '<div class="err">otb_data.json 로드 실패</div>';
+    return;
+  }
+  const now = new Date();
+  const cur = now.getMonth() + 1;
+  const months = [0,1,2].map(i => ((cur - 1 + i) % 12) + 1);
+  const html = months.map(m => {
+    const snap = otb.allMonths[String(m)] || {};
+    const s = snap.summary || {};
+    const ach = s.rns_achievement;
+    const fAch = s.fcst_achievement;
+    return `
+    <div class="mcard">
+      <div class="m-h">
+        <div class="m-name">${m}월</div>
+        <div class="m-tag">${m === cur ? '당월' : (m === ((cur)%12)+1 ? '익월' : '익익월')}</div>
+      </div>
+      <div class="row"><span>Budget RN</span><b>${fmt.num(s.rns_budget)}</b></div>
+      <div class="row"><span>OTB 실적</span><b>${fmt.num(s.rns_actual)}</b></div>
+      <div class="row"><span>달성률</span><span class="ach ${achClass(ach)}">${fmt.pct(ach)}</span></div>
+      <div class="row"><span>FCST</span><b>${fmt.num(s.rns_fcst)}</b></div>
+      <div class="row"><span>FCST 달성</span><span class="ach ${achClass(fAch)}">${fmt.pct(fAch)}</span></div>
+      <div class="row"><span>전일 순증</span><b style="color:${(s.today_net||0) >= 0 ? 'var(--positive)' : 'var(--negative)'}">${(s.today_net||0) >= 0 ? '+' : ''}${fmt.num(s.today_net)}</b></div>
+    </div>`;
+  }).join('');
+  host.innerHTML = html;
+}
+
+function renderStory(admin){
+  const host = document.getElementById('story-blocks');
+  const insights = (admin && admin.daily_insights) || [];
+  if (!insights.length){
+    host.innerHTML = '<div class="empty">오늘의 인사이트 데이터가 없습니다 (admin_input.daily_insights 비어있음)</div>';
+    return;
+  }
+  const titleMap = {
+    'auto-otb-achievement': '당월 OTB 페이스',
+    'auto-fcst-gap': 'FCST 갭 분석',
+    'auto-prop-spread': '사업장 편차',
+    'auto-adr-yoy': 'ADR YoY 추이',
+  };
+  host.innerHTML = insights.map(it => {
+    const title = titleMap[it.id] || it.source || '인사이트';
+    const color = it.type === 'positive' ? 'var(--positive)' : it.type === 'negative' ? 'var(--negative)' : 'var(--warning)';
+    return `
+    <div class="story-block" style="border-left-color:${color}">
+      <div class="insight-tag">${(it.source||'').toUpperCase()} · ${(it.type||'').toUpperCase()}</div>
+      <h3>${title}</h3>
+      <p>${it.text || '—'}</p>
+    </div>`;
+  }).join('');
+}
+
+function renderChain(otb, rm, admin){
+  const host = document.getElementById('chain-grid');
+  if (!otb){
+    host.innerHTML = '<div class="err">otb_data.json 로드 실패</div>';
+    return;
+  }
+  // 외부 요인: RM FCST 권역별 / 외부 시그널 (sum)
+  const regions = (rm && rm.regions) || {};
+  const regionNames = Object.keys(regions).slice(0, 4);
+  const externalLi = regionNames.length
+    ? regionNames.map(rn => {
+        const months = regions[rn] || {};
+        const mk = Object.keys(months)[0] || '—';
+        const md = months[mk] || {};
+        const fcstRn = md.rm_fcst_rn || md.fcst_rn || md.rns_fcst;
+        return `<li><b>${rn}</b> ${mk} RM FCST ${fmt.num(fcstRn)}실<span class="source">rm_fcst.regions</span></li>`;
+      }).join('')
+    : '<li class="muted">RM FCST 데이터 없음</li>';
+
+  // 전략: admin_input.property_strategy (권역별)
+  const ps = (admin && admin.property_strategy) || {};
+  const stratLi = Object.keys(ps).length
+    ? Object.entries(ps).map(([k,v]) => `<li><b>${k}</b> 전략상태 <span style="color:var(--gold)">${v}</span><span class="source">admin_input.property_strategy</span></li>`).join('')
+    : '<li class="muted">전략 키인 미입력</li>';
+
+  // 지표: 전사 OTB 달성률·ADR YoY·전일 순증
+  const s = otb.summary || {};
+  const indLi = `
+    <li><b>전사 OTB 달성률</b> <span class="ach ${achClass(s.rns_achievement)}">${fmt.pct(s.rns_achievement)}</span><span class="source">otb_data.summary</span></li>
+    <li><b>FCST 달성</b> <span class="ach ${achClass(s.fcst_achievement)}">${fmt.pct(s.fcst_achievement)}</span><span class="source">otb_data.summary</span></li>
+    <li><b>ADR YoY</b> <span style="color:${(s.adr_yoy||0)>=0?'var(--positive)':'var(--negative)'}">${fmt.signed(s.adr_yoy)}</span><span class="source">otb_data.summary</span></li>
+    <li><b>전일 순증</b> <span style="color:${(s.today_net||0)>=0?'var(--positive)':'var(--negative)'}">${(s.today_net||0)>=0?'+':''}${fmt.num(s.today_net)}실</span><span class="source">otb_data.summary</span></li>
+  `;
+
+  host.innerHTML = `
+    <div class="chain-col"><h3>외부 요인</h3><ul>${externalLi}</ul></div>
+    <div class="chain-col"><h3>전략</h3><ul>${stratLi}</ul></div>
+    <div class="chain-col"><h3>모니터링 지표</h3><ul>${indLi}</ul></div>
+  `;
+}
+
+function renderProps(otb){
+  const tbl = document.getElementById('prop-tbl');
+  const props = (otb && otb.byProperty) || [];
+  if (!props.length){
+    tbl.innerHTML = '<tbody><tr><td class="empty" colspan="6">사업장 데이터 없음</td></tr></tbody>';
+    return;
+  }
+  const sorted = [...props].sort((a,b) => (b.rns_achievement||0) - (a.rns_achievement||0));
+  const head = `<thead><tr>
+    <th>사업장</th>
+    <th>Budget RN</th>
+    <th>실적 RN</th>
+    <th>달성률</th>
+    <th>YoY</th>
+    <th>FCST 달성</th>
+  </tr></thead>`;
+  const rows = sorted.map(p => `
+    <tr>
+      <td>${(p.name||'').replace(/^\d+\./,'')}</td>
+      <td>${fmt.num(p.rns_budget)}</td>
+      <td>${fmt.num(p.rns_actual)}</td>
+      <td><span class="ach ${achClass(p.rns_achievement)}">${fmt.pct(p.rns_achievement)}</span></td>
+      <td class="${(p.rns_yoy||0)>=0?'pos':'neg'}">${fmt.signed(p.rns_yoy)}</td>
+      <td><span class="ach ${achClass(p.fcst_achievement)}">${fmt.pct(p.fcst_achievement)}</span></td>
+    </tr>
+  `).join('');
+  tbl.innerHTML = head + '<tbody>' + rows + '</tbody>';
+}
+
+function renderCampaigns(camp){
+  const sumHost = document.getElementById('camp-summary');
+  const tbl = document.getElementById('camp-tbl');
+  if (!camp){
+    sumHost.innerHTML = '';
+    tbl.innerHTML = '<tbody><tr><td class="empty" colspan="6">campaign_data.json 로드 실패</td></tr></tbody>';
+    return;
+  }
+  // 요약 칩
+  const total = camp.total_campaigns || 0;
+  const summer = camp.summer_campaigns || 0;
+  const byMonth = camp.by_month || {};
+  const now = new Date();
+  const curKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const nextKey = (() => {
+    const d = new Date(now); d.setMonth(d.getMonth()+1);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  })();
+  sumHost.innerHTML = `
+    <div class="camp-pill"><div class="k">${total}</div><div class="l">전체 기획전</div></div>
+    <div class="camp-pill"><div class="k">${summer}</div><div class="l">여름 기획전</div></div>
+    <div class="camp-pill"><div class="k">${byMonth[curKey] || 0}</div><div class="l">${curKey}</div></div>
+    <div class="camp-pill"><div class="k">${byMonth[nextKey] || 0}</div><div class="l">${nextKey}</div></div>
+    <div class="camp-pill"><div class="k">${Object.keys(camp.summer_by_channel||{}).length}</div><div class="l">여름 채널 수</div></div>
+  `;
+  const detail = camp.summer_detail || [];
+  if (!detail.length){
+    tbl.innerHTML = '<tbody><tr><td class="empty" colspan="6">여름 기획전 상세 없음</td></tr></tbody>';
+    return;
+  }
+  const head = `<thead><tr>
+    <th>구분</th><th>사업장</th><th>채널</th><th>판매기간</th><th>투숙기간</th><th>상품</th>
+  </tr></thead>`;
+  const rows = detail.map(c => `
+    <tr>
+      <td>${c['구분']||'—'}</td>
+      <td>${c['사업장']||'—'}</td>
+      <td>${c['채널']||'—'}</td>
+      <td class="muted">${(c['판매시작']||'')} ~ ${(c['판매종료']||'')}</td>
+      <td class="muted">${(c['투숙시작']||'')} ~ ${(c['투숙종료']||'')}</td>
+      <td>${c['상품']||'—'}</td>
+    </tr>
+  `).join('');
+  tbl.innerHTML = head + '<tbody>' + rows + '</tbody>';
+}
+
+function renderActions(admin){
+  const host = document.getElementById('actions-grid');
+  if (!admin){
+    host.innerHTML = '<div class="err">admin_input.json 로드 실패</div>';
+    return;
+  }
+  const ps = admin.property_strategy || {};
+  const aa = admin.action_alerts || {};
+  const regions = ['vivaldi','central','south','apac'];
+  const labels = {vivaldi:'비발디',central:'중부',south:'남부',apac:'APAC'};
+  const statusClass = (st) => {
+    if (st === 'hold') return 's-hold';
+    if (st === 'active' || st === 'go') return 's-active';
+    if (st === 'watch' || st === 'caution') return 's-watch';
+    return 's-hold';
+  };
+  host.innerHTML = regions.map(rk => {
+    const status = ps[rk] || 'hold';
+    const alert = (aa[rk] || '').trim();
+    return `
+    <div class="action">
+      <div class="a-h">
+        <span class="a-region">${labels[rk]||rk}</span>
+        <span class="a-status ${statusClass(status)}">${status.toUpperCase()}</span>
+      </div>
+      <div class="${alert ? 'a-text' : 'a-empty'}">${alert || '액션 키인 미입력'}</div>
+    </div>`;
+  }).join('');
+}
+
+(async () => {
+  document.getElementById('hdr-date').textContent = todayStr();
+  const [otb, admin, camp, rm] = await Promise.all([
+    loadJSON('data/otb_data.json'),
+    loadJSON('data/admin_input.json'),
+    loadJSON('data/campaign_data.json'),
+    loadJSON('data/rm_fcst.json'),
+  ]);
+  renderMonthCards(otb);
+  renderStory(admin);
+  renderChain(otb, rm, admin);
+  renderProps(otb);
+  renderCampaigns(camp);
+  renderActions(admin);
+})();
+</script>
+</body>
+</html>
