@@ -258,8 +258,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <!-- Check 4 -->
       <div class="check-card loading" id="chk4">
         <div class="check-header"><span class="check-num">CHECK 04</span><span class="check-badge loading" id="chk4-badge">LOADING</span></div>
-        <div class="check-title">OTB Budget vs RM Budget 구조 차이</div>
-        <div class="check-desc">OTB rns_budget(온북 투숙일 Budget)과 RM budget_rn(사업계획 월간 목표) — 다른 소스이므로 비율만 표시</div>
+        <div class="check-title">실시간 실적현황 vs 우리 실적 숫자 비교</div>
+        <div class="check-desc">GS 실시간 실적현황(Excel) 숫자와 우리 DB(otb_data) 숫자를 사업장별로 비교하여 차이 도출</div>
         <div class="check-stat" id="chk4-stat"></div>
         <button class="check-detail-toggle" onclick="toggleDetail('chk4')">▸ 세부 결과 보기</button>
         <div class="check-detail" id="chk4-detail"></div>
@@ -466,7 +466,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     runCheck1();
     runCheck2();
     runCheck3();
-    runCheck4();
+    await runCheck4();
 
     // Update summary
     updateSummary();
@@ -666,51 +666,72 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('chk3-detail').innerHTML = html;
   }
 
-  /* ---- CHECK 4: OTB Budget vs RM Budget (ratio, INFO) ---- */
-  function runCheck4() {
+  /* ---- CHECK 4: 실시간 실적현황(Excel) vs 우리 DB 숫자 비교 ---- */
+  async function runCheck4() {
     const id = 'chk4';
-    if (!DATA.rm || !DATA.otb) return setCheckError(id, 'DATA MISSING');
+    // Try to load latest validation JSON
+    let valData = null;
+    const today = new Date();
+    const tryDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const ds = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      tryDates.push(ds);
+    }
+    for (const ds of tryDates) {
+      try {
+        const r = await fetch('data/validation/' + ds + '_validation.json?t=' + Date.now());
+        if (r.ok) { valData = await r.json(); break; }
+      } catch(e) {}
+    }
+    if (!valData) return setCheckError(id, '실적현황 검증 데이터 없음 (validation JSON)');
 
-    const rmProps = DATA.rm.properties;
-    const rmMonths = DATA.rm._months_covered || [];
-    const otbMonths = DATA.otb.allMonths;
-    const details = [];
-
-    rmMonths.forEach(monthKey => {
-      const monthNum = parseInt(monthKey.split('-')[1]);
-      const otbMonth = otbMonths[String(monthNum)];
-      if (!otbMonth) return;
-
-      const otbBudget = otbMonth.summary?.rns_budget || 0;
-
-      // Sum RM budget for this month
-      let rmBudgetSum = 0;
-      Object.values(rmProps).forEach(months => {
-        if (months[monthKey]) rmBudgetSum += months[monthKey].budget_rn || 0;
-      });
-
-      const ratio = otbBudget > 0 ? (rmBudgetSum / otbBudget).toFixed(2) : '—';
-      details.push({ month: monthKey, otb: otbBudget, rm: rmBudgetSum, ratio });
+    const props = valData.by_property || [];
+    let matchCount = 0, mismatchCount = 0;
+    const RN_THRESHOLD = 500; // RN 차이 허용 범위
+    props.forEach(p => {
+      const rnOk = Math.abs(p.rn_diff || 0) <= RN_THRESHOLD;
+      if (rnOk) matchCount++; else mismatchCount++;
     });
 
-    totalInfo += details.length;
-    setCheckResult(id, 'INFO', 'info', details.length, 0, true);
-    renderCheck4Detail(details);
-    checkResults.check4 = { result: 'INFO', items: details.length };
+    const cls = mismatchCount === 0 ? 'pass' : (mismatchCount <= 3 ? 'warn' : 'fail');
+    const label = mismatchCount === 0 ? 'PASS' : (mismatchCount <= 3 ? 'WARN' : 'FAIL');
+    totalMatch += matchCount; totalMismatch += mismatchCount;
+    setCheckResult(id, label, cls, matchCount, mismatchCount, false);
+    renderCheck4Detail(valData);
+    checkResults.check4 = { result: label, match: matchCount, mismatch: mismatchCount };
   }
 
-  function renderCheck4Detail(details) {
-    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>월</th><th>OTB rns_budget<br><span style="font-weight:400;color:var(--ink-faint)">(온북 투숙일 Budget)</span></th><th>RM budget_rn 합계<br><span style="font-weight:400;color:var(--ink-faint)">(사업계획 월간 목표)</span></th><th>비율<br><span style="font-weight:400;color:var(--ink-faint)">(RM/OTB)</span></th><th>비고</th></tr></thead><tbody>';
-    details.forEach(d => {
-      html += `<tr>
-        <td class="prop-col" style="text-align:center">${d.month}</td>
-        <td>${fmtNum(d.otb)}</td>
-        <td>${fmtNum(d.rm)}</td>
-        <td class="cell-yellow">${d.ratio}x</td>
-        <td style="font-size:9px;color:var(--ink-faint)">다른 소스 — 구조적 차이</td>
-      </tr>`;
+  function renderCheck4Detail(valData) {
+    const props = valData.by_property || [];
+    const RN_THRESHOLD = 500;
+    let html = '<div style="font-size:10px;color:var(--ink-muted);margin-bottom:8px;">기준일: ' + (valData.date || '—') + ' · 소스: ' + (valData.excel_file || '실시간 실적현황') + '</div>';
+    // Summary row
+    const totalRnDiff = valData.total_rn_diff || 0;
+    const totalRevDiff = valData.total_rev_diff_m || 0;
+    html += '<div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;">';
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:8px 14px;font-size:11px;"><span style="color:var(--ink-faint)">전체 RN 차이</span><br><span style="font-size:16px;font-weight:700;color:' + (Math.abs(totalRnDiff) > 5000 ? 'var(--negative)' : 'var(--gold-bright)') + '">' + (totalRnDiff > 0 ? '+' : '') + totalRnDiff.toLocaleString() + '</span><br><span style="font-size:9px;color:var(--ink-faint)">Excel ' + (valData.excel_total_rn||0).toLocaleString() + ' vs DB ' + (valData.db_total_rn||0).toLocaleString() + '</span></div>';
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:8px 14px;font-size:11px;"><span style="color:var(--ink-faint)">전체 매출 차이(백만)</span><br><span style="font-size:16px;font-weight:700;color:' + (Math.abs(totalRevDiff) > 1000 ? 'var(--negative)' : 'var(--gold-bright)') + '">' + (totalRevDiff > 0 ? '+' : '') + totalRevDiff.toLocaleString() + 'M</span><br><span style="font-size:9px;color:var(--ink-faint)">Excel ' + (valData.excel_total_rev_m||0).toLocaleString() + 'M vs DB ' + (valData.db_total_rev_m||0).toFixed(1).toLocaleString() + 'M</span></div>';
+    html += '</div>';
+    // Detail table
+    html += '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>Excel RN</th><th>DB RN</th><th>RN 차이</th><th>Excel 매출(M)</th><th>DB 매출(M)</th><th>매출 차이(M)</th><th>상태</th></tr></thead><tbody>';
+    props.forEach(p => {
+      const rnOk = Math.abs(p.rn_diff || 0) <= RN_THRESHOLD;
+      const diffColor = (p.rn_diff||0) > 0 ? 'color:var(--positive)' : ((p.rn_diff||0) < 0 ? 'color:var(--negative)' : '');
+      const revDiffColor = (p.rev_diff_m||0) > 0 ? 'color:var(--positive)' : ((p.rev_diff_m||0) < 0 ? 'color:var(--negative)' : '');
+      html += '<tr>';
+      html += '<td class="prop-col">' + (p.excel_property || p.db_property) + '</td>';
+      html += '<td>' + fmtNum(p.excel_rn) + '</td>';
+      html += '<td>' + fmtNum(p.db_rn) + '</td>';
+      html += '<td style="' + diffColor + '">' + (p.rn_diff > 0 ? '+' : '') + fmtNum(p.rn_diff) + '</td>';
+      html += '<td>' + fmtNum(p.excel_rev_m) + '</td>';
+      html += '<td>' + (p.db_rev_m||0).toFixed(1) + '</td>';
+      html += '<td style="' + revDiffColor + '">' + (p.rev_diff_m > 0 ? '+' : '') + (p.rev_diff_m||0).toFixed(1) + '</td>';
+      html += '<td>' + (rnOk ? '<span class="status-pass">✅</span>' : '<span class="status-fail">❌ 차이 ' + Math.abs(p.rn_diff).toLocaleString() + '</span>') + '</td>';
+      html += '</tr>';
     });
     html += '</tbody></table></div>';
+    if (valData.notes) html += '<div style="font-size:9px;color:var(--ink-faint);margin-top:6px;padding-left:4px;">' + valData.notes + '</div>';
     document.getElementById('chk4-detail').innerHTML = html;
   }
 

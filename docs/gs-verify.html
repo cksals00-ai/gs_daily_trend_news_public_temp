@@ -460,13 +460,13 @@ input, button, select, table, th, td {
 
       <!-- CHECK 04 -->
       <div style="margin-bottom:0;">
-        <div style="font-size:12px;font-weight:700;color:var(--gold-bright);margin-bottom:6px;font-family:var(--mono);">CHECK 04 — 실시간 실적현황(온북) vs OTB 리포트 숫자 일치</div>
+        <div style="font-size:12px;font-weight:700;color:var(--gold-bright);margin-bottom:6px;font-family:var(--mono);">CHECK 04 — 실시간 실적현황(Excel) vs 우리 DB 숫자 비교</div>
         <div class="check-item">
-          <span class="check-label">otb_data.json 사업장별 RN·Revenue vs OTB 리포트 화면 표시값 교차 검증</span>
+          <span class="check-label">GS 실시간 실적현황 Excel 숫자 vs 우리 DB(otb_data) 사업장별 RN·매출 교차 비교</span>
           <span class="check-status" id="xcheck-04-status"><span class="status-warn">⏳ 로딩</span></span>
         </div>
         <table class="v-table" id="xcheck-04-table" style="margin-top:10px;display:none;">
-          <thead><tr><th>사업장</th><th>JSON RN</th><th>JSON Revenue</th><th>합계 기여 RN</th><th>합계 기여 Revenue</th><th>상태</th></tr></thead>
+          <thead><tr><th>사업장</th><th>Excel RN</th><th>DB RN</th><th>RN 차이</th><th>Excel 매출(M)</th><th>DB 매출(M)</th><th>매출 차이(M)</th><th>상태</th></tr></thead>
           <tbody id="xcheck-04-body"></tbody>
         </table>
         <div id="xcheck-04-summary" style="font-size:11px;color:var(--ink-faint);padding-left:10px;margin-top:6px;"></div>
@@ -1088,69 +1088,71 @@ function runCrossChecks(data) {
   document.getElementById('xcheck-03-detail').textContent =
     'JSON ADR: ' + adrActual.toLocaleString() + '원 / 계산값(Rev÷RN): ' + adrCalc.toLocaleString() + '원 (차이: ' + adrDiff + '원)';
 
-  // CHECK 04: 실시간 실적현황(온북) vs OTB 리포트 숫자 일치
-  // 사업장별 RN/Revenue가 합계에 정확히 기여하는지 + 개별 값 유효성
-  var tbody04 = document.getElementById('xcheck-04-body');
-  tbody04.innerHTML = '';
-  document.getElementById('xcheck-04-table').style.display = '';
+  // CHECK 04: 실시간 실적현황(Excel) vs 우리 DB 숫자 비교
+  (async function() {
+    var tbody04 = document.getElementById('xcheck-04-body');
+    tbody04.innerHTML = '';
+    var valData = null;
+    var today = new Date();
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(today); d.setDate(d.getDate() - i);
+      var ds = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+      try {
+        var r = await fetch('data/validation/' + ds + '_validation.json?t=' + Date.now());
+        if (r.ok) { valData = await r.json(); break; }
+      } catch(e) {}
+    }
+    if (!valData || !valData.by_property) {
+      document.getElementById('xcheck-04-status').innerHTML = '<span class="status-warn">⏳ 검증 데이터 없음</span>';
+      document.getElementById('xcheck-04-summary').textContent = 'validation JSON 파일을 찾을 수 없습니다.';
+      return;
+    }
+    document.getElementById('xcheck-04-table').style.display = '';
+    var RN_THRESHOLD = 500;
+    var allMatch04 = true;
+    var issueCount = 0;
+    valData.by_property.forEach(function(p) {
+      var rnDiff = p.rn_diff || 0;
+      var revDiff = p.rev_diff_m || 0;
+      var rnOk = Math.abs(rnDiff) <= RN_THRESHOLD;
+      if (!rnOk) { allMatch04 = false; issueCount++; }
+      var diffColor = rnDiff > 0 ? 'color:#4caf6f' : (rnDiff < 0 ? 'color:#ef5350' : '');
+      var revColor = revDiff > 0 ? 'color:#4caf6f' : (revDiff < 0 ? 'color:#ef5350' : '');
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td style="font-weight:600">' + (p.excel_property || p.db_property || '—') + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right">' + (p.excel_rn||0).toLocaleString() + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right">' + (p.db_rn||0).toLocaleString() + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right;' + diffColor + '">' + (rnDiff>0?'+':'') + rnDiff.toLocaleString() + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right">' + (p.excel_rev_m||0).toLocaleString() + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right">' + (p.db_rev_m||0).toFixed(1) + '</td>' +
+        '<td style="font-family:var(--mono);text-align:right;' + revColor + '">' + (revDiff>0?'+':'') + revDiff.toFixed(1) + '</td>' +
+        '<td>' + (rnOk ? '<span class="status-pass">✅</span>' : '<span class="status-fail">❌</span>') + '</td>';
+      tbody04.appendChild(tr);
+    });
+    // 합계 행
+    var trTotal = document.createElement('tr');
+    trTotal.style.background = 'var(--bg-deep)';
+    trTotal.style.fontWeight = '700';
+    var totalRnDiff = valData.total_rn_diff || 0;
+    var totalRevDiff = valData.total_rev_diff_m || 0;
+    trTotal.innerHTML =
+      '<td style="color:var(--gold-bright)">합계</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (valData.excel_total_rn||0).toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (valData.db_total_rn||0).toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (totalRnDiff>0?'+':'') + totalRnDiff.toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (valData.excel_total_rev_m||0).toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (valData.db_total_rev_m||0).toFixed(1) + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + (totalRevDiff>0?'+':'') + totalRevDiff.toFixed(1) + '</td>' +
+      '<td></td>';
+    tbody04.appendChild(trTotal);
 
-  var allMatch04 = true;
-  var issueCount = 0;
-  var runningRN = 0;
-  var runningRev = 0;
-
-  props.forEach(function(p) {
-    var pRN = p.rns_actual || 0;
-    var pRev = p.rev_actual || 0;
-    runningRN += pRN;
-    runningRev += pRev;
-
-    // 각 사업장의 ADR 정합성도 체크
-    var pAdr = p.adr_actual || 0;
-    var pAdrCalc = pRN > 0 ? Math.round(pRev / pRN) : 0;
-    var pAdrOk = pRN === 0 || Math.abs(pAdr - pAdrCalc) <= 1;
-
-    // 값이 음수이거나 비정상인 경우 체크
-    var valueOk = pRN >= 0 && pRev >= 0;
-    var rowOk = pAdrOk && valueOk;
-    if (!rowOk) { allMatch04 = false; issueCount++; }
-
-    var statusHtml = rowOk
-      ? '<span class="status-pass">✅</span>'
-      : '<span class="status-fail">❌' + (!pAdrOk ? ' ADR 불일치' : '') + (!valueOk ? ' 음수값' : '') + '</span>';
-
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td style="font-weight:600">' + escHtml(p.name || p.region || '—') + '</td>' +
-      '<td style="font-family:var(--mono);text-align:right">' + pRN.toLocaleString() + '</td>' +
-      '<td style="font-family:var(--mono);text-align:right">' + pRev.toLocaleString() + '</td>' +
-      '<td style="font-family:var(--mono);text-align:right;color:var(--ink-faint)">' + runningRN.toLocaleString() + '</td>' +
-      '<td style="font-family:var(--mono);text-align:right;color:var(--ink-faint)">' + runningRev.toLocaleString() + '</td>' +
-      '<td>' + statusHtml + '</td>';
-    tbody04.appendChild(tr);
-  });
-
-  // 합계 일치 행
-  var totalRowMatch = (runningRN === totalRN && runningRev === totalRev);
-  if (!totalRowMatch) { allMatch04 = false; }
-  var trTotal = document.createElement('tr');
-  trTotal.style.background = 'var(--bg-deep)';
-  trTotal.style.fontWeight = '700';
-  trTotal.innerHTML =
-    '<td style="color:var(--gold-bright)">합계 검증</td>' +
-    '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + runningRN.toLocaleString() + '</td>' +
-    '<td style="font-family:var(--mono);text-align:right;color:var(--gold-bright)">' + runningRev.toLocaleString() + '</td>' +
-    '<td style="font-family:var(--mono);text-align:right">= ' + totalRN.toLocaleString() + '</td>' +
-    '<td style="font-family:var(--mono);text-align:right">= ' + totalRev.toLocaleString() + '</td>' +
-    '<td>' + (totalRowMatch ? '<span class="status-pass">✅ 합계 일치</span>' : '<span class="status-fail">❌ 합계 불일치</span>') + '</td>';
-  tbody04.appendChild(trTotal);
-
-  document.getElementById('xcheck-04-status').innerHTML = allMatch04
-    ? '<span class="status-pass">✅ 전체 일치 (' + props.length + '개 사업장)</span>'
-    : '<span class="status-fail">❌ ' + issueCount + '건 불일치</span>';
-  document.getElementById('xcheck-04-summary').textContent =
-    '검증 대상: ' + props.length + '개 사업장 · RN 합계: ' + runningRN.toLocaleString() +
-    ' · Revenue 합계: ' + runningRev.toLocaleString() + '원';
+    document.getElementById('xcheck-04-status').innerHTML = allMatch04
+      ? '<span class="status-pass">✅ 전체 일치 (RN ±' + RN_THRESHOLD + ' 이내)</span>'
+      : '<span class="status-fail">❌ ' + issueCount + '건 차이 (RN ±' + RN_THRESHOLD + ' 초과)</span>';
+    document.getElementById('xcheck-04-summary').textContent =
+      '기준: ' + (valData.date||'—') + ' · ' + (valData.excel_file||'실시간 실적현황') + ' · ' + valData.by_property.length + '개 사업장';
+  })();
 }
 
 /* ───── NEW UI CHECKS (from verify_log) ───── */
