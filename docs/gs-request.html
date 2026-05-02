@@ -274,35 +274,21 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
         <input type="text" class="form-input" id="reqName" placeholder="이름 입력">
       </div>
       <div class="form-group">
-        <label class="form-label">사업장</label>
-        <select class="form-select" id="reqProp">
+        <label class="form-label">세그먼트</label>
+        <select class="form-select" id="reqSeg">
           <option value="">선택</option>
-          <option>비발디파크</option>
-          <option>소노캄 고양</option>
-          <option>소노캄 여수</option>
-          <option>소노캄 거제</option>
-          <option>소노캄 제주</option>
-          <option>소노벨 비발디파크</option>
-          <option>소노벨 천안</option>
-          <option>소노벨 변산</option>
-          <option>소노벨 거제</option>
-          <option>소노벨 제주</option>
-          <option>소노펠리체 비발디파크</option>
-          <option>소노펠리체 천안</option>
-          <option>소노문 단양</option>
-          <option>소노문 해운대</option>
-          <option>델피노</option>
-          <option>마리나</option>
-          <option>트리니티</option>
-          <option>기타</option>
+          <option value="OTA">OTA</option>
+          <option value="G-OTA">G-OTA</option>
+          <option value="Inbound">Inbound</option>
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">요청 카테고리</label>
         <select class="form-select" id="reqCat">
           <option value="">선택</option>
-          <option value="가격조정">가격조정</option>
-          <option value="특별요청">특별요청</option>
+          <option value="시스템오류">시스템오류</option>
+          <option value="자료요청">자료요청</option>
+          <option value="지표오류">지표오류</option>
           <option value="기타">기타</option>
         </select>
       </div>
@@ -356,15 +342,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
   window.submitRequest = function(){
     var name = document.getElementById('reqName').value.trim();
-    var prop = document.getElementById('reqProp').value;
+    var seg = document.getElementById('reqSeg').value;
     var cat = document.getElementById('reqCat').value;
     var content = document.getElementById('reqContent').value.trim();
-    if(!name||!prop||!cat||!content){alert('모든 항목을 입력해 주세요.');return;}
+    if(!name||!seg||!cat||!content){alert('모든 항목을 입력해 주세요.');return;}
     var data = loadData();
     var req = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2,4),
       name: name,
-      property: prop,
+      segment: seg,
       category: cat,
       content: content,
       status: '대기중',
@@ -452,7 +438,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       html += '<div class="req-header">';
       html += '<div class="req-meta">';
       html += '<span class="req-name">'+esc(r.name)+'</span>';
-      html += '<span class="req-prop">'+esc(r.property)+'</span>';
+      html += '<span class="req-prop">'+esc(r.segment||r.property||'')+'</span>';
       html += '<span class="req-cat">'+esc(r.category)+'</span>';
       html += '<span class="req-date">'+fmtDate(r.created)+'</span>';
       html += '</div>';
