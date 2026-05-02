@@ -640,6 +640,8 @@ function renderHeaderContext(){
 }
 
 // 주간 픽업 — db_aggregated.net_daily_by_month[targetMonth] 의 최근 7일 net_rn 합
+// 사업장 필터 시 net_daily_by_month 에는 사업장 차원이 없으므로
+// 사업장의 월 stay-actual 비중으로 proxy 분배
 function getWeeklyPickup(){
   if (!DATA.db) return null;
   const ndm = DATA.db.net_daily_by_month || {};
@@ -647,31 +649,66 @@ function getWeeklyPickup(){
   const md = ndm[target];
   if (!md) return null;
   const today = new Date();
-  let sum = 0, daysWithData = 0;
+  let totalSum = 0, daysWithData = 0;
   for (let i = 0; i < 7; i++){
     const d = new Date(today); d.setDate(d.getDate() - i);
     const k = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
     if (md[k]){
-      sum += md[k].net_rn || 0;
+      totalSum += md[k].net_rn || 0;
       daysWithData++;
     }
   }
-  return { sum, daysWithData };
+  // 사업장 필터 적용 (proxy 분배)
+  let sum = totalSum;
+  let propShare = null;
+  if (STATE.prop !== 'ALL' && DATA.otb){
+    const monthSnap = (DATA.otb.allMonths || {})[String(STATE.month)] || {};
+    const props = monthSnap.byProperty || [];
+    const totalActual = props.reduce((a, p) => a + (p.rns_actual || 0), 0);
+    const propEntry = props.find(p => p.name === STATE.prop);
+    if (propEntry && totalActual > 0){
+      const propActual = propEntry.rns_actual || 0;
+      propShare = propActual / totalActual;
+      sum = Math.round(totalSum * propShare);
+    } else {
+      sum = 0;
+    }
+  }
+  // 권역 필터 (사업장 ALL 일 때만)
+  if (STATE.prop === 'ALL' && STATE.region !== 'ALL' && DATA.otb){
+    const monthSnap = (DATA.otb.allMonths || {})[String(STATE.month)] || {};
+    const props = monthSnap.byProperty || [];
+    const totalActual = props.reduce((a, p) => a + (p.rns_actual || 0), 0);
+    const regionActual = props.filter(p => p.region === STATE.region).reduce((a, p) => a + (p.rns_actual || 0), 0);
+    if (totalActual > 0){
+      propShare = regionActual / totalActual;
+      sum = Math.round(totalSum * propShare);
+    }
+  }
+  return { sum, daysWithData, total: totalSum, share: propShare };
 }
 
-// FCST 전주비 — rm_fcst_trend 의 마지막 2개 5월 스냅샷 비교
+// FCST 전주비 — rm_fcst_trend 의 마지막 2개 스냅샷 비교
+// 사업장 필터: properties[prop] 직접 사용 / 권역 필터: 권역 사업장 합산
 function getFcstWoW(){
   if (!DATA.fcstTrend) return null;
   const snaps = DATA.fcstTrend.snapshots || [];
   const target = '2026-' + String(STATE.month).padStart(2,'0');
   const usePropertyLevel = STATE.prop !== 'ALL';
+  // 권역 필터링 위해 사업장→권역 매핑 (otb_data.byProperty)
+  const propRegionMap = {};
+  if (DATA.otb && STATE.region !== 'ALL' && !usePropertyLevel){
+    (DATA.otb.byProperty || []).forEach(p => { propRegionMap[p.name] = p.region; });
+  }
   const totalFcst = (s) => {
     if (usePropertyLevel){
       const md = (s.properties[STATE.prop] || {})[target];
       return md ? (md.rm_fcst_rn || 0) : null;
     }
     let t = 0, has = false;
-    for (const p of Object.values(s.properties || {})){
+    for (const [pname, p] of Object.entries(s.properties || {})){
+      // 권역 필터 시 해당 권역 사업장만 합산
+      if (STATE.region !== 'ALL' && propRegionMap[pname] !== STATE.region) continue;
       const md = p[target];
       if (md){ t += md.rm_fcst_rn || 0; has = true; }
     }
@@ -739,7 +776,14 @@ function renderKPI(){
   if (wp){
     wpV.textContent = (wp.sum >= 0 ? '+' : '') + fmt.num(wp.sum) + '실';
     wpV.className = 'v ' + (wp.sum >= 0 ? 'pos' : 'neg');
-    wpSub.textContent = `${STATE.month}월 stay · 최근 ${wp.daysWithData}일 booking date 합산`;
+    let sub = `${STATE.month}월 stay · 최근 ${wp.daysWithData}일 booking date 합산`;
+    if (STATE.prop !== 'ALL' && wp.share != null){
+      // 사업장 필터 시 비중 분배 명시
+      sub = `${STATE.prop.replace(/^\d+\./,'')} 추정 · 전사 ${fmt.num(wp.total)}실 × ${(wp.share * 100).toFixed(1)}% 분배`;
+    } else if (STATE.region !== 'ALL' && wp.share != null){
+      sub = `${STATE.region} 권역 · 전사 ${fmt.num(wp.total)}실 × ${(wp.share * 100).toFixed(1)}% 분배`;
+    }
+    wpSub.textContent = sub;
   } else {
     wpV.textContent = '—'; wpV.className = 'v'; wpSub.textContent = '데이터 없음';
   }
