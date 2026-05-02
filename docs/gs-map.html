@@ -282,6 +282,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <div class="cat-count">PINNED</div>
     </div>
     <div class="bento">
+      <a href="strategy-keyin.html" class="bento-card bento-primary">
+        <span class="bento-tag tag-gold">STRATEGY</span>
+        <span class="bento-icon">🎯</span>
+        <span class="bento-title">전략 키인</span>
+        <span class="bento-desc">월별 전략 입력 · AI 제안 검토</span>
+      </a>
+
       <a href="admin.html" class="bento-card bento-primary">
         <span class="bento-tag tag-gold">ADMIN</span>
         <span class="bento-icon">🔑</span>
@@ -465,9 +472,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     <div class="cat-head">
       <div class="cat-accent" style="background:var(--cyan)"></div>
       <div class="cat-title">관리 도구</div>
-      <div class="cat-count">9 PAGES</div>
+      <div class="cat-count">10 PAGES</div>
     </div>
     <div class="link-grid">
+      <a href="strategy-keyin.html" class="link-item">
+        <div class="link-icon admin">🎯</div>
+        <div class="link-info"><div class="link-name">전략 키인</div><div class="link-desc">월별 전략 입력 · AI 제안 검토 · 영업기획 전용</div></div>
+        <span class="link-arrow">→</span>
+      </a>
       <a href="admin.html" class="link-item">
         <div class="link-icon admin">🔑</div>
         <div class="link-info"><div class="link-name">관리자 키인</div><div class="link-desc">시스템 데이터 관리 및 입력</div></div>
@@ -554,11 +566,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 (function(){
   var files = [
     {label:'OTB / YoY 데이터', url:'data/otb_data.json', key:'meta.refreshTime'},
-    {label:'RM FCST 데이터', url:'data/rm_fcst.json', key:'_generated'},
+    {label:'RM FCST 데이터', url:'data/rm_fcst.json', key:'_extracted_at'},
     {label:'FCST 추이 (PDF 파싱)', url:'data/rm_fcst_trend.json', key:'_generated'},
     {label:'OCC 데이터', url:'data/occ_data.json', key:'_generated'},
-    {label:'Daily Booking', url:'data/daily_booking.json', key:'_generated'},
-    {label:'DB 집계 데이터', url:'data/db_aggregated.json', key:'_generated'}
+    {label:'Daily Booking', url:'data/daily_booking.json', key:'meta.report_date'},
+    {label:'DB 집계 (온북 파싱)', url:'data/db_aggregated.json', key:'generated_at'}
   ];
   var grid = document.getElementById('ds-grid');
   if(!grid) return;
@@ -581,7 +593,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     fetch(f.url + '?t=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
-        var ts = d ? (deepGet(d, f.key) || d._generated || d._extracted_at || d._timestamp || d.generated || null) : null;
+        var ts = d ? (deepGet(d, f.key)
+                      || d._generated || d._extracted_at || d._timestamp
+                      || d.generated || d.generated_at
+                      || deepGet(d, 'meta.refreshTime') || deepGet(d, 'meta.report_date')
+                      || null) : null;
         results[i] = {label:f.label, ts:ts, file:f.url.split('/').pop(), ok:!!ts};
       })
       .catch(function(){ results[i] = {label:f.label, ts:null, file:f.url.split('/').pop(), ok:false}; })
@@ -595,7 +611,18 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     var now = Date.now();
     grid.innerHTML = results.map(function(r){
       if(!r) return '';
-      function parseTS(s) { if(!s) return null; s = s.replace(/\s*KST\s*$/i,''); var m = s.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]); return new Date(s); }
+      function parseTS(s) {
+        if(!s) return null;
+        s = String(s).replace(/\s*KST\s*$/i,'');
+        // 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD HH:MM:SS'
+        var m = s.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+        if(m) return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));
+        // Date only: 'YYYY-MM-DD'
+        var d2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if(d2) return new Date(+d2[1],+d2[2]-1,+d2[3]);
+        var dt = new Date(s);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
       var parsedTs = parseTS(r.ts);
       var age = parsedTs && !isNaN(parsedTs.getTime()) ? (now - parsedTs.getTime()) : Infinity;
       var fresh = age < 86400000 * 2; // 2일 이내
