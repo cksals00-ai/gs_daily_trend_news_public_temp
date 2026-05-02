@@ -255,9 +255,23 @@
   .strategy-row .stargets .tg{background:var(--bg-soft);padding:3px 8px;border-radius:3px;color:var(--ink-muted)}
   .strategy-row .stargets .tg b{color:var(--positive);font-weight:700}
 
-  /* RM FCST 추이 차트 */
-  .fcst-chart-wrap{position:relative;height:280px;padding:8px 4px 0;background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px}
-  .fcst-legend-note{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);align-items:center}
+  /* RM FCST 추이 차트 — 세그먼트별 mini chart 5개 (스케일 차이 해결) */
+  .fcst-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .fcst-mini{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column}
+  .fcst-mini.tier-bad{border-left:3px solid var(--negative)}
+  .fcst-mini.tier-warn{border-left:3px solid var(--warning)}
+  .fcst-mini.tier-good{border-left:3px solid var(--positive)}
+  .fcst-mini-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:6px}
+  .fcst-mini-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--gold-bright)}
+  .fcst-mini-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+  .fcst-mini-meta .pos{color:var(--positive);font-weight:700}
+  .fcst-mini-meta .neg{color:var(--negative);font-weight:700}
+  .fcst-mini-canvas{position:relative;height:120px;margin-top:4px}
+  .fcst-mini-foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-muted);margin-top:5px;padding-top:5px;border-top:1px dashed var(--rule)}
+  .fcst-mini-foot b{color:var(--gold-bright);font-weight:700}
+  /* 기존 단일 차트 (사용 안 함, hidden) */
+  .fcst-chart-wrap{display:none}
+  .fcst-legend-note{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);align-items:center}
   .fcst-legend-note .lg{display:inline-flex;align-items:center;gap:5px}
   .fcst-legend-note .swatch{width:14px;height:3px;border-radius:1px;display:inline-block}
   .fcst-legend-note .swatch.dashed{height:0;border-top:2px dashed var(--gold)}
@@ -322,8 +336,7 @@
     </button>
   </div>
 </nav>
-
-<header class="masthead">
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='gsmap')hit=h.indexOf('gs-map.html')!==-1;else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend.html')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;if(hit)a.classList.add('active');});})();</script><header class="masthead">
   <div class="masthead-inner">
     <div class="logo-wrap">
       <span class="logo-mark">SONO</span>
@@ -450,15 +463,11 @@
 
     <section class="card">
       <h2><span class="num">6</span> RM FCST 추이 (Budget vs Forecast)</h2>
-      <div class="sub" id="fcst-sub">RM 미팅 PDF 스냅샷 시계열 — 5개 라인: 전체(properties 합)/GS전체(OTA+G-OTA+Inb)/OTA/G-OTA/Inbound + Budget 점선</div>
-      <div class="fcst-chart-wrap"><canvas id="fcst-trend-chart"></canvas></div>
+      <div class="sub" id="fcst-sub">RM 미팅 PDF 스냅샷 시계열 — 세그먼트별 5개 mini chart (자체 스케일 → 변화량 명확) · 점선=Budget · 실선=FCST</div>
+      <div class="fcst-mini-grid" id="fcst-mini-grid"></div>
       <div class="fcst-legend-note">
-        <span class="lg"><span class="swatch dashed"></span>Budget(전체)</span>
-        <span class="lg"><span class="swatch" style="background:#e6b970"></span>전체 FCST</span>
-        <span class="lg"><span class="swatch" style="background:#c9a063"></span>GS전체 (OTA+G-OTA+Inb)</span>
-        <span class="lg"><span class="swatch" style="background:#5a9fc4"></span>OTA</span>
-        <span class="lg"><span class="swatch" style="background:#a855f7"></span>G-OTA</span>
-        <span class="lg"><span class="swatch" style="background:#4caf6f"></span>Inbound</span>
+        <span class="lg"><span class="swatch dashed"></span>Budget</span>
+        <span class="lg"><span class="swatch" style="background:#e6b970"></span>FCST 라인</span>
         <span style="margin-left:auto" id="fcst-snap-meta"></span>
       </div>
     </section>
@@ -1231,126 +1240,109 @@ function renderFcstTrend(){
   });
 
   const meta = document.getElementById('fcst-snap-meta');
+  const grid = document.getElementById('fcst-mini-grid');
   if (!series.length){
-    if (_fcstChart) { _fcstChart.destroy(); _fcstChart = null; }
-    document.getElementById('fcst-trend-chart').getContext('2d').clearRect(0,0,2000,1000);
+    // 모든 mini chart 정리
+    Object.values(_fcstMiniCharts || {}).forEach(c => c && c.destroy());
+    _fcstMiniCharts = {};
+    if (grid) grid.innerHTML = '<div class="empty" style="grid-column:1/-1">선택 월 RM FCST 스냅샷 없음</div>';
     if (meta) meta.textContent = `${targetMonth} 스냅샷 없음`;
     return;
   }
   const last12 = series.slice(-12);
   const labels = last12.map(x => x.date);
+  const lastSnap = last12[last12.length - 1];
   const segColors = { 'OTA': '#5a9fc4', 'G-OTA': '#a855f7', 'Inbound': '#4caf6f' };
 
-  const datasets = [];
-  // Budget 점선 (RM PDF — 215,280실 · 회사 권역 합산)
-  const lastSnap = last12[last12.length - 1];
-  datasets.push({
-    label: 'Budget(RM PDF · 회사 권역 합산)',
-    data: last12.map(x => x.totalBudget),
-    borderColor: '#c9a063',
-    borderDash: [6, 4],
-    borderWidth: 2,
-    pointRadius: 0,
-    fill: false,
-    tension: 0
-  });
-  // Budget 점선 2 — otb_data (GS 운영) 64,017실 — 사업장 ALL 일 때만
-  if (!usePropertyLevel && DATA.otb){
-    const otbBudget = ((DATA.otb.allMonths || {})[String(STATE.month)] || {}).summary || {};
-    const otbBudgetRn = otbBudget.rns_budget;
-    if (otbBudgetRn){
-      datasets.push({
-        label: 'Budget(otb_data · GS 운영)',
-        data: last12.map(() => otbBudgetRn),
-        borderColor: '#7a8794',
-        borderDash: [3, 4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-        tension: 0
-      });
+  // 5 mini chart 정의: 각각 자체 스케일 + Budget(점선) + FCST(실선)
+  const miniSpecs = [
+    { key: 'total', title: '전체 (RM PDF)', color: '#e6b970',
+      fcst: x => x.totalFcst, budget: x => x.totalBudget },
+    { key: 'gs', title: 'GS전체 (OTA+G-OTA+Inb)', color: '#c9a063',
+      fcst: x => segNames.reduce((a, sn) => a + ((x.segments[sn] || {}).rm_fcst_rn || 0), 0),
+      budget: x => segNames.reduce((a, sn) => a + ((x.segments[sn] || {}).rm_budget_rn || 0), 0) },
+    { key: 'OTA', title: 'OTA', color: segColors.OTA,
+      fcst: x => (x.segments.OTA || {}).rm_fcst_rn || 0,
+      budget: x => (x.segments.OTA || {}).rm_budget_rn || 0 },
+    { key: 'G-OTA', title: 'G-OTA', color: segColors['G-OTA'],
+      fcst: x => (x.segments['G-OTA'] || {}).rm_fcst_rn || 0,
+      budget: x => (x.segments['G-OTA'] || {}).rm_budget_rn || 0 },
+    { key: 'Inbound', title: 'Inbound (여행사)', color: segColors.Inbound,
+      fcst: x => (x.segments.Inbound || {}).rm_fcst_rn || 0,
+      budget: x => (x.segments.Inbound || {}).rm_budget_rn || 0 },
+  ];
+
+  // 각 spec 별 카드 + canvas DOM 생성
+  grid.innerHTML = miniSpecs.map(spec => {
+    const lastF = spec.fcst(lastSnap);
+    const lastB = spec.budget(lastSnap);
+    const gap = lastB > 0 ? ((lastF - lastB) / lastB * 100) : null;
+    const gapText = gap == null ? '—' : (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+    const tier = gap == null ? '' : (gap >= 0 ? 'tier-good' : gap > -5 ? 'tier-warn' : 'tier-bad');
+    const gapClass = gap == null ? '' : (gap >= 0 ? 'pos' : 'neg');
+    let wow = '';
+    if (last12.length >= 2){
+      const prev = last12[last12.length - 2];
+      const prevF = spec.fcst(prev);
+      const delta = lastF - prevF;
+      const dPct = prevF ? (delta / prevF * 100) : 0;
+      const sign = delta >= 0 ? '+' : '';
+      wow = `<span class="${delta >= 0 ? 'pos' : 'neg'}">${sign}${Math.round(delta).toLocaleString()} (${sign}${dPct.toFixed(1)}%)</span>`;
     }
-  }
-  // 전체 FCST (properties 합)
-  datasets.push({
-    label: '전체 FCST',
-    data: last12.map(x => x.totalFcst),
-    borderColor: '#e6b970',
-    backgroundColor: 'rgba(230,185,112,0.10)',
-    borderWidth: 3,
-    pointRadius: 3,
-    fill: false,
-    tension: 0.25
-  });
-  // GS전체 (OTA+G-OTA+Inbound segments 합산)
-  const gsTotalSeries = last12.map(x => segNames.reduce((a, sn) => a + ((x.segments[sn] || {}).rm_fcst_rn || 0), 0));
-  datasets.push({
-    label: 'GS전체 FCST',
-    data: gsTotalSeries,
-    borderColor: '#c9a063',
-    borderWidth: 2,
-    pointRadius: 2,
-    fill: false,
-    tension: 0.25
-  });
-  segNames.forEach(sn => {
-    datasets.push({
-      label: sn + ' FCST',
-      data: last12.map(x => (x.segments[sn] || {}).rm_fcst_rn || 0),
-      borderColor: segColors[sn],
-      backgroundColor: segColors[sn] + '22',
-      borderWidth: 1.6,
-      pointRadius: 2,
-      fill: false,
-      tension: 0.25
+    return `
+      <div class="fcst-mini ${tier}">
+        <div class="fcst-mini-h">
+          <span class="fcst-mini-title">${spec.title}</span>
+          <span class="fcst-mini-meta">전주비 ${wow}</span>
+        </div>
+        <div class="fcst-mini-canvas"><canvas id="fcst-mini-${spec.key}"></canvas></div>
+        <div class="fcst-mini-foot">
+          <span>F <b>${Math.round(lastF).toLocaleString()}</b> / B ${Math.round(lastB).toLocaleString()}</span>
+          <span class="${gapClass}" style="font-weight:700">${gapText}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 각 spec 별 Chart.js 인스턴스 생성
+  if (!window._fcstMiniCharts) window._fcstMiniCharts = {};
+  const charts = window._fcstMiniCharts;
+  miniSpecs.forEach(spec => {
+    if (charts[spec.key]) charts[spec.key].destroy();
+    const ctx = document.getElementById(`fcst-mini-${spec.key}`).getContext('2d');
+    const fcstSeries = last12.map(spec.fcst);
+    const budgetSeries = last12.map(spec.budget);
+    charts[spec.key] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Budget', data: budgetSeries, borderColor: '#c9a063', borderDash: [4, 3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0 },
+          { label: 'FCST', data: fcstSeries, borderColor: spec.color, backgroundColor: spec.color + '22', borderWidth: 2.5, pointRadius: 2.5, fill: true, tension: 0.25 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: 'index', callbacks: { label: c => c.dataset.label + ' ' + Math.round(c.raw).toLocaleString() + '실' } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 8 }, maxRotation: 35, minRotation: 35, autoSkip: true, maxTicksLimit: 6 } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxTicksLimit: 4, callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v } }
+        }
+      }
     });
   });
 
-  if (_fcstChart) _fcstChart.destroy();
-  const ctx = document.getElementById('fcst-trend-chart').getContext('2d');
-  _fcstChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          mode: 'index',
-          callbacks: {
-            label: c => c.dataset.label + ' ' + Math.round(c.raw).toLocaleString() + '실'
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false, color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxRotation: 45, minRotation: 45 }
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: v => v.toLocaleString() }
-        }
-      }
-    }
-  });
-
-  // Caption + 전주비 (마지막 vs 직전 스냅샷)
-  const lastTotal = lastSnap.totalFcst;
-  const lastBud = lastSnap.totalBudget;
-  const gap = lastBud > 0 ? ((lastTotal - lastBud) / lastBud * 100) : null;
-  const gapText = gap == null ? '—' : (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
-  let wowText = '';
-  if (last12.length >= 2){
-    const prev = last12[last12.length - 2];
-    const delta = lastTotal - prev.totalFcst;
-    const deltaPct = prev.totalFcst ? (delta / prev.totalFcst * 100) : 0;
-    const sign = delta >= 0 ? '+' : '';
-    const color = delta >= 0 ? 'var(--positive)' : 'var(--negative)';
-    wowText = ` · <span style="color:${color};font-weight:700">전주비 ${sign}${Math.round(delta).toLocaleString()}실 (${sign}${deltaPct.toFixed(1)}%)</span>`;
+  // 종합 캡션
+  if (meta){
+    const lastTotal = lastSnap.totalFcst;
+    const lastBud = lastSnap.totalBudget;
+    const gap = lastBud > 0 ? ((lastTotal - lastBud) / lastBud * 100) : null;
+    const gapText = gap == null ? '—' : (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+    meta.innerHTML = `최신 ${labels[labels.length-1]} · 전체 FCST ${Math.round(lastTotal).toLocaleString()}실 / Budget ${Math.round(lastBud).toLocaleString()}실 (${gapText}) · ${last12.length}개 스냅샷`;
   }
-  if (meta) meta.innerHTML = `최신 ${labels[labels.length-1]} · 전체 FCST ${Math.round(lastTotal).toLocaleString()}실 / Budget ${Math.round(lastBud).toLocaleString()}실 (${gapText})${wowText}`;
 }
 
 // === Section 2: 채널 × 사업장 KPI 추이 진단 ===
@@ -1424,8 +1416,9 @@ function renderKpiDiagnosis(){
       else if (gap != null && gap >= 3) action = `G-OTA 초과 — 가격 마진 확보, 패키지 단가 5% 상향 검토.`;
       else action = `G-OTA 안정 — 카카오메이커스/티딜 분기 1회 push 유지.`;
     } else {
-      if (otbYoy != null && otbYoy < -10) action = `Inbound YoY ${otbYoy.toFixed(1)}% 감소 — 인바운드 OTA(아고다·트립닷컴) 가격 점검, 외국인 전용 패키지 신규 기획.`;
-      else action = `Inbound 모니터링 — 트립닷컴/아고다 부킹 페이스 주간 단위 추적.`;
+      // Inbound = 여행사 물량 (트립닷컴/아고다는 G-OTA, Inbound 아님)
+      if (otbYoy != null && otbYoy < -10) action = `Inbound YoY ${otbYoy.toFixed(1)}% 감소 — 글로벌 여행사 contracting 점검, 인바운드 단체·MICE 기획전 신규 발주.`;
+      else action = `Inbound 여행사 물량 모니터링 — 글로벌 여행사 송객 페이스, 단체 inquiry 추적.`;
     }
 
     segCards.push(`
@@ -1534,7 +1527,8 @@ function renderMonthlyStrategy(){
       : `당월 페이스 우수, 추가 노출은 자제하고 단가/믹스 최적화로 Revenue 추가 확보.`;
     const actions = [];
     if (gap < -3){
-      actions.push(`<b>OTA 광고 입찰 즉시 +20%</b> — 아고다/부킹닷컴 진성 트래픽 확대`);
+      actions.push(`<b>OTA 광고 입찰 즉시 +20%</b> — 야놀자/여기어때 진성 트래픽 확대 (OTA = 국내 채널)`);
+      actions.push(`<b>G-OTA 광고 입찰</b> — 아고다/부킹닷컴/트립닷컴 키워드 강화 (G-OTA = 글로벌 OTA)`);
       actions.push(`<b>카카오 톡예약 + 메이커스</b> 단기 발주 (lead time 7일 내)`);
       actions.push(`<b>인플루언서 임팩트 채널</b> — @요미맘 등 검증 인플루언서 1주 내 contracting`);
     } else if (gap >= 0){
@@ -1590,12 +1584,16 @@ function renderMonthlyStrategy(){
     const ach = segPriority.ach;
     const tier = ach < 70 ? 'A' : ach < 85 ? 'B' : 'C';
     const title = `${segPriority.name} 세그먼트 우선 보강 — 달성률 ${fmt.pct(ach)}`;
-    const desc = `${m}월 세그먼트 중 가장 부진. ${segPriority.name === 'OTA' ? 'Mega channel 의존도 점검 + Direct 부킹 채널 강화' : segPriority.name === 'G-OTA' ? '여기어때·놀유니버스·카카오 등 G-OTA 캠페인 추가' : 'Inbound — 트립닷컴/아고다 가격 점검 + 외국인 전용 패키지'} 우선.`;
+    // 세그먼트 정의 (회사 기준):
+    //  OTA = 국내 채널 (야놀자, 여기어때, 쿠팡, 인터파크, 티몬, 네이버, 종이비행기 등)
+    //  G-OTA = 글로벌 OTA (아고다, 부킹닷컴, 트립닷컴, 익스피디아, 트립비토즈)
+    //  Inbound = 여행사 물량 (글로벌 여행사 송객, 인바운드 단체)
+    const desc = `${m}월 세그먼트 중 가장 부진. ${segPriority.name === 'OTA' ? '국내 OTA(야놀자·여기어때·쿠팡) 의존도 점검 + Direct 부킹 채널 강화' : segPriority.name === 'G-OTA' ? '글로벌 OTA(아고다·트립닷컴·부킹닷컴) 캠페인 강화' : 'Inbound — 글로벌 여행사 contracting + 인바운드 단체 영업 강화'} 우선.`;
     const actions = segPriority.name === 'OTA'
-      ? [`<b>아고다/부킹닷컴 광고</b> 입찰 +15~20%`, `<b>YH/HW Direct</b> 노출 강화`, `<b>채널별 단가 협상</b> — 수수료 최적화`, `<b>취소율 모니터링</b> — high-cancel OTA 차단`]
+      ? [`<b>야놀자/여기어때 광고</b> 입찰 +15~20% — 국내 OTA 진성 트래픽`, `<b>YH/HW Direct</b> 노출 강화`, `<b>국내 OTA 단가 협상</b> — 수수료 최적화 (쿠팡/인터파크/티몬)`, `<b>취소율 모니터링</b> — high-cancel 국내 OTA 차단`]
       : segPriority.name === 'G-OTA'
-      ? [`<b>여기어때 라이브방송</b> — 즉시 협의, 라이브 단가 협상`, `<b>놀유니버스 소노위크</b> 패키지 신규 contracting`, `<b>카카오 메이커스/예약하기</b> 분기별 push`, `<b>인플루언서 G-OTA 결합</b> — 인플루언서 + 티딜/톡딜 콜라보`]
-      : [`<b>트립닷컴 / 아고다</b> 가격 점검, 인바운드 전용 promo`, `<b>외국인 전용 패키지</b> — 항공+숙박, 영문 노출 강화`, `<b>인바운드 OTA 키워드 광고</b> 입찰 강화`, `<b>주요국(중국/대만/동남아) 시장별</b> 단가 차별화`];
+      ? [`<b>아고다/부킹닷컴 키워드 광고</b> 입찰 +15~20% — 글로벌 트래픽 확대`, `<b>트립닷컴 ESG/B2B 패키지</b> 신규 contracting`, `<b>익스피디아 광고</b> 입찰 강화`, `<b>외국인 전용 패키지</b> — 영문 노출 강화 + 글로벌 OTA 메인 슬롯 확보`]
+      : [`<b>글로벌 여행사 contracting</b> — 일본/대만/동남아 송객 여행사 점검 및 단가 갱신`, `<b>인바운드 단체·MICE 기획전</b> — 영업장별 그룹 inquiry 추적, 단체 quote 회신 SLA 강화`, `<b>여행사 패키지 신규 발주</b> — 마이리얼트립·하나투어·놀유니버스 인바운드 전용 상품`, `<b>외국인 단체 영업</b> — KTO·CIQ·항공사 제휴 송객, 시장별(중국/대만/동남아) 차별화`];
     blocks.push({priority: tier, title, desc, actions, kpi: [`${segPriority.name} 달성 ${(ach + 10).toFixed(0)}%+ 회복`, `세그먼트 mix 균형 ${fmt.pct(ach)} → ${fmt.pct(ach + 10)}`, `4주 내 효과 측정`]});
   }
 
