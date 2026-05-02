@@ -388,6 +388,18 @@ input, button, select, table, th, td { font-family: var(--sans) !important; }
     <div class="section-card info" id="sec-heatmap">
       <div class="section-title">SECTION B</div>
       <div class="section-heading">사업장별 6개월 달성률 히트맵</div>
+      <!-- 세그먼트 필터 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">세그먼트</span>
+        <div class="filter-chips" id="heatmap-seg-chips" style="display:flex;align-items:center;gap:4px;">
+          <button class="chip active" data-hm-seg="전체">전체</button>
+          <button class="chip" data-hm-seg="GS팀">GS전체</button>
+          <span style="color:var(--rule);margin:0 4px;">│</span>
+          <button class="chip" data-hm-seg="OTA" style="border-color:rgba(90,159,196,0.4);">OTA</button>
+          <button class="chip" data-hm-seg="G-OTA" style="border-color:rgba(76,175,111,0.4);">G-OTA</button>
+          <button class="chip" data-hm-seg="Inbound" style="border-color:rgba(232,162,86,0.4);">Inbound</button>
+        </div>
+      </div>
       <div class="hm-wrap">
         <table class="hm-table" id="heatmap-table">
           <thead></thead>
@@ -463,6 +475,7 @@ let selectedRegion = '전체';
 let selectedSeg = '전체';
 let selectedProp = '전체';
 let selectedTimingSeg = '전체';
+let selectedHmSeg = '전체';
 const GS_CHANNELS = ['Inbound', 'OTA', 'G-OTA'];
 
 async function init() {
@@ -546,6 +559,12 @@ function buildFilters() {
       e.target.classList.add('active');
       selectedTimingSeg = e.target.dataset.timingSeg;
       renderTiming();
+    }
+    if (e.target.dataset.hmSeg) {
+      document.querySelectorAll('[data-hm-seg]').forEach(c => c.classList.remove('active'));
+      e.target.classList.add('active');
+      selectedHmSeg = e.target.dataset.hmSeg;
+      renderHeatmap();
     }
   });
 }
