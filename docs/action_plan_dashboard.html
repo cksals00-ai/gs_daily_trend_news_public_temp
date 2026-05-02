@@ -145,9 +145,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .tbl .kpi-group-header.adr{color:var(--info);border-left:2px solid var(--info)}
 .tbl .kpi-group-header.rev{color:var(--gold-bright);border-left:2px solid var(--gold)}
 .tbl .kpi-sub-header{text-align:center;font-size:9px;font-weight:700;color:var(--ink-faint);padding:4px 6px;letter-spacing:.06em}
-.tbl .kpi-sub-header.kpi-bl{border-left:2px solid rgba(255,255,255,.06)}
-.tbl .kpi-val{font-family:var(--mono);font-size:10px;text-align:right;white-space:nowrap;padding:8px 6px;color:var(--ink-muted)}
-.tbl .kpi-val.kpi-bl{border-left:2px solid rgba(255,255,255,.06)}
+.tbl .kpi-sub-header.kpi-bl-rn{border-left:2px solid var(--positive)}
+.tbl .kpi-sub-header.kpi-bl-adr{border-left:2px solid var(--info)}
+.tbl .kpi-sub-header.kpi-bl-rev{border-left:2px solid var(--gold)}
+.tbl .kpi-val{font-family:var(--mono);font-size:10px;text-align:center;white-space:nowrap;padding:8px 6px;color:var(--ink-muted)}
+.tbl .kpi-val.kpi-bl-rn{border-left:2px solid var(--positive)}
+.tbl .kpi-val.kpi-bl-adr{border-left:2px solid var(--info)}
+.tbl .kpi-val.kpi-bl-rev{border-left:2px solid var(--gold)}
 .tbl .kpi-val.has-data{color:var(--ink-soft)}
 .kpi-ach-wrap{display:flex;align-items:center;gap:4px;justify-content:flex-end}
 .kpi-bar{width:36px;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;flex-shrink:0}
@@ -686,7 +690,7 @@ function render(){
 }
 
 /* ── KPI cell renderer ── */
-function renderKpiCells(actual,target,isCurrency){
+function renderKpiCells(actual,target,isCurrency,blType){
   const hasA=actual!=null&&actual!==''&&!isNaN(actual);
   const hasT=target!=null&&target!==''&&!isNaN(target);
   let achPct=null;
@@ -710,7 +714,8 @@ function renderKpiCells(actual,target,isCurrency){
     ?`<div class="kpi-ach-wrap"><div class="kpi-bar"><div class="kpi-bar-fill ${cls}" style="width:${barW(achPct)}%"></div></div><span class="kpi-ach-text ${cls}">${achPct}%</span></div>`
     :`<span class="kpi-ach-text empty">—</span>`;
 
-  return `<td class="kpi-val kpi-bl ${hasA?'has-data':''}">${fmtV(actual,isCurrency)}</td>`+
+  const blCls=blType?('kpi-bl-'+blType):'';
+  return `<td class="kpi-val ${blCls} ${hasA?'has-data':''}">${fmtV(actual,isCurrency)}</td>`+
     `<td class="kpi-val ${hasT?'has-data':''}">${fmtV(target,isCurrency)}</td>`+
     `<td class="kpi-val">${achHtml}</td>`;
 }
@@ -769,9 +774,9 @@ function renderTable(data){
     '</tr>'+
     // Row 2: KPI 서브 헤더
     '<tr>'+
-    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
-    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
-    '<th class="kpi-sub-header kpi-bl">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '<th class="kpi-sub-header kpi-bl-rn">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '<th class="kpi-sub-header kpi-bl-adr">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
+    '<th class="kpi-sub-header kpi-bl-rev">실적</th><th class="kpi-sub-header">목표</th><th class="kpi-sub-header">달성률</th>'+
     '</tr>'+
     '</thead><tbody>';
   data.forEach((d,i)=>{
@@ -784,9 +789,9 @@ function renderTable(data){
       `<td class="col-channel" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`+
       `<td class="col-region">${escapeHtml(d.region||'—')}</td>`+
       `<td class="col-prop">${escapeHtml(d.property||'—')}</td>`+
-      renderKpiCells(k.rns_actual,k.rns_target)+
-      renderKpiCells(k.adr_actual,k.adr_target)+
-      renderKpiCells(k.rev_actual,k.rev_target,true)+
+      renderKpiCells(k.rns_actual,k.rns_target,false,'rn')+
+      renderKpiCells(k.adr_actual,k.adr_target,false,'adr')+
+      renderKpiCells(k.rev_actual,k.rev_target,true,'rev')+
       `<td class="col-title" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`+
       `<td class="col-product">${escapeHtml(d.product||'—')}</td>`+
       `<td class="col-period">${fmtYMD(d.saleStart)} <span class="period-sub">~ ${fmtYMD(d.saleEnd)}</span></td>`+
