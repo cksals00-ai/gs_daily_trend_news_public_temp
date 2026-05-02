@@ -742,60 +742,40 @@ function renderTiming() {
     summaryEl.innerHTML = '';
   }
 
-  // Build timing table
+  // Build timing table — 세그먼트 기준 좌측 그룹핑
   const thead = document.querySelector('#timing-table thead');
   const tbody = document.querySelector('#timing-table tbody');
-  thead.innerHTML = '<tr><th style="text-align:left;">사업장</th><th>채널</th><th>W-4 RN</th><th>W RN</th><th>Late Pickup</th><th>Late%</th><th>YoY%</th></tr>';
+  thead.innerHTML = '<tr><th style="text-align:left;">세그</th><th style="text-align:left;">사업장</th><th>W-4 RN</th><th>W RN</th><th>Late%</th><th>YoY%</th></tr>';
 
   let html = '';
-  // Group by property
-  const propMap = new Map();
+  const segOrder = ['OTA','G-OTA','Inbound'];
+
+  // Group by channel → property
+  const segMap = new Map();
   filtered.forEach(t => {
-    if (!propMap.has(t.property)) propMap.set(t.property, []);
-    propMap.get(t.property).push(t);
+    if (!segMap.has(t.channel)) segMap.set(t.channel, []);
+    segMap.get(t.channel).push(t);
   });
 
-  // Totals first
-  const totalRows = propMap.get('전체') || [];
-  if (totalRows.length) {
-    html += `<tr class="region-sub"><td colspan="7">전체</td></tr>`;
-    totalRows.forEach(t => {
+  segOrder.forEach(seg => {
+    const rows = segMap.get(seg) || [];
+    if (!rows.length) return;
+
+    // Sort: 전체 first, then *_Total, then individual props
+    const totalRow = rows.find(r => r.property === '전체');
+    const regionRows = rows.filter(r => r.property.includes('_Total')).sort((a,b) => b.w_rn - a.w_rn);
+    const propRows = rows.filter(r => r.property !== '전체' && !r.property.includes('_Total')).sort((a,b) => b.late_pct - a.late_pct);
+    const sorted = [...(totalRow ? [totalRow] : []), ...regionRows, ...propRows];
+
+    const segColor = seg === 'OTA' ? 'var(--info)' : seg === 'G-OTA' ? 'var(--positive)' : 'var(--warning)';
+    let first = true;
+    sorted.forEach(t => {
       const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
-      html += `<tr><td class="prop-name"></td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
-    });
-  }
-
-  // Region totals then individual properties
-  const regionTotalKeys = ['비발디_Total','한국중부_Total','아시아퍼시픽_Total','한국남부_Total'];
-  const regionDisplayNames = { '비발디_Total':'비발디파크', '한국중부_Total':'한국중부', '아시아퍼시픽_Total':'아시아퍼시픽', '한국남부_Total':'한국남부' };
-
-  const regionPropMap = {};
-  Object.entries(regions).forEach(([rName, rProps]) => {
-    const rKey = rName === '비발디파크' ? '비발디_Total' : rName + '_Total';
-    regionPropMap[rKey] = { name: rName, props: rProps };
-  });
-
-  regionTotalKeys.forEach(rtk => {
-    const info = regionPropMap[rtk];
-    if (!info) return;
-    if (selectedRegion !== '전체' && selectedRegion !== info.name) return;
-
-    const rtRows = propMap.get(rtk) || [];
-    if (rtRows.length) {
-      html += `<tr class="region-sub"><td colspan="7">${regionDisplayNames[rtk]}</td></tr>`;
-      rtRows.forEach(t => {
-        const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
-        html += `<tr><td class="prop-name" style="font-weight:700;">${regionDisplayNames[rtk]} 소계</td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
-      });
-    }
-
-    // Individual properties in this region
-    info.props.forEach(pName => {
-      const pRows = propMap.get(pName) || [];
-      pRows.forEach(t => {
-        const lateCls = t.late_pct > 15 ? 'color:var(--negative)' : t.late_pct > 10 ? 'color:var(--warning)' : '';
-        html += `<tr><td class="prop-name">${pName.replace(/_/g, ' ')}</td><td>${t.channel}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td>${t.late_pickup.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
-      });
+      const pName = t.property === '전체' ? '전체' : t.property.includes('_Total') ? t.property.replace('_Total','').replace('비발디','비발디파크') + ' 소계' : t.property.replace(/_/g,' ');
+      const isBold = t.property === '전체' || t.property.includes('_Total') ? 'font-weight:700;' : '';
+      const segCell = first ? `<td rowspan="${sorted.length}" style="vertical-align:top;font-weight:700;color:${segColor};border-right:2px solid ${segColor};padding-right:12px;white-space:nowrap;">${seg}</td>` : '';
+      html += `<tr${first ? ' class="region-sub" style="border-top:1px solid var(--rule);"' : ''}>${segCell}<td class="prop-name" style="${isBold}">${pName}</td><td>${t.w4_rn.toLocaleString()}</td><td>${t.w_rn.toLocaleString()}</td><td style="${lateCls};font-weight:700;">${t.late_pct}%</td><td>${getYoYBadge(t.yoy_pct)}</td></tr>`;
+      first = false;
     });
   });
 
