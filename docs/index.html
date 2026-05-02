@@ -1996,6 +1996,7 @@
                 <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);">WoW</span>
                 <span id="wow-this-week" style="font-family:var(--mono);font-size:11px;font-weight:700;color:#4ecdc4;">—</span>
                 <span id="wow-delta-val" style="font-family:var(--mono);font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);">—</span>
+                <span id="wow-context-note" style="font-family:var(--mono);font-size:8.5px;color:rgba(255,255,255,0.35);margin-left:auto;letter-spacing:0.02em;"></span>
               </div>
               <div id="anomaly-banner" style="display:none;font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-bottom:6px;text-align:center;"></div>
               <div style="position:relative;height:110px;margin-bottom:8px;">
@@ -11460,13 +11461,28 @@ function toggleNewsMore(btn, id) {
 
       window._renderWeeklyOTB = function(monthKey) {
         _activeChartMonth = monthKey || 'all';
+        var isAll = !monthKey || monthKey === 'all';
         var daily = _getDailyByMonth(monthKey);
-        var g = _groupByWeek(daily, true);
+        // 월 필터 시 현재 미완료 주(이번주)도 포함하여 최신 활동 노출
+        var g = _groupByWeek(daily, isAll);
 
-        // 최근 8주 표시 (미완료 주 제외됨)
+        // 최근 8주 표시 (월 필터 시 진행 중 주 포함)
         var lastN = g.order.slice(-8);
-        var labels = lastN.map(function(k) { return g.weeks[k].label; });
+        var labels = lastN.map(function(k) {
+          var lbl = g.weeks[k].label;
+          // 진행 중 주는 별표 추가
+          if (k === _thisWeekKey && !isAll) lbl = '★' + lbl;
+          return lbl;
+        });
         var vals = lastN.map(function(k) { return g.weeks[k].net; });
+
+        // 컨텍스트 캡션
+        var noteEl = document.getElementById('wow-context-note');
+        if (noteEl) {
+          noteEl.textContent = isAll
+            ? '전체 stay · booking-week 기준 · 최근 완료 8주'
+            : monthKey + '월 stay 픽업 · booking-week 기준 · ★=진행 중';
+        }
 
         // 364일 전 LY 주 데이터 (각 주별)
         var lyG = _groupByWeek(nd, false);
@@ -11478,11 +11494,17 @@ function toggleNewsMore(btn, id) {
         });
 
         // YoY 계산 (364일 전 = 지난해 같은 주)
-        var thisWk = g.weeks[_thisWeekKey];
+        // 월 필터 시 진행 중 주가 포함되어 있으면 그 주를 "이번주"로, 아니면 마지막 완료 주
+        var refKey = _thisWeekKey;
+        if (!isAll && lastN.length && lastN[lastN.length - 1] !== _thisWeekKey) {
+          refKey = lastN[lastN.length - 1];
+        }
+        var thisWk = g.weeks[refKey];
         var thisWeekNet = thisWk ? thisWk.net : 0;
 
-        // 364일 전의 같은 주 데이터
-        var lyWeekMon = new Date(_thisWeekMon);
+        // 364일 전의 같은 주 데이터 (refKey 기준 — 월 필터 시 진행 중 주에 맞춤)
+        var refMon = thisWk ? thisWk.monDate : _thisWeekMon;
+        var lyWeekMon = new Date(refMon);
         lyWeekMon.setDate(lyWeekMon.getDate() - 364);
         var lyWeekKey = _dateKey(lyWeekMon);
         var lyThisWk = lyG.weeks[lyWeekKey];
