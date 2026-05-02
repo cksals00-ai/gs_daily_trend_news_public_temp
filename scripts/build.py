@@ -212,14 +212,31 @@ def load_json(path: Path, default=None):
 
 
 def apply_tpl(html: str, selector: str, new_text) -> str:
+    """data-tpl-{selector} element 의 inner text 또는 inner HTML 을 new_text 로 교체.
+
+    Inner HTML 에 <strong> 등 nested tag 가 있어도 동작하도록 backref(\\2) 로 같은 tag 의 close 매칭.
+    new_text 는 HTML 가능 (예: <strong>아고다</strong>).
+    """
     if new_text is None:
         return html
-    pattern = re.compile(
+    # 1차: inner HTML 에 < 없는 단순 케이스 (기존 호환)
+    simple_pattern = re.compile(
         rf'(<[^>]*\bdata-tpl-{re.escape(selector)}\b[^>]*>)([^<]*?)(</)',
         re.DOTALL
     )
-    new_html, n = pattern.subn(
+    new_html, n = simple_pattern.subn(
         lambda m: m.group(1) + str(new_text) + m.group(3),
+        html, count=1
+    )
+    if n > 0:
+        return new_html
+    # 2차: inner HTML 에 nested tag 포함 케이스 (backref 로 같은 tag close 매칭)
+    nested_pattern = re.compile(
+        rf'(<(\w+)[^>]*\bdata-tpl-{re.escape(selector)}\b[^>]*>)(.*?)(</\2>)',
+        re.DOTALL
+    )
+    new_html, n = nested_pattern.subn(
+        lambda m: m.group(1) + str(new_text) + m.group(4),
         html, count=1
     )
     return new_html
