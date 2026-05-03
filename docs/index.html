@@ -1260,6 +1260,9 @@
     .trend-now-value { font-size: 30px; }
     /* 주간 리포트: 1칼럼 */
     .weekly-grid { grid-template-columns: 1fr !important; }
+    /* TODAY+WEEKLY COMPARISON: 모바일에서 1~2칼럼 */
+    #today-weekly-cmp .twc-row1 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    #today-weekly-cmp .twc-row2 { grid-template-columns: 1fr !important; }
     /* OTB 월별 내부 그리드: 항상 3칼럼 유지 */
     .otb-month-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 8px !important; }
     /* OTB 월별 컬럼: 오른쪽 정렬 */
@@ -2288,6 +2291,165 @@
       <!-- // INSIGHT ROW END -->
 
     </div>
+
+    <!-- ============ TODAY + WEEKLY COMPARISON — 당일/금주 vs 전주/전년 ============ -->
+    <div id="today-weekly-cmp" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#4ecdc4;font-weight:700;">◈ TODAY · WEEKLY COMPARISON · <span id="twc-date-label">—</span></div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="twc-window-label">—</div>
+      </div>
+
+      <!-- ROW 1: 당일현황 + 금주 합계 (3개 컬럼) -->
+      <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row1">
+
+        <!-- 당일현황 카드 -->
+        <div style="background:rgba(78,205,196,0.06);border:1px solid rgba(78,205,196,0.25);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">당일 현황</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-today-date">—</span>
+              <span id="twc-partial-badge" style="display:none;font-family:var(--mono);font-size:9px;color:#f0a500;background:rgba(240,165,0,0.1);padding:2px 6px;border-radius:3px;border:1px solid rgba(240,165,0,0.3);font-weight:700;">PARTIAL</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:36px;font-weight:800;color:#fff;line-height:1;" id="twc-today-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실 / 매출 <span id="twc-today-rev" style="color:rgba(255,255,255,0.7);font-weight:700;">—</span> 백만</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전주 동요일 (<span id="twc-today-prev-date">—</span>)</span>
+                <span><span id="twc-today-prev-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-wow" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전년 동기간 (<span id="twc-today-ly-date">—</span>)</span>
+                <span><span id="twc-today-ly-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-yoy" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 금주 카드 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.5));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#fff;font-weight:900;">금주</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-this-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" id="twc-this-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);">매출 <span id="twc-this-rev" style="color:#fff;font-weight:700;">—</span> 백만</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">픽업 <span id="twc-this-pickup">—</span> · 취소 <span id="twc-this-cancel">—</span></div>
+          </div>
+        </div>
+
+        <!-- 전주 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.2));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:rgba(255,255,255,0.7);font-weight:900;">전주 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-prev-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-prev-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-wow-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-prev-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+        <!-- LY 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">전년 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-ly-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-ly-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 2: 사업장별 + 세그먼트별 테이블 -->
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
+
+        <!-- 사업장별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#7dc4b0);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">사업장별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">금주 net 온북 RN, 전주/전년 동기간比</span>
+            </div>
+            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전년</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-prop-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 세그먼트별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">세그먼트별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">OTA / G-OTA / Inbound 등</span>
+            </div>
+            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">세그먼트</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-seg-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 3: AI 인사이트 -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
+        <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+        <div style="padding:14px 18px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">⚡ AI 인사이트</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">자동 추출 · 금주 변동 핵심</span>
+          </div>
+          <div id="twc-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"></div>
+        </div>
+      </div>
+
+    </div>
+    <!-- // TODAY + WEEKLY COMPARISON END -->
 
   </div>
 </div>
@@ -11022,6 +11184,178 @@ function toggleNewsMore(btn, id) {
 
   window.addEventListener('scroll', updateActive, {passive:true});
   updateActive();
+})();
+</script>
+
+<script>
+// ===== TODAY + WEEKLY COMPARISON 렌더러 =====
+(function () {
+  fetch('./data/weekly_comparison.json')
+    .then(function (r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+    .then(function (data) { renderTWC(data); })
+    .catch(function (e) { console.warn('[twc] load failed:', e); });
+
+  function fmtDate(ymd) {
+    if (!ymd || ymd.length < 8) return '—';
+    return ymd.slice(4,6) + '/' + ymd.slice(6,8);
+  }
+  function fmtDateRange(start, end) {
+    if (!start || !end) return '—';
+    return fmtDate(start) + '~' + fmtDate(end);
+  }
+  function fmtNum(n) {
+    if (n == null) return '—';
+    return n.toLocaleString('en-US');
+  }
+  function fmtPct(p) {
+    if (p == null) return '—';
+    var sign = p > 0 ? '+' : '';
+    return sign + p.toFixed(1) + '%';
+  }
+  function pctBadge(p) {
+    if (p == null) return { text: '—', color: 'rgba(255,255,255,0.35)' };
+    var sign = p > 0 ? '▲ +' : (p < 0 ? '▼ ' : '');
+    var color = p > 0 ? '#4caf6f' : (p < 0 ? '#e57373' : 'rgba(255,255,255,0.5)');
+    return { text: sign + Math.abs(p).toFixed(1) + '%', color: color };
+  }
+  function dowKr(ymd) {
+    if (!ymd || ymd.length < 8) return '';
+    var dt = new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8));
+    return ['일','월','화','수','목','금','토'][dt.getDay()];
+  }
+
+  function renderTWC(d) {
+    var latest = d.latest_data_date || '';
+    document.getElementById('twc-date-label').textContent = fmtDate(latest) + ' (' + dowKr(latest) + ') 기준';
+    var src = d.source_generated_at ? (' · 데이터 ' + d.source_generated_at) : '';
+    document.getElementById('twc-window-label').textContent = '예약일(최초입력일자) 기준' + src;
+
+    // ── 당일 카드 ──
+    var t = d.today || {};
+    document.getElementById('twc-today-date').textContent = fmtDate(t.date) + ' (' + dowKr(t.date) + ')';
+    document.getElementById('twc-today-rn').textContent = fmtNum(t.this && t.this.net_rn);
+    document.getElementById('twc-today-rev').textContent = (t.this && t.this.net_rev != null) ? t.this.net_rev.toLocaleString() : '—';
+
+    var prevDay = t.prev_week_same_day || {};
+    document.getElementById('twc-today-prev-date').textContent = fmtDate(prevDay.date);
+    document.getElementById('twc-today-prev-rn').textContent = fmtNum(prevDay.net_rn);
+    var wow = pctBadge(t.wow_pct);
+    var wowEl = document.getElementById('twc-today-wow');
+    wowEl.textContent = wow.text; wowEl.style.color = wow.color;
+
+    var lyDay = t.ly_same_day || {};
+    document.getElementById('twc-today-ly-date').textContent = fmtDate(lyDay.date);
+    document.getElementById('twc-today-ly-rn').textContent = fmtNum(lyDay.net_rn);
+    var yoy = pctBadge(t.yoy_pct);
+    var yoyEl = document.getElementById('twc-today-yoy');
+    yoyEl.textContent = yoy.text; yoyEl.style.color = yoy.color;
+
+    if (d.partial_today && d.partial_today.is_partial) {
+      var badge = document.getElementById('twc-partial-badge');
+      badge.style.display = 'inline-block';
+      badge.title = '추출일 ' + d.partial_today.raw_latest_date + ' (Pickup ' + d.partial_today.raw_latest_pickup_rn + 'RN) 데이터는 부분만 포함되어 마지막 완전일을 사용';
+    }
+
+    // ── 주간 카드들 ──
+    var wt = d.week_totals || {};
+    var tw = wt.this_week || {}, pw = wt.prev_week || {}, lw = wt.ly_week || {};
+    document.getElementById('twc-this-range').textContent = fmtDateRange(tw.start, tw.end) + ' · ' + (tw.days||0) + '일';
+    document.getElementById('twc-this-rn').textContent = fmtNum(tw.net_rn);
+    document.getElementById('twc-this-rev').textContent = (tw.net_rev != null) ? tw.net_rev.toLocaleString() : '—';
+    document.getElementById('twc-this-pickup').textContent = fmtNum(tw.pickup_rn) + '실';
+    document.getElementById('twc-this-cancel').textContent = fmtNum(tw.cancel_rn) + '실';
+
+    document.getElementById('twc-prev-range').textContent = fmtDateRange(pw.start, pw.end);
+    document.getElementById('twc-prev-rn').textContent = fmtNum(pw.net_rn);
+    document.getElementById('twc-prev-rev').textContent = (pw.net_rev != null) ? pw.net_rev.toLocaleString() : '—';
+    var wowW = pctBadge(wt.wow_rn_pct);
+    var wowWel = document.getElementById('twc-wow-pct');
+    wowWel.textContent = 'WoW ' + wowW.text + '  /  매출 ' + (pctBadge(wt.wow_rev_pct).text);
+    wowWel.style.color = wowW.color;
+
+    document.getElementById('twc-ly-range').textContent = fmtDateRange(lw.start, lw.end);
+    document.getElementById('twc-ly-rn').textContent = fmtNum(lw.net_rn);
+    document.getElementById('twc-ly-rev').textContent = (lw.net_rev != null) ? lw.net_rev.toLocaleString() : '—';
+    var yoyW = pctBadge(wt.yoy_rn_pct);
+    var yoyWel = document.getElementById('twc-yoy-pct');
+    yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
+    yoyWel.style.color = yoyW.color;
+
+    // ── 사업장 테이블 ──
+    var tbody = document.getElementById('twc-prop-tbody');
+    var props = (d.by_property || []).filter(function(p){ return p.this_net_rn !== 0 || p.prev_net_rn !== 0 || p.ly_net_rn !== 0; });
+    var maxRN = props.reduce(function(m, p){ return Math.max(m, p.this_net_rn||0); }, 1);
+    var rows = props.map(function(p) {
+      var w = pctBadge(p.wow_rn_pct), y = pctBadge(p.yoy_rn_pct);
+      var wAbs = Math.abs(p.wow_rn_pct||0), yAbs = Math.abs(p.yoy_rn_pct||0);
+      var hi = (wAbs >= 50 || yAbs >= 50) ? 'background:rgba(78,205,196,0.05);' : '';
+      var bar = Math.max(2, Math.round((p.this_net_rn||0) / maxRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);' + hi + '">' +
+        '<td style="padding:5px 6px;color:rgba(255,255,255,0.85);font-weight:600;">' + escapeHtml(p.property) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(p.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(78,205,196,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.prev_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.ly_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+
+    // ── 세그먼트 테이블 ──
+    var stbody = document.getElementById('twc-seg-tbody');
+    var FOCUS = ['OTA', 'G-OTA', 'Inbound'];
+    var segs = (d.by_segment || []).filter(function(s){ return s.segment && s.this_net_rn !== 0 || s.prev_net_rn !== 0; });
+    // FOCUS 우선 정렬 + 나머지 net_rn 기준
+    segs.sort(function(a, b) {
+      var ai = FOCUS.indexOf(a.segment), bi = FOCUS.indexOf(b.segment);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return (b.this_net_rn||0) - (a.this_net_rn||0);
+    });
+    var maxSegRN = segs.reduce(function(m, p){ return Math.max(m, Math.abs(p.this_net_rn||0)); }, 1);
+    var srows = segs.map(function(s) {
+      var w = pctBadge(s.wow_rn_pct), y = pctBadge(s.yoy_rn_pct);
+      var isFocus = FOCUS.indexOf(s.segment) !== -1;
+      var color = isFocus ? '#e6b970' : 'rgba(255,255,255,0.85)';
+      var weight = isFocus ? '800' : '600';
+      var bar = Math.max(1, Math.round(Math.abs(s.this_net_rn||0) / maxSegRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(s.segment) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(s.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(230,185,112,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    stbody.innerHTML = srows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+
+    // ── 인사이트 카드 ──
+    var iwrap = document.getElementById('twc-insights');
+    var insights = d.insights || [];
+    iwrap.innerHTML = insights.map(function(i) {
+      var color = i.tone === 'positive' ? '#4caf6f' : (i.tone === 'negative' ? '#e57373' : '#a892c8');
+      var bg = i.tone === 'positive' ? 'rgba(76,175,111,0.07)' : (i.tone === 'negative' ? 'rgba(229,115,115,0.07)' : 'rgba(168,146,200,0.07)');
+      return '<div style="background:' + bg + ';border-left:3px solid ' + color + ';border-radius:0 4px 4px 0;padding:10px 12px;">' +
+        '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;line-height:1.3;">' + escapeHtml(i.title) + '</div>' +
+        '<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);line-height:1.4;">' + escapeHtml(i.detail) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
 })();
 </script>
 
