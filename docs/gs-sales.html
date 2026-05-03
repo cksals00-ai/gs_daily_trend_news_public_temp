@@ -24,15 +24,6 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* ═══ GSN NAVIGATOR ═══ */
-.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
-.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
-.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
-.gsn-links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto}
-.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
-.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
-@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
-
 /* ═══ TOP BAR ═══ */
 .top-bar{
   background:var(--bg);border-bottom:1px solid var(--rule);
@@ -225,6 +216,45 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 }
 .guide-content .step-row{display:flex;align-items:flex-start;gap:4px;margin-bottom:10px}
 
+/* ═══ FLOWCHART (기획전 등록 프로세스) ═══ */
+.flowchart{
+  display:flex;flex-direction:column;gap:0;margin:14px 0 18px;
+  padding:18px 14px;background:var(--bg);border:1px solid var(--rule);border-radius:10px;
+}
+.flow-row{
+  display:flex;align-items:stretch;gap:10px;
+}
+.flow-node{
+  flex:1;min-width:0;padding:12px 14px;border-radius:8px;
+  background:var(--glass2);border:1px solid var(--rule);
+  font-size:12px;color:var(--ink2);line-height:1.5;
+  display:flex;flex-direction:column;gap:4px;
+}
+.flow-node.start{border-color:rgba(92,196,208,.4);background:rgba(92,196,208,.06)}
+.flow-node.action{border-color:rgba(212,167,74,.35);background:rgba(212,167,74,.06)}
+.flow-node.kpi{border-color:rgba(160,126,232,.4);background:rgba(160,126,232,.06)}
+.flow-node.end{border-color:rgba(92,196,154,.4);background:rgba(92,196,154,.06)}
+.flow-node-title{
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold2);
+  font-weight:700;text-transform:uppercase;
+}
+.flow-node-body{font-size:12px;color:var(--ink2)}
+.flow-node-meta{font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:.05em}
+.flow-arrow{
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);color:var(--gold);font-size:18px;
+  margin:6px 0;font-weight:700;
+}
+.kpi-callout{
+  margin-top:14px;padding:14px 16px;border-radius:10px;
+  background:rgba(160,126,232,.08);border:1px solid rgba(160,126,232,.3);
+  font-size:12.5px;color:var(--ink2);line-height:1.7;
+}
+.kpi-callout strong{color:var(--violet)}
+@media(max-width:768px){
+  .flow-row{flex-direction:column;gap:6px}
+}
+
 /* ═══ FOOTER ═══ */
 .map-footer{
   border-top:1px solid var(--rule);padding:32px 0;margin-top:24px;
@@ -253,7 +283,6 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   .hero-stats{flex-wrap:wrap}
 }
 
-@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -385,6 +414,87 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <div class="cat-accent" style="background:var(--mint)"></div>
       <div class="cat-title">업무 가이드</div>
       <div class="cat-count">GUIDES</div>
+    </div>
+
+    <!-- 기획전 등록 프로세스 가이드 -->
+    <div class="guide-section">
+      <button class="guide-toggle" onclick="toggleGuide(this)">
+        <div class="guide-toggle-left">
+          <span class="guide-toggle-icon">🎯</span>
+          <div>
+            <div class="guide-toggle-title">기획전 등록 프로세스 가이드</div>
+            <div class="guide-toggle-sub">기획전 신규 등록 → KPI 자동배분 → Action Plan 반영 흐름</div>
+          </div>
+        </div>
+        <span class="guide-chevron">▼</span>
+      </button>
+      <div class="guide-body">
+        <div class="guide-content">
+          <h4>전체 흐름</h4>
+          <div class="flowchart">
+            <div class="flow-row">
+              <div class="flow-node start">
+                <span class="flow-node-title">1. 신규 등록</span>
+                <span class="flow-node-body">품의 페이지에서 기획전 등록</span>
+                <span class="flow-node-meta">pumui.html</span>
+              </div>
+              <div class="flow-node action">
+                <span class="flow-node-title">2. 상세 입력</span>
+                <span class="flow-node-body">대상 사업장·기간·요금·총 RN/REV 목표 입력</span>
+                <span class="flow-node-meta">엑셀 업로드 가능</span>
+              </div>
+            </div>
+            <div class="flow-arrow">▼</div>
+            <div class="flow-row">
+              <div class="flow-node kpi">
+                <span class="flow-node-title">3. KPI 자동배분</span>
+                <span class="flow-node-body">총 RN/REV/ADR을 일자별·사업장별로 자동 분할</span>
+                <span class="flow-node-meta">공휴일·주말 가중치 반영</span>
+              </div>
+              <div class="flow-node kpi">
+                <span class="flow-node-title">4. 구글시트 동기화</span>
+                <span class="flow-node-body">제출 시 Apps Script로 시트 적재</span>
+                <span class="flow-node-meta">중복 방지 로직 포함</span>
+              </div>
+            </div>
+            <div class="flow-arrow">▼</div>
+            <div class="flow-row">
+              <div class="flow-node end">
+                <span class="flow-node-title">5. Action Plan 반영</span>
+                <span class="flow-node-body">action_plan_dashboard.html에서 자동 로드 → 일자별 KPI 추적</span>
+                <span class="flow-node-meta">실적 vs 목표 비교</span>
+              </div>
+            </div>
+          </div>
+
+          <h4>등록 절차</h4>
+          <div class="step-row"><span class="step-num">1</span><span><strong>품의 페이지 접속</strong> — <code>pumui.html</code>에서 "기획전 등록" 유형 선택</span></div>
+          <div class="step-row"><span class="step-num">2</span><span><strong>기본 정보 입력</strong> — 기획전명, 대상 사업장(다중 선택), 판매 기간, 적용 채널</span></div>
+          <div class="step-row"><span class="step-num">3</span><span><strong>요금 및 KPI 총계 입력</strong> — 패키지 코드, 요금안(min~max), 총 목표 RN/REV/ADR 입력</span></div>
+          <div class="step-row"><span class="step-num">4</span><span><strong>엑셀 업로드(선택)</strong> — 다수 기획전 일괄 등록 시 템플릿 활용</span></div>
+          <div class="step-row"><span class="step-num">5</span><span><strong>구글시트 제출</strong> — "제출" 버튼으로 Apps Script가 Key시트에 적재</span></div>
+          <div class="step-row"><span class="step-num">6</span><span><strong>Action Plan 확인</strong> — <code>action_plan_dashboard.html</code>에서 자동 분할된 일자별 KPI 확인</span></div>
+
+          <div class="kpi-callout">
+            <strong>KPI 총계 자동배분 안내</strong><br>
+            기획전 등록 시 <strong>총 RN/REV/ADR</strong>만 입력하면 시스템이 다음 규칙으로 일자·사업장별로 자동 분할합니다.
+            <ul>
+              <li><strong>주말 가중치</strong> — 금/토/일 1.4배, 평일 1.0배</li>
+              <li><strong>공휴일 가중치</strong> — 어린이날·현충일·광복절 등 1.6배 (2026 공휴일 캘린더 기준)</li>
+              <li><strong>사업장 가중치</strong> — 패키지 코드 매핑 시 사업장별 평균 ADR 비율 적용</li>
+              <li><strong>ADR 자동계산</strong> — REV/RN 입력 시 ADR 자동 도출, 셋 중 둘만 입력해도 나머지 자동 산출</li>
+              <li><strong>중복 방지</strong> — 동일 기획전명+패키지코드 조합은 Key시트에서 차단</li>
+            </ul>
+          </div>
+
+          <h4>주의사항</h4>
+          <ul>
+            <li>패키지 코드는 Key시트의 사전 정의 코드만 허용 — 신규 코드는 GS팀 승인 후 등록</li>
+            <li>총계 입력 후 자동배분 결과는 Action Plan 페이지에서 <strong>수정 가능</strong> (개별 일자 오버라이드)</li>
+            <li>제출 후 12시간 내 수정은 동일 기획전 ID로 덮어쓰기, 이후는 신규 버전으로 적재</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <!-- FCST 키인 가이드 -->

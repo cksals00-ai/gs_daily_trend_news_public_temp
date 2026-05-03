@@ -463,11 +463,49 @@ function aggregateProps(props) {
 
 function getOverallSummary() {
   if (!data) return null;
-  if (activeRegion !== '전체' || activeProps.size > 0) {
-    const allProps = (data.allMonths && data.allMonths['0']) ? data.allMonths['0'].byProperty : (data.byProperty || []);
-    return aggregateProps(allProps);
+  // M1~M12 per-month summary/byProperty 직접 합산 — allMonths['0']은
+  // 빌드 시점 LY 동기간 산출 로직이 월별 분할과 어긋나 합계 불일치 발생 → 우회.
+  const sumKeys = ['rns_budget','rns_actual','rns_last','rev_budget','rev_actual','rev_last',
+    'today_booking','today_cancel','today_net','today_booking_rev','today_cancel_rev','today_net_rev',
+    'rns_fcst','rev_fcst'];
+  const filterByPropArr = activeRegion !== '전체' || activeProps.size > 0;
+
+  if (filterByPropArr) {
+    const merged = {};
+    const propMap = {};
+    for (let m = 1; m <= 12; m++) {
+      const md = data.allMonths ? data.allMonths[String(m)] : null;
+      if (!md || !md.byProperty) continue;
+      md.byProperty.forEach(p => {
+        const key = p.name;
+        if (!propMap[key]) {
+          propMap[key] = { name: p.name, region: p.region };
+          sumKeys.forEach(k => propMap[key][k] = 0);
+        }
+        sumKeys.forEach(k => { propMap[key][k] += (p[k] || 0); });
+      });
+    }
+    const aggProps = Object.values(propMap);
+    return aggregateProps(aggProps);
   }
-  return (data.allMonths && data.allMonths['0']) ? data.allMonths['0'].summary : data.summary;
+
+  const out = {};
+  sumKeys.forEach(k => out[k] = 0);
+  for (let m = 1; m <= 12; m++) {
+    const md = data.allMonths ? data.allMonths[String(m)] : null;
+    if (!md || !md.summary) continue;
+    sumKeys.forEach(k => { out[k] += (md.summary[k] || 0); });
+  }
+  out.adr_actual = out.rns_actual > 0 ? Math.round(out.rev_actual / out.rns_actual) : 0;
+  out.adr_budget = out.rns_budget > 0 ? Math.round(out.rev_budget / out.rns_budget) : 0;
+  out.adr_last = out.rns_last > 0 ? Math.round(out.rev_last / out.rns_last) : 0;
+  out.rns_achievement = out.rns_budget > 0 ? +(out.rns_actual / out.rns_budget * 100).toFixed(1) : 0;
+  out.rev_achievement = out.rev_budget > 0 ? +(out.rev_actual / out.rev_budget * 100).toFixed(1) : 0;
+  out.rns_yoy = out.rns_last > 0 ? +((out.rns_actual / out.rns_last - 1) * 100).toFixed(1) : 0;
+  out.rev_yoy = out.rev_last > 0 ? +((out.rev_actual / out.rev_last - 1) * 100).toFixed(1) : 0;
+  out.adr_yoy = out.adr_last > 0 ? +((out.adr_actual / out.adr_last - 1) * 100).toFixed(1) : 0;
+  out.adr_vs_budget = out.adr_budget > 0 ? +((out.adr_actual / out.adr_budget - 1) * 100).toFixed(1) : 0;
+  return out;
 }
 
 // ─── RENDER ───

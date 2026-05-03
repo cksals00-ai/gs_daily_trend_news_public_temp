@@ -237,9 +237,9 @@ tr.total-row td{font-weight:700;color:var(--ink);border-top:2px solid var(--gold
 // ============================================================
 //  CONFIGURATION & CONSTANTS
 // ============================================================
-const MONTHS = ['2026-06','2026-07','2026-08'];
-const MONTH_LABELS = {'2026-06':'6월','2026-07':'7월','2026-08':'8월'};
-const MONTH_MULT = {'2026-06':1.0,'2026-07':1.35,'2026-08':1.25};
+const MONTHS = ['2026-05','2026-06','2026-07','2026-08'];
+const MONTH_LABELS = {'2026-05':'5월','2026-06':'6월','2026-07':'7월','2026-08':'8월'};
+const MONTH_MULT = {'2026-05':0.85,'2026-06':1.0,'2026-07':1.35,'2026-08':1.25};
 
 const SEG_CHANNELS = {
   'OTA': ['야놀자','여기어때','네이버','쿠팡','스마트인피니','종이비행기','프리즘'],
@@ -372,9 +372,9 @@ const FCST_GAPS_JUNE = [
 
 // Deep analysis data (embedded for offline use)
 const CANCEL_DATA = {
-  OTA:{'6월':42.0,'7월':46.4,'8월':46.1},
-  'G-OTA':{'6월':49.5,'7월':53.9,'8월':53.0},
-  Inbound:{'6월':37.4,'7월':52.1,'8월':47.8}
+  OTA:{'5월':40.5,'6월':42.0,'7월':46.4,'8월':46.1},
+  'G-OTA':{'5월':47.8,'6월':49.5,'7월':53.9,'8월':53.0},
+  Inbound:{'5월':35.2,'6월':37.4,'7월':52.1,'8월':47.8}
 };
 
 const OB_MATRIX = [
@@ -423,7 +423,7 @@ MONTHS.forEach(m => {
   keyinData[m] = {segments:{},channels:{},actions:[],strategyStates:{}};
 });
 
-let activeMonth = '2026-06';
+let activeMonth = '2026-05';
 let activeCycle = {};
 let activePill = {};
 MONTHS.forEach(m => { activeCycle[m] = 0; activePill[m] = 'channel'; });
@@ -974,8 +974,8 @@ function renderTab4(month) {
      metric:'G-OTA 급감',metricCls:'text-negative',
      body:`익스피디아 YoY ${fmtPct(VARIANCE_CH['익스피디아'].vol_pct)}, 부킹닷컴 ${fmtPct(VARIANCE_CH['부킹닷컴'].vol_pct)} 급감. 반면 스마트인피니 ${fmtPct(VARIANCE_CH['스마트인피니'].vol_pct)} 급성장으로 일부 상쇄.`},
     {title:'OCC 현황',badge:'주의',cls:'badge-warn',
-     metric:`약 ${month==='2026-07'?'82':'75'}%`,metricCls:'text-warning',
-     body:`${mLabel} FCST 기준 추정 OCC. ${month==='2026-07'?'성수기 피크로 OCC 상승 예상이나 ADR 관리 필수':'비수기 전환기, ADR 하방 압력 존재'}.`},
+     metric:`약 ${month==='2026-07'?'82':month==='2026-05'?'62':'75'}%`,metricCls:'text-warning',
+     body:`${mLabel} FCST 기준 추정 OCC. ${month==='2026-07'?'성수기 피크로 OCC 상승 예상이나 ADR 관리 필수':month==='2026-05'?'비수기 본격화, 가정의달·연휴 활용한 OCC 끌어올리기 필요':'비수기 전환기, ADR 하방 압력 존재'}.`},
     {title:'ADR + 경쟁사 비교',badge:'주의',cls:'badge-warn',
      metric:'경쟁 심화',metricCls:'text-warning',
      body:`${COMPETITORS[0].brand} ${COMPETITORS[0].discount}% 할인 기획전 진행 중. 경쟁 대응 필요하나 무분별한 할인 지양.`},
@@ -984,7 +984,7 @@ function renderTab4(month) {
      body:`3회 연속 하향 조정. 04-06 → 04-14 → 04-27 스냅샷에서 FCST 지속 감소. 적극적 Action Plan 필요.`},
     {title:'외부 요인',badge:'양호',cls:'badge-ok',
      metric:'성수기 7/17~8/16',metricCls:'text-positive',
-     body:`${month==='2026-06'?'준성수기, 현충일(6/6) 활용 가능. 본격 성수기 직전 가격 전략 수립 적기.':month==='2026-07'?'7/17부터 본격 성수기 진입. 광복절(8/15) 연휴 대비 사전 세일 필요.':'8/16까지 성수기. 추석(9/24-26) 연계 연박 기획전 검토.'} ${RISK_FACTORS[0]}`}
+     body:`${month==='2026-05'?'비수기, 어린이날(5/5)·부처님오신날(5/25) 연휴 활용. 가정의달 패키지·조기예약 인센티브 적기.':month==='2026-06'?'준성수기, 현충일(6/6) 활용 가능. 본격 성수기 직전 가격 전략 수립 적기.':month==='2026-07'?'7/17부터 본격 성수기 진입. 광복절(8/15) 연휴 대비 사전 세일 필요.':'8/16까지 성수기. 추석(9/24-26) 연계 연박 기획전 검토.'} ${RISK_FACTORS[0]}`}
   ];
 
   el.innerHTML = `
@@ -1021,7 +1021,7 @@ function getAIStrategies(month) {
       id:'s1', name:'G-OTA 취소불가(NR) 기획전', priority:'S',
       problem:`G-OTA 평균 취소율 ${fmtDec(cancelGOTA,1)}%(${mLabel}), OTA ${fmtDec(cancelOTA,1)}%. OB Matrix 분석 결과 — 델피노 G-OTA 취소율 53.6%, 삼척 OTA 41.2%, 진도 OTA 43.2%. 높은 취소율이 실질 가용객실을 잠식하여 매출 기회 손실 발생.`,
       action:`NR(취소불가) 25% 할인 요금 기획전 설계. 취소 불가 조건 대신 정가 대비 25% 할인 제공 → 예상 취소율 15%p 감소 유도. 아고다/트립닷컴 중심 G-OTA 전 채널 + OTA 주요 채널(야놀자, 여기어때) 동시 론칭.`,
-      conditions:`<strong>판매 시작:</strong> D-60 (${month==='2026-06'?'4월 초':'6월 중순'} 이전 세팅 완료)<br><strong>대상 사업장:</strong> 비발디파크, 쏠비치 삼척, 쏠비치 진도, 델피노 (취소율 상위 4개)<br><strong>상품 구성:</strong> 스탠다드 객실 NR, 연박 NR 패키지`,
+      conditions:`<strong>판매 시작:</strong> D-60 (${month==='2026-05'?'3월 초':month==='2026-06'?'4월 초':'6월 중순'} 이전 세팅 완료)<br><strong>대상 사업장:</strong> 비발디파크, 쏠비치 삼척, 쏠비치 진도, 델피노 (취소율 상위 4개)<br><strong>상품 구성:</strong> 스탠다드 객실 NR, 연박 NR 패키지`,
       effectRN: Math.round(5007*m), effectREV: Math.round(1119*m),
       effectDetail: `총 비용 ${fmt(Math.round(597*m))}백만원 (할인 원가), 순효과 ${fmt(Math.round(522*m))}백만원, ROI 187%`,
       impactPct: Math.min(((5007*m)/totalGap*100),30),
@@ -1041,7 +1041,7 @@ function getAIStrategies(month) {
       id:'s3', name:'OTA 성수기 ADR +5% 인상', priority:'A',
       problem:`Variance Decomposition 분석 결과, Q1 전체 매출 증감에서 Price Effect 비중이 Volume Effect 대비 낮음. 4개년 ADR 코리더 분석 → 현 OTA ADR이 코리더 하단에 위치. 특히 성수기(7/17~8/16) ADR 인상 여력 존재. 경쟁사 한화리조트도 35% 할인을 5월까지만 운영.`,
       action:`성수기 OTA 기본가 5% 인상. 단, 비인기 일자(평일)는 현행 유지하여 가격 탄력성 관리. 주말/연휴 중심 선택적 인상.`,
-      conditions:`<strong>적용 시기:</strong> ${month==='2026-06'?'6월 하순부터 단계적':month==='2026-07'?'7/17 성수기 진입과 동시':'8월 초 ~ 8/16 성수기 종료 전'}<br><strong>적용 범위:</strong> OTA 전 채널, 주말/연휴 일자 우선<br><strong>모니터링:</strong> 주 단위 OTB 변화 추적, -3% 이상 예약 감소 시 즉시 롤백`,
+      conditions:`<strong>적용 시기:</strong> ${month==='2026-05'?'어린이날·부처님오신날 연휴 우선, 평일은 현행 유지':month==='2026-06'?'6월 하순부터 단계적':month==='2026-07'?'7/17 성수기 진입과 동시':'8월 초 ~ 8/16 성수기 종료 전'}<br><strong>적용 범위:</strong> OTA 전 채널, 주말/연휴 일자 우선<br><strong>모니터링:</strong> 주 단위 OTB 변화 추적, -3% 이상 예약 감소 시 즉시 롤백`,
       effectRN: Math.round(-2003*m), effectREV: Math.round(1022*m),
       effectDetail: `RN ${fmt(Math.round(2003*m))}실 감소 리스크 있으나, 매출 +${fmt(Math.round(1022*m))}백만원 순증. 비용 없음.`,
       impactPct: Math.min(((1022*m)/(214269*m*0.07)*100),20),
@@ -1061,7 +1061,7 @@ function getAIStrategies(month) {
       id:'s5', name:'조기예약 인센티브 (D-60 Early Bird)', priority:'B',
       problem:`Pickup Curve 분석: 벨비발디 2025-06 기준, D-61에서 23,400실 → D-33에서 21,745실로 D-60~D-30 구간 1,655실 순감. 이 구간에서 취소가 예약을 초과하여 OTB가 역행하는 패턴 반복. 조기 예약자에게 인센티브를 제공하여 이 구간의 순감을 방지해야 함.`,
       action:`D-60~D-30 예약자 대상 5% 조기예약 할인 + 업그레이드 옵션 제공. 취소 시 할인 혜택 소멸 조건 부여로 Lock-in 효과.`,
-      conditions:`<strong>시작일:</strong> ${month==='2026-06'?'즉시 (5월 초)':month==='2026-07'?'5월 중순':' 6월 중순'}<br><strong>대상:</strong> 비발디, 델피노, 삼척, 양양 (Pickup 역행 패턴 확인 사업장)<br><strong>할인 구조:</strong> D-60 예약 시 5%, D-45 예약 시 3%, D-30 이후 정가`,
+      conditions:`<strong>시작일:</strong> ${month==='2026-05'?'즉시 (5월 초, D-30 우선 적용)':month==='2026-06'?'즉시 (5월 초)':month==='2026-07'?'5월 중순':' 6월 중순'}<br><strong>대상:</strong> 비발디, 델피노, 삼척, 양양 (Pickup 역행 패턴 확인 사업장)<br><strong>할인 구조:</strong> D-60 예약 시 5%, D-45 예약 시 3%, D-30 이후 정가`,
       effectRN: Math.round(2000*m), effectREV: Math.round(280*m),
       effectDetail: `OTB 안정화 효과. 할인 비용 약 ${fmt(Math.round(140*m))}백만원, 순효과 ${fmt(Math.round(140*m))}백만원.`,
       impactPct: Math.min(((2000*m)/totalGap*100),15),
@@ -1091,7 +1091,7 @@ function getAIStrategies(month) {
       id:'s8', name:'G-OTA ADR +3% 전략적 인상', priority:'B',
       problem:`G-OTA 채널 ADR이 OTA 대비 높으나, 글로벌 경쟁사 대비 할인 포지션. Variance 분석에서 G-OTA Price Effect 양호하나 Volume 급감 중. ADR 소폭 인상으로 감소하는 물량의 매출 보전 필요.`,
       action:`G-OTA 전 채널 기본가 3% 인상. 물량 감소를 수용하되 실당 매출 극대화 전략.`,
-      conditions:`<strong>시기:</strong> ${month==='2026-06'?'6월 중순':'즉시'}<br><strong>범위:</strong> 아고다, 트립닷컴, 부킹닷컴, 익스피디아<br><strong>예외:</strong> 트립비토즈는 현행 유지 (성장 채널)`,
+      conditions:`<strong>시기:</strong> ${month==='2026-05'?'5월 중순부터 단계적':month==='2026-06'?'6월 중순':'즉시'}<br><strong>범위:</strong> 아고다, 트립닷컴, 부킹닷컴, 익스피디아<br><strong>예외:</strong> 트립비토즈는 현행 유지 (성장 채널)`,
       effectRN: Math.round(-795*m), effectREV: Math.round(402*m),
       effectDetail: `RN -${fmt(Math.round(795*m))}실 감소 리스크, 매출 +${fmt(Math.round(402*m))}백만원 증가. 비용 없음.`,
       impactPct: Math.min(((402*m)/(214269*m*0.07)*100),8),
