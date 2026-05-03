@@ -255,6 +255,291 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   .flow-row{flex-direction:column;gap:6px}
 }
 
+/* ═══ GOAL GAUGE ═══ */
+.goal-section{
+  margin:-32px 0 28px;position:relative;z-index:5;
+  background:linear-gradient(180deg,var(--glass2),var(--glass));
+  border:1px solid var(--rule);border-radius:16px;
+  padding:26px 28px 22px;
+}
+.goal-head{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:20px;margin-bottom:22px;flex-wrap:wrap;
+}
+.goal-head-left h2{
+  font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.01em;
+  margin-bottom:4px;
+}
+.goal-head-left .goal-sub{
+  font-size:11px;color:var(--ink4);font-family:var(--mono);
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.goal-filters{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:6px}
+.filter-label{
+  font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+  color:var(--ink4);font-weight:700;text-transform:uppercase;
+}
+.seg-chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{
+  padding:5px 12px;border-radius:14px;background:transparent;
+  border:1px solid var(--rule);color:var(--ink3);font-size:11px;
+  font-weight:600;cursor:pointer;transition:all .2s;
+  font-family:var(--sans);
+}
+.chip:hover{color:var(--ink2);border-color:var(--ink4)}
+.chip.active{
+  background:rgba(212,167,74,.12);
+  border-color:rgba(212,167,74,.5);color:var(--gold2);
+}
+.goal-prop-select{
+  padding:6px 12px;background:var(--glass);border:1px solid var(--rule);
+  border-radius:14px;color:var(--ink2);font-size:11px;font-weight:600;
+  font-family:var(--sans);cursor:pointer;min-width:140px;
+}
+.goal-prop-select:focus{outline:none;border-color:var(--gold)}
+
+.goal-main{
+  display:grid;grid-template-columns:auto 1fr auto;gap:32px;
+  align-items:center;padding:8px 0 22px;
+  border-bottom:1px solid var(--rule);margin-bottom:18px;
+}
+.goal-target-display{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  min-width:150px;
+}
+.goal-target-label{
+  font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+  color:var(--ink4);font-weight:700;text-transform:uppercase;
+}
+.goal-target-row{display:flex;align-items:baseline;gap:6px}
+.goal-target-val{
+  font-family:var(--mono);font-size:38px;font-weight:800;
+  color:var(--ink);line-height:1;
+}
+.goal-target-unit{font-family:var(--mono);font-size:13px;color:var(--ink3)}
+.goal-target-month{
+  font-size:11px;color:var(--ink4);font-weight:600;
+  font-family:var(--mono);letter-spacing:.05em;
+}
+
+.goal-gauge-wrap{flex:1;min-width:0;padding:14px 0}
+.goal-gauge-bar{
+  position:relative;height:34px;border-radius:17px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--rule);
+}
+.gauge-fill{
+  position:absolute;left:0;top:0;bottom:0;
+  border-radius:16px 0 0 16px;
+  transition:width .8s cubic-bezier(.25,.46,.45,.94);
+  display:flex;align-items:center;justify-content:flex-end;padding-right:10px;
+}
+.gauge-fill.full{border-radius:16px}
+.gauge-fill.status-good{background:linear-gradient(90deg,#4eb088,#6dd1a6)}
+.gauge-fill.status-warn{background:linear-gradient(90deg,#d4a84e,#ecc06a)}
+.gauge-fill.status-risk{background:linear-gradient(90deg,#d6586a,#e87a8a)}
+.gauge-fill-pct{
+  font-family:var(--mono);font-size:12px;font-weight:800;
+  color:rgba(15,17,23,.85);
+}
+.gauge-marker{
+  position:absolute;top:-8px;bottom:-8px;width:2px;pointer-events:none;
+}
+.gauge-marker-fcst{background:var(--cyan)}
+.gauge-marker-ly{background:var(--violet)}
+.gauge-marker-label{
+  position:absolute;left:50%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.05em;white-space:nowrap;padding:2px 6px;
+  border-radius:8px;
+}
+.gauge-marker-fcst .gauge-marker-label{
+  top:-22px;background:rgba(92,196,208,.18);color:var(--cyan);
+}
+.gauge-marker-ly .gauge-marker-label{
+  bottom:-22px;background:rgba(160,126,232,.18);color:var(--violet);
+}
+
+.goal-status{
+  display:flex;align-items:center;gap:14px;padding:12px 18px;
+  border-radius:12px;border:1px solid var(--rule);
+  min-width:220px;max-width:280px;
+}
+.goal-status.status-good{background:rgba(92,196,154,.08);border-color:rgba(92,196,154,.35)}
+.goal-status.status-warn{background:rgba(212,167,74,.08);border-color:rgba(212,167,74,.35)}
+.goal-status.status-risk{background:rgba(232,122,138,.08);border-color:rgba(232,122,138,.35)}
+.status-icon{font-size:22px;flex-shrink:0}
+.status-text{flex:1;min-width:0}
+.status-headline{
+  font-size:13px;font-weight:800;color:var(--ink);
+  letter-spacing:-.01em;line-height:1.3;
+}
+.status-detail{
+  font-family:var(--mono);font-size:10px;color:var(--ink3);
+  letter-spacing:.05em;margin-top:3px;
+}
+
+.goal-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+}
+.goal-stat{
+  background:var(--glass);border:1px solid var(--rule);
+  border-radius:10px;padding:13px 16px;
+}
+.stat-label{
+  display:block;font-family:var(--mono);font-size:9px;
+  letter-spacing:.15em;color:var(--ink4);font-weight:700;
+  text-transform:uppercase;margin-bottom:5px;
+}
+.stat-val{
+  display:block;font-family:var(--mono);font-size:20px;
+  font-weight:800;color:var(--ink);line-height:1;
+}
+.stat-meta{
+  display:block;font-size:10px;color:var(--ink3);margin-top:5px;
+  font-family:var(--mono);letter-spacing:.05em;
+}
+.goal-stat.accent-mint .stat-val{color:#7ad6a8}
+.goal-stat.accent-rose .stat-val{color:var(--rose)}
+.goal-stat.accent-cyan .stat-val{color:var(--cyan)}
+.goal-stat.accent-violet .stat-val{color:var(--violet)}
+
+.goal-loading{
+  text-align:center;padding:30px;color:var(--ink4);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+}
+
+@media(max-width:900px){
+  .goal-main{grid-template-columns:1fr;gap:18px}
+  .goal-stats{grid-template-columns:repeat(2,1fr)}
+  .goal-status{max-width:none}
+}
+
+/* ═══ GANTT CALENDAR ═══ */
+.gantt-section{margin-bottom:52px}
+.gantt-head-row{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;flex-wrap:wrap;margin-bottom:14px;
+  padding:14px 20px;background:var(--glass);
+  border:1px solid var(--rule);border-radius:12px;
+}
+.gantt-head-left{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.gantt-channel-label{
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;
+  color:var(--ink4);font-weight:700;text-transform:uppercase;
+}
+.channel-chips{display:flex;flex-wrap:wrap;gap:4px;max-width:560px}
+.gantt-month-nav{display:flex;align-items:center;gap:10px}
+.gantt-nav-btn{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--glass2);border:1px solid var(--rule);
+  color:var(--ink2);cursor:pointer;font-family:var(--mono);
+  font-size:12px;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.gantt-nav-btn:hover{color:var(--gold2);border-color:var(--gold)}
+.gantt-month-label{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  color:var(--ink);letter-spacing:.05em;min-width:160px;text-align:center;
+}
+
+.gantt-canvas{
+  background:var(--glass);border:1px solid var(--rule);
+  border-radius:12px;overflow:hidden;
+}
+.gantt-grid-header{
+  display:grid;grid-template-columns:220px 1fr;
+  background:var(--bg2);border-bottom:1px solid var(--rule);
+}
+.gantt-row-header-cell{
+  padding:9px 12px;font-family:var(--mono);font-size:10px;
+  color:var(--ink3);letter-spacing:.12em;font-weight:700;
+  text-transform:uppercase;border-right:1px solid var(--rule);
+}
+.gantt-day-header{display:grid}
+.gantt-day-cell{
+  text-align:center;padding:6px 0;font-family:var(--mono);
+  font-size:10px;color:var(--ink3);font-weight:600;
+  border-left:1px solid var(--rule);
+}
+.gantt-day-cell.weekend{color:var(--ink4);background:rgba(255,255,255,.02)}
+.gantt-day-cell.today{color:var(--gold2);background:rgba(212,167,74,.08);font-weight:800}
+.gantt-day-cell-day{display:block;font-size:9px;opacity:.6}
+
+.gantt-rows{max-height:560px;overflow-y:auto}
+.gantt-row{
+  display:grid;grid-template-columns:220px 1fr;
+  border-bottom:1px solid var(--rule);min-height:42px;
+  align-items:stretch;
+}
+.gantt-row:last-child{border-bottom:none}
+.gantt-row:hover{background:rgba(255,255,255,.02)}
+.gantt-row-info{
+  padding:8px 12px;font-size:11.5px;color:var(--ink2);
+  border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;justify-content:center;gap:2px;
+  overflow:hidden;
+}
+.gantt-row-title{
+  font-weight:700;color:var(--ink);line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.gantt-row-meta{
+  font-family:var(--mono);font-size:9px;color:var(--ink4);
+  letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.gantt-row-bar-track{position:relative;min-height:42px}
+.gantt-day-grid{position:absolute;inset:0;display:grid;pointer-events:none}
+.gantt-day-grid-line{border-left:1px solid rgba(255,255,255,.04)}
+.gantt-day-grid-line.weekend{background:rgba(255,255,255,.015)}
+.gantt-day-grid-line.today{background:rgba(212,167,74,.05)}
+.gantt-bar{
+  position:absolute;top:50%;transform:translateY(-50%);
+  height:22px;border-radius:6px;padding:0 8px;
+  display:flex;align-items:center;font-size:10.5px;font-weight:700;
+  color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;transition:all .15s;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:2;
+}
+.gantt-bar:hover{transform:translateY(-50%) scale(1.02);z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.gantt-bar.seg-ota{background:linear-gradient(90deg,rgba(232,122,138,.85),rgba(232,122,138,.95))}
+.gantt-bar.seg-gota{background:linear-gradient(90deg,rgba(160,126,232,.85),rgba(160,126,232,.95))}
+.gantt-bar.seg-inbound{background:linear-gradient(90deg,rgba(92,196,208,.85),rgba(92,196,208,.95))}
+.gantt-bar.seg-other{background:linear-gradient(90deg,rgba(212,167,74,.85),rgba(212,167,74,.95))}
+.gantt-bar.spillover-left{border-top-left-radius:0;border-bottom-left-radius:0}
+.gantt-bar.spillover-right{border-top-right-radius:0;border-bottom-right-radius:0}
+
+.gantt-empty{
+  padding:60px 20px;text-align:center;color:var(--ink4);font-size:13px;
+}
+.gantt-empty-icon{font-size:32px;margin-bottom:10px;display:block;opacity:.5}
+
+.gantt-legend{
+  display:flex;flex-wrap:wrap;gap:14px;padding:10px 16px;
+  font-family:var(--mono);font-size:10px;color:var(--ink3);
+  letter-spacing:.05em;border-top:1px solid var(--rule);
+  background:var(--bg2);
+}
+.gantt-legend-dot{
+  display:inline-block;width:10px;height:10px;border-radius:3px;
+  margin-right:6px;vertical-align:middle;
+}
+.gantt-meta-bar{
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  padding:8px 16px;font-family:var(--mono);font-size:10px;
+  color:var(--ink4);letter-spacing:.05em;border-top:1px solid var(--rule);
+}
+.gantt-meta-bar strong{color:var(--ink2);font-weight:700}
+
+@media(max-width:768px){
+  .gantt-grid-header,.gantt-row{grid-template-columns:130px 1fr}
+  .gantt-row-info{font-size:10.5px;padding:6px 8px}
+  .gantt-day-cell{font-size:8.5px}
+}
+
 /* ═══ FOOTER ═══ */
 .map-footer{
   border-top:1px solid var(--rule);padding:32px 0;margin-top:24px;
@@ -317,6 +602,84 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 <!-- ═══ CONTENT ═══ -->
 <div class="content">
 
+  <!-- ★ 목표 게이지 -->
+  <div class="goal-section" id="goal-section">
+    <div class="goal-head">
+      <div class="goal-head-left">
+        <h2>이번 달 목표 달성 현황</h2>
+        <div class="goal-sub" id="goal-period-label">— 객실 목표 vs 기획전 KPI</div>
+      </div>
+      <div class="goal-filters">
+        <div class="filter-group">
+          <span class="filter-label">세그먼트</span>
+          <div class="seg-chips" id="goal-seg-chips"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">사업장</span>
+          <select class="goal-prop-select" id="goal-prop-select">
+            <option value="">전체</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="goal-main">
+      <div class="goal-target-display">
+        <span class="goal-target-label">월 목표</span>
+        <div class="goal-target-row">
+          <span class="goal-target-val" id="goal-target-val">—</span>
+          <span class="goal-target-unit">실</span>
+        </div>
+        <span class="goal-target-month" id="goal-target-month">—</span>
+      </div>
+
+      <div class="goal-gauge-wrap">
+        <div class="goal-gauge-bar" id="goal-gauge-bar">
+          <div class="gauge-fill status-warn" id="gauge-fill" style="width:0%">
+            <span class="gauge-fill-pct" id="gauge-fill-pct"></span>
+          </div>
+          <div class="gauge-marker gauge-marker-fcst" id="gauge-marker-fcst" style="left:0%;display:none">
+            <span class="gauge-marker-label" id="gauge-marker-fcst-label">FCST</span>
+          </div>
+          <div class="gauge-marker gauge-marker-ly" id="gauge-marker-ly" style="left:0%;display:none">
+            <span class="gauge-marker-label" id="gauge-marker-ly-label">LY</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="goal-status status-warn" id="goal-status">
+        <span class="status-icon" id="status-icon">⚠️</span>
+        <div class="status-text">
+          <div class="status-headline" id="status-headline">데이터 로딩 중</div>
+          <div class="status-detail" id="status-detail">기획전 KPI 집계 중…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="goal-stats">
+      <div class="goal-stat accent-mint">
+        <span class="stat-label">기획전 KPI 합산</span>
+        <span class="stat-val" id="stat-kpi">—</span>
+        <span class="stat-meta" id="stat-kpi-meta">— 건</span>
+      </div>
+      <div class="goal-stat accent-rose">
+        <span class="stat-label">추가 필요</span>
+        <span class="stat-val" id="stat-gap">—</span>
+        <span class="stat-meta" id="stat-gap-meta">목표 대비</span>
+      </div>
+      <div class="goal-stat accent-cyan">
+        <span class="stat-label">FCST</span>
+        <span class="stat-val" id="stat-fcst">—</span>
+        <span class="stat-meta" id="stat-fcst-meta">목표 대비</span>
+      </div>
+      <div class="goal-stat accent-violet">
+        <span class="stat-label">전년 동기간 실적</span>
+        <span class="stat-val" id="stat-ly">—</span>
+        <span class="stat-meta" id="stat-ly-meta">YoY</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ★ 주요 도구 — Bento Grid -->
   <div class="fav-section">
     <div class="cat-head">
@@ -343,6 +706,36 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
         <span class="bento-title">요청사항</span>
         <span class="bento-desc">세일즈 요청 접수 및 관리</span>
       </a>
+    </div>
+  </div>
+
+  <!-- ★ Action Plan 간트 캘린더 -->
+  <div class="cat-section gantt-section">
+    <div class="cat-head">
+      <div class="cat-accent" style="background:var(--violet)"></div>
+      <div class="cat-title">내 기획전 캘린더</div>
+      <div class="cat-count" id="gantt-count">ACTION PLAN</div>
+    </div>
+
+    <div class="gantt-head-row">
+      <div class="gantt-head-left">
+        <span class="gantt-channel-label">내 채널</span>
+        <div class="channel-chips" id="gantt-channel-chips">
+          <button class="chip active" data-channel="">전체</button>
+        </div>
+      </div>
+      <div class="gantt-month-nav">
+        <button class="gantt-nav-btn" id="gantt-prev" aria-label="이전 달">◀</button>
+        <span class="gantt-month-label" id="gantt-month-label">—</span>
+        <button class="gantt-nav-btn" id="gantt-next" aria-label="다음 달">▶</button>
+      </div>
+    </div>
+
+    <div class="gantt-canvas" id="gantt-canvas">
+      <div class="gantt-empty" id="gantt-empty">
+        <span class="gantt-empty-icon">📅</span>
+        구글시트에서 기획전 데이터 로드 중…
+      </div>
     </div>
   </div>
 
@@ -582,6 +975,370 @@ function toggleGuide(btn){
   body.classList.toggle('open');
   chevron.classList.toggle('open');
 }
+
+/* ════════════════════════════════════════════════
+   세일즈 대시보드 — 목표 게이지 + 간트 캘린더
+   데이터 소스: 기획전 KPI 구글시트 publish CSV
+   ════════════════════════════════════════════════ */
+(function(){
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTqe7nY8vHYVVnnGR5qrl-uubCABXtmbToAuKWziuaoms14hZ3qlJuQTBWUXDmjCOU-4hd0hp6cpO_O/pub?gid=1818134248&single=true&output=csv';
+
+/* ── 월별 객실 목표 (운영팀이 관리하는 값 — 필요 시 직접 갱신) ── */
+const MONTHLY_GOALS={
+  '2026-04':{'전체':10500,'OTA':4400,'G-OTA':3100,'Inbound':2200,'기타':800},
+  '2026-05':{'전체':12200,'OTA':5100,'G-OTA':3500,'Inbound':2600,'기타':1000},
+  '2026-06':{'전체':13500,'OTA':5600,'G-OTA':4000,'Inbound':2900,'기타':1000},
+  '2026-07':{'전체':16000,'OTA':6500,'G-OTA':5000,'Inbound':3300,'기타':1200},
+  '2026-08':{'전체':17200,'OTA':6800,'G-OTA':5400,'Inbound':3700,'기타':1300},
+  '2026-09':{'전체':14000,'OTA':5800,'G-OTA':4200,'Inbound':3000,'기타':1000},
+  '2026-10':{'전체':15500,'OTA':6300,'G-OTA':4700,'Inbound':3300,'기타':1200},
+  '2026-11':{'전체':12500,'OTA':5100,'G-OTA':3700,'Inbound':2700,'기타':1000},
+  '2026-12':{'전체':14000,'OTA':5600,'G-OTA':4200,'Inbound':3100,'기타':1100}
+};
+/* ── FCST/전년 동기간 참고치 (향후 fcst-status·otb 연동 예정) ── */
+const REFERENCE_BY_MONTH={
+  '2026-05':{'전체':{fcst:11000,ly:11500},'OTA':{fcst:4700,ly:4900},'G-OTA':{fcst:3200,ly:3300},'Inbound':{fcst:2400,ly:2300},'기타':{fcst:900,ly:1000}},
+  '2026-06':{'전체':{fcst:12500,ly:12800},'OTA':{fcst:5300,ly:5400},'G-OTA':{fcst:3800,ly:3900},'Inbound':{fcst:2700,ly:2600},'기타':{fcst:900,ly:900}},
+  '2026-07':{'전체':{fcst:14800,ly:15200},'OTA':{fcst:6100,ly:6300},'G-OTA':{fcst:4700,ly:4800},'Inbound':{fcst:3100,ly:3000},'기타':{fcst:1100,ly:1100}}
+};
+
+/* ── State ── */
+const today=new Date();today.setHours(0,0,0,0);
+let allRows=[];
+let goalSeg='전체';        // 전체 / OTA / G-OTA / Inbound
+let goalProp='';            // '' = 전체
+let ganttChannel='';        // '' = 전체
+let ganttCursor=new Date(today.getFullYear(),today.getMonth(),1);
+
+/* ── Utils ── */
+function parseCSVLine(line){
+  const r=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++}else q=!q}
+    else if(c===','&&!q){r.push(cur);cur=''}
+    else cur+=c;
+  }
+  r.push(cur);return r;
+}
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return [];
+  let hdrIdx=0;
+  for(let i=0;i<Math.min(lines.length,30);i++){
+    const cells=parseCSVLine(lines[i]).map(c=>c.trim());
+    const hasProp=cells.some(c=>c==='사업장'||c==='영업장');
+    const hasCh=cells.some(c=>c==='채널');
+    if(hasProp&&hasCh){hdrIdx=i;break}
+  }
+  const hdr=parseCSVLine(lines[hdrIdx]).map(h=>h.trim());
+  return lines.slice(hdrIdx+1).map(l=>{
+    const vals=parseCSVLine(l);
+    const row={};
+    hdr.forEach((h,i)=>row[h]=(vals[i]||'').trim());
+    return row;
+  });
+}
+function findCol(row,...keys){
+  for(const k of keys){
+    for(const rk of Object.keys(row)){
+      if(rk.toLowerCase()===k.toLowerCase())return row[rk];
+    }
+    for(const rk of Object.keys(row)){
+      if(rk.toLowerCase().includes(k.toLowerCase()))return row[rk];
+    }
+  }
+  return '';
+}
+function parseDate(s){
+  if(!s)return null;s=s.trim();
+  let m=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/);
+  if(m){const d=new Date(+m[1],+m[2]-1,+m[3]);d.setHours(0,0,0,0);return d}
+  m=s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+  if(m){const d=new Date(+m[3],+m[1]-1,+m[2]);d.setHours(0,0,0,0);return d}
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m){const d=new Date(+m[1],+m[2]-1,+m[3]);d.setHours(0,0,0,0);return d}
+  return null;
+}
+function parseNum(v){if(v==null)return 0;const n=parseFloat(String(v).replace(/[,\s]/g,''));return isFinite(n)?n:0}
+function fmtNum(n){if(!isFinite(n))return '—';return Math.round(n).toLocaleString('ko-KR')}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ymKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function ymLabel(d){return d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')}
+function daysInMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
+
+/* ── Row mapping ── */
+function mapRow(raw,idx){
+  const seg=findCol(raw,'구분').trim();
+  const property=findCol(raw,'사업장').trim();
+  const channel=findCol(raw,'채널').trim();
+  const saleStart=parseDate(findCol(raw,'판매기간(시작)','판매기간시작','판매시작'));
+  const saleEnd=parseDate(findCol(raw,'판매기간(종료)','판매기간종료','판매종료'));
+  const stayStart=parseDate(findCol(raw,'투숙기간(시작)','투숙기간시작','투숙시작'));
+  const stayEnd=parseDate(findCol(raw,'투숙기간(종료)','투숙기간종료','투숙종료'));
+  const venue=findCol(raw,'영업장').trim();
+  const product=findCol(raw,'상품명','상품').trim();
+  const key=findCol(raw,'Key','키','번호').trim();
+  const kpiRn=parseNum(findCol(raw,'KPI객실수실','KPI객실수','객실KPI'));
+  const kpiRev=parseNum(findCol(raw,'KPI매출백만원','KPI매출','매출KPI'));
+  const title=product||venue||'(제목 없음)';
+  return{idx,key,seg,property,channel,saleStart,saleEnd,stayStart,stayEnd,venue,product,title,kpiRn,kpiRev};
+}
+
+/* ── Segment normalization ── */
+function normSeg(s){
+  if(!s)return '기타';
+  const t=s.trim().toUpperCase();
+  if(t==='OTA')return 'OTA';
+  if(t==='G-OTA'||t==='GOTA'||t.includes('G-OTA'))return 'G-OTA';
+  if(t.includes('INBOUND')||t.includes('인바운드'))return 'Inbound';
+  if(t.includes('OTA'))return 'OTA';
+  return s.trim();
+}
+
+/* ── CSV load ── */
+async function loadCSV(){
+  try{
+    const r=await fetch(CSV_URL,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    const raw=parseCSV(txt);
+    const mapped=raw.map((row,i)=>mapRow(row,i));
+    allRows=mapped.filter(r=>r.title&&(r.stayStart||r.saleStart));
+    console.log('[gs-sales] CSV loaded:',allRows.length,'rows');
+    initFilters();
+    renderGoal();
+    renderGantt();
+  }catch(e){
+    console.error('[gs-sales] CSV load failed:',e);
+    document.getElementById('status-headline').textContent='데이터 로드 실패';
+    document.getElementById('status-detail').textContent=e.message;
+    document.getElementById('gantt-empty').innerHTML='<span class="gantt-empty-icon">⚠️</span>데이터 로드 실패: '+escapeHtml(e.message);
+  }
+}
+
+/* ── Filters init ── */
+function initFilters(){
+  // 세그먼트 chips
+  const segs=['전체','OTA','G-OTA','Inbound'];
+  const segWrap=document.getElementById('goal-seg-chips');
+  segWrap.innerHTML=segs.map(s=>`<button class="chip ${goalSeg===s?'active':''}" data-seg="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('');
+  segWrap.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{
+    goalSeg=b.dataset.seg;
+    segWrap.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));
+    renderGoal();
+  }));
+
+  // 사업장 select
+  const props=[...new Set(allRows.map(r=>r.property).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const sel=document.getElementById('goal-prop-select');
+  sel.innerHTML='<option value="">전체</option>'+props.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  sel.addEventListener('change',()=>{goalProp=sel.value;renderGoal()});
+
+  // 간트 채널 chips
+  const chans=[...new Set(allRows.map(r=>r.channel).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const chWrap=document.getElementById('gantt-channel-chips');
+  chWrap.innerHTML='<button class="chip active" data-channel="">전체</button>'+
+    chans.map(c=>`<button class="chip" data-channel="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  chWrap.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{
+    ganttChannel=b.dataset.channel;
+    chWrap.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));
+    renderGantt();
+  }));
+
+  document.getElementById('gantt-prev').addEventListener('click',()=>{
+    ganttCursor=new Date(ganttCursor.getFullYear(),ganttCursor.getMonth()-1,1);
+    renderGantt();
+  });
+  document.getElementById('gantt-next').addEventListener('click',()=>{
+    ganttCursor=new Date(ganttCursor.getFullYear(),ganttCursor.getMonth()+1,1);
+    renderGantt();
+  });
+}
+
+/* ── 목표 게이지 렌더 ── */
+function renderGoal(){
+  const ym=ymKey(today);
+  const goalsForMonth=MONTHLY_GOALS[ym]||MONTHLY_GOALS['2026-05'];
+  const refForMonth=REFERENCE_BY_MONTH[ym]||REFERENCE_BY_MONTH['2026-05']||{};
+  const target=goalsForMonth?(goalsForMonth[goalSeg]||goalsForMonth['전체']||0):0;
+
+  // 이번달 투숙기간이 겹치는 기획전만 카운트
+  const monthStart=new Date(today.getFullYear(),today.getMonth(),1);
+  const monthEnd=new Date(today.getFullYear(),today.getMonth()+1,0);
+  monthEnd.setHours(23,59,59,999);
+
+  const filtered=allRows.filter(r=>{
+    if(goalSeg!=='전체'&&normSeg(r.seg)!==goalSeg)return false;
+    if(goalProp&&r.property!==goalProp)return false;
+    const s=r.stayStart||r.saleStart;
+    const e=r.stayEnd||r.saleEnd||s;
+    if(!s)return false;
+    return !(e<monthStart||s>monthEnd);
+  });
+
+  const kpiSum=filtered.reduce((a,r)=>a+(r.kpiRn||0),0);
+  const propAdj=goalProp?Math.max(0.1,(allRows.filter(r=>r.property===goalProp).length/Math.max(allRows.length,1))):1;
+  const refSeg=refForMonth[goalSeg]||refForMonth['전체']||{fcst:0,ly:0};
+  const fcst=Math.round((refSeg.fcst||0)*propAdj);
+  const ly=Math.round((refSeg.ly||0)*propAdj);
+  const targetAdj=Math.round(target*propAdj);
+  const gap=Math.max(0,targetAdj-kpiSum);
+  const pct=targetAdj>0?Math.min(150,Math.round(kpiSum/targetAdj*100)):0;
+  const fcstPct=targetAdj>0?Math.min(150,Math.round(fcst/targetAdj*100)):0;
+  const lyPct=targetAdj>0?Math.min(150,Math.round(ly/targetAdj*100)):0;
+  const yoy=ly>0?Math.round((kpiSum-ly)/ly*100):0;
+
+  // 상태 신호: 좋음(>=80) / 주의(>=50) / 위험(<50) — FCST 기준 우선
+  const statusBy=Math.max(pct,fcstPct);
+  let status='good',icon='🟢',headline='',detail='';
+  if(statusBy>=80){status='good';icon='🟢';headline=`목표 대비 ${statusBy}% 도달`;detail=`기획전 ${pct}% · FCST ${fcstPct}%`}
+  else if(statusBy>=50){status='warn';icon='🟡';headline=`주의 — 추가 ${fmtNum(gap)}실 필요`;detail=`기획전 ${pct}% · FCST ${fcstPct}%`}
+  else{status='risk';icon='🔴';headline=`위험 — ${fmtNum(gap)}실 부족`;detail=`기획전 ${pct}% · FCST ${fcstPct}%`}
+
+  // DOM 갱신
+  document.getElementById('goal-target-val').textContent=fmtNum(targetAdj);
+  const monthLabel=`${today.getFullYear()}년 ${today.getMonth()+1}월`;
+  document.getElementById('goal-target-month').textContent=monthLabel;
+  const segLabel=goalSeg+(goalProp?' · '+goalProp:'');
+  document.getElementById('goal-period-label').textContent=`${monthLabel} · ${segLabel} 객실 목표 vs 기획전 KPI`;
+
+  const fill=document.getElementById('gauge-fill');
+  fill.className='gauge-fill status-'+status+(pct>=100?' full':'');
+  fill.style.width=Math.min(100,pct)+'%';
+  document.getElementById('gauge-fill-pct').textContent=pct+'%';
+
+  const fcstM=document.getElementById('gauge-marker-fcst');
+  if(fcst>0){
+    fcstM.style.display='block';
+    fcstM.style.left=Math.min(100,fcstPct)+'%';
+    document.getElementById('gauge-marker-fcst-label').textContent='FCST '+fcstPct+'%';
+  }else fcstM.style.display='none';
+
+  const lyM=document.getElementById('gauge-marker-ly');
+  if(ly>0){
+    lyM.style.display='block';
+    lyM.style.left=Math.min(100,lyPct)+'%';
+    document.getElementById('gauge-marker-ly-label').textContent='전년 '+lyPct+'%';
+  }else lyM.style.display='none';
+
+  const statusEl=document.getElementById('goal-status');
+  statusEl.className='goal-status status-'+status;
+  document.getElementById('status-icon').textContent=icon;
+  document.getElementById('status-headline').textContent=headline;
+  document.getElementById('status-detail').textContent=detail;
+
+  document.getElementById('stat-kpi').textContent=fmtNum(kpiSum);
+  document.getElementById('stat-kpi-meta').textContent=`${filtered.length}건 기획전`;
+  document.getElementById('stat-gap').textContent=gap>0?fmtNum(gap):'0';
+  document.getElementById('stat-gap-meta').textContent=targetAdj>0?`목표의 ${Math.max(0,100-pct)}%`:'—';
+  document.getElementById('stat-fcst').textContent=fmtNum(fcst);
+  document.getElementById('stat-fcst-meta').textContent=fcst>0?`목표의 ${fcstPct}%`:'연동 대기';
+  document.getElementById('stat-ly').textContent=fmtNum(ly);
+  document.getElementById('stat-ly-meta').textContent=ly>0?(yoy>=0?`YoY +${yoy}%`:`YoY ${yoy}%`):'연동 대기';
+}
+
+/* ── 간트 캘린더 렌더 ── */
+function renderGantt(){
+  const monthStart=new Date(ganttCursor.getFullYear(),ganttCursor.getMonth(),1);
+  const dim=daysInMonth(ganttCursor);
+  const monthEnd=new Date(ganttCursor.getFullYear(),ganttCursor.getMonth(),dim);
+  monthEnd.setHours(23,59,59,999);
+
+  document.getElementById('gantt-month-label').textContent=ymLabel(ganttCursor);
+
+  const filtered=allRows.filter(r=>{
+    if(ganttChannel&&r.channel!==ganttChannel)return false;
+    const s=r.stayStart||r.saleStart;
+    const e=r.stayEnd||r.saleEnd||s;
+    if(!s)return false;
+    return !(e<monthStart||s>monthEnd);
+  }).sort((a,b)=>{
+    const sa=(a.stayStart||a.saleStart||monthEnd).getTime();
+    const sb=(b.stayStart||b.saleStart||monthEnd).getTime();
+    return sa-sb;
+  });
+
+  document.getElementById('gantt-count').textContent=`${filtered.length}건`;
+
+  const canvas=document.getElementById('gantt-canvas');
+  if(!filtered.length){
+    canvas.innerHTML=`<div class="gantt-empty"><span class="gantt-empty-icon">📅</span>이 달에 해당하는 기획전이 없습니다${ganttChannel?` <strong>(채널: ${escapeHtml(ganttChannel)})</strong>`:''}</div>`;
+    return;
+  }
+
+  // 헤더 - 일자
+  const dayCols=`repeat(${dim},minmax(22px,1fr))`;
+  let dayHeaderHTML='';
+  let gridHTML='';
+  const todayY=today.getFullYear(),todayM=today.getMonth(),todayD=today.getDate();
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(monthStart.getFullYear(),monthStart.getMonth(),d);
+    const dow=dt.getDay();
+    const isWk=(dow===0||dow===6);
+    const isToday=(monthStart.getFullYear()===todayY&&monthStart.getMonth()===todayM&&d===todayD);
+    const cls=(isToday?'today':(isWk?'weekend':''));
+    dayHeaderHTML+=`<div class="gantt-day-cell ${cls}"><span>${d}</span><span class="gantt-day-cell-day">${'일월화수목금토'[dow]}</span></div>`;
+    gridHTML+=`<div class="gantt-day-grid-line ${cls}"></div>`;
+  }
+
+  // 본문 행
+  const rowsHTML=filtered.map(r=>{
+    const s=r.stayStart||r.saleStart;
+    const e=r.stayEnd||r.saleEnd||s;
+    const segCls={'OTA':'seg-ota','G-OTA':'seg-gota','Inbound':'seg-inbound'}[normSeg(r.seg)]||'seg-other';
+    const visStart=s<monthStart?monthStart:s;
+    const visEnd=e>monthEnd?monthEnd:e;
+    const startDay=visStart.getDate();
+    const endDay=visEnd.getDate();
+    const spanDays=endDay-startDay+1;
+    const leftPct=(startDay-1)/dim*100;
+    const widthPct=spanDays/dim*100;
+    const spillL=s<monthStart?'spillover-left':'';
+    const spillR=e>monthEnd?'spillover-right':'';
+    const sStr=s?`${s.getMonth()+1}/${s.getDate()}`:'—';
+    const eStr=e?`${e.getMonth()+1}/${e.getDate()}`:'—';
+    const tooltip=`${r.title}\n채널: ${r.channel||'—'}\n사업장: ${r.property||'—'}\n구분: ${r.seg||'—'}\n투숙: ${sStr} ~ ${eStr}\nKPI 객실: ${fmtNum(r.kpiRn)}실 · 매출 ${fmtNum(r.kpiRev)}백만`;
+    const meta=`${r.channel||'—'} · ${r.property||'—'}`;
+    const barText=`${r.title} · ${fmtNum(r.kpiRn)}실`;
+    return `<div class="gantt-row">
+      <div class="gantt-row-info">
+        <div class="gantt-row-title" title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</div>
+        <div class="gantt-row-meta">${escapeHtml(meta)}</div>
+      </div>
+      <div class="gantt-row-bar-track">
+        <div class="gantt-day-grid" style="grid-template-columns:${dayCols}">${gridHTML}</div>
+        <div class="gantt-bar ${segCls} ${spillL} ${spillR}" style="left:${leftPct}%;width:${widthPct}%" title="${escapeHtml(tooltip)}">${escapeHtml(barText)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 합계
+  const totalRn=filtered.reduce((a,r)=>a+(r.kpiRn||0),0);
+  const totalRev=filtered.reduce((a,r)=>a+(r.kpiRev||0),0);
+
+  canvas.innerHTML=`
+    <div class="gantt-grid-header">
+      <div class="gantt-row-header-cell">기획전 / 채널 · 사업장</div>
+      <div class="gantt-day-header" style="grid-template-columns:${dayCols}">${dayHeaderHTML}</div>
+    </div>
+    <div class="gantt-rows">${rowsHTML}</div>
+    <div class="gantt-meta-bar">
+      <span><strong>${filtered.length}</strong>건 · KPI 객실 합산 <strong>${fmtNum(totalRn)}실</strong> · 매출 <strong>${fmtNum(totalRev)}백만</strong></span>
+      <span>${ganttChannel?`채널: <strong>${escapeHtml(ganttChannel)}</strong>`:'전체 채널'}</span>
+    </div>
+    <div class="gantt-legend">
+      <span><span class="gantt-legend-dot" style="background:rgba(232,122,138,.85)"></span>OTA</span>
+      <span><span class="gantt-legend-dot" style="background:rgba(160,126,232,.85)"></span>G-OTA</span>
+      <span><span class="gantt-legend-dot" style="background:rgba(92,196,208,.85)"></span>Inbound</span>
+      <span><span class="gantt-legend-dot" style="background:rgba(212,167,74,.85)"></span>기타</span>
+      <span style="margin-left:auto">투숙기간 기준 · 막대를 끌어당겨도 이동되지 않음 · 호버 시 상세</span>
+    </div>`;
+}
+
+// kick off
+loadCSV();
+})();
 </script>
 </body>
 </html>
