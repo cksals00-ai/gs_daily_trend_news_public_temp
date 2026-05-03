@@ -279,9 +279,9 @@ def merge_and_build():
         print(f"  {year}년: RN {total_rn:>10,} | REV {total_rev:>10,.0f}백만원 | ADR {adr:>6,}천원")
 
 def run_post_steps():
-    """Run steps 2-5."""
+    """Run steps 2-6."""
     import subprocess
-    for script in ["compare_and_update.py", "generate_otb_data.py", "generate_insights.py", "build.py"]:
+    for script in ["compare_and_update.py", "generate_otb_data.py", "generate_campaign_data.py", "generate_insights.py", "build.py"]:
         logger.info(f"=== {script} ===")
         result = subprocess.run(
             [sys.executable, str(SCRIPTS_DIR / script)],
