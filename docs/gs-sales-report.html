@@ -185,23 +185,45 @@ a{color:inherit}
 .cal-week-day.cw-sun{color:var(--negative)}
 .cal-week-day.cw-sat{color:var(--info)}
 
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(96px,1fr);flex:1}
-.cal-cell{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:5px 4px;display:flex;flex-direction:column;gap:3px;overflow:hidden;min-width:0}
-.cal-cell.is-outside{background:rgba(0,0,0,.18);opacity:.45}
-.cal-cell.is-today{background:rgba(201,160,99,.06)}
-.cal-day-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft);padding:0 2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(86px,1fr);flex:1}
+.cal-cell{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:4px 5px 5px;display:flex;flex-direction:column;gap:2px;overflow:hidden;min-width:0;cursor:pointer;transition:background 0.12s,box-shadow 0.12s}
+.cal-cell:hover{background:rgba(201,160,99,.08)}
+.cal-cell.is-outside{background:rgba(0,0,0,.22);opacity:.4;cursor:default}
+.cal-cell.is-outside:hover{background:rgba(0,0,0,.22)}
+.cal-cell.is-today{background:rgba(201,160,99,.07)}
+.cal-cell.is-selected{background:rgba(201,160,99,.18);box-shadow:inset 0 0 0 1.5px var(--gold-bright)}
+.cal-cell.is-empty{cursor:default}
+.cal-cell.is-empty:hover{background:transparent}
+.cal-cell.is-empty.is-today:hover{background:rgba(201,160,99,.07)}
+/* 우측 목록에서 기획전 선택 시 — 해당 기획전의 투숙기간 날짜들 하이라이트 */
+.cal-cell.is-event-day{background:rgba(201,160,99,.22);box-shadow:inset 0 0 0 1px rgba(201,160,99,.55)}
+.cal-cell.is-event-day.seg-gota{background:rgba(90,159,196,.22);box-shadow:inset 0 0 0 1px rgba(90,159,196,.55)}
+.cal-cell.is-event-day.seg-ib{background:rgba(168,146,200,.22);box-shadow:inset 0 0 0 1px rgba(168,146,200,.55)}
+.cal-cell.is-event-day.is-event-start{box-shadow:inset 3px 0 0 var(--gold-bright),inset 0 0 0 1px rgba(201,160,99,.55)}
+.cal-cell.is-event-day.is-event-end{box-shadow:inset -3px 0 0 var(--gold-bright),inset 0 0 0 1px rgba(201,160,99,.55)}
+.cal-cell.is-event-day.is-event-start.is-event-end{box-shadow:inset 3px 0 0 var(--gold-bright),inset -3px 0 0 var(--gold-bright),inset 0 0 0 1px rgba(201,160,99,.55)}
+.cal-cell.is-event-day.seg-gota.is-event-start{box-shadow:inset 3px 0 0 var(--info),inset 0 0 0 1px rgba(90,159,196,.55)}
+.cal-cell.is-event-day.seg-gota.is-event-end{box-shadow:inset -3px 0 0 var(--info),inset 0 0 0 1px rgba(90,159,196,.55)}
+.cal-cell.is-event-day.seg-ib.is-event-start{box-shadow:inset 3px 0 0 var(--apac),inset 0 0 0 1px rgba(168,146,200,.55)}
+.cal-cell.is-event-day.seg-ib.is-event-end{box-shadow:inset -3px 0 0 var(--apac),inset 0 0 0 1px rgba(168,146,200,.55)}
+
+.cal-day-head{display:flex;justify-content:space-between;align-items:center;padding:0 1px}
+.cal-day-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft)}
 .cal-day-num.is-sun{color:var(--negative)}
 .cal-day-num.is-sat{color:var(--info)}
 .cal-cell.is-today .cal-day-num{color:var(--gold-bright);font-weight:800}
+.cm-count{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--gold-bright);background:rgba(201,160,99,.14);padding:1px 5px;border-radius:8px;line-height:1.3}
 
-.cal-bar{display:block;width:100%;background:rgba(201,160,99,.18);border:none;border-left:3px solid var(--gold);color:var(--ink-soft);font-size:10px;font-weight:600;padding:2px 5px;border-radius:3px;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:all 0.12s;line-height:1.3;letter-spacing:-0.01em}
-.cal-bar:hover{background:rgba(201,160,99,.32);color:var(--ink)}
-.cal-bar.seg-ota{background:rgba(201,160,99,.16);border-left-color:var(--gold);color:var(--gold-bright)}
-.cal-bar.seg-gota{background:rgba(90,159,196,.16);border-left-color:var(--info);color:#9ec5dd}
-.cal-bar.seg-ib{background:rgba(168,146,200,.16);border-left-color:var(--apac);color:#c4b1d9}
-.cal-bar.is-sel{outline:1.5px solid var(--gold-bright);background:rgba(201,160,99,.36);color:var(--ink);box-shadow:0 0 0 2px rgba(201,160,99,0.2)}
-.cal-more{background:transparent;border:1px dashed var(--rule);color:var(--ink-faint);font-family:var(--mono);font-size:9.5px;font-weight:700;padding:2px 4px;border-radius:3px;cursor:pointer;text-align:center}
-.cal-more:hover{color:var(--gold-bright);border-color:rgba(201,160,99,0.3)}
+.cm-metrics{display:flex;flex-direction:column;gap:1px;font-family:var(--mono);margin-top:auto;padding:2px 1px 0;border-top:1px dashed rgba(255,255,255,.06)}
+.cm-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;line-height:1.25;gap:4px}
+.cm-label{color:var(--ink-faint);font-weight:600;font-size:9px;letter-spacing:0.02em;flex-shrink:0}
+.cm-val{color:var(--ink-soft);font-weight:700;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cm-rate{font-size:11px;font-weight:800}
+.cm-rate.rate-high{color:var(--positive)}
+.cm-rate.rate-mid{color:var(--gold-bright)}
+.cm-rate.rate-low{color:var(--warning)}
+.cm-rate.rate-vlow{color:var(--negative)}
+.cm-rate.rate-na{color:var(--ink-faint)}
 
 /* List pane */
 .list-header{padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--bg-deep);display:flex;flex-direction:column;gap:6px}
@@ -455,7 +477,11 @@ a{color:inherit}
       <span><span class="cal-legend-dot" style="background:var(--gold)"></span>OTA</span>
       <span><span class="cal-legend-dot" style="background:var(--info)"></span>G-OTA</span>
       <span><span class="cal-legend-dot" style="background:var(--apac)"></span>Inbound</span>
-      <span style="margin-left:auto;color:var(--ink-faint)">캘린더의 기획전 막대를 클릭하면 우측 목록에서 상세를 확인할 수 있습니다 · 월 제목을 클릭하면 해당 월 전체 목록</span>
+      <span style="margin-left:14px"><span style="color:var(--positive);font-weight:800">●</span> 달성 ≥100%</span>
+      <span><span style="color:var(--gold-bright);font-weight:800">●</span> 70~99%</span>
+      <span><span style="color:var(--warning);font-weight:800">●</span> 40~69%</span>
+      <span><span style="color:var(--negative);font-weight:800">●</span> &lt;40%</span>
+      <span style="margin-left:auto;color:var(--ink-faint)">날짜 클릭 → 우측 목록 필터 · 우측 기획전 클릭 → 캘린더에 투숙기간 강조</span>
     </div>
 
     <div class="footer-bar">
@@ -498,7 +524,8 @@ let selStatus = '전체';
 let curGoalMonth = null;       // 'YYYY-MM'
 let calCursor = null;
 let calMode = 'stay';          // 투숙기간 기준 default
-let selectedEventIdx = null;   // 캘린더에서 선택된 기획전 idx
+let selectedEventIdx = null;   // 우측 목록에서 선택된 기획전 idx → 캘린더에서 투숙기간 강조
+let selectedDate = null;       // 캘린더에서 선택된 날짜 'YYYY-MM-DD' → 우측 목록 필터
 
 const today = new Date(); today.setHours(0,0,0,0);
 const todayStr = ymdStr(today);
@@ -713,6 +740,7 @@ function setRole(role){
   activeProps.clear();
   selStatus='전체';
   selectedEventIdx=null;
+  selectedDate=null;
   initSidebar();
   initFilters();
   initGoalMonths();
@@ -723,6 +751,7 @@ function setRegion(region){
   curRegion=region;
   activeProps.clear();
   selectedEventIdx=null;
+  selectedDate=null;
   initSidebar();
   initFilters();
   render();
@@ -732,6 +761,7 @@ function toggleProp(p){
   if(activeProps.has(p))activeProps.delete(p);
   else activeProps.add(p);
   selectedEventIdx=null;
+  selectedDate=null;
   renderPropChips();
   initFilters();
   render();
@@ -780,7 +810,7 @@ function buildStatusChips(){
     {key:'upcoming',label:'예정',cls:'st-upcoming'},
     {key:'ended',label:'종료',cls:'st-ended'}
   ];
-  c.innerHTML=items.map(it=>`<button class="f-chip ${it.cls} ${selStatus===it.key?'active':''}" onclick="selStatus='${it.key}';selectedEventIdx=null;buildStatusChips();render()">${it.label}</button>`).join('');
+  c.innerHTML=items.map(it=>`<button class="f-chip ${it.cls} ${selStatus===it.key?'active':''}" onclick="selStatus='${it.key}';selectedEventIdx=null;selectedDate=null;buildStatusChips();render()">${it.label}</button>`).join('');
 }
 
 /* ── Scope label ── */
@@ -998,11 +1028,11 @@ async function getOTBSummary(monthKey){
 }
 
 /* ── Master render ── */
-function render(){
+async function render(){
   updateScopeDisplay();
   const data=sortRows(getFiltered());
   document.getElementById('count-label').textContent=`${data.length} / ${getScoped().length}건 · 전체 ${allRows.length}`;
-  renderCalendarList(data);
+  await renderCalendarList(data);
   /* Goal는 scope 기준이므로 필터와 무관 */
   renderGoal();
 }
@@ -1022,7 +1052,7 @@ function sortRows(rows){
 function segCls(seg){return seg==='G-OTA'?'seg-gota':seg==='Inbound'?'seg-ib':'seg-ota'}
 function statusKR(st){return st==='active'?'진행':st==='upcoming'?'예정':st==='ended'?'종료':'기타'}
 
-function renderCalendarList(data){
+async function renderCalendarList(data){
   if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);
   const year=calCursor.getFullYear();
   const month=calCursor.getMonth();
@@ -1043,6 +1073,21 @@ function renderCalendarList(data){
     const ee=modeEnd(d)||s;
     return s<=monthEnd&&ee>=monthStart;
   });
+
+  /* 달성률 계산용 — 현재 월의 OTB 매출 목표 (백만원) 프리로드 */
+  const monthKey=`${year}-${String(month+1).padStart(2,'0')}`;
+  const otb=await getOTBSummary(monthKey);
+  const monthTargetMM=(otb&&otb.rev_budget)?otb.rev_budget/1000000:null;
+  const daysInMonth=lastDay.getDate();
+  const dailyTargetMM=(monthTargetMM&&daysInMonth)?monthTargetMM/daysInMonth:null;
+
+  /* 우측에서 선택된 기획전 — 캘린더 강조용 */
+  const selEvent=selectedEventIdx!=null?data.find(d=>d.idx===selectedEventIdx):null;
+  const selStart=selEvent?modeStart(selEvent):null;
+  const selEnd=selEvent?(modeEnd(selEvent)||selStart):null;
+  const selSegCls=selEvent?segCls(selEvent.segment):'';
+  const selStartKey=selStart?ymdStr(selStart):null;
+  const selEndKey=selEnd?ymdStr(selEnd):null;
 
   const monthLabel=`${year}년 ${month+1}월`;
   const modeLabel=calMode==='sale'?'판매':'투숙';
@@ -1083,21 +1128,56 @@ function renderCalendarList(data){
       const sk=ymdStr(s),ek=ymdStr(e);
       return dayKey>=sk&&dayKey<=ek;
     });
+
+    /* 우측 선택 기획전의 투숙기간이면 강조 */
+    const isEventDay=!isOutside&&selStartKey&&dayKey>=selStartKey&&dayKey<=selEndKey;
+    const isEventStart=isEventDay&&dayKey===selStartKey;
+    const isEventEnd=isEventDay&&dayKey===selEndKey;
+    /* 캘린더에서 선택된 날짜 */
+    const isSelDate=!isOutside&&selectedDate===dayKey;
+
     let cellCls='cal-cell';
     if(isOutside)cellCls+=' is-outside';
     if(isToday)cellCls+=' is-today';
+    if(isSelDate)cellCls+=' is-selected';
+    if(isEventDay){
+      cellCls+=' is-event-day '+selSegCls;
+      if(isEventStart)cellCls+=' is-event-start';
+      if(isEventEnd)cellCls+=' is-event-end';
+    }
+    if(!events.length&&!isEventDay)cellCls+=' is-empty';
+
     const dnCls=dow===0?'is-sun':dow===6?'is-sat':'';
-    calHtml+=`<div class="${cellCls}">`;
-    calHtml+=`<div class="cal-day-num ${dnCls}">${cur.getDate()}</div>`;
-    const maxShow=2;
-    const eventsToShow=events.slice(0,maxShow);
-    eventsToShow.forEach(ev=>{
-      const isSel=selectedEventIdx===ev.idx;
-      const label=`${ev.property||'?'}·${ev.title||ev.channel||'?'}`;
-      calHtml+=`<button class="cal-bar ${segCls(ev.segment)} ${isSel?'is-sel':''}" onclick="selectEvent(${ev.idx})" title="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
-    });
-    if(events.length>maxShow){
-      calHtml+=`<button class="cal-more" onclick="selectMonth()" title="이 달 전체 목록 열기">+${events.length-maxShow}건</button>`;
+    const clickAttr=!isOutside?` onclick="selectDate('${dayKey}')"`:'';
+
+    calHtml+=`<div class="${cellCls}"${clickAttr}>`;
+    calHtml+=`<div class="cal-day-head"><span class="cal-day-num ${dnCls}">${cur.getDate()}</span>`;
+    if(events.length&&!isOutside)calHtml+=`<span class="cm-count">${events.length}건</span>`;
+    calHtml+=`</div>`;
+
+    if(events.length&&!isOutside){
+      const sumRn=events.reduce((a,e)=>a+(e.kpiRn||0),0);
+      const sumRev=events.reduce((a,e)=>a+(e.kpiRev||0),0);
+      /* 일 단위 기여(달성률용) — 기간 안배 */
+      const sumRevDaily=events.reduce((acc,e)=>{
+        const s=modeStart(e),en=modeEnd(e)||s;
+        if(!s||!e.kpiRev)return acc;
+        const dur=Math.max(1,Math.round((en-s)/86400000)+1);
+        return acc+(e.kpiRev/dur);
+      },0);
+      const achPct=dailyTargetMM?Math.round((sumRevDaily/dailyTargetMM)*100):null;
+      let rateCls='rate-na';
+      if(achPct!=null){
+        if(achPct>=100)rateCls='rate-high';
+        else if(achPct>=70)rateCls='rate-mid';
+        else if(achPct>=40)rateCls='rate-low';
+        else rateCls='rate-vlow';
+      }
+      calHtml+=`<div class="cm-metrics">
+        <div class="cm-row"><span class="cm-label">RN</span><span class="cm-val">${sumRn?fmtNum(sumRn):'·'}</span></div>
+        <div class="cm-row"><span class="cm-label">매출</span><span class="cm-val">${sumRev?Math.round(sumRev).toLocaleString('ko-KR')+'M':'·'}</span></div>
+        <div class="cm-row"><span class="cm-label">달성</span><span class="cm-val cm-rate ${rateCls}">${achPct!=null?achPct+'%':'—'}</span></div>
+      </div>`;
     }
     calHtml+=`</div>`;
     cur.setDate(cur.getDate()+1);
@@ -1109,10 +1189,11 @@ function renderCalendarList(data){
   if(selectedEventIdx!=null){
     const ev=data.find(d=>d.idx===selectedEventIdx);
     if(ev){
+      const backLabel=selectedDate?`← ${selectedDate.slice(5).replace('-','.')} 목록으로`:'← 목록으로';
       listHtml+=`<div class="list-header">
         <div class="list-title-row">
-          <div class="list-eyebrow">선택된 기획전</div>
-          <button class="list-back" onclick="clearSelection()">← 목록으로</button>
+          <div class="list-eyebrow">선택된 기획전 · 캘린더에 투숙기간 강조됨</div>
+          <button class="list-back" onclick="clearEventSelection()">${backLabel}</button>
         </div>
         <div class="list-title">${escapeHtml(ev.title||ev.channel||'—')}</div>
       </div>
@@ -1120,10 +1201,28 @@ function renderCalendarList(data){
     }else{
       listHtml+=`<div class="list-header">
         <div class="list-title-row"><div class="list-eyebrow">선택된 기획전 없음</div>
-        <button class="list-back" onclick="clearSelection()">← 목록으로</button></div>
+        <button class="list-back" onclick="clearAllSelection()">← 목록으로</button></div>
       </div>
       <div class="list-body"><div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">선택한 기획전이 현재 필터에 포함되지 않습니다</div></div></div>`;
     }
+  }else if(selectedDate){
+    /* 캘린더에서 날짜 선택됨 → 그 날짜에 걸치는 기획전만 */
+    const dayEvents=data.filter(d=>{
+      const s=modeStart(d);
+      const e=modeEnd(d)||s;
+      if(!s)return false;
+      return selectedDate>=ymdStr(s)&&selectedDate<=ymdStr(e);
+    });
+    const [yy,mm,dd]=selectedDate.split('-');
+    const dateLabel=`${parseInt(mm,10)}월 ${parseInt(dd,10)}일`;
+    listHtml+=`<div class="list-header">
+      <div class="list-title-row">
+        <div class="list-eyebrow">${yy}.${mm}.${dd} · ${modeLabel}기간 기준</div>
+        <button class="list-back" onclick="clearDateSelection()">← 월 전체</button>
+      </div>
+      <div class="list-title">${dateLabel} 기획전 <span class="list-count" style="margin-left:6px">${dayEvents.length}건</span></div>
+    </div>
+    <div class="list-body">${renderEventCards(dayEvents)}</div>`;
   }else{
     listHtml+=`<div class="list-header">
       <div class="list-title-row">
@@ -1194,12 +1293,25 @@ function renderEventCards(events){
   }).join('');
 }
 
+/* 우측 목록의 기획전 선택 → 좌측 캘린더에 투숙기간 강조 (selectedDate는 유지) */
 function selectEvent(idx){selectedEventIdx=idx;render()}
-function selectMonth(){selectedEventIdx=null;render()}
-function clearSelection(){selectedEventIdx=null;render()}
-function calNav(delta){if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);selectedEventIdx=null;render()}
-function calToday(){calCursor=new Date(today.getFullYear(),today.getMonth(),1);selectedEventIdx=null;render()}
-function setCalMode(m){calMode=m;selectedEventIdx=null;render()}
+/* 캘린더 날짜 클릭 → 우측 목록 그 날짜로 필터 (같은 날 다시 클릭 → 해제) */
+function selectDate(d){
+  if(selectedDate===d){selectedDate=null;selectedEventIdx=null;}
+  else{selectedDate=d;selectedEventIdx=null;}
+  render();
+}
+/* 월 제목 클릭 → 모든 선택 해제, 월 전체 목록 */
+function selectMonth(){selectedEventIdx=null;selectedDate=null;render()}
+/* 기획전 상세 → 직전 컨텍스트(날짜 또는 월)로 복귀, 캘린더 강조 해제 */
+function clearEventSelection(){selectedEventIdx=null;render()}
+/* 날짜 필터 해제 → 월 전체 목록 */
+function clearDateSelection(){selectedDate=null;selectedEventIdx=null;render()}
+/* 전부 해제 */
+function clearAllSelection(){selectedEventIdx=null;selectedDate=null;render()}
+function calNav(delta){if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);selectedEventIdx=null;selectedDate=null;render()}
+function calToday(){calCursor=new Date(today.getFullYear(),today.getMonth(),1);selectedEventIdx=null;selectedDate=null;render()}
+function setCalMode(m){calMode=m;selectedEventIdx=null;selectedDate=null;render()}
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded',()=>{
