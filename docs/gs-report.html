@@ -688,6 +688,197 @@
     white-space: nowrap;
   }
 
+  /* ============= WORKTREE CLEANUP ============= */
+  .wt-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+    margin-bottom: 22px;
+  }
+  .wt-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 18px 20px;
+  }
+  .wt-stat-card.cleaned { border-left-color: var(--positive); }
+  .wt-stat-card.active { border-left-color: var(--info); }
+  .wt-stat-card.branches { border-left-color: var(--warning); }
+  .wt-stat-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .wt-stat-value {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: 32px;
+    color: var(--ink);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .wt-stat-value .unit {
+    font-size: 14px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+  .wt-stat-sub {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  .wt-cleanup-list {
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid var(--warning);
+    padding: 18px 20px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .wt-cleanup-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+    font-size: 13px;
+  }
+  .wt-cleanup-row:last-child { border-bottom: none; }
+  .wt-cleanup-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold-bright);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .wt-cleanup-desc { color: var(--ink-soft); line-height: 1.5; }
+  .wt-cleanup-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(232,162,86,0.12);
+    color: var(--warning);
+    padding: 3px 9px;
+    border-radius: 3px;
+    border: 1px solid rgba(232,162,86,0.25);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ============= HISTORY TIMELINE ============= */
+  .timeline {
+    position: relative;
+    padding-left: 36px;
+    margin-top: 24px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 13px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--gold) 0%, var(--gold) 60%, rgba(201,160,99,0.15) 100%);
+  }
+  .timeline-day {
+    position: relative;
+    margin-bottom: 26px;
+  }
+  .timeline-day:last-child { margin-bottom: 0; }
+  .timeline-day-marker {
+    position: absolute;
+    left: -36px;
+    top: 2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg-deep);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--gold-bright);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    box-shadow: 0 0 0 4px var(--bg);
+  }
+  .timeline-day-date {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gold-bright);
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .timeline-day-date .weekday {
+    color: var(--ink-faint);
+    margin-left: 8px;
+    font-weight: 500;
+  }
+  .timeline-events {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .timeline-event {
+    display: grid;
+    grid-template-columns: 60px 64px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 11px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 13px;
+    transition: 0.15s;
+  }
+  .timeline-event:hover {
+    background: var(--bg-soft);
+    border-color: rgba(201,160,99,0.3);
+  }
+  .timeline-event-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .timeline-event-tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    padding: 3px 0;
+    border-radius: 3px;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .tag-page    { background: rgba(201,160,99,0.15); color: var(--gold-bright); border: 1px solid rgba(201,160,99,0.25); }
+  .tag-feat    { background: rgba(76,175,111,0.15); color: var(--positive); border: 1px solid rgba(76,175,111,0.25); }
+  .tag-fix     { background: rgba(229,115,115,0.15); color: var(--negative); border: 1px solid rgba(229,115,115,0.25); }
+  .tag-refactor{ background: rgba(90,159,196,0.15); color: var(--info); border: 1px solid rgba(90,159,196,0.25); }
+  .tag-cleanup { background: rgba(232,162,86,0.15); color: var(--warning); border: 1px solid rgba(232,162,86,0.25); }
+  .tag-rename  { background: rgba(168,140,210,0.15); color: #b8a3df; border: 1px solid rgba(168,140,210,0.25); }
+  .timeline-event-text {
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .timeline-event-text strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
   /* ============= RESPONSIVE ============= */
   @media (max-width: 768px) {
     .masthead-inner {
@@ -749,6 +940,19 @@
       grid-template-columns: 48px 1fr;
       gap: 14px;
       padding: 18px 16px;
+    }
+    .timeline { padding-left: 28px; }
+    .timeline::before { left: 9px; }
+    .timeline-day-marker { left: -28px; width: 22px; height: 22px; font-size: 8px; }
+    .timeline-event {
+      grid-template-columns: 50px 56px 1fr;
+      gap: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+    .wt-cleanup-row {
+      grid-template-columns: 1fr;
+      gap: 4px;
     }
   }
 </style>
@@ -1191,7 +1395,7 @@
         <span class="flow-lane-label">월간 전략 사이클</span>
         <div class="flow-node source">📊 분석<br><span style="font-size:10px;opacity:.7">실적·경쟁사·트렌드</span></div>
         <div class="flow-arrow"></div>
-        <div class="flow-node process">🧠 전략장<br><span style="font-size:10px;opacity:.7">AI 인사이트 도출</span></div>
+        <div class="flow-node process">🧠 전략장<br><span style="font-size:10px;opacity:.7">주요 현황 요약</span></div>
         <div class="flow-arrow"></div>
         <div class="flow-node process">🗓️ 월별 전략<br><span style="font-size:10px;opacity:.7">strategy-keyin</span></div>
         <div class="flow-arrow"></div>
@@ -1211,7 +1415,7 @@
       </div>
       <div class="detail-list-item">
         <div class="detail-list-icon">🧠</div>
-        <div><strong>전략장 (AI 인사이트):</strong> 수치 이상치 탐지 + BCG/SWOT/시뮬레이션 → 우선순위 제안</div>
+        <div><strong>전략장 (주요 현황 요약):</strong> 수치 이상치 탐지 + BCG/SWOT/시뮬레이션 → 우선순위 제안</div>
       </div>
       <div class="detail-list-item">
         <div class="detail-list-icon">🗓️</div>
@@ -1550,6 +1754,62 @@
     </div>
   </div>
 
+  <!-- 워크트리 / 브랜치 정리 -->
+  <div class="report-section">
+    <h2 class="section-title">🧹 워크트리 · 브랜치 정리 <span style="font-size:12px;font-weight:400;color:var(--ink-faint);">(개발 작업 격리 · 정리 이력)</span></h2>
+    <div class="detail-list" style="margin-bottom:18px">
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🌳</div>
+        <div><strong>워크트리(worktree):</strong> Git에서 동일 레포의 작업을 여러 디렉터리로 동시에 진행할 수 있게 해주는 격리 공간. Claude 자동 작업이 각자 별도 워크트리에서 수행되어 충돌 없이 병렬 처리됨.</div>
+      </div>
+      <div class="detail-list-item">
+        <div class="detail-list-icon">🌿</div>
+        <div><strong>브랜치 정리:</strong> 머지 완료된 <code style="color:var(--gold);background:rgba(201,160,99,0.1);padding:2px 6px;border-radius:3px">claude/*</code> 브랜치는 디스크·인덱스 부담 → 주기적 정리 필요.</div>
+      </div>
+    </div>
+
+    <div class="wt-stats">
+      <div class="wt-stat-card cleaned">
+        <div class="wt-stat-label">누적 정리 워크트리</div>
+        <div class="wt-stat-value">21<span class="unit">개</span></div>
+        <div class="wt-stat-sub">이전 13개 + 오늘 8개</div>
+      </div>
+      <div class="wt-stat-card active">
+        <div class="wt-stat-label">현재 활성 워크트리</div>
+        <div class="wt-stat-value">8<span class="unit">개</span></div>
+        <div class="wt-stat-sub">진행 중인 Claude 작업 격리 공간</div>
+      </div>
+      <div class="wt-stat-card branches">
+        <div class="wt-stat-label">claude/* 브랜치 보유</div>
+        <div class="wt-stat-value">100<span class="unit">개</span></div>
+        <div class="wt-stat-sub">정리 권고 (머지 완료분 다수)</div>
+      </div>
+      <div class="wt-stat-card">
+        <div class="wt-stat-label">최근 정리일</div>
+        <div class="wt-stat-value" style="font-size:22px">2026.05.04</div>
+        <div class="wt-stat-sub">정기 정리 사이클 운영</div>
+      </div>
+    </div>
+
+    <div class="wt-cleanup-list">
+      <div class="wt-cleanup-row">
+        <div class="wt-cleanup-date">2026.05.04</div>
+        <div class="wt-cleanup-desc">금주비교 페이지 신설 + 거래처별 비교 머지 후 stale worktree 정리</div>
+        <div class="wt-cleanup-count">8개 정리</div>
+      </div>
+      <div class="wt-cleanup-row">
+        <div class="wt-cleanup-date">2026.05.03</div>
+        <div class="wt-cleanup-desc">gs-sales-report 시리즈(Gantt → Calendar 전환, 거래처 카드, 경쟁사 비교) 머지 + 워크트리 정리</div>
+        <div class="wt-cleanup-count">13개 누적</div>
+      </div>
+      <div class="wt-cleanup-row">
+        <div class="wt-cleanup-date">정리 정책</div>
+        <div class="wt-cleanup-desc">머지 완료 → 워크트리 제거 → claude/* 브랜치 정리. main 머지 후 즉시 또는 주 1회 일괄 처리.</div>
+        <div class="wt-cleanup-count">사이클</div>
+      </div>
+    </div>
+  </div>
+
   <!-- 기술 스택 -->
   <div class="report-section">
     <h2 class="section-title">⚙️ 기술 스택</h2>
@@ -1577,6 +1837,320 @@
       <div class="tech-item">
         <span class="tech-label">Database</span>
         <div class="tech-value">Static JSON · CSV Export · Google Sheets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 히스토리 타임라인 -->
+  <div class="report-section">
+    <h2 class="section-title">📜 변경 이력 타임라인 <span style="font-size:12px;font-weight:400;color:var(--ink-faint);">(최근 50개 주요 이벤트 · 시간순)</span></h2>
+
+    <!-- 범례 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:0.1em;margin-right:6px;">LEGEND</span>
+      <span class="timeline-event-tag tag-page" style="padding:3px 8px;">PAGE</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);margin-right:8px;">페이지 신설</span>
+      <span class="timeline-event-tag tag-feat" style="padding:3px 8px;">FEAT</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);margin-right:8px;">기능 추가</span>
+      <span class="timeline-event-tag tag-fix" style="padding:3px 8px;">FIX</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);margin-right:8px;">버그 수정</span>
+      <span class="timeline-event-tag tag-refactor" style="padding:3px 8px;">REFAC</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);margin-right:8px;">리팩터</span>
+      <span class="timeline-event-tag tag-rename" style="padding:3px 8px;">RENAME</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);margin-right:8px;">이름 변경</span>
+      <span class="timeline-event-tag tag-cleanup" style="padding:3px 8px;">CLEAN</span>
+      <span style="font-size:11.5px;color:var(--ink-muted);">워크트리 정리</span>
+    </div>
+
+    <div class="timeline">
+      <!-- 2026-05-04 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/4</div>
+        <div class="timeline-day-date">2026.05.04 <span class="weekday">월요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">02:03</div>
+            <div class="timeline-event-tag tag-cleanup">CLEAN</div>
+            <div class="timeline-event-text"><strong>워크트리 정리:</strong> 머지 완료된 stale worktree 8개 제거 + 누적 21개 도달</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">01:31</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>금주비교 별도 페이지 신설:</strong> 거래처별 비교 추가 (weekly-compare.html)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">00:25</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>트렌드 리포트 강화:</strong> 당일현황 + 금주 vs 전주/전년 비교 섹션 추가</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-03 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/3</div>
+        <div class="timeline-day-date">2026.05.03 <span class="weekday">일요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:36</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> 월별 목표 게이지 채움값을 OTB 실적으로 바인딩</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:29</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> 경쟁사 가격 비교 섹션 추가</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:12</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> 거래처 카드 YoY를 전년 동기간 OTB 기준으로 전환</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">17:20</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> 거래처 카드를 세그먼트 키 → 실제 채널사(아고다·야놀자·트립닷컴)로 교체</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:57</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> 목표/FCST/LY 실데이터 매핑 + 사업장·거래처 듀얼 카드</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:41</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>action-plan:</strong> 캘린더 셀을 텍스트 막대 → 핵심 수치(건수/RN/매출/달성률)로 단순화 + 양방향 연동</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:19</div>
+            <div class="timeline-event-tag tag-rename">RENAME</div>
+            <div class="timeline-event-text"><strong>admin:</strong> "관리자 키인" → "데일리 리포트 키인" + verification-tracker 추적</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:11</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>gs-sales-report:</strong> Gantt 제거 → Calendar+List 듀얼 페인 + 세그먼트 자동 필터</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">15:51</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>pumui:</strong> 전체(RM) 데이터 복원 — rm_fcst.json 신규 스키마 + daily_booking 연동</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">15:36</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>세일즈 리포트 별도 페이지 신설:</strong> gs-sales-report.html</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">09:09</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>네비점검 + 5월 연결 + BookingLY + 기획전 가이드 + KPI 연동</strong> 재적용</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-02 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/2</div>
+        <div class="timeline-day-date">2026.05.02 <span class="weekday">토요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:51</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>영업기획맵:</strong> 운영전략 대시보드 추가</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:35</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>전략 대시보드:</strong> 5개 섹션 삭제 + 네비게이션 깊이별 정리</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:07</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>사이드바:</strong> 권역 → 사업장 2뎁스 트리 + 페이지 앵커 네비게이터</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">19:20</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>거래처 목표:</strong> AI 1차 배분 + strategy-keyin 자동 반영 (5/6/7월 적용)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">19:04</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>fix(critical):</strong> GSN nav에서 영업기획 맵 항목 전 페이지 제거</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">17:29</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>핵심 지표 요약 테이블</strong> + KPI 진단 2줄 분리 + Budget 2종 명시</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">17:19</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>월 전략 리포트 풍부화:</strong> 거래처별 테이블 + 전 페이지 네비 통일</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:55</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>마감리포트:</strong> 좌측 사이드바 + R&R 프로세스 도식 + 파이프라인 NaN 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:52</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>월 전략 리포트 대폭 확장</strong> + gs-report 빠른 진입</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">15:29</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>전략 리포트 신규:</strong> WoW 날짜 동적화 + ADMIN 사이드바 제거 + BS월 롤링</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">12:27</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>히트맵 세그필터</strong> 추가 + 마감리포트 GSN CSS 통일</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">11:43</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>전략 키인 페이지</strong> 신설 + 파이프라인 도식화</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">10:58</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>일일 업데이트:</strong> 온북 파싱 + 검증 + 빌드 + 구축현황 정리</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">01:53</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>gs-report:</strong> status cards 정리 (완료/진행/예정) + glossary + 매일 05시 최신화 라벨</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">01:48</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>gs-report:</strong> 용어 설명 추가 (파싱·Git·커밋·풀·푸시·샌드박스·체크포인트)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-01 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/1</div>
+        <div class="timeline-day-date">2026.05.01 <span class="weekday">금요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:33</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>마감리포트 재설계</strong> + 검증리포트 업데이트</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">22:13</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>전략 시뮬레이션</strong> + 극한 심층분석 + Q1 마감 + 품의서 요금파싱 개편 + Statista 통합 + AI FCST 고도화</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">14:42</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>gs-closing-report.html 전면 재설계</strong></div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">13:54</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>검증 리포트 페이지 신설:</strong> gs-verify.html + verify_log.json</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">11:36</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>심층분석 스토리라인 재구성</strong> + 2027 체크포인트 + 사업장별 분석</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">10:30</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>FCST 세그 분리</strong> + 검증 4파일 + 월 롤링 + 심층전략</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">10:05</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>심층전략 뎁스3 강화</strong> + 취소·변경 분리 + 수수료 키인 + 리포트 연동</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">09:14</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>FCST 세그먼트</strong> + 심층전략 + OCC Heatmap 업그레이드</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">04:54</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>모바일 UI 수정</strong> + 동기간 표기 + 팔라티움 추가 + 검증 페이지 + 액션플랜 KPI</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">01:52</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>데이터 검증 4파일 업로드</strong> + 히스토리 + TOP3 NaN 수정 + 취소율 키인 + 모바일 사이드바 숨김</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-04-30 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">4/30</div>
+        <div class="timeline-day-date">2026.04.30 <span class="weekday">목요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:49</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>GS 영업기획 대시보드 맵 + 구축 현황 리포트(gs-report) 신설</strong></div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:42</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>OCC Heatmap, YoY Comparison</strong> 더보기 적용</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">23:26</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>트렌드 리포트 좌측 사이드바 네비게이터</strong> 추가</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">22:33</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>FCST 추이 좌측 사이드바</strong> + 변동 분석 테이블</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">15:55</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>GSSP Sales Support</strong> + 요청사항 + 데이터 검증 + gs-map 리디자인 + fcst-status 컴팩트</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">11:43</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>월별 비교표 → 주별 예약 추이 테이블</strong> (7일 간격, 동기간)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">11:17</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>품의 기획전 상세 입력폼</strong> + 엑셀 다운로드 + 구글시트 제출</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">02:07</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>품의 작성용 대시보드 페이지 신설</strong> (사업장/월 복수선택, Forecast 테이블)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">00:24</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>gs-map 잡지형 리디자인</strong> + 데이터 현황 + 자동 스케줄 + 매일 명언 + 흘림체</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">00:07</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>운영전략 + FCST 현황 대시보드 신설</strong> + 전 페이지 네비게이터 연결</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">09:24</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>action-plan:</strong> 간트 좌측 6컬럼 틀고정 + 캘린더 +N건 더보기 토글</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
