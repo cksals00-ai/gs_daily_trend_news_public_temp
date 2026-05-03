@@ -149,10 +149,9 @@ a{color:inherit}
 .goal-mini-value.warn{color:var(--warning)}
 .goal-mini-value.pos{color:var(--positive)}
 
-/* Filter bar (above gantt) */
+/* Filter bar */
 .filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:10px 14px}
 .filter-bar .f-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:0.12em;margin-right:2px}
-.filter-select{background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:11.5px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer;min-width:140px;max-width:220px}
 .f-chip{padding:4px 10px;border-radius:11px;border:1px solid var(--rule);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:10.5px;font-weight:600;cursor:pointer;transition:all 0.15s}
 .f-chip:hover{background:var(--bg-soft);color:var(--ink)}
 .f-chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright)}
@@ -161,42 +160,93 @@ a{color:inherit}
 .f-chip.st-ended.active{background:rgba(122,126,133,0.14);border-color:var(--ink-faint);color:var(--ink-soft)}
 .count-badge{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-left:auto;font-weight:600}
 
-/* View tabs */
-.view-tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);padding-bottom:0}
-.view-tab{background:transparent;border:1px solid transparent;border-bottom:none;padding:8px 16px;color:var(--ink-faint);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;transition:all .15s;font-family:var(--mono)}
-.view-tab:hover{color:var(--ink-soft);background:rgba(255,255,255,.03)}
-.view-tab.active{background:var(--bg-card);border-color:var(--rule);border-bottom:1px solid var(--bg-card);color:var(--gold-bright);margin-bottom:-1px;position:relative;z-index:1}
+/* Calendar + List dual pane */
+.cal-list-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:stretch}
+.cal-pane,.list-pane{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;min-height:520px}
 
-/* Gantt */
-.gantt-wrap{overflow-x:auto;overflow-y:auto;max-height:75vh;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;position:relative}
-.gantt-table{border-collapse:separate;border-spacing:0;font-size:11px;width:max-content;min-width:100%}
-.gantt-table th{position:sticky;top:0;background:var(--bg-deep);z-index:4;padding:6px 8px;font-size:9.5px;font-weight:700;color:var(--ink-faint);text-align:center;border-bottom:2px solid var(--rule-strong);white-space:nowrap;letter-spacing:.04em}
-.gantt-table th.freeze{position:sticky;z-index:5;background:var(--bg-deep)}
-.gantt-table td{padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap;vertical-align:middle}
-.gantt-table td.freeze{position:sticky;z-index:2;background:var(--bg-card)}
-.gantt-table tr:hover td{background:var(--bg-hover)}
-.gantt-table tr:hover td.freeze{background:var(--bg-hover)}
-.gantt-table .fz-0{left:0}
-.gantt-table .fz-1{left:32px}
-.gantt-table .fz-2{left:162px}
-.gantt-table .fz-3{left:232px}
-.gantt-table .fz-4{left:452px}
-.gantt-table .fz-5{left:548px}
-.gantt-table .fz-end{border-right:2px solid var(--rule-strong)!important;box-shadow:4px 0 6px -2px rgba(0,0,0,.45)}
-.gantt-fw-num{width:32px;min-width:32px;max-width:32px}
-.gantt-fw-ch{width:130px;min-width:130px;max-width:130px}
-.gantt-fw-prop{width:70px;min-width:70px;max-width:70px}
-.gantt-fw-title{width:220px;min-width:220px;max-width:220px}
-.gantt-fw-period{width:96px;min-width:96px;max-width:96px}
-.gantt-cell{width:24px;min-width:24px;max-width:24px;padding:0!important;position:relative;border-left:1px solid rgba(255,255,255,.04)}
-.gantt-cell.weekend{background:rgba(255,255,255,.03)}
-.gantt-cell.today{background:rgba(201,160,99,.08)}
-.gantt-cell .bar{position:absolute;height:48%;border-radius:2px}
-.gantt-cell .bar-sale{top:6%;background:var(--gold);opacity:.85}
-.gantt-cell .bar-stay{top:48%;background:var(--info);opacity:.7}
+/* Calendar pane */
+.cal-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule);background:var(--bg-deep);flex-wrap:wrap}
+.cal-month-title{background:transparent;border:1px dashed transparent;color:var(--ink);font-weight:800;font-size:14px;cursor:pointer;padding:4px 10px;border-radius:5px;letter-spacing:-0.02em;transition:all 0.15s}
+.cal-month-title:hover{background:rgba(201,160,99,0.10);border-color:rgba(201,160,99,0.3);color:var(--gold-bright)}
+.cal-month-title::after{content:'▾';margin-left:6px;font-size:10px;color:var(--ink-faint)}
+.cal-nav-btn{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.cal-nav-btn:hover{background:var(--bg-soft);color:var(--ink)}
+.cal-controls{display:flex;gap:6px;align-items:center}
+.cal-mini-btn{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);padding:0 10px;height:28px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:10.5px;font-weight:700}
+.cal-mini-btn:hover{background:var(--bg-soft);color:var(--ink)}
+.cal-mode-toggle{display:flex;gap:0;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.cal-mode-btn{background:transparent;border:none;color:var(--ink-faint);padding:0 9px;height:26px;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.04em}
+.cal-mode-btn:hover{color:var(--ink)}
+.cal-mode-btn.active{background:rgba(201,160,99,0.18);color:var(--gold-bright)}
+.cal-mode-btn+.cal-mode-btn{border-left:1px solid var(--rule)}
 
-.legend{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--ink-muted);font-weight:600;font-family:var(--mono);padding:8px 0;flex-wrap:wrap}
-.legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.cal-week-row{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg-deep);border-bottom:1px solid var(--rule-strong)}
+.cal-week-day{padding:7px 4px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:0.08em}
+.cal-week-day.cw-sun{color:var(--negative)}
+.cal-week-day.cw-sat{color:var(--info)}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(96px,1fr);flex:1}
+.cal-cell{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:5px 4px;display:flex;flex-direction:column;gap:3px;overflow:hidden;min-width:0}
+.cal-cell.is-outside{background:rgba(0,0,0,.18);opacity:.45}
+.cal-cell.is-today{background:rgba(201,160,99,.06)}
+.cal-day-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft);padding:0 2px}
+.cal-day-num.is-sun{color:var(--negative)}
+.cal-day-num.is-sat{color:var(--info)}
+.cal-cell.is-today .cal-day-num{color:var(--gold-bright);font-weight:800}
+
+.cal-bar{display:block;width:100%;background:rgba(201,160,99,.18);border:none;border-left:3px solid var(--gold);color:var(--ink-soft);font-size:10px;font-weight:600;padding:2px 5px;border-radius:3px;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:all 0.12s;line-height:1.3;letter-spacing:-0.01em}
+.cal-bar:hover{background:rgba(201,160,99,.32);color:var(--ink)}
+.cal-bar.seg-ota{background:rgba(201,160,99,.16);border-left-color:var(--gold);color:var(--gold-bright)}
+.cal-bar.seg-gota{background:rgba(90,159,196,.16);border-left-color:var(--info);color:#9ec5dd}
+.cal-bar.seg-ib{background:rgba(168,146,200,.16);border-left-color:var(--apac);color:#c4b1d9}
+.cal-bar.is-sel{outline:1.5px solid var(--gold-bright);background:rgba(201,160,99,.36);color:var(--ink);box-shadow:0 0 0 2px rgba(201,160,99,0.2)}
+.cal-more{background:transparent;border:1px dashed var(--rule);color:var(--ink-faint);font-family:var(--mono);font-size:9.5px;font-weight:700;padding:2px 4px;border-radius:3px;cursor:pointer;text-align:center}
+.cal-more:hover{color:var(--gold-bright);border-color:rgba(201,160,99,0.3)}
+
+/* List pane */
+.list-header{padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--bg-deep);display:flex;flex-direction:column;gap:6px}
+.list-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.list-eyebrow{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.14em;font-weight:700;text-transform:uppercase}
+.list-count{font-family:var(--mono);font-size:11px;color:var(--gold-bright);font-weight:700}
+.list-back{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 9px;border-radius:4px;cursor:pointer;letter-spacing:0.04em}
+.list-back:hover{background:var(--bg-soft);color:var(--ink);border-color:var(--rule-strong)}
+.list-title{font-weight:800;font-size:15px;color:var(--ink);line-height:1.3;letter-spacing:-0.015em}
+.list-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:520px}
+
+/* Event card */
+.event-card{display:flex;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;overflow:hidden;cursor:pointer;transition:all 0.15s;flex-shrink:0}
+.event-card:hover{border-color:var(--rule-strong);background:var(--bg-hover);transform:translateY(-1px)}
+.ec-bar{width:4px;flex-shrink:0;background:var(--gold)}
+.ec-bar.seg-ota{background:var(--gold)}
+.ec-bar.seg-gota{background:var(--info)}
+.ec-bar.seg-ib{background:var(--apac)}
+.ec-body{flex:1;min-width:0;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.ec-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ec-title{font-weight:700;font-size:12.5px;color:var(--ink);line-height:1.35;flex:1;min-width:0;letter-spacing:-0.01em}
+.ec-meta{display:flex;gap:8px;font-size:11px;color:var(--ink-muted);flex-wrap:wrap}
+.ec-prop{color:var(--gold-bright);font-weight:700}
+.ec-channel{color:var(--ink-muted)}
+.ec-period{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;align-items:center}
+.ec-period-label{color:var(--ink-faint);font-weight:700;letter-spacing:0.04em}
+.ec-period-val{color:var(--ink-soft);font-weight:600}
+.ec-kpi{font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);display:flex;gap:10px;border-top:1px dashed var(--rule);padding-top:5px;margin-top:2px}
+.ec-kpi strong{color:var(--gold-bright);font-weight:700}
+
+/* Event detail */
+.event-detail{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.ed-row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:start;font-size:12px;line-height:1.5}
+.ed-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding-top:2px}
+.ed-val{color:var(--ink-soft);font-weight:600}
+.ed-val.mono{font-family:var(--mono);font-size:11.5px}
+.ed-divider{height:1px;background:var(--rule);margin:4px 0}
+.seg-pill{display:inline-block;padding:1px 7px;border-radius:9px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:0.04em;margin-left:6px}
+.seg-pill.seg-ota{background:rgba(201,160,99,.18);color:var(--gold-bright)}
+.seg-pill.seg-gota{background:rgba(90,159,196,.18);color:#9ec5dd}
+.seg-pill.seg-ib{background:rgba(168,146,200,.18);color:#c4b1d9}
+
+/* Calendar legend */
+.cal-legend{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--ink-muted);font-weight:600;font-family:var(--mono);padding:8px 14px;flex-wrap:wrap;border-top:1px solid var(--rule);background:var(--bg-deep)}
+.cal-legend-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
 
 /* Status badges */
 .st-badge{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.04em;white-space:nowrap}
@@ -231,6 +281,10 @@ a{color:inherit}
   .goal-mini-grid{grid-template-columns:1fr 1fr}
   .masthead-inner{padding:0 12px}
   .team-tag{display:none}
+  .cal-list-grid{grid-template-columns:1fr}
+  .cal-pane,.list-pane{min-height:auto}
+  .list-body{max-height:420px}
+  .cal-grid{grid-auto-rows:minmax(82px,1fr)}
 }
 @media(max-width:480px){
   .gsn-wrap{padding:0 10px}
@@ -385,33 +439,27 @@ a{color:inherit}
 
     <!-- Filter bar -->
     <div class="filter-bar">
-      <span class="f-label">채널</span>
-      <select class="filter-select" id="f-channel" onchange="render()"><option value="">전체 채널</option></select>
-      <span class="f-label" style="margin-left:6px">상태</span>
+      <span class="f-label">상태</span>
       <div id="status-chips" style="display:flex;gap:4px"></div>
+      <span class="f-label" style="margin-left:10px">세그먼트</span>
+      <span class="f-chip" id="seg-display" style="cursor:default">담당영역 기준 자동</span>
       <span class="count-badge" id="count-label">— / —건</span>
     </div>
 
-    <!-- View tabs -->
-    <div class="view-tabs">
-      <button class="view-tab active" data-view="gantt" onclick="setView('gantt')">📊 간트 차트</button>
-      <button class="view-tab" data-view="calendar" onclick="setView('calendar')">📅 캘린더</button>
-    </div>
-
-    <!-- Panes -->
-    <div id="view-gantt" class="view-pane">
+    <!-- Calendar + List dual-pane -->
+    <div id="cal-list-pane">
       <div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-title">데이터 로딩 중...</div></div>
     </div>
-    <div id="view-calendar" class="view-pane" style="display:none"></div>
 
-    <div class="legend" id="gantt-legend" style="display:none">
-      <span><span class="legend-dot" style="background:var(--gold);opacity:.85"></span>판매기간</span>
-      <span><span class="legend-dot" style="background:var(--info);opacity:.7"></span>투숙기간</span>
-      <span><span class="legend-dot" style="background:rgba(239,68,68,.5);width:2px"></span>오늘</span>
+    <div class="cal-legend">
+      <span><span class="cal-legend-dot" style="background:var(--gold)"></span>OTA</span>
+      <span><span class="cal-legend-dot" style="background:var(--info)"></span>G-OTA</span>
+      <span><span class="cal-legend-dot" style="background:var(--apac)"></span>Inbound</span>
+      <span style="margin-left:auto;color:var(--ink-faint)">캘린더의 기획전 막대를 클릭하면 우측 목록에서 상세를 확인할 수 있습니다 · 월 제목을 클릭하면 해당 월 전체 목록</span>
     </div>
 
     <div class="footer-bar">
-      DATA: 구글시트 (publish CSV) · 권역/사업장 필터는 사이드바에서 선택 · <a href="action_plan_dashboard.html" style="color:var(--gold);text-decoration:none">Action Plan 원본 ↗</a>
+      DATA: 구글시트 (publish CSV) · 사이드바에서 권역/사업장/담당영역을 선택하면 자동 필터됩니다 · <a href="action_plan_dashboard.html" style="color:var(--gold);text-decoration:none">Action Plan 원본 ↗</a>
     </div>
   </main>
 </div>
@@ -446,12 +494,11 @@ let allRows = [];
 let curRole = 'ota';
 let curRegion = '전체';
 let activeProps = new Set();
-let curView = 'gantt';
 let selStatus = '전체';
 let curGoalMonth = null;       // 'YYYY-MM'
 let calCursor = null;
 let calMode = 'stay';          // 투숙기간 기준 default
-let calExpanded = new Set();
+let selectedEventIdx = null;   // 캘린더에서 선택된 기획전 idx
 
 const today = new Date(); today.setHours(0,0,0,0);
 const todayStr = ymdStr(today);
@@ -585,7 +632,7 @@ async function loadCSV(){
   }catch(e){
     console.error('[SalesReport] 로드 실패:',e);
     document.getElementById('load-status').innerHTML='❌ '+escapeHtml(e.message);
-    document.getElementById('view-gantt').innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">데이터 로드 실패</div><div class="empty-state-sub">${escapeHtml(e.message)}</div></div>`;
+    document.getElementById('cal-list-pane').innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">데이터 로드 실패</div><div class="empty-state-sub">${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -665,9 +712,7 @@ function setRole(role){
   curRegion='전체';
   activeProps.clear();
   selStatus='전체';
-  /* role 바뀌면 채널 select 도 reset */
-  const fc=document.getElementById('f-channel');
-  if(fc)fc.value='';
+  selectedEventIdx=null;
   initSidebar();
   initFilters();
   initGoalMonths();
@@ -677,6 +722,7 @@ function setRole(role){
 function setRegion(region){
   curRegion=region;
   activeProps.clear();
+  selectedEventIdx=null;
   initSidebar();
   initFilters();
   render();
@@ -685,6 +731,7 @@ function setRegion(region){
 function toggleProp(p){
   if(activeProps.has(p))activeProps.delete(p);
   else activeProps.add(p);
+  selectedEventIdx=null;
   renderPropChips();
   initFilters();
   render();
@@ -710,9 +757,7 @@ function getScoped(){
 }
 
 function getFiltered(){
-  const ch=document.getElementById('f-channel')?.value||'';
   return getScoped().filter(d=>{
-    if(ch&&d.channel!==ch)return false;
     if(selStatus!=='전체'&&d.status!==selStatus)return false;
     return true;
   });
@@ -720,13 +765,12 @@ function getFiltered(){
 
 /* ── Filters ── */
 function initFilters(){
-  /* Channel select — scope 기준 */
-  const scoped=getScoped();
-  const channels=[...new Set(scoped.map(d=>d.channel).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-  const ch=document.getElementById('f-channel');
-  const cur=ch.value;
-  ch.innerHTML='<option value="">전체 채널 ('+channels.length+')</option>'+channels.map(p=>`<option ${p===cur?'selected':''}>${escapeHtml(p)}</option>`).join('');
   buildStatusChips();
+  const segDisplay=document.getElementById('seg-display');
+  if(segDisplay){
+    const segLabel=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
+    segDisplay.textContent=`${segLabel} (사이드바 담당영역 연동)`;
+  }
 }
 function buildStatusChips(){
   const c=document.getElementById('status-chips');
@@ -736,7 +780,7 @@ function buildStatusChips(){
     {key:'upcoming',label:'예정',cls:'st-upcoming'},
     {key:'ended',label:'종료',cls:'st-ended'}
   ];
-  c.innerHTML=items.map(it=>`<button class="f-chip ${it.cls} ${selStatus===it.key?'active':''}" onclick="selStatus='${it.key}';buildStatusChips();render()">${it.label}</button>`).join('');
+  c.innerHTML=items.map(it=>`<button class="f-chip ${it.cls} ${selStatus===it.key?'active':''}" onclick="selStatus='${it.key}';selectedEventIdx=null;buildStatusChips();render()">${it.label}</button>`).join('');
 }
 
 /* ── Scope label ── */
@@ -768,7 +812,7 @@ function initGoalMonths(){
   }).join('');
 }
 function getMonthOptions(){
-  /* 투숙기간(시작) 기준 월 목록 — scope 적용 */
+  /* 투숙기간(시작) 기준 월 목록 — scope 적용 + 현재 연도 1~12월 보강(목표 데이터는 항상 표시) */
   const months=new Set();
   getScoped().forEach(d=>{
     if(d.stayStart){
@@ -777,6 +821,9 @@ function getMonthOptions(){
       months.add(`${d.saleStart.getFullYear()}-${String(d.saleStart.getMonth()+1).padStart(2,'0')}`);
     }
   });
+  /* OTB 목표는 CSV 행 0건이어도 보여줘야 하므로 당해 연도 12개월 항상 포함 */
+  const ty=today.getFullYear();
+  for(let i=1;i<=12;i++)months.add(`${ty}-${String(i).padStart(2,'0')}`);
   return [...months].sort();
 }
 function setGoalMonth(m){
@@ -915,14 +962,16 @@ async function getOTBSummary(monthKey){
   const md=otbCache.allMonths[String(mm)];
   if(!md)return null;
 
-  /* OTA 권역 필터 적용 시 byProperty 합산 */
+  /* 현재 담당영역(role)에 해당하는 segmentData 키 */
+  const segKey=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
+
+  /* OTA + 권역/사업장 필터 → byPropertySegment에서 OTA 사업장만 합산 */
   if(curRole==='ota'&&(curRegion!=='전체'||activeProps.size>0)){
     const regMap={'비발디파크':'vivaldi','한국중부':'central','한국남부':'south','아시아퍼시픽':'apac'};
     const wanted=regMap[curRegion];
-    let bp=md.byProperty||[];
+    let bp=(md.byPropertySegment&&md.byPropertySegment[segKey])||md.byProperty||[];
     if(wanted)bp=bp.filter(p=>p.region===wanted);
     if(activeProps.size>0)bp=bp.filter(p=>{
-      /* 사업장명 매칭: byProperty.name = "01.벨비발디" 형식, 사이드바는 단순 이름 */
       for(const ap of activeProps){
         if(p.name.includes(ap)||ap.includes(p.name.replace(/^\d+\./,'')))return true;
       }
@@ -933,6 +982,18 @@ async function getOTBSummary(monthKey){
     bp.forEach(p=>{Object.keys(out).forEach(k=>{out[k]+=(p[k]||0)})});
     return out;
   }
+
+  /* 세그먼트(OTA/G-OTA/Inbound) 단위 데이터 */
+  if(md.segmentData&&md.segmentData[segKey]){
+    const s=md.segmentData[segKey];
+    return {
+      rns_budget:s.rns_budget||0, rns_actual:s.rns_actual||0,
+      rev_budget:s.rev_budget||0, rev_actual:s.rev_actual||0,
+      rev_last :s.rev_last ||0,  rev_fcst :s.rev_fcst ||0,
+      rns_last :s.rns_last ||0
+    };
+  }
+
   return md.summary||null;
 }
 
@@ -941,8 +1002,7 @@ function render(){
   updateScopeDisplay();
   const data=sortRows(getFiltered());
   document.getElementById('count-label').textContent=`${data.length} / ${getScoped().length}건 · 전체 ${allRows.length}`;
-  if(curView==='gantt')renderGantt(data);
-  else if(curView==='calendar')renderCalendar(data);
+  renderCalendarList(data);
   /* Goal는 scope 기준이므로 필터와 무관 */
   renderGoal();
 }
@@ -958,109 +1018,11 @@ function sortRows(rows){
   });
 }
 
-function setView(v){
-  curView=v;
-  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
-  document.getElementById('view-gantt').style.display=v==='gantt'?'block':'none';
-  document.getElementById('view-calendar').style.display=v==='calendar'?'block':'none';
-  document.getElementById('gantt-legend').style.display=v==='gantt'?'flex':'none';
-  render();
-}
+/* ── Calendar + List dual pane ── */
+function segCls(seg){return seg==='G-OTA'?'seg-gota':seg==='Inbound'?'seg-ib':'seg-ota'}
+function statusKR(st){return st==='active'?'진행':st==='upcoming'?'예정':st==='ended'?'종료':'기타'}
 
-/* ── Gantt ── */
-function renderGantt(data){
-  if(!data.length){
-    document.getElementById('view-gantt').innerHTML=`<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">표시할 데이터가 없습니다</div></div>`;
-    return;
-  }
-  const days=getDateRange(data);
-  const months=[];let cur=null;
-  days.forEach((d,i)=>{
-    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if(!cur||cur.key!==key){cur={key,start:i,count:0,label:`${d.getFullYear().toString().slice(-2)}.${String(d.getMonth()+1).padStart(2,'0')}`};months.push(cur)}
-    cur.count++;
-  });
-
-  let html='<div class="gantt-wrap" id="gantt-scroll"><table class="gantt-table">';
-  html+='<tr><th class="freeze fz-0 fz-end" colspan="6" style="text-align:left">기획전 정보</th>';
-  const bgs=['rgba(59,130,246,.08)','rgba(245,158,11,.06)','rgba(76,175,111,.06)','rgba(168,146,200,.06)'];
-  months.forEach((m,i)=>{
-    html+=`<th colspan="${m.count}" style="background:${bgs[i%bgs.length]};font-size:11px;color:var(--ink-soft);font-weight:800">${m.label}</th>`;
-  });
-  html+='</tr>';
-
-  html+='<tr>';
-  html+='<th class="freeze fz-0 gantt-fw-num" style="border-right:1px solid var(--rule)">#</th>';
-  html+='<th class="freeze fz-1 gantt-fw-ch" style="border-right:1px solid var(--rule)">채널</th>';
-  html+='<th class="freeze fz-2 gantt-fw-prop" style="border-right:1px solid var(--rule)">사업장</th>';
-  html+='<th class="freeze fz-3 gantt-fw-title" style="border-right:1px solid var(--rule);text-align:left">기획전명</th>';
-  html+='<th class="freeze fz-4 gantt-fw-period" style="border-right:1px solid var(--rule)">판매기간</th>';
-  html+='<th class="freeze fz-5 fz-end gantt-fw-period">투숙기간</th>';
-  days.forEach(d=>{
-    const dow=d.getDay(),isWe=dow===0||dow===6,isToday=ymdStr(d)===todayStr;
-    const color=isToday?'#ef4444':isWe?'rgba(229,115,115,.6)':'var(--ink-faint)';
-    const bg=isToday?'rgba(239,68,68,.12)':isWe?'rgba(255,255,255,.03)':'';
-    html+=`<th class="gantt-cell" style="color:${color};${bg?'background:'+bg+';':''}font-size:8px;padding:2px 0!important">${d.getDate()}</th>`;
-  });
-  html+='</tr>';
-
-  data.forEach((d,rowIdx)=>{
-    const tip=`${d.title||'—'}\n사업장: ${d.property||'—'}\n채널: ${d.channel||'—'}\n구분: ${d.region||'—'}\n판매: ${fmtYMD(d.saleStart)} ~ ${fmtYMD(d.saleEnd)}\n투숙: ${fmtYMD(d.stayStart)} ~ ${fmtYMD(d.stayEnd)}\n비고: ${d.note||'—'}`;
-    html+='<tr>';
-    html+=`<td class="freeze fz-0 gantt-fw-num" style="border-right:1px solid var(--rule);text-align:center"><span class="st-badge ${d.status}" style="font-size:8px;padding:1px 4px">●</span></td>`;
-    html+=`<td class="freeze fz-1 gantt-fw-ch" style="border-right:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;color:var(--ink-soft);font-size:10.5px" title="${escapeHtml(d.channel||'')}">${escapeHtml(d.channel||'—')}</td>`;
-    html+=`<td class="freeze fz-2 gantt-fw-prop" style="border-right:1px solid var(--rule);color:var(--gold-bright);font-weight:700;font-size:10.5px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.property||'—')}</td>`;
-    html+=`<td class="freeze fz-3 gantt-fw-title" style="border-right:1px solid var(--rule);overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:600" data-tip="${escapeHtml(tip)}">${escapeHtml(d.title||'—')}</td>`;
-    html+=`<td class="freeze fz-4 gantt-fw-period" style="border-right:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--gold-bright)">${fmtMD(d.saleStart)}~${fmtMD(d.saleEnd)}</td>`;
-    html+=`<td class="freeze fz-5 fz-end gantt-fw-period" style="font-family:var(--mono);font-size:10px;color:var(--info)">${fmtMD(d.stayStart)}~${fmtMD(d.stayEnd)}</td>`;
-    days.forEach(day=>{
-      const isWe=day.getDay()===0||day.getDay()===6,isToday=ymdStr(day)===todayStr;
-      const ds=ymdStr(day);
-      let bars='';
-      if(d.saleStart&&d.saleEnd){
-        const ss=ymdStr(d.saleStart),se=ymdStr(d.saleEnd);
-        if(ds>=ss&&ds<=se)bars+='<div class="bar bar-sale" style="left:0;right:0"></div>';
-      }
-      if(d.stayStart&&d.stayEnd){
-        const ss=ymdStr(d.stayStart),se=ymdStr(d.stayEnd);
-        if(ds>=ss&&ds<=se)bars+='<div class="bar bar-stay" style="left:0;right:0"></div>';
-      }
-      const bgCls=isToday?'background:rgba(239,68,68,.08);':isWe?'background:rgba(255,255,255,.02);':'';
-      html+=`<td class="gantt-cell" style="${bgCls}">${bars}</td>`;
-    });
-    html+='</tr>';
-  });
-  html+='</table></div>';
-  document.getElementById('view-gantt').innerHTML=html;
-
-  const todayIdx=days.findIndex(d=>ymdStr(d)===todayStr);
-  if(todayIdx>=0){
-    const wrap=document.getElementById('gantt-scroll');
-    setTimeout(()=>{wrap.scrollLeft=Math.max(0,644+(todayIdx-5)*24)},80);
-  }
-}
-
-function getDateRange(data){
-  let minD=new Date(today);minD.setDate(minD.getDate()-14);
-  let maxD=new Date(today);maxD.setDate(maxD.getDate()+60);
-  data.forEach(d=>{
-    const candidates=[d.saleStart,d.saleEnd,d.stayStart,d.stayEnd].filter(Boolean);
-    candidates.forEach(c=>{if(c<minD)minD=new Date(c);if(c>maxD)maxD=new Date(c)});
-  });
-  const maxFromToday=new Date(today);maxFromToday.setDate(maxFromToday.getDate()+180);
-  if(maxD>maxFromToday)maxD=maxFromToday;
-  const minFromToday=new Date(today);minFromToday.setDate(minFromToday.getDate()-90);
-  if(minD<minFromToday)minD=minFromToday;
-  const dow=minD.getDay();
-  minD.setDate(minD.getDate()-(dow===0?6:dow-1));
-  maxD.setDate(maxD.getDate()+((7-maxD.getDay())%7));
-  const days=[];const cur=new Date(minD);
-  while(cur<=maxD){days.push(new Date(cur));cur.setDate(cur.getDate()+1)}
-  return days;
-}
-
-/* ── Calendar (간단 버전 — 투숙기간 기준) ── */
-function renderCalendar(data){
+function renderCalendarList(data){
   if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);
   const year=calCursor.getFullYear();
   const month=calCursor.getMonth();
@@ -1069,27 +1031,44 @@ function renderCalendar(data){
   const gridStart=new Date(year,month,1-startDow);
   const gridEnd=new Date(year,month,lastDay.getDate()+(6-lastDay.getDay()));
 
-  const monthLabel=`${year}년 ${month+1}월`;
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;margin-bottom:10px">
-    <button onclick="calNav(-1)" style="background:transparent;border:1px solid var(--rule);color:var(--ink-soft);width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:700">‹</button>
-    <div style="font-weight:800;font-size:14px;color:var(--ink)">${monthLabel}</div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <button onclick="calToday()" style="background:transparent;border:1px solid var(--rule);color:var(--ink-soft);padding:0 10px;height:30px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700">오늘</button>
-      <div style="display:flex;gap:4px">
-        <button onclick="setCalMode('sale')" style="padding:4px 10px;font-size:10px;font-family:var(--mono);font-weight:700;background:${calMode==='sale'?'rgba(201,160,99,.18)':'transparent'};border:1px solid ${calMode==='sale'?'var(--gold)':'var(--rule)'};border-radius:4px;color:${calMode==='sale'?'var(--gold-bright)':'var(--ink-faint)'};cursor:pointer">판매기간</button>
-        <button onclick="setCalMode('stay')" style="padding:4px 10px;font-size:10px;font-family:var(--mono);font-weight:700;background:${calMode==='stay'?'rgba(201,160,99,.18)':'transparent'};border:1px solid ${calMode==='stay'?'var(--gold)':'var(--rule)'};border-radius:4px;color:${calMode==='stay'?'var(--gold-bright)':'var(--ink-faint)'};cursor:pointer">투숙기간</button>
-      </div>
-      <button onclick="calNav(1)" style="background:transparent;border:1px solid var(--rule);color:var(--ink-soft);width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:700">›</button>
-    </div>
-  </div>`;
+  const monthStart=new Date(year,month,1);
+  const monthEnd=new Date(year,month+1,0,23,59,59);
+  const modeStart=d=>calMode==='sale'?d.saleStart:d.stayStart;
+  const modeEnd=d=>calMode==='sale'?d.saleEnd:d.stayEnd;
 
-  html+='<div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden">';
-  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg-deep);border-bottom:1px solid var(--rule-strong)">';
-  ['일','월','화','수','목','금','토'].forEach((w,i)=>{
-    const cls=i===0?'color:var(--negative)':i===6?'color:var(--info)':'color:var(--ink-faint)';
-    html+=`<div style="padding:8px 6px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;${cls};letter-spacing:.08em">${w}</div>`;
+  /* 해당 월에 걸치는 이벤트만 (목록 패널용) */
+  const monthEvents=data.filter(d=>{
+    const s=modeStart(d);
+    if(!s)return false;
+    const ee=modeEnd(d)||s;
+    return s<=monthEnd&&ee>=monthStart;
   });
-  html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(110px,auto)">';
+
+  const monthLabel=`${year}년 ${month+1}월`;
+  const modeLabel=calMode==='sale'?'판매':'투숙';
+
+  /* === 캘린더 패널 === */
+  let calHtml=`<div class="cal-pane">
+    <div class="cal-header">
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="cal-nav-btn" onclick="calNav(-1)" title="이전 달">‹</button>
+        <button class="cal-month-title" onclick="selectMonth()" title="이 달 전체 기획전 목록 보기">${monthLabel}</button>
+        <button class="cal-nav-btn" onclick="calNav(1)" title="다음 달">›</button>
+      </div>
+      <div class="cal-controls">
+        <button class="cal-mini-btn" onclick="calToday()">오늘</button>
+        <div class="cal-mode-toggle">
+          <button class="cal-mode-btn ${calMode==='sale'?'active':''}" onclick="setCalMode('sale')">판매</button>
+          <button class="cal-mode-btn ${calMode==='stay'?'active':''}" onclick="setCalMode('stay')">투숙</button>
+        </div>
+      </div>
+    </div>
+    <div class="cal-week-row">`;
+  ['일','월','화','수','목','금','토'].forEach((w,i)=>{
+    const cls=i===0?'cw-sun':i===6?'cw-sat':'';
+    calHtml+=`<div class="cal-week-day ${cls}">${w}</div>`;
+  });
+  calHtml+=`</div><div class="cal-grid">`;
 
   const cur=new Date(gridStart);
   while(cur<=gridEnd){
@@ -1098,44 +1077,129 @@ function renderCalendar(data){
     const dow=cur.getDay();
     const dayKey=ymdStr(cur);
     const events=data.filter(d=>{
-      const s=calMode==='sale'?d.saleStart:d.stayStart;
-      const e=calMode==='sale'?d.saleEnd:d.stayEnd;
-      if(!s||!e)return false;
+      const s=modeStart(d);
+      const e=modeEnd(d)||s;
+      if(!s)return false;
       const sk=ymdStr(s),ek=ymdStr(e);
       return dayKey>=sk&&dayKey<=ek;
     });
-    const bg=isOutside?'rgba(0,0,0,.18)':isToday?'rgba(201,160,99,.07)':'';
-    html+=`<div style="border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6px;display:flex;flex-direction:column;gap:3px;min-height:110px;overflow:hidden;${bg?'background:'+bg+';':''}${isOutside?'opacity:.5':''}">`;
-    const dnCls=dow===0?'color:var(--negative)':dow===6?'color:var(--info)':'color:var(--ink-soft)';
-    html+=`<div style="font-family:var(--mono);font-size:11px;font-weight:${isToday?'800':'700'};${dnCls};${isToday?'color:var(--gold-bright)':''}">${cur.getDate()}</div>`;
-    const maxShow=3;
-    const isExpanded=calExpanded.has(dayKey);
-    const eventsToShow=isExpanded?events:events.slice(0,maxShow);
+    let cellCls='cal-cell';
+    if(isOutside)cellCls+=' is-outside';
+    if(isToday)cellCls+=' is-today';
+    const dnCls=dow===0?'is-sun':dow===6?'is-sat':'';
+    calHtml+=`<div class="${cellCls}">`;
+    calHtml+=`<div class="cal-day-num ${dnCls}">${cur.getDate()}</div>`;
+    const maxShow=2;
+    const eventsToShow=events.slice(0,maxShow);
     eventsToShow.forEach(ev=>{
-      const s=calMode==='sale'?ev.saleStart:ev.stayStart;
-      const e=calMode==='sale'?ev.saleEnd:ev.stayEnd;
-      const sk=ymdStr(s),ek=ymdStr(e);
-      let evBg='rgba(90,159,196,.12)',evCol='var(--ink-soft)',evBl='var(--info)';
-      if(dayKey===sk){evBg='rgba(76,175,111,.2)';evCol='var(--positive)';evBl='var(--positive)'}
-      else if(dayKey===ek){evBg='rgba(229,115,115,.18)';evCol='var(--negative)';evBl='var(--negative)'}
-      const tip=`[${ev.channel||'—'}] ${ev.title||'—'}\n사업장: ${ev.property||'—'}\n판매: ${fmtYMD(ev.saleStart)} ~ ${fmtYMD(ev.saleEnd)}\n투숙: ${fmtYMD(ev.stayStart)} ~ ${fmtYMD(ev.stayEnd)}`;
-      const label=`${ev.property||'?'} · ${ev.title||ev.channel||'?'}`;
-      html+=`<div data-tip="${escapeHtml(tip)}" style="font-size:10px;padding:2px 5px;border-radius:3px;background:${evBg};color:${evCol};border-left:2px solid ${evBl};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help">${escapeHtml(label)}</div>`;
+      const isSel=selectedEventIdx===ev.idx;
+      const label=`${ev.property||'?'}·${ev.title||ev.channel||'?'}`;
+      calHtml+=`<button class="cal-bar ${segCls(ev.segment)} ${isSel?'is-sel':''}" onclick="selectEvent(${ev.idx})" title="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
     });
     if(events.length>maxShow){
-      const txt=isExpanded?'접기 ▲':`+${events.length-maxShow}건 ▼`;
-      html+=`<div onclick="toggleCalDay('${dayKey}')" style="font-family:var(--mono);font-size:9px;color:var(--gold-bright);font-weight:700;text-align:center;margin-top:2px;cursor:pointer;padding:1px 4px;border-radius:3px;background:rgba(201,160,99,.1);border:1px solid rgba(201,160,99,.25);user-select:none">${txt}</div>`;
+      calHtml+=`<button class="cal-more" onclick="selectMonth()" title="이 달 전체 목록 열기">+${events.length-maxShow}건</button>`;
     }
-    html+='</div>';
+    calHtml+=`</div>`;
     cur.setDate(cur.getDate()+1);
   }
-  html+='</div></div>';
-  document.getElementById('view-calendar').innerHTML=html;
+  calHtml+=`</div></div>`;
+
+  /* === 리스트 패널 === */
+  let listHtml='<div class="list-pane">';
+  if(selectedEventIdx!=null){
+    const ev=data.find(d=>d.idx===selectedEventIdx);
+    if(ev){
+      listHtml+=`<div class="list-header">
+        <div class="list-title-row">
+          <div class="list-eyebrow">선택된 기획전</div>
+          <button class="list-back" onclick="clearSelection()">← 목록으로</button>
+        </div>
+        <div class="list-title">${escapeHtml(ev.title||ev.channel||'—')}</div>
+      </div>
+      <div class="list-body">${renderEventDetail(ev)}</div>`;
+    }else{
+      listHtml+=`<div class="list-header">
+        <div class="list-title-row"><div class="list-eyebrow">선택된 기획전 없음</div>
+        <button class="list-back" onclick="clearSelection()">← 목록으로</button></div>
+      </div>
+      <div class="list-body"><div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">선택한 기획전이 현재 필터에 포함되지 않습니다</div></div></div>`;
+    }
+  }else{
+    listHtml+=`<div class="list-header">
+      <div class="list-title-row">
+        <div class="list-eyebrow">${monthLabel} · ${modeLabel}기간 기준</div>
+        <span class="list-count">${monthEvents.length}건</span>
+      </div>
+      <div class="list-title">이 달의 기획전</div>
+    </div>
+    <div class="list-body">${renderEventCards(monthEvents)}</div>`;
+  }
+  listHtml+='</div>';
+
+  document.getElementById('cal-list-pane').innerHTML=`<div class="cal-list-grid">${calHtml}${listHtml}</div>`;
 }
-function calNav(delta){if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);render()}
-function calToday(){calCursor=new Date(today.getFullYear(),today.getMonth(),1);render()}
-function setCalMode(m){calMode=m;render()}
-function toggleCalDay(dayKey){if(calExpanded.has(dayKey))calExpanded.delete(dayKey);else calExpanded.add(dayKey);render()}
+
+function renderEventDetail(ev){
+  const seg=ev.segment==='G-OTA'?'gota':ev.segment==='Inbound'?'ib':'ota';
+  return `
+    <div class="event-detail">
+      <div class="ed-row"><span class="ed-label">사업장</span><span class="ed-val" style="color:var(--gold-bright);font-weight:700">${escapeHtml(ev.property||'—')}</span></div>
+      <div class="ed-row"><span class="ed-label">권역</span><span class="ed-val">${escapeHtml(ev.region||'—')}</span></div>
+      <div class="ed-row"><span class="ed-label">채널</span><span class="ed-val">${escapeHtml(ev.channel||'—')}<span class="seg-pill seg-${seg}">${escapeHtml(ev.segment)}</span></span></div>
+      <div class="ed-row"><span class="ed-label">상태</span><span class="ed-val"><span class="st-badge ${ev.status}">${statusKR(ev.status)}</span></span></div>
+      <div class="ed-divider"></div>
+      <div class="ed-row"><span class="ed-label">판매기간</span><span class="ed-val mono">${fmtYMD(ev.saleStart)} ~ ${fmtYMD(ev.saleEnd)}</span></div>
+      <div class="ed-row"><span class="ed-label">투숙기간</span><span class="ed-val mono">${fmtYMD(ev.stayStart)} ~ ${fmtYMD(ev.stayEnd)}</span></div>
+      ${ev.venue?`<div class="ed-row"><span class="ed-label">영업장</span><span class="ed-val">${escapeHtml(ev.venue)}</span></div>`:''}
+      ${ev.product?`<div class="ed-row"><span class="ed-label">상품</span><span class="ed-val">${escapeHtml(ev.product)}</span></div>`:''}
+      <div class="ed-divider"></div>
+      <div class="ed-row"><span class="ed-label">KPI 객실</span><span class="ed-val mono">${ev.kpiRn?fmtNum(ev.kpiRn)+' 박':'—'}</span></div>
+      <div class="ed-row"><span class="ed-label">KPI 매출</span><span class="ed-val mono">${ev.kpiRev?fmtNum(ev.kpiRev)+' 백만원':'—'}</span></div>
+      ${ev.note?`<div class="ed-divider"></div><div class="ed-row"><span class="ed-label">비고</span><span class="ed-val" style="white-space:pre-wrap">${escapeHtml(ev.note)}</span></div>`:''}
+    </div>
+  `;
+}
+
+function renderEventCards(events){
+  if(!events.length){
+    return `<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">이 달엔 표시할 기획전이 없습니다</div><div class="empty-state-sub">사이드바의 권역/사업장 또는 상태 필터를 확인하세요</div></div>`;
+  }
+  const sorted=events.slice().sort((a,b)=>{
+    const sa=(calMode==='sale'?a.saleStart:a.stayStart)||0;
+    const sb=(calMode==='sale'?b.saleStart:b.stayStart)||0;
+    return sa-sb;
+  });
+  return sorted.map(ev=>{
+    const sc=segCls(ev.segment);
+    return `
+      <div class="event-card" onclick="selectEvent(${ev.idx})">
+        <div class="ec-bar ${sc}"></div>
+        <div class="ec-body">
+          <div class="ec-title-row">
+            <div class="ec-title">${escapeHtml(ev.title||ev.channel||'—')}</div>
+            <span class="st-badge ${ev.status}">${statusKR(ev.status)}</span>
+          </div>
+          <div class="ec-meta">
+            <span class="ec-prop">${escapeHtml(ev.property||'—')}</span>
+            <span class="ec-channel">${escapeHtml(ev.channel||'—')}</span>
+          </div>
+          <div class="ec-period">
+            <span class="ec-period-label">판매</span><span class="ec-period-val">${fmtMD(ev.saleStart)}~${fmtMD(ev.saleEnd)}</span>
+            <span class="ec-period-label" style="margin-left:6px">투숙</span><span class="ec-period-val">${fmtMD(ev.stayStart)}~${fmtMD(ev.stayEnd)}</span>
+          </div>
+          ${(ev.kpiRn||ev.kpiRev)?`<div class="ec-kpi">${ev.kpiRn?'<span>객실 <strong>'+fmtNum(ev.kpiRn)+'</strong>박</span>':''}${ev.kpiRev?'<span>매출 <strong>'+fmtNum(ev.kpiRev)+'</strong>백만</span>':''}</div>`:''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectEvent(idx){selectedEventIdx=idx;render()}
+function selectMonth(){selectedEventIdx=null;render()}
+function clearSelection(){selectedEventIdx=null;render()}
+function calNav(delta){if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);selectedEventIdx=null;render()}
+function calToday(){calCursor=new Date(today.getFullYear(),today.getMonth(),1);selectedEventIdx=null;render()}
+function setCalMode(m){calMode=m;selectedEventIdx=null;render()}
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded',()=>{
