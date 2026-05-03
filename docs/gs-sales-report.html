@@ -522,10 +522,14 @@ a{color:inherit}
 
 /* Mobile toggle */
 .mobile-sidebar-toggle{display:none;background:var(--bg-soft);border:1px solid var(--rule);color:var(--ink-soft);padding:6px 12px;border-radius:4px;font-family:var(--mono);font-size:11px;cursor:pointer;font-weight:700}
+.sidebar-close{display:none;position:absolute;top:10px;right:10px;background:var(--bg-soft);border:1px solid var(--rule);color:var(--ink-soft);width:28px;height:28px;border-radius:4px;font-size:16px;cursor:pointer;line-height:1;font-weight:700}
+.sidebar-backdrop{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:140}
+.sidebar-backdrop.open{display:block}
 
 @media(max-width:900px){
-  .sidebar{display:none;position:fixed;top:94px;left:0;width:280px;z-index:150;box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+  .sidebar{display:none;position:fixed;top:94px;left:0;width:280px;max-width:85vw;height:calc(100vh - 94px);z-index:150;box-shadow:4px 0 20px rgba(0,0,0,0.5);padding-top:42px}
   .sidebar.open{display:flex}
+  .sidebar.open .sidebar-close{display:block}
   .mobile-sidebar-toggle{display:inline-block}
   .main-content{padding:16px 14px 40px}
   .goal-grid{grid-template-columns:1fr}
@@ -576,7 +580,7 @@ a{color:inherit}
       <div class="team-tag">GS팀 · 세일즈 리포트</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
-      <button class="mobile-sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ 사이드바</button>
+      <button class="mobile-sidebar-toggle" onclick="(function(){var sb=document.getElementById('sidebar');var bd=document.getElementById('sidebar-backdrop');var open=!sb.classList.contains('open');sb.classList.toggle('open',open);bd.classList.toggle('open',open);document.body.style.overflow=open?'hidden':'';})()">☰ 사이드바</button>
       <span class="page-badge">📊 세일즈 리포트</span>
     </div>
     <div class="masthead-right">
@@ -589,8 +593,12 @@ a{color:inherit}
 <!-- APP SHELL -->
 <div class="app-shell">
 
+  <!-- MOBILE SIDEBAR BACKDROP -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="document.getElementById('sidebar').classList.remove('open');this.classList.remove('open');document.body.style.overflow='';"></div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
+    <button class="sidebar-close" type="button" aria-label="닫기" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-backdrop').classList.remove('open');document.body.style.overflow='';">×</button>
 
     <div>
       <div class="sidebar-section-label">담당 영역</div>
