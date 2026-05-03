@@ -28,8 +28,25 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 RAW_DB_DIR = PROJECT_DIR / 'data' / 'raw_db' / '2026'
 OUTPUT_PATH = PROJECT_DIR / 'docs' / 'data' / 'inbound_enriched.json'
+KEYIN_PATH = PROJECT_DIR / 'docs' / 'data' / 'inbound_partner_nationality_keyin.json'
 
 UNMAPPABLE_PARTNERS = {'티케이트래블', '원더트립', '에스에이투어', '코리얼트립'}
+
+
+def load_keyin_mappings():
+    """관리자 키인 거래처→국적 매핑 로드. 없으면 빈 dict."""
+    if not KEYIN_PATH.exists():
+        return {}
+    try:
+        with open(KEYIN_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        m = data.get('mappings', {}) or {}
+        # 정규화: 빈 문자열 제외
+        return {k.strip(): normalize_nationality(v) for k, v in m.items()
+                if k and v and v.strip()}
+    except Exception as e:
+        logger.warning(f'키인 파일 로드 실패: {e}')
+        return {}
 
 # 국적 표기 정규화: '대만법인'/'대만FIT' → '대만' 등
 NATIONALITY_NORMALIZE = {
@@ -193,8 +210,12 @@ def build_master(rows):
     return master
 
 
-def apply_mapping(rows, master):
-    """각 row에 nationality + mapping_confidence 부여."""
+def apply_mapping(rows, master, keyin=None):
+    """각 row에 nationality + mapping_confidence 부여.
+    keyin 매핑은 87원본/57원본보다 낮고 87매핑/미확인보다 높은 우선순위로
+    적용 — 즉, 회원명에 (국적)이 직접 있으면 원본을 신뢰하되, 그 외엔 키인 우선.
+    """
+    keyin = keyin or {}
     enriched = []
     for r in rows:
         prefix = r['prefix']
@@ -206,6 +227,9 @@ def apply_mapping(rows, master):
             if nat_in_name:
                 r['nationality'] = nat_in_name
                 r['mapping_confidence'] = '87원본'
+            elif b in keyin:
+                r['nationality'] = keyin[b]
+                r['mapping_confidence'] = '키인매핑'
             elif b in master:
                 r['nationality'] = master[b]['top']
                 r['mapping_confidence'] = '87매핑'
@@ -216,6 +240,9 @@ def apply_mapping(rows, master):
             if nat_in_name:
                 r['nationality'] = nat_in_name
                 r['mapping_confidence'] = '57원본'
+            elif b in keyin:
+                r['nationality'] = keyin[b]
+                r['mapping_confidence'] = '키인매핑'
             elif b in master:
                 r['nationality'] = master[b]['top']
                 r['mapping_confidence'] = '87매핑'
@@ -309,7 +336,7 @@ def print_report(enriched, master, agg):
     # 매핑 신뢰도
     print('\n[매핑 신뢰도 분포]')
     print(f'{"신뢰도":<12}{"행 수":>10}{"booking RN":>12}{"cancel RN":>12}{"net RN":>10}')
-    for k in ['87원본', '87매핑', '57원본', '미확인']:
+    for k in ['87원본', '87매핑', '57원본', '키인매핑', '미확인']:
         v = agg['mapping_confidence_summary'].get(k, {'rows': 0, 'rn_booking': 0, 'rn_cancel': 0})
         net = v['rn_booking'] - v['rn_cancel']
         print(f'{k:<12}{v["rows"]:>10,}{v["rn_booking"]:>12,}{v["rn_cancel"]:>12,}{net:>10,}')
@@ -361,7 +388,10 @@ def main():
     logger.info(f'전체 inbound 레코드: {len(rows):,}행')
     master = build_master(rows)
     logger.info(f'87 master 거래처: {len(master)}개')
-    enriched = apply_mapping(rows, master)
+    keyin = load_keyin_mappings()
+    if keyin:
+        logger.info(f'키인 매핑: {len(keyin)}개 ({", ".join(f"{k}→{v}" for k, v in keyin.items())})')
+    enriched = apply_mapping(rows, master, keyin)
     agg = aggregate(enriched)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -372,9 +402,12 @@ def main():
             '87원본': '87-prefix 회원명에 (국적) 직접 표기',
             '87매핑': '57-prefix 거래처명을 87 master에서 lookup',
             '57원본': '57-prefix 회원명에 (국적) 직접 표기',
-            '미확인': '매핑 불가 (티케이트래블/원더트립/에스에이투어/코리얼트립 등)',
+            '키인매핑': '관리자 키인 매핑 (inbound_partner_nationality_keyin.json)',
+            '미확인': '매핑 불가 (티케이트래블/원더트립 등)',
         },
         'master_partner_count': len(master),
+        'keyin_mapping_count': len(keyin),
+        'keyin_mappings': keyin,
         'master_top_nationality': {
             b: {'top': v['top'], 'distribution': v['distribution']}
             for b, v in sorted(master.items())
