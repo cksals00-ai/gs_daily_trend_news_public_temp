@@ -1083,6 +1083,21 @@ async function ensureDB(){
   return dbCache;
 }
 
+/* ── 채널×stay_month 동기간 OTB (전년 동기간 대비 비교용) ── */
+let dbYoyChannelCache=null;
+async function ensureDbYoyChannel(){
+  if(dbYoyChannelCache!==null)return dbYoyChannelCache;
+  try{
+    const r=await fetch('data/db_yoy_channel.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok)dbYoyChannelCache=await r.json();
+    else dbYoyChannelCache=false;
+  }catch(e){
+    console.warn('[SalesReport] db_yoy_channel.json 로드 실패:',e.message);
+    dbYoyChannelCache=false;
+  }
+  return dbYoyChannelCache;
+}
+
 /* otb_data 사업장명(예: "01.벨비발디") ↔ db_aggregated 사업장명(예: "소노벨 비발디파크") 매핑.
    db에 등재되지 않은 항목은 매핑하지 않는다(필터 시 자연스럽게 제외). */
 const PROP_OTB_TO_DB={
@@ -1508,10 +1523,12 @@ function buildPropertyCardData(md){
   });
 }
 
-/* 거래처(실제 채널사) 카드 데이터 — db_aggregated.by_channel 기반.
+/* 거래처(실제 채널사) 카드 데이터 — db_aggregated.by_channel(현재 OTB) + db_yoy_channel(전년 동기간 OTB)
    - 키 = 실제 거래처(아고다, 야놀자, 트립닷컴 …) ; 세그먼트(OTA/G-OTA/Inbound)는 by_channel_segment로 결정
    - 현재 role의 세그먼트에 속하는 채널만 표시 (D멤버스/FIT 등 내부분류 자동 제외, '기타' 제외)
-   - YoY = 선택월 net_rev / 전년 동월 net_rev
+   - LY 비교 우선순위: ① db_yoy_channel(동기간 OTB, base = 1년 전 어제) ② 없으면 by_channel(마감) 폴백
+   - YoY = 선택월 cur(현재 OTB or 마감) / 전년 동월 last(동기간 OTB or 마감)
+   - 사업장 단위 스코프(mgmtSelProperty/권역/사업장 필터)에서는 채널 단위 동기간 데이터 부재 → by_property_channel(마감) 사용
    - mgmtSelProperty 또는 권역/사업장 필터 시: by_property_channel 합산
 */
 function buildChannelCardData(md, monthKey){
@@ -1521,7 +1538,12 @@ function buildChannelCardData(md, monthKey){
   const byChSeg=dbCache.by_channel_segment||{};
   const byPropCh=dbCache.by_property_channel||{};
   const yyyymm=monthKey.replace('-','');
-  const lyKey=String(parseInt(yyyymm.slice(0,4),10)-1)+yyyymm.slice(4);
+  const lyYear=String(parseInt(yyyymm.slice(0,4),10)-1);
+  const lyKey=lyYear+yyyymm.slice(4);
+
+  /* 동기간 채널 데이터 (전사 단위에서만 사용). 사업장×채널 동기간 데이터는 미산출. */
+  const lyYearBlock=(dbYoyChannelCache&&dbYoyChannelCache.years&&dbYoyChannelCache.years[lyYear])||null;
+  const lyChMap=lyYearBlock?(lyYearBlock.by_channel||{}):null;
 
   /* 스코프 사업장(db naming) 결정. null 이면 전사 합산(by_channel 직접 사용). */
   let scopeDbProps=null;
@@ -1544,6 +1566,7 @@ function buildChannelCardData(md, monthKey){
     }
   }
 
+  const isScoped=!!scopeDbProps;
   const out=[];
   Object.keys(byCh).forEach(ch=>{
     if(ch==='기타')return;
@@ -1552,7 +1575,9 @@ function buildChannelCardData(md, monthKey){
     if(seg!==segWanted)return;
 
     let cur=0,last=0,curRn=0;
-    if(scopeDbProps){
+    let lastSrc='final'; // 'samePeriod' | 'final'
+    if(isScoped){
+      /* 사업장 스코프: by_property_channel(마감) 사용 — 동기간 채널 데이터 미산출 */
       scopeDbProps.forEach(p=>{
         const cell=byPropCh[p]&&byPropCh[p][ch];
         if(!cell)return;
@@ -1561,10 +1586,18 @@ function buildChannelCardData(md, monthKey){
         if(l) last+=l.net_rev||0;
       });
     }else{
+      /* 전사: cur는 by_channel 현재 스냅샷, last는 동기간 OTB 우선 → 미산출 시 마감 폴백 */
       const ts=byCh[ch];
-      const c=ts[yyyymm], l=ts[lyKey];
+      const c=ts[yyyymm];
       if(c){cur=c.net_rev||0; curRn=c.net_rn||0;}
-      if(l) last=l.net_rev||0;
+      const lySamePeriod=lyChMap&&lyChMap[ch]&&lyChMap[ch][lyKey];
+      if(lySamePeriod&&typeof lySamePeriod.net_rev_m==='number'){
+        last=lySamePeriod.net_rev_m;
+        lastSrc='samePeriod';
+      }else{
+        const l=ts[lyKey];
+        if(l) last=l.net_rev||0;
+      }
     }
 
     if(cur===0&&last===0)return;
@@ -1578,7 +1611,8 @@ function buildChannelCardData(md, monthKey){
       name:ch, segment:seg,
       rev_actual, rev_last, rev_budget:0,
       rns_actual:curRn, rns_last:0, rns_budget:0,
-      yoy, ach:null
+      yoy, ach:null,
+      lastSrc /* 'samePeriod' | 'final' — 라벨/툴팁 분기용 */
     });
   });
 
@@ -1619,6 +1653,7 @@ async function renderMgmtCards(){
   }
   await ensureOTB();
   await ensureDB();
+  await ensureDbYoyChannel();
   const md=getMonthBlock(m);
   if(!md){
     pane.innerHTML=`<div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">${m} OTB 데이터 없음</div></div>`;
@@ -1675,6 +1710,8 @@ async function renderMgmtCards(){
   /* === 거래처 카드 === */
   const declCt=chanData.filter(c=>c.yoy!=null&&c.yoy<0).length;
   const totalCt=chanData.filter(c=>c.yoy!=null).length;
+  const samePeriodCt=chanData.filter(c=>c.lastSrc==='samePeriod').length;
+  const finalCt=chanData.filter(c=>c.lastSrc==='final'&&c.yoy!=null).length;
   let chanBody;
   if(!chanData.length){
     chanBody=`<div class="mgmt-empty"><div class="me-icon">🔍</div>현재 스코프에 해당하는 거래처(채널)가 없습니다</div>`;
@@ -1689,25 +1726,28 @@ async function renderMgmtCards(){
       const lastMM=Math.round((c.rev_last||0)/1000000).toLocaleString('ko-KR');
       const rnTxt=c.rns_actual?Math.round(c.rns_actual).toLocaleString('ko-KR'):'—';
       const segPill=c.segment?`<span class="seg-pill ${segCls(c.segment)}">${escapeHtml(c.segment)}</span>`:'';
-      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="실적 ${actMM}백만 / 전년 ${lastMM}백만 · 객실 ${rnTxt}RN">
+      const lastLabel=c.lastSrc==='samePeriod'?'전년동기':'전년마감';
+      const tipLastLabel=c.lastSrc==='samePeriod'?'전년 동기간':'전년 마감';
+      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="실적 ${actMM}백만 / ${tipLastLabel} ${lastMM}백만 · 객실 ${rnTxt}RN">
         <div class="mgmt-row-main">
           <div class="mgmt-row-name">${escapeHtml(c.name)}${segPill}</div>
           <div class="mgmt-row-meta">
             <span>실적 ${actMM}M</span>
-            <span>전년 ${lastMM}M</span>
+            <span>${lastLabel} ${lastMM}M</span>
             <span>객실 ${rnTxt}RN</span>
           </div>
         </div>
         <div class="mgmt-row-side">
           <div class="mgmt-row-pct ${yoyCls}">${yoyTxt}</div>
-          <div class="mgmt-row-delta">${yoy==null?'데이터 없음':yoy>=0?'전년比 상승':'전년比 하락'}</div>
+          <div class="mgmt-row-delta">${yoy==null?'데이터 없음':(c.lastSrc==='samePeriod'?(yoy>=0?'동기간比 상승':'동기간比 하락'):(yoy>=0?'마감比 상승':'마감比 하락'))}</div>
         </div>
       </div>`;
     }).join('');
   }
 
   const propSubLbl=mgmtSelChannel?`거래처 [${mgmtSelChannel}] 하락 사업장 강조 중`:`${segLbl} · 달성률 낮은 순`;
-  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] · ${segLbl} 채널 · 전년比 하락 큰 순`:`${segLbl} 채널 · 전년比 하락 큰 순`;
+  const chanLyMode=mgmtSelProperty?'전년마감 대비':(samePeriodCt>0?(finalCt>0?'전년동기/마감 혼합 대비':'전년동기 대비'):'전년마감 대비');
+  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] · ${segLbl} 채널 · ${chanLyMode} 하락 큰 순`:`${segLbl} 채널 · ${chanLyMode} 하락 큰 순`;
 
   pane.innerHTML=`<div class="mgmt-grid">
     <div class="mgmt-card">
@@ -1742,7 +1782,7 @@ async function renderMgmtCards(){
       </div>
       <div class="mgmt-summary">
         <span class="mgmt-summary-item bad">하락 <strong>${declCt}</strong></span>
-        <span class="mgmt-summary-item">총 <strong>${totalCt}</strong>개 거래처 (전년 비교 가능)</span>
+        <span class="mgmt-summary-item">총 <strong>${totalCt}</strong>개 거래처 (${chanLyMode} 가능)</span>
         <span class="mgmt-summary-item" style="margin-left:auto">전체 <strong>${chanData.length}</strong>개</span>
       </div>
       <div class="mgmt-body">${chanBody}</div>
