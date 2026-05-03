@@ -1260,6 +1260,9 @@
     .trend-now-value { font-size: 30px; }
     /* 주간 리포트: 1칼럼 */
     .weekly-grid { grid-template-columns: 1fr !important; }
+    /* TODAY+WEEKLY COMPARISON: 모바일에서 1~2칼럼 */
+    #today-weekly-cmp .twc-row1 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    #today-weekly-cmp .twc-row2 { grid-template-columns: 1fr !important; }
     /* OTB 월별 내부 그리드: 항상 3칼럼 유지 */
     .otb-month-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 8px !important; }
     /* OTB 월별 컬럼: 오른쪽 정렬 */
@@ -2289,6 +2292,165 @@
 
     </div>
 
+    <!-- ============ TODAY + WEEKLY COMPARISON — 당일/금주 vs 전주/전년 ============ -->
+    <div id="today-weekly-cmp" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#4ecdc4;font-weight:700;">◈ TODAY · WEEKLY COMPARISON · <span id="twc-date-label">—</span></div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="twc-window-label">—</div>
+      </div>
+
+      <!-- ROW 1: 당일현황 + 금주 합계 (3개 컬럼) -->
+      <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row1">
+
+        <!-- 당일현황 카드 -->
+        <div style="background:rgba(78,205,196,0.06);border:1px solid rgba(78,205,196,0.25);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">당일 현황</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-today-date">—</span>
+              <span id="twc-partial-badge" style="display:none;font-family:var(--mono);font-size:9px;color:#f0a500;background:rgba(240,165,0,0.1);padding:2px 6px;border-radius:3px;border:1px solid rgba(240,165,0,0.3);font-weight:700;">PARTIAL</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:36px;font-weight:800;color:#fff;line-height:1;" id="twc-today-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실 / 매출 <span id="twc-today-rev" style="color:rgba(255,255,255,0.7);font-weight:700;">—</span> 백만</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전주 동요일 (<span id="twc-today-prev-date">—</span>)</span>
+                <span><span id="twc-today-prev-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-wow" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전년 동기간 (<span id="twc-today-ly-date">—</span>)</span>
+                <span><span id="twc-today-ly-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-yoy" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 금주 카드 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.5));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#fff;font-weight:900;">금주</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-this-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" id="twc-this-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);">매출 <span id="twc-this-rev" style="color:#fff;font-weight:700;">—</span> 백만</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">픽업 <span id="twc-this-pickup">—</span> · 취소 <span id="twc-this-cancel">—</span></div>
+          </div>
+        </div>
+
+        <!-- 전주 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.2));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:rgba(255,255,255,0.7);font-weight:900;">전주 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-prev-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-prev-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-wow-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-prev-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+        <!-- LY 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">전년 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-ly-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-ly-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 2: 사업장별 + 세그먼트별 테이블 -->
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
+
+        <!-- 사업장별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#7dc4b0);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">사업장별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">금주 net 온북 RN, 전주/전년 동기간比</span>
+            </div>
+            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전년</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-prop-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 세그먼트별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">세그먼트별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">OTA / G-OTA / Inbound 등</span>
+            </div>
+            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">세그먼트</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-seg-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 3: AI 인사이트 -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
+        <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+        <div style="padding:14px 18px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">⚡ AI 인사이트</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">자동 추출 · 금주 변동 핵심</span>
+          </div>
+          <div id="twc-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"></div>
+        </div>
+      </div>
+
+    </div>
+    <!-- // TODAY + WEEKLY COMPARISON END -->
+
   </div>
 </div>
 
@@ -2378,8 +2540,8 @@
       </div>
     </a>
 
-    <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTFBPQ0Y3SWFlRVYwNXpYaW5PN3FDbm9mc1NhOE94WENmMDRBbnpBZ01ucFEwT2RFcWxkTFZqRHFFcmxGUWFHNG9lNVM1aTNUS3NVVmdkazFhV0dub0VnczlLN3ZSelg0dl9VTTV2QmxSMVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="central" 
-       style="text-decoration:none;color:inherit;display:flex;background:var(--bg-card);border:1px solid var(--rule);border-left:4px solid #6ba3c4;border-radius:0 6px 6px 0;overflow:hidden;transition:all 0.2s;"
+    <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBJZk4tbncxZWMxbW1DazNMSXFWWXB4Y2R3aVJxRlpKX1NpdW52a0lUMEpfQVc4SDNzcGVadkNpU2dtVTFnMTFEVm5fOTc1LWM?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south" 
+       style="text-decoration:none;color:inherit;display:flex;background:var(--bg-card);border:1px solid var(--rule);border-left:4px solid #6db58a;border-radius:0 6px 6px 0;overflow:hidden;transition:all 0.2s;"
        onmouseover="this.style.boxShadow='0 12px 24px rgba(0,0,0,0.4)';this.style.transform='translateY(-2px)'"
        onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
 
@@ -2387,16 +2549,16 @@
       <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
         <div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:#6ba3c4;color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">호텔/리조트</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;padding:3px 8px;background:#6db58a;color:#0d0d0d;border-radius:2px;font-weight:900;letter-spacing:0.05em;">OTA/여행</span>
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:9px;padding:3px 7px;background:var(--negative)22;color:var(--negative);border-radius:2px;font-weight:800;letter-spacing:0.05em;">🔴 HIGH IMPACT</span>
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[하이원리조트]</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[아고다]</span>
             <span style="font-family:var(--mono);font-size:9px;padding:3px 7px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
           </div>
-          <div style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);line-height:1.4;letter-spacing:-0.01em;margin-bottom:8px;">하이원리조트, 가정의 달 맞아 가족형 축제 운영 - 신아일보</div>
-          <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.55;font-weight:500;">하이원리조트, 가정의 달 맞아 가족형 축제 운영 - 신아일보</div>
+          <div style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);line-height:1.4;letter-spacing:-0.01em;margin-bottom:8px;">&quot;노트북 들고 부산으로&quot; 부산시, 아고다와 손잡고 &#x27;워케이션 유치&#x27; 본격화 - v.daum.net</div>
+          <div style="font-family:'Pretendard Variable',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.55;font-weight:500;">&quot;노트북 들고 부산으로&quot; 부산시, 아고다와 손잡고 &#x27;워케이션 유치&#x27; 본격화 - v.daum.net</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px dashed var(--rule);">
-          <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;">📰 신아일보</span>
+          <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;">📰 v.daum.net</span>
           <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">원문 보기 ↗</span>
         </div>
       </div>
@@ -2408,19 +2570,19 @@
   <!-- ============ 권역 필터 탭 ============ -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;padding:4px;background:var(--bg-soft);border-radius:6px;">
     <button class="news-tab-btn active" data-news-tab="all" onclick="switchNewsTab('all')">
-      📰 ALL · <span data-tpl-news-count-all>272</span>
+      📰 ALL · <span data-tpl-news-count-all>276</span>
     </button>
     <button class="news-tab-btn" data-news-tab="vivaldi" onclick="switchNewsTab('vivaldi')" style="border-left-color:#d97a7a;">
       🍷 비발디 · <span data-tpl-news-count-vivaldi>7</span>
     </button>
     <button class="news-tab-btn" data-news-tab="central" onclick="switchNewsTab('central')" style="border-left-color:#6ba3c4;">
-      🏔️ 중부 · <span data-tpl-news-count-central>15</span>
+      🏔️ 중부 · <span data-tpl-news-count-central>14</span>
     </button>
     <button class="news-tab-btn" data-news-tab="south" onclick="switchNewsTab('south')" style="border-left-color:#6db58a;">
-      🌊 남부 · <span data-tpl-news-count-south>34</span>
+      🌊 남부 · <span data-tpl-news-count-south>35</span>
     </button>
     <button class="news-tab-btn" data-news-tab="apac" onclick="switchNewsTab('apac')" style="border-left-color:#a892c8;">
-      🌏 APAC · <span data-tpl-news-count-apac>92</span>
+      🌏 APAC · <span data-tpl-news-count-apac>93</span>
     </button>
   </div>
 
@@ -2437,101 +2599,6 @@
       <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">51 Articles</span>
     </div>
     <div>
-      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTFBPQ0Y3SWFlRVYwNXpYaW5PN3FDbm9mc1NhOE94WENmMDRBbnpBZ01ucFEwT2RFcWxkTFZqRHFFcmxGUWFHNG9lNVM1aTNUS3NVVmdkazFhV0dub0VnczlLN3ZSelg0dl9VTTV2QmxSMVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="central"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6ba3c422;color:#6ba3c4;border-radius:2px;font-weight:800;letter-spacing:0.05em;">중부</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[하이원리조트]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">하이원리조트, 가정의 달 맞아 가족형 축제 운영 - 신아일보</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">신아일보</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTFB2NnFweVl5MHZxRV9rOEJjRTctWjJTRC10Ykp2akp1ZmY1a1F2djFOZWd1bnFqY1ZWbUpCcjNublh6ekZYTmpaVjRHb3FaQ1RuZ2ZBNWJuWmdrYk3SAWBBVV95cUxPd3UwY1hhd1c0WENlQnhaU3U5dWk5NC13dER1REpENkFSWU9tUXdLcEM3Zy1OT2dmNmNHY0FVSXJXMS14M2llTlVPTjR1TlZiNE5DdWpOV29Wa3d5cVN6aDY?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[신라호텔]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">신라호텔, 가정의달 한정 디저트 출시…&#x27;카네이션 케이크&#x27; 선봬 - 연합뉴스</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">연합뉴스</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE1jTmJlNkgzU1VMYWJia2FQWkFvdVNtdTU4VTFNOW9HcHBzWjJ6cnJDdlVQZFV0NjNqMTlVZVVSS2d0cVBIVDNQSHBFYWJpVTk1M2tWZ0ZrOEpHVVdmVU9aNUhR?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[호텔 객실]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">4성급 150객실 규모 안동 스탠포드 호텔이 만실?…한일정상회담 열리나 - 매일신문</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">매일신문</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTFBDYjlYZkI2SnY2X2huZlhldzBka0RLdTdTS3FXdjl1MWpHbW91cTFibzFuTWtESmZGdWJVNWZfVVFmWTlhSFE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[리조트 패키지]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">가족 여행, ‘객실’ 아닌 ‘경험’으로 바뀌었다…호텔 패키지 경쟁 판 커졌다 - v.daum.net</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiakFVX3lxTE1zcXA4ZkQ5M25WU2NiQjFaUlEzbHYxd1UxS1F1RnZDd3p5MThnNHZ0bldHN3BacUZ3TV9LcWJfQWVZS1k1R3AyRVUzMWxKWlR3d3JXc2g0U19tMmZGMHluRXNFaFpGUjNLYnc?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[호텔 신규 오픈]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">외트커 호텔, 파리와 프렌치 리비에라에 럭셔리 다이닝 신규 오픈 - 퍼블릭뉴스통신</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">퍼블릭뉴스통신</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
       <a href="https://news.google.com/rss/articles/CBMiTkFVX3lxTE9hc0t3VmlDY09sczB3UlR4eXM5THVlVF96a2tkS2pGM1IyQzhrNmxZS3lONTRSN3hROHRqbTR4MjNpbUVpUDNqb0g1R2REUQ?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -2722,6 +2789,25 @@
           </div>
         </div>
       </a>
+      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTFBPQ0Y3SWFlRVYwNXpYaW5PN3FDbm9mc1NhOE94WENmMDRBbnpBZ01ucFEwT2RFcWxkTFZqRHFFcmxGUWFHNG9lNVM1aTNUS3NVVmdkazFhV0dub0VnczlLN3ZSelg0dl9VTTV2QmxSMVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="central"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6ba3c422;color:#6ba3c4;border-radius:2px;font-weight:800;letter-spacing:0.05em;">중부</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[하이원리조트]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">하이원리조트, 가정의 달 맞아 가족형 축제 운영 - 신아일보</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">신아일보</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
       <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE15Z3VNcElQdmt5RlNiRzZpMWYxc2dmTlNVMGNlWVlrZlV5M0JwYzYzbHlYUHREVWc1U2pQRTJaV1dWNEcycGRKTTFjMUhkMWs?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="central"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -2813,6 +2899,25 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">주간한국</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTFB2NnFweVl5MHZxRV9rOEJjRTctWjJTRC10Ykp2akp1ZmY1a1F2djFOZWd1bnFqY1ZWbUpCcjNublh6ekZYTmpaVjRHb3FaQ1RuZ2ZBNWJuWmdrYk3SAWBBVV95cUxPd3UwY1hhd1c0WENlQnhaU3U5dWk5NC13dER1REpENkFSWU9tUXdLcEM3Zy1OT2dmNmNHY0FVSXJXMS14M2llTlVPTjR1TlZiNE5DdWpOV29Wa3d5cVN6aDY?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[신라호텔]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">신라호텔, 가정의달 한정 디저트 출시…&#x27;카네이션 케이크&#x27; 선봬 - 연합뉴스</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">연합뉴스</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -2984,6 +3089,63 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE1jTmJlNkgzU1VMYWJia2FQWkFvdVNtdTU4VTFNOW9HcHBzWjJ6cnJDdlVQZFV0NjNqMTlVZVVSS2d0cVBIVDNQSHBFYWJpVTk1M2tWZ0ZrOEpHVVdmVU9aNUhR?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[호텔 객실]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">4성급 150객실 규모 안동 스탠포드 호텔이 만실?…한일정상회담 열리나 - 매일신문</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">매일신문</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTFBDYjlYZkI2SnY2X2huZlhldzBka0RLdTdTS3FXdjl1MWpHbW91cTFibzFuTWtESmZGdWJVNWZfVVFmWTlhSFE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[리조트 패키지]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">가족 여행, ‘객실’ 아닌 ‘경험’으로 바뀌었다…호텔 패키지 경쟁 판 커졌다 - v.daum.net</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiakFVX3lxTE1zcXA4ZkQ5M25WU2NiQjFaUlEzbHYxd1UxS1F1RnZDd3p5MThnNHZ0bldHN3BacUZ3TV9LcWJfQWVZS1k1R3AyRVUzMWxKWlR3d3JXc2g0U19tMmZGMHluRXNFaFpGUjNLYnc?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[호텔 신규 오픈]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">외트커 호텔, 파리와 프렌치 리비에라에 럭셔리 다이닝 신규 오픈 - 퍼블릭뉴스통신</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">퍼블릭뉴스통신</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -3415,7 +3577,7 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-0.01em;">OTA/여행</span>
       </div>
-      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">38 Articles</span>
+      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">40 Articles</span>
     </div>
     <div>
       <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBJZk4tbncxZWMxbW1DazNMSXFWWXB4Y2R3aVJxRlpKX1NpdW52a0lUMEpfQVc4SDNzcGVadkNpU2dtVTFnMTFEVm5fOTc1LWM?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
@@ -3437,7 +3599,7 @@
           </div>
         </div>
       </a>
-      <a href="https://news.google.com/rss/articles/CBMiVkFVX3lxTFBNa0pDRXc0SHRPd2lSbGFUdTFTSTVrNVQ5TngxdmNIdmEtUEZOY09lckZIUWx4TVRDYTJla1VVZ0h1akhBcEdyaGpneHU5d0xNQVdsX0ln?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE41alYzd0xhVDNraVMwbXBnTkM4SlVuTXRkS1F6VjNyWXo1amxVTmlUM2hleE1uLWZBdXV1SE15NVI1UjI0Zy0xVEl6SWJ0QXM?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -3448,15 +3610,15 @@
               <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[야놀자]</span>
             </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">야놀자, 글로벌 AI 기술 교류 행사 ‘클로드 코드 밋업’ 성료 - 지디넷코리아</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“한국은 가입하라는 게 너무 많아요”…한국 여행 불편, 일본보다 높았다 - v.daum.net</div>
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">지디넷코리아</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
       </a>
-      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBpMXplZzY1VG1LYVZFNnN6dnZlV3FLdVJmc0dnWi1OMWtSQm5SRThVUDlJZG1wMmpSdTFMTEVXaUpxOTc1OVhhcGtqUWo4QVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE0ydXdDeFI1bzRaWDljYlJ6aE5QY1lPcWlubkQ5UGVueUpGdHF3UkU0WVd3YUdIUjRjX0tyX1pXN051NE9RQWlhYnJsTTRyMkE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -3465,9 +3627,9 @@
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
               <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[여기어때]</span>
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[야놀자]</span>
             </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">번개장터, 여기어때와 맞손…&quot;여행 혜택 제공&quot; - v.daum.net</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">야놀자, 글로벌 AI 기술 교류 행사 ‘클로드 코드 밋업’ 성료 - v.daum.net</div>
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
@@ -3604,6 +3766,44 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">굿모닝베트남미디어</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiVkFVX3lxTFBNa0pDRXc0SHRPd2lSbGFUdTFTSTVrNVQ5TngxdmNIdmEtUEZOY09lckZIUWx4TVRDYTJla1VVZ0h1akhBcEdyaGpneHU5d0xNQVdsX0ln?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[야놀자]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">야놀자, 글로벌 AI 기술 교류 행사 ‘클로드 코드 밋업’ 성료 - 지디넷코리아</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">지디넷코리아</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBpMXplZzY1VG1LYVZFNnN6dnZlV3FLdVJmc0dnWi1OMWtSQm5SRThVUDlJZG1wMmpSdTFMTEVXaUpxOTc1OVhhcGtqUWo4QVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[여기어때]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">번개장터, 여기어때와 맞손…&quot;여행 혜택 제공&quot; - v.daum.net</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -4149,10 +4349,10 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-0.01em;">항공/공항</span>
       </div>
-      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">67 Articles</span>
+      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">68 Articles</span>
     </div>
     <div>
-      <a href="https://news.google.com/rss/articles/CBMiUEFVX3lxTFAtOEFWdUlBdXhUUnJESU1lUzN0bThWNDZJRmw5dms1bVhVaDhXdGJkZDVPbWVtaHBXT25DX1FQNzRjQlNrbzU0aGF4NDFkSlRL?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+      <a href="https://news.google.com/rss/articles/CBMickFVX3lxTFBXRFhYYy1NRVFRaV9YVTgzWXV1VDh0aHNuQmFaNkpMZ0xRbVVCdW5aNF9ORHZyUkNUZzYyQ1FIRkV4LXVYb1h1bjJQbXIyRlBOTzVlWFdPaXNodEViVm1yVldQMmNpNUp6VG1uNWdXR0ZwZ9IBdkFVX3lxTE9YRk5heHR1X1RnY3FfeHR1SlhmdGpnVGt3T21OQ1A3WjZpY2RqRktTQVdjcGhSMG05NEhIUnp0bnpnWkl0NjY1eGdtU1NjdlN5eURDazBkOHk5R1ZPckFnbjFwNi1ZdjBENjlCM0NUMWtGenhvLVE?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -4161,69 +4361,12 @@
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
               <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[대한항공]</span>
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[아시아나항공]</span>
             </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“대한항공에 수탉이 많이 실리는 이유”…미국-필리핀, 투계 수송 통로 역할..중단 발표 - 문화일보</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">서열 기준 충돌, 통합 변수로···대한항공·아시아나 인사통합 ‘진통’ - 시사저널e</div>
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">문화일보</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE5kdmlrbGhJRTBiNF8wek1TU1dCU3JIRURYcWNYMy0xQXdlWS1lOWRhQjVuQmVlTHg3UmQ4VUI1NG1zaEIwWnRNLXpYOEg1TWVrMmZPRFB4ZXlBRnNkSnZ2WnoxUEVzeWRHaGsxcEkxMVBRM1BC?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[제주항공]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">2차 수색 종료 다음날도 유해 나왔는데…제주항공 참사, 후속조사 안 했다 - 한겨레</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">한겨레</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMipwNBVV95cUxNUmZkQzJacEJkM2tYT1JxeG1rbVozQXpGYTZWOVkyVU9RTkdsUm93MnFTb0oxZTh3UkhaSTVsZU5wMjNCNF9IWk0wdVlNRmdVWldNQjZmVko0aE9Mc1k5OElGTlNTOWNjc0hmTDh0N2VJSlgwQjQ4WkhZY1lmSm5iV01ybFUyNURuVzNQZWc4Nzk2NktCWkFLdm53eFgtLUNLaW5ZOHNiRUtvUE01X2UyMFpPSW9DeHRGSDhQOTRscFNYV2tqY2U3bENaaEJ6TnpUVnJkdVYtRHpGRU42aU5FX1ZDWHlnR2s5OUVsM2xGUTdCWXlWeTVDVFlkR24xMTlHUS1BYTkyNkxXcHJSUkx0c3dkTHVwZ3VJNHl6OGZrcjlIMkhqd2R4Zk0zb1E2aFZJeHJxX29FR29lbTBqWHB6VkdrRE1PaGs0RHFFUWtWOFQ2dWE5emMxTDhvRkF5QlZUbldxTS1XRVhPeVB6X2JlcEZvMVlFSFVmcTdrbnA5Y29WNjhncm15dWdubEZBclNXUzF3NG1CZ2tQQWJMZ2ZhNWxOVUdDY0k?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[유류할증료]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">비행기 표값만 112만원 더 내라... 유류할증료 2배 폭등에 여행객들 멘붕 - MSN</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">MSN</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE9IX2RPSXl1UVB5dkxES21ueUI3WmJxa1hjMzE0cGxVSjYzY3ozRmk1NkttWksybWdPRnkzWTdnMXdUX0Z6WC14azYtZDdCaGs?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[유류할증료]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">[주간이슈:일] 유류할증료 인상 대책 마련‥도민체전 개막 - 제주MBC</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">제주MBC</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">시사저널e</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -4342,44 +4485,6 @@
           </div>
         </div>
       </a>
-      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5MT19kLThCdlRETkRza1BjQ1M3NFNjNTBnWUN5MjdjMzAtWlFobFdhdDNfSmtzaklDSm5aMjEzYzFmb0FSNFp5eXNpQXhDSVVNZTFxblQ1cDlmT0lqZW9kRGdLZ09ZbUtEMnRWV0h6WFM?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[티웨이항공]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">[여행단신] 티웨이항공·진에어 - 트래블데일리</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">트래블데일리</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiXkFVX3lxTFBTR0RRMFAzQmktNzZ6eDNWMjRsQXhmRVYxUkNWVnp6LTJJTDRJdlIxZ05xWk5RdXlnLVpDbjA4b0F0UlZpVmtaU3hHb3JqU3l0V3lKa3N0bmZqeHRzZ2c?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[공항 이용객]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">황금연휴 시작...5일간 인천공항 이용객 130만 예상 - YTN</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">YTN</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
       <a href="https://news.google.com/rss/articles/CBMiYEFVX3lxTE1qTWZDSi1GUnUtT1RNd1ZVWnZzb0c4cUZic094U25wQ19wMER3cWlkSWVSRHV3cm9vMHM1R0lpX04yYXdyYTB4eDkxNjZWVGlBRTQ0NXNFWkF0YXNCUjZLVtIBeEFVX3lxTE9mS2ZGdzBTSHRfamhzS1U0VC1rOG1iQXRjZm45RVREbGNXVzFBbmNYR3VTVEVrcl9BUkY3Z0t6LTRrWFdRMlVkblJUMG5pdHlmVzVMQnpMSE1LVjhiUHk3MXhXNXdvXzM0Nm1wUnlfWGg0bVF0cG5fOQ?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -4452,6 +4557,82 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">연합뉴스</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiUEFVX3lxTFAtOEFWdUlBdXhUUnJESU1lUzN0bThWNDZJRmw5dms1bVhVaDhXdGJkZDVPbWVtaHBXT25DX1FQNzRjQlNrbzU0aGF4NDFkSlRL?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[대한항공]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“대한항공에 수탉이 많이 실리는 이유”…미국-필리핀, 투계 수송 통로 역할..중단 발표 - 문화일보</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">문화일보</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE5kdmlrbGhJRTBiNF8wek1TU1dCU3JIRURYcWNYMy0xQXdlWS1lOWRhQjVuQmVlTHg3UmQ4VUI1NG1zaEIwWnRNLXpYOEg1TWVrMmZPRFB4ZXlBRnNkSnZ2WnoxUEVzeWRHaGsxcEkxMVBRM1BC?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[제주항공]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">2차 수색 종료 다음날도 유해 나왔는데…제주항공 참사, 후속조사 안 했다 - 한겨레</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">한겨레</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMipwNBVV95cUxNUmZkQzJacEJkM2tYT1JxeG1rbVozQXpGYTZWOVkyVU9RTkdsUm93MnFTb0oxZTh3UkhaSTVsZU5wMjNCNF9IWk0wdVlNRmdVWldNQjZmVko0aE9Mc1k5OElGTlNTOWNjc0hmTDh0N2VJSlgwQjQ4WkhZY1lmSm5iV01ybFUyNURuVzNQZWc4Nzk2NktCWkFLdm53eFgtLUNLaW5ZOHNiRUtvUE01X2UyMFpPSW9DeHRGSDhQOTRscFNYV2tqY2U3bENaaEJ6TnpUVnJkdVYtRHpGRU42aU5FX1ZDWHlnR2s5OUVsM2xGUTdCWXlWeTVDVFlkR24xMTlHUS1BYTkyNkxXcHJSUkx0c3dkTHVwZ3VJNHl6OGZrcjlIMkhqd2R4Zk0zb1E2aFZJeHJxX29FR29lbTBqWHB6VkdrRE1PaGs0RHFFUWtWOFQ2dWE5emMxTDhvRkF5QlZUbldxTS1XRVhPeVB6X2JlcEZvMVlFSFVmcTdrbnA5Y29WNjhncm15dWdubEZBclNXUzF3NG1CZ2tQQWJMZ2ZhNWxOVUdDY0k?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[유류할증료]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">비행기 표값만 112만원 더 내라... 유류할증료 2배 폭등에 여행객들 멘붕 - MSN</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">MSN</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE9IX2RPSXl1UVB5dkxES21ueUI3WmJxa1hjMzE0cGxVSjYzY3ozRmk1NkttWksybWdPRnkzWTdnMXdUX0Z6WC14azYtZDdCaGs?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[유류할증료]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">[주간이슈:일] 유류할증료 인상 대책 마련‥도민체전 개막 - 제주MBC</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">제주MBC</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -5235,6 +5416,44 @@
           </div>
         </div>
       </a>
+      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5MT19kLThCdlRETkRza1BjQ1M3NFNjNTBnWUN5MjdjMzAtWlFobFdhdDNfSmtzaklDSm5aMjEzYzFmb0FSNFp5eXNpQXhDSVVNZTFxblQ1cDlmT0lqZW9kRGdLZ09ZbUtEMnRWV0h6WFM?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[티웨이항공]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">[여행단신] 티웨이항공·진에어 - 트래블데일리</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">트래블데일리</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiXkFVX3lxTFBTR0RRMFAzQmktNzZ6eDNWMjRsQXhmRVYxUkNWVnp6LTJJTDRJdlIxZ05xWk5RdXlnLVpDbjA4b0F0UlZpVmtaU3hHb3JqU3l0V3lKa3N0bmZqeHRzZ2c?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[공항 이용객]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">황금연휴 시작...5일간 인천공항 이용객 130만 예상 - YTN</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">YTN</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
       <a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTE5UQU1ISXluclI1cDhLeVZ5QmtaRmVnX0t2WS1PTFJTZVFmMHNyWE5WWERCeWFwYkpjTVhhUjUwREVpQUlFYXc?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
@@ -5434,7 +5653,7 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-family:'Pretendard Variable',sans-serif;font-size:15px;font-weight:900;color:var(--ink);letter-spacing:-0.01em;">관광/지역</span>
       </div>
-      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">68 Articles</span>
+      <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">69 Articles</span>
     </div>
     <div>
       <a href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE9TcDBTZ0NhbnFTREJiRWhEWVJrUmRqQzZMd090aHpENGJ5S2g3bjZsbUszX3dDTXdPSXFBVFlxZ1pka0haSzFnc3ctdGR4ejFtekZreHlaNmIyM2I5dnpiRW1R?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="central"
@@ -5452,120 +5671,6 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">강원일보</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE5oQktQdndRUTlVMzZKUWFSdUxaeGZkek0yczRET2FkNjlIYktOaWlERlREbVAxZkVZWVVOWlBaUFV0aXNrczRBb3BjUWZ0dGtwVU9OV0VnQ1hhdnFySWhERnV3Umd2Qi1CSVVDTw?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[여수 관광]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">세계섬박람회 앞둔 여수, 복합해양관광도시 도약 시동 - 재외동포신문</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">재외동포신문</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE8wMEg3U2QzQ0Jiem1BajJ5UXpabW9nemlDS2VrSHU1b1p6ZWF6VzI4SDBjdzdqdS1JWFNCZEc0eDdJb2hqbG5WYkFKWlJ5c001WmdpdGtfbWNUQdIBX0FVX3lxTE5uRURQdlB2T295ZXo1VFAxNTFOZ01qZl9yZm5MaWNwTXpYU2c4ZVdWYXB4M3N3NXZ3aFBKNE1DS3ZNZEQtRGFqWFRxWW9OS3p3TkIxbHNyLVRCWURBY0VF?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[외국인 관광객]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">크루즈 활성화에…부산, 외국인 관광객 1분기 100만명 ‘최단 기간 돌파’ - 경향신문</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">경향신문</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiVEFVX3lxTE43eklvaERfQy12TEhaZjhIMWQ0NlJKbUxCdHFPZnBqVHlNODl1blBxMzhaTGVmTFV1WWFZR2dpMk1RVjRlN0d5TE5xeVU2VC0tOGZOOQ?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[외국인 관광객]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">부산 외국인 관광객 역대 최단기 100만명 돌파 - knn.co.kr</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">knn.co.kr</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE1sdTJCemlzTTdBM09LSkx4ek9QRlhUNlZrWnJPUkF2eDZRb3pBY0RycWEyYkdvNFRZSjB5Z0RBQUZFNmpYUXlCUDd6NGljREJieVJrVWpPU1liUC12VWwyMXZmNEdqNmxyNk9xWTJUN1Y?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">서울관협, 인바운드 수익 플러스 협력 설명회 성료 - 트래블데일리</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">트래블데일리</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE13bG1hNzlLTnVQNkFpUVNFN19mLWZDRXBVVlJzVnQ2dVc1ZDljaWlibDNJM3dWVnlpdm5QRG4wZlNFNEljSU5nSHRKcUQtMnFWOGU1WFlpVC00UzVtVWN3Nnc2MUtBdnlV?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">면세점 실적 회복 신호탄…외형 반등 속 ‘인바운드 여행 구조’는 여전히 반쪽 - 녹색경제신문</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">녹색경제신문</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5sY1JEd2x1OVBTNVZuTm9HSzZiOWxhOE45akN5WWotVjJmV0JQQ08wVGgzZkF2Q1NzemhkOWpoaWE1TmpPWlY4bk9FY3R3RU1jSlJUTkl0dldSeFZkV3p5X242RWtqakJmaVVSdEV3?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“외국인 관광객 늘어도 적자”…서울시관광협회, 인바운드 ‘수익 플러스 협력 방안’ 제시 - 투어코리아</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">투어코리아</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -5608,26 +5713,7 @@
           </div>
         </div>
       </a>
-      <a href="https://news.google.com/rss/articles/CBMickFVX3lxTE9raHVIMFdMLTlWQ0xFUl9EZjZ0TVN1dlJSU1pxamZVTGdaN3NqN0lCR1hOaDFfeW5TMTJrRUtTbmptVXRpN3p6WUVzTmhIY3FIdzZrM1gzTXl6Umd1ZVlSR1BXYk1oOXhkbFExdHFwM1A2dw?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[지역 축제]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">문경찻사발축제, 연휴 대박 행진 - reporternside.com</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">reporternside.com</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE80cXdic2pOMGFGTm12eUdEYVpXSHRoOVZ1SFBkSWRkSFRXaFFQZHhCa2xhcG5hZzQwY2lFMHg4NXc4NXhUZkZidzdmTUkwZnpEQVVBU0cyd2dEblJ0RFZ4Z2tzcUJaU0FGMDAwenFBS1NCVXdl0gF0QVVfeXFMTzRxd2Jzak4wYUZObXZ5R0RhWldIdGg5VnVIUGRJZGRIVFdoUVBkeEJrbGFwbmFnNDBjaUUweDg1dzg1eFRmRmJ3N2ZNSTBmekRBVUFTRzJ3Z0RuUnREVnhna3NxQlpTQUYwMDB6cUFLU0JVd2U?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+      <a href="https://news.google.com/rss/articles/CBMid0FVX3lxTE85ZFRCZ21ZSklHMVNqTTE0Zkhuay1aYmN6WUFsa1ZmOEtFZFdPX2xwT0E1VUxjd2RwWVZoNHlpbGREMUcyMjBTR2N2X3VKRDBRMTJ1TElwRG40bFRVa0VUZDctX0N6ZDNwc0N1M3pTUGw1T05KaVdz0gFmQVVfeXFMT2VxeXpJQ2tWTHRYQ1FueTNyS2t2NmRMYjlCeTBsMDhVZGhQRFJFZnc1MVdxei1mOTNJSVhMUUVhckwyZzQ5RllkVjRMV3MzUXVSMzVDbFdVZUxWWmFrLUJzU0JKbzBR?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -5638,10 +5724,10 @@
               <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[봄꽃 축제]</span>
             </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">2026 화순 봄꽃 축제’ 성료···내달 10일까지 개방 - 이뉴스투데이</div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“봄꽃 축제 소음에 잠도 못 자”…나들이 민원 39% 4~6월 집중 - 동아일보</div>
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">이뉴스투데이</span>
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">동아일보</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -5832,6 +5918,63 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE5oQktQdndRUTlVMzZKUWFSdUxaeGZkek0yczRET2FkNjlIYktOaWlERlREbVAxZkVZWVVOWlBaUFV0aXNrczRBb3BjUWZ0dGtwVU9OV0VnQ1hhdnFySWhERnV3Umd2Qi1CSVVDTw?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[여수 관광]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">세계섬박람회 앞둔 여수, 복합해양관광도시 도약 시동 - 재외동포신문</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">재외동포신문</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE8wMEg3U2QzQ0Jiem1BajJ5UXpabW9nemlDS2VrSHU1b1p6ZWF6VzI4SDBjdzdqdS1JWFNCZEc0eDdJb2hqbG5WYkFKWlJ5c001WmdpdGtfbWNUQdIBX0FVX3lxTE5uRURQdlB2T295ZXo1VFAxNTFOZ01qZl9yZm5MaWNwTXpYU2c4ZVdWYXB4M3N3NXZ3aFBKNE1DS3ZNZEQtRGFqWFRxWW9OS3p3TkIxbHNyLVRCWURBY0VF?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[외국인 관광객]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">크루즈 활성화에…부산, 외국인 관광객 1분기 100만명 ‘최단 기간 돌파’ - 경향신문</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">경향신문</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiVEFVX3lxTE43eklvaERfQy12TEhaZjhIMWQ0NlJKbUxCdHFPZnBqVHlNODl1blBxMzhaTGVmTFV1WWFZR2dpMk1RVjRlN0d5TE5xeVU2VC0tOGZOOQ?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="south"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#6db58a22;color:#6db58a;border-radius:2px;font-weight:800;letter-spacing:0.05em;">남부</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[외국인 관광객]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">부산 외국인 관광객 역대 최단기 100만명 돌파 - knn.co.kr</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">knn.co.kr</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -6079,6 +6222,63 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">경남뉴스</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE1sdTJCemlzTTdBM09LSkx4ek9QRlhUNlZrWnJPUkF2eDZRb3pBY0RycWEyYkdvNFRZSjB5Z0RBQUZFNmpYUXlCUDd6NGljREJieVJrVWpPU1liUC12VWwyMXZmNEdqNmxyNk9xWTJUN1Y?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">서울관협, 인바운드 수익 플러스 협력 설명회 성료 - 트래블데일리</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">트래블데일리</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE13bG1hNzlLTnVQNkFpUVNFN19mLWZDRXBVVlJzVnQ2dVc1ZDljaWlibDNJM3dWVnlpdm5QRG4wZlNFNEljSU5nSHRKcUQtMnFWOGU1WFlpVC00UzVtVWN3Nnc2MUtBdnlV?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">면세점 실적 회복 신호탄…외형 반등 속 ‘인바운드 여행 구조’는 여전히 반쪽 - 녹색경제신문</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">녹색경제신문</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5sY1JEd2x1OVBTNVZuTm9HSzZiOWxhOE45akN5WWotVjJmV0JQQ08wVGgzZkF2Q1NzemhkOWpoaWE1TmpPWlY4bk9FY3R3RU1jSlJUTkl0dldSeFZkV3p5X242RWtqakJmaVVSdEV3?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[인바운드 관광]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">“외국인 관광객 늘어도 적자”…서울시관광협회, 인바운드 ‘수익 플러스 협력 방안’ 제시 - 투어코리아</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">투어코리아</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -6345,6 +6545,44 @@
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">녹색경제신문</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMickFVX3lxTE9raHVIMFdMLTlWQ0xFUl9EZjZ0TVN1dlJSU1pxamZVTGdaN3NqN0lCR1hOaDFfeW5TMTJrRUtTbmptVXRpN3p6WUVzTmhIY3FIdzZrM1gzTXl6Umd1ZVlSR1BXYk1oOXhkbFExdHFwM1A2dw?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[지역 축제]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">문경찻사발축제, 연휴 대박 행진 - reporternside.com</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">reporternside.com</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE80cXdic2pOMGFGTm12eUdEYVpXSHRoOVZ1SFBkSWRkSFRXaFFQZHhCa2xhcG5hZzQwY2lFMHg4NXc4NXhUZkZidzdmTUkwZnpEQVVBU0cyd2dEblJ0RFZ4Z2tzcUJaU0FGMDAwenFBS1NCVXdl0gF0QVVfeXFMTzRxd2Jzak4wYUZObXZ5R0RhWldIdGg5VnVIUGRJZGRIVFdoUVBkeEJrbGFwbmFnNDBjaUUweDg1dzg1eFRmRmJ3N2ZNSTBmekRBVUFTRzJ3Z0RuUnREVnhna3NxQlpTQUYwMDB6cUFLU0JVd2U?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="general"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#7a7e8522;color:#7a7e85;border-radius:2px;font-weight:800;letter-spacing:0.05em;">일반</span>
+              
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[봄꽃 축제]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">2026 화순 봄꽃 축제’ 성료···내달 10일까지 개방 - 이뉴스투데이</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">이뉴스투데이</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -7247,7 +7485,7 @@
       <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:800;letter-spacing:0.05em;">20 Articles</span>
     </div>
     <div>
-      <a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTE9mVkhfS21oMkZpbnBTNk13eGlvZnJmTTRicjVMRnRicmxpemJZRXdMM29zZ0xKUGhaUy1MQTZfUWdQdGxGT29yWWZhNG93b2VYbFpsSFZyU0xpY29oVnRJRTJNdjA?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+      <a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTE1yMldkbFF5XzFQQVlvSzM5Y0pjajNYRzkwSS1nREZ6UWVUT2lYZGl1QUNNcVpKM1UxRklpSEYzTWZGcDhQa3c?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
          style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
          onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
          onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
@@ -7256,6 +7494,25 @@
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
               <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[국제유가]</span>
+            </div>
+            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">&quot;국제유가 폭등 &#x27;임계점&#x27; 4주 남았다&quot; FT - v.daum.net</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
+            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
+          </div>
+        </div>
+      </a>
+      <a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTE9mVkhfS21oMkZpbnBTNk13eGlvZnJmTTRicjVMRnRicmxpemJZRXdMM29zZ0xKUGhaUy1MQTZfUWdQdGxGT29yWWZhNG93b2VYbFpsSFZyU0xpY29oVnRJRTJNdjA?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
+         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
+         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
+         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
+              
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[원달러 환율]</span>
             </div>
             <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">100달러대 지속한 국제유가…환율 불확실성 증가 - 매일일보</div>
@@ -7274,32 +7531,13 @@
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
+              
               <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[국제유가]</span>
             </div>
             <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">코스피, 국제유가 급등에 6600선 아래로…코스닥 2%대 급락 - 한국경제</div>
           </div>
           <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
             <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">한국경제</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
-          </div>
-        </div>
-      </a>
-      <a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTE1yMldkbFF5XzFQQVlvSzM5Y0pjajNYRzkwSS1nREZ6UWVUT2lYZGl1QUNNcVpKM1UxRklpSEYzTWZGcDhQa3c?oc=5" target="_blank" rel="noopener noreferrer" class="news-item" data-region="apac"
-         style="text-decoration:none;color:inherit;display:block;padding:12px 14px;border-bottom:1px solid var(--rule);transition:all 0.15s;"
-         onmouseover="this.style.background='var(--bg-soft)';this.style.paddingLeft='18px'"
-         onmouseout="this.style.background='transparent';this.style.paddingLeft='14px'">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:14px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:9.5px;padding:2px 7px;background:#a892c822;color:#a892c8;border-radius:2px;font-weight:800;letter-spacing:0.05em;">APAC</span>
-              <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;background:#ff4757;color:#fff;border-radius:2px;font-weight:900;letter-spacing:0.08em;animation:pulse-new 2s ease-in-out infinite;">NEW</span>
-              <span style="font-family:'Pretendard Variable',sans-serif;font-size:10px;color:var(--ink-faint);font-weight:700;">[국제유가]</span>
-            </div>
-            <div style="font-family:'Pretendard Variable',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;letter-spacing:-0.01em;">&quot;국제유가 폭등 &#x27;임계점&#x27; 4주 남았다&quot; FT - v.daum.net</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:80px;">
-            <span style="font-family:'Pretendard Variable',sans-serif;font-size:11px;color:var(--gold);font-weight:700;">v.daum.net</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);">↗</span>
           </div>
         </div>
@@ -9660,7 +9898,7 @@
     본 대시보드는 <strong style="color:rgba(255,255,255,0.75);">GS팀 내부 운영용</strong>이며, 무단 복제 및 외부 공유를 금지합니다.
   </div>
 
-  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-05-03 23:15 KST</span></div>
+  <div class="footer-meta">DAILY TREND REPORT · V7 · 4-REGION · <span data-tpl-build>Auto-Built 2026-05-03 23:40 KST</span></div>
 </footer>
 
 <script>
@@ -11022,6 +11260,178 @@ function toggleNewsMore(btn, id) {
 
   window.addEventListener('scroll', updateActive, {passive:true});
   updateActive();
+})();
+</script>
+
+<script>
+// ===== TODAY + WEEKLY COMPARISON 렌더러 =====
+(function () {
+  fetch('./data/weekly_comparison.json')
+    .then(function (r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+    .then(function (data) { renderTWC(data); })
+    .catch(function (e) { console.warn('[twc] load failed:', e); });
+
+  function fmtDate(ymd) {
+    if (!ymd || ymd.length < 8) return '—';
+    return ymd.slice(4,6) + '/' + ymd.slice(6,8);
+  }
+  function fmtDateRange(start, end) {
+    if (!start || !end) return '—';
+    return fmtDate(start) + '~' + fmtDate(end);
+  }
+  function fmtNum(n) {
+    if (n == null) return '—';
+    return n.toLocaleString('en-US');
+  }
+  function fmtPct(p) {
+    if (p == null) return '—';
+    var sign = p > 0 ? '+' : '';
+    return sign + p.toFixed(1) + '%';
+  }
+  function pctBadge(p) {
+    if (p == null) return { text: '—', color: 'rgba(255,255,255,0.35)' };
+    var sign = p > 0 ? '▲ +' : (p < 0 ? '▼ ' : '');
+    var color = p > 0 ? '#4caf6f' : (p < 0 ? '#e57373' : 'rgba(255,255,255,0.5)');
+    return { text: sign + Math.abs(p).toFixed(1) + '%', color: color };
+  }
+  function dowKr(ymd) {
+    if (!ymd || ymd.length < 8) return '';
+    var dt = new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8));
+    return ['일','월','화','수','목','금','토'][dt.getDay()];
+  }
+
+  function renderTWC(d) {
+    var latest = d.latest_data_date || '';
+    document.getElementById('twc-date-label').textContent = fmtDate(latest) + ' (' + dowKr(latest) + ') 기준';
+    var src = d.source_generated_at ? (' · 데이터 ' + d.source_generated_at) : '';
+    document.getElementById('twc-window-label').textContent = '예약일(최초입력일자) 기준' + src;
+
+    // ── 당일 카드 ──
+    var t = d.today || {};
+    document.getElementById('twc-today-date').textContent = fmtDate(t.date) + ' (' + dowKr(t.date) + ')';
+    document.getElementById('twc-today-rn').textContent = fmtNum(t.this && t.this.net_rn);
+    document.getElementById('twc-today-rev').textContent = (t.this && t.this.net_rev != null) ? t.this.net_rev.toLocaleString() : '—';
+
+    var prevDay = t.prev_week_same_day || {};
+    document.getElementById('twc-today-prev-date').textContent = fmtDate(prevDay.date);
+    document.getElementById('twc-today-prev-rn').textContent = fmtNum(prevDay.net_rn);
+    var wow = pctBadge(t.wow_pct);
+    var wowEl = document.getElementById('twc-today-wow');
+    wowEl.textContent = wow.text; wowEl.style.color = wow.color;
+
+    var lyDay = t.ly_same_day || {};
+    document.getElementById('twc-today-ly-date').textContent = fmtDate(lyDay.date);
+    document.getElementById('twc-today-ly-rn').textContent = fmtNum(lyDay.net_rn);
+    var yoy = pctBadge(t.yoy_pct);
+    var yoyEl = document.getElementById('twc-today-yoy');
+    yoyEl.textContent = yoy.text; yoyEl.style.color = yoy.color;
+
+    if (d.partial_today && d.partial_today.is_partial) {
+      var badge = document.getElementById('twc-partial-badge');
+      badge.style.display = 'inline-block';
+      badge.title = '추출일 ' + d.partial_today.raw_latest_date + ' (Pickup ' + d.partial_today.raw_latest_pickup_rn + 'RN) 데이터는 부분만 포함되어 마지막 완전일을 사용';
+    }
+
+    // ── 주간 카드들 ──
+    var wt = d.week_totals || {};
+    var tw = wt.this_week || {}, pw = wt.prev_week || {}, lw = wt.ly_week || {};
+    document.getElementById('twc-this-range').textContent = fmtDateRange(tw.start, tw.end) + ' · ' + (tw.days||0) + '일';
+    document.getElementById('twc-this-rn').textContent = fmtNum(tw.net_rn);
+    document.getElementById('twc-this-rev').textContent = (tw.net_rev != null) ? tw.net_rev.toLocaleString() : '—';
+    document.getElementById('twc-this-pickup').textContent = fmtNum(tw.pickup_rn) + '실';
+    document.getElementById('twc-this-cancel').textContent = fmtNum(tw.cancel_rn) + '실';
+
+    document.getElementById('twc-prev-range').textContent = fmtDateRange(pw.start, pw.end);
+    document.getElementById('twc-prev-rn').textContent = fmtNum(pw.net_rn);
+    document.getElementById('twc-prev-rev').textContent = (pw.net_rev != null) ? pw.net_rev.toLocaleString() : '—';
+    var wowW = pctBadge(wt.wow_rn_pct);
+    var wowWel = document.getElementById('twc-wow-pct');
+    wowWel.textContent = 'WoW ' + wowW.text + '  /  매출 ' + (pctBadge(wt.wow_rev_pct).text);
+    wowWel.style.color = wowW.color;
+
+    document.getElementById('twc-ly-range').textContent = fmtDateRange(lw.start, lw.end);
+    document.getElementById('twc-ly-rn').textContent = fmtNum(lw.net_rn);
+    document.getElementById('twc-ly-rev').textContent = (lw.net_rev != null) ? lw.net_rev.toLocaleString() : '—';
+    var yoyW = pctBadge(wt.yoy_rn_pct);
+    var yoyWel = document.getElementById('twc-yoy-pct');
+    yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
+    yoyWel.style.color = yoyW.color;
+
+    // ── 사업장 테이블 ──
+    var tbody = document.getElementById('twc-prop-tbody');
+    var props = (d.by_property || []).filter(function(p){ return p.this_net_rn !== 0 || p.prev_net_rn !== 0 || p.ly_net_rn !== 0; });
+    var maxRN = props.reduce(function(m, p){ return Math.max(m, p.this_net_rn||0); }, 1);
+    var rows = props.map(function(p) {
+      var w = pctBadge(p.wow_rn_pct), y = pctBadge(p.yoy_rn_pct);
+      var wAbs = Math.abs(p.wow_rn_pct||0), yAbs = Math.abs(p.yoy_rn_pct||0);
+      var hi = (wAbs >= 50 || yAbs >= 50) ? 'background:rgba(78,205,196,0.05);' : '';
+      var bar = Math.max(2, Math.round((p.this_net_rn||0) / maxRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);' + hi + '">' +
+        '<td style="padding:5px 6px;color:rgba(255,255,255,0.85);font-weight:600;">' + escapeHtml(p.property) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(p.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(78,205,196,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.prev_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.ly_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+
+    // ── 세그먼트 테이블 ──
+    var stbody = document.getElementById('twc-seg-tbody');
+    var FOCUS = ['OTA', 'G-OTA', 'Inbound'];
+    var segs = (d.by_segment || []).filter(function(s){ return s.segment && s.this_net_rn !== 0 || s.prev_net_rn !== 0; });
+    // FOCUS 우선 정렬 + 나머지 net_rn 기준
+    segs.sort(function(a, b) {
+      var ai = FOCUS.indexOf(a.segment), bi = FOCUS.indexOf(b.segment);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return (b.this_net_rn||0) - (a.this_net_rn||0);
+    });
+    var maxSegRN = segs.reduce(function(m, p){ return Math.max(m, Math.abs(p.this_net_rn||0)); }, 1);
+    var srows = segs.map(function(s) {
+      var w = pctBadge(s.wow_rn_pct), y = pctBadge(s.yoy_rn_pct);
+      var isFocus = FOCUS.indexOf(s.segment) !== -1;
+      var color = isFocus ? '#e6b970' : 'rgba(255,255,255,0.85)';
+      var weight = isFocus ? '800' : '600';
+      var bar = Math.max(1, Math.round(Math.abs(s.this_net_rn||0) / maxSegRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(s.segment) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(s.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(230,185,112,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    stbody.innerHTML = srows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+
+    // ── 인사이트 카드 ──
+    var iwrap = document.getElementById('twc-insights');
+    var insights = d.insights || [];
+    iwrap.innerHTML = insights.map(function(i) {
+      var color = i.tone === 'positive' ? '#4caf6f' : (i.tone === 'negative' ? '#e57373' : '#a892c8');
+      var bg = i.tone === 'positive' ? 'rgba(76,175,111,0.07)' : (i.tone === 'negative' ? 'rgba(229,115,115,0.07)' : 'rgba(168,146,200,0.07)');
+      return '<div style="background:' + bg + ';border-left:3px solid ' + color + ';border-radius:0 4px 4px 0;padding:10px 12px;">' +
+        '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;line-height:1.3;">' + escapeHtml(i.title) + '</div>' +
+        '<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);line-height:1.4;">' + escapeHtml(i.detail) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
 })();
 </script>
 
