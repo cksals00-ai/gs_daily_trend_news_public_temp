@@ -136,6 +136,10 @@ def build():
     cancel_prop = agg["cancel_daily_by_property"]
     pickup_seg = agg["pickup_daily_by_segment"]
     cancel_seg = agg["cancel_daily_by_segment"]
+    pickup_ch = agg.get("pickup_daily_by_channel", {})
+    cancel_ch = agg.get("cancel_daily_by_channel", {})
+    if not pickup_ch:
+        logger.warning("pickup_daily_by_channel 누락 → 거래처별 산출 생략 (patch_channel_daily.py 먼저 실행 필요)")
 
     # 가장 최근 데이터 일자. 단, 추출 시점이 그날 새벽이면 partial이므로
     # latest day의 pickup이 직전 7일 평균의 30% 미만이면 latest-1을 "마지막 완전일"로 본다.
@@ -320,6 +324,43 @@ def build():
         })
     by_segment.sort(key=lambda x: x["this_net_rn"], reverse=True)
 
+    # ── 거래처(채널)별 ──
+    by_channel = []
+    if pickup_ch:
+        this_c_pu = sum_window_keyed(pickup_ch, this_dates)
+        this_c_cn = sum_window_keyed(cancel_ch, this_dates)
+        prev_c_pu = sum_window_keyed(pickup_ch, prev_dates)
+        prev_c_cn = sum_window_keyed(cancel_ch, prev_dates)
+        ly_c_pu = sum_window_keyed(pickup_ch, ly_dates)
+        ly_c_cn = sum_window_keyed(cancel_ch, ly_dates)
+
+        all_chs = sorted(set(this_c_pu.keys()) | set(prev_c_pu.keys()) | set(ly_c_pu.keys())
+                         | set(this_c_cn.keys()) | set(prev_c_cn.keys()) | set(ly_c_cn.keys()))
+        for ch in all_chs:
+            if not ch or ch == "기타":
+                # 사용자 메모리: '기타' 카테고리 절대 금지 → 노출 제외
+                continue
+            this_n = calc_net(this_c_pu.get(ch, {}), this_c_cn.get(ch, {}))
+            prev_n = calc_net(prev_c_pu.get(ch, {}), prev_c_cn.get(ch, {}))
+            ly_n = calc_net(ly_c_pu.get(ch, {}), ly_c_cn.get(ch, {}))
+            # 모든 윈도우에서 0이면 노출 가치 없음
+            if this_n["net_rn"] == 0 and prev_n["net_rn"] == 0 and ly_n["net_rn"] == 0:
+                continue
+            by_channel.append({
+                "channel": ch,
+                "this_net_rn": this_n["net_rn"],
+                "this_net_rev": this_n["net_rev"],
+                "prev_net_rn": prev_n["net_rn"],
+                "prev_net_rev": prev_n["net_rev"],
+                "ly_net_rn": ly_n["net_rn"],
+                "ly_net_rev": ly_n["net_rev"],
+                "wow_rn_pct": pct_change(this_n["net_rn"], prev_n["net_rn"]),
+                "yoy_rn_pct": pct_change(this_n["net_rn"], ly_n["net_rn"]),
+                "wow_rev_pct": pct_change(this_n["net_rev"], prev_n["net_rev"]),
+                "yoy_rev_pct": pct_change(this_n["net_rev"], ly_n["net_rev"]),
+            })
+        by_channel.sort(key=lambda x: x["this_net_rn"], reverse=True)
+
     # ── 인사이트 자동 생성 ──
     insights = []
 
@@ -385,6 +426,21 @@ def build():
             "detail": f"금주 {s['this_net_rn']:,}실 vs 전주 {s['prev_net_rn']:,}실"
         })
 
+    # 5b) 거래처(채널) — top |WoW| (최소 금주 100실 이상)
+    if by_channel:
+        ch_movers = [c for c in by_channel
+                     if c["wow_rn_pct"] is not None and abs(c["this_net_rn"]) >= 100]
+        ch_movers.sort(key=lambda x: abs(x["wow_rn_pct"]), reverse=True)
+        if ch_movers:
+            c = ch_movers[0]
+            sign = "▲" if c["wow_rn_pct"] > 0 else "▼"
+            tone = "positive" if c["wow_rn_pct"] > 0 else "negative"
+            insights.append({
+                "tone": tone,
+                "title": f"거래처: {c['channel']} {sign} {abs(c['wow_rn_pct'])}% (전주比)",
+                "detail": f"금주 {c['this_net_rn']:,}실 vs 전주 {c['prev_net_rn']:,}실"
+            })
+
     # 6) 당일 vs 전주 동요일
     if today_block["wow_pct"] is not None:
         wow = today_block["wow_pct"]
@@ -407,14 +463,15 @@ def build():
         "week_totals": week_totals,
         "by_property": by_property,
         "by_segment": by_segment,
-        "insights": insights[:6],
+        "by_channel": by_channel,
+        "insights": insights[:7],
     }
 
     DOCS_DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     logger.info(f"✓ 저장: {OUTPUT_PATH} ({OUTPUT_PATH.stat().st_size:,} bytes)")
-    logger.info(f"  사업장 {len(by_property)}개 / 세그먼트 {len(by_segment)}개 / 인사이트 {len(result['insights'])}개")
+    logger.info(f"  사업장 {len(by_property)}개 / 세그먼트 {len(by_segment)}개 / 거래처 {len(by_channel)}개 / 인사이트 {len(result['insights'])}개")
 
 
 if __name__ == "__main__":

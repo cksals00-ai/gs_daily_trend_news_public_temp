@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS 실적 리포트 · 금주비교 · SONO & TRINITY GS팀</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  --sidebar-w: 220px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.masthead-inner {
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.logo-wrap { display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap; }
+.logo-mark {
+  font-family: var(--serif); font-weight: 800; font-size: 18px;
+  color: var(--gold-bright); white-space: nowrap;
+}
+.team-tag {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.5); border-left: 1px solid rgba(255,255,255,0.2);
+  padding-left: 14px; margin-left: 14px; white-space: nowrap;
+}
+.page-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; background: rgba(201,160,99,0.15);
+  border: 1px solid rgba(201,160,99,0.35); border-radius: 3px;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: var(--gold-bright); letter-spacing: 0.12em;
+}
+.masthead-right {
+  display: flex; align-items: center; gap: 16px;
+  font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.6);
+}
+.live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--positive); margin-right: 5px; animation: pulse 2.4s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ───── LAYOUT ───── */
+.app-shell { display: flex; min-height: calc(100vh - 52px); }
+
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--bg-deep); border-right: 1px solid var(--rule);
+  padding: 20px 16px; position: sticky; top: 52px;
+  height: calc(100vh - 52px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.filter-section-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--ink-faint); margin-bottom: 8px; text-transform: uppercase;
+}
+.sidebar-divider { height: 1px; background: var(--rule); }
+.refresh-info { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule); }
+.refresh-label {
+  font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
+  letter-spacing: 0.1em; margin-bottom: 4px;
+}
+.refresh-time { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); font-weight: 600; }
+
+/* MAIN */
+.main-content {
+  flex: 1; min-width: 0; padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.page-title {
+  font-family: var(--serif); font-weight: 800;
+  font-size: clamp(20px, 2.2vw, 26px); color: var(--ink);
+  letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;
+}
+.page-title .sub {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  color: var(--ink-faint); letter-spacing: 0.08em;
+}
+.base-date-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; background: var(--bg-soft);
+  border: 1px solid var(--rule-strong); border-radius: 3px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--ink-muted);
+}
+.base-date-tag strong { color: var(--gold-bright); font-weight: 700; }
+
+/* ───── WEEKLY CARDS ───── */
+.twc-row1 {
+  display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  gap: 14px;
+}
+.twc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.twc-card-bar { height: 4px; }
+.twc-card-body { padding: 14px 18px; }
+.twc-card-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.twc-card-tag {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.15em;
+  font-weight: 900;
+}
+.twc-card-meta {
+  font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.4);
+}
+.twc-row2 {
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px;
+}
+
+@media (max-width: 1280px) {
+  .twc-row1 { grid-template-columns: 1fr 1fr; }
+  .twc-row2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 1100px) {
+  .twc-row1 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 860px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .twc-row1 { grid-template-columns: 1fr; }
+  .twc-row2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .main-content { padding: 16px 14px; }
+}
+
+/* ───── MOBILE SHEET TABS ───── */
+.mobile-sheet-tabs {
+  display: none; background: var(--bg-deep);
+  border-bottom: 1px solid var(--rule); overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+  position: sticky; top: 52px; z-index: 100; padding: 0 4px;
+}
+.mobile-sheet-tabs::-webkit-scrollbar { display: none; }
+@media (max-width: 860px) { .mobile-sheet-tabs { display: flex; } }
+.mobile-sheet-tab {
+  flex-shrink: 0; padding: 9px 14px; font-family: var(--mono);
+  font-size: 11px; font-weight: 600; color: var(--ink-muted);
+  text-decoration: none; white-space: nowrap; letter-spacing: 0.06em;
+  border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+}
+.mobile-sheet-tab:hover { color: var(--ink); }
+.mobile-sheet-tab.active {
+  color: var(--gold-bright); border-bottom-color: var(--gold);
+  background: rgba(201,160,99,0.08);
+}
+@media (max-width: 480px) {
+  .mobile-sheet-tab { padding: 8px 10px; font-size: 10px; letter-spacing: 0.03em; }
+}
+
+@media (max-width: 480px) {
+  .masthead-inner { flex-direction: column; gap: 8px; }
+  .team-tag { border: none; padding: 0; }
+  .masthead-right { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- GS Suite Navigation -->
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){
+  .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+  .gsn-links.open{display:flex}
+  .gsn-item{padding:8px 12px}
+  .gsn-toggle{display:flex;align-items:center;justify-content:center}
+}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+</style>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ========== MASTHEAD ========== -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap">
+      <div class="logo-mark">SONO &amp; TRINITY</div>
+      <div class="team-tag">GS팀 · 금주비교</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="page-badge">📅 GS실적 · 금주비교</span>
+      <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 당일현황</a>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>LIVE</span>
+      <span id="refresh-badge">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- MOBILE SHEET TABS (visible < 860px) -->
+<nav class="mobile-sheet-tabs">
+  <a href="otb.html" class="mobile-sheet-tab">당일현황</a>
+  <a href="weekly-compare.html" class="mobile-sheet-tab active">금주비교</a>
+  <a href="channel.html" class="mobile-sheet-tab">채널별</a>
+  <a href="stay-date.html" class="mobile-sheet-tab">투숙일기준</a>
+  <a href="booking-trend.html" class="mobile-sheet-tab">예약추이</a>
+  <a href="product-detail.html" class="mobile-sheet-tab">상품비교</a>
+  <a href="booking-status.html" class="mobile-sheet-tab">Booking Status</a>
+  <a href="manager-analysis.html" class="mobile-sheet-tab">담당자 분석</a>
+</nav>
+
+<!-- ========== APP SHELL ========== -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="filter-section-label">GS 실적 리포트</div>
+      <nav style="display:flex;flex-direction:column;gap:2px;">
+        <a href="otb.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">당일현황</a>
+        <a href="weekly-compare.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;background:rgba(201,160,99,0.18);color:var(--gold-bright);text-decoration:none;">금주비교</a>
+        <a href="channel.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">채널별</a>
+        <a href="stay-date.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">투숙일기준</a>
+        <a href="booking-trend.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">예약추이</a>
+        <a href="product-detail.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">상품비교</a>
+        <a href="booking-status.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">Booking Status</a>
+        <a href="manager-analysis.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">담당자 분석</a>
+      </nav>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">기준</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--ink-muted);line-height:1.7;">
+        예약일(최초입력일자) 기준<br>
+        Net = 픽업 − 취소<br>
+        WoW = 전주 동기간比<br>
+        YoY = 전년 동기간比 (364일전)
+      </div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">LAST REFRESH</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-title">
+        금주 비교
+        <span class="sub">WEEKLY · WoW · YoY COMPARISON</span>
+      </div>
+      <div class="base-date-tag">
+        기준일자 <strong id="base-date-display">—</strong> · <span id="window-label">—</span>
+      </div>
+    </div>
+
+    <!-- ROW 1: 당일현황 + 금주 + 전주 + LY -->
+    <div class="twc-row1" id="twc-row1">
+
+      <!-- 당일현황 카드 -->
+      <div class="twc-card" style="background:rgba(78,205,196,0.06);border-color:rgba(78,205,196,0.25);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:#4ecdc4;">당일 현황</span>
+            <span class="twc-card-meta" id="twc-today-date">—</span>
+            <span id="twc-partial-badge" style="display:none;font-family:var(--mono);font-size:9px;color:#f0a500;background:rgba(240,165,0,0.1);padding:2px 6px;border-radius:3px;border:1px solid rgba(240,165,0,0.3);font-weight:700;">PARTIAL</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+            <span style="font-family:var(--serif);font-size:36px;font-weight:800;color:#fff;line-height:1;" id="twc-today-rn">—</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실 / 매출 <span id="twc-today-rev" style="color:rgba(255,255,255,0.7);font-weight:700;">—</span> 백만</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:rgba(255,255,255,0.4);">전주 동요일 (<span id="twc-today-prev-date">—</span>)</span>
+              <span><span id="twc-today-prev-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-wow" style="margin-left:6px;font-weight:700;">—</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:rgba(255,255,255,0.4);">전년 동기간 (<span id="twc-today-ly-date">—</span>)</span>
+              <span><span id="twc-today-ly-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-yoy" style="margin-left:6px;font-weight:700;">—</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 금주 카드 -->
+      <div class="twc-card">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,#fff,rgba(255,255,255,0.5));"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:#fff;">금주</span>
+            <span class="twc-card-meta" id="twc-this-range">—</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+            <span style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" id="twc-this-rn">—</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);">매출 <span id="twc-this-rev" style="color:#fff;font-weight:700;">—</span> 백만</div>
+          <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">픽업 <span id="twc-this-pickup">—</span> · 취소 <span id="twc-this-cancel">—</span></div>
+        </div>
+      </div>
+
+      <!-- 전주 카드 -->
+      <div class="twc-card" style="border-color:rgba(255,255,255,0.08);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.2));"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:rgba(255,255,255,0.7);">전주 동기간</span>
+            <span class="twc-card-meta" id="twc-prev-range">—</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+            <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-prev-rn">—</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-wow-pct">—</div>
+          <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-prev-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+        </div>
+      </div>
+
+      <!-- LY 카드 -->
+      <div class="twc-card" style="border-color:rgba(184,137,63,0.18);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:var(--gold-bright);">전년 동기간</span>
+            <span class="twc-card-meta" id="twc-ly-range">—</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+            <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-ly-rn">—</span>
+            <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
+          <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ROW 2: 사업장 → 거래처 → 상품카테고리 -->
+    <div class="twc-row2">
+
+      <!-- 사업장별 -->
+      <div class="twc-card" style="border-color:rgba(255,255,255,0.08);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,#4ecdc4,#7dc4b0);"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:#4ecdc4;">사업장별 금주 비교</span>
+            <span class="twc-card-meta">net 온북 RN, 전주/전년 동기간比</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+              <thead>
+                <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                  <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전주</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전년</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                </tr>
+              </thead>
+              <tbody id="twc-prop-tbody"></tbody>
+            </table>
+            <div id="twc-prop-more" style="text-align:center;padding:6px 0 2px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 거래처별 -->
+      <div class="twc-card" style="border-color:rgba(168,146,200,0.2);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:#a892c8;">거래처별 금주 비교</span>
+            <span class="twc-card-meta">아고다 / 야놀자 / 트립닷컴</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+              <thead>
+                <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                  <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">거래처</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                </tr>
+              </thead>
+              <tbody id="twc-channel-tbody"></tbody>
+            </table>
+            <div id="twc-channel-more" style="text-align:center;padding:6px 0 2px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상품카테고리별 -->
+      <div class="twc-card" style="border-color:rgba(184,137,63,0.18);">
+        <div class="twc-card-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+        <div class="twc-card-body">
+          <div class="twc-card-head">
+            <span class="twc-card-tag" style="color:var(--gold-bright);">상품카테고리별 금주 비교</span>
+            <span class="twc-card-meta">OTA / G-OTA / Inbound</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+              <thead>
+                <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                  <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">상품카테고리</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                  <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                </tr>
+              </thead>
+              <tbody id="twc-seg-tbody"></tbody>
+            </table>
+            <div id="twc-seg-more" style="text-align:center;padding:6px 0 2px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ROW 3: 주요 현황 요약 -->
+    <div class="twc-card" style="border-color:rgba(168,146,200,0.2);">
+      <div class="twc-card-bar" style="background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+      <div class="twc-card-body">
+        <div class="twc-card-head">
+          <span class="twc-card-tag" style="color:#a892c8;">◆ 주요 현황 요약</span>
+          <span class="twc-card-meta">자동 추출 · 금주 변동 핵심</span>
+        </div>
+        <div id="twc-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;"></div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+// ===== TODAY + WEEKLY COMPARISON 렌더러 =====
+(function () {
+  fetch('./data/weekly_comparison.json')
+    .then(function (r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+    .then(function (data) { renderTWC(data); })
+    .catch(function (e) {
+      console.warn('[twc] load failed:', e);
+      var ph = document.getElementById('window-label');
+      if (ph) ph.textContent = '데이터 로드 실패';
+    });
+
+  function fmtDate(ymd) {
+    if (!ymd || ymd.length < 8) return '—';
+    return ymd.slice(4,6) + '/' + ymd.slice(6,8);
+  }
+  function fmtDateRange(start, end) {
+    if (!start || !end) return '—';
+    return fmtDate(start) + '~' + fmtDate(end);
+  }
+  function fmtNum(n) {
+    if (n == null) return '—';
+    return n.toLocaleString('en-US');
+  }
+  function pctBadge(p) {
+    if (p == null) return { text: '—', color: 'rgba(255,255,255,0.35)' };
+    var sign = p > 0 ? '▲ +' : (p < 0 ? '▼ ' : '');
+    var color = p > 0 ? '#4caf6f' : (p < 0 ? '#e57373' : 'rgba(255,255,255,0.5)');
+    return { text: sign + Math.abs(p).toFixed(1) + '%', color: color };
+  }
+  function dowKr(ymd) {
+    if (!ymd || ymd.length < 8) return '';
+    var dt = new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8));
+    return ['일','월','화','수','목','금','토'][dt.getDay()];
+  }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function renderTWC(d) {
+    var latest = d.latest_data_date || '';
+    var bd = document.getElementById('base-date-display');
+    if (bd) bd.textContent = fmtDate(latest) + ' (' + dowKr(latest) + ')';
+    var src = d.source_generated_at ? (' · 데이터 ' + d.source_generated_at) : '';
+    document.getElementById('window-label').textContent = '예약일(최초입력일자) 기준' + src;
+    var sb = document.getElementById('sidebar-refresh');
+    if (sb) sb.textContent = d.generated_at || '—';
+    var rb = document.getElementById('refresh-badge');
+    if (rb) rb.textContent = (d.generated_at || '—').replace(/^\d{4}-/, '');
+
+    // 당일 카드
+    var t = d.today || {};
+    document.getElementById('twc-today-date').textContent = fmtDate(t.date) + ' (' + dowKr(t.date) + ')';
+    document.getElementById('twc-today-rn').textContent = fmtNum(t.this && t.this.net_rn);
+    document.getElementById('twc-today-rev').textContent = (t.this && t.this.net_rev != null) ? t.this.net_rev.toLocaleString() : '—';
+    var prevDay = t.prev_week_same_day || {};
+    document.getElementById('twc-today-prev-date').textContent = fmtDate(prevDay.date);
+    document.getElementById('twc-today-prev-rn').textContent = fmtNum(prevDay.net_rn);
+    var wow = pctBadge(t.wow_pct);
+    var wowEl = document.getElementById('twc-today-wow');
+    wowEl.textContent = wow.text; wowEl.style.color = wow.color;
+    var lyDay = t.ly_same_day || {};
+    document.getElementById('twc-today-ly-date').textContent = fmtDate(lyDay.date);
+    document.getElementById('twc-today-ly-rn').textContent = fmtNum(lyDay.net_rn);
+    var yoy = pctBadge(t.yoy_pct);
+    var yoyEl = document.getElementById('twc-today-yoy');
+    yoyEl.textContent = yoy.text; yoyEl.style.color = yoy.color;
+    if (d.partial_today && d.partial_today.is_partial) {
+      var pb = document.getElementById('twc-partial-badge');
+      pb.style.display = 'inline-block';
+      pb.title = '추출일 ' + d.partial_today.raw_latest_date + ' (Pickup ' + d.partial_today.raw_latest_pickup_rn + 'RN) 데이터는 부분만 포함되어 마지막 완전일을 사용';
+    }
+
+    // 주간 카드들
+    var wt = d.week_totals || {};
+    var tw = wt.this_week || {}, pw = wt.prev_week || {}, lw = wt.ly_week || {};
+    document.getElementById('twc-this-range').textContent = fmtDateRange(tw.start, tw.end) + ' · ' + (tw.days||0) + '일';
+    document.getElementById('twc-this-rn').textContent = fmtNum(tw.net_rn);
+    document.getElementById('twc-this-rev').textContent = (tw.net_rev != null) ? tw.net_rev.toLocaleString() : '—';
+    document.getElementById('twc-this-pickup').textContent = fmtNum(tw.pickup_rn) + '실';
+    document.getElementById('twc-this-cancel').textContent = fmtNum(tw.cancel_rn) + '실';
+    document.getElementById('twc-prev-range').textContent = fmtDateRange(pw.start, pw.end);
+    document.getElementById('twc-prev-rn').textContent = fmtNum(pw.net_rn);
+    document.getElementById('twc-prev-rev').textContent = (pw.net_rev != null) ? pw.net_rev.toLocaleString() : '—';
+    var wowW = pctBadge(wt.wow_rn_pct);
+    var wowWel = document.getElementById('twc-wow-pct');
+    wowWel.textContent = 'WoW ' + wowW.text + '  /  매출 ' + (pctBadge(wt.wow_rev_pct).text);
+    wowWel.style.color = wowW.color;
+    document.getElementById('twc-ly-range').textContent = fmtDateRange(lw.start, lw.end);
+    document.getElementById('twc-ly-rn').textContent = fmtNum(lw.net_rn);
+    document.getElementById('twc-ly-rev').textContent = (lw.net_rev != null) ? lw.net_rev.toLocaleString() : '—';
+    var yoyW = pctBadge(wt.yoy_rn_pct);
+    var yoyWel = document.getElementById('twc-yoy-pct');
+    yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
+    yoyWel.style.color = yoyW.color;
+
+    // 6줄 제한 + 더보기 토글
+    var SHOW_LIMIT = 6;
+    function bindMore(tbodyId, moreId, totalRows, accentColor) {
+      var tbody = document.getElementById(tbodyId);
+      var more = document.getElementById(moreId);
+      if (!tbody || !more) return;
+      if (totalRows <= SHOW_LIMIT) { more.innerHTML = ''; return; }
+      var expanded = false;
+      function refresh() {
+        var hidden = totalRows - SHOW_LIMIT;
+        var trs = tbody.querySelectorAll('tr');
+        for (var i = SHOW_LIMIT; i < trs.length; i++) {
+          trs[i].style.display = expanded ? '' : 'none';
+        }
+        more.innerHTML = '<button type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:4px 12px;color:' + accentColor + ';font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:0.08em;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+          (expanded ? '접기' : ('더보기 +' + hidden)) +
+          '</button>';
+        more.querySelector('button').addEventListener('click', function() { expanded = !expanded; refresh(); });
+      }
+      refresh();
+    }
+
+    // 사업장 테이블
+    var tbody = document.getElementById('twc-prop-tbody');
+    var props = (d.by_property || []).filter(function(p){ return p.this_net_rn !== 0 || p.prev_net_rn !== 0 || p.ly_net_rn !== 0; });
+    var maxRN = props.reduce(function(m, p){ return Math.max(m, p.this_net_rn||0); }, 1);
+    var rows = props.map(function(p) {
+      var w = pctBadge(p.wow_rn_pct), y = pctBadge(p.yoy_rn_pct);
+      var wAbs = Math.abs(p.wow_rn_pct||0), yAbs = Math.abs(p.yoy_rn_pct||0);
+      var hi = (wAbs >= 50 || yAbs >= 50) ? 'background:rgba(78,205,196,0.05);' : '';
+      var bar = Math.max(2, Math.round((p.this_net_rn||0) / maxRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);' + hi + '">' +
+        '<td style="padding:5px 6px;color:rgba(255,255,255,0.85);font-weight:600;">' + escapeHtml(p.property) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(p.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(78,205,196,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.prev_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:rgba(255,255,255,0.5);">' + fmtNum(p.ly_net_rn) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+    bindMore('twc-prop-tbody', 'twc-prop-more', rows.length, '#4ecdc4');
+
+    // 거래처 테이블
+    var ctbody = document.getElementById('twc-channel-tbody');
+    var FOCUS_CH = ['아고다', '야놀자', '여기어때', '트립닷컴'];
+    var chs = (d.by_channel || []).filter(function(c){
+      return c.channel && (c.this_net_rn !== 0 || c.prev_net_rn !== 0 || c.ly_net_rn !== 0);
+    });
+    var maxChRN = chs.reduce(function(m, c){ return Math.max(m, Math.abs(c.this_net_rn||0)); }, 1);
+    var crows = chs.map(function(c) {
+      var w = pctBadge(c.wow_rn_pct), y = pctBadge(c.yoy_rn_pct);
+      var isFocus = FOCUS_CH.indexOf(c.channel) !== -1;
+      var color = isFocus ? '#a892c8' : 'rgba(255,255,255,0.85)';
+      var weight = isFocus ? '800' : '600';
+      var bar = Math.max(1, Math.round(Math.abs(c.this_net_rn||0) / maxChRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(c.channel) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(c.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(168,146,200,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    ctbody.innerHTML = crows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+    bindMore('twc-channel-tbody', 'twc-channel-more', crows.length, '#a892c8');
+
+    // 상품카테고리(세그먼트) 테이블
+    var stbody = document.getElementById('twc-seg-tbody');
+    var FOCUS = ['OTA', 'G-OTA', 'Inbound'];
+    var segs = (d.by_segment || []).filter(function(s){ return s.segment && (s.this_net_rn !== 0 || s.prev_net_rn !== 0); });
+    segs.sort(function(a, b) {
+      var ai = FOCUS.indexOf(a.segment), bi = FOCUS.indexOf(b.segment);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return (b.this_net_rn||0) - (a.this_net_rn||0);
+    });
+    var maxSegRN = segs.reduce(function(m, p){ return Math.max(m, Math.abs(p.this_net_rn||0)); }, 1);
+    var srows = segs.map(function(s) {
+      var w = pctBadge(s.wow_rn_pct), y = pctBadge(s.yoy_rn_pct);
+      var isFocus = FOCUS.indexOf(s.segment) !== -1;
+      var color = isFocus ? '#e6b970' : 'rgba(255,255,255,0.85)';
+      var weight = isFocus ? '800' : '600';
+      var bar = Math.max(1, Math.round(Math.abs(s.this_net_rn||0) / maxSegRN * 100));
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(s.segment) + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+          '<div>' + fmtNum(s.this_net_rn) + '</div>' +
+          '<div style="height:2px;background:rgba(230,185,112,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+        '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+        '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+      '</tr>';
+    });
+    stbody.innerHTML = srows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+    bindMore('twc-seg-tbody', 'twc-seg-more', srows.length, '#e6b970');
+
+    // 인사이트 카드
+    var iwrap = document.getElementById('twc-insights');
+    var insights = d.insights || [];
+    iwrap.innerHTML = insights.map(function(i) {
+      var color = i.tone === 'positive' ? '#4caf6f' : (i.tone === 'negative' ? '#e57373' : '#a892c8');
+      var bg = i.tone === 'positive' ? 'rgba(76,175,111,0.07)' : (i.tone === 'negative' ? 'rgba(229,115,115,0.07)' : 'rgba(168,146,200,0.07)');
+      return '<div style="background:' + bg + ';border-left:3px solid ' + color + ';border-radius:0 4px 4px 0;padding:10px 12px;">' +
+        '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;line-height:1.3;">' + escapeHtml(i.title) + '</div>' +
+        '<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);line-height:1.4;">' + escapeHtml(i.detail) + '</div>' +
+      '</div>';
+    }).join('') || '<div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);">인사이트 없음</div>';
+  }
+})();
+</script>
+
+</body>
+</html>
