@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인바운드 거래처 국적 키인 · GS 세일즈 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root {
+  --bg:#0f1117; --bg-card:#1a1d23; --bg-deep:#0d1117;
+  --bg-soft:#22272e; --bg-hover:#2d333b;
+  --ink:#e8e6e1; --ink-soft:#d4d2c8; --ink-muted:#9e9b93; --ink-faint:#6e6c62;
+  --gold:#c9a063; --gold-bright:#e6b970; --gold-dim:rgba(201,160,99,0.15);
+  --positive:#4caf6f; --positive-bg:#1f3a28;
+  --warning:#e8a256; --warning-bg:#3d2e1a;
+  --negative:#e57373; --negative-bg:#3d1f1f;
+  --info:#5a9fc4; --info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.08); --rule-strong:rgba(255,255,255,0.18);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;font-weight:500;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;word-break:keep-all}
+
+.masthead{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:12px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.mast-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}
+.mast-title{font-size:14px;color:var(--ink-soft);font-weight:600}
+.mast-left{display:flex;align-items:center;gap:14px}
+.mast-right{display:flex;gap:8px;align-items:center}
+.mast-ts{font-size:11px;color:var(--ink-faint);font-family:var(--mono);margin-right:8px}
+
+.btn{padding:7px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-weight:600;font-size:12px;border-radius:4px;cursor:pointer;transition:all .2s;font-family:var(--sans);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.btn:hover{color:var(--ink);border-color:var(--gold);background:var(--gold-dim)}
+.btn-gold{background:var(--gold);color:var(--bg-deep);border-color:var(--gold)}
+.btn-gold:hover{background:var(--gold-bright)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-positive{border-color:var(--positive);color:var(--positive)}
+.btn-positive:hover{background:var(--positive-bg)}
+.btn-negative{border-color:var(--negative);color:var(--negative)}
+.btn-negative:hover{background:var(--negative-bg)}
+
+.content{max-width:1280px;margin:0 auto;padding:24px}
+
+.page-title{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
+.page-title h1{font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:13px;color:var(--ink-muted);line-height:1.7}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:1px 5px;border-radius:3px;color:var(--gold)}
+
+.grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:7px;padding:12px 14px}
+.stat-label{font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.stat-value{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--gold-bright);line-height:1.1}
+.stat-sub{font-size:11px;color:var(--ink-faint);margin-top:2px}
+
+.section{margin-bottom:24px}
+.sec-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-subtitle{font-size:12px;color:var(--ink-muted);margin-bottom:12px}
+
+.tbl-wrap{overflow-x:auto;border-radius:7px;border:1px solid var(--rule);background:var(--bg-card)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg-soft);padding:10px 12px;font-weight:700;color:var(--ink-muted);text-align:right;border-bottom:1px solid var(--rule-strong);white-space:nowrap;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+th:first-child,th.lalign{text-align:left}
+td{padding:9px 12px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+td.lalign{text-align:left;font-family:var(--sans);font-weight:600;color:var(--ink-soft)}
+tr:hover{background:var(--bg-hover)}
+tr.mapped td{background:rgba(76,175,111,.05)}
+tr.mapped:hover td{background:rgba(76,175,111,.1)}
+
+.nat-select{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12.5px;font-weight:600;min-width:120px;cursor:pointer;outline:none;transition:all .15s}
+.nat-select:focus,.nat-select:hover{border-color:var(--gold);background:var(--bg-hover)}
+.nat-select.unset{color:var(--ink-faint);border-style:dashed}
+.nat-select.set{color:var(--gold-bright);border-color:var(--gold);background:var(--gold-dim)}
+
+.custom-input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12.5px;width:110px;outline:none;margin-left:6px}
+.custom-input:focus{border-color:var(--gold);background:var(--bg-hover)}
+
+.confidence-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.04em}
+.cp-keyin{background:var(--gold-dim);color:var(--gold-bright)}
+.cp-87map{background:var(--info-bg);color:var(--info)}
+.cp-unknown{background:var(--negative-bg);color:var(--negative)}
+
+.action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--rule);border-radius:7px;margin-bottom:16px;flex-wrap:wrap}
+.action-bar .info{font-size:12px;color:var(--ink-muted)}
+.action-bar .btn-group{display:flex;gap:6px}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--positive);color:#fff;padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;z-index:999;box-shadow:0 6px 20px rgba(0,0,0,.4);animation:slideUp .3s ease}
+.toast.err{background:var(--negative)}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.empty{padding:32px;text-align:center;color:var(--ink-faint);font-size:13px}
+
+.guide-box{background:var(--info-bg);border:1px solid rgba(90,159,196,.3);border-radius:6px;padding:12px 16px;font-size:12px;color:var(--ink-soft);line-height:1.7;margin-bottom:18px}
+.guide-box b{color:var(--info)}
+.guide-box ol{padding-left:18px;margin-top:6px}
+.guide-box li{margin-bottom:3px}
+
+.add-row{display:flex;gap:8px;align-items:center;margin-top:10px;padding:12px;background:var(--bg-card);border:1px dashed var(--rule-strong);border-radius:6px}
+.add-row input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:7px 10px;font-family:var(--sans);font-size:12.5px;outline:none;flex:1}
+.add-row input:focus{border-color:var(--gold)}
+
+@media(max-width:640px){
+  .mast-inner{flex-direction:column;align-items:flex-start}
+  .content{padding:14px}
+  th,td{padding:7px 8px;font-size:11.5px}
+}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="mast-inner">
+    <div class="mast-left">
+      <span class="logo">GS HOTELS</span>
+      <span class="mast-title">인바운드 국적 키인 · 관리자</span>
+    </div>
+    <div class="mast-right">
+      <a href="admin.html" class="btn">← 관리자</a>
+      <a href="gs-sales-report.html" class="btn">↗ 세일즈 리포트</a>
+      <span class="mast-ts" id="lastSaved"></span>
+      <button class="btn btn-gold" onclick="exportJSON()">📤 JSON 내보내기</button>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="page-title">
+    <div class="eyebrow">ADMIN · INBOUND NATIONALITY KEY-IN</div>
+    <h1>인바운드 거래처 국적 매핑 관리</h1>
+    <p>
+      57-prefix 회원번호(구코드)는 회원명에 국적이 표기되지 않아 자동 매핑이 어렵습니다.
+      이 페이지에서 거래처별 국적을 수동 매핑하면 <code>build_inbound_enriched.py</code> 빌드 시 우선 적용됩니다.
+      <br><span style="color:var(--ink-faint);font-size:11.5px">우선순위: <b>회원명 (국적) 표기 &gt; 키인 매핑 &gt; 87 master &gt; 미확인</b></span>
+    </p>
+  </div>
+
+  <div class="guide-box">
+    <b>🛠️ 사용법</b>
+    <ol>
+      <li>아래 표에서 미확인 거래처의 국적을 드롭다운으로 선택 (또는 직접 입력)</li>
+      <li><b>「JSON 내보내기」</b> 클릭 → <code>inbound_partner_nationality_keyin.json</code> 다운로드</li>
+      <li>다운로드한 파일을 <code>docs/data/</code> 폴더에 덮어쓰기 → 커밋 &amp; 푸시</li>
+      <li>다음 빌드(<code>scripts/build_inbound_enriched.py</code>)에서 자동 반영</li>
+    </ol>
+  </div>
+
+  <div class="grid-summary" id="summary"></div>
+
+  <div class="action-bar">
+    <div class="info">
+      <span id="mappingInfo">매핑 로딩 중…</span>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-sm" onclick="resetAll()">🔄 모든 키인 초기화</button>
+      <button class="btn btn-sm btn-positive" onclick="applyAllTaiwan()">🇹🇼 미매핑 전체 → 대만</button>
+      <button class="btn btn-sm" onclick="loadFromFile()">📥 기존 JSON 불러오기</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="onFileSelected(event)">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">🚨 미확인 거래처 (57-prefix)</div>
+    <div class="sec-subtitle">회원명에 국적 표기가 없고 87 master에서도 매칭되지 않는 거래처</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th class="lalign">거래처명</th>
+          <th>현재 신뢰도</th>
+          <th>예약 RN</th>
+          <th>취소 RN</th>
+          <th>Net RN</th>
+          <th>매출 (백만원)</th>
+          <th class="lalign" style="min-width:280px">키인 국적</th>
+        </tr></thead>
+        <tbody id="unknownTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">✏️ 추가 거래처 키인</div>
+    <div class="sec-subtitle">목록에 없는 거래처를 직접 추가하여 매핑할 수 있습니다 (예: 신규 거래처, 87매핑된 항목 강제 변경)</div>
+    <div class="add-row">
+      <input type="text" id="newPartner" placeholder="거래처명 (예: 신규여행사)">
+      <select class="nat-select" id="newNat" style="min-width:160px">
+        <option value="">-- 국적 선택 --</option>
+      </select>
+      <button class="btn btn-sm btn-gold" onclick="addCustomMapping()">+ 추가</button>
+    </div>
+    <div style="margin-top:12px" class="tbl-wrap" id="customWrap" hidden>
+      <table>
+        <thead><tr>
+          <th class="lalign">거래처명</th>
+          <th>매핑 국적</th>
+          <th class="lalign" style="width:120px">관리</th>
+        </tr></thead>
+        <tbody id="customTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const KEYIN_JSON_URL = './data/inbound_partner_nationality_keyin.json';
+const ENRICHED_JSON_URL = './data/inbound_enriched.json';
+const STORAGE_KEY = 'gs_inbound_nat_keyin_v1';
+
+const NATIONALITY_OPTIONS = [
+  '대만','홍콩','중국','일본','베트남','말레이시아','태국','인도네시아','싱가포르',
+  '필리핀','인도','몽골','카자흐스탄','터키','이스라엘','오만','UAE',
+  '미국','캐나다','멕시코','미주',
+  '호주','뉴질랜드',
+  '영국','프랑스','독일','이탈리아','스페인','네덜란드','스위스','러시아','우크라이나','유럽',
+  '마카오','라오스','캄보디아','미얀마','브루나이'
+];
+
+let state = {
+  enriched: null,
+  unknownPartners: [],
+  mappings: {},
+  customMappings: {},
+  initialMappings: {}
+};
+
+const fmt = n => Math.round(n||0).toLocaleString('ko-KR');
+const fmtMil = n => (Math.round((n||0)/100000)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1});
+
+function showToast(msg, type='ok') {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type==='err' ? ' err' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+
+function buildNatDropdown(selectedValue, partnerName) {
+  const isCustom = selectedValue && !NATIONALITY_OPTIONS.includes(selectedValue);
+  let opts = '<option value="">-- 미매핑 --</option>';
+  NATIONALITY_OPTIONS.forEach(n => {
+    opts += `<option value="${n}"${n===selectedValue?' selected':''}>${n}</option>`;
+  });
+  opts += `<option value="__custom__"${isCustom?' selected':''}>✏️ 직접 입력…</option>`;
+  const cls = selectedValue ? 'set' : 'unset';
+  const customInput = isCustom
+    ? `<input type="text" class="custom-input" value="${esc(selectedValue)}" data-partner="${esc(partnerName)}" data-role="custom">`
+    : '';
+  return `<select class="nat-select ${cls}" data-partner="${esc(partnerName)}" onchange="onNatChange(event)">${opts}</select>${customInput}`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function onNatChange(e) {
+  const partner = e.target.dataset.partner;
+  const val = e.target.value;
+  if (val === '__custom__') {
+    state.mappings[partner] = '';
+    persist();
+    renderUnknownTable();
+    renderCustomTable();
+    setTimeout(() => {
+      const inp = document.querySelector(`input.custom-input[data-partner="${CSS.escape(partner)}"]`);
+      if (inp) inp.focus();
+    }, 0);
+    return;
+  }
+  if (!val) {
+    delete state.mappings[partner];
+  } else {
+    state.mappings[partner] = val;
+  }
+  persist();
+  updateMappingInfo();
+  renderUnknownTable();
+  renderCustomTable();
+}
+
+function onCustomInputChange(e) {
+  const partner = e.target.dataset.partner;
+  const val = (e.target.value || '').trim();
+  if (!val) {
+    delete state.mappings[partner];
+  } else {
+    state.mappings[partner] = val;
+  }
+  persist();
+  updateMappingInfo();
+}
+
+document.addEventListener('change', e => {
+  if (e.target.matches('input.custom-input[data-role="custom"]')) {
+    onCustomInputChange(e);
+  }
+});
+
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({mappings: state.mappings}));
+  } catch(err) { console.warn(err); }
+}
+
+function loadFromStorage() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      if (d.mappings) Object.assign(state.mappings, d.mappings);
+    }
+  } catch(err) { console.warn(err); }
+}
+
+async function loadInitialMappings() {
+  try {
+    const resp = await fetch(KEYIN_JSON_URL + '?t=' + Date.now());
+    if (!resp.ok) return;
+    const d = await resp.json();
+    state.initialMappings = d.mappings || {};
+    Object.entries(state.initialMappings).forEach(([k,v]) => {
+      if (state.mappings[k] === undefined) state.mappings[k] = v;
+    });
+  } catch(err) {
+    console.warn('keyin JSON 로드 실패', err);
+  }
+}
+
+async function loadEnriched() {
+  const resp = await fetch(ENRICHED_JSON_URL + '?t=' + Date.now());
+  if (!resp.ok) throw new Error('inbound_enriched.json 로드 실패');
+  state.enriched = await resp.json();
+
+  const unknown = [];
+  const byPartner = state.enriched.by_partner_nationality || {};
+  Object.entries(byPartner).forEach(([partner, byNat]) => {
+    if (!partner || partner === '(미상)') return;
+    if (byNat['미확인']) {
+      const v = byNat['미확인'];
+      unknown.push({
+        partner,
+        rn_booking: v.rn_booking || 0,
+        rn_cancel: v.rn_cancel || 0,
+        rn_net: v.rn_net || 0,
+        rev_net: v.rev_net || 0,
+        prefix: (v.prefix || []).join(','),
+        confidence: 'unknown'
+      });
+    }
+  });
+  unknown.sort((a,b) => b.rn_booking - a.rn_booking);
+  state.unknownPartners = unknown;
+
+  // 키인 매핑된 거래처도 함께 노출 (이미 매핑됐어도 변경 가능하도록)
+  const keyinMappings = state.enriched.keyin_mappings || {};
+  Object.keys(keyinMappings).forEach(partner => {
+    if (state.unknownPartners.find(u => u.partner === partner)) return;
+    const byNat = byPartner[partner] || {};
+    let rnB=0, rnC=0, rnN=0, revN=0, prefixSet=new Set();
+    Object.values(byNat).forEach(v => {
+      rnB += v.rn_booking || 0;
+      rnC += v.rn_cancel || 0;
+      rnN += v.rn_net || 0;
+      revN += v.rev_net || 0;
+      (v.prefix || []).forEach(p => prefixSet.add(p));
+    });
+    state.unknownPartners.push({
+      partner, rn_booking: rnB, rn_cancel: rnC, rn_net: rnN, rev_net: revN,
+      prefix: [...prefixSet].join(','), confidence: 'keyin'
+    });
+  });
+  state.unknownPartners.sort((a,b) => b.rn_booking - a.rn_booking);
+}
+
+function renderSummary() {
+  const totalUnknown = state.unknownPartners.filter(u => u.confidence === 'unknown').length;
+  const mappedCount = Object.keys(state.mappings).filter(k => state.mappings[k]).length;
+  const totalUnknownRN = state.unknownPartners
+    .filter(u => u.confidence === 'unknown' && !state.mappings[u.partner])
+    .reduce((s,u) => s + u.rn_booking, 0);
+  const mappedRN = state.unknownPartners
+    .filter(u => state.mappings[u.partner])
+    .reduce((s,u) => s + u.rn_booking, 0);
+
+  document.getElementById('summary').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">미매핑 거래처</div>
+      <div class="stat-value">${totalUnknown}</div>
+      <div class="stat-sub">남은 미확인 RN: ${fmt(totalUnknownRN)}실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">키인 매핑 완료</div>
+      <div class="stat-value" style="color:var(--positive)">${mappedCount}</div>
+      <div class="stat-sub">매핑 RN: ${fmt(mappedRN)}실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">87 Master</div>
+      <div class="stat-value" style="color:var(--info)">${state.enriched?.master_partner_count || 0}</div>
+      <div class="stat-sub">87-prefix 자동 매핑 가능 거래처</div>
+    </div>
+  `;
+}
+
+function renderUnknownTable() {
+  const tbody = document.getElementById('unknownTbody');
+  if (!state.unknownPartners.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">미확인 거래처가 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.unknownPartners.map(u => {
+    const mapped = state.mappings[u.partner];
+    const cls = mapped ? 'mapped' : '';
+    const confLbl = u.confidence === 'keyin'
+      ? '<span class="confidence-pill cp-keyin">키인매핑</span>'
+      : '<span class="confidence-pill cp-unknown">미확인</span>';
+    return `<tr class="${cls}">
+      <td class="lalign">${esc(u.partner)} <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px">${u.prefix}</span></td>
+      <td>${confLbl}</td>
+      <td>${fmt(u.rn_booking)}</td>
+      <td>${fmt(u.rn_cancel)}</td>
+      <td><b>${fmt(u.rn_net)}</b></td>
+      <td>${fmtMil(u.rev_net)}</td>
+      <td class="lalign">${buildNatDropdown(mapped, u.partner)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCustomTable() {
+  const knownPartnerSet = new Set(state.unknownPartners.map(u => u.partner));
+  const customs = Object.entries(state.mappings).filter(([k,v]) => v && !knownPartnerSet.has(k));
+  const wrap = document.getElementById('customWrap');
+  const tbody = document.getElementById('customTbody');
+  if (!customs.length) {
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  tbody.innerHTML = customs.map(([k,v]) => `
+    <tr>
+      <td class="lalign">${esc(k)}</td>
+      <td class="lalign">${buildNatDropdown(v, k)}</td>
+      <td class="lalign"><button class="btn btn-sm btn-negative" onclick="removeCustom('${esc(k).replace(/'/g,"\\'")}')">✕ 삭제</button></td>
+    </tr>
+  `).join('');
+}
+
+function removeCustom(partner) {
+  delete state.mappings[partner];
+  persist();
+  updateMappingInfo();
+  renderCustomTable();
+}
+
+function addCustomMapping() {
+  const partner = (document.getElementById('newPartner').value || '').trim();
+  const nat = (document.getElementById('newNat').value || '').trim();
+  if (!partner) { showToast('거래처명을 입력하세요', 'err'); return; }
+  if (!nat) { showToast('국적을 선택하세요', 'err'); return; }
+  state.mappings[partner] = nat;
+  persist();
+  document.getElementById('newPartner').value = '';
+  document.getElementById('newNat').value = '';
+  updateMappingInfo();
+  renderUnknownTable();
+  renderCustomTable();
+  renderSummary();
+  showToast(`${partner} → ${nat} 추가됨`);
+}
+
+function applyAllTaiwan() {
+  if (!confirm('미매핑 모든 거래처를 「대만」으로 일괄 매핑하시겠습니까?')) return;
+  let n = 0;
+  state.unknownPartners.forEach(u => {
+    if (u.confidence === 'unknown' && !state.mappings[u.partner]) {
+      state.mappings[u.partner] = '대만';
+      n++;
+    }
+  });
+  persist();
+  updateMappingInfo();
+  renderUnknownTable();
+  renderCustomTable();
+  renderSummary();
+  showToast(`${n}개 거래처를 「대만」으로 매핑했습니다.`);
+}
+
+function resetAll() {
+  if (!confirm('모든 키인 매핑을 초기화하시겠습니까? (브라우저 로컬 + 화면)')) return;
+  state.mappings = {};
+  localStorage.removeItem(STORAGE_KEY);
+  updateMappingInfo();
+  renderUnknownTable();
+  renderCustomTable();
+  renderSummary();
+  showToast('초기화 완료. 「JSON 내보내기」를 다시 눌러야 파일에 반영됩니다.');
+}
+
+function updateMappingInfo() {
+  const n = Object.keys(state.mappings).filter(k => state.mappings[k]).length;
+  const initN = Object.keys(state.initialMappings).length;
+  document.getElementById('mappingInfo').innerHTML =
+    `현재 매핑: <b style="color:var(--gold-bright)">${n}개</b> · 파일 기준: <b>${initN}개</b>` +
+    (n !== initN ? ` <span style="color:var(--warning)">⚠️ 미저장 변경 있음</span>` : '');
+}
+
+function buildNewNatDropdown() {
+  const sel = document.getElementById('newNat');
+  NATIONALITY_OPTIONS.forEach(n => {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    sel.appendChild(o);
+  });
+}
+
+function exportJSON() {
+  // 빈 값 제거
+  const clean = {};
+  Object.entries(state.mappings).forEach(([k,v]) => {
+    if (k && v && v.trim()) clean[k.trim()] = v.trim();
+  });
+  const payload = {
+    _description: '인바운드(58) 57-prefix 미확인 거래처 → 국적 수동 매핑. 이 매핑이 87 master 매핑보다 우선합니다. inbound-nationality-keyin.html에서 편집 후 JSON 내보내기 → docs/data/ 폴더에 커밋하면 build_inbound_enriched.py 실행 시 반영.',
+    _updated_at: new Date().toISOString(),
+    _updated_by: 'inbound-nationality-keyin.html',
+    mappings: clean
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2) + '\n'], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'inbound_partner_nationality_keyin.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('lastSaved').textContent = '내보내기: ' + new Date().toLocaleTimeString('ko-KR');
+  showToast('JSON 내보내기 완료 — docs/data/ 폴더에 저장하세요.');
+}
+
+function loadFromFile() {
+  document.getElementById('fileInput').click();
+}
+
+function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (!d.mappings || typeof d.mappings !== 'object') throw new Error('mappings 키가 없습니다.');
+      state.mappings = {};
+      Object.entries(d.mappings).forEach(([k,v]) => {
+        if (k && v) state.mappings[k.trim()] = String(v).trim();
+      });
+      persist();
+      updateMappingInfo();
+      renderUnknownTable();
+      renderCustomTable();
+      renderSummary();
+      showToast(`"${file.name}" 불러오기 완료 (${Object.keys(state.mappings).length}개 매핑)`);
+    } catch(err) {
+      showToast('JSON 파싱 실패: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function init() {
+  buildNewNatDropdown();
+  loadFromStorage();
+  await loadInitialMappings();
+  try {
+    await loadEnriched();
+  } catch(err) {
+    document.getElementById('unknownTbody').innerHTML =
+      `<tr><td colspan="7" class="empty">데이터 로드 실패: ${err.message}<br><span style="font-size:11px">scripts/build_inbound_enriched.py 를 먼저 실행하세요.</span></td></tr>`;
+    return;
+  }
+  renderSummary();
+  renderUnknownTable();
+  renderCustomTable();
+  updateMappingInfo();
+}
+
+init();
+</script>
+</body>
+</html>
