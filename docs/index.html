@@ -2381,8 +2381,8 @@
 
       </div>
 
-      <!-- ROW 2: 사업장별 + 세그먼트별 테이블 -->
-      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
+      <!-- ROW 2: 사업장 → 거래처 → 상품카테고리 -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
 
         <!-- 사업장별 비교 -->
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
@@ -2392,9 +2392,9 @@
               <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">사업장별 금주 비교</span>
               <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">금주 net 온북 RN, 전주/전년 동기간比</span>
             </div>
-            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+            <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
-                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                <thead>
                   <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
                     <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
                     <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
@@ -2406,23 +2406,49 @@
                 </thead>
                 <tbody id="twc-prop-tbody"></tbody>
               </table>
+              <div id="twc-prop-more" style="text-align:center;padding:6px 0 2px;"></div>
             </div>
           </div>
         </div>
 
-        <!-- 세그먼트별 비교 -->
+        <!-- 거래처별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">거래처별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">아고다 / 야놀자 / 트립닷컴 등</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">거래처</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-channel-tbody"></tbody>
+              </table>
+              <div id="twc-channel-more" style="text-align:center;padding:6px 0 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 상품카테고리별 비교 -->
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
           <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
           <div style="padding:14px 18px;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">세그먼트별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">상품카테고리별 금주 비교</span>
               <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">OTA / G-OTA / Inbound 등</span>
             </div>
-            <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+            <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
-                <thead style="position:sticky;top:0;background:#252932;z-index:1;">
+                <thead>
                   <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
-                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">세그먼트</th>
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">상품카테고리</th>
                     <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
                     <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
                     <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
@@ -2430,18 +2456,19 @@
                 </thead>
                 <tbody id="twc-seg-tbody"></tbody>
               </table>
+              <div id="twc-seg-more" style="text-align:center;padding:6px 0 2px;"></div>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- ROW 3: AI 인사이트 -->
+      <!-- ROW 3: 주요 현황 요약 -->
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
         <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
         <div style="padding:14px 18px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-            <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">⚡ AI 인사이트</span>
+            <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">◆ 주요 현황 요약</span>
             <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">자동 추출 · 금주 변동 핵심</span>
           </div>
           <div id="twc-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"></div>
@@ -11357,6 +11384,28 @@ function toggleNewsMore(btn, id) {
     yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
     yoyWel.style.color = yoyW.color;
 
+    // 6줄 제한 + 더보기 토글
+    var SHOW_LIMIT = 6;
+    function bindMore(tbodyId, moreId, totalRows, colspan, accentColor) {
+      var tbody = document.getElementById(tbodyId);
+      var more = document.getElementById(moreId);
+      if (!tbody || !more) return;
+      if (totalRows <= SHOW_LIMIT) { more.innerHTML = ''; return; }
+      var expanded = false;
+      function refresh() {
+        var hidden = totalRows - SHOW_LIMIT;
+        var trs = tbody.querySelectorAll('tr');
+        for (var i = SHOW_LIMIT; i < trs.length; i++) {
+          trs[i].style.display = expanded ? '' : 'none';
+        }
+        more.innerHTML = '<button type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:4px 12px;color:' + accentColor + ';font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:0.08em;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+          (expanded ? '접기' : ('더보기 +' + hidden)) +
+          '</button>';
+        more.querySelector('button').addEventListener('click', function() { expanded = !expanded; refresh(); });
+      }
+      refresh();
+    }
+
     // ── 사업장 테이블 ──
     var tbody = document.getElementById('twc-prop-tbody');
     var props = (d.by_property || []).filter(function(p){ return p.this_net_rn !== 0 || p.prev_net_rn !== 0 || p.ly_net_rn !== 0; });
@@ -11379,12 +11428,40 @@ function toggleNewsMore(btn, id) {
       '</tr>';
     });
     tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+    bindMore('twc-prop-tbody', 'twc-prop-more', rows.length, 6, '#4ecdc4');
 
-    // ── 세그먼트 테이블 ──
+    // ── 거래처 테이블 ──
+    var ctbody = document.getElementById('twc-channel-tbody');
+    if (ctbody) {
+      var FOCUS_CH = ['아고다', '야놀자', '여기어때', '트립닷컴'];
+      var chs = (d.by_channel || []).filter(function(c){
+        return c.channel && (c.this_net_rn !== 0 || c.prev_net_rn !== 0 || c.ly_net_rn !== 0);
+      });
+      var maxChRN = chs.reduce(function(m, c){ return Math.max(m, Math.abs(c.this_net_rn||0)); }, 1);
+      var crows = chs.map(function(c) {
+        var w = pctBadge(c.wow_rn_pct), y = pctBadge(c.yoy_rn_pct);
+        var isFocus = FOCUS_CH.indexOf(c.channel) !== -1;
+        var color = isFocus ? '#a892c8' : 'rgba(255,255,255,0.85)';
+        var weight = isFocus ? '800' : '600';
+        var bar = Math.max(1, Math.round(Math.abs(c.this_net_rn||0) / maxChRN * 100));
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+          '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(c.channel) + '</td>' +
+          '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
+            '<div>' + fmtNum(c.this_net_rn) + '</div>' +
+            '<div style="height:2px;background:rgba(168,146,200,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
+          '</td>' +
+          '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
+          '<td style="padding:5px 6px;text-align:right;color:' + y.color + ';font-weight:700;">' + y.text + '</td>' +
+        '</tr>';
+      });
+      ctbody.innerHTML = crows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+      bindMore('twc-channel-tbody', 'twc-channel-more', crows.length, 4, '#a892c8');
+    }
+
+    // ── 상품카테고리(세그먼트) 테이블 ──
     var stbody = document.getElementById('twc-seg-tbody');
     var FOCUS = ['OTA', 'G-OTA', 'Inbound'];
-    var segs = (d.by_segment || []).filter(function(s){ return s.segment && s.this_net_rn !== 0 || s.prev_net_rn !== 0; });
-    // FOCUS 우선 정렬 + 나머지 net_rn 기준
+    var segs = (d.by_segment || []).filter(function(s){ return s.segment && (s.this_net_rn !== 0 || s.prev_net_rn !== 0); });
     segs.sort(function(a, b) {
       var ai = FOCUS.indexOf(a.segment), bi = FOCUS.indexOf(b.segment);
       if (ai !== -1 || bi !== -1) {
@@ -11412,6 +11489,7 @@ function toggleNewsMore(btn, id) {
       '</tr>';
     });
     stbody.innerHTML = srows.join('') || '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
+    bindMore('twc-seg-tbody', 'twc-seg-more', srows.length, 4, '#e6b970');
 
     // ── 인사이트 카드 ──
     var iwrap = document.getElementById('twc-insights');
