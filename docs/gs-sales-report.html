@@ -1071,6 +1071,46 @@ async function ensureOTB(){
   }catch(e){console.warn('[SalesReport] otb_data.json 로드 실패:',e.message)}
   return otbCache;
 }
+
+/* ── DB aggregated (실제 거래처/채널 단위 집계) ── */
+let dbCache=null;
+async function ensureDB(){
+  if(dbCache)return dbCache;
+  try{
+    const r=await fetch('data/db_aggregated.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok)dbCache=await r.json();
+  }catch(e){console.warn('[SalesReport] db_aggregated.json 로드 실패:',e.message)}
+  return dbCache;
+}
+
+/* otb_data 사업장명(예: "01.벨비발디") ↔ db_aggregated 사업장명(예: "소노벨 비발디파크") 매핑.
+   db에 등재되지 않은 항목은 매핑하지 않는다(필터 시 자연스럽게 제외). */
+const PROP_OTB_TO_DB={
+  '01.벨비발디':'소노벨 비발디파크',
+  '02.캄비발디':'소노캄 비발디파크',
+  '03.펫비발디':'소노펫 비발디파크',
+  '04.펠리체비발디':'소노펠리체 비발디파크',
+  '05.빌리지비발디':'소노펠리체 빌리지 비발디파크',
+  '06.양평':'소노휴 양평',
+  '07.델피노':'델피노',
+  '08.쏠비치양양':'쏠비치 양양',
+  '09.쏠비치삼척':'쏠비치 삼척',
+  '10.소노벨단양':'소노문 단양',
+  '11.소노캄경주':'소노벨 경주',
+  '12.소노벨청송':'소노벨 청송',
+  '13.소노벨천안':'소노벨 천안',
+  '14.소노벨변산':'소노벨 변산',
+  '15.소노캄여수':'소노캄 여수',
+  '16.소노캄거제':'소노캄 거제',
+  '17.쏠비치진도':'쏠비치 진도',
+  '18.소노벨제주':'소노벨 제주',
+  '19.소노캄제주':'소노캄 제주',
+  '20.소노캄고양':'소노캄 고양',
+  '21.소노문해운대':'소노문 해운대',
+  '22.쏠비치남해':'쏠비치 남해',
+  '23.르네블루':'르네블루'
+};
+const PROP_DB_TO_OTB=Object.fromEntries(Object.entries(PROP_OTB_TO_DB).map(([k,v])=>[v,k]));
 function getMonthBlock(monthKey){
   if(!otbCache||!otbCache.allMonths)return null;
   const mm=parseInt(monthKey.slice(5),10);
@@ -1468,52 +1508,81 @@ function buildPropertyCardData(md){
   });
 }
 
-/* 거래처(채널/세그먼트) 카드 데이터 — md.byPropertySegment 모든 키 합산 후 YoY 계산 */
-function buildChannelCardData(md){
-  if(!md||!md.byPropertySegment)return [];
-  const out=[];
-  Object.entries(md.byPropertySegment).forEach(([segKey,arr])=>{
-    if(!Array.isArray(arr)||!arr.length)return;
-    /* 사업장 선택 시 → 그 사업장만 */
-    let rows=arr;
-    if(mgmtSelProperty){
-      rows=rows.filter(p=>p.name===mgmtSelProperty);
-    }else if(curRole==='ota'){
+/* 거래처(실제 채널사) 카드 데이터 — db_aggregated.by_channel 기반.
+   - 키 = 실제 거래처(아고다, 야놀자, 트립닷컴 …) ; 세그먼트(OTA/G-OTA/Inbound)는 by_channel_segment로 결정
+   - 현재 role의 세그먼트에 속하는 채널만 표시 (D멤버스/FIT 등 내부분류 자동 제외, '기타' 제외)
+   - YoY = 선택월 net_rev / 전년 동월 net_rev
+   - mgmtSelProperty 또는 권역/사업장 필터 시: by_property_channel 합산
+*/
+function buildChannelCardData(md, monthKey){
+  if(!dbCache||!dbCache.by_channel||!monthKey)return [];
+  const segWanted=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
+  const byCh=dbCache.by_channel;
+  const byChSeg=dbCache.by_channel_segment||{};
+  const byPropCh=dbCache.by_property_channel||{};
+  const yyyymm=monthKey.replace('-','');
+  const lyKey=String(parseInt(yyyymm.slice(0,4),10)-1)+yyyymm.slice(4);
+
+  /* 스코프 사업장(db naming) 결정. null 이면 전사 합산(by_channel 직접 사용). */
+  let scopeDbProps=null;
+  if(mgmtSelProperty){
+    const dbN=PROP_OTB_TO_DB[mgmtSelProperty];
+    scopeDbProps=dbN?[dbN]:[];
+  }else if(curRole==='ota'){
+    if(activeProps.size>0&&md&&Array.isArray(md.byProperty)){
+      scopeDbProps=[];
+      md.byProperty.forEach(p=>{
+        if(propMatchActive(p.name)){
+          const dbN=PROP_OTB_TO_DB[p.name];
+          if(dbN)scopeDbProps.push(dbN);
+        }
+      });
+    }else if(curRegion!=='전체'){
       const wanted=REGION_KO_TO_EN[curRegion];
-      if(wanted)rows=rows.filter(p=>p.region===wanted);
-      if(activeProps.size>0)rows=rows.filter(p=>propMatchActive(p.name));
+      const propRegMap=(dbCache.meta&&dbCache.meta.property_region_map)||{};
+      scopeDbProps=Object.entries(propRegMap).filter(([,r])=>r===wanted).map(([n])=>n);
     }
-    let rev_actual=0,rev_budget=0,rev_last=0,rns_actual=0,rns_last=0,rns_budget=0;
-    rows.forEach(p=>{
-      const adr=effectiveAdr(p);
-      rev_actual+=p.rev_actual||0;
-      rev_budget+=p.rev_budget||0;
-      rev_last+=(p.rns_last||0)*adr;
-      rns_actual+=p.rns_actual||0;
-      rns_last+=p.rns_last||0;
-      rns_budget+=p.rns_budget||0;
-    });
-    /* segmentData가 더 정확한 rev_last 보유 — 무필터일 때만 덮어쓰기 (전 사업장 합산이므로 신뢰도 높음) */
-    const isTotalScope=!mgmtSelProperty&&(curRole!=='ota'||(curRegion==='전체'&&activeProps.size===0));
-    if(isTotalScope&&md.segmentData&&md.segmentData[segKey]){
-      const sd=md.segmentData[segKey];
-      if(sd.rev_actual)rev_actual=sd.rev_actual;
-      if(sd.rev_budget)rev_budget=sd.rev_budget;
-      if(sd.rev_last)  rev_last  =sd.rev_last;
-      if(sd.rns_actual)rns_actual=sd.rns_actual;
-      if(sd.rns_last)  rns_last  =sd.rns_last;
-      if(sd.rns_budget)rns_budget=sd.rns_budget;
+  }
+
+  const out=[];
+  Object.keys(byCh).forEach(ch=>{
+    if(ch==='기타')return;
+    const segMap=byChSeg[ch];
+    const seg=segMap&&Object.keys(segMap)[0];
+    if(seg!==segWanted)return;
+
+    let cur=0,last=0,curRn=0;
+    if(scopeDbProps){
+      scopeDbProps.forEach(p=>{
+        const cell=byPropCh[p]&&byPropCh[p][ch];
+        if(!cell)return;
+        const c=cell[yyyymm], l=cell[lyKey];
+        if(c){cur+=c.net_rev||0; curRn+=c.net_rn||0;}
+        if(l) last+=l.net_rev||0;
+      });
+    }else{
+      const ts=byCh[ch];
+      const c=ts[yyyymm], l=ts[lyKey];
+      if(c){cur=c.net_rev||0; curRn=c.net_rn||0;}
+      if(l) last=l.net_rev||0;
     }
-    if(rev_actual===0&&rev_budget===0&&rev_last===0)return;
-    const yoy=rev_last>0?Math.round((rev_actual/rev_last-1)*100):null;
-    const ach=rev_budget>0?Math.round((rev_actual/rev_budget)*100):null;
+
+    if(cur===0&&last===0)return;
+
+    /* db_aggregated 단위는 백만원 → otb_data 카드와 통일하려면 ×1,000,000 (원) 변환 */
+    const rev_actual=cur*1000000;
+    const rev_last  =last*1000000;
+    const yoy=last>0?Math.round((cur/last-1)*100):null;
+
     out.push({
-      name:segKey, rev_actual, rev_budget, rev_last,
-      rns_actual, rns_last, rns_budget,
-      yoy, ach
+      name:ch, segment:seg,
+      rev_actual, rev_last, rev_budget:0,
+      rns_actual:curRn, rns_last:0, rns_budget:0,
+      yoy, ach:null
     });
   });
-  /* 하락폭 큰 순 (양수는 뒤로) */
+
+  /* 하락 큰 순 (양수는 뒤로, null 은 가장 뒤) */
   return out.sort((a,b)=>{
     const ya=a.yoy==null?9999:a.yoy;
     const yb=b.yoy==null?9999:b.yoy;
@@ -1521,15 +1590,21 @@ function buildChannelCardData(md){
   });
 }
 
-/* 거래처 클릭 시 → 사업장 강조용: 해당 segKey가 사업장별로 어떻게 분포하는지 */
-function buildPropertyHighlightForChannel(md,segKey){
-  if(!md||!md.byPropertySegment||!md.byPropertySegment[segKey])return new Set();
+/* 거래처(채널) 클릭 시 → 사업장 강조용: 해당 채널이 선택월 전년比 하락한 사업장(otb naming) */
+function buildPropertyHighlightForChannel(channelName, monthKey){
   const set=new Set();
-  /* 해당 채널이 전년比 하락한 사업장만 집계 */
-  md.byPropertySegment[segKey].forEach(p=>{
-    const adr=effectiveAdr(p);
-    const last=(p.rns_last||0)*adr;
-    if(last>0&&(p.rev_actual||0)<last)set.add(p.name);
+  if(!dbCache||!dbCache.by_property_channel||!channelName||!monthKey)return set;
+  const yyyymm=monthKey.replace('-','');
+  const lyKey=String(parseInt(yyyymm.slice(0,4),10)-1)+yyyymm.slice(4);
+  Object.entries(dbCache.by_property_channel).forEach(([dbProp,channels])=>{
+    const cell=channels[channelName];
+    if(!cell)return;
+    const cur=(cell[yyyymm]&&cell[yyyymm].net_rev)||0;
+    const last=(cell[lyKey]&&cell[lyKey].net_rev)||0;
+    if(last>0&&cur<last){
+      const otbName=PROP_DB_TO_OTB[dbProp];
+      if(otbName)set.add(otbName);
+    }
   });
   return set;
 }
@@ -1543,6 +1618,7 @@ async function renderMgmtCards(){
     return;
   }
   await ensureOTB();
+  await ensureDB();
   const md=getMonthBlock(m);
   if(!md){
     pane.innerHTML=`<div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">${m} OTB 데이터 없음</div></div>`;
@@ -1552,10 +1628,10 @@ async function renderMgmtCards(){
 
   /* 데이터 빌드 */
   const propData=buildPropertyCardData(md);
-  const chanData=buildChannelCardData(md);
+  const chanData=buildChannelCardData(md,m);
 
   /* 거래처 클릭 시 → 사업장 강조 셋 */
-  const highlightProps=mgmtSelChannel?buildPropertyHighlightForChannel(md,mgmtSelChannel):new Set();
+  const highlightProps=mgmtSelChannel?buildPropertyHighlightForChannel(mgmtSelChannel,m):new Set();
 
   /* === 사업장 카드 === */
   const segLbl=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
@@ -1611,14 +1687,15 @@ async function renderMgmtCards(){
       const yoyTxt=yoy!=null?`${yoy>=0?'+':''}${yoy}%`:'—';
       const actMM=Math.round((c.rev_actual||0)/1000000).toLocaleString('ko-KR');
       const lastMM=Math.round((c.rev_last||0)/1000000).toLocaleString('ko-KR');
-      const achTxt=c.ach!=null?`달성 ${c.ach}%`:'';
-      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="실적 ${actMM}백만 / 전년 ${lastMM}백만 · ${achTxt}">
+      const rnTxt=c.rns_actual?Math.round(c.rns_actual).toLocaleString('ko-KR'):'—';
+      const segPill=c.segment?`<span class="seg-pill ${segCls(c.segment)}">${escapeHtml(c.segment)}</span>`:'';
+      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="실적 ${actMM}백만 / 전년 ${lastMM}백만 · 객실 ${rnTxt}RN">
         <div class="mgmt-row-main">
-          <div class="mgmt-row-name">${escapeHtml(c.name)}</div>
+          <div class="mgmt-row-name">${escapeHtml(c.name)}${segPill}</div>
           <div class="mgmt-row-meta">
             <span>실적 ${actMM}M</span>
             <span>전년 ${lastMM}M</span>
-            ${c.ach!=null?`<span>달성 ${c.ach}%</span>`:''}
+            <span>객실 ${rnTxt}RN</span>
           </div>
         </div>
         <div class="mgmt-row-side">
@@ -1630,7 +1707,7 @@ async function renderMgmtCards(){
   }
 
   const propSubLbl=mgmtSelChannel?`거래처 [${mgmtSelChannel}] 하락 사업장 강조 중`:`${segLbl} · 달성률 낮은 순`;
-  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] 거래처만`:'전년比 하락 큰 순';
+  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] · ${segLbl} 채널 · 전년比 하락 큰 순`:`${segLbl} 채널 · 전년比 하락 큰 순`;
 
   pane.innerHTML=`<div class="mgmt-grid">
     <div class="mgmt-card">
