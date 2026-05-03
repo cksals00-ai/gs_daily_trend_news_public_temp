@@ -1550,7 +1550,9 @@ def overlay_daily_booking(all_months, daily_bk, now_kst):
     no_db_names = {dn for _, dn, _, dp in PROPERTY_DEFS if not dp}
 
     for m_str, snap in all_months.items():
-        m_idx = int(m_str)
+        # "summary"=전체 합산(0과 동치), "1".."12"=해당 월
+        is_summary = (m_str == "summary")
+        m_idx = 0 if is_summary else int(m_str)
         props = snap.get("byProperty", [])
 
         # summary 보정을 위해 추가분 추적
@@ -1694,9 +1696,22 @@ def main():
     print(f"  오늘 데이터 날짜: {today_date}")
     print(f"  today_booking={today_booking}, today_cancel={today_cancel}, today_net={today_net}")
 
-    # 월별 스냅샷 (0=전체, 1~12=각 월)
+    # 월별 스냅샷
+    #   "summary" : 전체 합산 (12개월 통합)
+    #   "1"~"12"  : 해당 월
+    # ※ 하위 호환성: 출력 직전에 "0" 키를 "summary" 별칭으로 추가 (구 소비처용)
+    SUMMARY_KEY = "summary"
     all_months = {}
-    for m in range(0, 13):
+    all_months[SUMMARY_KEY] = build_month_snapshot(
+        db_bp, budgets, 0,
+        db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
+        adj_by_prop=adj_by_prop, adj_by_segment=adj_by_segment,
+        holiday_factors=holiday_factors,
+        lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
+        rm_fcst_props=rm_fcst_props,
+        rm_trend_snapshots=rm_trend_snapshots,
+    )
+    for m in range(1, 13):
         all_months[str(m)] = build_month_snapshot(
             db_bp, budgets, m,
             db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
@@ -1709,7 +1724,8 @@ def main():
 
     # today 데이터를 월 스냅샷에 주입 (월별로 stay_month 필터 적용)
     for m_str, snap in all_months.items():
-        if m_str == "0":
+        is_summary = (m_str == SUMMARY_KEY)
+        if is_summary:
             snap["summary"]["today_booking"] = today_booking
             snap["summary"]["today_cancel"]  = today_cancel
             snap["summary"]["today_net"]     = today_net
@@ -1722,7 +1738,7 @@ def main():
 
         for prop in snap["byProperty"]:
             db_props = next((d for _, n, _, d in PROPERTY_DEFS if n == prop["name"]), [])
-            if m_str == "0":
+            if is_summary:
                 prop_booking, prop_booking_rev = get_today_booking_by_props(db, today_date, db_props)
                 prop_cancel,  prop_cancel_rev  = get_today_cancel_by_props(db, today_date, db_props)
             else:
@@ -1736,7 +1752,7 @@ def main():
             prop["today_cancel_rev"]  = round(prop_cancel_rev  * 1_000_000)
             prop["today_net_rev"]     = round((prop_booking_rev - prop_cancel_rev) * 1_000_000)
 
-        if m_str == "0":
+        if is_summary:
             snap["summary"]["today_booking_rev"] = sum(p["today_booking_rev"] for p in snap["byProperty"])
             snap["summary"]["today_cancel_rev"]  = sum(p["today_cancel_rev"]  for p in snap["byProperty"])
             snap["summary"]["today_net_rev"]     = sum(p["today_net_rev"]     for p in snap["byProperty"])
@@ -1747,7 +1763,7 @@ def main():
                 # 해당 세그먼트만의 today 데이터 (3세그 합산 X → 개별 세그먼트)
                 pdbps = db.get("pickup_daily_by_property_segment", {})
                 cdbps = db.get("cancel_daily_by_property_segment", {})
-                if m_str == "0":
+                if is_summary:
                     prop_booking, prop_cancel = 0, 0
                     if today_date:
                         for pname in db_props:
@@ -1769,7 +1785,7 @@ def main():
         # ── segmentData에 today 주입 ──
         for seg, seg_summary in snap.get("segmentData", {}).items():
             if today_date:
-                if m_str == "0":
+                if is_summary:
                     # 전체: net_daily_by_segment (전월 합산)
                     nds = db.get("net_daily_by_segment", {})
                     pds = db.get("pickup_daily_by_segment", {})
@@ -1832,10 +1848,12 @@ def main():
             "segments": ["전체"] + SEGMENT_KEYS,
         },
         # 전체(기본) 스냅샷 (월 필터=전체 상태)
-        "summary":    all_months["0"]["summary"],
-        "byProperty": all_months["0"]["byProperty"],
+        "summary":    all_months["summary"]["summary"],
+        "byProperty": all_months["summary"]["byProperty"],
         # 월별 분리 데이터 (월 필터 작동용)
-        "allMonths":  all_months,
+        #   "summary" = 전체 합산 / "1".."12" = 해당 월
+        #   하위 호환성: "0"은 "summary"의 별칭 (구 소비처 보호용; 신규 코드는 "summary" 사용)
+        "allMonths":  {**all_months, "0": all_months["summary"]},
         # Chart
         "monthly":    monthly_chart,
         # YoY 사업장별 추이

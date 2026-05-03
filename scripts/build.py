@@ -1360,7 +1360,8 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     # ── 1) 세그먼트별 전일 픽업 ──
     main_segs = ["OTA", "G-OTA", "Inbound"]
     seg_today = {}
-    full_seg = all_months.get("0", {}).get("segmentData", {})
+    # "summary" = 전체 합산 (구 "0" 키는 별칭으로 호환)
+    full_seg = (all_months.get("summary") or all_months.get("0") or {}).get("segmentData", {})
     for seg in main_segs:
         s = full_seg.get(seg, {})
         seg_today[seg] = {

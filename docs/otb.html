@@ -1709,7 +1709,7 @@ function buildPropChips(data) {
   if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
 
   // 해당 권역의 사업장 목록 가져오기
-  const allProps = (data.allMonths ? data.allMonths['0'].byProperty : data.byProperty) || [];
+  const allProps = (data.allMonths ? (data.allMonths['summary'] || data.allMonths['0'] || {}).byProperty : data.byProperty) || [];
   const regionProps = allProps.filter(p => p.region === activeRegion);
 
   [propContainer, mPropContainer].forEach(c => {

@@ -465,7 +465,7 @@ function aggregateProps(props) {
 
 function getOverallSummary() {
   if (!data) return null;
-  // M1~M12 per-month summary/byProperty 직접 합산 — allMonths['0']은
+  // M1~M12 per-month summary/byProperty 직접 합산 — allMonths['summary']는
   // 빌드 시점 LY 동기간 산출 로직이 월별 분할과 어긋나 합계 불일치 발생 → 우회.
   const sumKeys = ['rns_budget','rns_actual','rns_last','rev_budget','rev_actual','rev_last',
     'today_booking','today_cancel','today_net','today_booking_rev','today_cancel_rev','today_net_rev',
@@ -989,7 +989,7 @@ function buildPropChips() {
   if (propWrap) propWrap.style.display = '';
   if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
 
-  const allProps = (data.allMonths ? data.allMonths['0'].byProperty : data.byProperty) || [];
+  const allProps = (data.allMonths ? (data.allMonths['summary'] || data.allMonths['0'] || {}).byProperty : data.byProperty) || [];
   const regionProps = allProps.filter(p => p.region === activeRegion);
 
   if (!propContainer) return;
