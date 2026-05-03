@@ -2176,6 +2176,18 @@
         </div>
       </div>
 
+      <!-- 채널 카테고리 × 월 매트릭스 (목표 대비 기획전 KPI 비중) -->
+      <div style="background:var(--bg); border-radius:6px; padding:16px; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <div style="font-size:13px; font-weight:600; color:var(--ink);">채널 × 월 기획전 KPI 비중 매트릭스 (2026)</div>
+            <div style="font-size:11px; color:var(--ink-muted); margin-top:4px;">셀: 기획전 건수 / 월별 RNS 목표(만실당) · 색농도 = 비중 강도 · 채널 카테고리는 OTA/G-OTA/Inbound 세그먼트로 분류</div>
+          </div>
+          <div style="font-size:11px; color:var(--ink-faint); font-family:var(--mono);">데이터: campaign_data.json × otb_data.json</div>
+        </div>
+        <div id="campaignChannelMonthMatrix" style="overflow-x:auto;"></div>
+      </div>
+
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
         <div style="background:var(--bg); border-radius:6px; padding:16px;">
           <div style="font-size:12px; color:var(--ink-muted); margin-bottom:8px;">TOP 10 인플루언서 성과 (RNs)</div>
@@ -5767,6 +5779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTrend(trendData);
     renderUpdateTime();
     renderCampaignCharts(campaignData);
+    renderCampaignChannelMonthMatrix(otbData, campaignData);
     renderRmFcstCharts(fcstData, trendData);
     renderBizPlanCharts();
 
@@ -6966,6 +6979,194 @@ function renderCampaignStayChart() {
 // ═══════════════════════════════════════════════════════
 // NEW CHART FUNCTIONS - Campaign, RM FCST, Biz Plan
 // ═══════════════════════════════════════════════════════
+
+// 캠페인 채널명 → OTB 세그먼트(OTA / G-OTA / Inbound) 매핑
+// 분류 기준: 글로벌 OTA(아고다·익스피디아·부킹·트립닷컴 계열)는 G-OTA,
+// 인바운드/홀세일 여행사는 Inbound, 그 외 국내 온라인·소셜커머스·인플루언서는 OTA로 묶음.
+const CAMPAIGN_CHANNEL_TO_SEGMENT = {
+  '맘맘': 'OTA',
+  '놀유니버스/놀이의발견': 'OTA',
+  '카카오메이커스': 'OTA',
+  '여기어때': 'OTA',
+  'G마켓/옥션': 'OTA',
+  '인플루언서': 'OTA',
+  '티딜/톡딜': 'OTA',
+  '롯데온': 'OTA',
+  '카카오예약/톡': 'OTA',
+  '쿠팡': 'OTA',
+  '키즈노트': 'OTA',
+  '네이버': 'OTA',
+  '프리즘': 'OTA',
+  '카카오쇼핑라이브': 'OTA',
+  '11번가': 'OTA',
+  '마이리얼트립': 'OTA',
+  '이베이(종이비행기)': 'OTA',
+  '야놀자': 'OTA',
+  '트립비토즈': 'OTA',
+  'CJ온스타일  럭셔리체크인': 'OTA',
+  '와디즈': 'OTA',
+  // G-OTA (현재 데이터엔 없으나 향후 들어올 글로벌 OTA 키워드)
+  '트립닷컴': 'G-OTA',
+  '부킹닷컴': 'G-OTA',
+  '익스피디아': 'G-OTA',
+  '아고다': 'G-OTA',
+  '호텔스닷컴': 'G-OTA',
+  // Inbound (B2B 인바운드 여행사)
+  '여행사': 'Inbound',
+};
+
+function classifyCampaignChannelToSegment(name) {
+  if (!name) return null;
+  if (CAMPAIGN_CHANNEL_TO_SEGMENT.hasOwnProperty(name)) {
+    return CAMPAIGN_CHANNEL_TO_SEGMENT[name];
+  }
+  // 키 매칭 fallback (글로벌 OTA 키워드 / 여행사 키워드 부분일치)
+  const lower = name.toLowerCase();
+  if (lower.includes('booking') || lower.includes('expedia') || lower.includes('agoda') ||
+      name.includes('트립닷컴') || name.includes('부킹') || name.includes('익스피디아') ||
+      name.includes('아고다') || name.includes('호텔스닷컴')) {
+    return 'G-OTA';
+  }
+  if (name.includes('여행사') || name.includes('인바운드')) return 'Inbound';
+  // 그 외는 OTA(국내 온라인) 기본값
+  return 'OTA';
+}
+
+function renderCampaignChannelMonthMatrix(otbData, campaignData) {
+  const host = document.getElementById('campaignChannelMonthMatrix');
+  if (!host) return;
+  if (!otbData || !campaignData || !campaignData.channel_by_month || !otbData.allMonths) {
+    host.innerHTML = '<div style="color:var(--ink-muted); padding:12px; font-size:12px;">데이터 없음</div>';
+    return;
+  }
+
+  const segments = ['OTA', 'G-OTA', 'Inbound'];
+  const months   = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+  // 1) 세그먼트별·월별 캠페인 건수 집계
+  const campCount = {};   // {seg: {month: count}}
+  segments.forEach(s => { campCount[s] = {}; months.forEach(m => campCount[s][m] = 0); });
+
+  Object.entries(campaignData.channel_by_month).forEach(([chName, byMonth]) => {
+    const seg = classifyCampaignChannelToSegment(chName);
+    if (!seg || !campCount[seg]) return;
+    Object.entries(byMonth || {}).forEach(([yyyymm, cnt]) => {
+      // 2026년만 사용 (otb 목표가 2026년)
+      const m = (yyyymm || '').match(/^2026-(\d{2})$/);
+      if (!m) return;
+      const mi = parseInt(m[1], 10);
+      campCount[seg][mi] += (cnt || 0);
+    });
+  });
+
+  // 2) 세그먼트별·월별 RNS 목표 (otb_data.allMonths[m].segmentData[seg].rns_budget)
+  const targetRns = {};
+  segments.forEach(s => { targetRns[s] = {}; months.forEach(m => {
+    const snap = otbData.allMonths[String(m)];
+    const t = snap && snap.segmentData && snap.segmentData[s] ? (snap.segmentData[s].rns_budget || 0) : 0;
+    targetRns[s][m] = t;
+  });});
+
+  // 3) 비중 = 캠페인 건수 / (RNS목표 / 10000) → 1만 RN당 기획전 건수
+  //    색농도용 정규화는 전체 셀 중 max 기준
+  const density = {};
+  let maxDensity = 0;
+  segments.forEach(s => {
+    density[s] = {};
+    months.forEach(m => {
+      const t = targetRns[s][m];
+      const c = campCount[s][m];
+      const d = (t > 0) ? (c / (t / 10000)) : 0;
+      density[s][m] = d;
+      if (d > maxDensity) maxDensity = d;
+    });
+  });
+
+  // 4) 행별/열별 합계
+  const rowCampSum = {}; const rowTargetSum = {};
+  segments.forEach(s => {
+    rowCampSum[s]   = months.reduce((a,m)=>a+campCount[s][m], 0);
+    rowTargetSum[s] = months.reduce((a,m)=>a+targetRns[s][m], 0);
+  });
+  const colCampSum = {}; const colTargetSum = {};
+  months.forEach(m => {
+    colCampSum[m]   = segments.reduce((a,s)=>a+campCount[s][m], 0);
+    colTargetSum[m] = segments.reduce((a,s)=>a+targetRns[s][m], 0);
+  });
+  const totalCamp   = months.reduce((a,m)=>a+colCampSum[m], 0);
+  const totalTarget = months.reduce((a,m)=>a+colTargetSum[m], 0);
+
+  const fmt   = (n) => (n||0).toLocaleString();
+  const fmtD  = (d) => (d > 0 ? d.toFixed(2) : '–');
+
+  const segColor = { 'OTA': 'var(--gold)', 'G-OTA': 'var(--info)', 'Inbound': 'var(--positive)' };
+  const cellBg = (d) => {
+    if (!d || d <= 0) return 'transparent';
+    const r = Math.min(1, d / (maxDensity || 1));
+    // gold tint heatmap
+    const alpha = (0.10 + 0.55 * r).toFixed(3);
+    return `rgba(232,162,86,${alpha})`;
+  };
+
+  const monthHeader = months.map(m => `<th style="padding:6px 8px; font-size:11px; font-weight:600; color:var(--ink-muted); border-bottom:1px solid rgba(255,255,255,0.06); text-align:center;">${m}월</th>`).join('');
+  const totalHeaderHtml = `<th style="padding:6px 8px; font-size:11px; font-weight:600; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.06); text-align:center; border-left:1px solid rgba(255,255,255,0.06);">연합계</th>`;
+
+  const rowsHtml = segments.map(seg => {
+    const cellsHtml = months.map(m => {
+      const c = campCount[seg][m];
+      const t = targetRns[seg][m];
+      const d = density[seg][m];
+      const tip = `${seg} · ${m}월\n기획전 건수: ${fmt(c)}건\nRNS 목표: ${fmt(t)}\n1만 RN당 건수: ${fmtD(d)}`;
+      const topLine = `<div style="font-size:13px; font-weight:600; color:var(--ink);">${c>0?fmt(c):'–'}</div>`;
+      const subLine = `<div style="font-size:10px; color:var(--ink-faint); margin-top:2px;">${fmtD(d)}</div>`;
+      return `<td title="${tip}" style="padding:8px 6px; text-align:center; background:${cellBg(d)}; border-bottom:1px solid rgba(255,255,255,0.04); border-right:1px solid rgba(255,255,255,0.04);">${topLine}${subLine}</td>`;
+    }).join('');
+    const rowDensity = (rowTargetSum[seg] > 0) ? (rowCampSum[seg] / (rowTargetSum[seg] / 10000)) : 0;
+    const totalCell = `<td style="padding:8px 6px; text-align:center; border-left:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div style="font-size:13px; font-weight:700; color:var(--ink);">${fmt(rowCampSum[seg])}건</div>
+      <div style="font-size:10px; color:var(--ink-faint); margin-top:2px;">${fmtD(rowDensity)}</div>
+    </td>`;
+    const segLabel = `<th style="padding:8px 12px; text-align:left; color:${segColor[seg]||'var(--ink)'}; font-weight:600; font-size:12px; border-bottom:1px solid rgba(255,255,255,0.04); white-space:nowrap;">${seg}</th>`;
+    return `<tr>${segLabel}${cellsHtml}${totalCell}</tr>`;
+  }).join('');
+
+  // 합계 행
+  const colTotalsHtml = months.map(m => {
+    const colDensity = (colTargetSum[m] > 0) ? (colCampSum[m] / (colTargetSum[m] / 10000)) : 0;
+    return `<td style="padding:6px; text-align:center; border-top:1px solid rgba(255,255,255,0.10); color:var(--ink-soft); font-size:11px;">
+      <div style="font-weight:600;">${fmt(colCampSum[m])}건</div>
+      <div style="color:var(--ink-faint); font-size:10px; margin-top:2px;">${fmtD(colDensity)}</div>
+    </td>`;
+  }).join('');
+  const grandDensity = (totalTarget > 0) ? (totalCamp / (totalTarget / 10000)) : 0;
+  const totalRowHtml = `<tr>
+    <th style="padding:6px 12px; text-align:left; color:var(--gold); font-weight:600; font-size:12px; border-top:1px solid rgba(255,255,255,0.10);">합계</th>
+    ${colTotalsHtml}
+    <td style="padding:6px; text-align:center; border-top:1px solid rgba(255,255,255,0.10); border-left:1px solid rgba(255,255,255,0.06); color:var(--gold); font-size:11px;">
+      <div style="font-weight:700;">${fmt(totalCamp)}건</div>
+      <div style="color:var(--ink-faint); font-size:10px; margin-top:2px;">${fmtD(grandDensity)}</div>
+    </td>
+  </tr>`;
+
+  host.innerHTML = `
+    <table style="width:100%; border-collapse:collapse; min-width:720px;">
+      <thead>
+        <tr>
+          <th style="padding:6px 12px; text-align:left; font-size:11px; font-weight:600; color:var(--ink-muted); border-bottom:1px solid rgba(255,255,255,0.06);">채널 카테고리</th>
+          ${monthHeader}
+          ${totalHeaderHtml}
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        ${totalRowHtml}
+      </tbody>
+    </table>
+    <div style="margin-top:8px; font-size:11px; color:var(--ink-muted);">
+      각 셀 상단=해당 (채널·월) 기획전 건수 / 하단=목표 1만 RN당 건수(밀도). 셀 색농도가 짙을수록 기획전 비중이 높음.
+    </div>
+  `;
+}
 
 function renderCampaignCharts(data) {
   if (!data) return;
