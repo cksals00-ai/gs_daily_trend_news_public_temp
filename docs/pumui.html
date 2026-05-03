@@ -246,13 +246,13 @@ const PROPERTIES = [
   {id:'02',otb:'02.캄비발디',db:'소노캄 비발디파크',occ:'02.캄비발디',label:'소노캄 비발디파크'},
   {id:'03',otb:'03.펫비발디',db:'소노펫 비발디파크',occ:'03.펫비발디',label:'소노펫 비발디파크'},
   {id:'04',otb:'04.펠리체비발디',db:'소노펠리체 비발디파크',occ:'04.펠리체비발디',label:'소노펠리체 비발디파크'},
-  {id:'05',otb:'05.빌리지비발디',db:'소노펠리체 빌리지 비발디파크',occ:'05.빌리지비발디',label:'빌리지 비발디파크'},
-  {id:'06',otb:'06.양평',db:'소노휴 양평',occ:'06.양평',label:'소노휴 양평'},
+  {id:'05',otb:'05.빌리지비발디',db:'소노펠리체 빌리지 비발디파크',daily:'소노펠리체빌리지 비발디파크',occ:'05.빌리지비발디',label:'빌리지 비발디파크'},
+  {id:'06',otb:'06.양평',db:'소노휴 양평',daily:'소노벨 양평',occ:'06.양평',label:'소노휴 양평'},
   {id:'07',otb:'07.델피노',db:'델피노',occ:'07.델피노',label:'델피노'},
   {id:'08',otb:'08.쏠비치양양',db:'쏠비치 양양',occ:'08.양양',label:'쏠비치 양양'},
   {id:'09',otb:'09.쏠비치삼척',db:'쏠비치 삼척',occ:'09.삼척',label:'쏠비치 삼척'},
-  {id:'10',otb:'10.소노벨단양',db:'소노문 단양',occ:'10.단양',label:'소노벨 단양'},
-  {id:'11',otb:'11.소노캄경주',db:'소노벨 경주',occ:'11.경주',label:'소노캄 경주'},
+  {id:'10',otb:'10.소노벨단양',db:'소노문 단양',daily:'소노벨 단양',occ:'10.단양',label:'소노벨 단양'},
+  {id:'11',otb:'11.소노캄경주',db:'소노벨 경주',daily:'소노캄 경주',occ:'11.경주',label:'소노캄 경주'},
   {id:'12',otb:'12.소노벨청송',db:'소노벨 청송',occ:'12.청송',label:'소노벨 청송'},
   {id:'13',otb:'13.소노벨천안',db:'소노벨 천안',occ:'13.천안',label:'소노벨 천안'},
   {id:'14',otb:'14.소노벨변산',db:'소노벨 변산',occ:'14.변산',label:'소노벨 변산'},
@@ -271,7 +271,7 @@ const GS_SEGMENTS = ['OTA','G-OTA','Inbound'];
 const ALL_SEGMENTS = ['OTA','G-OTA','Inbound','D멤버스','FIT','GSA','H/U','네트웍스 일반단체','단체COMP','법인주중(회원사)','비회원COMP','연간계약사','인바운드COMP','일반단체','임차','자사 패키지','제휴사PKG','학생단체','할인권 예약부일반','회원PKG'];
 const AVAIL_MONTHS = [4,5,6,7]; // months we have RM data for
 
-let DATA = {otb:null, db:null, occ:null, fcst:null};
+let DATA = {otb:null, db:null, occ:null, fcst:null, daily:null};
 let selectedProps = new Set();
 let selectedMonths = new Set();
 let selectedSegs = new Set(GS_SEGMENTS);
@@ -285,7 +285,8 @@ async function loadData(){
   DATA.db = await load('data/db_aggregated.json');
   DATA.occ = await load('data/occ_data.json');
   DATA.fcst = await load('data/rm_fcst.json');
-  console.log('DATA loaded:', {otb:!!DATA.otb, db:!!DATA.db, occ:!!DATA.occ, fcst:!!DATA.fcst});
+  DATA.daily = await load('data/daily_booking.json');
+  console.log('DATA loaded:', {otb:!!DATA.otb, db:!!DATA.db, occ:!!DATA.occ, fcst:!!DATA.fcst, daily:!!DATA.daily});
   if(DATA.occ) console.log('OCC props:', Object.keys(DATA.occ.properties||{}));
   initUI();
 }
@@ -399,7 +400,8 @@ function getGsData(dbName, month, segs){
   return {rn:totalRn, rev:totalRev, adr:Math.round(adr*1000)}; // rev 백만, adr 원
 }
 
-// rm_fcst.json (enhanced): Budget/OTB/ADR/REV + FCST RN per property per month
+// rm_fcst.json: Budget RN/REV + RM FCST RN/REV per property per month
+// Schema: {budget_rn, budget_rev_mil, rm_fcst_rn, rm_fcst_rev_mil}
 function getRmFcst(otbName, month){
   if(!DATA.fcst) return null;
   const props = DATA.fcst.properties || {};
@@ -411,6 +413,15 @@ function getRmTotal(month){
   if(!DATA.fcst || !DATA.fcst.total) return null;
   const key = `2026-${String(month).padStart(2,'0')}`;
   return DATA.fcst.total[key] || null;
+}
+
+// daily_booking.json: Booking Status (Budget RN/Actual RN + Budget OCC/Actual OCC)
+function getDailyBooking(prop, month){
+  if(!DATA.daily) return null;
+  const md = (DATA.daily.months_detail||[]).find(m=>m.month===month);
+  if(!md) return null;
+  const name = prop.daily || prop.db;
+  return (md.properties||[]).find(x=>x.name===name) || null;
 }
 
 /* ─── Format helpers ─── */
@@ -452,7 +463,7 @@ function generateTables(){
   lastMonthData = selMonthsArr.map(month=>{
     /* ── 전체 (Booking Status + Revenue Meeting) ── */
     let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
-    let t_otb_rn=0, t_otb_occ=0, t_otb_adr_w=0, t_otb_rev=0;
+    let t_otb_rn=0, t_otb_occ=0;
     let t_fcst_rn=0;
     let rm_cnt=0;
 
@@ -461,20 +472,30 @@ function generateTables(){
     let gs_otb_rev=0;
     let gs_adr_bud_w=0, gs_bud_rn_bp=0;
 
+    let t_fcst_rev_k=0;
+    let t_bud_adr_rn=0;
     selPropsArr.forEach(p=>{
-      // 전체: Booking Status data from rm_fcst.json (enhanced)
+      // 전체 RNs/OCC: Booking Status (daily_booking.json)
+      const db = getDailyBooking(p, month);
+      if(db){
+        t_bud_rn += db.budget_rns||0;
+        t_otb_rn += db.actual_rns||0;
+        t_bud_occ += db.occ_budget||0;
+        t_otb_occ += db.occ_actual||0;
+        rm_cnt++;
+      }
+      // 전체 Budget REV/FCST RN/FCST REV: Revenue Meeting (rm_fcst.json)
       const rm = getRmFcst(p.otb, month);
       if(rm){
-        t_bud_rn += rm.bud_rn||0;
-        t_bud_adr_w += (rm.bud_adr||0)*(rm.bud_rn||0);
-        t_bud_rev += rm.bud_rev_k||0;
-        t_otb_rn += rm.otb_rn||0;
-        t_otb_adr_w += (rm.otb_adr||0)*(rm.otb_rn||0);
-        t_otb_rev += rm.otb_rev_k||0;
+        t_bud_rev += (rm.budget_rev_mil||0)*1000; // 백만→천원
         t_fcst_rn += rm.rm_fcst_rn||0;
-        t_bud_occ += rm.bud_occ||0;
-        t_otb_occ += rm.otb_occ||0;
-        rm_cnt++;
+        t_fcst_rev_k += (rm.rm_fcst_rev_mil||0)*1000; // 백만→천원
+        // Budget ADR (원) = REV/RN, weighted by Budget RN
+        if(rm.budget_rn>0){
+          const adr_won = (rm.budget_rev_mil||0)*1000000/rm.budget_rn;
+          t_bud_adr_w += adr_won*rm.budget_rn;
+          t_bud_adr_rn += rm.budget_rn;
+        }
       }
 
       // GS OTB/REV: db_aggregated by_property_segment (세그먼트 필터링)
@@ -516,18 +537,18 @@ function generateTables(){
     const t_rn_ach = t_bud_rn>0 ? t_otb_rn/t_bud_rn*100 : null;
     const t_fcst_ach_rn = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
     const t_fcst_diff_rn = t_fcst_rn>0 ? t_fcst_rn - t_bud_rn : null;
-    // ADR (원 → 천원)
-    const t_adr_bud = t_bud_rn>0 ? Math.round(t_bud_adr_w/t_bud_rn/1000) : null;
-    const t_adr_otb = t_otb_rn>0 ? Math.round(t_otb_adr_w/t_otb_rn/1000) : null;
-    const t_adr_ach = (t_adr_bud&&t_adr_otb) ? t_adr_otb/t_adr_bud*100 : null;
-    const t_adr_fcst = t_adr_bud; // FCST ADR ≈ Budget ADR (RM PDF에 FCST ADR 없음)
+    // ADR (원 → 천원). OTB ADR ≈ Budget ADR (Booking Status PDF에 OTB ADR 없음)
+    const t_adr_bud = t_bud_adr_rn>0 ? Math.round(t_bud_adr_w/t_bud_adr_rn/1000) : null;
+    const t_adr_otb = t_adr_bud;
+    const t_adr_ach = t_adr_bud ? 100 : null;
+    const t_adr_fcst = t_adr_bud; // FCST ADR ≈ Budget ADR
     const t_adr_f_diff = 0;
     const t_adr_f_ach = t_adr_bud ? 100 : null;
-    // REV (천원 → 백만원 표시)
+    // REV (천원 → 백만원 표시). OTB REV = OTB RN × Budget ADR (proxy)
     const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null;
-    const t_rev_otb = t_otb_rev>0 ? Math.round(t_otb_rev/1000) : null;
+    const t_rev_otb = (t_otb_rn>0&&t_adr_bud) ? Math.round(t_otb_rn*t_adr_bud/1000) : null;
     const t_rev_ach = (t_rev_bud&&t_rev_otb) ? t_rev_otb/t_rev_bud*100 : null;
-    const t_rev_fcst = (t_fcst_rn>0&&t_adr_fcst) ? Math.round(t_fcst_rn*t_adr_fcst/1000) : null;
+    const t_rev_fcst = t_fcst_rev_k>0 ? Math.round(t_fcst_rev_k/1000) : null;
     const t_rev_f_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
     const t_rev_f_ach = (t_rev_bud&&t_rev_fcst) ? t_rev_fcst/t_rev_bud*100 : null;
 
