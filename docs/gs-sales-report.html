@@ -528,13 +528,13 @@ a{color:inherit}
       <div class="goal-head">
         <div>
           <div class="goal-head-title">월별 목표 게이지</div>
-          <div class="goal-head-sub">기획전 KPI 누적 vs. 월별 목표 · 추가 필요량 · FCST · 전년 비교</div>
+          <div class="goal-head-sub">OTB 실적 vs. 월별 목표 · 추가 필요량 · FCST · 전년 비교 (기획전 KPI는 부가 표시)</div>
         </div>
         <div class="goal-month-tabs" id="goal-month-tabs"></div>
       </div>
       <div class="goal-grid">
         <div class="goal-cell">
-          <div class="goal-cell-label">월별 목표 vs 기획전 KPI 채움</div>
+          <div class="goal-cell-label">월별 목표 vs OTB 실적</div>
           <div class="gauge-wrap">
             <div class="gauge-bar" id="gauge-bar" style="width:0%"></div>
             <div class="gauge-marker" id="gauge-marker" style="left:0%;display:none"></div>
@@ -1040,13 +1040,13 @@ async function renderGoal(){
     revLY=otb.rev_last;
   }
 
-  /* 채움 = 기획전 KPI 합 (REV 백만원) */
-  const fillRev=sumRev*1000000; // 백만원 → 원
-  const fillRn=sumRn;
+  /* 기획전 KPI 합 (부가 표시용) */
+  const kpiRev=sumRev*1000000; // 백만원 → 원
 
-  /* 게이지: 채움 / 목표 */
+  /* 게이지: OTB 실적 / 월별 목표 */
   const targetForGauge=revTarget||0;
-  const fillForGauge=fillRev||0;
+  const fillForGauge=revActual||0;
+  const fillRnForGauge=rnsActual||0;
   const pct=targetForGauge>0?Math.round((fillForGauge/targetForGauge)*100):null;
   const gap=targetForGauge>0?Math.max(0,targetForGauge-fillForGauge):null;
 
@@ -1098,7 +1098,7 @@ async function renderGoal(){
   /* 추가 필요 = 목표 - 실적 (음수면 0) */
   const actualGap=(targetForGauge>0&&revActual!=null)?Math.max(0,targetForGauge-revActual):null;
   document.getElementById('rev-gap-val').textContent=actualGap!=null?Math.round(actualGap/1000000).toLocaleString('ko-KR')+'백만':'—';
-  document.getElementById('rev-fill-val').textContent=Math.round(fillForGauge/1000000).toLocaleString('ko-KR')+'백만';
+  document.getElementById('rev-fill-val').textContent=Math.round(kpiRev/1000000).toLocaleString('ko-KR')+'백만';
 
   /* 전년/FCST cell */
   const lyTxt=revLY?Math.round(revLY/100000000).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억':'—';
@@ -1108,13 +1108,13 @@ async function renderGoal(){
   if(revLY&&fillForGauge){
     const diff=((fillForGauge/revLY-1)*100);
     const cls=diff>=0?'pos':'neg';
-    lyDiff=`전년比 채움 <span class="${cls}">${diff>=0?'+':''}${diff.toFixed(1)}%</span>`;
+    lyDiff=`전년比 실적 <span class="${cls}">${diff>=0?'+':''}${diff.toFixed(1)}%</span>`;
   }
   document.getElementById('ly-fcst-sub').innerHTML=lyDiff;
 
-  /* Mini cards */
-  document.getElementById('mini-rn').textContent=`${fmtNum(fillRn)} / ${fmtNum(rnsTarget)}`;
-  const rnAch=rnsTarget>0?Math.round((fillRn/rnsTarget)*100):null;
+  /* Mini cards — 채움은 OTB 실적 기준 */
+  document.getElementById('mini-rn').textContent=`${fmtNum(fillRnForGauge)} / ${fmtNum(rnsTarget)}`;
+  const rnAch=rnsTarget>0?Math.round((fillRnForGauge/rnsTarget)*100):null;
   document.getElementById('mini-rn-sub').textContent=rnAch!=null?`달성률 ${rnAch}%`:'목표 미설정';
 
   document.getElementById('mini-rev').textContent=`${Math.round(fillForGauge/1000000).toLocaleString('ko-KR')} / ${targetForGauge?Math.round(targetForGauge/1000000).toLocaleString('ko-KR'):'—'}`;
