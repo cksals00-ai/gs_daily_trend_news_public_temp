@@ -286,6 +286,51 @@ a{color:inherit}
 [data-tip]{position:relative}
 [data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:0;background:var(--bg-deep);color:var(--ink);padding:6px 10px;border-radius:4px;font-size:10.5px;line-height:1.5;white-space:pre-wrap;max-width:340px;width:max-content;border:1px solid var(--rule-strong);z-index:50;font-family:var(--sans);font-weight:500;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.4)}
 
+/* Mgmt cards (캘린더 아래 2카드) */
+.mgmt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mgmt-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;min-height:340px}
+.mgmt-head{padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--bg-deep);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mgmt-head-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.mgmt-head-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--gold);border-radius:2px}
+.mgmt-head-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.mgmt-head-actions{display:flex;align-items:center;gap:6px}
+.mgmt-clear-btn{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;cursor:pointer;letter-spacing:0.04em}
+.mgmt-clear-btn:hover{background:var(--bg-soft);color:var(--ink);border-color:var(--rule-strong)}
+.mgmt-body{flex:1;overflow-y:auto;max-height:380px;padding:6px 0}
+.mgmt-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background 0.12s}
+.mgmt-row:last-child{border-bottom:none}
+.mgmt-row:hover{background:var(--bg-soft)}
+.mgmt-row.is-selected{background:rgba(201,160,99,.14);box-shadow:inset 3px 0 0 var(--gold-bright)}
+.mgmt-row.is-related{background:rgba(90,159,196,.10);box-shadow:inset 3px 0 0 var(--info)}
+.mgmt-row.is-dim{opacity:0.45}
+.mgmt-row-main{min-width:0;display:flex;flex-direction:column;gap:3px}
+.mgmt-row-name{font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgmt-row-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mgmt-row-tag{display:inline-block;padding:1px 6px;border-radius:8px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}
+.mgmt-row-tag.reg-vivaldi{background:rgba(217,122,122,.16);color:var(--vivaldi)}
+.mgmt-row-tag.reg-central{background:rgba(107,163,196,.16);color:var(--central)}
+.mgmt-row-tag.reg-south{background:rgba(109,181,138,.16);color:var(--south)}
+.mgmt-row-tag.reg-apac{background:rgba(168,146,200,.16);color:var(--apac)}
+.mgmt-row-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-family:var(--mono);min-width:80px}
+.mgmt-row-pct{font-size:14px;font-weight:800;line-height:1.1}
+.mgmt-row-pct.lvl-ok{color:var(--positive)}
+.mgmt-row-pct.lvl-warn{color:var(--warning)}
+.mgmt-row-pct.lvl-bad{color:var(--negative)}
+.mgmt-row-pct.lvl-na{color:var(--ink-faint)}
+.mgmt-row-delta{font-size:10px;color:var(--ink-faint);font-weight:600}
+.mgmt-row-delta.pos{color:var(--positive)}
+.mgmt-row-delta.neg{color:var(--negative)}
+.mgmt-empty{padding:36px 16px;text-align:center;color:var(--ink-faint);font-size:11.5px}
+.mgmt-empty .me-icon{font-size:28px;margin-bottom:6px}
+.mgmt-summary{display:flex;gap:12px;padding:8px 14px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:rgba(255,255,255,.02);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.mgmt-summary-item strong{color:var(--ink-soft);font-weight:700}
+.mgmt-summary-item.bad strong{color:var(--negative)}
+.mgmt-summary-item.warn strong{color:var(--warning)}
+.mgmt-summary-item.ok strong{color:var(--positive)}
+@media(max-width:900px){
+  .mgmt-grid{grid-template-columns:1fr}
+}
+
 /* Footer */
 .footer-bar{padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);margin-top:14px}
 
@@ -425,9 +470,9 @@ a{color:inherit}
         </div>
 
         <div class="goal-cell">
-          <div class="goal-cell-label">REVENUE 요약</div>
+          <div class="goal-cell-label">REVENUE 실적 (OTB)</div>
           <div class="goal-cell-value" id="rev-actual-val">—<span class="unit">백만원</span></div>
-          <div class="goal-cell-sub">목표 <strong id="rev-target-val">—</strong> · 추가 필요 <span id="rev-gap-val" class="warn">—</span></div>
+          <div class="goal-cell-sub">목표 <strong id="rev-target-val">—</strong> · 추가 필요 <span id="rev-gap-val" class="warn">—</span><br>기획전 채움 <strong id="rev-fill-val" style="color:var(--gold-bright)">—</strong></div>
         </div>
 
         <div class="goal-cell">
@@ -484,6 +529,11 @@ a{color:inherit}
       <span style="margin-left:auto;color:var(--ink-faint)">날짜 클릭 → 우측 목록 필터 · 우측 기획전 클릭 → 캘린더에 투숙기간 강조</span>
     </div>
 
+    <!-- 사업장/거래처 관리 듀얼 카드 -->
+    <div id="mgmt-pane">
+      <div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⏳</div><div class="empty-state-title">관리 카드 로딩 중...</div></div>
+    </div>
+
     <div class="footer-bar">
       DATA: 구글시트 (publish CSV) · 사이드바에서 권역/사업장/담당영역을 선택하면 자동 필터됩니다 · <a href="action_plan_dashboard.html" style="color:var(--gold);text-decoration:none">Action Plan 원본 ↗</a>
     </div>
@@ -526,6 +576,8 @@ let calCursor = null;
 let calMode = 'stay';          // 투숙기간 기준 default
 let selectedEventIdx = null;   // 우측 목록에서 선택된 기획전 idx → 캘린더에서 투숙기간 강조
 let selectedDate = null;       // 캘린더에서 선택된 날짜 'YYYY-MM-DD' → 우측 목록 필터
+let mgmtSelProperty = null;    // 사업장 관리에서 선택된 사업장(name) → 거래처 카드 필터
+let mgmtSelChannel  = null;    // 거래처 관리에서 선택된 채널(seg key) → 사업장 카드 강조
 
 const today = new Date(); today.setHours(0,0,0,0);
 const todayStr = ymdStr(today);
@@ -741,6 +793,8 @@ function setRole(role){
   selStatus='전체';
   selectedEventIdx=null;
   selectedDate=null;
+  mgmtSelProperty=null;
+  mgmtSelChannel=null;
   initSidebar();
   initFilters();
   initGoalMonths();
@@ -752,6 +806,8 @@ function setRegion(region){
   activeProps.clear();
   selectedEventIdx=null;
   selectedDate=null;
+  mgmtSelProperty=null;
+  mgmtSelChannel=null;
   initSidebar();
   initFilters();
   render();
@@ -762,6 +818,8 @@ function toggleProp(p){
   else activeProps.add(p);
   selectedEventIdx=null;
   selectedDate=null;
+  mgmtSelProperty=null;
+  mgmtSelChannel=null;
   renderPropChips();
   initFilters();
   render();
@@ -858,8 +916,11 @@ function getMonthOptions(){
 }
 function setGoalMonth(m){
   curGoalMonth=m;
+  mgmtSelProperty=null;
+  mgmtSelChannel=null;
   initGoalMonths();
   renderGoal();
+  renderMgmtCards();
 }
 
 /* ── Goal gauge — render ── */
@@ -949,10 +1010,14 @@ async function renderGoal(){
     goalBadge.innerHTML='● 월 목표(OTB Budget) 미연동';
   }
 
-  /* REV 요약 cell */
-  document.getElementById('rev-actual-val').innerHTML=`${Math.round(fillForGauge/1000000).toLocaleString('ko-KR')}<span class="unit">백만원</span>`;
+  /* REV 요약 cell — 메인은 OTB 실적(rev_actual), 부가로 기획전 채움 */
+  const actualMM=revActual?Math.round(revActual/1000000):0;
+  document.getElementById('rev-actual-val').innerHTML=`${actualMM.toLocaleString('ko-KR')}<span class="unit">백만원</span>`;
   document.getElementById('rev-target-val').textContent=targetForGauge?Math.round(targetForGauge/1000000).toLocaleString('ko-KR')+'백만':'—';
-  document.getElementById('rev-gap-val').textContent=gap!=null?Math.round(gap/1000000).toLocaleString('ko-KR')+'백만':'—';
+  /* 추가 필요 = 목표 - 실적 (음수면 0) */
+  const actualGap=(targetForGauge>0&&revActual!=null)?Math.max(0,targetForGauge-revActual):null;
+  document.getElementById('rev-gap-val').textContent=actualGap!=null?Math.round(actualGap/1000000).toLocaleString('ko-KR')+'백만':'—';
+  document.getElementById('rev-fill-val').textContent=Math.round(fillForGauge/1000000).toLocaleString('ko-KR')+'백만';
 
   /* 전년/FCST cell */
   const lyTxt=revLY?Math.round(revLY/100000000).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억':'—';
@@ -978,53 +1043,93 @@ async function renderGoal(){
   document.getElementById('mini-ct-sub').textContent=`${channels} 채널 · ${props} 사업장`;
 }
 
-/* ── OTB summary helper ── */
+/* ── OTB summary helper ──
+   byPropertySegment[seg][p]에는 rev_budget/rev_actual/rns_*는 있으나 rev_fcst·rev_last가 없으므로,
+   property별 ADR(rev_actual/rns_actual)을 사용해 rns_fcst·rns_last → rev_fcst·rev_last로 유도한다.
+   "전체 권역" + role 무필터 시에는 segmentData가 정확한 rev_last/rev_actual을 가지므로 우선 사용. */
 let otbCache=null;
-async function getOTBSummary(monthKey){
-  if(!otbCache){
-    try{
-      const r=await fetch('data/otb_data.json?t='+Date.now(),{cache:'no-store'});
-      if(r.ok)otbCache=await r.json();
-    }catch(e){console.warn('[SalesReport] otb_data.json 로드 실패:',e.message)}
+const REGION_KO_TO_EN={'비발디파크':'vivaldi','한국중부':'central','한국남부':'south','아시아퍼시픽':'apac'};
+function propMatchActive(name){
+  if(!activeProps.size)return true;
+  const clean=String(name||'').replace(/^\d+\./,'');
+  for(const ap of activeProps){
+    const apClean=String(ap).replace(/^\d+\./,'');
+    if(name===ap||clean===apClean||(name||'').includes(ap)||ap.includes(clean))return true;
   }
+  return false;
+}
+function effectiveAdr(p){
+  if(p.rns_actual>0&&p.rev_actual>0)return p.rev_actual/p.rns_actual;
+  if(p.rns_budget>0&&p.rev_budget>0)return p.rev_budget/p.rns_budget;
+  return 0;
+}
+async function ensureOTB(){
+  if(otbCache)return otbCache;
+  try{
+    const r=await fetch('data/otb_data.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok)otbCache=await r.json();
+  }catch(e){console.warn('[SalesReport] otb_data.json 로드 실패:',e.message)}
+  return otbCache;
+}
+function getMonthBlock(monthKey){
   if(!otbCache||!otbCache.allMonths)return null;
   const mm=parseInt(monthKey.slice(5),10);
-  const md=otbCache.allMonths[String(mm)];
+  return otbCache.allMonths[String(mm)]||null;
+}
+function filterByPropSegRows(md,segKey){
+  let bp=(md.byPropertySegment&&md.byPropertySegment[segKey])||[];
+  if(curRole==='ota'){
+    const wanted=REGION_KO_TO_EN[curRegion];
+    if(wanted)bp=bp.filter(p=>p.region===wanted);
+    if(activeProps.size>0)bp=bp.filter(p=>propMatchActive(p.name));
+  }
+  return bp;
+}
+async function getOTBSummary(monthKey){
+  await ensureOTB();
+  const md=getMonthBlock(monthKey);
   if(!md)return null;
-
-  /* 현재 담당영역(role)에 해당하는 segmentData 키 */
   const segKey=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
 
-  /* OTA + 권역/사업장 필터 → byPropertySegment에서 OTA 사업장만 합산 */
-  if(curRole==='ota'&&(curRegion!=='전체'||activeProps.size>0)){
-    const regMap={'비발디파크':'vivaldi','한국중부':'central','한국남부':'south','아시아퍼시픽':'apac'};
-    const wanted=regMap[curRegion];
-    let bp=(md.byPropertySegment&&md.byPropertySegment[segKey])||md.byProperty||[];
-    if(wanted)bp=bp.filter(p=>p.region===wanted);
-    if(activeProps.size>0)bp=bp.filter(p=>{
-      for(const ap of activeProps){
-        if(p.name.includes(ap)||ap.includes(p.name.replace(/^\d+\./,'')))return true;
-      }
-      return false;
-    });
-    if(!bp.length)return null;
-    const out={rns_budget:0,rns_actual:0,rev_budget:0,rev_actual:0,rev_last:0,rev_fcst:0,rns_last:0};
-    bp.forEach(p=>{Object.keys(out).forEach(k=>{out[k]+=(p[k]||0)})});
-    return out;
+  /* 1) byPropertySegment 합산 (필터 적용) — segment-specific 값 확보 */
+  const bp=filterByPropSegRows(md,segKey);
+  const out={rns_budget:0,rns_actual:0,rns_fcst:0,rns_last:0,rev_budget:0,rev_actual:0,rev_fcst:0,rev_last:0};
+  bp.forEach(p=>{
+    out.rns_budget+=p.rns_budget||0;
+    out.rns_actual+=p.rns_actual||0;
+    out.rns_fcst  +=p.rns_fcst  ||0;
+    out.rns_last  +=p.rns_last  ||0;
+    out.rev_budget+=p.rev_budget||0;
+    out.rev_actual+=p.rev_actual||0;
+    /* rev_fcst·rev_last는 byPropertySegment에 없으므로 ADR 추정 */
+    const adr=effectiveAdr(p);
+    out.rev_fcst+=(p.rns_fcst||0)*adr;
+    out.rev_last+=(p.rns_last||0)*adr;
+  });
+
+  /* 2) 무필터 스코프(전체 권역·전체 사업장)에서는 segmentData가 더 정확한 값 보유 → 덮어쓰기 */
+  const isAllScope=(curRole!=='ota')||(curRegion==='전체'&&activeProps.size===0);
+  if(isAllScope&&md.segmentData&&md.segmentData[segKey]){
+    const sd=md.segmentData[segKey];
+    if(sd.rns_budget) out.rns_budget=sd.rns_budget;
+    if(sd.rns_actual) out.rns_actual=sd.rns_actual;
+    if(sd.rns_last)   out.rns_last  =sd.rns_last;
+    if(sd.rev_budget) out.rev_budget=sd.rev_budget;
+    if(sd.rev_actual) out.rev_actual=sd.rev_actual;
+    if(sd.rev_last)   out.rev_last  =sd.rev_last;
+    /* rev_fcst·rns_fcst는 segmentData에 없으므로 byPropertySegment 합산값 유지 */
   }
 
-  /* 세그먼트(OTA/G-OTA/Inbound) 단위 데이터 */
-  if(md.segmentData&&md.segmentData[segKey]){
-    const s=md.segmentData[segKey];
+  /* 빈 결과면 summary 폴백 */
+  if(!bp.length&&out.rev_budget===0&&md.summary){
     return {
-      rns_budget:s.rns_budget||0, rns_actual:s.rns_actual||0,
-      rev_budget:s.rev_budget||0, rev_actual:s.rev_actual||0,
-      rev_last :s.rev_last ||0,  rev_fcst :s.rev_fcst ||0,
-      rns_last :s.rns_last ||0
+      rns_budget:md.summary.rns_budget||0, rns_actual:md.summary.rns_actual||0,
+      rns_fcst :md.summary.rns_fcst ||0,  rns_last :md.summary.rns_last ||0,
+      rev_budget:md.summary.rev_budget||0, rev_actual:md.summary.rev_actual||0,
+      rev_fcst :md.summary.rev_fcst ||0,  rev_last :md.summary.rev_last ||0
     };
   }
-
-  return md.summary||null;
+  return out;
 }
 
 /* ── Master render ── */
@@ -1035,6 +1140,7 @@ async function render(){
   await renderCalendarList(data);
   /* Goal는 scope 기준이므로 필터와 무관 */
   renderGoal();
+  renderMgmtCards();
 }
 
 function sortRows(rows){
@@ -1312,6 +1418,274 @@ function clearAllSelection(){selectedEventIdx=null;selectedDate=null;render()}
 function calNav(delta){if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+delta,1);selectedEventIdx=null;selectedDate=null;render()}
 function calToday(){calCursor=new Date(today.getFullYear(),today.getMonth(),1);selectedEventIdx=null;selectedDate=null;render()}
 function setCalMode(m){calMode=m;selectedEventIdx=null;selectedDate=null;render()}
+
+/* ═══ 사업장 / 거래처 관리 듀얼 카드 ═══
+   - 좌(사업장 관리): byPropertySegment[seg] 기반, 달성률(rev_actual/rev_budget) 낮은 순
+   - 우(거래처 관리): byPropertySegment 전 채널 키별로 현재 스코프 사업장 합산 → 전년比(rev_yoy) 하락 순
+   - 양방향: 사업장 클릭 → 거래처 카드는 그 사업장의 채널만, 거래처 클릭 → 사업장 카드에 해당 채널 강조
+*/
+const REGION_LABEL={vivaldi:'비발디', central:'중부', south:'남부', apac:'아시아'};
+
+function achLevel(pct){
+  if(pct==null||!isFinite(pct))return 'na';
+  if(pct>=90)return 'ok';
+  if(pct>=70)return 'warn';
+  return 'bad';
+}
+function levelBadgeText(pct){
+  if(pct==null)return '데이터 없음';
+  if(pct>=90)return '양호';
+  if(pct>=70)return '주의';
+  return '위험';
+}
+
+/* role에 따른 사업장 카드 데이터 — 항상 OTA/G-OTA/Inbound 중 1개 segKey 합산 */
+function buildPropertyCardData(md){
+  if(!md)return [];
+  const segKey=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
+  const bp=filterByPropSegRows(md,segKey);
+  return bp.map(p=>{
+    const adr=effectiveAdr(p);
+    const rev_fcst=(p.rns_fcst||0)*adr;
+    const rev_last=(p.rns_last||0)*adr;
+    const fcstAch=p.rev_budget>0?Math.round(((p.rev_actual||rev_fcst||0)/p.rev_budget)*100):null;
+    const yoy=rev_last>0?Math.round(((p.rev_actual||0)/rev_last-1)*100):null;
+    return {
+      name:p.name, region:p.region,
+      rev_budget:p.rev_budget||0, rev_actual:p.rev_actual||0,
+      rev_fcst, rev_last,
+      rns_budget:p.rns_budget||0, rns_actual:p.rns_actual||0,
+      rns_fcst:p.rns_fcst||0, rns_last:p.rns_last||0,
+      fcstAch, yoy
+    };
+  })
+  .filter(p=>p.rev_budget>0||p.rev_actual>0)
+  .sort((a,b)=>{
+    /* 달성률 낮은 순 (null은 뒤로) */
+    const xa=a.fcstAch==null?9999:a.fcstAch;
+    const xb=b.fcstAch==null?9999:b.fcstAch;
+    return xa-xb;
+  });
+}
+
+/* 거래처(채널/세그먼트) 카드 데이터 — md.byPropertySegment 모든 키 합산 후 YoY 계산 */
+function buildChannelCardData(md){
+  if(!md||!md.byPropertySegment)return [];
+  const out=[];
+  Object.entries(md.byPropertySegment).forEach(([segKey,arr])=>{
+    if(!Array.isArray(arr)||!arr.length)return;
+    /* 사업장 선택 시 → 그 사업장만 */
+    let rows=arr;
+    if(mgmtSelProperty){
+      rows=rows.filter(p=>p.name===mgmtSelProperty);
+    }else if(curRole==='ota'){
+      const wanted=REGION_KO_TO_EN[curRegion];
+      if(wanted)rows=rows.filter(p=>p.region===wanted);
+      if(activeProps.size>0)rows=rows.filter(p=>propMatchActive(p.name));
+    }
+    let rev_actual=0,rev_budget=0,rev_last=0,rns_actual=0,rns_last=0,rns_budget=0;
+    rows.forEach(p=>{
+      const adr=effectiveAdr(p);
+      rev_actual+=p.rev_actual||0;
+      rev_budget+=p.rev_budget||0;
+      rev_last+=(p.rns_last||0)*adr;
+      rns_actual+=p.rns_actual||0;
+      rns_last+=p.rns_last||0;
+      rns_budget+=p.rns_budget||0;
+    });
+    /* segmentData가 더 정확한 rev_last 보유 — 무필터일 때만 덮어쓰기 (전 사업장 합산이므로 신뢰도 높음) */
+    const isTotalScope=!mgmtSelProperty&&(curRole!=='ota'||(curRegion==='전체'&&activeProps.size===0));
+    if(isTotalScope&&md.segmentData&&md.segmentData[segKey]){
+      const sd=md.segmentData[segKey];
+      if(sd.rev_actual)rev_actual=sd.rev_actual;
+      if(sd.rev_budget)rev_budget=sd.rev_budget;
+      if(sd.rev_last)  rev_last  =sd.rev_last;
+      if(sd.rns_actual)rns_actual=sd.rns_actual;
+      if(sd.rns_last)  rns_last  =sd.rns_last;
+      if(sd.rns_budget)rns_budget=sd.rns_budget;
+    }
+    if(rev_actual===0&&rev_budget===0&&rev_last===0)return;
+    const yoy=rev_last>0?Math.round((rev_actual/rev_last-1)*100):null;
+    const ach=rev_budget>0?Math.round((rev_actual/rev_budget)*100):null;
+    out.push({
+      name:segKey, rev_actual, rev_budget, rev_last,
+      rns_actual, rns_last, rns_budget,
+      yoy, ach
+    });
+  });
+  /* 하락폭 큰 순 (양수는 뒤로) */
+  return out.sort((a,b)=>{
+    const ya=a.yoy==null?9999:a.yoy;
+    const yb=b.yoy==null?9999:b.yoy;
+    return ya-yb;
+  });
+}
+
+/* 거래처 클릭 시 → 사업장 강조용: 해당 segKey가 사업장별로 어떻게 분포하는지 */
+function buildPropertyHighlightForChannel(md,segKey){
+  if(!md||!md.byPropertySegment||!md.byPropertySegment[segKey])return new Set();
+  const set=new Set();
+  /* 해당 채널이 전년比 하락한 사업장만 집계 */
+  md.byPropertySegment[segKey].forEach(p=>{
+    const adr=effectiveAdr(p);
+    const last=(p.rns_last||0)*adr;
+    if(last>0&&(p.rev_actual||0)<last)set.add(p.name);
+  });
+  return set;
+}
+
+async function renderMgmtCards(){
+  const pane=document.getElementById('mgmt-pane');
+  if(!pane)return;
+  const m=curGoalMonth;
+  if(!m){
+    pane.innerHTML=`<div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">📅</div><div class="empty-state-title">월을 선택해 주세요</div></div>`;
+    return;
+  }
+  await ensureOTB();
+  const md=getMonthBlock(m);
+  if(!md){
+    pane.innerHTML=`<div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">${m} OTB 데이터 없음</div></div>`;
+    return;
+  }
+  const monthLbl=parseInt(m.slice(5),10)+'월';
+
+  /* 데이터 빌드 */
+  const propData=buildPropertyCardData(md);
+  const chanData=buildChannelCardData(md);
+
+  /* 거래처 클릭 시 → 사업장 강조 셋 */
+  const highlightProps=mgmtSelChannel?buildPropertyHighlightForChannel(md,mgmtSelChannel):new Set();
+
+  /* === 사업장 카드 === */
+  const segLbl=curRole==='gota'?'G-OTA':curRole==='inbound'?'Inbound':'OTA';
+  const badRiskCt=propData.filter(p=>p.fcstAch!=null&&p.fcstAch<70).length;
+  const warnCt=propData.filter(p=>p.fcstAch!=null&&p.fcstAch>=70&&p.fcstAch<90).length;
+  const okCt=propData.filter(p=>p.fcstAch!=null&&p.fcstAch>=90).length;
+  let propBody;
+  if(!propData.length){
+    propBody=`<div class="mgmt-empty"><div class="me-icon">🔍</div>현재 스코프에 해당하는 사업장이 없습니다</div>`;
+  }else{
+    /* 양방향 호환: 거래처 선택 시 highlightProps에 포함된 것만 강조, 나머지 dim */
+    propBody=propData.map(p=>{
+      const cls=achLevel(p.fcstAch);
+      const isSel=mgmtSelProperty===p.name;
+      const isRel=mgmtSelChannel&&highlightProps.has(p.name);
+      const isDim=mgmtSelChannel&&!isRel;
+      const cls2=['mgmt-row',isSel?'is-selected':'',isRel?'is-related':'',isDim?'is-dim':''].filter(Boolean).join(' ');
+      const regCls=p.region?`reg-${p.region}`:'';
+      const regLbl=p.region?REGION_LABEL[p.region]||p.region:'';
+      const actMM=Math.round((p.rev_actual||0)/1000000).toLocaleString('ko-KR');
+      const bdgMM=Math.round((p.rev_budget||0)/1000000).toLocaleString('ko-KR');
+      const yoyTxt=p.yoy!=null?`${p.yoy>=0?'+':''}${p.yoy}%`:'—';
+      const yoyCls=p.yoy!=null?(p.yoy>=0?'pos':'neg'):'';
+      return `<div class="${cls2}" onclick="selectMgmtProperty('${escapeHtml(p.name)}')" data-tip="실적 ${actMM}백만 / 목표 ${bdgMM}백만 · 전년比 ${yoyTxt}">
+        <div class="mgmt-row-main">
+          <div class="mgmt-row-name">${escapeHtml(p.name)}</div>
+          <div class="mgmt-row-meta">
+            ${regLbl?`<span class="mgmt-row-tag ${regCls}">${regLbl}</span>`:''}
+            <span>실적 ${actMM}M / 목표 ${bdgMM}M</span>
+            <span class="mgmt-row-delta ${yoyCls}">YoY ${yoyTxt}</span>
+          </div>
+        </div>
+        <div class="mgmt-row-side">
+          <div class="mgmt-row-pct lvl-${cls}">${p.fcstAch!=null?p.fcstAch+'%':'—'}</div>
+          <div class="mgmt-row-delta">${levelBadgeText(p.fcstAch)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* === 거래처 카드 === */
+  const declCt=chanData.filter(c=>c.yoy!=null&&c.yoy<0).length;
+  const totalCt=chanData.filter(c=>c.yoy!=null).length;
+  let chanBody;
+  if(!chanData.length){
+    chanBody=`<div class="mgmt-empty"><div class="me-icon">🔍</div>현재 스코프에 해당하는 거래처(채널)가 없습니다</div>`;
+  }else{
+    chanBody=chanData.map(c=>{
+      const isSel=mgmtSelChannel===c.name;
+      const cls2=['mgmt-row',isSel?'is-selected':''].filter(Boolean).join(' ');
+      const yoy=c.yoy;
+      const yoyCls=yoy==null?'lvl-na':yoy>=0?'lvl-ok':yoy<-20?'lvl-bad':'lvl-warn';
+      const yoyTxt=yoy!=null?`${yoy>=0?'+':''}${yoy}%`:'—';
+      const actMM=Math.round((c.rev_actual||0)/1000000).toLocaleString('ko-KR');
+      const lastMM=Math.round((c.rev_last||0)/1000000).toLocaleString('ko-KR');
+      const achTxt=c.ach!=null?`달성 ${c.ach}%`:'';
+      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="실적 ${actMM}백만 / 전년 ${lastMM}백만 · ${achTxt}">
+        <div class="mgmt-row-main">
+          <div class="mgmt-row-name">${escapeHtml(c.name)}</div>
+          <div class="mgmt-row-meta">
+            <span>실적 ${actMM}M</span>
+            <span>전년 ${lastMM}M</span>
+            ${c.ach!=null?`<span>달성 ${c.ach}%</span>`:''}
+          </div>
+        </div>
+        <div class="mgmt-row-side">
+          <div class="mgmt-row-pct ${yoyCls}">${yoyTxt}</div>
+          <div class="mgmt-row-delta">${yoy==null?'데이터 없음':yoy>=0?'전년比 상승':'전년比 하락'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const propSubLbl=mgmtSelChannel?`거래처 [${mgmtSelChannel}] 하락 사업장 강조 중`:`${segLbl} · 달성률 낮은 순`;
+  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] 거래처만`:'전년比 하락 큰 순';
+
+  pane.innerHTML=`<div class="mgmt-grid">
+    <div class="mgmt-card">
+      <div class="mgmt-head">
+        <div>
+          <div class="mgmt-head-title">사업장 관리</div>
+          <div class="mgmt-head-sub">${monthLbl} · ${escapeHtml(propSubLbl)}</div>
+        </div>
+        <div class="mgmt-head-actions">
+          ${mgmtSelChannel?`<button class="mgmt-clear-btn" onclick="clearMgmtChannel()">강조 해제</button>`:''}
+          ${mgmtSelProperty?`<button class="mgmt-clear-btn" onclick="clearMgmtProperty()">선택 해제</button>`:''}
+        </div>
+      </div>
+      <div class="mgmt-summary">
+        <span class="mgmt-summary-item bad">위험 <strong>${badRiskCt}</strong></span>
+        <span class="mgmt-summary-item warn">주의 <strong>${warnCt}</strong></span>
+        <span class="mgmt-summary-item ok">양호 <strong>${okCt}</strong></span>
+        <span class="mgmt-summary-item" style="margin-left:auto">총 <strong>${propData.length}</strong>개 사업장</span>
+      </div>
+      <div class="mgmt-body">${propBody}</div>
+    </div>
+    <div class="mgmt-card">
+      <div class="mgmt-head">
+        <div>
+          <div class="mgmt-head-title">거래처 관리</div>
+          <div class="mgmt-head-sub">${monthLbl} · ${escapeHtml(chanSubLbl)}</div>
+        </div>
+        <div class="mgmt-head-actions">
+          ${mgmtSelProperty?`<button class="mgmt-clear-btn" onclick="clearMgmtProperty()">필터 해제</button>`:''}
+          ${mgmtSelChannel?`<button class="mgmt-clear-btn" onclick="clearMgmtChannel()">선택 해제</button>`:''}
+        </div>
+      </div>
+      <div class="mgmt-summary">
+        <span class="mgmt-summary-item bad">하락 <strong>${declCt}</strong></span>
+        <span class="mgmt-summary-item">총 <strong>${totalCt}</strong>개 거래처 (전년 비교 가능)</span>
+        <span class="mgmt-summary-item" style="margin-left:auto">전체 <strong>${chanData.length}</strong>개</span>
+      </div>
+      <div class="mgmt-body">${chanBody}</div>
+    </div>
+  </div>`;
+}
+
+/* === 양방향 클릭 핸들러 === */
+function selectMgmtProperty(name){
+  if(mgmtSelProperty===name){mgmtSelProperty=null;}
+  else{mgmtSelProperty=name;mgmtSelChannel=null;}
+  renderMgmtCards();
+}
+function selectMgmtChannel(name){
+  if(mgmtSelChannel===name){mgmtSelChannel=null;}
+  else{mgmtSelChannel=name;mgmtSelProperty=null;}
+  renderMgmtCards();
+}
+function clearMgmtProperty(){mgmtSelProperty=null;renderMgmtCards()}
+function clearMgmtChannel(){mgmtSelChannel=null;renderMgmtCards()}
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded',()=>{
