@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS 검증 체계 트래커</title>
+<style>
+:root { color-scheme: light; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.5; padding: 16px; }
+
+.header { text-align: center; margin-bottom: 20px; }
+.header h1 { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+.header .subtitle { font-size: 13px; color: #666; margin-top: 4px; }
+
+/* Summary cards */
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+.summary-card { background: #fff; border-radius: 10px; padding: 12px 8px; text-align: center; border: 1px solid #e8e8e8; }
+.summary-card .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+.summary-card .value { font-size: 24px; font-weight: 700; margin: 4px 0; }
+.summary-card .detail { font-size: 10px; color: #666; }
+.card-done .value { color: #22c55e; }
+.card-partial .value { color: #f59e0b; }
+.card-todo .value { color: #ef4444; }
+.card-future .value { color: #8b5cf6; }
+
+/* Progress bar */
+.progress-bar-wrap { background: #e5e7eb; border-radius: 8px; height: 8px; margin-bottom: 20px; overflow: hidden; display: flex; }
+.progress-fill-done { background: #22c55e; height: 100%; }
+.progress-fill-partial { background: #f59e0b; height: 100%; }
+.progress-fill-future { background: #c4b5fd; height: 100%; }
+
+/* Stage sections */
+.stage { background: #fff; border-radius: 10px; border: 1px solid #e8e8e8; margin-bottom: 12px; overflow: hidden; }
+.stage-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.stage-header:hover { background: #f8f9fa; }
+.stage-icon { font-size: 18px; }
+.stage-title { font-weight: 700; font-size: 14px; flex: 1; }
+.stage-badge { font-size: 11px; padding: 2px 10px; border-radius: 12px; font-weight: 600; }
+.badge-done { background: #dcfce7; color: #16a34a; }
+.badge-partial { background: #fef3c7; color: #d97706; }
+.badge-todo { background: #fee2e2; color: #dc2626; }
+.badge-future { background: #ede9fe; color: #7c3aed; }
+.stage-chevron { font-size: 12px; color: #999; transition: transform 0.2s; }
+.stage.open .stage-chevron { transform: rotate(90deg); }
+
+.stage-body { display: none; padding: 0 16px 14px; }
+.stage.open .stage-body { display: block; }
+.stage-desc { font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px 10px; background: #f8f9fa; border-radius: 6px; }
+
+/* Checklist items */
+.check-group { margin-bottom: 10px; }
+.check-group-title { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0; }
+.check-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; }
+.check-item + .check-item { border-top: 1px solid #f8f8f8; }
+.check-icon { flex-shrink: 0; width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-top: 1px; }
+.icon-done { background: #dcfce7; color: #16a34a; }
+.icon-partial { background: #fef3c7; color: #d97706; }
+.icon-todo { background: #fee2e2; color: #dc2626; }
+.icon-future { background: #ede9fe; color: #7c3aed; }
+.check-text { flex: 1; }
+.check-note { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* Page matrix */
+.page-matrix { margin-top: 10px; }
+.page-row { display: grid; grid-template-columns: 1fr 50px 50px 50px 50px; gap: 4px; padding: 5px 0; font-size: 12px; align-items: center; }
+.page-row + .page-row { border-top: 1px solid #f4f4f4; }
+.page-row.header-row { font-weight: 700; color: #666; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; padding-bottom: 8px; border-bottom: 2px solid #e8e8e8; }
+.page-name { font-weight: 500; }
+.page-name .tag { font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; font-weight: 600; }
+.tag-private { background: #fce7f3; color: #be185d; }
+.tag-admin { background: #e0e7ff; color: #4338ca; }
+.tag-report { background: #f0fdf4; color: #15803d; }
+.cell { text-align: center; font-size: 13px; }
+
+/* Legend */
+.legend { display: flex; gap: 14px; margin-top: 14px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+/* Timestamp */
+.footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>GS 검증 체계 트래커</h1>
+  <div class="subtitle">4단계 검증 현황 — 온북 / UI / 권한 / SIS 인증</div>
+</div>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="summary-card card-done">
+    <div class="label">1. 온북</div>
+    <div class="value">100%</div>
+    <div class="detail">데이터 검증 완료</div>
+  </div>
+  <div class="summary-card card-todo">
+    <div class="label">2. UI</div>
+    <div class="value">0%</div>
+    <div class="detail">미진행</div>
+  </div>
+  <div class="summary-card card-partial">
+    <div class="label">3. 권한</div>
+    <div class="value">40%</div>
+    <div class="detail">링크 제거 완료</div>
+  </div>
+  <div class="summary-card card-future">
+    <div class="label">4. SIS</div>
+    <div class="value">0%</div>
+    <div class="detail">향후 예정</div>
+  </div>
+</div>
+
+<!-- Overall progress -->
+<div class="progress-bar-wrap">
+  <div class="progress-fill-done" style="width: 25%"></div>
+  <div class="progress-fill-partial" style="width: 10%"></div>
+  <div class="progress-fill-future" style="width: 0%"></div>
+</div>
+
+<!-- Stage 1: 온북 검증 -->
+<div class="stage open">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f4ca;</span>
+    <span class="stage-title">1단계: 온북 검증 (데이터)</span>
+    <span class="stage-badge badge-done">완료</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="stage-desc">온북 txt(27/28/43/44) 파싱 데이터와 실제 리포트 수치의 일치 여부를 검증합니다.</div>
+
+    <div class="check-group">
+      <div class="check-group-title">파싱 정합성</div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          온북 TXT → JSON 파싱 정합성 검증
+          <div class="check-note">99.91% 정합성 확인 (2026-05-02)</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          투숙일/예약일 기준 혼용 여부 확인
+          <div class="check-note">혼용 없음 확인 완료</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          비발디(벨) -7.1% 차이 원인 규명
+          <div class="check-note">소노문 별도 분류 차이로 확인 — 허용 범위</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          사업장별 매출/객실수 교차 검증
+          <div class="check-note">전 사업장 일치 확인</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stage 2: UI 검증 -->
+<div class="stage open">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f5a5;</span>
+    <span class="stage-title">2단계: UI 검증</span>
+    <span class="stage-badge badge-todo">미진행</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="stage-desc">각 페이지 스크린샷을 통한 시각적 확인. 숫자 표시, 차트, 반응형, 다크테마, 기타 카테고리 노출 등을 검증합니다.</div>
+
+    <div class="check-group">
+      <div class="check-group-title">공통 UI 항목</div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">숫자 포맷 (천단위 콤마, 소수점, 음수 표시)</div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">차트 렌더링 정상 여부 (Chart.js)</div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">모바일 반응형 레이아웃 (&#x2264;768px)</div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">다크 테마 전환 및 색상 대비</div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">"기타" 카테고리 노출 여부 확인</div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">더보기/접기 토글 동작</div>
+      </div>
+    </div>
+
+    <div class="check-group">
+      <div class="check-group-title">페이지별 특수 검증</div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          gs-sales: 목표 게이지 차트 & 간트 캘린더
+          <div class="check-note">달성율 퍼센트, 색상 전환, 스크롤, 날짜 범위</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          gs-report: 사업장별 테이블 정렬 및 합계
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          booking-status: 일별 OTB 차트 & 테이블 연동
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          product-detail: 사업장 상세 드릴다운 동작
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          gs-closing-report: 마감 리포트 인쇄용 레이아웃
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          action_plan_dashboard: 액션플랜 카드 & 필터
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stage 3: 권한 검증 -->
+<div class="stage open">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f512;</span>
+    <span class="stage-title">3단계: 권한 검증</span>
+    <span class="stage-badge badge-partial">부분 완료</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="stage-desc">영업기획 전용 페이지(gs-map, gs-strategy, strategy-keyin, gs-request)로의 유입 링크 차단 및 리포트 3계층 권한별 접근 제어를 검증합니다.</div>
+
+    <div class="check-group">
+      <div class="check-group-title">네비게이션 링크 격리</div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          gs-map 링크: 세일즈/GSN 네비에서 제거
+          <div class="check-note">Navigation Map에서 제거 완료</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-done">&#x2713;</div>
+        <div class="check-text">
+          strategy-keyin 링크: 세일즈/GSN 네비에서 제거
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          전체 HTML 소스에서 전용 페이지 링크 잔존 스캔
+          <div class="check-note">gs-map, gs-strategy, strategy-keyin, gs-request 4개 파일 대상</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="check-group">
+      <div class="check-group-title">리포트 3계층 구조</div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          보고서 계층: 경영진 리포트 접근 범위 정의
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          관리용 계층: 운영팀 페이지 접근 범위 정의
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-todo">&#x2717;</div>
+        <div class="check-text">
+          외부 계층: 파트너 공유 페이지 접근 범위 정의
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stage 4: SIS 인증 -->
+<div class="stage">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f52e;</span>
+    <span class="stage-title">4단계: SIS 인증 검증</span>
+    <span class="stage-badge badge-future">향후 예정</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="stage-desc">프라이빗 페이지 전환 시 SIS(Single Sign-On/인증) 기반 접근 제어를 설계하고 검증합니다.</div>
+
+    <div class="check-group">
+      <div class="check-group-title">인증 체계 설계</div>
+      <div class="check-item">
+        <div class="check-icon icon-future">&#x25CB;</div>
+        <div class="check-text">
+          SIS SSO 연동 방안 설계
+          <div class="check-note">기존 사내 인증 시스템과의 통합 방식 결정</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-future">&#x25CB;</div>
+        <div class="check-text">
+          Role-based 접근 제어 매트릭스 설계
+          <div class="check-note">영업기획 / 세일즈 / GSN / 경영진 역할 정의</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-future">&#x25CB;</div>
+        <div class="check-text">
+          페이지별 접근 권한 매핑
+          <div class="check-note">29개 페이지 × 역할 매트릭스</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-future">&#x25CB;</div>
+        <div class="check-text">
+          인증 실패 시 리다이렉트/에러 처리 UX
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-icon icon-future">&#x25CB;</div>
+        <div class="check-text">
+          프라이빗 전환 후 통합 테스트
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Matrix -->
+<div class="stage open">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f4c4;</span>
+    <span class="stage-title">페이지별 검증 매트릭스</span>
+    <span class="stage-badge badge-partial">29 pages</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="page-matrix">
+      <div class="page-row header-row">
+        <span>페이지</span>
+        <span class="cell">온북</span>
+        <span class="cell">UI</span>
+        <span class="cell">권한</span>
+        <span class="cell">SIS</span>
+      </div>
+      <!-- Core Sales & Report -->
+      <div class="page-row"><span class="page-name">gs-sales <span class="tag tag-report">Sales</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-report <span class="tag tag-report">Report</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-closing-report <span class="tag tag-report">Report</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">booking-status</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">product-detail</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">action_plan_dashboard</span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- OTB & Trend -->
+      <div class="page-row"><span class="page-name">otb</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">booking-trend</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">stay-date</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">channel</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">monthly</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">ytd</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- FCST -->
+      <div class="page-row"><span class="page-name">fcst-status</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">fcst-trend</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">fcst-admin <span class="tag tag-admin">Admin</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- LY -->
+      <div class="page-row"><span class="page-name">ly-product</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">ly-trend</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- Special -->
+      <div class="page-row"><span class="page-name">overseas</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">pumui</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">manager-analysis</span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- Admin -->
+      <div class="page-row"><span class="page-name">admin <span class="tag tag-admin">Admin</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">data-check <span class="tag tag-admin">Admin</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-verify <span class="tag tag-admin">Admin</span></span><span class="cell">&#x2705;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">index</span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x1f52e;</span></div>
+      <!-- Private (영업기획 전용) -->
+      <div class="page-row"><span class="page-name">gs-map <span class="tag tag-private">Private</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x26A0;&#xFE0F;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-strategy <span class="tag tag-private">Private</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x26A0;&#xFE0F;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-strategy-report <span class="tag tag-private">Private</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x26A0;&#xFE0F;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">strategy-keyin <span class="tag tag-private">Private</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x26A0;&#xFE0F;</span><span class="cell">&#x1f52e;</span></div>
+      <div class="page-row"><span class="page-name">gs-request <span class="tag tag-private">Private</span></span><span class="cell">&#x2014;</span><span class="cell">&#x2B1C;</span><span class="cell">&#x26A0;&#xFE0F;</span><span class="cell">&#x1f52e;</span></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> 완료</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 부분</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e5e7eb"></div> 미진행</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c4b5fd"></div> 향후</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fce7f3"></div> Private</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e0e7ff"></div> Admin</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f0fdf4"></div> Report</div>
+      <div class="legend-item">&#x2014; = N/A</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Last updated: 2026-05-03 &middot; GS Daily Trend Verification Tracker v2
+</div>
+
+</body>
+</html>
