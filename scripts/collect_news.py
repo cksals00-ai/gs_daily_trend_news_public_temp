@@ -67,6 +67,20 @@ KEYWORDS = {
 }
 
 # ─────────────────────────────────────────────
+# 직접 RSS 피드 (여행 전문지 등 — 키워드 검색이 아닌 발행 RSS)
+# ─────────────────────────────────────────────
+# default_category: 제목 키워드로 카테고리를 못 잡았을 때 사용. build.py가 렌더 순서에
+# "업계동향"을 포함하므로 일반 업계 기사는 거기로 모아준다.
+RSS_FEEDS = [
+    {
+        "name": "여행신문",
+        "url": "https://www.traveltimes.co.kr/rss/allArticle.xml",
+        "default_category": "업계동향",
+        "limit": 50,
+    },
+]
+
+# ─────────────────────────────────────────────
 # 제외 키워드 (자사 + 부정 키워드)
 # ─────────────────────────────────────────────
 EXCLUDE_KEYWORDS = [
@@ -207,19 +221,114 @@ def detect_category_emoji(category: str) -> str:
         "호텔/리조트": "📰",
         "항공/공항": "✈️",
         "OTA/여행": "🌐",
+        "종합여행사": "🧭",
         "관광/지역": "📰",
         "레저/휴양": "🏖️",
         "거시지표": "📊",
+        "업계동향": "📈",
+        "IT/플랫폼": "💻",
     }.get(category, "📰")
 
 
+# 제목 → 카테고리 라우팅 (직접 RSS용)
+_CATEGORY_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("대한항공", "아시아나", "제주항공", "티웨이", "에어부산", "에어서울", "진에어",
+      "이스타항공", "공항", "노선", "유류할증", "증편", "감편", "취항", "결항",
+      "전세기", "직항"), "항공/공항"),
+    (("호텔", "리조트", "객실", "숙박", "ADR", "RevPAR"), "호텔/리조트"),
+    (("야놀자", "여기어때", "트립닷컴", "아고다", "Booking", "익스피디아",
+      "스카이스캐너", "에어비앤비", "OTA"), "OTA/여행"),
+    (("하나투어", "모두투어", "노랑풍선", "참좋은여행", "교원투어", "롯데관광",
+      "인터파크 투어", "여행박사", "KRT", "타이드스퀘어"), "종합여행사"),
+    (("외국인 관광", "외래객", "인바운드", "방한", "아웃바운드", "축제",
+      "관광청", "관광공사", "관광정책"), "관광/지역"),
+    (("환율", "유가", "WTI", "원달러"), "거시지표"),
+)
+
+
+def categorize_from_title(title: str, default: str) -> str:
+    """제목 키워드로 카테고리 추정. 매칭 실패 시 default."""
+    for keywords, category in _CATEGORY_RULES:
+        if any(kw in title for kw in keywords):
+            return category
+    return default
+
+
+def _norm_title_key(title: str) -> str:
+    """dedup용 정규화 키 — 공백/구두점 제거, 소문자, 앞 30자.
+
+    30자 한글 prefix는 사실상 unique하면서도, Google News의 '제목 - 출처' 접미사
+    형태와 직접 RSS 본 제목이 같은 키로 잡히도록 한다.
+    """
+    return re.sub(r"[\s\W_]+", "", title or "").lower()[:30]
+
+
+def _normalize_pub_date(pub_str: str) -> str:
+    """다양한 pub_date 포맷을 RFC 2822로 정규화 (is_stale_by_pub_date 호환).
+
+    이미 RFC 2822면 그대로, ISO 'YYYY-MM-DD HH:MM:SS' (KST 가정)는 변환.
+    파싱 실패 시 빈 문자열을 반환해 stale 필터를 통과시킨다.
+    """
+    if not pub_str:
+        return ""
+    from email.utils import parsedate_to_datetime, format_datetime
+    try:
+        dt = parsedate_to_datetime(pub_str)
+        if dt is not None:
+            return pub_str  # 이미 RFC 2822
+    except (TypeError, ValueError):
+        pass
+    s = pub_str.strip().replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(s, fmt).replace(tzinfo=KST)
+            return format_datetime(dt)
+        except ValueError:
+            continue
+    return ""
+
+
+def fetch_rss_feed(feed: dict) -> list[dict]:
+    """일반 RSS 피드에서 기사 가져오기 (Google News와 동일 스키마)."""
+    url = feed["url"]
+    name = feed.get("name", "")
+    limit = feed.get("limit", 50)
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; GSReportBot/1.0)'},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            xml_data = resp.read().decode('utf-8', 'replace')
+        root = ET.fromstring(xml_data)
+        items: list[dict] = []
+        for item in root.findall(".//item")[:limit]:
+            title = item.findtext("title", "").strip()
+            link = item.findtext("link", "").strip()
+            pub_date = item.findtext("pubDate", "").strip()
+            if not title or not link:
+                continue
+            title = re.sub(r'<[^>]+>', '', title)
+            items.append({
+                "title": title,
+                "link": link,
+                "source": name,
+                "pub_date": _normalize_pub_date(pub_date),
+            })
+        return items
+    except Exception as e:
+        logger.warning(f"RSS 호출 실패 ({name}: {url}): {e}")
+        return []
+
+
 def load_existing_news() -> list:
-    """기존 news_latest.json에서 이전 기사 목록 로드 (by_category 단일 소스, 제목 기준 dedup)"""
+    """기존 news_latest.json에서 이전 기사 목록 로드 (by_category 단일 소스, 제목+링크 dedup)"""
     if not OUTPUT_FILE.exists():
         return []
     try:
         data = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
-        seen = set()
+        seen_titles: set[str] = set()
+        seen_links: set[str] = set()
         existing = []
         # by_category만 단일 소스로 사용 (top_news/by_region은 동일 기사의 뷰이므로 제외)
         for cat_data in data.get("by_category", {}).values():
@@ -228,10 +337,17 @@ def load_existing_news() -> list:
             for art in cat_data.get("articles", []):
                 if not isinstance(art, dict):
                     continue
-                key = art.get("title", "")[:50]
-                if key and key not in seen:
-                    seen.add(key)
-                    existing.append(art)
+                tkey = _norm_title_key(art.get("title", ""))
+                lkey = (art.get("link") or "").strip()
+                if tkey and tkey in seen_titles:
+                    continue
+                if lkey and lkey in seen_links:
+                    continue
+                if tkey:
+                    seen_titles.add(tkey)
+                if lkey:
+                    seen_links.add(lkey)
+                existing.append(art)
         return existing
     except (json.JSONDecodeError, KeyError):
         return []
@@ -288,54 +404,61 @@ def main():
     stale_removed = before_stale - len(existing_articles)
     if stale_removed:
         logger.info(f"  ⏳ 기존 기사 중 {stale_removed}건 제거 (pub_date 오래됨)")
-    existing_titles = {art.get("title", "")[:50] for art in existing_articles}
+    seen_titles: set[str] = {_norm_title_key(art.get("title", "")) for art in existing_articles}
+    seen_titles.discard("")
+    seen_links: set[str] = {(art.get("link") or "").strip() for art in existing_articles}
+    seen_links.discard("")
     logger.info(f"기존 기사: {len(existing_articles)}건 (48시간 이내, 최신)")
 
-    new_news = []
-    seen_titles = set(existing_titles)
+    new_news: list[dict] = []
+
+    def _accept(item: dict, *, category: str, query: str, default_emoji: str) -> bool:
+        """공통 dedup·필터·append. dup이거나 제외되면 False."""
+        title = item["title"]
+        tkey = _norm_title_key(title)
+        lkey = (item.get("link") or "").strip()
+        if (tkey and tkey in seen_titles) or (lkey and lkey in seen_links):
+            return False
+        if is_excluded(title):
+            logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
+            return False
+        if is_stale_by_pub_date(item.get("pub_date", ""), now):
+            logger.info(f"  ⏳ 제외 (오래된 기사): {title[:50]} | pub_date={item.get('pub_date','')}")
+            return False
+        if tkey:
+            seen_titles.add(tkey)
+        if lkey:
+            seen_links.add(lkey)
+        new_news.append({
+            "title": title,
+            "link": item["link"],
+            "source": item.get("source", ""),
+            "pub_date": item.get("pub_date", ""),
+            "category": category,
+            "category_emoji": default_emoji,
+            "region": detect_region(title),
+            "query": query,
+            "collected_at": now_iso,
+            "is_new": True,
+        })
+        return True
 
     for category, queries in KEYWORDS.items():
         logger.info(f"카테고리: {category} ({len(queries)}개 쿼리)")
         emoji = detect_category_emoji(category)
-
         for query in queries:
-            news_items = fetch_google_news(query, limit=3)
+            for item in fetch_google_news(query, limit=3):
+                _accept(item, category=category, query=query, default_emoji=emoji)
+        logger.info(f"  → 신규 수집 누계: {len(new_news)}건")
 
-            for item in news_items:
-                title = item["title"]
-
-                # 중복 제거 (기존 + 신규 모두)
-                title_key = title[:50]
-                if title_key in seen_titles:
-                    continue
-                seen_titles.add(title_key)
-
-                # 자사 언급 제외
-                if is_excluded(title):
-                    logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
-                    continue
-
-                # 오래된 기사 제외 (연도 불일치 또는 3개월 이전)
-                if is_stale_by_pub_date(item.get("pub_date", ""), now):
-                    logger.info(f"  ⏳ 제외 (오래된 기사): {title[:50]} | pub_date={item.get('pub_date','')}")
-                    continue
-
-                region = detect_region(title)
-
-                new_news.append({
-                    "title": title,
-                    "link": item["link"],
-                    "source": item["source"],
-                    "pub_date": item["pub_date"],
-                    "category": category,
-                    "category_emoji": emoji,
-                    "region": region,
-                    "query": query,
-                    "collected_at": now_iso,
-                    "is_new": True,
-                })
-
-        logger.info(f"  → 신규 수집: {len(new_news)}건")
+    # 직접 RSS 피드 (여행 전문지)
+    for feed in RSS_FEEDS:
+        logger.info(f"RSS 피드: {feed['name']} ({feed['url']})")
+        before = len(new_news)
+        for item in fetch_rss_feed(feed):
+            cat = categorize_from_title(item["title"], feed.get("default_category", "업계동향"))
+            _accept(item, category=cat, query=feed["name"], default_emoji=detect_category_emoji(cat))
+        logger.info(f"  → {feed['name']} 추가: {len(new_news) - before}건")
 
     # 기존 기사의 is_new 플래그 재계산 (오늘 00:00~11:00 수집분만 NEW)
     for art in existing_articles:
