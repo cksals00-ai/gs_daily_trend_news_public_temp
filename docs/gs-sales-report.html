@@ -2555,10 +2555,19 @@ async function renderInboundPartners(){
     </div>`;
   }).join('');
 
-  /* === 미확인 / 매핑불가 === */
+  /* === 미확인 / 매핑불가 ===
+     신 schema(v2): unmappable_partners_list 별도 필드 + unmapped_partners_top 은
+     순수 미확인만 포함. 구 schema fallback: unmapped_partners_top 의 unmappable_flag 분리. */
   const unmappedPartners=inboundCache.unmapped_partners_top||[];
-  const unmappable=unmappedPartners.filter(u=>u.unmappable_flag);
-  const unconfirmed=unmappedPartners.filter(u=>!u.unmappable_flag);
+  const unmappableList=inboundCache.unmappable_partners_list;
+  let unmappable, unconfirmed;
+  if(Array.isArray(unmappableList)){
+    unmappable=unmappableList;
+    unconfirmed=unmappedPartners;
+  }else{
+    unmappable=unmappedPartners.filter(u=>u.unmappable_flag);
+    unconfirmed=unmappedPartners.filter(u=>!u.unmappable_flag);
+  }
 
   function renderUnmappedRow(u,kindCls){
     const yrs=u.years_rn?Object.entries(u.years_rn).map(([y,c])=>`${y.slice(2)}:${fmtNum(c)}`).join(' · '):'—';
@@ -2617,15 +2626,15 @@ async function renderInboundPartners(){
     <div class="inb-unmapped-grid">
       <div class="inb-card">
         <div class="inb-card-head">
-          <div class="inb-card-title">⚠️ 매핑 불가 거래처</div>
-          <div class="inb-card-sub">87 master·키인·이름 추정 모두 실패 · ${unmappable.length}개 (즉시 키인 매핑 필요)</div>
+          <div class="inb-card-title">🚫 매핑 불가 거래처 (다국적/혼합)</div>
+          <div class="inb-card-sub">키인 unmappable 등재 · ${unmappable.length}개 · 단일 국적 매핑 부적합</div>
         </div>
         <div class="inb-card-body">${unmappableHtml}</div>
       </div>
       <div class="inb-card">
         <div class="inb-card-head">
           <div class="inb-card-title">❓ 미확인 거래처 (매핑 후보)</div>
-          <div class="inb-card-sub">잠정 미확인 · ${unconfirmed.length}개 (이름·prefix 검토 후 매핑)</div>
+          <div class="inb-card-sub">87 master·키인·이름 추정 모두 실패 · ${unconfirmed.length}개 (즉시 키인 매핑 필요)</div>
         </div>
         <div class="inb-card-body">${unconfirmedHtml}</div>
       </div>
