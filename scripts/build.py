@@ -495,82 +495,6 @@ def inject_property_matrix(html: str, prop_data: dict) -> str:
     """권역별 사업장 실적 매트릭스 주입 (구버전 - 매트릭스 UI 삭제됨, 사용 안 함)"""
     return html
 
-
-# ─────────────────────────────────────────────
-# 권역 카드 월별 실적/목표/달성률 주입
-# ─────────────────────────────────────────────
-def inject_region_monthly(html: str, prop_data: dict) -> str:
-    """권역 카드에 월별 실적/목표/달성률 3행 표 주입"""
-    month_labels = MONTH_LABELS
-
-    for region_key in ("vivaldi", "central", "south", "apac"):
-        properties = prop_data.get(region_key, [])
-
-        # 월별 집계
-        totals = {}
-        for month_key in STAY_MONTHS:
-            actual = sum(p.get(month_key, {}).get("rns", 0) for p in properties)
-            target = sum(p.get(month_key, {}).get("target_rns", 0) for p in properties)
-            if target > 0:
-                rate = actual / target * 100
-            else:
-                rate = None
-            totals[month_key] = {"actual": actual, "target": target, "rate": rate}
-
-        # HTML 행 생성
-        rows = []
-        for m_idx, month_key in enumerate(STAY_MONTHS):
-            label = month_labels[month_key]
-            d = totals[month_key]
-            actual_str = f"{d['actual']:,}"
-            target_str = f"{d['target']:,}" if d["target"] > 0 else "—"
-            if d["rate"] is not None:
-                rate_val = d["rate"]
-                if rate_val >= 100:
-                    rate_color = "#6dd396"
-                elif rate_val >= 85:
-                    rate_color = "#e6b960"
-                else:
-                    rate_color = "#e08580"
-                rate_str = f"{rate_val:.1f}%"
-            else:
-                rate_color = "rgba(255,255,255,0.35)"
-                rate_str = "—%"
-
-            # 당월(4월) 진하게, 나머지 연하게
-            opacity = "1" if m_idx == 0 else "0.55"
-            font_weight = "700" if m_idx == 0 else "400"
-
-            rows.append(
-                f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                f'font-family:var(--mono);font-size:10.5px;line-height:1.7;opacity:{opacity};">'
-                f'<span style="color:rgba(255,255,255,0.55);min-width:22px;font-weight:{font_weight};">{label}</span>'
-                f'<span style="color:rgba(255,255,255,0.85);flex:1;text-align:right;padding-right:6px;'
-                f'font-weight:{font_weight};">{actual_str}<span style="font-size:9px;opacity:0.6;">실</span>'
-                f'&nbsp;/&nbsp;{target_str}<span style="font-size:9px;opacity:0.6;">실</span></span>'
-                f'<span style="color:{rate_color};min-width:38px;text-align:right;font-weight:700;">{rate_str}</span>'
-                f'</div>'
-            )
-
-        inner_html = "\n          ".join(rows)
-        marker_key = region_key.upper()
-        pattern = re.compile(
-            rf'(<!-- REGION_MONTHLY_{marker_key}_START -->)(.*?)(<!-- REGION_MONTHLY_{marker_key}_END -->)',
-            re.DOTALL
-        )
-        new_html, n = pattern.subn(
-            lambda m: m.group(1) + "\n          " + inner_html + "\n          " + m.group(3),
-            html, count=1
-        )
-        if n > 0:
-            html = new_html
-            logger.info(f"✓ 권역 월별 주입: {region_key}")
-        else:
-            logger.warning(f"✗ 권역 마커 미발견: {region_key}")
-
-    return html
-
-
 # ─────────────────────────────────────────────
 # 권역 카드 주간 온북 추이 (사업장별·월별)
 # ─────────────────────────────────────────────
@@ -2254,7 +2178,6 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
         html = apply_tpl(html, "headline", headline_text)
     html = apply_tpl(html, "updated_by", f"by {data.get('_updated_by', 'GS팀 · Haein Kim Manager')}")
     html = inject_kpi_3months(html, notes.get("executive_kpi", {}))
-    html = inject_region_monthly(html, notes.get("property_performance", {}))
     actions = data.get("action_alerts", {})
     for key in ("vivaldi", "central", "south", "apac"):
         text = actions.get(key, "")
