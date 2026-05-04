@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>인바운드 거래처 국적 매핑 확인/반영 · 영업기획</title>
+<title>인바운드 거래처 국적 키인 · 세일즈 관리자</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -34,6 +34,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .mast-left{display:flex;align-items:center;gap:14px}
 .mast-right{display:flex;gap:8px;align-items:center}
 .mast-ts{font-size:11px;color:var(--ink-faint);font-family:var(--mono);margin-right:8px}
+.role-pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;padding:3px 9px;border-radius:10px;background:var(--info-bg);color:var(--info);border:1px solid rgba(90,159,196,.4)}
 
 .btn{padding:7px 16px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-weight:600;font-size:12px;border-radius:4px;cursor:pointer;transition:all .2s;font-family:var(--sans);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .btn:hover{color:var(--ink);border-color:var(--gold);background:var(--gold-dim)}
@@ -127,22 +128,9 @@ tr.unmappable:hover td{background:rgba(181,143,207,.1)}
 .guide-box li{margin-bottom:3px}
 .guide-box .ump{color:var(--purple);font-weight:700}
 
-.role-pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;padding:3px 9px;border-radius:10px;background:var(--purple-bg);color:var(--purple);border:1px solid rgba(181,143,207,.4)}
-
-.review-box{background:var(--purple-bg);border:1px solid rgba(181,143,207,.35);border-radius:6px;padding:14px 18px;font-size:12.5px;color:var(--ink-soft);line-height:1.7;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start}
-.review-box .icon{font-size:22px;line-height:1;flex-shrink:0}
-.review-box b{color:var(--purple)}
-
-.diff-bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:10px;align-items:center}
-.diff-chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:12px;font-weight:700;letter-spacing:.04em}
-.diff-chip.added{background:rgba(76,175,111,.12);color:var(--positive);border:1px solid rgba(76,175,111,.35)}
-.diff-chip.changed{background:rgba(232,162,86,.12);color:var(--warning);border:1px solid rgba(232,162,86,.35)}
-.diff-chip.removed{background:rgba(229,115,115,.12);color:var(--negative);border:1px solid rgba(229,115,115,.35)}
-.diff-chip.same{background:var(--bg-soft);color:var(--ink-faint);border:1px solid var(--rule)}
-.diff-tag{font-family:var(--mono);font-size:9.5px;padding:2px 6px;border-radius:8px;font-weight:700;margin-left:6px;letter-spacing:.05em}
-.diff-tag.added{background:rgba(76,175,111,.18);color:var(--positive)}
-.diff-tag.changed{background:rgba(232,162,86,.18);color:var(--warning)}
-.diff-tag.removed{background:rgba(229,115,115,.18);color:var(--negative)}
+.handoff-box{background:rgba(76,175,111,.06);border:1px solid rgba(76,175,111,.35);border-radius:6px;padding:14px 18px;font-size:12.5px;color:var(--ink-soft);line-height:1.7;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start}
+.handoff-box .icon{font-size:22px;line-height:1;flex-shrink:0}
+.handoff-box b{color:var(--positive)}
 
 .add-row{display:flex;gap:8px;align-items:center;margin-top:10px;padding:12px;background:var(--bg-card);border:1px dashed var(--rule-strong);border-radius:6px;flex-wrap:wrap}
 .add-row input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:7px 10px;font-family:var(--sans);font-size:12.5px;outline:none;flex:1;min-width:140px}
@@ -162,63 +150,47 @@ tr.unmappable:hover td{background:rgba(181,143,207,.1)}
   <div class="mast-inner">
     <div class="mast-left">
       <span class="logo">GS HOTELS</span>
-      <span class="mast-title">인바운드 국적 매핑 확인/반영</span>
-      <span class="role-pill">PLANNING REVIEW</span>
+      <span class="mast-title">인바운드 국적 키인</span>
+      <span class="role-pill">SALES MANAGER</span>
     </div>
     <div class="mast-right">
-      <a href="admin.html" class="btn">← 관리자</a>
-      <a href="gs-map.html" class="btn">↗ GS-MAP</a>
+      <a href="gs-sales.html" class="btn">← 세일즈 허브</a>
+      <a href="gs-sales-report.html" class="btn">↗ 세일즈 리포트</a>
       <span class="mast-ts" id="lastSaved"></span>
-      <button class="btn" onclick="loadFromFile()">📥 세일즈 작성본 불러오기</button>
-      <button class="btn btn-gold" onclick="exportJSON()">📤 최종 반영 (JSON 내보내기)</button>
+      <button class="btn btn-gold" onclick="exportJSON()">💾 저장 (JSON 다운로드)</button>
     </div>
   </div>
 </div>
 
 <div class="content">
   <div class="page-title">
-    <div class="eyebrow">PLANNING · INBOUND NATIONALITY MAPPING REVIEW</div>
-    <h1>인바운드 거래처 국적 매핑 — 영업기획 확인/반영</h1>
+    <div class="eyebrow">SALES · INBOUND NATIONALITY KEY-IN</div>
+    <h1>인바운드 거래처 국적 매핑 키인</h1>
     <p>
-      세일즈 관리자(인바운드 담당)가 <a href="inbound-nationality-keyin-sales.html" style="color:var(--gold);text-decoration:none">키인 페이지</a>에서 작성한 거래처별 국적 매핑을 검토하고 최종 반영합니다.
-      반영된 매핑은 <code>build_inbound_enriched.py</code> 빌드 시 우선 적용됩니다.
+      57-prefix 회원번호(구코드)는 회원명에 국적이 표기되지 않아 자동 매핑이 어렵습니다.
+      이 페이지에서 거래처별 국적을 수동 매핑하여 저장하면 영업기획팀이 검토 후 최종 반영합니다.
       <br><span style="color:var(--ink-faint);font-size:11.5px">우선순위: <b>매핑불가 (UNMAPPABLE) &gt; 회원명 (국적) 표기 &gt; 키인 매핑 &gt; 87 master &gt; 이름 토큰 추정 &gt; 미확인</b></span>
     </p>
   </div>
 
-  <div class="review-box">
-    <span class="icon">🧭</span>
+  <div class="handoff-box">
+    <span class="icon">📨</span>
     <div>
-      <b>R&amp;R 안내</b> — 세일즈 관리자(인바운드 담당)는 매핑 키인 + JSON 저장까지,
-      영업기획 담당자는 본 페이지에서 <b>검토 → 최종 반영(빌드 푸시)</b>까지 담당합니다.
-      세일즈 작성본 JSON을 받으면 「📥 세일즈 작성본 불러오기」로 적재 후 차이를 확인하세요.
+      <b>R&amp;R 안내</b> — 세일즈 관리자(인바운드 담당)는 <b>국적 매핑 키인 + 저장</b>까지 담당하고,
+      저장된 JSON 파일을 영업기획팀에 전달합니다.
+      영업기획팀이 검토 후 <b>최종 반영(빌드 푸시)</b>을 진행합니다.
     </div>
   </div>
 
   <div class="guide-box">
-    <b>🛠️ 검토 / 반영 절차</b>
+    <b>🛠️ 사용법</b>
     <ol>
-      <li>세일즈 관리자가 전달한 <code>inbound_partner_nationality_keyin.json</code> 파일을 <b>「📥 세일즈 작성본 불러오기」</b>로 적재</li>
-      <li>「변경 요약」에서 추가/변경/삭제 항목을 확인 (현재 운영 파일 대비 차이)</li>
-      <li>이상 항목이 있으면 표에서 직접 수정 (드롭다운/사유 메모/매핑불가 토글)</li>
-      <li><b>「📤 최종 반영 (JSON 내보내기)」</b> 클릭 → 검증된 <code>inbound_partner_nationality_keyin.json</code> 다운로드</li>
-      <li>다운로드한 파일을 <code>docs/data/</code>에 덮어쓰기 → git 커밋 &amp; 푸시</li>
-      <li>다음 빌드(<code>scripts/build_inbound_enriched.py</code>)에서 자동 반영
-        <ul style="margin-top:3px;padding-left:16px;color:var(--ink-faint)">
-          <li>매핑된 거래처 → 해당 국적 (키인매핑)</li>
-          <li><span class="ump">매핑 불가 등재 거래처 → '매핑불가' 분류 (미확인과 분리 집계)</span></li>
-        </ul>
-      </li>
+      <li>아래 표에서 미확인 거래처의 국적을 드롭다운으로 선택 (또는 <b>다국적</b> 선택)</li>
+      <li>다국적 인바운드 거래처처럼 단일 국적 매핑이 부적합한 경우 → <span class="ump">🚫 매핑 불가</span> 선택 후 사유 메모 입력</li>
+      <li>편집 사항은 브라우저에 자동 저장됩니다 (다음 접속 시에도 유지)</li>
+      <li><b>「💾 저장 (JSON 다운로드)」</b> 클릭 → <code>inbound_partner_nationality_keyin.json</code> 파일 다운로드</li>
+      <li>다운로드한 파일을 <b>영업기획팀에 전달</b> → 영업기획팀이 검토 후 git 커밋 &amp; 빌드 푸시</li>
     </ol>
-  </div>
-
-  <div class="diff-bar" id="diffBar" hidden>
-    <span style="font-size:12px;font-weight:700;color:var(--ink);margin-right:4px">📊 변경 요약</span>
-    <span class="diff-chip added">＋ 신규 <span id="diffAdded">0</span></span>
-    <span class="diff-chip changed">↻ 변경 <span id="diffChanged">0</span></span>
-    <span class="diff-chip removed">✕ 삭제 <span id="diffRemoved">0</span></span>
-    <span class="diff-chip same">＝ 동일 <span id="diffSame">0</span></span>
-    <span style="font-size:11px;color:var(--ink-faint);margin-left:auto">현재 운영 JSON 대비 (mappings + unmappable 합산)</span>
   </div>
 
   <div class="grid-summary" id="summary"></div>
@@ -293,6 +265,7 @@ tr.unmappable:hover td{background:rgba(181,143,207,.1)}
 const KEYIN_JSON_URL = './data/inbound_partner_nationality_keyin.json';
 const ENRICHED_JSON_URL = './data/inbound_enriched.json';
 const STORAGE_KEY = 'gs_inbound_nat_keyin_v2';
+const ROLE = 'sales-manager';
 
 const NATIONALITY_OPTIONS = [
   '대만','홍콩','중국','일본','베트남','말레이시아','태국','인도네시아','싱가포르',
@@ -309,12 +282,12 @@ const CUSTOM_VALUE = '__custom__';
 
 let state = {
   enriched: null,
-  partners: [],          // 통합 거래처 목록 [{partner, rn_booking, rn_cancel, rn_net, rev_booking, prefix, years_rn, source}]
-  mappings: {},          // {partner: nationality}
-  unmappable: {},        // {partner: reason}
+  partners: [],
+  mappings: {},
+  unmappable: {},
   initialMappings: {},
   initialUnmappable: {},
-  filter: 'all',         // 'all' | 'unknown' | 'mapped' | 'unmappable'
+  filter: 'all',
 };
 
 const fmt = n => Math.round(n||0).toLocaleString('ko-KR');
@@ -334,7 +307,6 @@ function esc(s) {
 
 function buildNatDropdown(partner, currentNat, isUnmappable, currentReason) {
   const isCustom = currentNat && !NATIONALITY_OPTIONS.includes(currentNat);
-  const selectedVal = isUnmappable ? UNMAPPABLE_VALUE : (isCustom ? CUSTOM_VALUE : (currentNat || ''));
   let opts = '<option value="">-- 미매핑 --</option>';
   NATIONALITY_OPTIONS.forEach(n => {
     opts += `<option value="${n}"${n===currentNat&&!isUnmappable?' selected':''}>${n}</option>`;
@@ -466,7 +438,6 @@ async function loadInitialMappings() {
 }
 
 function statsForPartner(partnerName) {
-  // by_partner_nationality 에서 거래처 통계 합산.
   const byPartner = (state.enriched && state.enriched.by_partner_nationality) || {};
   const byNat = byPartner[partnerName] || {};
   let rnB=0, rnC=0, rnN=0, revB=0, prefixSet=new Set(), yearsRN={};
@@ -486,9 +457,8 @@ async function loadEnriched() {
   if (!resp.ok) throw new Error('inbound_enriched.json 로드 실패');
   state.enriched = await resp.json();
 
-  const partnerMap = new Map();  // partner -> {partner, rn_booking,...,source}
+  const partnerMap = new Map();
 
-  // 1) unmapped_partners_top — 미확인 거래처 (years_rn 포함)
   (state.enriched.unmapped_partners_top || []).forEach(u => {
     if (!u.partner || u.partner === '(미상)') return;
     partnerMap.set(u.partner, {
@@ -503,7 +473,6 @@ async function loadEnriched() {
     });
   });
 
-  // 2) unmappable_partners_list (신 schema) 또는 unmappable_mappings 의 partner 만 fallback
   const unmappableList = state.enriched.unmappable_partners_list;
   if (Array.isArray(unmappableList) && unmappableList.length) {
     unmappableList.forEach(u => {
@@ -520,7 +489,6 @@ async function loadEnriched() {
       });
     });
   } else {
-    // 구 schema 또는 미적용 빌드 — unmappable 매핑 partner 의 stats 를 by_partner_nationality 에서 추출
     Object.keys(state.unmappable).forEach(p => {
       if (partnerMap.has(p)) return;
       const s = statsForPartner(p);
@@ -528,7 +496,6 @@ async function loadEnriched() {
     });
   }
 
-  // 3) keyin_mapped_partners_list (신 schema) 또는 keyin_mappings 의 partner 만 fallback
   const kmList = state.enriched.keyin_mapped_partners_list;
   if (Array.isArray(kmList) && kmList.length) {
     kmList.forEach(u => {
@@ -552,8 +519,6 @@ async function loadEnriched() {
     });
   }
 
-  // 4) state.mappings / state.unmappable 의 추가 partner (사용자가 키인했지만 데이터에 없는 경우 = custom)
-  //    -> custom 섹션에서 따로 처리 — partners 목록에는 추가 안 함
   state.partners = [...partnerMap.values()].sort((a,b) => b.rn_net - a.rn_net);
 }
 
@@ -658,8 +623,6 @@ function renderUnknownTable() {
     updateFilterCounts();
     return;
   }
-  const diff = computeDiff();
-  const addedSet = new Set(diff.added), changedSet = new Set(diff.changed), removedSet = new Set(diff.removed);
   tbody.innerHTML = rows.map(p => {
     const st = partnerStatus(p);
     let confLbl, rowCls = '';
@@ -672,16 +635,12 @@ function renderUnknownTable() {
     } else {
       confLbl = '<span class="confidence-pill cp-unknown">미확인</span>';
     }
-    let diffTag = '';
-    if (addedSet.has(p.partner)) diffTag = '<span class="diff-tag added">＋ 신규</span>';
-    else if (changedSet.has(p.partner)) diffTag = '<span class="diff-tag changed">↻ 변경</span>';
-    else if (removedSet.has(p.partner)) diffTag = '<span class="diff-tag removed">✕ 삭제</span>';
     const currentNat = state.mappings[p.partner] || '';
     const isUmp = state.unmappable[p.partner] !== undefined;
     const reason = state.unmappable[p.partner] || '';
     const prefixStr = (p.prefix || []).join(',');
     return `<tr class="${rowCls}">
-      <td class="lalign">${esc(p.partner)} <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px">${prefixStr}</span>${diffTag}</td>
+      <td class="lalign">${esc(p.partner)} <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px">${prefixStr}</span></td>
       <td>${confLbl}</td>
       <td>${fmt(p.rn_booking)}</td>
       <td>${fmt(p.rn_cancel)}</td>
@@ -770,43 +729,12 @@ function applyAllTaiwan() {
 }
 
 function resetAll() {
-  if (!confirm('모든 키인 매핑(매핑불가 포함)을 초기화하시겠습니까? (브라우저 로컬 + 화면)\n파일에 반영하려면 「📤 최종 반영」을 다시 눌러야 합니다.')) return;
+  if (!confirm('모든 키인 매핑(매핑불가 포함)을 초기화하시겠습니까? (브라우저 로컬 + 화면)\n파일에 반영하려면 「💾 저장 (JSON 다운로드)」를 다시 눌러야 합니다.')) return;
   state.mappings = {};
   state.unmappable = {};
   localStorage.removeItem(STORAGE_KEY);
   renderAll();
-  showToast('초기화 완료. 「📤 최종 반영」을 다시 눌러야 파일에 반영됩니다.');
-}
-
-function computeDiff() {
-  // 현재 운영 파일 (initial*) 대비 작업 상태 (state.mappings/unmappable) 차이
-  const baselineMap = {};
-  Object.entries(state.initialMappings || {}).forEach(([k,v]) => { baselineMap[k] = {type:'mapping', value:v}; });
-  Object.entries(state.initialUnmappable || {}).forEach(([k,v]) => { baselineMap[k] = {type:'unmappable', value:v}; });
-  const currentMap = {};
-  Object.entries(state.mappings || {}).forEach(([k,v]) => { if (v) currentMap[k] = {type:'mapping', value:v}; });
-  Object.entries(state.unmappable || {}).forEach(([k,v]) => { currentMap[k] = {type:'unmappable', value:v}; });
-
-  const allKeys = new Set([...Object.keys(baselineMap), ...Object.keys(currentMap)]);
-  const diff = {added:[], changed:[], removed:[], same:[]};
-  allKeys.forEach(k => {
-    const b = baselineMap[k], c = currentMap[k];
-    if (!b && c) diff.added.push(k);
-    else if (b && !c) diff.removed.push(k);
-    else if (b && c) {
-      if (b.type === c.type && b.value === c.value) diff.same.push(k);
-      else diff.changed.push(k);
-    }
-  });
-  return diff;
-}
-
-function diffStatusFor(partner) {
-  const d = computeDiff();
-  if (d.added.includes(partner)) return 'added';
-  if (d.changed.includes(partner)) return 'changed';
-  if (d.removed.includes(partner)) return 'removed';
-  return null;
+  showToast('초기화 완료. 「💾 저장」을 다시 눌러야 파일에 반영됩니다.');
 }
 
 function updateMappingInfo() {
@@ -814,25 +742,11 @@ function updateMappingInfo() {
   const nU = Object.keys(state.unmappable).length;
   const initM = Object.keys(state.initialMappings).length;
   const initU = Object.keys(state.initialUnmappable).length;
-  const d = computeDiff();
-  const dirty = d.added.length || d.changed.length || d.removed.length;
+  const dirty = (nM !== initM) || (nU !== initU);
   document.getElementById('mappingInfo').innerHTML =
     `현재 매핑: <b style="color:var(--gold-bright)">${nM}개</b> · 매핑불가: <b style="color:var(--purple)">${nU}개</b> · ` +
-    `운영 파일: <b>${initM}+${initU}</b>` +
-    (dirty ? ` <span style="color:var(--warning)">⚠️ 미반영 변경 ${d.added.length+d.changed.length+d.removed.length}건 — 「📤 최종 반영」 필요</span>` : ' <span style="color:var(--positive)">✓ 운영 파일과 동기화됨</span>');
-
-  const bar = document.getElementById('diffBar');
-  if (bar) {
-    if (dirty) {
-      bar.hidden = false;
-      document.getElementById('diffAdded').textContent = d.added.length;
-      document.getElementById('diffChanged').textContent = d.changed.length;
-      document.getElementById('diffRemoved').textContent = d.removed.length;
-      document.getElementById('diffSame').textContent = d.same.length;
-    } else {
-      bar.hidden = true;
-    }
-  }
+    `파일 기준: <b>${initM}+${initU}</b>` +
+    (dirty ? ` <span style="color:var(--warning)">⚠️ 미저장 변경 있음 — 저장 후 영업기획팀에 전달 필요</span>` : '');
 }
 
 function buildNewNatDropdown() {
@@ -854,11 +768,11 @@ function exportJSON() {
     if (k && k.trim()) cleanUnmappable[k.trim()] = (v && String(v).trim()) || '매핑 불가';
   });
   const payload = {
-    _description: '인바운드(58) 미확인 거래처 → 국적 수동 매핑 + 매핑불가(다국적) 리스트. 세일즈 관리자가 inbound-nationality-keyin-sales.html 에서 작성, 영업기획이 inbound-nationality-keyin.html 에서 검토 후 docs/data/ 에 커밋하면 build_inbound_enriched.py 실행 시 반영.',
+    _description: '인바운드(58) 미확인 거래처 → 국적 수동 매핑 + 매핑불가(다국적) 리스트. 세일즈 관리자가 inbound-nationality-keyin-sales.html 에서 작성, 영업기획이 inbound-nationality-keyin.html 에서 검토 후 docs/data/ 에 커밋하면 build_inbound_enriched.py 빌드 시 반영.',
     _schema_version: 2,
     _updated_at: new Date().toISOString(),
-    _updated_by: 'inbound-nationality-keyin.html (영업기획 최종 반영)',
-    _role: 'planning-review',
+    _updated_by: 'inbound-nationality-keyin-sales.html (세일즈 관리자)',
+    _role: ROLE,
     _unmappable_note: 'unmappable 섹션에 등재된 거래처는 다국적/혼합/이벤트성 등으로 단일 국적 매핑이 부적합한 거래처입니다. 빌드 시 \'미확인\'이 아닌 \'매핑불가\'로 분류됩니다.',
     mappings: cleanMappings,
     unmappable: cleanUnmappable,
@@ -869,8 +783,8 @@ function exportJSON() {
   a.download = 'inbound_partner_nationality_keyin.json';
   a.click();
   URL.revokeObjectURL(a.href);
-  document.getElementById('lastSaved').textContent = '최종 반영: ' + new Date().toLocaleTimeString('ko-KR');
-  showToast(`📤 최종 반영 완료 (매핑 ${Object.keys(cleanMappings).length} + 매핑불가 ${Object.keys(cleanUnmappable).length}) — docs/data/ 에 커밋·푸시하세요.`);
+  document.getElementById('lastSaved').textContent = '저장: ' + new Date().toLocaleTimeString('ko-KR');
+  showToast(`💾 저장 완료 (매핑 ${Object.keys(cleanMappings).length} + 매핑불가 ${Object.keys(cleanUnmappable).length}) — 영업기획팀에 전달하세요.`);
 }
 
 function loadFromFile() {
@@ -895,12 +809,7 @@ function onFileSelected(e) {
       });
       persist();
       renderAll();
-      const d = computeDiff();
-      const dirty = d.added.length + d.changed.length + d.removed.length;
-      showToast(
-        `"${file.name}" 적재 완료 — 매핑 ${Object.keys(state.mappings).length} + 매핑불가 ${Object.keys(state.unmappable).length}` +
-        (dirty ? ` · 변경 ${dirty}건 (＋${d.added.length} ↻${d.changed.length} ✕${d.removed.length})` : ' · 운영 파일과 동일')
-      );
+      showToast(`"${file.name}" 불러오기 완료 (매핑 ${Object.keys(state.mappings).length} + 매핑불가 ${Object.keys(state.unmappable).length})`);
     } catch(err) {
       showToast('JSON 파싱 실패: ' + err.message, 'err');
     }
