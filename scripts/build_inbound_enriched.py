@@ -33,23 +33,39 @@ KEYIN_PATH = PROJECT_DIR / 'docs' / 'data' / 'inbound_partner_nationality_keyin.
 
 YEARS = ['2022', '2023', '2024', '2025', '2026']
 
-# 매핑 자체가 의미 없는 회원명 (배제도 매핑도 아님 — '미확인' 상태로 두지만 키인에 추가하지 않음)
-UNMAPPABLE_PARTNERS = {'티케이트래블', '원더트립', '에스에이투어', '코리얼트립'}
+# 매핑 자체가 의미 없는 회원명 fallback (키인 JSON 의 unmappable 섹션이 비어있을 때만 사용).
+# 운영 데이터는 docs/data/inbound_partner_nationality_keyin.json 의 "unmappable" 섹션이 정답.
+UNMAPPABLE_FALLBACK = {
+    '티케이트래블': '다국적 인바운드 거래처 — 단일 국적 매핑 불가',
+    '원더트립': '다국적 인바운드 거래처 — 단일 국적 매핑 불가',
+    '에스에이투어': '다국적 인바운드 거래처 — 단일 국적 매핑 불가',
+    '코리얼트립': '다국적 인바운드 거래처 — 단일 국적 매핑 불가',
+    'TK트래블': '다국적 인바운드 거래처 — 단일 국적 매핑 불가',
+}
 
 
 def load_keyin_mappings():
-    """관리자 키인 거래처→국적 매핑 로드. 없으면 빈 dict."""
+    """관리자 키인 로드. 반환: (mappings dict, unmappable dict).
+    - mappings: {거래처명: 국적}
+    - unmappable: {거래처명: 사유메모}
+    """
     if not KEYIN_PATH.exists():
-        return {}
+        return {}, dict(UNMAPPABLE_FALLBACK)
     try:
         with open(KEYIN_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
         m = data.get('mappings', {}) or {}
-        return {k.strip(): normalize_nationality(v) for k, v in m.items()
-                if k and v and v.strip()}
+        mappings = {k.strip(): normalize_nationality(v) for k, v in m.items()
+                    if k and v and v.strip() and normalize_nationality(v)}
+        u = data.get('unmappable', {}) or {}
+        unmappable = {k.strip(): (str(v).strip() if v else '매핑 불가')
+                      for k, v in u.items() if k and k.strip()}
+        if not unmappable:
+            unmappable = dict(UNMAPPABLE_FALLBACK)
+        return mappings, unmappable
     except Exception as e:
         logger.warning(f'키인 파일 로드 실패: {e}')
-        return {}
+        return {}, dict(UNMAPPABLE_FALLBACK)
 
 
 # 국적 표기 정규화: 별칭 매핑 + 비-국적 토큰 무효화 (None)
@@ -322,9 +338,18 @@ def build_master(rows):
     return master
 
 
-def apply_mapping(rows, master, keyin=None):
-    """각 row에 nationality + mapping_confidence 부여."""
+def apply_mapping(rows, master, keyin=None, unmappable=None):
+    """각 row에 nationality + mapping_confidence 부여.
+    매핑 우선순위 (양 prefix 공통):
+      1) 키인 unmappable 등재 → '매핑불가' (단일 국적 매핑이 부적합한 다국적 거래처)
+      2) 회원명 () 표기 → 'XX원본'
+      3) 키인 mappings → '키인매핑'
+      4) 87 master 룩업 → '87매핑'
+      5) 이름 본문 토큰 추정 → '추정매핑'
+      6) 그 외 → '미확인'
+    """
     keyin = keyin or {}
+    unmappable = unmappable or {}
     enriched = []
     for r in rows:
         prefix = r['prefix']
@@ -332,42 +357,26 @@ def apply_mapping(rows, master, keyin=None):
         nat_in_name = extract_country_from_name(member_name)
         b = base_partner(member_name)
 
-        if prefix == '87':
-            if nat_in_name:
-                r['nationality'] = nat_in_name
-                r['mapping_confidence'] = '87원본'
-            elif b in keyin:
-                r['nationality'] = keyin[b]
-                r['mapping_confidence'] = '키인매핑'
-            elif b in master:
-                r['nationality'] = master[b]['top']
-                r['mapping_confidence'] = '87매핑'
+        if b in unmappable:
+            r['nationality'] = '매핑불가'
+            r['mapping_confidence'] = '매핑불가'
+        elif nat_in_name:
+            r['nationality'] = nat_in_name
+            r['mapping_confidence'] = '87원본' if prefix == '87' else '57원본'
+        elif b in keyin:
+            r['nationality'] = keyin[b]
+            r['mapping_confidence'] = '키인매핑'
+        elif b in master:
+            r['nationality'] = master[b]['top']
+            r['mapping_confidence'] = '87매핑'
+        else:
+            inferred = infer_nationality_from_name(member_name)
+            if inferred:
+                r['nationality'] = inferred
+                r['mapping_confidence'] = '추정매핑'
             else:
-                inferred = infer_nationality_from_name(member_name)
-                if inferred:
-                    r['nationality'] = inferred
-                    r['mapping_confidence'] = '추정매핑'
-                else:
-                    r['nationality'] = '미확인'
-                    r['mapping_confidence'] = '미확인'
-        else:  # 57
-            if nat_in_name:
-                r['nationality'] = nat_in_name
-                r['mapping_confidence'] = '57원본'
-            elif b in keyin:
-                r['nationality'] = keyin[b]
-                r['mapping_confidence'] = '키인매핑'
-            elif b in master:
-                r['nationality'] = master[b]['top']
-                r['mapping_confidence'] = '87매핑'
-            else:
-                inferred = infer_nationality_from_name(member_name)
-                if inferred:
-                    r['nationality'] = inferred
-                    r['mapping_confidence'] = '추정매핑'
-                else:
-                    r['nationality'] = '미확인'
-                    r['mapping_confidence'] = '미확인'
+                r['nationality'] = '미확인'
+                r['mapping_confidence'] = '미확인'
         r['base_partner'] = b
         enriched.append(r)
     return enriched
@@ -461,17 +470,17 @@ def aggregate(enriched):
     }
 
 
-def collect_unmapped_partners(enriched):
-    """미확인 거래처 + 빈도 + 연도 분포. 키인 매핑 보강 후보 식별용."""
-    unk = defaultdict(lambda: {'rows': 0, 'rn_booking': 0, 'rn_cancel': 0,
+def _collect_partners_with_confidence(enriched, target_confidence):
+    """주어진 confidence 의 거래처별 RN/매출/연도분포 수집."""
+    grp = defaultdict(lambda: {'rows': 0, 'rn_booking': 0, 'rn_cancel': 0,
                                'rev_booking': 0, 'rev_cancel': 0,
                                'prefix': set(), 'years': defaultdict(int),
                                'sample_member_names': set()})
     for r in enriched:
-        if r['nationality'] != '미확인':
+        if r['mapping_confidence'] != target_confidence:
             continue
         b = r['base_partner'] or '(미상)'
-        d = unk[b]
+        d = grp[b]
         d['rows'] += 1
         if r['btype'] == 'booking':
             d['rn_booking'] += r['rn']
@@ -485,7 +494,7 @@ def collect_unmapped_partners(enriched):
             d['sample_member_names'].add(r['member_name'])
 
     out = []
-    for b, d in unk.items():
+    for b, d in grp.items():
         out.append({
             'partner': b,
             'rows': d['rows'],
@@ -496,9 +505,29 @@ def collect_unmapped_partners(enriched):
             'prefix': sorted(d['prefix']),
             'years_rn': dict(sorted(d['years'].items())),
             'sample_names': sorted(d['sample_member_names']),
-            'unmappable_flag': b in UNMAPPABLE_PARTNERS,
         })
     out.sort(key=lambda x: x['rn_net'], reverse=True)
+    return out
+
+
+def collect_unmapped_partners(enriched):
+    """미확인 거래처 + 빈도 + 연도 분포. 키인 매핑 보강 후보 식별용."""
+    return _collect_partners_with_confidence(enriched, '미확인')
+
+
+def collect_unmappable_partners(enriched, unmappable):
+    """매핑불가 거래처 + 빈도 + 연도 분포 + 사유. 키인 페이지에서 편집 가능하게."""
+    out = _collect_partners_with_confidence(enriched, '매핑불가')
+    for item in out:
+        item['reason'] = unmappable.get(item['partner'], '매핑 불가')
+    return out
+
+
+def collect_keyin_mapped_partners(enriched, keyin):
+    """키인매핑된 거래처 + 빈도. 페이지에서 매핑 변경 가능하게."""
+    out = _collect_partners_with_confidence(enriched, '키인매핑')
+    for item in out:
+        item['mapped_to'] = keyin.get(item['partner'], '')
     return out
 
 
@@ -524,7 +553,7 @@ def print_report(enriched, master, agg, unmapped):
     # 매핑 신뢰도 (전체)
     print('\n[매핑 신뢰도 분포 — 전체]')
     print(f'{"신뢰도":<10}{"행 수":>10}{"booking RN":>14}{"cancel RN":>14}{"net RN":>12}')
-    for k in ['87원본', '87매핑', '57원본', '키인매핑', '추정매핑', '미확인']:
+    for k in ['87원본', '87매핑', '57원본', '키인매핑', '추정매핑', '매핑불가', '미확인']:
         v = agg['mapping_confidence_summary'].get(k)
         if not v:
             continue
@@ -532,7 +561,7 @@ def print_report(enriched, master, agg, unmapped):
 
     # 매핑 신뢰도 (연도별, 행수만)
     print('\n[매핑 신뢰도 — 연도별 행수]')
-    confs = ['87원본', '87매핑', '57원본', '키인매핑', '추정매핑', '미확인']
+    confs = ['87원본', '87매핑', '57원본', '키인매핑', '추정매핑', '매핑불가', '미확인']
     print(f'{"연도":<6}', end='')
     for c in confs:
         print(f'{c:>10}', end='')
@@ -559,8 +588,7 @@ def print_report(enriched, master, agg, unmapped):
     print(f'{"#":>3}  {"net RN":>8}  {"prefix":<8}  {"거래처":<28}  연도별RN')
     for i, u in enumerate(unmapped[:25], 1):
         years_str = ' '.join(f'{y}:{rn}' for y, rn in u['years_rn'].items())
-        flag = ' [UNMAPPABLE]' if u['unmappable_flag'] else ''
-        print(f'{i:>3}  {u["rn_net"]:>8,}  {",".join(u["prefix"]):<8}  {u["partner"][:28]:<28}  {years_str}{flag}')
+        print(f'{i:>3}  {u["rn_net"]:>8,}  {",".join(u["prefix"]):<8}  {u["partner"][:28]:<28}  {years_str}')
 
     # 월별 인바운드 RN (최근 12개월)
     print('\n[최근 12개월 인바운드 booking RN — 국적 Top 8]')
@@ -592,12 +620,16 @@ def main():
     logger.info(f'전체 inbound 레코드: {len(rows):,}행')
     master = build_master(rows)
     logger.info(f'87 master 거래처: {len(master)}개')
-    keyin = load_keyin_mappings()
+    keyin, unmappable = load_keyin_mappings()
     if keyin:
         logger.info(f'키인 매핑: {len(keyin)}개')
-    enriched = apply_mapping(rows, master, keyin)
+    if unmappable:
+        logger.info(f'키인 매핑불가(UNMAPPABLE) 거래처: {len(unmappable)}개')
+    enriched = apply_mapping(rows, master, keyin, unmappable)
     agg = aggregate(enriched)
     unmapped = collect_unmapped_partners(enriched)
+    unmappable_partners = collect_unmappable_partners(enriched, unmappable)
+    keyin_mapped_partners = collect_keyin_mapped_partners(enriched, keyin)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -610,16 +642,21 @@ def main():
             '57원본': '57-prefix 회원명에 (국적) 직접 표기 (드물게 발생)',
             '키인매핑': '관리자 키인 매핑 (inbound_partner_nationality_keyin.json)',
             '추정매핑': '거래처 이름 본문에 명시된 국가명 토큰 기반 추정',
+            '매핑불가': '키인 unmappable 등재 (다국적/혼합 — 단일 국적 매핑 부적합)',
             '미확인': '매핑 불가 — 87 master/키인/이름 추정 모두 실패',
         },
         'master_partner_count': len(master),
         'keyin_mapping_count': len(keyin),
         'keyin_mappings': keyin,
+        'unmappable_count': len(unmappable),
+        'unmappable_mappings': unmappable,
         'master_top_nationality': {
             b: {'top': v['top'], 'distribution': v['distribution']}
             for b, v in sorted(master.items())
         },
-        'unmapped_partners_top': unmapped[:100],  # 키인 보강 후보 식별용
+        'unmapped_partners_top': unmapped[:100],         # 미확인 → 키인 보강 후보
+        'unmappable_partners_list': unmappable_partners,  # 매핑불가 - 편집/해제 가능
+        'keyin_mapped_partners_list': keyin_mapped_partners,  # 키인매핑된 - 변경 가능
         **agg,
     }
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:

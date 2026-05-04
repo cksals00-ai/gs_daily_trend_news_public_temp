@@ -19,6 +19,7 @@
   --warning:#e8a256; --warning-bg:#3d2e1a;
   --negative:#e57373; --negative-bg:#3d1f1f;
   --info:#5a9fc4; --info-bg:#1a2e3d;
+  --purple:#b58fcf; --purple-bg:#2c1f3d;
   --rule:rgba(255,255,255,0.08); --rule-strong:rgba(255,255,255,0.18);
   --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',sans-serif;
   --mono:'JetBrains Mono',Consolas,monospace;
@@ -27,7 +28,7 @@
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;font-weight:500;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;word-break:keep-all}
 
 .masthead{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:12px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
-.mast-inner{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.mast-inner{max-width:1440px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .logo{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}
 .mast-title{font-size:14px;color:var(--ink-soft);font-weight:600}
 .mast-left{display:flex;align-items:center;gap:14px}
@@ -43,8 +44,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .btn-positive:hover{background:var(--positive-bg)}
 .btn-negative{border-color:var(--negative);color:var(--negative)}
 .btn-negative:hover{background:var(--negative-bg)}
+.btn-purple{border-color:var(--purple);color:var(--purple)}
+.btn-purple:hover{background:var(--purple-bg)}
 
-.content{max-width:1280px;margin:0 auto;padding:24px}
+.content{max-width:1440px;margin:0 auto;padding:24px}
 
 .page-title{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
@@ -52,42 +55,65 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .page-title p{font-size:13px;color:var(--ink-muted);line-height:1.7}
 code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:1px 5px;border-radius:3px;color:var(--gold)}
 
-.grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px}
+.grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px}
 .stat-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:7px;padding:12px 14px}
 .stat-label{font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
 .stat-value{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--gold-bright);line-height:1.1}
 .stat-sub{font-size:11px;color:var(--ink-faint);margin-top:2px}
 
 .section{margin-bottom:24px}
-.sec-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .sec-subtitle{font-size:12px;color:var(--ink-muted);margin-bottom:12px}
 
 .tbl-wrap{overflow-x:auto;border-radius:7px;border:1px solid var(--rule);background:var(--bg-card)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:var(--bg-soft);padding:10px 12px;font-weight:700;color:var(--ink-muted);text-align:right;border-bottom:1px solid var(--rule-strong);white-space:nowrap;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+th{background:var(--bg-soft);padding:10px 12px;font-weight:700;color:var(--ink-muted);text-align:right;border-bottom:1px solid var(--rule-strong);white-space:nowrap;font-size:11px;letter-spacing:.04em;text-transform:uppercase;position:sticky;top:0}
 th:first-child,th.lalign{text-align:left}
-td{padding:9px 12px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap;vertical-align:top}
 td.lalign{text-align:left;font-family:var(--sans);font-weight:600;color:var(--ink-soft)}
-tr:hover{background:var(--bg-hover)}
+tr:hover td{background:var(--bg-hover)}
 tr.mapped td{background:rgba(76,175,111,.05)}
 tr.mapped:hover td{background:rgba(76,175,111,.1)}
+tr.unmappable td{background:rgba(181,143,207,.05)}
+tr.unmappable:hover td{background:rgba(181,143,207,.1)}
 
-.nat-select{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12.5px;font-weight:600;min-width:120px;cursor:pointer;outline:none;transition:all .15s}
+.years-grid{display:flex;gap:3px;justify-content:flex-end;font-family:var(--mono);font-size:10.5px}
+.year-chip{display:inline-flex;flex-direction:column;align-items:center;padding:2px 5px;border-radius:3px;background:var(--bg-soft);border:1px solid var(--rule);min-width:34px;line-height:1.2}
+.year-chip .y-label{color:var(--ink-faint);font-size:9px;font-weight:600}
+.year-chip .y-val{color:var(--ink-soft);font-weight:700;font-size:11px}
+.year-chip.zero{opacity:.4}
+.year-chip.heavy{background:var(--gold-dim);border-color:var(--gold)}
+.year-chip.heavy .y-val{color:var(--gold-bright)}
+
+.nat-select{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12.5px;font-weight:600;min-width:130px;cursor:pointer;outline:none;transition:all .15s}
 .nat-select:focus,.nat-select:hover{border-color:var(--gold);background:var(--bg-hover)}
 .nat-select.unset{color:var(--ink-faint);border-style:dashed}
 .nat-select.set{color:var(--gold-bright);border-color:var(--gold);background:var(--gold-dim)}
+.nat-select.unmappable-set{color:var(--purple);border-color:var(--purple);background:var(--purple-bg)}
 
-.custom-input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12.5px;width:110px;outline:none;margin-left:6px}
-.custom-input:focus{border-color:var(--gold);background:var(--bg-hover)}
+.custom-input,.reason-input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px;font-family:var(--sans);font-size:12px;outline:none;margin-left:6px}
+.custom-input{width:110px}
+.reason-input{width:200px;border-color:var(--purple);background:rgba(181,143,207,.06)}
+.custom-input:focus,.reason-input:focus{border-color:var(--gold);background:var(--bg-hover)}
 
 .confidence-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.04em}
 .cp-keyin{background:var(--gold-dim);color:var(--gold-bright)}
 .cp-87map{background:var(--info-bg);color:var(--info)}
 .cp-unknown{background:var(--negative-bg);color:var(--negative)}
+.cp-unmappable{background:var(--purple-bg);color:var(--purple)}
 
 .action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--rule);border-radius:7px;margin-bottom:16px;flex-wrap:wrap}
 .action-bar .info{font-size:12px;color:var(--ink-muted)}
-.action-bar .btn-group{display:flex;gap:6px}
+.action-bar .btn-group{display:flex;gap:6px;flex-wrap:wrap}
+
+.filter-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;margin-bottom:10px;flex-wrap:wrap}
+.filter-bar input[type=search]{background:var(--bg-deep);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:6px 10px;font-family:var(--sans);font-size:12.5px;outline:none;flex:1;min-width:180px}
+.filter-bar input[type=search]:focus{border-color:var(--gold)}
+.filter-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--rule);border-radius:14px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink-muted);background:var(--bg-card);transition:all .15s;user-select:none}
+.filter-pill:hover{color:var(--ink);border-color:var(--gold)}
+.filter-pill.active{color:var(--gold-bright);border-color:var(--gold);background:var(--gold-dim)}
+.filter-pill .count{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-left:2px}
+.filter-pill.active .count{color:var(--gold)}
 
 .toast{position:fixed;bottom:24px;right:24px;background:var(--positive);color:#fff;padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;z-index:999;box-shadow:0 6px 20px rgba(0,0,0,.4);animation:slideUp .3s ease}
 .toast.err{background:var(--negative)}
@@ -99,15 +125,17 @@ tr.mapped:hover td{background:rgba(76,175,111,.1)}
 .guide-box b{color:var(--info)}
 .guide-box ol{padding-left:18px;margin-top:6px}
 .guide-box li{margin-bottom:3px}
+.guide-box .ump{color:var(--purple);font-weight:700}
 
-.add-row{display:flex;gap:8px;align-items:center;margin-top:10px;padding:12px;background:var(--bg-card);border:1px dashed var(--rule-strong);border-radius:6px}
-.add-row input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:7px 10px;font-family:var(--sans);font-size:12.5px;outline:none;flex:1}
+.add-row{display:flex;gap:8px;align-items:center;margin-top:10px;padding:12px;background:var(--bg-card);border:1px dashed var(--rule-strong);border-radius:6px;flex-wrap:wrap}
+.add-row input{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:7px 10px;font-family:var(--sans);font-size:12.5px;outline:none;flex:1;min-width:140px}
 .add-row input:focus{border-color:var(--gold)}
 
 @media(max-width:640px){
   .mast-inner{flex-direction:column;align-items:flex-start}
   .content{padding:14px}
   th,td{padding:7px 8px;font-size:11.5px}
+  .year-chip{min-width:30px}
 }
 </style>
 </head>
@@ -135,17 +163,23 @@ tr.mapped:hover td{background:rgba(76,175,111,.1)}
     <p>
       57-prefix 회원번호(구코드)는 회원명에 국적이 표기되지 않아 자동 매핑이 어렵습니다.
       이 페이지에서 거래처별 국적을 수동 매핑하면 <code>build_inbound_enriched.py</code> 빌드 시 우선 적용됩니다.
-      <br><span style="color:var(--ink-faint);font-size:11.5px">우선순위: <b>회원명 (국적) 표기 &gt; 키인 매핑 &gt; 87 master &gt; 미확인</b></span>
+      <br><span style="color:var(--ink-faint);font-size:11.5px">우선순위: <b>매핑불가 (UNMAPPABLE) &gt; 회원명 (국적) 표기 &gt; 키인 매핑 &gt; 87 master &gt; 이름 토큰 추정 &gt; 미확인</b></span>
     </p>
   </div>
 
   <div class="guide-box">
     <b>🛠️ 사용법</b>
     <ol>
-      <li>아래 표에서 미확인 거래처의 국적을 드롭다운으로 선택 (또는 직접 입력)</li>
+      <li>아래 표에서 미확인 거래처의 국적을 드롭다운으로 선택 (또는 <b>다국적</b> 선택)</li>
+      <li>다국적 인바운드 거래처처럼 단일 국적 매핑이 부적합한 경우 → <span class="ump">🚫 매핑 불가</span> 선택 후 사유 메모 입력</li>
       <li><b>「JSON 내보내기」</b> 클릭 → <code>inbound_partner_nationality_keyin.json</code> 다운로드</li>
       <li>다운로드한 파일을 <code>docs/data/</code> 폴더에 덮어쓰기 → 커밋 &amp; 푸시</li>
-      <li>다음 빌드(<code>scripts/build_inbound_enriched.py</code>)에서 자동 반영</li>
+      <li>다음 빌드(<code>scripts/build_inbound_enriched.py</code>)에서 자동 반영
+        <ul style="margin-top:3px;padding-left:16px;color:var(--ink-faint)">
+          <li>매핑된 거래처 → 해당 국적 (키인매핑)</li>
+          <li><span class="ump">매핑 불가 등재 거래처 → '매핑불가' 분류 (미확인과 분리 집계)</span></li>
+        </ul>
+      </li>
     </ol>
   </div>
 
@@ -164,18 +198,28 @@ tr.mapped:hover td{background:rgba(76,175,111,.1)}
   </div>
 
   <div class="section">
-    <div class="sec-title">🚨 미확인 거래처 (57-prefix)</div>
-    <div class="sec-subtitle">회원명에 국적 표기가 없고 87 master에서도 매칭되지 않는 거래처</div>
+    <div class="sec-title">🚨 거래처 국적 매핑</div>
+    <div class="sec-subtitle">미확인 / 키인매핑 / 매핑불가 거래처 통합 — 전체 목록을 한눈에 확인하고 일괄 편집할 수 있습니다.</div>
+
+    <div class="filter-bar">
+      <input type="search" id="searchInput" placeholder="🔍 거래처명 검색…" oninput="renderUnknownTable()">
+      <span class="filter-pill active" data-filter="all" onclick="setFilter('all')">전체 <span class="count" id="countAll">0</span></span>
+      <span class="filter-pill" data-filter="unknown" onclick="setFilter('unknown')">🚨 미확인 <span class="count" id="countUnknown">0</span></span>
+      <span class="filter-pill" data-filter="mapped" onclick="setFilter('mapped')">✅ 매핑완료 <span class="count" id="countMapped">0</span></span>
+      <span class="filter-pill" data-filter="unmappable" onclick="setFilter('unmappable')">🚫 매핑불가 <span class="count" id="countUnmappable">0</span></span>
+    </div>
+
     <div class="tbl-wrap">
       <table>
         <thead><tr>
-          <th class="lalign">거래처명</th>
-          <th>현재 신뢰도</th>
-          <th>예약 RN</th>
-          <th>취소 RN</th>
+          <th class="lalign" style="min-width:200px">거래처명</th>
+          <th>현재 상태</th>
+          <th>예약</th>
+          <th>취소</th>
           <th>Net RN</th>
-          <th>매출 (백만원)</th>
-          <th class="lalign" style="min-width:280px">키인 국적</th>
+          <th>매출(백만)</th>
+          <th style="min-width:240px">연도별 RN (22~26)</th>
+          <th class="lalign" style="min-width:340px">국적 / 매핑불가</th>
         </tr></thead>
         <tbody id="unknownTbody"></tbody>
       </table>
@@ -190,13 +234,14 @@ tr.mapped:hover td{background:rgba(76,175,111,.1)}
       <select class="nat-select" id="newNat" style="min-width:160px">
         <option value="">-- 국적 선택 --</option>
       </select>
-      <button class="btn btn-sm btn-gold" onclick="addCustomMapping()">+ 추가</button>
+      <button class="btn btn-sm btn-gold" onclick="addCustomMapping()">+ 매핑 추가</button>
+      <button class="btn btn-sm btn-purple" onclick="addCustomUnmappable()">🚫 매핑 불가로 추가</button>
     </div>
     <div style="margin-top:12px" class="tbl-wrap" id="customWrap" hidden>
       <table>
         <thead><tr>
           <th class="lalign">거래처명</th>
-          <th>매핑 국적</th>
+          <th class="lalign">매핑 / 사유</th>
           <th class="lalign" style="width:120px">관리</th>
         </tr></thead>
         <tbody id="customTbody"></tbody>
@@ -209,23 +254,29 @@ tr.mapped:hover td{background:rgba(76,175,111,.1)}
 <script>
 const KEYIN_JSON_URL = './data/inbound_partner_nationality_keyin.json';
 const ENRICHED_JSON_URL = './data/inbound_enriched.json';
-const STORAGE_KEY = 'gs_inbound_nat_keyin_v1';
+const STORAGE_KEY = 'gs_inbound_nat_keyin_v2';
 
 const NATIONALITY_OPTIONS = [
   '대만','홍콩','중국','일본','베트남','말레이시아','태국','인도네시아','싱가포르',
   '필리핀','인도','몽골','카자흐스탄','터키','이스라엘','오만','UAE',
-  '미국','캐나다','멕시코','미주',
+  '미주','캐나다','멕시코',
   '호주','뉴질랜드',
   '영국','프랑스','독일','이탈리아','스페인','네덜란드','스위스','러시아','우크라이나','유럽',
-  '마카오','라오스','캄보디아','미얀마','브루나이'
+  '마카오','라오스','캄보디아','미얀마','브루나이',
+  '다국적'
 ];
+
+const UNMAPPABLE_VALUE = '__unmappable__';
+const CUSTOM_VALUE = '__custom__';
 
 let state = {
   enriched: null,
-  unknownPartners: [],
-  mappings: {},
-  customMappings: {},
-  initialMappings: {}
+  partners: [],          // 통합 거래처 목록 [{partner, rn_booking, rn_cancel, rn_net, rev_booking, prefix, years_rn, source}]
+  mappings: {},          // {partner: nationality}
+  unmappable: {},        // {partner: reason}
+  initialMappings: {},
+  initialUnmappable: {},
+  filter: 'all',         // 'all' | 'unknown' | 'mapped' | 'unmappable'
 };
 
 const fmt = n => Math.round(n||0).toLocaleString('ko-KR');
@@ -239,47 +290,66 @@ function showToast(msg, type='ok') {
   setTimeout(()=>t.remove(), 2600);
 }
 
-function buildNatDropdown(selectedValue, partnerName) {
-  const isCustom = selectedValue && !NATIONALITY_OPTIONS.includes(selectedValue);
-  let opts = '<option value="">-- 미매핑 --</option>';
-  NATIONALITY_OPTIONS.forEach(n => {
-    opts += `<option value="${n}"${n===selectedValue?' selected':''}>${n}</option>`;
-  });
-  opts += `<option value="__custom__"${isCustom?' selected':''}>✏️ 직접 입력…</option>`;
-  const cls = selectedValue ? 'set' : 'unset';
-  const customInput = isCustom
-    ? `<input type="text" class="custom-input" value="${esc(selectedValue)}" data-partner="${esc(partnerName)}" data-role="custom">`
-    : '';
-  return `<select class="nat-select ${cls}" data-partner="${esc(partnerName)}" onchange="onNatChange(event)">${opts}</select>${customInput}`;
-}
-
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildNatDropdown(partner, currentNat, isUnmappable, currentReason) {
+  const isCustom = currentNat && !NATIONALITY_OPTIONS.includes(currentNat);
+  const selectedVal = isUnmappable ? UNMAPPABLE_VALUE : (isCustom ? CUSTOM_VALUE : (currentNat || ''));
+  let opts = '<option value="">-- 미매핑 --</option>';
+  NATIONALITY_OPTIONS.forEach(n => {
+    opts += `<option value="${n}"${n===currentNat&&!isUnmappable?' selected':''}>${n}</option>`;
+  });
+  opts += `<option value="${CUSTOM_VALUE}"${isCustom&&!isUnmappable?' selected':''}>✏️ 직접 입력…</option>`;
+  opts += `<option value="${UNMAPPABLE_VALUE}"${isUnmappable?' selected':''}>🚫 매핑 불가 (다국적/혼합)</option>`;
+
+  let cls = 'unset';
+  if (isUnmappable) cls = 'unmappable-set';
+  else if (currentNat) cls = 'set';
+
+  let extra = '';
+  if (isUnmappable) {
+    extra = `<input type="text" class="reason-input" value="${esc(currentReason || '')}" data-partner="${esc(partner)}" data-role="reason" placeholder="사유 메모 (예: 다국적 인바운드)">`;
+  } else if (isCustom) {
+    extra = `<input type="text" class="custom-input" value="${esc(currentNat)}" data-partner="${esc(partner)}" data-role="custom" placeholder="국적 직접 입력">`;
+  }
+  return `<select class="nat-select ${cls}" data-partner="${esc(partner)}" onchange="onNatChange(event)">${opts}</select>${extra}`;
 }
 
 function onNatChange(e) {
   const partner = e.target.dataset.partner;
   const val = e.target.value;
-  if (val === '__custom__') {
+  if (val === UNMAPPABLE_VALUE) {
+    delete state.mappings[partner];
+    if (!state.unmappable[partner]) state.unmappable[partner] = '';
+    persist();
+    renderAll();
+    setTimeout(() => {
+      const inp = document.querySelector(`input.reason-input[data-partner="${CSS.escape(partner)}"]`);
+      if (inp) inp.focus();
+    }, 0);
+    return;
+  }
+  if (val === CUSTOM_VALUE) {
+    delete state.unmappable[partner];
     state.mappings[partner] = '';
     persist();
-    renderUnknownTable();
-    renderCustomTable();
+    renderAll();
     setTimeout(() => {
       const inp = document.querySelector(`input.custom-input[data-partner="${CSS.escape(partner)}"]`);
       if (inp) inp.focus();
     }, 0);
     return;
   }
+  delete state.unmappable[partner];
   if (!val) {
     delete state.mappings[partner];
   } else {
     state.mappings[partner] = val;
   }
   persist();
-  updateMappingInfo();
-  renderUnknownTable();
-  renderCustomTable();
+  renderAll();
 }
 
 function onCustomInputChange(e) {
@@ -292,17 +362,35 @@ function onCustomInputChange(e) {
   }
   persist();
   updateMappingInfo();
+  renderSummary();
+  updateFilterCounts();
+}
+
+function onReasonInputChange(e) {
+  const partner = e.target.dataset.partner;
+  const val = (e.target.value || '').trim();
+  state.unmappable[partner] = val;
+  persist();
+  updateMappingInfo();
 }
 
 document.addEventListener('change', e => {
-  if (e.target.matches('input.custom-input[data-role="custom"]')) {
-    onCustomInputChange(e);
+  if (e.target.matches('input.custom-input[data-role="custom"]')) onCustomInputChange(e);
+  if (e.target.matches('input.reason-input[data-role="reason"]')) onReasonInputChange(e);
+});
+document.addEventListener('input', e => {
+  if (e.target.matches('input.reason-input[data-role="reason"]')) {
+    state.unmappable[e.target.dataset.partner] = (e.target.value||'').trim();
+    persist();
   }
 });
 
 function persist() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({mappings: state.mappings}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      mappings: state.mappings,
+      unmappable: state.unmappable,
+    }));
   } catch(err) { console.warn(err); }
 }
 
@@ -312,6 +400,7 @@ function loadFromStorage() {
     if (s) {
       const d = JSON.parse(s);
       if (d.mappings) Object.assign(state.mappings, d.mappings);
+      if (d.unmappable) Object.assign(state.unmappable, d.unmappable);
     }
   } catch(err) { console.warn(err); }
 }
@@ -322,12 +411,36 @@ async function loadInitialMappings() {
     if (!resp.ok) return;
     const d = await resp.json();
     state.initialMappings = d.mappings || {};
+    state.initialUnmappable = d.unmappable || {};
     Object.entries(state.initialMappings).forEach(([k,v]) => {
-      if (state.mappings[k] === undefined) state.mappings[k] = v;
+      if (state.mappings[k] === undefined && state.unmappable[k] === undefined) {
+        state.mappings[k] = v;
+      }
+    });
+    Object.entries(state.initialUnmappable).forEach(([k,v]) => {
+      if (state.unmappable[k] === undefined && state.mappings[k] === undefined) {
+        state.unmappable[k] = v;
+      }
     });
   } catch(err) {
     console.warn('keyin JSON 로드 실패', err);
   }
+}
+
+function statsForPartner(partnerName) {
+  // by_partner_nationality 에서 거래처 통계 합산.
+  const byPartner = (state.enriched && state.enriched.by_partner_nationality) || {};
+  const byNat = byPartner[partnerName] || {};
+  let rnB=0, rnC=0, rnN=0, revB=0, prefixSet=new Set(), yearsRN={};
+  Object.values(byNat).forEach(v => {
+    rnB += v.rn_booking || 0;
+    rnC += v.rn_cancel || 0;
+    rnN += v.rn_net || 0;
+    revB += v.rev_booking || 0;
+    (v.prefix || []).forEach(p => prefixSet.add(p));
+  });
+  return {rn_booking: rnB, rn_cancel: rnC, rn_net: rnN, rev_booking: revB,
+          prefix: [...prefixSet], years_rn: yearsRN};
 }
 
 async function loadEnriched() {
@@ -335,103 +448,219 @@ async function loadEnriched() {
   if (!resp.ok) throw new Error('inbound_enriched.json 로드 실패');
   state.enriched = await resp.json();
 
-  const unknown = [];
-  const byPartner = state.enriched.by_partner_nationality || {};
-  Object.entries(byPartner).forEach(([partner, byNat]) => {
-    if (!partner || partner === '(미상)') return;
-    if (byNat['미확인']) {
-      const v = byNat['미확인'];
-      unknown.push({
-        partner,
-        rn_booking: v.rn_booking || 0,
-        rn_cancel: v.rn_cancel || 0,
-        rn_net: v.rn_net || 0,
-        rev_net: v.rev_net || 0,
-        prefix: (v.prefix || []).join(','),
-        confidence: 'unknown'
-      });
-    }
-  });
-  unknown.sort((a,b) => b.rn_booking - a.rn_booking);
-  state.unknownPartners = unknown;
+  const partnerMap = new Map();  // partner -> {partner, rn_booking,...,source}
 
-  // 키인 매핑된 거래처도 함께 노출 (이미 매핑됐어도 변경 가능하도록)
-  const keyinMappings = state.enriched.keyin_mappings || {};
-  Object.keys(keyinMappings).forEach(partner => {
-    if (state.unknownPartners.find(u => u.partner === partner)) return;
-    const byNat = byPartner[partner] || {};
-    let rnB=0, rnC=0, rnN=0, revN=0, prefixSet=new Set();
-    Object.values(byNat).forEach(v => {
-      rnB += v.rn_booking || 0;
-      rnC += v.rn_cancel || 0;
-      rnN += v.rn_net || 0;
-      revN += v.rev_net || 0;
-      (v.prefix || []).forEach(p => prefixSet.add(p));
-    });
-    state.unknownPartners.push({
-      partner, rn_booking: rnB, rn_cancel: rnC, rn_net: rnN, rev_net: revN,
-      prefix: [...prefixSet].join(','), confidence: 'keyin'
+  // 1) unmapped_partners_top — 미확인 거래처 (years_rn 포함)
+  (state.enriched.unmapped_partners_top || []).forEach(u => {
+    if (!u.partner || u.partner === '(미상)') return;
+    partnerMap.set(u.partner, {
+      partner: u.partner,
+      rn_booking: u.rn_booking || 0,
+      rn_cancel: u.rn_cancel || 0,
+      rn_net: u.rn_net || 0,
+      rev_booking: u.rev_booking || 0,
+      prefix: u.prefix || [],
+      years_rn: u.years_rn || {},
+      source: 'unknown',
     });
   });
-  state.unknownPartners.sort((a,b) => b.rn_booking - a.rn_booking);
+
+  // 2) unmappable_partners_list (신 schema) 또는 unmappable_mappings 의 partner 만 fallback
+  const unmappableList = state.enriched.unmappable_partners_list;
+  if (Array.isArray(unmappableList) && unmappableList.length) {
+    unmappableList.forEach(u => {
+      if (!u.partner) return;
+      partnerMap.set(u.partner, {
+        partner: u.partner,
+        rn_booking: u.rn_booking || 0,
+        rn_cancel: u.rn_cancel || 0,
+        rn_net: u.rn_net || 0,
+        rev_booking: u.rev_booking || 0,
+        prefix: u.prefix || [],
+        years_rn: u.years_rn || {},
+        source: 'unmappable',
+      });
+    });
+  } else {
+    // 구 schema 또는 미적용 빌드 — unmappable 매핑 partner 의 stats 를 by_partner_nationality 에서 추출
+    Object.keys(state.unmappable).forEach(p => {
+      if (partnerMap.has(p)) return;
+      const s = statsForPartner(p);
+      partnerMap.set(p, {partner: p, ...s, source: 'unmappable'});
+    });
+  }
+
+  // 3) keyin_mapped_partners_list (신 schema) 또는 keyin_mappings 의 partner 만 fallback
+  const kmList = state.enriched.keyin_mapped_partners_list;
+  if (Array.isArray(kmList) && kmList.length) {
+    kmList.forEach(u => {
+      if (!u.partner || partnerMap.has(u.partner)) return;
+      partnerMap.set(u.partner, {
+        partner: u.partner,
+        rn_booking: u.rn_booking || 0,
+        rn_cancel: u.rn_cancel || 0,
+        rn_net: u.rn_net || 0,
+        rev_booking: u.rev_booking || 0,
+        prefix: u.prefix || [],
+        years_rn: u.years_rn || {},
+        source: 'mapped',
+      });
+    });
+  } else {
+    Object.keys(state.enriched.keyin_mappings || {}).forEach(p => {
+      if (partnerMap.has(p)) return;
+      const s = statsForPartner(p);
+      partnerMap.set(p, {partner: p, ...s, source: 'mapped'});
+    });
+  }
+
+  // 4) state.mappings / state.unmappable 의 추가 partner (사용자가 키인했지만 데이터에 없는 경우 = custom)
+  //    -> custom 섹션에서 따로 처리 — partners 목록에는 추가 안 함
+  state.partners = [...partnerMap.values()].sort((a,b) => b.rn_net - a.rn_net);
+}
+
+function partnerStatus(p) {
+  if (state.unmappable[p.partner] !== undefined) return 'unmappable';
+  if (state.mappings[p.partner]) return 'mapped';
+  return 'unknown';
 }
 
 function renderSummary() {
-  const totalUnknown = state.unknownPartners.filter(u => u.confidence === 'unknown').length;
-  const mappedCount = Object.keys(state.mappings).filter(k => state.mappings[k]).length;
-  const totalUnknownRN = state.unknownPartners
-    .filter(u => u.confidence === 'unknown' && !state.mappings[u.partner])
-    .reduce((s,u) => s + u.rn_booking, 0);
-  const mappedRN = state.unknownPartners
-    .filter(u => state.mappings[u.partner])
-    .reduce((s,u) => s + u.rn_booking, 0);
+  const totalPartners = state.partners.length;
+  let nUnknown=0, nMapped=0, nUnmappable=0;
+  let rnUnknown=0, rnMapped=0, rnUnmappable=0;
+  state.partners.forEach(p => {
+    const st = partnerStatus(p);
+    if (st === 'unknown') { nUnknown++; rnUnknown += p.rn_net; }
+    else if (st === 'mapped') { nMapped++; rnMapped += p.rn_net; }
+    else { nUnmappable++; rnUnmappable += p.rn_net; }
+  });
 
   document.getElementById('summary').innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">미매핑 거래처</div>
-      <div class="stat-value">${totalUnknown}</div>
-      <div class="stat-sub">남은 미확인 RN: ${fmt(totalUnknownRN)}실</div>
+      <div class="stat-label">전체 대상 거래처</div>
+      <div class="stat-value">${totalPartners}</div>
+      <div class="stat-sub">미확인+키인+매핑불가 통합</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">키인 매핑 완료</div>
-      <div class="stat-value" style="color:var(--positive)">${mappedCount}</div>
-      <div class="stat-sub">매핑 RN: ${fmt(mappedRN)}실</div>
+      <div class="stat-label">🚨 미매핑</div>
+      <div class="stat-value" style="color:var(--negative)">${nUnknown}</div>
+      <div class="stat-sub">잔여 net RN: ${fmt(rnUnknown)}실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">✅ 키인 매핑</div>
+      <div class="stat-value" style="color:var(--positive)">${nMapped}</div>
+      <div class="stat-sub">매핑 net RN: ${fmt(rnMapped)}실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">🚫 매핑 불가</div>
+      <div class="stat-value" style="color:var(--purple)">${nUnmappable}</div>
+      <div class="stat-sub">매핑불가 net RN: ${fmt(rnUnmappable)}실</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">87 Master</div>
       <div class="stat-value" style="color:var(--info)">${state.enriched?.master_partner_count || 0}</div>
-      <div class="stat-sub">87-prefix 자동 매핑 가능 거래처</div>
+      <div class="stat-sub">87-prefix 자동매핑 거래처</div>
     </div>
   `;
 }
 
+function yearsCellHTML(yearsRN) {
+  const years = ['2022','2023','2024','2025','2026'];
+  const max = Math.max(1, ...years.map(y => yearsRN[y] || 0));
+  const heavyThr = max * 0.5;
+  return `<div class="years-grid">${years.map(y => {
+    const v = yearsRN[y] || 0;
+    let cls = 'year-chip';
+    if (v === 0) cls += ' zero';
+    else if (v >= heavyThr && v >= 50) cls += ' heavy';
+    return `<span class="${cls}"><span class="y-label">${y.slice(2)}</span><span class="y-val">${v ? fmt(v) : '·'}</span></span>`;
+  }).join('')}</div>`;
+}
+
+function setFilter(f) {
+  state.filter = f;
+  document.querySelectorAll('.filter-pill').forEach(el => {
+    el.classList.toggle('active', el.dataset.filter === f);
+  });
+  renderUnknownTable();
+}
+
+function updateFilterCounts() {
+  let nAll=0, nUnknown=0, nMapped=0, nUnmappable=0;
+  state.partners.forEach(p => {
+    nAll++;
+    const st = partnerStatus(p);
+    if (st === 'unknown') nUnknown++;
+    else if (st === 'mapped') nMapped++;
+    else nUnmappable++;
+  });
+  document.getElementById('countAll').textContent = nAll;
+  document.getElementById('countUnknown').textContent = nUnknown;
+  document.getElementById('countMapped').textContent = nMapped;
+  document.getElementById('countUnmappable').textContent = nUnmappable;
+}
+
 function renderUnknownTable() {
   const tbody = document.getElementById('unknownTbody');
-  if (!state.unknownPartners.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">미확인 거래처가 없습니다.</td></tr>';
+  if (!state.partners.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">대상 거래처가 없습니다.</td></tr>';
+    updateFilterCounts();
     return;
   }
-  tbody.innerHTML = state.unknownPartners.map(u => {
-    const mapped = state.mappings[u.partner];
-    const cls = mapped ? 'mapped' : '';
-    const confLbl = u.confidence === 'keyin'
-      ? '<span class="confidence-pill cp-keyin">키인매핑</span>'
-      : '<span class="confidence-pill cp-unknown">미확인</span>';
-    return `<tr class="${cls}">
-      <td class="lalign">${esc(u.partner)} <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px">${u.prefix}</span></td>
+  const q = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  const rows = state.partners.filter(p => {
+    if (q && !p.partner.toLowerCase().includes(q)) return false;
+    const st = partnerStatus(p);
+    if (state.filter === 'all') return true;
+    return st === state.filter;
+  });
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">필터/검색 조건에 해당하는 거래처가 없습니다.</td></tr>';
+    updateFilterCounts();
+    return;
+  }
+  tbody.innerHTML = rows.map(p => {
+    const st = partnerStatus(p);
+    let confLbl, rowCls = '';
+    if (st === 'unmappable') {
+      confLbl = '<span class="confidence-pill cp-unmappable">매핑불가</span>';
+      rowCls = 'unmappable';
+    } else if (st === 'mapped') {
+      confLbl = '<span class="confidence-pill cp-keyin">키인매핑</span>';
+      rowCls = 'mapped';
+    } else {
+      confLbl = '<span class="confidence-pill cp-unknown">미확인</span>';
+    }
+    const currentNat = state.mappings[p.partner] || '';
+    const isUmp = state.unmappable[p.partner] !== undefined;
+    const reason = state.unmappable[p.partner] || '';
+    const prefixStr = (p.prefix || []).join(',');
+    return `<tr class="${rowCls}">
+      <td class="lalign">${esc(p.partner)} <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px">${prefixStr}</span></td>
       <td>${confLbl}</td>
-      <td>${fmt(u.rn_booking)}</td>
-      <td>${fmt(u.rn_cancel)}</td>
-      <td><b>${fmt(u.rn_net)}</b></td>
-      <td>${fmtMil(u.rev_net)}</td>
-      <td class="lalign">${buildNatDropdown(mapped, u.partner)}</td>
+      <td>${fmt(p.rn_booking)}</td>
+      <td>${fmt(p.rn_cancel)}</td>
+      <td><b>${fmt(p.rn_net)}</b></td>
+      <td>${fmtMil(p.rev_booking)}</td>
+      <td>${yearsCellHTML(p.years_rn)}</td>
+      <td class="lalign">${buildNatDropdown(p.partner, currentNat, isUmp, reason)}</td>
     </tr>`;
   }).join('');
+  updateFilterCounts();
 }
 
 function renderCustomTable() {
-  const knownPartnerSet = new Set(state.unknownPartners.map(u => u.partner));
-  const customs = Object.entries(state.mappings).filter(([k,v]) => v && !knownPartnerSet.has(k));
+  const knownSet = new Set(state.partners.map(p => p.partner));
+  const customs = [];
+  Object.entries(state.mappings).forEach(([k,v]) => {
+    if (!v || knownSet.has(k)) return;
+    customs.push({partner:k, type:'mapping', value:v});
+  });
+  Object.entries(state.unmappable).forEach(([k,v]) => {
+    if (knownSet.has(k)) return;
+    customs.push({partner:k, type:'unmappable', value:v});
+  });
   const wrap = document.getElementById('customWrap');
   const tbody = document.getElementById('customTbody');
   if (!customs.length) {
@@ -439,20 +668,21 @@ function renderCustomTable() {
     return;
   }
   wrap.hidden = false;
-  tbody.innerHTML = customs.map(([k,v]) => `
-    <tr>
-      <td class="lalign">${esc(k)}</td>
-      <td class="lalign">${buildNatDropdown(v, k)}</td>
-      <td class="lalign"><button class="btn btn-sm btn-negative" onclick="removeCustom('${esc(k).replace(/'/g,"\\'")}')">✕ 삭제</button></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = customs.map(c => {
+    const dropdown = buildNatDropdown(c.partner, c.type==='mapping'?c.value:'', c.type==='unmappable', c.type==='unmappable'?c.value:'');
+    return `<tr class="${c.type==='unmappable'?'unmappable':'mapped'}">
+      <td class="lalign">${esc(c.partner)}</td>
+      <td class="lalign">${dropdown}</td>
+      <td class="lalign"><button class="btn btn-sm btn-negative" onclick="removeCustom('${esc(c.partner).replace(/'/g,"\\'")}')">✕ 삭제</button></td>
+    </tr>`;
+  }).join('');
 }
 
 function removeCustom(partner) {
   delete state.mappings[partner];
+  delete state.unmappable[partner];
   persist();
-  updateMappingInfo();
-  renderCustomTable();
+  renderAll();
 }
 
 function addCustomMapping() {
@@ -460,51 +690,60 @@ function addCustomMapping() {
   const nat = (document.getElementById('newNat').value || '').trim();
   if (!partner) { showToast('거래처명을 입력하세요', 'err'); return; }
   if (!nat) { showToast('국적을 선택하세요', 'err'); return; }
+  delete state.unmappable[partner];
   state.mappings[partner] = nat;
   persist();
   document.getElementById('newPartner').value = '';
   document.getElementById('newNat').value = '';
-  updateMappingInfo();
-  renderUnknownTable();
-  renderCustomTable();
-  renderSummary();
-  showToast(`${partner} → ${nat} 추가됨`);
+  renderAll();
+  showToast(`${partner} → ${nat} 매핑 추가됨`);
+}
+
+function addCustomUnmappable() {
+  const partner = (document.getElementById('newPartner').value || '').trim();
+  if (!partner) { showToast('거래처명을 입력하세요', 'err'); return; }
+  delete state.mappings[partner];
+  if (state.unmappable[partner] === undefined) state.unmappable[partner] = '';
+  persist();
+  document.getElementById('newPartner').value = '';
+  document.getElementById('newNat').value = '';
+  renderAll();
+  showToast(`${partner} → 매핑 불가 추가됨 (사유 메모 입력 가능)`);
 }
 
 function applyAllTaiwan() {
-  if (!confirm('미매핑 모든 거래처를 「대만」으로 일괄 매핑하시겠습니까?')) return;
+  if (!confirm('미매핑 모든 거래처를 「대만」으로 일괄 매핑하시겠습니까?\n(매핑 불가로 등재된 거래처는 제외됩니다)')) return;
   let n = 0;
-  state.unknownPartners.forEach(u => {
-    if (u.confidence === 'unknown' && !state.mappings[u.partner]) {
-      state.mappings[u.partner] = '대만';
+  state.partners.forEach(p => {
+    if (partnerStatus(p) === 'unknown') {
+      state.mappings[p.partner] = '대만';
       n++;
     }
   });
   persist();
-  updateMappingInfo();
-  renderUnknownTable();
-  renderCustomTable();
-  renderSummary();
+  renderAll();
   showToast(`${n}개 거래처를 「대만」으로 매핑했습니다.`);
 }
 
 function resetAll() {
-  if (!confirm('모든 키인 매핑을 초기화하시겠습니까? (브라우저 로컬 + 화면)')) return;
+  if (!confirm('모든 키인 매핑(매핑불가 포함)을 초기화하시겠습니까? (브라우저 로컬 + 화면)\n파일에 반영하려면 「JSON 내보내기」를 다시 눌러야 합니다.')) return;
   state.mappings = {};
+  state.unmappable = {};
   localStorage.removeItem(STORAGE_KEY);
-  updateMappingInfo();
-  renderUnknownTable();
-  renderCustomTable();
-  renderSummary();
+  renderAll();
   showToast('초기화 완료. 「JSON 내보내기」를 다시 눌러야 파일에 반영됩니다.');
 }
 
 function updateMappingInfo() {
-  const n = Object.keys(state.mappings).filter(k => state.mappings[k]).length;
-  const initN = Object.keys(state.initialMappings).length;
+  const nM = Object.keys(state.mappings).filter(k => state.mappings[k]).length;
+  const nU = Object.keys(state.unmappable).length;
+  const initM = Object.keys(state.initialMappings).length;
+  const initU = Object.keys(state.initialUnmappable).length;
+  const dirty = (nM !== initM) || (nU !== initU);
   document.getElementById('mappingInfo').innerHTML =
-    `현재 매핑: <b style="color:var(--gold-bright)">${n}개</b> · 파일 기준: <b>${initN}개</b>` +
-    (n !== initN ? ` <span style="color:var(--warning)">⚠️ 미저장 변경 있음</span>` : '');
+    `현재 매핑: <b style="color:var(--gold-bright)">${nM}개</b> · 매핑불가: <b style="color:var(--purple)">${nU}개</b> · ` +
+    `파일 기준: <b>${initM}+${initU}</b>` +
+    (dirty ? ` <span style="color:var(--warning)">⚠️ 미저장 변경 있음</span>` : '');
 }
 
 function buildNewNatDropdown() {
@@ -517,16 +756,22 @@ function buildNewNatDropdown() {
 }
 
 function exportJSON() {
-  // 빈 값 제거
-  const clean = {};
+  const cleanMappings = {};
   Object.entries(state.mappings).forEach(([k,v]) => {
-    if (k && v && v.trim()) clean[k.trim()] = v.trim();
+    if (k && v && String(v).trim()) cleanMappings[k.trim()] = String(v).trim();
+  });
+  const cleanUnmappable = {};
+  Object.entries(state.unmappable).forEach(([k,v]) => {
+    if (k && k.trim()) cleanUnmappable[k.trim()] = (v && String(v).trim()) || '매핑 불가';
   });
   const payload = {
-    _description: '인바운드(58) 57-prefix 미확인 거래처 → 국적 수동 매핑. 이 매핑이 87 master 매핑보다 우선합니다. inbound-nationality-keyin.html에서 편집 후 JSON 내보내기 → docs/data/ 폴더에 커밋하면 build_inbound_enriched.py 실행 시 반영.',
+    _description: '인바운드(58) 미확인 거래처 → 국적 수동 매핑 + 매핑불가(다국적) 리스트. inbound-nationality-keyin.html에서 편집 후 JSON 내보내기 → docs/data/ 폴더에 커밋하면 build_inbound_enriched.py 실행 시 반영.',
+    _schema_version: 2,
     _updated_at: new Date().toISOString(),
     _updated_by: 'inbound-nationality-keyin.html',
-    mappings: clean
+    _unmappable_note: 'unmappable 섹션에 등재된 거래처는 다국적/혼합/이벤트성 등으로 단일 국적 매핑이 부적합한 거래처입니다. 빌드 시 \'미확인\'이 아닌 \'매핑불가\'로 분류됩니다.',
+    mappings: cleanMappings,
+    unmappable: cleanUnmappable,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2) + '\n'], {type:'application/json'});
   const a = document.createElement('a');
@@ -535,7 +780,7 @@ function exportJSON() {
   a.click();
   URL.revokeObjectURL(a.href);
   document.getElementById('lastSaved').textContent = '내보내기: ' + new Date().toLocaleTimeString('ko-KR');
-  showToast('JSON 내보내기 완료 — docs/data/ 폴더에 저장하세요.');
+  showToast(`JSON 내보내기 완료 (매핑 ${Object.keys(cleanMappings).length} + 매핑불가 ${Object.keys(cleanUnmappable).length}) — docs/data/ 폴더에 저장하세요.`);
 }
 
 function loadFromFile() {
@@ -551,21 +796,29 @@ function onFileSelected(e) {
       const d = JSON.parse(ev.target.result);
       if (!d.mappings || typeof d.mappings !== 'object') throw new Error('mappings 키가 없습니다.');
       state.mappings = {};
+      state.unmappable = {};
       Object.entries(d.mappings).forEach(([k,v]) => {
         if (k && v) state.mappings[k.trim()] = String(v).trim();
       });
+      Object.entries(d.unmappable || {}).forEach(([k,v]) => {
+        if (k) state.unmappable[k.trim()] = (v && String(v).trim()) || '매핑 불가';
+      });
       persist();
-      updateMappingInfo();
-      renderUnknownTable();
-      renderCustomTable();
-      renderSummary();
-      showToast(`"${file.name}" 불러오기 완료 (${Object.keys(state.mappings).length}개 매핑)`);
+      renderAll();
+      showToast(`"${file.name}" 불러오기 완료 (매핑 ${Object.keys(state.mappings).length} + 매핑불가 ${Object.keys(state.unmappable).length})`);
     } catch(err) {
       showToast('JSON 파싱 실패: ' + err.message, 'err');
     }
   };
   reader.readAsText(file);
   e.target.value = '';
+}
+
+function renderAll() {
+  renderSummary();
+  renderUnknownTable();
+  renderCustomTable();
+  updateMappingInfo();
 }
 
 async function init() {
@@ -576,13 +829,10 @@ async function init() {
     await loadEnriched();
   } catch(err) {
     document.getElementById('unknownTbody').innerHTML =
-      `<tr><td colspan="7" class="empty">데이터 로드 실패: ${err.message}<br><span style="font-size:11px">scripts/build_inbound_enriched.py 를 먼저 실행하세요.</span></td></tr>`;
+      `<tr><td colspan="8" class="empty">데이터 로드 실패: ${err.message}<br><span style="font-size:11px">scripts/build_inbound_enriched.py 를 먼저 실행하세요.</span></td></tr>`;
     return;
   }
-  renderSummary();
-  renderUnknownTable();
-  renderCustomTable();
-  updateMappingInfo();
+  renderAll();
 }
 
 init();
