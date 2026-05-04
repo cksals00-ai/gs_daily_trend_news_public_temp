@@ -132,6 +132,74 @@
         "docs/data/validation/20260504_validation.json"
       ],
       "author": "claude"
+    },
+    {
+      "verification_date": "2026-05-05",
+      "verification_time": "—",
+      "verification_type": "mobile_ui",
+      "scope": "세일즈코웍 P1 전략위젯(strat-section) + 액션플랜 패키지코드 실적 머지(campaign_performance.json) 머지 후 GitHub Pages 배포 모바일 UI 검증",
+      "verdict": "정상(1건 수정 후)",
+      "pages_checked": [
+        {
+          "page": "docs/index.html",
+          "viewport_meta": true,
+          "media_queries": ["1920px", "2400px", "1100px", "1024px", "768px"],
+          "result": "PASS"
+        },
+        {
+          "page": "docs/gs-sales-report.html",
+          "viewport_meta": true,
+          "media_queries": ["1100px", "900px", "480px"],
+          "result": "FIXED",
+          "issue": "신규 strat-grid가 grid-template-columns:repeat(3,1fr) 고정으로 모바일에서 3개 셀이 각 ~100px 미만이 되어 strat-cell-value(20px font) 가독성 저하",
+          "fix": "1100px(2-col), 900px(1-col) 미디어쿼리 추가 + strat-banner padding/badge/value 사이즈 모바일 축소",
+          "cmproi_summary_check": "기존 1100px(2-col) / 900px(1-col) 폴백 정상 동작 확인 — 추가 수정 불필요"
+        },
+        {
+          "page": "docs/verification-tracker.html",
+          "viewport_meta": true,
+          "media_queries": ["768px", "480px"],
+          "result": "PASS"
+        },
+        {
+          "page": "docs/inbound-nationality-keyin.html",
+          "viewport_meta": true,
+          "media_queries": ["640px"],
+          "result": "PASS"
+        },
+        {
+          "page": "docs/inbound-nationality-keyin-sales.html",
+          "viewport_meta": true,
+          "media_queries": ["640px"],
+          "result": "PASS"
+        },
+        {
+          "page": "docs/data-check.html",
+          "viewport_meta": true,
+          "media_queries": ["768px", "380px", "900px(GSN)", "480px(GSN)"],
+          "result": "PASS"
+        },
+        {
+          "page": "docs/action_plan_dashboard.html",
+          "viewport_meta": true,
+          "media_queries": ["900px", "500px", "480px"],
+          "result": "PASS",
+          "note": "이번 머지 변경은 JS(loadCampaignPerformance) 추가뿐이라 UI 영향 없음"
+        }
+      ],
+      "checks_performed": [
+        "viewport meta (width=device-width) 존재 여부",
+        "신규 strat-section(.strat-grid 3-col) 모바일 폴백",
+        "신규 cmproi-summary(.cmproi-summary 4-col) 모바일 폴백 — 기존 1100/900 미디어쿼리 정상",
+        "사이드바 모바일 토글(.mobile-sidebar-toggle/.sidebar-backdrop) 동작 구조",
+        "GSN 햄버거 메뉴 900px 미만 동작 구조",
+        "테이블/그리드 가로 스크롤(overflow-x:auto, occ-grid min-width:640px 등) 처리"
+      ],
+      "notes": "5개 페이지(index/verification-tracker/inbound-keyin x2/data-check)는 기존 미디어쿼리/사이드바 구조 정상. action_plan_dashboard는 JS 머지뿐이라 UI 회귀 없음. gs-sales-report만 신규 strat-grid 3-col 고정 이슈 발견 → 1100/900 폴백 추가 수정 후 PASS.",
+      "related_commits": [
+        "3364766 feat: 세일즈코웍 P1 전략위젯 + 액션플랜 패키지코드 실적연동"
+      ],
+      "author": "claude"
     }
   ]
 }
