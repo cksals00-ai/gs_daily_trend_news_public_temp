@@ -9,9 +9,10 @@ steps = [
     ("STEP1", "parse_raw_db.py"),
     ("STEP2", "compare_and_update.py"),
     ("STEP3", "generate_otb_data.py"),
-    ("STEP4", "generate_campaign_data.py"),
-    ("STEP5", "generate_insights.py"),
-    ("STEP6", "build.py"),
+    ("STEP4", "generate_fcst.py"),
+    ("STEP5", "generate_campaign_data.py"),
+    ("STEP6", "generate_insights.py"),
+    ("STEP7", "build.py"),
 ]
 
 pid = os.fork()

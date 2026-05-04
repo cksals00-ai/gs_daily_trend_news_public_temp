@@ -116,7 +116,8 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
   <div class="page-title">
     <div class="eyebrow">FCST · KEY-IN PANEL</div>
     <h1>FCST 키인 수정 (주차별 · 세그먼트별)</h1>
-    <p>해당 주차 FCST를 키인합니다. (매일 키인 가능)</p>
+    <p>해당 주차 FCST를 키인합니다. 자동 FCST는 4개년 패턴 + 공휴일 보정 + Confidence Interval 기반.
+    내보낸 <code>admin_input.json</code>은 data/ 폴더에 덮어쓴 뒤 <code>generate_fcst.py</code> · 빌드에서 반영됩니다.</p>
   </div>
 
   <!-- 주차 정보 배너 -->
@@ -152,6 +153,14 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
     <div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:12px;line-height:1.7;">
       키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다. <strong style="color:var(--ink-muted)">기존 FCST</strong> = 직전 주차에 작성한 값.
       <strong style="color:var(--warning)">RM FCST</strong> = 최신 Revenue Meeting PDF의 사업장별 전망 RN (단위: 실, <span id="rm-fcst-source">data/rm_fcst.json</span> 기반).
+      <strong style="color:var(--info)">자동 FCST</strong> 아래 회색 텍스트는 4개년 분산 기반 신뢰구간(CI).
+    </div>
+
+    <!-- 정확도 배지 (지난 완료월 MAPE) -->
+    <div id="accuracy-banner" style="display:none;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--ink-muted);line-height:1.6;">
+      <strong style="color:var(--info)">📊 AI FCST 정확도</strong>
+      <span id="accuracy-overall" style="margin-left:8px;font-family:var(--mono);"></span>
+      <span id="accuracy-source" style="margin-left:8px;font-size:10.5px;color:var(--ink-faint);"></span>
     </div>
 
     <div style="overflow-x:auto;margin-bottom:12px;">
@@ -256,6 +265,8 @@ const CAN_EDIT = isEditable(TODAY);
 let otbRaw = {};
 let rmFcstData = {};          // RM FCST data from data/rm_fcst.json
 let rmTrendData = null;       // RM FCST trend data from data/rm_fcst_trend.json
+let aiFcstData = null;        // AI FCST data from data/ai_fcst.json (CI + accuracy)
+let baseAdminData = {};       // 기존 admin_input.json 보존용 (export 시 머지)
 let propertyList = [];
 let fcstHistory = {};         // { "2026-W17": { month, week_label, created, keyin: {"벨비발디|OTA": 22565, ...} }, ... }
 let activeWeekKey = CURRENT_WEEK_KEY;
@@ -388,6 +399,32 @@ async function loadFcstData() {
       console.log('RM FCST trend data not available:', e.message);
     }
 
+    // Load AI FCST artifact (CI + accuracy + 4-year pattern)
+    try {
+      const aiResp = await fetch('data/ai_fcst.json?t=' + Date.now());
+      if (aiResp.ok) {
+        aiFcstData = await aiResp.json();
+        renderAccuracyBanner();
+      }
+    } catch(e) {
+      console.log('AI FCST data not available:', e.message);
+    }
+
+    // Preload existing admin_input.json so export merges (preserves admin.html fields)
+    try {
+      const adResp = await fetch('data/admin_input.json?t=' + Date.now());
+      if (adResp.ok) {
+        baseAdminData = await adResp.json();
+        // 키인이 admin_input.json에 이미 있다면 history 비어있을 때 복원
+        if (baseAdminData.fcst_history && Object.keys(fcstHistory).length === 0) {
+          fcstHistory = baseAdminData.fcst_history;
+          renderWeekTabs();
+        }
+      }
+    } catch(e) {
+      console.log('admin_input.json baseline not loaded:', e.message);
+    }
+
     const yoy0 = otbRaw.yoyTable?.[0];
     const availMonths = yoy0 ? Object.keys(yoy0.months).map(Number).sort((a,b)=>a-b).slice(0,3) : [];
 
@@ -416,6 +453,42 @@ function getSegData(propName, segment, month) {
 }
 function getPropYoy(propName, month) {
   return (otbRaw.yoyTable || []).find(r => r.name === propName)?.months?.[month] || null;
+}
+function getAiCi(propName, month) {
+  if (!aiFcstData?.properties) return null;
+  const mk = '2026-' + String(month).padStart(2,'0');
+  const md = aiFcstData.properties[propName]?.[mk];
+  if (!md) return null;
+  return {
+    fcst: md.ai_fcst_rn, lo: md.fcst_lo, hi: md.fcst_hi,
+    width_pct: md.ci_width_pct, final: md.final_fcst,
+  };
+}
+function getAccuracy(propName) {
+  if (!aiFcstData?.accuracy?.by_property) return null;
+  return aiFcstData.accuracy.by_property[propName] || null;
+}
+
+/* ═══ ACCURACY BANNER ═══ */
+function renderAccuracyBanner() {
+  const banner = document.getElementById('accuracy-banner');
+  if (!banner || !aiFcstData?.accuracy?.overall) return;
+  const o = aiFcstData.accuracy.overall;
+  if (!o.samples) {
+    banner.style.display = 'block';
+    document.getElementById('accuracy-overall').innerHTML =
+      '<span style="color:var(--ink-faint)">샘플 누적 중 (스냅샷 1개 — 다음 주차부터 MAPE 산출)</span>';
+    document.getElementById('accuracy-source').textContent =
+      `히스토리 ${aiFcstData.meta?.history_count || 0}건`;
+    return;
+  }
+  banner.style.display = 'block';
+  const mapeCls = o.mape <= 5 ? 'positive' : o.mape <= 10 ? 'warning' : 'negative';
+  const biasSign = o.bias > 0 ? '+' : '';
+  document.getElementById('accuracy-overall').innerHTML =
+    `MAPE <span style="color:var(--${mapeCls})">${o.mape}%</span> · Bias ${biasSign}${o.bias}% · 샘플 ${o.samples}건`;
+  document.getElementById('accuracy-source').textContent =
+    `(완료월의 최초 스냅샷 vs 실적 비교, 히스토리 ${aiFcstData.meta?.history_count || 0}건)`;
 }
 
 /* ═══ AI FACTOR ═══ */
@@ -540,11 +613,19 @@ function renderFcstTable() {
     const rmDisplay = rmVal !== null ? fmt(rmVal) : '—';
     if (rmVal !== null) totRm += rmVal;
 
-    html+=`<tr class="prop-row"><td><span class="prop-toggle ${isColl?'collapsed':''}" onclick="toggleProp('${esca(prop.name)}')"><span class="arrow">▼</span><span class="rbadge ${rbCls}" style="font-size:9px;padding:1px 4px;margin-right:3px">${region.charAt(0).toUpperCase()}</span>${esc(prop.name)}</span></td>
+    // CI 표시 (data/ai_fcst.json 기반, 사업장 단위)
+    const ci = getAiCi(prop.name, fcstCurrentMonth);
+    const ciHtml = ci ? `<div style="font-size:9px;color:var(--ink-faint);font-family:var(--mono);margin-top:2px">CI [${fmt(ci.lo)}~${fmt(ci.hi)}] ±${ci.width_pct?.toFixed?.(0) ?? ci.width_pct ?? '?'}%</div>` : '';
+
+    // 사업장 정확도 배지
+    const acc = getAccuracy(prop.name);
+    const accHtml = acc ? `<span style="font-size:9px;font-family:var(--mono);color:${acc.mape<=5?'var(--positive)':acc.mape<=10?'var(--warning)':'var(--negative)'};margin-left:6px;padding:1px 4px;border:1px solid ${acc.mape<=5?'var(--positive)':acc.mape<=10?'var(--warning)':'var(--negative)'};border-radius:3px;opacity:.85" title="과거 ${acc.samples}개월 평균">MAPE ${acc.mape}%</span>` : '';
+
+    html+=`<tr class="prop-row"><td><span class="prop-toggle ${isColl?'collapsed':''}" onclick="toggleProp('${esca(prop.name)}')"><span class="arrow">▼</span><span class="rbadge ${rbCls}" style="font-size:9px;padding:1px 4px;margin-right:3px">${region.charAt(0).toUpperCase()}</span>${esc(prop.name)}</span>${accHtml}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pBud)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink)">${fmt(pAct)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pPrev)}</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmt(pAuto)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmt(pAuto)}${ciHtml}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
       <td style="text-align:center;font-size:9.5px;color:var(--ink-faint)">세그 합산</td>
       <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmt(pFinal)} ${dHtml}</td>
@@ -620,28 +701,50 @@ window.resetFcstKeyin=function(){
 };
 
 /* ═══ FORM DATA (build.py compat) ═══ */
-function getFormData(){
-  // Build aggregated fcst_keyin for build.py: "사업장|월" → {value, _segments}
+function buildFcstKeyinAgg(){
+  // 모든 주차·모든 월의 키인을 "사업장|월" 단위로 집계
+  // - 같은 사업장×월에 대해 최신 주차 키인 우선
   const agg={};
-  const weekData=fcstHistory[activeWeekKey];
-  if(weekData?.keyin){
-    Object.entries(weekData.keyin).forEach(([k,v])=>{
+  const updatedBy=document.getElementById('updatedBy').value.trim()||null;
+  const nowIso=new Date().toISOString();
+  const weekKeys=Object.keys(fcstHistory).sort(); // 오래된 → 최신
+  weekKeys.forEach(wk=>{
+    const wd=fcstHistory[wk];
+    if(!wd?.keyin)return;
+    const month=wd.month||fcstCurrentMonth;
+    Object.entries(wd.keyin).forEach(([k,v])=>{
       const[prop,seg]=k.split('|');
-      const aggK=`${prop}|${fcstCurrentMonth}`;
-      if(!agg[aggK])agg[aggK]={value:0,_segments:{}};
-      agg[aggK].value+=v;
+      const aggK=`${prop}|${month}`;
+      if(!agg[aggK])agg[aggK]={value:0,_segments:{},updated_at:nowIso,updated_by:updatedBy,_source_week:wk};
+      // 같은 (사업장,월,세그) 키 — 최신 주차로 덮어쓰기 (sort 순서 보장)
+      const prev=agg[aggK]._segments[seg]||0;
       agg[aggK]._segments[seg]=v;
+      agg[aggK].value=agg[aggK].value-prev+v;
+      agg[aggK]._source_week=wk;
+      agg[aggK].updated_at=nowIso;
     });
+  });
+  return agg;
+}
+
+function getFormData(){
+  // baseAdminData(서버 admin_input.json)을 베이스로 머지 — admin.html 측 필드 보존
+  const base=baseAdminData&&typeof baseAdminData==='object'?JSON.parse(JSON.stringify(baseAdminData)):{};
+  const agg=buildFcstKeyinAgg();
+  base._description=base._description||'데일리 리포트 키인 데이터';
+  base._updated_at=new Date().toISOString();
+  base._updated_by=document.getElementById('updatedBy').value.trim()||base._updated_by||'';
+  base.report_date=document.getElementById('reportDate').value.trim()||base.report_date||'';
+  // fcst_keyin / fcst_history 머지 — 메타필드는 보존
+  const existingMeta={};
+  if(base.fcst_keyin&&typeof base.fcst_keyin==='object'){
+    Object.entries(base.fcst_keyin).forEach(([k,v])=>{if(k.startsWith('_'))existingMeta[k]=v;});
   }
-  return {
-    _description:'FCST 키인 데이터 (주차별·세그먼트별)',
-    _updated_at:new Date().toISOString(),
-    _updated_by:document.getElementById('updatedBy').value.trim(),
-    report_date:document.getElementById('reportDate').value.trim(),
-    active_week:activeWeekKey,
-    fcst_keyin:Object.keys(agg).length>0?agg:undefined,
-    fcst_history:fcstHistory,
-  };
+  base.fcst_keyin={...existingMeta,...agg,_updated_at:new Date().toISOString(),
+    _description:'fcst-admin.html → 사업장×월 FCST 수동 키인. key="<사업장명>|<월>", value={value,_segments,updated_at,updated_by}'};
+  base.fcst_history=fcstHistory;
+  base.active_week=activeWeekKey;
+  return base;
 }
 
 function applyFormData(d){
@@ -649,6 +752,8 @@ function applyFormData(d){
   setVal('updatedBy',d._updated_by);
   setVal('reportDate',d.report_date);
   if(d.fcst_history&&typeof d.fcst_history==='object')fcstHistory=d.fcst_history;
+  // 가져온 데이터를 베이스로 머지(다음 export 시 보존)
+  baseAdminData=d;
   renderWeekTabs();renderFcstTable();updateEditableState();
 }
 
@@ -665,8 +770,8 @@ let _at;function autoSave(){clearTimeout(_at);_at=setTimeout(saveToStorage,1800)
 function exportJSON(){
   const j=JSON.stringify(getFormData(),null,2);
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([j],{type:'application/json'}));
-  a.download='fcst_input.json';a.click();URL.revokeObjectURL(a.href);
-  localStorage.setItem(STORAGE_KEY,j);showToast('fcst_input.json 다운로드 완료');
+  a.download='admin_input.json';a.click();URL.revokeObjectURL(a.href);
+  localStorage.setItem(STORAGE_KEY,j);showToast('admin_input.json 다운로드 완료 — data/ 폴더에 덮어쓰기');
 }
 
 /* ═══ EXPORT EXCEL ═══ */
