@@ -2319,6 +2319,9 @@ function toggleCompShowAll(){
 async function renderCompetitorCards(){
   const pane=document.getElementById('comp-pane');
   if(!pane)return;
+  /* Inbound 담당 모드에서는 경쟁사 가격비교 섹션 숨김 (OTA 가격 기반 데이터라 무관) */
+  if(curRole==='inbound'){pane.innerHTML='';pane.style.display='none';return}
+  pane.style.display='';
   await ensureCompetitor();
   if(!compCache||!compCache.A_regional){
     pane.innerHTML=`<div class="comp-empty"><div class="me-icon">⚠️</div>경쟁사 가격 데이터(competitor_analysis.json)를 불러오지 못했습니다</div>`;
