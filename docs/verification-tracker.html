@@ -79,7 +79,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
 
 /* Verification history */
-.history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.history-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; min-width: 560px; }
 .history-table th { background: #f8f9fa; color: #555; font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 2px solid #e8e8e8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
 .history-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
 .history-table tr:last-child td { border-bottom: none; }
@@ -97,6 +98,42 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* Timestamp */
 .footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 16px; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  .header h1 { font-size: 18px; }
+  .header .subtitle { font-size: 12px; }
+  .summary { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .summary-card .value { font-size: 22px; }
+  .stage-header { padding: 10px 12px; gap: 8px; }
+  .stage-title { font-size: 13px; }
+  .stage-body { padding: 0 12px 12px; }
+  .check-item { font-size: 12.5px; }
+  .legend { gap: 8px 12px; padding: 8px; }
+  /* page matrix: tighter cols, smaller font */
+  .page-row { grid-template-columns: minmax(0,1fr) 38px 38px 38px 38px; gap: 3px; font-size: 11px; }
+  .page-row.header-row { font-size: 9px; }
+  .page-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page-name .tag { display: inline-block; }
+  .cell { font-size: 12px; }
+}
+@media (max-width: 480px) {
+  body { padding: 10px; }
+  .summary-card { padding: 10px 6px; }
+  .summary-card .label { font-size: 9px; }
+  .summary-card .value { font-size: 19px; }
+  .summary-card .detail { font-size: 9px; }
+  .stage-icon { font-size: 16px; }
+  .stage-badge { font-size: 10px; padding: 2px 7px; }
+  /* page matrix: hide tags inline to save room, tighter cells */
+  .page-row { grid-template-columns: minmax(0,1fr) 30px 30px 30px 30px; gap: 2px; font-size: 10.5px; }
+  .page-row.header-row { font-size: 8.5px; letter-spacing: 0.1px; }
+  .page-name .tag { font-size: 8px; padding: 1px 4px; margin-left: 3px; }
+  .cell { font-size: 11px; }
+  .check-icon { width: 16px; height: 16px; font-size: 10px; }
+  .check-note { font-size: 10.5px; }
+}
 </style>
 </head>
 <body>
@@ -451,20 +488,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
   <div class="stage-body">
     <div class="stage-desc">GS실시간실적현황 Excel 파일과 온북 파싱 데이터의 교차 검증 회차별 결과. <code style="font-size:11px;">docs/data/verification_history.json</code>에서 자동 로드됩니다.</div>
-    <table class="history-table" id="history-table">
-      <thead>
-        <tr>
-          <th style="width:88px;">검증일</th>
-          <th>검증 파일 / 파싱 시점</th>
-          <th style="width:200px;">채널별 차이율</th>
-          <th style="width:74px;">판정</th>
-          <th>비고</th>
-        </tr>
-      </thead>
-      <tbody id="history-tbody">
-        <tr><td colspan="5" style="text-align:center; color:#999; padding:14px;">로딩 중...</td></tr>
-      </tbody>
-    </table>
+    <div class="history-wrap">
+      <table class="history-table" id="history-table">
+        <thead>
+          <tr>
+            <th style="width:88px;">검증일</th>
+            <th>검증 파일 / 파싱 시점</th>
+            <th style="width:200px;">채널별 차이율</th>
+            <th style="width:74px;">판정</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody">
+          <tr><td colspan="5" style="text-align:center; color:#999; padding:14px;">로딩 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
