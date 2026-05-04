@@ -12,7 +12,8 @@ steps = [
     ("STEP4", "generate_fcst.py"),
     ("STEP5", "generate_campaign_data.py"),
     ("STEP6", "generate_insights.py"),
-    ("STEP7", "build.py"),
+    ("STEP7", "build_validation.py"),
+    ("STEP8", "build.py"),
 ]
 
 pid = os.fork()
