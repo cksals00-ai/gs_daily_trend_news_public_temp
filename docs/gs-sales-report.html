@@ -322,6 +322,14 @@ a{color:inherit}
 .mgmt-row-delta.neg{color:var(--negative)}
 .mgmt-empty{padding:36px 16px;text-align:center;color:var(--ink-faint);font-size:11.5px}
 .mgmt-empty .me-icon{font-size:28px;margin-bottom:6px}
+/* Inbound 모드 거래처 row — 국적 플래그 */
+.mgmt-row.inb-mode{align-items:flex-start;padding:10px 14px;grid-template-columns:1fr}
+.inb-mgmt-flags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.inb-mgmt-flag{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;background:rgba(168,146,200,.10);border:1px solid rgba(168,146,200,.25);font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-soft)}
+.inb-mgmt-flag-name{color:var(--ink-soft);font-weight:700}
+.inb-mgmt-flag-rn{color:var(--gold-bright);font-weight:700;margin-left:2px}
+.inb-mgmt-flag-more{display:inline-flex;align-items:center;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--rule);font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint)}
+.inb-mgmt-years{font-size:9.5px;color:var(--ink-faint);font-weight:700;letter-spacing:0.04em;padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--rule)}
 .mgmt-summary{display:flex;gap:12px;padding:8px 14px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:rgba(255,255,255,.02);border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .mgmt-summary-item strong{color:var(--ink-soft);font-weight:700}
 .mgmt-summary-item.bad strong{color:var(--negative)}
@@ -567,6 +575,9 @@ a{color:inherit}
 .inb-card-head{padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--bg-deep);display:flex;flex-direction:column;gap:3px}
 .inb-card-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.06em;text-transform:uppercase}
 .inb-card-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.inb-card-hint{font-size:10.5px;color:var(--ink-muted);font-weight:500;margin-top:2px}
+.inb-card-hint a{color:var(--info);text-decoration:none;border-bottom:1px dashed rgba(90,159,196,.4);transition:color 0.15s}
+.inb-card-hint a:hover{color:var(--gold-bright);border-bottom-color:var(--gold-bright)}
 .inb-card-body{padding:8px 14px;display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto}
 .inb-unmapped-row{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:7px 8px;border-radius:4px;font-size:11px;background:rgba(255,255,255,.02);border-left:3px solid var(--negative)}
 .inb-unmapped-row.unconfirmed{border-left-color:var(--warning)}
@@ -580,6 +591,40 @@ a{color:inherit}
 .inb-empty-mini{padding:14px;text-align:center;color:var(--ink-faint);font-size:10.5px;font-style:italic}
 .inb-meta-note{padding:10px 14px;background:rgba(168,146,200,.06);border:1px solid rgba(168,146,200,.25);border-radius:6px;font-size:11px;color:var(--ink-muted);font-weight:500;line-height:1.55}
 .inb-meta-note strong{color:var(--ink-soft)}
+
+/* Inbound 캘린더 (left) */
+.inb-cal-mode-pill{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--apac);background:rgba(168,146,200,.10);border:1px solid rgba(168,146,200,.3);padding:3px 9px;border-radius:10px;letter-spacing:0.04em}
+.cal-cell.inb-cal-cell{cursor:pointer}
+.cal-cell.inb-cal-cell.is-empty-inb{cursor:pointer;opacity:0.55}
+.cal-cell.inb-cal-cell.heat-hot{background:rgba(168,146,200,.32);box-shadow:inset 0 0 0 1px rgba(168,146,200,.55)}
+.cal-cell.inb-cal-cell.heat-warm{background:rgba(168,146,200,.22);box-shadow:inset 0 0 0 1px rgba(168,146,200,.40)}
+.cal-cell.inb-cal-cell.heat-mid{background:rgba(168,146,200,.13);box-shadow:inset 0 0 0 1px rgba(168,146,200,.25)}
+.cal-cell.inb-cal-cell.heat-cool{background:rgba(168,146,200,.06);box-shadow:inset 0 0 0 1px rgba(168,146,200,.15)}
+.cal-cell.inb-cal-cell.is-selected{background:rgba(201,160,99,.22);box-shadow:inset 0 0 0 1.5px var(--gold-bright)}
+.inb-cell-rn-block{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:3px 0 0;font-family:var(--mono);font-weight:800}
+.inb-cell-rn-val{font-size:14px;color:var(--ink);line-height:1.05}
+.inb-cell-rn-unit{font-size:9px;color:var(--ink-faint);font-weight:600;margin-left:2px}
+.inb-cell-rev{font-size:10px;color:var(--gold-bright);font-weight:700}
+
+/* Inbound 리스트 (right) — 거래처×회원명 */
+.inb-list-partner{display:flex;flex-direction:column;gap:5px;padding:9px 12px;border-bottom:1px solid var(--rule);background:rgba(255,255,255,.015)}
+.inb-list-partner:last-child{border-bottom:none}
+.inb-list-partner-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:4px;border-bottom:1px dashed var(--rule)}
+.inb-list-partner-name{font-size:12.5px;font-weight:800;color:var(--gold-bright);letter-spacing:-0.01em}
+.inb-list-partner-stat{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700}
+.inb-list-row{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border-radius:4px;background:rgba(168,146,200,.05);border-left:2px solid rgba(168,146,200,.4)}
+.inb-list-line1{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.inb-list-flag{font-size:14px;line-height:1}
+.inb-list-mname{font-size:11.5px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inb-list-pattern{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.04em;padding:1px 6px;border-radius:8px}
+.inb-list-pattern.pat-series{background:rgba(76,175,111,.18);color:var(--positive)}
+.inb-list-pattern.pat-incentive{background:rgba(229,115,115,.18);color:var(--negative)}
+.inb-list-pattern.pat-regular{background:rgba(232,162,86,.18);color:var(--warning)}
+.inb-list-pattern.pat-spot{background:rgba(168,172,179,.14);color:var(--ink-soft)}
+.inb-list-line2{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--ink-muted);font-weight:600;flex-wrap:wrap}
+.inb-list-stat strong{color:var(--ink-soft);font-weight:700}
+.inb-list-range{color:var(--gold-bright);font-weight:700}
+.inb-list-more-inline{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;text-align:center;padding:4px;font-style:italic}
 
 @media(max-width:1100px){
   .inb-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -867,6 +912,7 @@ let selectedEventIdx = null;   // 우측 목록에서 선택된 기획전 idx �
 let selectedDate = null;       // 캘린더에서 선택된 날짜 'YYYY-MM-DD' → 우측 목록 필터
 let mgmtSelProperty = null;    // 사업장 관리에서 선택된 사업장(name) → 거래처 카드 필터
 let mgmtSelChannel  = null;    // 거래처 관리에서 선택된 채널(seg key) → 사업장 카드 강조
+let mgmtChanExpand  = false;   // Inbound 모드 거래처 카드 더보기 토글
 
 const today = new Date(); today.setHours(0,0,0,0);
 const todayStr = ymdStr(today);
@@ -1084,6 +1130,9 @@ function setRole(role){
   selectedDate=null;
   mgmtSelProperty=null;
   mgmtSelChannel=null;
+  mgmtChanExpand=false;
+  inboundExpandedNats=new Set();
+  inboundShowAllNats=false;
   initSidebar();
   initFilters();
   initGoalMonths();
@@ -1509,7 +1558,11 @@ async function render(){
   updateScopeDisplay();
   const data=sortRows(getFiltered());
   document.getElementById('count-label').textContent=`${data.length} / ${getScoped().length}건 · 전체 ${allRows.length}`;
-  await renderCalendarList(data);
+  if(curRole==='inbound'){
+    await renderInboundCalendarList();
+  }else{
+    await renderCalendarList(data);
+  }
   /* Goal는 scope 기준이므로 필터와 무관 */
   renderGoal();
   renderMgmtCards();
@@ -1716,6 +1769,192 @@ async function renderCalendarList(data){
     <div class="list-body">${renderEventCards(monthEvents)}</div>`;
   }
   listHtml+='</div>';
+
+  document.getElementById('cal-list-pane').innerHTML=`<div class="cal-list-grid">${calHtml}${listHtml}</div>`;
+}
+
+/* === Inbound 모드 캘린더 + 거래처/회원명 리스트 === */
+async function renderInboundCalendarList(){
+  if(!calCursor)calCursor=new Date(today.getFullYear(),today.getMonth(),1);
+  const year=calCursor.getFullYear();
+  const month=calCursor.getMonth();
+  const lastDay=new Date(year,month+1,0);
+  const startDow=new Date(year,month,1).getDay();
+  const gridStart=new Date(year,month,1-startDow);
+  const gridEnd=new Date(year,month,lastDay.getDate()+(6-lastDay.getDay()));
+  const monthLabel=`${year}년 ${month+1}월`;
+  const yyyymm=`${year}${String(month+1).padStart(2,'0')}`;
+
+  await ensureInbound();
+  const dailyMap=(inboundCache&&inboundCache.daily_inbound_rn)||{};
+  const monthMembers=(inboundCache&&inboundCache.recent_member_detail&&inboundCache.recent_member_detail[yyyymm])||[];
+
+  /* 월간 합계 (cell heatmap 색조용 max 계산) */
+  let monthMaxDayRn=0, monthSumRn=0, monthSumRev=0;
+  let cur0=new Date(gridStart);
+  while(cur0<=gridEnd){
+    if(cur0.getMonth()===month){
+      const k=ymdStr(cur0).replace(/-/g,'');
+      const c=dailyMap[k];
+      if(c){
+        if(c.rn_net>monthMaxDayRn)monthMaxDayRn=c.rn_net;
+        monthSumRn+=c.rn_net||0;
+        monthSumRev+=c.rev_net||0;
+      }
+    }
+    cur0.setDate(cur0.getDate()+1);
+  }
+
+  /* === 캘린더 패널 === */
+  let calHtml=`<div class="cal-pane">
+    <div class="cal-header">
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="cal-nav-btn" onclick="calNav(-1)" title="이전 달">‹</button>
+        <button class="cal-month-title" onclick="clearDateSelection()" title="이 달 전체 보기">${monthLabel}</button>
+        <button class="cal-nav-btn" onclick="calNav(1)" title="다음 달">›</button>
+      </div>
+      <div class="cal-controls">
+        <button class="cal-mini-btn" onclick="calToday()">오늘</button>
+        <span class="inb-cal-mode-pill">투숙일자 기준 · 인바운드 RN</span>
+      </div>
+    </div>
+    <div class="cal-week-row">`;
+  ['일','월','화','수','목','금','토'].forEach((w,i)=>{
+    const cls=i===0?'cw-sun':i===6?'cw-sat':'';
+    calHtml+=`<div class="cal-week-day ${cls}">${w}</div>`;
+  });
+  calHtml+=`</div><div class="cal-grid">`;
+
+  const cur=new Date(gridStart);
+  while(cur<=gridEnd){
+    const isOutside=cur.getMonth()!==month;
+    const isToday=ymdStr(cur)===todayStr;
+    const dow=cur.getDay();
+    const dayKey=ymdStr(cur);
+    const yKey=dayKey.replace(/-/g,'');
+    const c=dailyMap[yKey];
+    const rn=(c&&c.rn_net)||0;
+    const rev=(c&&c.rev_net)||0;
+    const isSelDate=!isOutside&&selectedDate===dayKey;
+
+    let cellCls='cal-cell inb-cal-cell';
+    if(isOutside)cellCls+=' is-outside';
+    if(isToday)cellCls+=' is-today';
+    if(isSelDate)cellCls+=' is-selected';
+    if(rn===0&&!isOutside)cellCls+=' is-empty-inb';
+
+    /* heatmap 강도 */
+    let heatCls='';
+    if(rn>0&&monthMaxDayRn>0){
+      const ratio=rn/monthMaxDayRn;
+      if(ratio>=0.7)heatCls='heat-hot';
+      else if(ratio>=0.4)heatCls='heat-warm';
+      else if(ratio>=0.15)heatCls='heat-mid';
+      else heatCls='heat-cool';
+    }
+    cellCls+=' '+heatCls;
+    const dnCls=dow===0?'is-sun':dow===6?'is-sat':'';
+    const clickAttr=!isOutside?` onclick="selectDate('${dayKey}')"`:'';
+
+    calHtml+=`<div class="${cellCls}"${clickAttr}>`;
+    calHtml+=`<div class="cal-day-head"><span class="cal-day-num ${dnCls}">${cur.getDate()}</span>`;
+    if(rn>0&&!isOutside)calHtml+=`<span class="cm-count">${fmtNum(rn)}</span>`;
+    calHtml+=`</div>`;
+    if(!isOutside&&rn>0){
+      calHtml+=`<div class="inb-cell-rn-block" data-tip="투숙 ${dayKey} · RN net ${fmtNum(rn)} · 매출 net ${fmtNum(Math.round(rev/1000000))}백만">
+        <div class="inb-cell-rn-val">${fmtNum(rn)}<span class="inb-cell-rn-unit">RN</span></div>
+        <div class="inb-cell-rev">${fmtNum(Math.round(rev/1000000))}M</div>
+      </div>`;
+    }
+    calHtml+=`</div>`;
+    cur.setDate(cur.getDate()+1);
+  }
+  calHtml+=`</div></div>`;
+
+  /* === 리스트 패널 (거래처×회원명×국적) === */
+  const isDateFilter=!!selectedDate;
+  const filtered=isDateFilter
+    ?monthMembers.filter(m=>(m.stay_days||[]).includes(selectedDate.replace(/-/g,'')))
+    :monthMembers.slice();
+
+  /* base_partner 그룹핑 */
+  const byPartner={};
+  filtered.forEach(m=>{
+    const p=m.base_partner||'(미상)';
+    if(!byPartner[p])byPartner[p]={partner:p,rn_net:0,members:[]};
+    byPartner[p].rn_net+=m.rn_net||0;
+    byPartner[p].members.push(m);
+  });
+  const partnerList=Object.values(byPartner).sort((a,b)=>b.rn_net-a.rn_net);
+  partnerList.forEach(p=>p.members.sort((a,b)=>b.rn_net-a.rn_net));
+
+  function patternBadge(m){
+    const n=m.n_days||0;
+    const rn=m.rn_net||0;
+    if(n>=5)return {cls:'series',label:'시리즈',tip:`${n}일간 반복 투숙 — 시리즈 패턴`};
+    if(n<=2&&rn>=30)return {cls:'incentive',label:'인센티브',tip:`${n}일 단기 대량 (${rn}RN) — 인센티브 패턴`};
+    if(n>=3)return {cls:'regular',label:'정기',tip:`${n}일 운영`};
+    return {cls:'spot',label:'스팟',tip:`${n}일 단발성`};
+  }
+  function dayRangeShort(days){
+    if(!days||!days.length)return '—';
+    if(days.length===1)return days[0].slice(4,6)+'.'+days[0].slice(6,8);
+    const first=days[0],last=days[days.length-1];
+    return first.slice(4,6)+'.'+first.slice(6,8)+'~'+last.slice(4,6)+'.'+last.slice(6,8);
+  }
+
+  let listHtml='<div class="list-pane">';
+  const dateLbl=isDateFilter?`${selectedDate.slice(5).replace('-','.')}일 투숙`:`${monthLabel} 전체 투숙`;
+  const totalMembers=filtered.length;
+  const totalRn=filtered.reduce((s,m)=>s+(m.rn_net||0),0);
+  listHtml+=`<div class="list-header">
+    <div class="list-title-row">
+      <div class="list-eyebrow">인바운드 거래처×회원명×국적 · ${escapeHtml(dateLbl)}</div>
+      ${isDateFilter?`<button class="list-back" onclick="clearDateSelection()">← 월 전체</button>`:''}
+    </div>
+    <div class="list-title">거래처 <strong>${partnerList.length}</strong>개 · 회원명 <strong>${totalMembers}</strong>건 · RN net <strong>${fmtNum(totalRn)}</strong></div>
+  </div>
+  <div class="list-body">`;
+
+  if(!partnerList.length){
+    listHtml+=`<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">${isDateFilter?'선택일 인바운드 투숙 없음':'이 달 인바운드 데이터 없음'}</div><div class="empty-state-sub">최근 24개월 외 데이터는 inbound_enriched.json 의 recent_member_detail 미포함</div></div>`;
+  }else{
+    listHtml+=partnerList.map(p=>{
+      const mLimit=4;
+      const mShown=p.members.slice(0,mLimit);
+      const mMore=p.members.length-mShown.length;
+      const memberHtml=mShown.map(m=>{
+        const pb=patternBadge(m);
+        const rngTxt=dayRangeShort(m.stay_days);
+        const revM=Math.round((m.rev_net||0)/1000000);
+        const tip=`${m.member_name} · ${m.nationality||'—'} · prefix ${m.prefix} · RN net ${fmtNum(m.rn_net)} · 매출 ${revM}백만 · 투숙 ${m.n_days||0}일 (${rngTxt}) · ${pb.tip}`;
+        return `<div class="inb-list-row" data-tip="${escapeHtml(tip)}">
+          <div class="inb-list-line1">
+            <span class="inb-list-flag">${natFlag(m.nationality||'')}</span>
+            <span class="inb-list-mname">${escapeHtml(m.member_name)}</span>
+            <span class="inb-list-pattern pat-${pb.cls}">${pb.label}</span>
+          </div>
+          <div class="inb-list-line2">
+            <span class="inb-list-stat">RN <strong>${fmtNum(m.rn_net)}</strong></span>
+            <span class="inb-list-stat">${revM}M</span>
+            <span class="inb-list-stat">${m.n_days||0}일</span>
+            <span class="inb-list-stat inb-list-range">${rngTxt}</span>
+            <span class="inb-tag inb-tag-prefix">${escapeHtml(m.prefix||'')}</span>
+          </div>
+        </div>`;
+      }).join('');
+      const moreHtml=mMore>0?`<div class="inb-list-more-inline">+${mMore}개 회원명 (RN ${fmtNum(p.members.slice(mLimit).reduce((s,m)=>s+(m.rn_net||0),0))})</div>`:'';
+      return `<div class="inb-list-partner">
+        <div class="inb-list-partner-head">
+          <div class="inb-list-partner-name">${escapeHtml(p.partner)}</div>
+          <div class="inb-list-partner-stat">${p.members.length}건 · RN ${fmtNum(p.rn_net)}</div>
+        </div>
+        ${memberHtml}
+        ${moreHtml}
+      </div>`;
+    }).join('');
+  }
+  listHtml+=`</div></div>`;
 
   document.getElementById('cal-list-pane').innerHTML=`<div class="cal-list-grid">${calHtml}${listHtml}</div>`;
 }
@@ -1945,6 +2184,44 @@ function buildChannelCardData(md, monthKey){
   });
 }
 
+/* Inbound 모드 거래처 카드 데이터 — inbound_enriched.json 의 by_partner_nationality 합산.
+   - 키 = 인바운드 거래처(여행사). nationalities 배열에 국적별 detail 포함.
+   - 월별 partner 데이터 미산출 → lifetime RN/Rev 만 표시 (YoY는 인바운드 섹션에서 별도 안내).
+   - 사이드바 권역/사업장 필터 비적용 (인바운드 데이터는 사업장 차원 미보유).
+*/
+function buildInboundChannelCardData(){
+  if(!inboundCache||!inboundCache.by_partner_nationality)return [];
+  const bpn=inboundCache.by_partner_nationality;
+  const out=[];
+  Object.entries(bpn).forEach(([partner,nats])=>{
+    let rn_net=0, rev_net=0;
+    const natList=[];
+    Object.entries(nats).forEach(([nat,d])=>{
+      rn_net+=d.rn_net||0;
+      rev_net+=d.rev_net||0;
+      natList.push({
+        nat,
+        rn_net:d.rn_net||0,
+        rev_net:d.rev_net||0,
+        prefix:d.prefix||[],
+        years:d.years||[]
+      });
+    });
+    if(rn_net===0&&rev_net===0)return;
+    natList.sort((a,b)=>(b.rn_net||0)-(a.rn_net||0));
+    out.push({
+      name:partner, segment:'Inbound',
+      rev_actual:rev_net, rev_last:0, rev_budget:0,
+      rns_actual:rn_net,  rns_last:0, rns_budget:0,
+      yoy:null, ach:null, lastSrc:'lifetime',
+      nationalities:natList
+    });
+  });
+  /* 누적 RN 큰 순 정렬 */
+  out.sort((a,b)=>(b.rns_actual||0)-(a.rns_actual||0));
+  return out;
+}
+
 /* 거래처(채널) 클릭 시 → 사업장 강조용: 해당 채널이 선택월 전년比 하락한 사업장(otb naming) */
 function buildPropertyHighlightForChannel(channelName, monthKey){
   const set=new Set();
@@ -1975,6 +2252,7 @@ async function renderMgmtCards(){
   await ensureOTB();
   await ensureDB();
   await ensureDbYoyChannel();
+  if(curRole==='inbound')await ensureInbound();
   const md=getMonthBlock(m);
   if(!md){
     pane.innerHTML=`<div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">${m} OTB 데이터 없음</div></div>`;
@@ -1984,7 +2262,8 @@ async function renderMgmtCards(){
 
   /* 데이터 빌드 */
   const propData=buildPropertyCardData(md);
-  const chanData=buildChannelCardData(md,m);
+  /* Inbound 모드는 inbound_enriched.json 의 거래처 데이터 사용 (43번 OTA/G-OTA 채널 데이터엔 인바운드 매핑 부재) */
+  const chanData=curRole==='inbound'?buildInboundChannelCardData():buildChannelCardData(md,m);
 
   /* 거래처 클릭 시 → 사업장 강조 셋 */
   const highlightProps=mgmtSelChannel?buildPropertyHighlightForChannel(mgmtSelChannel,m):new Set();
@@ -2029,13 +2308,51 @@ async function renderMgmtCards(){
   }
 
   /* === 거래처 카드 === */
+  const isInboundMode=curRole==='inbound';
   const declCt=chanData.filter(c=>c.yoy!=null&&c.yoy<0).length;
   const totalCt=chanData.filter(c=>c.yoy!=null).length;
   const samePeriodCt=chanData.filter(c=>c.lastSrc==='samePeriod').length;
   const finalCt=chanData.filter(c=>c.lastSrc==='final'&&c.yoy!=null).length;
   let chanBody;
   if(!chanData.length){
-    chanBody=`<div class="mgmt-empty"><div class="me-icon">🔍</div>현재 스코프에 해당하는 거래처(채널)가 없습니다</div>`;
+    chanBody=isInboundMode
+      ?`<div class="mgmt-empty"><div class="me-icon">🔍</div>인바운드 거래처 데이터(inbound_enriched.json) 없음<div style="font-size:10.5px;margin-top:4px">scripts/build_inbound_enriched.py 실행 후 새로고침</div></div>`
+      :`<div class="mgmt-empty"><div class="me-icon">🔍</div>현재 스코프에 해당하는 거래처(채널)가 없습니다</div>`;
+  }else if(isInboundMode){
+    /* Inbound 카드: 누적 RN/매출 + 국적 플래그. YoY 없음. */
+    const chanLimit=15;
+    const expanded=mgmtChanExpand;
+    const showCh=expanded?chanData:chanData.slice(0,chanLimit);
+    const moreCh=chanData.length-showCh.length;
+    chanBody=showCh.map(c=>{
+      const isSel=mgmtSelChannel===c.name;
+      const cls2=['mgmt-row','inb-mode',isSel?'is-selected':''].filter(Boolean).join(' ');
+      const actMM=Math.round((c.rev_actual||0)/1000000).toLocaleString('ko-KR');
+      const rnTxt=c.rns_actual?Math.round(c.rns_actual).toLocaleString('ko-KR'):'—';
+      const nats=(c.nationalities||[]).slice(0,4);
+      const natExtra=(c.nationalities||[]).length-nats.length;
+      const flagsHtml=nats.map(n=>{
+        const tip=`${n.nat} · RN ${fmtNum(n.rn_net)} · 매출 ${Math.round(n.rev_net/1000000).toLocaleString('ko-KR')}백만 · prefix ${(n.prefix||[]).join('/')} · ${(n.years||[]).join(',')}`;
+        return `<span class="inb-mgmt-flag" data-tip="${escapeHtml(tip)}">${natFlag(n.nat)}<span class="inb-mgmt-flag-name">${escapeHtml(n.nat)}</span><span class="inb-mgmt-flag-rn">${fmtNum(n.rn_net)}</span></span>`;
+      }).join('');
+      const moreFlag=natExtra>0?`<span class="inb-mgmt-flag-more">+${natExtra}</span>`:'';
+      const allYears=new Set(); (c.nationalities||[]).forEach(n=>(n.years||[]).forEach(y=>allYears.add(y)));
+      const yrsTxt=[...allYears].sort().map(y=>y.slice(2)).join('·');
+      return `<div class="${cls2}" onclick="selectMgmtChannel('${escapeHtml(c.name)}')" data-tip="${escapeHtml(c.name)} · 누적 RN net ${rnTxt} · 매출 ${actMM}백만 · ${(c.nationalities||[]).length}개 국적 운영">
+        <div class="mgmt-row-main">
+          <div class="mgmt-row-name">${escapeHtml(c.name)}<span class="seg-pill seg-ib">Inbound</span></div>
+          <div class="mgmt-row-meta">
+            <span>RN <strong>${rnTxt}</strong></span>
+            <span>매출 ${actMM}M</span>
+            ${yrsTxt?`<span class="inb-mgmt-years">${yrsTxt}</span>`:''}
+          </div>
+          <div class="inb-mgmt-flags">${flagsHtml}${moreFlag}</div>
+        </div>
+      </div>`;
+    }).join('');
+    if(chanData.length>chanLimit){
+      chanBody+=`<div style="text-align:center;padding:8px"><button class="inb-more-btn" onclick="mgmtChanExpand=!mgmtChanExpand;renderMgmtCards()">${expanded?'접기':`+${moreCh}개 거래처 더보기`}</button></div>`;
+    }
   }else{
     chanBody=chanData.map(c=>{
       const isSel=mgmtSelChannel===c.name;
@@ -2068,7 +2385,9 @@ async function renderMgmtCards(){
 
   const propSubLbl=mgmtSelChannel?`거래처 [${mgmtSelChannel}] 하락 사업장 강조 중`:`${segLbl} · 달성률 낮은 순`;
   const chanLyMode=mgmtSelProperty?'전년마감 대비':(samePeriodCt>0?(finalCt>0?'전년동기/마감 혼합 대비':'전년동기 대비'):'전년마감 대비');
-  const chanSubLbl=mgmtSelProperty?`사업장 [${mgmtSelProperty}] · ${segLbl} 채널 · ${chanLyMode} 하락 큰 순`:`${segLbl} 채널 · ${chanLyMode} 하락 큰 순`;
+  const chanSubLbl=isInboundMode
+    ?`Inbound 거래처 (전 기간 누적) · 국적 플래그 표시 · YoY는 아래 인바운드 섹션 참조`
+    :(mgmtSelProperty?`사업장 [${mgmtSelProperty}] · ${segLbl} 채널 · ${chanLyMode} 하락 큰 순`:`${segLbl} 채널 · ${chanLyMode} 하락 큰 순`);
 
   pane.innerHTML=`<div class="mgmt-grid">
     <div class="mgmt-card">
@@ -2102,9 +2421,12 @@ async function renderMgmtCards(){
         </div>
       </div>
       <div class="mgmt-summary">
-        <span class="mgmt-summary-item bad">하락 <strong>${declCt}</strong></span>
-        <span class="mgmt-summary-item">총 <strong>${totalCt}</strong>개 거래처 (${chanLyMode} 가능)</span>
-        <span class="mgmt-summary-item" style="margin-left:auto">전체 <strong>${chanData.length}</strong>개</span>
+        ${isInboundMode
+          ?`<span class="mgmt-summary-item">총 <strong>${chanData.length}</strong>개 인바운드 거래처</span>
+            <span class="mgmt-summary-item" style="margin-left:auto">국적 ${new Set(chanData.flatMap(c=>(c.nationalities||[]).map(n=>n.nat))).size}개</span>`
+          :`<span class="mgmt-summary-item bad">하락 <strong>${declCt}</strong></span>
+            <span class="mgmt-summary-item">총 <strong>${totalCt}</strong>개 거래처 (${chanLyMode} 가능)</span>
+            <span class="mgmt-summary-item" style="margin-left:auto">전체 <strong>${chanData.length}</strong>개</span>`}
       </div>
       <div class="mgmt-body">${chanBody}</div>
     </div>
@@ -2631,6 +2953,7 @@ async function renderInboundPartners(){
         <div class="inb-card-head">
           <div class="inb-card-title">🚫 매핑 불가 거래처 (다국적/혼합)</div>
           <div class="inb-card-sub">키인 unmappable 등재 · ${unmappable.length}개 · 단일 국적 매핑 부적합</div>
+          <div class="inb-card-hint"><a href="inbound-nationality-keyin.html" target="_blank">관리자 페이지에서 매핑 가능합니다 ↗</a></div>
         </div>
         <div class="inb-card-body">${unmappableHtml}</div>
       </div>
@@ -2638,6 +2961,7 @@ async function renderInboundPartners(){
         <div class="inb-card-head">
           <div class="inb-card-title">❓ 미확인 거래처 (매핑 후보)</div>
           <div class="inb-card-sub">87 master·키인·이름 추정 모두 실패 · ${unconfirmed.length}개 (즉시 키인 매핑 필요)</div>
+          <div class="inb-card-hint"><a href="inbound-nationality-keyin.html" target="_blank">관리자 페이지에서 매핑 가능합니다 ↗</a></div>
         </div>
         <div class="inb-card-body">${unconfirmedHtml}</div>
       </div>
@@ -2917,6 +3241,9 @@ function classifyCampaignProperty(propRaw){
 async function renderCampaignRoi(){
   const pane=document.getElementById('campaign-roi-pane');
   if(!pane)return;
+  /* Inbound 담당 모드에서는 기획전 ROI 섹션 비활성 — 인바운드 거래처는 기획전 단위 운영 안 함 */
+  if(curRole==='inbound'){pane.innerHTML='';pane.style.display='none';return}
+  pane.style.display='';
   await ensureCampaignData();
   await ensureOccData();
 
