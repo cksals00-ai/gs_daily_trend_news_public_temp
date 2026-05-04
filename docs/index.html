@@ -2442,7 +2442,7 @@
           <div style="padding:14px 18px;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">상품카테고리별 금주 비교</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">OTA / G-OTA / Inbound 등</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">룸온니/프로모션 · 연박/투나잇 · 시즌패키지 등 · 패키지 회원번호=86</span>
             </div>
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
@@ -11761,30 +11761,24 @@ function toggleNewsMore(btn, id) {
       bindMore('twc-channel-tbody', 'twc-channel-more', crows.length, 4, '#a892c8');
     }
 
-    // ── 상품카테고리(세그먼트) 테이블 ──
+    // ── 상품카테고리 테이블 (패키지 회원번호=86 → 9개 카테고리) ──
     var stbody = document.getElementById('twc-seg-tbody');
-    var FOCUS = ['OTA', 'G-OTA', 'Inbound'];
-    var segs = (d.by_segment || []).filter(function(s){ return s.segment && (s.this_net_rn !== 0 || s.prev_net_rn !== 0); });
-    segs.sort(function(a, b) {
-      var ai = FOCUS.indexOf(a.segment), bi = FOCUS.indexOf(b.segment);
-      if (ai !== -1 || bi !== -1) {
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      }
-      return (b.this_net_rn||0) - (a.this_net_rn||0);
+    var PC_FOCUS = ['룸온니/프로모션', '연박/투나잇', '시즌패키지', '워터풀/오션', '올인클루시브'];
+    var pcs = (d.by_product_category || []).filter(function(c){
+      return c.category && (c.this_net_rn !== 0 || c.prev_net_rn !== 0 || c.ly_net_rn !== 0);
     });
-    var maxSegRN = segs.reduce(function(m, p){ return Math.max(m, Math.abs(p.this_net_rn||0)); }, 1);
-    var srows = segs.map(function(s) {
-      var w = pctBadge(s.wow_rn_pct), y = pctBadge(s.yoy_rn_pct);
-      var isFocus = FOCUS.indexOf(s.segment) !== -1;
+    pcs.sort(function(a, b) { return (b.this_net_rn||0) - (a.this_net_rn||0); });
+    var maxPcRN = pcs.reduce(function(m, p){ return Math.max(m, Math.abs(p.this_net_rn||0)); }, 1);
+    var srows = pcs.map(function(c) {
+      var w = pctBadge(c.wow_rn_pct), y = pctBadge(c.yoy_rn_pct);
+      var isFocus = PC_FOCUS.indexOf(c.category) !== -1;
       var color = isFocus ? '#e6b970' : 'rgba(255,255,255,0.85)';
       var weight = isFocus ? '800' : '600';
-      var bar = Math.max(1, Math.round(Math.abs(s.this_net_rn||0) / maxSegRN * 100));
+      var bar = Math.max(1, Math.round(Math.abs(c.this_net_rn||0) / maxPcRN * 100));
       return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
-        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(s.segment) + '</td>' +
+        '<td style="padding:5px 6px;color:' + color + ';font-weight:' + weight + ';">' + escapeHtml(c.category) + '</td>' +
         '<td style="padding:5px 6px;text-align:right;color:#fff;font-weight:700;">' +
-          '<div>' + fmtNum(s.this_net_rn) + '</div>' +
+          '<div>' + fmtNum(c.this_net_rn) + '</div>' +
           '<div style="height:2px;background:rgba(230,185,112,0.5);width:' + bar + '%;margin-left:auto;margin-top:2px;border-radius:1px;"></div>' +
         '</td>' +
         '<td style="padding:5px 6px;text-align:right;color:' + w.color + ';font-weight:700;">' + w.text + '</td>' +
