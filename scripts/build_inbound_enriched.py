@@ -7,6 +7,9 @@ build_inbound_enriched.py — Inbound (변경예약집계코드=58) 거래처별
 
 처리:
 1. 22~26년 raw_db 의 43_/44_ [57,87] 파일에서 인바운드(58) 레코드 추출 (booking + cancel)
+   ─ 단, 코드=58 이라도 EVENT_KEYWORD_RE / EVENT_EXACT_PARTNERS 에 매칭되면 제외
+     (세계피트니스선수권대회·비바윈터페스티벌·일러스타페스·국제회의 등 — 외국인 단체참가
+      이벤트라 58로 분류되지만 거래처 단위 분석엔 노이즈)
 2. 87 마스터: 거래처명 → {국적: count}, 가장 많은 국적이 대표 국적
 3. 57 매핑:
    - 회원명에 (국적) 있으면 그대로 사용 (confidence='57원본')
@@ -35,6 +38,21 @@ YEARS = ['2022', '2023', '2024', '2025', '2026']
 
 # 매핑 자체가 의미 없는 회원명 (배제도 매핑도 아님 — '미확인' 상태로 두지만 키인에 추가하지 않음)
 UNMAPPABLE_PARTNERS = {'티케이트래블', '원더트립', '에스에이투어', '코리얼트립'}
+
+# 코드=58(인바운드)이지만 거래처(여행사)가 아닌 이벤트/단체성 행사 — 인바운드 거래처 분석에서 제외.
+# 원본은 외국인 단체참가자라서 58로 분류되지만, 거래처×국적 거래처 단위 분석엔 노이즈.
+# member_name(또는 base_partner) 에 다음 토큰이 포함되면 행 자체를 dataset 에서 drop.
+EVENT_KEYWORD_RE = re.compile(
+    r'(대회|페스티벌|페스티발|페스\b|페스$|컨퍼런스|컨퍼\b|국제회의|학술회의|심포지엄|심포지움|'
+    r'포럼|박람회|엑스포|EXPO|expo|콩쿨|콩쿠르|챔피언십|올림픽|선수권|월드컵|'
+    r'협력회의|학술대회|기념식|시상식)'
+)
+# 이벤트성으로 알려진 정확명 — keyword 만으로 안 잡히는 것 보강.
+EVENT_EXACT_PARTNERS = {
+    '비바윈터페스티벌', '비바윈터페스티벌2차', '비바윈터페스티벌_인바운드',
+    '일러스타페스', '일러스타페',
+    '세계피트니스선수권대회', '2022 유럽다자안보협력 국제회의',
+}
 
 
 def load_keyin_mappings():
@@ -250,6 +268,7 @@ def iter_inbound_rows(specs):
         n_total = 0
         n_emitted = 0
         n_dup = 0
+        n_event = 0
         with open(fp, 'r', encoding='cp949', errors='replace') as f:
             f.readline()  # header
             for line in f:
@@ -266,6 +285,7 @@ def iter_inbound_rows(specs):
                                      spec['idx_rooms'], spec['idx_sell']):
                     continue
                 code_num = parts[spec['idx_code_num']].strip()
+                # 변경예약집계코드 = 58 (인바운드) 만 통과
                 if code_num != '58':
                     continue
                 member_no = parts[spec['idx_member_no']].strip()
@@ -277,6 +297,14 @@ def iter_inbound_rows(specs):
                 stay_month = sell_date[:6]
                 year = stay_month[:4]
                 member_name = parts[spec['idx_member_name']].strip()
+                # 이벤트/단체성 행사 제외 (code=58 이지만 여행사 거래처가 아님)
+                if EVENT_KEYWORD_RE.search(member_name):
+                    n_event += 1
+                    continue
+                _b = base_partner(member_name)
+                if _b in EVENT_EXACT_PARTNERS:
+                    n_event += 1
+                    continue
                 rooms = parse_int(parts[spec['idx_rooms']])
                 night_rate = parse_int(parts[spec['idx_night_rate']])
                 rn = rooms if rooms > 0 else 1
@@ -293,7 +321,7 @@ def iter_inbound_rows(specs):
                     'rn': rn,
                     'rev': rev,
                 }
-        logger.info(f'  {fp.name[:60]:60s} {n_total:>8,}행→인바운드 {n_emitted:>6,}  (dup{n_dup:,})')
+        logger.info(f'  {fp.name[:60]:60s} {n_total:>8,}행→인바운드 {n_emitted:>6,}  (dup{n_dup:,}, event-skip{n_event:,})')
 
 
 def build_master(rows):
@@ -461,6 +489,89 @@ def aggregate(enriched):
     }
 
 
+def aggregate_member_detail(enriched, recent_months=24):
+    """월별 member_name 단위 상세 — gs-sales-report 캘린더 우측(거래처×회원명×국적) 표시용.
+
+    최근 N개월만 출력해 파일 크기 제어. 각 항목에 stay_days 셋을 포함해
+    시리즈(반복·다일자) vs 인센티브(단독·단기 대량) 패턴 구분 가능.
+    """
+    all_months = sorted({r['stay_month'] for r in enriched}, reverse=True)
+    recent_set = set(all_months[:recent_months])
+
+    detail = defaultdict(lambda: defaultdict(lambda: {
+        'base_partner': '', 'nationality': '', 'prefix': '',
+        'rn_booking': 0, 'rev_booking': 0, 'rn_cancel': 0, 'rev_cancel': 0,
+        'stay_days': set(),
+    }))
+    for r in enriched:
+        m = r['stay_month']
+        if m not in recent_set:
+            continue
+        mn = r['member_name'] or '(이름 미상)'
+        d = detail[m][mn]
+        d['base_partner'] = r['base_partner'] or '(미상)'
+        d['nationality'] = r['nationality']
+        d['prefix'] = r['prefix']
+        if r['btype'] == 'booking':
+            d['rn_booking'] += r['rn']
+            d['rev_booking'] += r['rev']
+        else:
+            d['rn_cancel'] += r['rn']
+            d['rev_cancel'] += r['rev']
+        d['stay_days'].add(r['sell_date'])
+
+    out = {}
+    for m, by_mn in detail.items():
+        items = []
+        for mn, v in by_mn.items():
+            items.append({
+                'member_name': mn,
+                'base_partner': v['base_partner'],
+                'nationality': v['nationality'],
+                'prefix': v['prefix'],
+                'rn_booking': v['rn_booking'],
+                'rn_cancel': v['rn_cancel'],
+                'rn_net': v['rn_booking'] - v['rn_cancel'],
+                'rev_booking': v['rev_booking'],
+                'rev_net': v['rev_booking'] - v['rev_cancel'],
+                'stay_days': sorted(v['stay_days']),
+                'n_days': len(v['stay_days']),
+            })
+        items.sort(key=lambda x: x['rn_net'], reverse=True)
+        out[m] = items
+    return out
+
+
+def aggregate_daily(enriched, recent_months=24):
+    """투숙일자(YYYYMMDD) 단위 인바운드 RN/매출 합 — 캘린더 좌측 셀의 일별 실적용.
+    최근 N개월만 포함해 파일 크기 제어.
+    """
+    all_months = sorted({r['stay_month'] for r in enriched}, reverse=True)
+    recent_set = set(all_months[:recent_months])
+
+    daily = defaultdict(lambda: {'rn_booking': 0, 'rev_booking': 0,
+                                  'rn_cancel': 0, 'rev_cancel': 0})
+    for r in enriched:
+        if r['stay_month'] not in recent_set:
+            continue
+        d = daily[r['sell_date']]
+        if r['btype'] == 'booking':
+            d['rn_booking'] += r['rn']
+            d['rev_booking'] += r['rev']
+        else:
+            d['rn_cancel'] += r['rn']
+            d['rev_cancel'] += r['rev']
+
+    out = {}
+    for ymd, v in sorted(daily.items()):
+        out[ymd] = {
+            **v,
+            'rn_net': v['rn_booking'] - v['rn_cancel'],
+            'rev_net': v['rev_booking'] - v['rev_cancel'],
+        }
+    return out
+
+
 def collect_unmapped_partners(enriched):
     """미확인 거래처 + 빈도 + 연도 분포. 키인 매핑 보강 후보 식별용."""
     unk = defaultdict(lambda: {'rows': 0, 'rn_booking': 0, 'rn_cancel': 0,
@@ -598,6 +709,8 @@ def main():
     enriched = apply_mapping(rows, master, keyin)
     agg = aggregate(enriched)
     unmapped = collect_unmapped_partners(enriched)
+    member_detail = aggregate_member_detail(enriched, recent_months=24)
+    daily = aggregate_daily(enriched, recent_months=24)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -620,6 +733,8 @@ def main():
             for b, v in sorted(master.items())
         },
         'unmapped_partners_top': unmapped[:100],  # 키인 보강 후보 식별용
+        'recent_member_detail': member_detail,  # 최근 24개월 회원명 단위 상세 (캘린더 우측용)
+        'daily_inbound_rn': daily,             # 최근 24개월 일자별 인바운드 합계 (캘린더 좌측용)
         **agg,
     }
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
