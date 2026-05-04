@@ -1344,6 +1344,65 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
 
 
 # ─────────────────────────────────────────────
+# 당일 분석 교차검증
+# ─────────────────────────────────────────────
+def _validate_daily_analysis_consistency(da: dict) -> dict:
+    """당일 분석 데이터 정합성 검증.
+
+    규칙:
+      1. 사업장별(OTA+G-OTA+Inbound) NET ≥ 채널별(OTA+G-OTA) NET — 채널별이 사업장별보다 크면 안 됨.
+      2. 사업장별 NET - 채널별 NET ≒ Inbound NET (채널은 비례추정이라 ±오차 허용).
+
+    위반 시 빌드 로그에 ERROR 출력하고, 검증 결과를 dict로 반환해
+    docs/data/daily_analysis_validation.json·data-check.html에서 표시 가능하게 함.
+    """
+    def _net(d):
+        return sum((v.get("pickup", 0) or 0) - (v.get("cancel", 0) or 0) for v in d.values())
+
+    prop_net = _net(da.get("byProperty", {}))
+    chan_net = _net(da.get("byChannel", {}))
+    seg = da.get("bySegment", {}) or {}
+    ib = (seg.get("Inbound", {}) or {}).get("net", 0) or 0
+
+    # 채널 분배는 by_property_channel 비례 추정이라 정확히 일치하지 않음. 절대값 5% 또는 100실 둘 중 큰 값 허용.
+    expected_diff = ib  # 사업장별 - 채널별 = Inbound (이상)
+    actual_diff = prop_net - chan_net
+    tolerance = max(100, abs(prop_net) * 0.05)
+    diff_ok = abs(actual_diff - expected_diff) <= tolerance
+    inequality_ok = prop_net >= chan_net  # 강한 룰
+
+    result = {
+        "prop_net": prop_net,
+        "chan_net": chan_net,
+        "inbound_net": ib,
+        "expected_diff": expected_diff,
+        "actual_diff": actual_diff,
+        "tolerance": round(tolerance, 1),
+        "inequality_ok": inequality_ok,
+        "diff_ok": diff_ok,
+        "passed": inequality_ok and diff_ok,
+    }
+
+    if not inequality_ok:
+        logger.error(
+            f"✗ 당일분석 교차검증 실패: 사업장별 NET({prop_net}) < 채널별 NET({chan_net}). "
+            f"채널별이 사업장별보다 클 수 없음 (Inbound·기타 세그먼트가 채널 합계에 섞여있을 가능성)."
+        )
+    elif not diff_ok:
+        logger.warning(
+            f"⚠ 당일분석 교차검증 경고: 사업장별-채널별({actual_diff}) ≠ Inbound({ib}), "
+            f"오차 {abs(actual_diff - expected_diff):.0f} > 허용 {tolerance:.0f}"
+        )
+    else:
+        logger.info(
+            f"✓ 당일분석 교차검증 통과: 사업장별 NET={prop_net}, 채널별 NET={chan_net}, "
+            f"차이={actual_diff} (Inbound={ib}, 허용±{tolerance:.0f})"
+        )
+
+    return result
+
+
+# ─────────────────────────────────────────────
 # 인사이트 패널 데이터 주입
 # ─────────────────────────────────────────────
 def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: datetime) -> str:
@@ -1725,35 +1784,23 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     if etc_segs:
         daily_analysis["bySegmentMonth"]["기타"] = etc_segs
 
-    # (b-2) 거래처(채널)별 전일 전체 (매출 포함, Inbound 제외)
+    # (b-2) 거래처(채널)별 전일 — OTA + G-OTA 채널만 (Inbound·기타 세그먼트 채널 제외)
+    # 채널→세그먼트 매핑(`by_channel_segment`)에서 OTA/G-OTA로 분류된 채널만 포함.
+    # 사업장별(OTA+G-OTA+Inbound) ≥ 채널별(OTA+G-OTA) 보장.
     pdbc = agg_data.get("pickup_daily_by_channel", {})
     cdbc = agg_data.get("cancel_daily_by_channel", {})
-    # Inbound 세그먼트의 전일 총 pickup/cancel 계산 (채널 총합에서 차감용)
-    _ib_p_val = pds.get("Inbound", {}).get(today_date, {})
-    _ib_c_val = cds.get("Inbound", {}).get(today_date, {})
-    _ib_total_p_rn = _ib_p_val.get("rn", 0) or 0
-    _ib_total_c_rn = _ib_c_val.get("rn", 0) or 0
-    _ib_total_p_rev = _ib_p_val.get("rev", 0) or 0
-    _ib_total_c_rev = _ib_c_val.get("rev", 0) or 0
-    # 채널별 합계 먼저 계산
-    _ch_total_p = sum((pdbc.get(ch, {}).get(today_date, {}).get("rn", 0) or 0) for ch in pdbc)
-    _ch_total_c = sum((cdbc.get(ch, {}).get(today_date, {}).get("rn", 0) or 0) for ch in cdbc)
+    bcs_map = agg_data.get("by_channel_segment", {})
+    OTA_GOTA_CHANNELS = {ch for ch, segs in bcs_map.items()
+                         if isinstance(segs, list) and any(s in ("OTA", "G-OTA") for s in segs)}
     for ch in sorted(set(list(pdbc.keys()) + list(cdbc.keys()))):
+        if ch not in OTA_GOTA_CHANNELS:
+            continue
         p_val = pdbc.get(ch, {}).get(today_date, {})
         c_val = cdbc.get(ch, {}).get(today_date, {})
         p_rn = p_val.get("rn", 0) or 0
         c_rn = c_val.get("rn", 0) or 0
         p_rev = p_val.get("rev", 0) or 0
         c_rev = c_val.get("rev", 0) or 0
-        # Inbound 비율 차감 (채널 비율 기반)
-        if _ib_total_p_rn and _ch_total_p:
-            ib_ratio_p = p_rn / _ch_total_p
-            p_rn -= round(_ib_total_p_rn * ib_ratio_p)
-            p_rev -= _ib_total_p_rev * ib_ratio_p
-        if _ib_total_c_rn and _ch_total_c:
-            ib_ratio_c = c_rn / _ch_total_c
-            c_rn -= round(_ib_total_c_rn * ib_ratio_c)
-            c_rev -= _ib_total_c_rev * ib_ratio_c
         if p_rn or c_rn:
             daily_analysis["byChannel"][ch] = {
                 "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
@@ -1761,7 +1808,7 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
                 "rev_pickup": round(p_rev, 1), "rev_cancel": round(c_rev, 1),
             }
 
-    # (b-3) 거래처(채널)별 × 투숙월 전일 (매출 포함, Inbound 제외)
+    # (b-3) 거래처(채널)별 × 투숙월 전일 — OTA + G-OTA 채널만
     pdbcm = agg_data.get("pickup_daily_by_channel_month", {})
     cdbcm = agg_data.get("cancel_daily_by_channel_month", {})
     for mi in compare_months:
@@ -1769,32 +1816,15 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         mlabel = f"{mi}월"
         month_chs = {}
         all_chs = sorted(set(list(pdbcm.keys()) + list(cdbcm.keys())))
-        # Inbound 세그먼트 월별 전일 (차감용)
-        _ib_mp = pdsm.get("Inbound", {}).get(mkey, {}).get(today_date, {})
-        _ib_mc = cdsm.get("Inbound", {}).get(mkey, {}).get(today_date, {})
-        _ib_mp_rn = _ib_mp.get("rn", 0) or 0
-        _ib_mc_rn = _ib_mc.get("rn", 0) or 0
-        _ib_mp_rev = _ib_mp.get("rev", 0) or 0
-        _ib_mc_rev = _ib_mc.get("rev", 0) or 0
-        # 월별 채널 합계
-        _chm_total_p = sum((pdbcm.get(ch, {}).get(mkey, {}).get(today_date, {}).get("rn", 0) or 0) for ch in all_chs)
-        _chm_total_c = sum((cdbcm.get(ch, {}).get(mkey, {}).get(today_date, {}).get("rn", 0) or 0) for ch in all_chs)
         for ch in all_chs:
+            if ch not in OTA_GOTA_CHANNELS:
+                continue
             p_val = pdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
             c_val = cdbcm.get(ch, {}).get(mkey, {}).get(today_date, {})
             p_rn = p_val.get("rn", 0) or 0
             c_rn = c_val.get("rn", 0) or 0
             p_rev = p_val.get("rev", 0) or 0
             c_rev = c_val.get("rev", 0) or 0
-            # Inbound 비율 차감
-            if _ib_mp_rn and _chm_total_p:
-                ib_r = p_rn / _chm_total_p
-                p_rn -= round(_ib_mp_rn * ib_r)
-                p_rev -= _ib_mp_rev * ib_r
-            if _ib_mc_rn and _chm_total_c:
-                ib_r = c_rn / _chm_total_c
-                c_rn -= round(_ib_mc_rn * ib_r)
-                c_rev -= _ib_mc_rev * ib_r
             if p_rn or c_rn:
                 month_chs[ch] = {
                     "pickup": p_rn, "cancel": c_rn, "net": p_rn - c_rn,
@@ -1929,6 +1959,10 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
             etc_prop_segs[prop] = prop_segs
     if etc_prop_segs:
         daily_analysis["byPropertySegmentMonth"]["기타"] = etc_prop_segs
+
+    # ── 5-X) 당일 분석 교차검증: 사업장별(OTA+G-OTA+Inbound) ≥ 채널별(OTA+G-OTA) ──
+    # 사업장별 NET = 채널별 NET + Inbound NET 이어야 정합 (채널 분배는 비례 추정이라 ±오차 허용)
+    daily_analysis["validation"] = _validate_daily_analysis_consistency(daily_analysis)
 
     # ── 6) 거래처별 주간 점유율 데이터 (최근 8주) ──
     from datetime import timedelta
@@ -2170,6 +2204,22 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
         html = pattern.sub(js_const, html)
     else:
         html = html.replace("/*__INSIGHT_DATA__*/", js_const)
+
+    # 당일분석 교차검증 결과를 JSON으로 영속화 → data-check.html이 fetch
+    validation = daily_analysis.get("validation", {})
+    if validation:
+        try:
+            v_path = DOCS_DIR / "data" / "daily_analysis_validation.json"
+            v_path.write_text(
+                _json.dumps({
+                    "today_date": today_date,
+                    "generated_at": now.strftime("%Y-%m-%d %H:%M KST"),
+                    **validation,
+                }, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception as e:
+            logger.warning(f"✗ daily_analysis_validation.json 저장 실패: {e}")
 
     logger.info(f"✓ 인사이트 패널 데이터 주입 (seg={len(seg_today)}, daily={len(daily_trend)}, years={len(years_compare)})")
     return html
