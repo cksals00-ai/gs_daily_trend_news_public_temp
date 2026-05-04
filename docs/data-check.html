@@ -105,6 +105,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .check-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .check-card.pass::before{background:var(--positive)}
 .check-card.fail::before{background:var(--negative)}
+.check-card.warn::before{background:var(--warning)}
 .check-card.info::before{background:var(--info)}
 .check-card.loading::before{background:var(--warning);animation:pulse-bar 1.2s ease-in-out infinite}
 @keyframes pulse-bar{0%,100%{opacity:.3}50%{opacity:1}}
@@ -114,6 +115,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .check-badge{font-family:var(--mono);font-size:10px;font-weight:800;padding:2px 10px;border-radius:3px}
 .check-badge.pass{background:var(--positive-bg);color:var(--positive)}
 .check-badge.fail{background:var(--negative-bg);color:var(--negative)}
+.check-badge.warn{background:var(--warning-bg);color:var(--warning)}
 .check-badge.info{background:var(--info-bg);color:var(--info)}
 .check-badge.loading{background:var(--warning-bg);color:var(--warning)}
 
@@ -263,6 +265,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
         <div class="check-stat" id="chk4-stat"></div>
         <button class="check-detail-toggle" onclick="toggleDetail('chk4')">▸ 세부 결과 보기</button>
         <div class="check-detail" id="chk4-detail"></div>
+      </div>
+      <!-- Check 5: 당일분석 교차검증 -->
+      <div class="check-card loading" id="chk5">
+        <div class="check-header"><span class="check-num">CHECK 05</span><span class="check-badge loading" id="chk5-badge">LOADING</span></div>
+        <div class="check-title">당일분석 사업장별 vs 채널별 정합</div>
+        <div class="check-desc">사업장별 NET(OTA+G-OTA+Inbound) ≥ 채널별 NET(OTA+G-OTA), 차이 ≒ Inbound NET. 채널 합계가 사업장 합계보다 크면 데이터 필터 오류.</div>
+        <div class="check-stat" id="chk5-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk5')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk5-detail"></div>
       </div>
     </div>
   </div>
@@ -433,7 +444,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       otb: 'data/otb_data.json',
       rm: 'data/rm_fcst.json',
       daily: 'data/daily_booking.json',
-      occ: 'data/occ_data.json'
+      occ: 'data/occ_data.json',
+      dailyAnalysisValidation: 'data/daily_analysis_validation.json'
     };
     const results = {};
     for (const [key, url] of Object.entries(urls)) {
@@ -450,7 +462,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     // Reset
     totalMatch = 0; totalMismatch = 0; totalInfo = 0;
     document.getElementById('summary-timestamp').textContent = '검증 중...';
-    ['chk1','chk2','chk3','chk4'].forEach(id => {
+    ['chk1','chk2','chk3','chk4','chk5'].forEach(id => {
       const el = document.getElementById(id);
       el.className = 'check-card loading';
       document.getElementById(id+'-badge').className = 'check-badge loading';
@@ -462,11 +474,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
     DATA = await fetchAllData();
 
-    // Run 4 checks
+    // Run checks
     runCheck1();
     runCheck2();
     runCheck3();
     await runCheck4();
+    runCheck5();
 
     // Update summary
     updateSummary();
@@ -735,6 +748,62 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('chk4-detail').innerHTML = html;
   }
 
+  /* ---- CHECK 5: 당일분석 사업장별 vs 채널별 정합 ---- */
+  function runCheck5() {
+    const id = 'chk5';
+    const v = DATA.dailyAnalysisValidation;
+    if (!v) return setCheckError(id, 'daily_analysis_validation.json 미발견');
+
+    const propNet = v.prop_net || 0;
+    const chanNet = v.chan_net || 0;
+    const ibNet = v.inbound_net || 0;
+    const actualDiff = v.actual_diff;
+    const expectedDiff = v.expected_diff;
+    const tolerance = v.tolerance || 0;
+    const inequalityOk = !!v.inequality_ok;
+    const diffOk = !!v.diff_ok;
+    const passed = !!v.passed;
+
+    // Result
+    if (!inequalityOk) {
+      // Hard fail: 채널별이 사업장별보다 큼 — 데이터 필터 오류
+      setCheckResult(id, 'FAIL', 'fail', 0, 1, false);
+      totalMismatch += 1;
+      checkResults.check5 = { result: 'FAIL', match: 0, mismatch: 1 };
+    } else if (!diffOk) {
+      // Soft warn: 부등식은 OK인데 Inbound와 차이가 허용 오차 초과
+      setCheckResult(id, 'WARN', 'warn', 0, 1, false);
+      totalMismatch += 1;
+      checkResults.check5 = { result: 'WARN', match: 0, mismatch: 1 };
+    } else {
+      setCheckResult(id, 'PASS', 'pass', 1, 0, false);
+      totalMatch += 1;
+      checkResults.check5 = { result: 'PASS', match: 1, mismatch: 0 };
+    }
+
+    // Detail
+    const fmtN = n => (n>0?'+':'') + (n||0).toLocaleString();
+    const errCls = (ok) => ok ? 'color:var(--positive)' : 'color:var(--negative);font-weight:700';
+    let html = '<div style="font-size:11px;line-height:1.7">';
+    html += `<div style="margin-bottom:8px;color:var(--ink-faint);font-family:var(--mono);font-size:10px">기준일 ${v.today_date || '—'} · 빌드 ${v.generated_at || '—'}</div>`;
+    html += `<div>① <strong>사업장별 NET</strong> (OTA+G-OTA+Inbound) = <strong style="font-family:var(--mono)">${fmtN(propNet)}</strong></div>`;
+    html += `<div>② <strong>채널별 NET</strong> (OTA+G-OTA만) = <strong style="font-family:var(--mono)">${fmtN(chanNet)}</strong></div>`;
+    html += `<div>③ <strong>Inbound NET</strong> = <strong style="font-family:var(--mono)">${fmtN(ibNet)}</strong></div>`;
+    html += '<hr style="border:none;border-top:1px dashed var(--rule);margin:8px 0">';
+    html += `<div style="${errCls(inequalityOk)}">[규칙1] 사업장별 ≥ 채널별 : ${inequalityOk ? '✓ 통과' : `✗ 위반 (사업장 ${propNet} < 채널 ${chanNet})`}</div>`;
+    html += `<div style="${errCls(diffOk)}">[규칙2] 사업장-채널 차이 ≒ Inbound : ${diffOk ? '✓ 통과' : '⚠ 경고'} (실제 차이 ${fmtN(actualDiff)} vs 기대 ${fmtN(expectedDiff)}, 허용 ±${tolerance})</div>`;
+    if (!passed) {
+      html += '<div style="margin-top:8px;padding:8px;background:rgba(229,115,115,0.08);border-left:3px solid var(--negative);font-size:10.5px">';
+      html += '<strong>원인 후보:</strong> ';
+      html += inequalityOk
+        ? '채널 비례 분배 추정 오차가 큰 경우(특정 사업장의 채널 믹스가 평소와 크게 다를 때 발생). build.py의 by_channel_segment 매핑·분배 로직 점검 필요.'
+        : 'build.py의 byChannel 필터에 OTA/G-OTA 외 채널(FIT, 일반단체, 자사패키지 등)이 섞여 있을 가능성. by_channel_segment 매핑 누락 채널 확인.';
+      html += '</div>';
+    }
+    html += '</div>';
+    document.getElementById('chk5-detail').innerHTML = html;
+  }
+
   /* ========================================================
      CHECK HELPERS
      ======================================================== */
@@ -770,9 +839,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   };
 
   function updateSummary() {
-    const totalChecks = 4;
-    const passCount = ['check1','check2','check3'].filter(k => checkResults[k]?.result === 'PASS').length;
-    const failCount = ['check1','check2','check3'].filter(k => checkResults[k]?.result === 'FAIL').length;
+    const totalChecks = 5;
+    const passCount = ['check1','check2','check3','check5'].filter(k => checkResults[k]?.result === 'PASS').length;
+    const failCount = ['check1','check2','check3','check5'].filter(k => checkResults[k]?.result === 'FAIL' || checkResults[k]?.result === 'WARN').length;
     const infoCount = checkResults.check4 ? 1 : 0;
     const totalItems = totalMatch + totalMismatch + totalInfo;
 
