@@ -78,6 +78,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
 
+/* Verification history */
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.history-table th { background: #f8f9fa; color: #555; font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 2px solid #e8e8e8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.history-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+.history-table tr:last-child td { border-bottom: none; }
+.history-date { font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+.history-file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: #666; word-break: break-all; }
+.history-verdict { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.verdict-pass { background: #dcfce7; color: #16a34a; }
+.verdict-warn { background: #fef3c7; color: #d97706; }
+.verdict-fail { background: #fee2e2; color: #dc2626; }
+.history-channel { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+.history-channel .ch { display: flex; gap: 6px; }
+.history-channel .ch-name { font-weight: 600; color: #444; min-width: 56px; }
+.history-channel .ch-range { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #666; }
+.history-note { font-size: 11px; color: #666; line-height: 1.4; }
+
 /* Timestamp */
 .footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 16px; }
 </style>
@@ -424,9 +441,90 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
-<div class="footer">
-  Last updated: 2026-05-03 &middot; GS Daily Trend Verification Tracker v2
+<!-- Verification History (cross-check 회차별 이력) -->
+<div class="stage open">
+  <div class="stage-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="stage-icon">&#x1f5c2;&#xFE0F;</span>
+    <span class="stage-title">검증 이력 (Excel ↔ 온북 교차 검증)</span>
+    <span class="stage-badge badge-done" id="hist-badge">— 회차</span>
+    <span class="stage-chevron">&#x25B6;</span>
+  </div>
+  <div class="stage-body">
+    <div class="stage-desc">GS실시간실적현황 Excel 파일과 온북 파싱 데이터의 교차 검증 회차별 결과. <code style="font-size:11px;">docs/data/verification_history.json</code>에서 자동 로드됩니다.</div>
+    <table class="history-table" id="history-table">
+      <thead>
+        <tr>
+          <th style="width:88px;">검증일</th>
+          <th>검증 파일 / 파싱 시점</th>
+          <th style="width:200px;">채널별 차이율</th>
+          <th style="width:74px;">판정</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="5" style="text-align:center; color:#999; padding:14px;">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<div class="footer">
+  Last updated: 2026-05-04 &middot; GS Daily Trend Verification Tracker v3
+</div>
+
+<script>
+(function loadVerificationHistory() {
+  fetch('data/verification_history.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var entries = (data.entries || []).slice().sort(function(a, b) {
+        return (b.verification_date + (b.verification_time || '')).localeCompare(a.verification_date + (a.verification_time || ''));
+      });
+      var tbody = document.getElementById('history-tbody');
+      var badge = document.getElementById('hist-badge');
+      badge.textContent = entries.length + ' 회차';
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">기록 없음</td></tr>';
+        return;
+      }
+      tbody.innerHTML = entries.map(function(e) {
+        var verdictClass = e.verdict === '정상' ? 'verdict-pass' : (e.verdict === '경고' ? 'verdict-warn' : 'verdict-fail');
+        var ch = e.channel_diff || {};
+        var chHtml = '';
+        var chKeys = Object.keys(ch).filter(function(k) { return k !== 'note' && ch[k] && typeof ch[k] === 'object'; });
+        if (chKeys.length === 0) {
+          chHtml = '<span style="color:#999; font-size:11px;">' + escapeHtml(ch.note || '—') + '</span>';
+        } else {
+          chHtml = '<div class="history-channel">' + chKeys.map(function(k) {
+            return '<div class="ch"><span class="ch-name">' + escapeHtml(k) + '</span><span class="ch-range">' +
+              escapeHtml((ch[k].min_pct || '') + ' ~ ' + (ch[k].max_pct || '')) + '</span></div>';
+          }).join('') + '</div>';
+        }
+        var dateLabel = e.verification_date + (e.verification_time && e.verification_time !== '—' ? '<br><span style="font-size:10px; color:#999;">' + escapeHtml(e.verification_time) + '</span>' : '');
+        var fileLabel = '<div class="history-file">' + escapeHtml(e.excel_file || '') + '</div>' +
+          '<div style="font-size:10px; color:#999; margin-top:3px;">파싱: ' + escapeHtml(e.parsed_data_basis || '—') + '</div>';
+        return '<tr>' +
+          '<td class="history-date">' + dateLabel + '</td>' +
+          '<td>' + fileLabel + '</td>' +
+          '<td>' + chHtml + '</td>' +
+          '<td><span class="history-verdict ' + verdictClass + '">' + escapeHtml(e.verdict || '—') + '</span></td>' +
+          '<td class="history-note">' + escapeHtml(e.notes || '') + '</td>' +
+          '</tr>';
+      }).join('');
+    })
+    .catch(function(err) {
+      var tbody = document.getElementById('history-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626;">로드 실패: ' + escapeHtml(err.message) + '</td></tr>';
+    });
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+})();
+</script>
 
 </body>
 </html>
