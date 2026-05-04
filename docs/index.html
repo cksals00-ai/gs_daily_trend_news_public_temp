@@ -2101,50 +2101,58 @@
         </div>
       </div>
 
-      <!-- ── ROW 2: 주간 픽업 트렌드 + OTA 비발디 + GOTA 양양 ── -->
+      <!-- ── ROW 2: 기획전 현황 + OTA 비발디 + GOTA 양양 ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px;align-items:stretch;" class="weekly-grid insight-grid">
 
-        <!-- 주간 픽업 트렌드 -->
-        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;" class="weekly-card">
-          <div style="height:4px;background:linear-gradient(90deg,#6ba3c4,#4a8ab5);flex-shrink:0;"></div>
-          <div style="padding:10px 14px 12px;display:flex;flex-direction:column;flex:1;">
+        <!-- 기획전 현황 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(168,140,196,0.28);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;" class="weekly-card">
+          <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa3);flex-shrink:0;"></div>
+          <div style="padding:10px 14px 12px;display:flex;flex-direction:column;flex:1;min-height:0;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:13px;letter-spacing:0.1em;color:#6ba3c4;font-weight:900;">📈 주간 픽업 트렌드</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">14일 추이</span>
+              <span style="font-family:var(--mono);font-size:13px;letter-spacing:0.1em;color:#bfa6dc;font-weight:900;">🎯 기획전 현황</span>
+              <span id="campaign-today-label" style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">—</span>
             </div>
-            <!-- 월 탭 -->
-            <div id="pickup-month-tabs" style="display:flex;gap:4px;margin-bottom:8px;">
-              <button class="pickup-month-tab active" data-month="all" onclick="switchPickupMonth('all')" style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(107,163,196,0.25);color:#6ba3c4;cursor:pointer;font-weight:700;">전체</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;display:none;">
-            </div>
-            <!-- 이번주 vs 전주 비교 요약 -->
+            <!-- 요약 3개 -->
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
-              <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 4px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">이번주 총 Net</div>
-                <div id="insight-this-week" style="font-family:var(--mono);font-size:14px;font-weight:800;color:#4ecdc4;">—</div>
+              <div style="text-align:center;background:rgba(0,0,0,0.18);border-radius:4px;padding:6px 4px;">
+                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.35);letter-spacing:0.05em;">오늘 신규</div>
+                <div id="campaign-stat-new" style="font-family:var(--mono);font-size:16px;font-weight:800;color:#bfa6dc;">—</div>
               </div>
-              <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 4px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">전주 총 Net</div>
-                <div id="insight-last-week" style="font-family:var(--mono);font-size:14px;font-weight:800;color:rgba(255,255,255,0.5);">—</div>
+              <div style="text-align:center;background:rgba(0,0,0,0.18);border-radius:4px;padding:6px 4px;">
+                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.35);letter-spacing:0.05em;">진행 중</div>
+                <div id="campaign-stat-active" style="font-family:var(--mono);font-size:16px;font-weight:800;color:#4ecdc4;">—</div>
               </div>
-              <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 4px;">
-                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;">WoW 변화</div>
-                <div id="insight-wow-change" style="font-family:var(--mono);font-size:14px;font-weight:800;">—</div>
+              <div style="text-align:center;background:rgba(0,0,0,0.18);border-radius:4px;padding:6px 4px;">
+                <div style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.35);letter-spacing:0.05em;">이달 시작</div>
+                <div id="campaign-stat-month" style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--gold-bright);">—</div>
               </div>
             </div>
-            <!-- 14일 Booking/Cancel 스택 차트 -->
+            <!-- 오늘 신규 시작 기획전 -->
             <div style="margin-bottom:8px;">
-              <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;margin-bottom:4px;">일별 Booking vs Cancel (14일)</div>
-              <div style="position:relative;height:100px;">
-                <canvas id="chart-pickup-cancel" style="display:block;width:100%;height:100px;"></canvas>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.05em;font-weight:700;">🆕 오늘 신규 시작</span>
+                <span id="campaign-new-meta" style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);"></span>
               </div>
+              <div id="campaign-new-list" style="display:flex;flex-direction:column;gap:3px;max-height:78px;overflow-y:auto;"></div>
             </div>
-            <!-- 거래처별 점유율 추이 (주간) -->
-            <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
-              <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;margin-bottom:4px;">거래처별 점유율 추이 (주간)</div>
-              <div style="position:relative;height:120px;">
-                <canvas id="chart-channel-weekly-share" style="display:block;width:100%;height:120px;"></canvas>
+            <!-- 진행 중 기획전: 판매·투숙 현황 -->
+            <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;flex:1;display:flex;flex-direction:column;min-height:0;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.05em;font-weight:700;">📊 진행 중 (판매·투숙)</span>
+                <span id="campaign-active-meta" style="font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);"></span>
+              </div>
+              <div style="overflow-y:auto;flex:1;max-height:200px;">
+                <table id="campaign-active-table" style="width:100%;font-family:var(--mono);border-collapse:collapse;">
+                  <thead>
+                    <tr style="font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.04em;">
+                      <th style="text-align:left;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,0.08);font-weight:600;">사업장·채널</th>
+                      <th style="text-align:center;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,0.08);font-weight:600;white-space:nowrap;">판매</th>
+                      <th style="text-align:center;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,0.08);font-weight:600;white-space:nowrap;">투숙</th>
+                      <th style="text-align:center;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,0.08);font-weight:600;">효과</th>
+                    </tr>
+                  </thead>
+                  <tbody id="campaign-active-tbody"></tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -13024,6 +13032,226 @@ function toggleNewsMore(btn, id) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+})();
+</script>
+
+<script>
+// ===== 기획전 현황 위젯 =====
+(function () {
+  function _esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function _todayKST() {
+    // 데일리 리포트는 KST 기준 — 오늘 날짜를 YYYY-MM-DD로
+    var now = new Date();
+    var kst = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+    var y = kst.getFullYear();
+    var m = ('0' + (kst.getMonth() + 1)).slice(-2);
+    var d = ('0' + kst.getDate()).slice(-2);
+    return y + '-' + m + '-' + d;
+  }
+
+  function _isDate(s) {
+    return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  }
+
+  function _diffDays(a, b) {
+    var da = new Date(a + 'T00:00:00');
+    var db = new Date(b + 'T00:00:00');
+    return Math.round((da - db) / 86400000);
+  }
+
+  // 효과 표시 라벨/색상
+  var EFF_META = {
+    'high':     { label: 'HIGH',  color: '#4ecdc4', bg: 'rgba(78,205,196,0.18)' },
+    'medium':   { label: 'MED',   color: '#e0c070', bg: 'rgba(224,192,112,0.15)' },
+    'low':      { label: 'LOW',   color: '#bfa6dc', bg: 'rgba(168,140,196,0.15)' },
+    'neutral':  { label: 'NEUT',  color: 'rgba(255,255,255,0.55)', bg: 'rgba(255,255,255,0.06)' },
+    'negative': { label: 'NEG',   color: '#e57373', bg: 'rgba(229,115,115,0.15)' },
+    'unknown':  { label: '—',     color: 'rgba(255,255,255,0.3)', bg: 'transparent' }
+  };
+
+  // 사업장 이름 단축 (테이블 컬럼 폭 절약)
+  function _shortProp(p) {
+    if (!p) return '—';
+    return p.replace(/^소노벨\s*|^소노캄\s*|^쏠비치\s*|^소노문\s*|^소노펫\s*|^소노펠리체\s*|^파나크\s*|^팔라티움\s*/, '');
+  }
+
+  // 채널 단축
+  function _shortChannel(c) {
+    if (!c) return '—';
+    // 괄호 부속 제거 후 길면 자르기
+    var base = c.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    if (base.length > 12) base = base.slice(0, 11) + '…';
+    return base;
+  }
+
+  function renderCampaignWidget(data) {
+    var camps = (data && data.individual_analysis) || [];
+    var today = _todayKST();
+    var todayLabel = (parseInt(today.slice(5, 7), 10)) + '/' + (parseInt(today.slice(8, 10), 10));
+
+    var labelEl = document.getElementById('campaign-today-label');
+    if (labelEl) labelEl.textContent = today + ' 기준';
+
+    // 유효한 판매기간 가진 캠페인만
+    var valid = camps.filter(function(c) {
+      var s = (c.sale_period || {}).start;
+      var e = (c.sale_period || {}).end;
+      return _isDate(s) && _isDate(e);
+    });
+
+    var newToday = valid.filter(function(c) { return c.sale_period.start === today; });
+    var active = valid.filter(function(c) {
+      return c.sale_period.start <= today && today <= c.sale_period.end;
+    });
+    var monthKey = today.slice(0, 7);
+    var monthStart = valid.filter(function(c) { return c.sale_period.start.slice(0, 7) === monthKey; });
+
+    // 요약 카운트
+    var sNew = document.getElementById('campaign-stat-new');
+    var sAct = document.getElementById('campaign-stat-active');
+    var sMon = document.getElementById('campaign-stat-month');
+    if (sNew) sNew.textContent = newToday.length + '개';
+    if (sAct) sAct.textContent = active.length + '개';
+    if (sMon) sMon.textContent = monthStart.length + '개';
+
+    // 오늘 신규 시작 리스트
+    var newListEl = document.getElementById('campaign-new-list');
+    var newMetaEl = document.getElementById('campaign-new-meta');
+    if (newListEl) {
+      if (newToday.length === 0) {
+        newListEl.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);padding:6px 4px;text-align:center;">오늘 신규 시작 기획전 없음</div>';
+        if (newMetaEl) newMetaEl.textContent = '';
+      } else {
+        if (newMetaEl) newMetaEl.textContent = newToday.length + '개';
+        newListEl.innerHTML = newToday.map(function(c) {
+          var sale = c.sale_period.start.slice(5).replace('-', '/') + '~' + c.sale_period.end.slice(5).replace('-', '/');
+          var stay = '';
+          if (c.stay_period && _isDate(c.stay_period.start) && _isDate(c.stay_period.end)) {
+            stay = c.stay_period.start.slice(5).replace('-', '/') + '~' + c.stay_period.end.slice(5).replace('-', '/');
+          }
+          var prod = c.product || '—';
+          if (prod.length > 22) prod = prod.slice(0, 21) + '…';
+          return '' +
+            '<div style="background:rgba(168,140,196,0.08);border-left:2px solid #a892c8;border-radius:3px;padding:5px 7px;display:flex;flex-direction:column;gap:2px;">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+                '<span style="font-family:var(--sans);font-size:11px;font-weight:700;color:#fff;">' + _esc(c.property || '—') + '</span>' +
+                '<span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.5);white-space:nowrap;">' + _esc(_shortChannel(c.channel)) + '</span>' +
+              '</div>' +
+              '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:8.5px;color:rgba(255,255,255,0.55);gap:4px;">' +
+                '<span title="상품: ' + _esc(c.product || '') + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' + _esc(prod) + '</span>' +
+                '<span style="color:rgba(191,166,220,0.85);white-space:nowrap;">판 ' + _esc(sale) + (stay ? ' · 투 ' + _esc(stay) : '') + '</span>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+      }
+    }
+
+    // 진행 중 기획전 테이블
+    var tbody = document.getElementById('campaign-active-tbody');
+    var actMetaEl = document.getElementById('campaign-active-meta');
+    if (tbody) {
+      if (active.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);padding:8px;text-align:center;">진행 중인 기획전 없음</td></tr>';
+        if (actMetaEl) actMetaEl.textContent = '';
+      } else {
+        if (actMetaEl) actMetaEl.textContent = active.length + '개';
+        // 정렬: 효과 score 우선(high>medium>low>neutral>negative>unknown), 이어서 판매종료 임박순
+        var EFF_RANK = { 'high': 0, 'medium': 1, 'low': 2, 'neutral': 3, 'negative': 4, 'unknown': 5 };
+        active.sort(function(a, b) {
+          var ra = EFF_RANK[a.effectiveness_score] != null ? EFF_RANK[a.effectiveness_score] : 9;
+          var rb = EFF_RANK[b.effectiveness_score] != null ? EFF_RANK[b.effectiveness_score] : 9;
+          if (ra !== rb) return ra - rb;
+          return _diffDays(a.sale_period.end, today) - _diffDays(b.sale_period.end, today);
+        });
+
+        tbody.innerHTML = active.map(function(c) {
+          var saleDays = _diffDays(c.sale_period.end, c.sale_period.start) + 1;
+          var saleElapsed = _diffDays(today, c.sale_period.start) + 1;
+          var saleRemain = _diffDays(c.sale_period.end, today);
+          var salePct = saleDays > 0 ? Math.min(100, Math.round(saleElapsed / saleDays * 100)) : 0;
+
+          // 판매 셀: D-잔여 + 진행 바
+          var saleColor = saleRemain <= 1 ? '#e57373' : (saleRemain <= 3 ? '#e0c070' : '#4ecdc4');
+          var saleCell = '' +
+            '<div style="font-size:9px;color:' + saleColor + ';font-weight:700;">D' + (saleRemain >= 0 ? '-' + saleRemain : '+' + Math.abs(saleRemain)) + '</div>' +
+            '<div style="background:rgba(255,255,255,0.08);border-radius:2px;height:3px;overflow:hidden;margin-top:2px;width:38px;">' +
+              '<div style="height:100%;width:' + salePct + '%;background:' + saleColor + ';"></div>' +
+            '</div>' +
+            '<div style="font-size:7px;color:rgba(255,255,255,0.35);margin-top:1px;">' + saleElapsed + '/' + saleDays + '일</div>';
+
+          // 투숙 셀: 시작 D-day + 진행 상태
+          var stayCell = '<div style="font-size:9px;color:rgba(255,255,255,0.4);">—</div>';
+          if (c.stay_period && _isDate(c.stay_period.start) && _isDate(c.stay_period.end)) {
+            var stayStart = c.stay_period.start;
+            var stayEnd = c.stay_period.end;
+            var stayStartDiff = _diffDays(stayStart, today);
+            var stayEndDiff = _diffDays(stayEnd, today);
+            var stayLabel, stayColor, stayDates;
+            if (stayStartDiff > 0) {
+              stayLabel = '대기 D-' + stayStartDiff;
+              stayColor = 'rgba(255,255,255,0.5)';
+            } else if (stayEndDiff >= 0) {
+              stayLabel = '진행중';
+              stayColor = '#4ecdc4';
+            } else {
+              stayLabel = '종료';
+              stayColor = 'rgba(255,255,255,0.3)';
+            }
+            stayDates = stayStart.slice(5).replace('-', '/') + '~' + stayEnd.slice(5).replace('-', '/');
+            stayCell = '' +
+              '<div style="font-size:9px;color:' + stayColor + ';font-weight:700;">' + stayLabel + '</div>' +
+              '<div style="font-size:7px;color:rgba(255,255,255,0.35);margin-top:1px;white-space:nowrap;">' + stayDates + '</div>';
+          }
+
+          // 효과 셀: score 라벨 + (있으면) OTB 변화율
+          var effKey = c.effectiveness_score || 'unknown';
+          var effMeta = EFF_META[effKey] || EFF_META.unknown;
+          var otb = c.otb_tracking || {};
+          var otbPct = otb.otb_change_pct;
+          var otbStr = '';
+          if (typeof otbPct === 'number') {
+            var sign = otbPct >= 0 ? '+' : '';
+            var otbColor = otbPct >= 0 ? '#4ecdc4' : '#e57373';
+            otbStr = '<div style="font-size:7.5px;color:' + otbColor + ';margin-top:1px;font-weight:700;">OTB ' + sign + otbPct.toFixed(1) + '%</div>';
+          } else if (c.influencer_data && typeof c.influencer_data.otb_rns === 'number') {
+            otbStr = '<div style="font-size:7.5px;color:#bfa6dc;margin-top:1px;font-weight:700;">' + Math.round(c.influencer_data.otb_rns).toLocaleString() + '실</div>';
+          }
+          var effCell = '' +
+            '<span style="display:inline-block;padding:2px 5px;border-radius:3px;background:' + effMeta.bg + ';color:' + effMeta.color + ';font-size:8px;font-weight:800;letter-spacing:0.05em;">' + effMeta.label + '</span>' +
+            otbStr;
+
+          var propLine = _esc(c.property || '—');
+          var chanLine = _esc(_shortChannel(c.channel));
+
+          return '' +
+            '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">' +
+              '<td style="padding:5px 4px;vertical-align:top;">' +
+                '<div style="font-family:var(--sans);font-size:11px;font-weight:700;color:#fff;line-height:1.15;">' + propLine + '</div>' +
+                '<div style="font-size:8.5px;color:rgba(255,255,255,0.45);margin-top:2px;line-height:1.15;" title="' + _esc(c.channel || '') + '">' + chanLine + '</div>' +
+              '</td>' +
+              '<td style="padding:5px 4px;text-align:center;vertical-align:top;">' + saleCell + '</td>' +
+              '<td style="padding:5px 4px;text-align:center;vertical-align:top;">' + stayCell + '</td>' +
+              '<td style="padding:5px 4px;text-align:center;vertical-align:top;">' + effCell + '</td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+  }
+
+  fetch('./data/campaign_individual_analysis.json')
+    .then(function(r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+    .then(renderCampaignWidget)
+    .catch(function(e) {
+      console.warn('기획전 현황 위젯 로드 실패:', e);
+      var labelEl = document.getElementById('campaign-today-label');
+      if (labelEl) labelEl.textContent = '데이터 로드 실패';
+    });
 })();
 </script>
 
