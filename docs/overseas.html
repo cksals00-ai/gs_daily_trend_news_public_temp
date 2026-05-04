@@ -145,14 +145,97 @@
       border-bottom: 1px solid rgba(184,137,63,0.35);
     }
 
-    /* Main container */
-    .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+    /* Masthead (otb-style) */
+    .masthead {
+      background: var(--bg-deep);
+      border-bottom: 3px solid var(--gold);
+      position: sticky;
+      top: 0;
+      z-index: 150;
+    }
+    .masthead-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .logo-wrap { display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap; }
+    .logo-mark {
+      font-family: var(--serif);
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--gold-bright);
+      white-space: nowrap;
+    }
+    .team-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.5);
+      border-left: 1px solid rgba(255,255,255,0.2);
+      padding-left: 14px;
+      margin-left: 14px;
+      white-space: nowrap;
+    }
+    .page-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(201,160,99,0.15);
+      border: 1px solid rgba(201,160,99,0.35);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gold-bright);
+      letter-spacing: 0.12em;
+    }
+    .masthead-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+    }
+    .live-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--positive);
+      margin-right: 5px;
+      animation: livepulse 2.4s infinite;
+    }
+    @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @media (max-width: 720px) {
+      .masthead-inner { height: auto; padding: 10px 16px; gap: 8px; }
+      .team-tag { font-size: 10px; padding-left: 8px; margin-left: 8px; }
+      .masthead-right { width: 100%; justify-content: space-between; font-size: 10px; }
+    }
 
-    /* Header */
-    .page-header { margin-bottom: 32px; text-align: center; }
-    .page-title { font-size: 36px; font-weight: 700; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.02em; }
-    .page-subtitle { font-size: 15px; color: var(--ink-muted); font-weight: 400; }
-    .page-meta { font-size: 12px; color: var(--ink-faint); margin-top: 8px; font-family: var(--mono); }
+    /* Main container */
+    .container { max-width: 1400px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Page subtitle row (replaces page-header) */
+    .page-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-subtitle { font-size: 14px; color: var(--ink-muted); font-weight: 500; }
+    .page-meta { font-size: 11px; color: var(--ink-faint); font-family: var(--mono); letter-spacing: 0.04em; }
+    .page-meta strong { color: var(--ink-soft); font-weight: 600; }
 
     /* Summary banner */
     .summary-banner {
@@ -360,14 +443,18 @@
 
     /* Responsive */
     @media (max-width: 768px) {
-      .page-title { font-size: 26px; }
+      .container { padding: 20px 14px; }
       .page-subtitle { font-size: 13px; }
-      .kpi-cards { grid-template-columns: 1fr; }
+      .page-meta-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .kpi-cards { grid-template-columns: 1fr; gap: 14px; margin: 20px 0 28px; }
       .chart-container { height: 250px; }
       th, td { padding: 8px; font-size: 12px; }
       .kpi-actual { font-size: 24px; }
-      .summary-banner { grid-template-columns: repeat(2, 1fr); }
+      .summary-banner { grid-template-columns: repeat(2, 1fr); padding: 14px; }
       .summary-item-value { font-size: 18px; }
+      .tab-button { padding: 10px 12px; font-size: 13px; }
+      .subtab-button { padding: 8px 12px; font-size: 12px; }
+      .table-title, .chart-title { font-size: 13px; }
     }
   </style>
 </head>
@@ -384,6 +471,7 @@
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
     </div>
@@ -392,16 +480,33 @@
     </button>
   </div>
 </nav>
-<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend.html')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;if(hit)a.classList.add('active');});})();</script><!-- Copyright banner -->
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend.html')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='overseas')hit=h.indexOf('overseas.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;if(hit)a.classList.add('active');});})();</script><!-- Copyright banner -->
   <div class="copyright-banner">
     © GS team chanmin Park / Haein Kim
   </div>
 
+  <!-- ========== MASTHEAD ========== -->
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="logo-wrap">
+        <div class="logo-mark">SONO &amp; TRINITY</div>
+        <div class="team-tag">GS팀 · 해외사업장</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="page-badge">🌐 해외 아웃바운드</span>
+        <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← GS 실적</a>
+      </div>
+      <div class="masthead-right">
+        <span><span class="live-dot"></span>LIVE</span>
+        <span id="refresh-badge">—</span>
+      </div>
+    </div>
+  </header>
+
   <!-- Main content -->
   <div class="container">
-    <div class="page-header">
-      <h1 class="page-title">해외사업장 실적 대시보드</h1>
-      <p class="page-subtitle">GS 아웃바운드 영업실적 — 하이퐁 · 괌</p>
+    <div class="page-meta-row">
+      <p class="page-subtitle">GS 아웃바운드 영업실적 — <strong style="color:var(--ink-soft);">하이퐁 · 괌 · 하와이</strong></p>
       <p class="page-meta" id="pageMeta"></p>
     </div>
 
@@ -418,8 +523,9 @@
     <!-- Tabs container -->
     <div id="tabsContainer" style="display:none;">
       <div class="tabs-header">
-        <button class="tab-button active" data-tab="haiphong">하이퐁</button>
-        <button class="tab-button" data-tab="guam">괌</button>
+        <button class="tab-button active" data-tab="haiphong">🇻🇳 하이퐁</button>
+        <button class="tab-button" data-tab="guam">🇬🇺 괌</button>
+        <button class="tab-button" data-tab="hawaii">🌺 하와이</button>
       </div>
 
       <!-- 하이퐁 Tab -->
@@ -457,12 +563,13 @@
                   <th>26년 실적</th>
                   <th>달성률</th>
                   <th>25년 실적</th>
-                  <th>전년비</th>
+                  <th>전년 진도율</th>
                 </tr>
               </thead>
               <tbody id="haiphongDetailBody"></tbody>
             </table>
           </div>
+          <p style="font-size:11px;color:var(--ink-faint);margin-top:8px;font-family:var(--mono);">※ 전년 진도율 = 26년 실적 / 25년 실적 × 100% (100% 미만 = 전년 미달)</p>
         </div>
       </div>
 
@@ -535,6 +642,19 @@
           </div>
         </div>
       </div>
+
+      <!-- 하와이 Tab -->
+      <div class="tab-content" id="tab-hawaii">
+        <div class="empty-state" style="margin-top:30px;">
+          <div class="empty-state-icon">🌺</div>
+          <div class="empty-state-text">하와이 사업장 — 데이터 준비중</div>
+          <div class="empty-state-subtext">객실 부문만 운영 예정 · 실적 데이터 입수 후 업데이트됩니다</div>
+          <div style="margin-top:24px;display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+            <span class="page-badge" style="font-size:10px;">🏨 객실 단일 부문</span>
+            <span class="page-badge" style="font-size:10px;background:rgba(90,159,196,0.12);border-color:rgba(90,159,196,0.3);color:#7ec8e3;">📋 계획 단계</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -576,8 +696,11 @@
       if (!DATA) return;
 
       // Meta
-      document.getElementById('pageMeta').textContent =
-        `기준일: ${DATA.generated_at || '-'}  ·  VND 환율: ${DATA.exchange_rate_vnd || '-'}  ·  USD 환율: ${DATA.exchange_rate_usd || '-'}`;
+      document.getElementById('pageMeta').innerHTML =
+        `기준일 <strong>${DATA.generated_at || '-'}</strong>  ·  VND <strong>${DATA.exchange_rate_vnd || '-'}</strong>  ·  USD <strong>${DATA.exchange_rate_usd || '-'}</strong>`;
+      // Refresh badge in masthead
+      const rb = document.getElementById('refresh-badge');
+      if (rb) rb.textContent = `UPD ${DATA.generated_at || '—'}`;
 
       // Summary banner
       renderSummaryBanner();
@@ -609,10 +732,10 @@
         items.push({ label: '괌 매출 실적', value: fmtD(guam.year.actual / 1000000, 0) + ' 백만', sub: `목표 ${fmtD(guam.year.target / 1000000, 0)} 백만 · 달성 ${fmtPct(guam.year.rate)}` });
       }
       if (hp) {
-        items.push({ label: '하이퐁 전년비', value: fmtPct(hp.yoy), sub: `전년 실적 ${fmtD(hp.prev, 0)} 백만` });
+        items.push({ label: '하이퐁 전년 진도율', value: fmtPct(hp.yoy), sub: `전년 동기간 실적 ${fmtD(hp.prev, 0)} 백만` });
       }
       if (guam) {
-        items.push({ label: '괌 전년비', value: fmtPct(guam.yoy), sub: `전년 실적 ${fmtD(guam.prev / 1000000, 0)} 백만` });
+        items.push({ label: '괌 전년 진도율', value: fmtPct(guam.yoy), sub: `전년 동기간 실적 ${fmtD(guam.prev / 1000000, 0)} 백만` });
       }
 
       banner.innerHTML = items.map(it => `
@@ -634,8 +757,8 @@
       kpiContainer.innerHTML = '';
       summary.forEach(item => {
         const cls = rateClass(item.year.rate);
-        const yoyDir = item.yoy >= 0 ? 'up' : 'down';
-        const yoySign = item.yoy >= 0 ? '+' : '';
+        // yoy in JSON = actual / prev * 100 (진도율 vs 전년 동기간), not delta
+        const yoyDir = item.yoy >= 100 ? 'up' : 'down';
         kpiContainer.innerHTML += `
           <div class="kpi-card">
             <div class="kpi-label">${item.name}</div>
@@ -649,7 +772,7 @@
             <div class="kpi-achievement">
               <span class="kpi-achievement-rate ${cls}">${fmtPct(item.year.rate)}</span>
             </div>
-            <div class="kpi-yoy">전년비: <span class="${yoyDir}">${yoySign}${fmtPct(item.yoy)}</span> (전년 ${fmtD(item.prev, 0)})</div>
+            <div class="kpi-yoy">전년 진도율: <span class="${yoyDir}">${fmtPct(item.yoy)}</span> (전년 ${fmtD(item.prev, 0)})</div>
           </div>
         `;
       });
@@ -770,10 +893,10 @@
         const actual = cat.total.actual;
         const prev = cat.total.prev;
         const rate = target > 0 ? (actual / target * 100) : 0;
-        const yoy = prev > 0 ? ((actual - prev) / prev * 100) : 0;
+        // 전년 진도율 = actual / prev * 100 (consistent with summary yoy semantics)
+        const yoy = prev > 0 ? (actual / prev * 100) : 0;
         const cls = rateClass(rate);
-        const yoyDir = yoy >= 0 ? 'positive' : 'negative';
-        const yoySign = yoy >= 0 ? '+' : '';
+        const yoyDir = yoy >= 100 ? 'positive' : (yoy >= 70 ? 'neutral' : 'negative');
         const isTotalRow = cat.is_total;
         const isIndented = !cat.parent && !cat.is_total;
 
@@ -787,7 +910,7 @@
           <td class="table-number">${fmtD(actual, 1)}</td>
           <td class="table-percent ${cls}">${rate > 0 ? fmtPct(rate) : '-'}</td>
           <td class="table-number">${prev > 0 ? fmtD(prev, 1) : '-'}</td>
-          <td class="table-percent ${yoyDir}">${prev > 0 ? yoySign + fmtPct(yoy) : '-'}</td>
+          <td class="table-percent ${yoyDir}">${prev > 0 ? fmtPct(yoy) : '-'}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -817,27 +940,23 @@
 
       const revRate = totalBudgetRev > 0 ? (totalActualRev / totalBudgetRev * 100) : 0;
       const paxRate = totalBudgetPax > 0 ? (totalActualPax / totalBudgetPax * 100) : 0;
-      const yoyRev = totalPrevRev > 0 ? ((totalActualRev - totalPrevRev) / totalPrevRev * 100) : 0;
-
-      // REV KPI (in thousands for readability)
-      const revActualK = (totalActualRev / 1000).toFixed(0);
-      const revBudgetK = (totalBudgetRev / 1000).toFixed(0);
-      const prevK = (totalPrevRev / 1000).toFixed(0);
+      // Use 진도율 (achievement vs prev year) for consistency with Excel/JSON yoy semantics
+      const yoyRev = totalPrevRev > 0 ? (totalActualRev / totalPrevRev * 100) : 0;
 
       kpiContainer.innerHTML = `
         <div class="kpi-card">
-          <div class="kpi-label">매출 (REV, 천원)</div>
+          <div class="kpi-label">매출 (REV, 백만원)</div>
           <div class="kpi-value-row">
-            <div class="kpi-actual">${fmt(totalActualRev / 1000)}</div>
+            <div class="kpi-actual">${fmt(totalActualRev / 1000000)}</div>
             <div>
               <div class="kpi-target-label">목표</div>
-              <div class="kpi-target">${fmt(totalBudgetRev / 1000)}</div>
+              <div class="kpi-target">${fmt(totalBudgetRev / 1000000)}</div>
             </div>
           </div>
           <div class="kpi-achievement">
             <span class="kpi-achievement-rate ${rateClass(revRate)}">${fmtPct(revRate)}</span>
           </div>
-          <div class="kpi-yoy">전년비: <span class="${yoyRev >= 0 ? 'up' : 'down'}">${yoyRev >= 0 ? '+' : ''}${fmtPct(yoyRev)}</span></div>
+          <div class="kpi-yoy">전년 진도율: <span class="${yoyRev >= 100 ? 'up' : 'down'}">${fmtPct(yoyRev)}</span> (전년 ${fmt(totalPrevRev / 1000000)} 백만)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">투숙객 (PAX)</div>
