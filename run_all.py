@@ -6,14 +6,18 @@ LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline.log")
 SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
 
 steps = [
-    ("STEP1", "parse_raw_db.py"),
-    ("STEP2", "compare_and_update.py"),
-    ("STEP3", "generate_otb_data.py"),
-    ("STEP4", "generate_fcst.py"),
-    ("STEP5", "generate_campaign_data.py"),
-    ("STEP6", "generate_insights.py"),
-    ("STEP7", "build_validation.py"),
-    ("STEP8", "build.py"),
+    ("STEP1",  "parse_raw_db.py"),
+    ("STEP2",  "compare_and_update.py"),
+    ("STEP3",  "generate_otb_data.py"),
+    ("STEP4",  "generate_fcst.py"),
+    ("STEP5",  "generate_campaign_data.py"),
+    # campaign_data.json#events에 매핑된 패키지코드를 27/28 DB와 조인 → 기획전별 실적
+    ("STEP5b", "generate_campaign_performance.py"),
+    # 패키지(86XXXXXX) 회원번호 분류별 트렌드 (시리즈 분석)
+    ("STEP5c", "parse_package_trend.py"),
+    ("STEP6",  "generate_insights.py"),
+    ("STEP7",  "build_validation.py"),
+    ("STEP8",  "build.py"),
 ]
 
 pid = os.fork()

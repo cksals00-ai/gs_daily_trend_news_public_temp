@@ -220,6 +220,7 @@ tr.total-row td{font-weight:700;color:var(--ink);border-top:2px solid var(--gold
       <span class="mast-ts" id="lastSaved"></span>
       <button class="btn" onclick="saveData()">💾 저장</button>
       <button class="btn btn-gold" onclick="exportData()">📤 내보내기</button>
+      <button class="btn btn-positive" onclick="confirmStrategy()" title="기획팀 목표 확정 — strategy_targets.json 생성 (세일즈 리포트에 노출)">✅ 확정</button>
     </div>
   </div>
 </div>
@@ -493,6 +494,152 @@ function exportData() {
   a.click();
   URL.revokeObjectURL(a.href);
   showToast('JSON 내보내기 완료');
+}
+
+// ============================================================
+//  STRATEGY TARGETS — 기획팀 → 세일즈 공유용 확정 export
+// ============================================================
+// 월별 우선순위 메시지 (세일즈 리포트 배너용)
+const PRIORITY_MSG_BY_MONTH = {
+  '2026-05': {
+    headline: '비수기 OCC 끌어올리기 + 가정의달 패키지 집중',
+    detail: '어린이날(5/5)·부처님오신날(5/25) 연휴 활용. 조기예약 인센티브(D-30)와 가정의달 패키지가 핵심. 평일 OCC 70% 미만 사업장은 OTA 노출 부스팅 즉시 가동.',
+    priority: 'A'
+  },
+  '2026-06': {
+    headline: '준성수기 진입 — 현충일 연휴 + 7월 성수기 사전 세일 시작',
+    detail: '현충일(6/6) 연휴 단기 패키지 + D-60 얼리버드 NR 요금으로 7월 OTB 안정화. G-OTA 감소분은 스마트인피니/쿠팡으로 리밸런싱.',
+    priority: 'A'
+  },
+  '2026-07': {
+    headline: '성수기 7/17 본격 진입 — ADR 상향 + NR 기획전 동시 추진',
+    detail: '주말/연휴 OTA 기본가 5% 인상, 비인기 평일은 현행 유지. NR 25% 할인 기획전 G-OTA 전 채널 동시 론칭(취소율 -15%p 효과). 보수적 OB 5% 적용으로 walk-out 리스크 관리.',
+    priority: 'S'
+  },
+  '2026-08': {
+    headline: '성수기 8/16 종료 — 추석(9/24-26) 연박 기획전 사전 편성',
+    detail: '8월 후반부 비수기 전환 대비 ADR 하방 압력 관리. 추석 연계 2+1 연박 패키지 D-45 사전 오픈. 하위 사업장(변산/진도/남해) 인플루언서 마케팅 집행.',
+    priority: 'A'
+  }
+};
+
+// 채널 priority/direction 산출 (CH_YOY_RATES 기반)
+function deriveChannelGuide(ch) {
+  const yoy = CH_YOY_RATES[ch]?.yoy || 0;
+  const note = CH_YOY_RATES[ch]?.note || '';
+  let direction, priority;
+  if (yoy >= 50)        { direction='focus';  priority='S'; }
+  else if (yoy >= 10)   { direction='focus';  priority='A'; }
+  else if (yoy > -10)   { direction='hold';   priority='B'; }
+  else                  { direction='reduce'; priority='C'; }
+  return { direction, priority, yoyPct: yoy, note };
+}
+
+// 세그먼트 priority — 키인 RN / Budget RN 비율 기반
+function deriveSegmentPriority(seg, month) {
+  const segData = getSegData(month);
+  const budget = segData[seg]?.budget_rn || 0;
+  const ki = keyinData[month].segments[seg]?.rn || calcAISegTarget(seg, month);
+  if (!budget) return 'B';
+  const ratio = ki / budget;
+  if (ratio >= 1.05) return 'S';
+  if (ratio >= 1.00) return 'A';
+  if (ratio >= 0.95) return 'B';
+  return 'C';
+}
+
+function buildStrategyTargets() {
+  const out = {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    exportedBy: '기획팀 (전략 키인)',
+    season: '2026 여름',
+    months: MONTHS.slice(),
+    _schema: {
+      priorityMessage: '월별 기획팀 우선순위 메시지 — 세일즈에 노출되는 한 줄 헤드라인',
+      targets: 'month → segment → {totals:{rn,rev,adr}, budget:{rn,rev}, priority, channels:{name:{target_rn}}}',
+      channelGuide: 'month → channel → {direction(focus|hold|reduce), priority(S|A|B|C), yoyPct, note}',
+      priorityLevels: {
+        S: '최우선 — 자원 집중 / 물량 확대 즉시 실행',
+        A: '우선 — 성장 추세, 적극 대응',
+        B: '유지 — 현행 수준 관리',
+        C: '축소 — 자연 감소 수용 또는 마진 위주 전환'
+      },
+      directions: {
+        focus: '집중 (▲) — 물량/노출/프로모션 확대',
+        hold: '유지 (=) — 기존 수준 운영',
+        reduce: '축소 (▼) — 의존도 낮추고 마진 채널로 전환'
+      }
+    },
+    priorityMessage: {},
+    targets: {},
+    channelGuide: {},
+    appliedStrategies: {}
+  };
+
+  MONTHS.forEach(month => {
+    out.priorityMessage[month] = PRIORITY_MSG_BY_MONTH[month] || {headline:'', detail:'', priority:'B'};
+
+    // targets
+    const segData = getSegData(month);
+    const monthTargets = {};
+    ALL_SEGS.forEach(seg => {
+      const ki = keyinData[month].segments[seg] || {};
+      const aiSegRN = calcAISegTarget(seg, month);
+      const segBase = segData[seg];
+      const kiRN  = ki.rn  || aiSegRN;
+      const kiREV = ki.rev || segBase.fcst_rev;
+      const adr = kiRN > 0 ? Math.round((kiREV/kiRN*1000)*10)/10 : 0;
+
+      // 채널별 target_rn
+      const channels = {};
+      SEG_CHANNELS[seg].forEach(ch => {
+        const userVal = keyinData[month].channels[ch]?.target_rn;
+        const aiVal = calcAISuggest(ch, month).value;
+        channels[ch] = { target_rn: (userVal !== undefined ? userVal : aiVal) };
+      });
+
+      monthTargets[seg] = {
+        totals: { rn: kiRN, rev: kiREV, adr },
+        budget: { rn: segBase.budget_rn, rev: segBase.budget_rev },
+        priority: deriveSegmentPriority(seg, month),
+        channels
+      };
+    });
+    out.targets[month] = monthTargets;
+
+    // channelGuide
+    const guide = {};
+    Object.keys(CH_YOY_RATES).forEach(ch => { guide[ch] = deriveChannelGuide(ch); });
+    out.channelGuide[month] = guide;
+
+    // appliedStrategies — 적용된 AI 제안만 추출
+    const states = keyinData[month].strategyStates || {};
+    const allStrategies = getAIStrategies(month);
+    out.appliedStrategies[month] = allStrategies
+      .filter(s => states[s.id] === 'applied' || states[s.id] === 'modified')
+      .map(s => ({ id: s.id, name: s.name, priority: s.priority, status: states[s.id] }));
+  });
+
+  return out;
+}
+
+function confirmStrategy() {
+  if (!confirm('기획팀 목표를 "확정"하고 strategy_targets.json을 생성합니다.\n\n다운로드된 파일을 docs/data/strategy_targets.json 위치에 덮어쓰면 세일즈 리포트에 즉시 반영됩니다.\n\n계속하시겠습니까?')) return;
+
+  const payload = buildStrategyTargets();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'strategy_targets.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // 액션 로그에도 기록 (현재 활성 월)
+  addActionEntry(activeMonth, '기획팀 확정',
+    `strategy_targets.json export — ${MONTHS.length}개월 / ${ALL_SEGS.length}세그 + ${Object.keys(CH_YOY_RATES).length}채널 가이드`,
+    '확정');
+  showToast('✅ 기획팀 목표 확정 — data/strategy_targets.json 으로 저장하세요');
 }
 
 // ============================================================

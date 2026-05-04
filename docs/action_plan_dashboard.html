@@ -964,6 +964,39 @@ async function loadKpiData(){
   }
 }
 
+/* ── 서버 사이드 실적: campaign_performance.json (Key → 27DB 집계 RN/매출) ── */
+async function loadCampaignPerformance(){
+  try{
+    const r=await fetch('data/campaign_performance.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const perf=await r.json();
+    const byKey=perf.by_key||{};
+    let merged=0;
+    Object.entries(byKey).forEach(([key,v])=>{
+      // 기존 kpiDataMap[key]에 실적값 머지 (목표는 그대로 유지)
+      const prev=kpiDataMap[key]||{};
+      const next=Object.assign({},prev,{
+        rns_actual:v.rn||null,
+        rev_actual:v.rev_won||null,  // 원 단위
+        adr_actual:v.adr||null,
+        pkg_codes:v.package_codes||[],
+        cancel_rn:v.cancel_rn||0,
+        cancel_rate:v.cancel_rate||0,
+      });
+      autoCalcADR(next);
+      kpiDataMap[key]=next;
+      merged++;
+    });
+    const meta=perf.meta||{};
+    console.log('[ActionPlan] campaign_performance.json 로드:',
+      merged,'개 Key 실적 머지 ·',
+      'codes',meta.total_codes||0,'· matched_rows',meta.total_matched_rows||0);
+    if(meta.note)console.log('[ActionPlan]',meta.note);
+  }catch(e){
+    console.warn('[ActionPlan] campaign_performance.json 로드 실패:',e.message);
+  }
+}
+
 /* ── Table view ── */
 function renderTable(data){
   if(!data.length){
@@ -1476,7 +1509,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   buildStatusChips();
   // HTML default URL이 항상 우선. 과거 stale localStorage 캐시 제거 (gid 누락 URL이 저장되어 있던 케이스).
   try{localStorage.removeItem('ap_csv_url')}catch(e){}
-  loadKpiData().then(()=>loadCSV());
+  // 우선 서버 집계 실적(campaign_performance.json) 머지 → Key시트 KPI(목표) → CSV 로드 순.
+  // Key시트 URL이 비어있어도 server perf만으로도 실적이 표시됨.
+  loadCampaignPerformance()
+    .then(()=>loadKpiData())
+    .then(()=>loadCSV());
   loadOTBData();
 });
 </script>

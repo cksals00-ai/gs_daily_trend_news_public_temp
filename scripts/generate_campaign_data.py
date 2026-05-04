@@ -7,12 +7,19 @@ generate_campaign_data.py — 구글시트 CSV → docs/data/campaign_data.json
         KPI (객실수 실), KPI 매출 (백만원), 영업장, 상품명, 상품, 노출영역, 비고
 - 위 시트는 publish-to-web CSV URL로 노출 (gid=1818134248)
 
+추가 (2026-05): Key 서브시트 연동
+- 각 행의 Key 값(예: "1","2"...)은 같은 워크북 내 서브시트의 시트명
+- 서브시트에 패키지코드(86XXXXXX 회원코드) 정의
+- pubhtml에서 시트명→gid를 자동 발견, 각 서브시트 CSV를 받아 패키지코드 파싱
+- 미발행 시트는 경고 후 스킵 (인프라가 먼저 구축, 데이터는 점진적으로 채워지는 구조)
+
 생성 필드:
 - total_campaigns, summer_campaigns
 - by_channel_type   (채널 카테고리별 건수)
 - by_month          (투숙 시작월 기준)
 - channel_by_month  (카테고리 × 월)
 - summer_by_channel, summer_by_property, summer_detail
+- events            (전체 기획전 행 + Key별 패키지코드 — 실적 매칭용)
 - (보존) influencer_25, influencer_26, annual_plan_summer
   → 위 항목은 다른 시트에서 관리되므로 기존 JSON에서 그대로 머지
 
@@ -37,11 +44,25 @@ DOCS_DATA_DIR = PROJECT_DIR / "docs" / "data"
 OUTPUT_JSON = DOCS_DATA_DIR / "campaign_data.json"
 
 # ─── 데이터 소스 ───
-CSV_URL = (
-    "https://docs.google.com/spreadsheets/d/e/"
+PUBLISH_ID = (
     "2PACX-1vTqe7nY8vHYVVnnGR5qrl-uubCABXtmbToAuKWziuaoms14hZ3qlJuQTBWUXDmjCOU-4hd0hp6cpO_O"
+)
+CSV_URL = (
+    f"https://docs.google.com/spreadsheets/d/e/{PUBLISH_ID}"
     "/pub?gid=1818134248&single=true&output=csv"
 )
+PUBHTML_URL = f"https://docs.google.com/spreadsheets/d/e/{PUBLISH_ID}/pubhtml"
+
+
+def sub_sheet_csv_url(gid: str) -> str:
+    return (
+        f"https://docs.google.com/spreadsheets/d/e/{PUBLISH_ID}"
+        f"/pub?gid={gid}&single=true&output=csv"
+    )
+
+
+# 패키지코드: 86으로 시작하는 7~9자리 숫자 (온북 회원번호 컨벤션)
+PKG_CODE_RE = re.compile(r"^86\d{4,7}$")
 
 # ─── 채널 카테고리 매핑 (specific → generic 순서로 매칭) ───
 # 매핑 누락 시 원본 채널명을 그대로 카테고리로 사용 (기타 통합 금지)
@@ -115,6 +136,73 @@ def fetch_csv(url: str) -> list[list[str]]:
     return list(csv.reader(io.StringIO(data)))
 
 
+def fetch_text(url: str) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def discover_sheet_gids() -> dict[str, str]:
+    """pubhtml 인덱스 페이지에서 모든 발행된 시트의 (시트명 → gid) 매핑 추출.
+    items.push({name:"X", pageUrl:"...gid=N..."}) 패턴을 파싱.
+    """
+    try:
+        html = fetch_text(PUBHTML_URL)
+    except Exception as e:
+        print(f"  pubhtml 로드 실패(스킵): {e}")
+        return {}
+    pat = re.compile(
+        r'items\.push\(\{name:\s*"([^"]+)",\s*pageUrl:\s*"([^"]+)"',
+        re.IGNORECASE,
+    )
+    name_to_gid: dict[str, str] = {}
+    for name, url in pat.findall(html):
+        unescaped = url.replace(r"\/", "/").replace(r"\x3d", "=").replace(r"\x26", "&")
+        m = re.search(r"gid=(\d+)", unescaped)
+        if m:
+            name_to_gid[name.strip()] = m.group(1)
+    return name_to_gid
+
+
+def parse_sub_sheet_codes(rows: list[list[str]]) -> list[str]:
+    """Key 서브시트의 행에서 패키지코드(86XXXXXX) 추출.
+    구조: 헤더 안내문 → '📦 패키지코드' 마커 → 이후 행에 코드 나열.
+    마커를 찾지 못하면 전체 행을 스캔. 중복은 순서 유지하며 dedupe.
+    """
+    seen: set[str] = set()
+    result: list[str] = []
+    marker_idx = -1
+    for i, row in enumerate(rows):
+        joined = " ".join(c.strip() for c in row)
+        if "패키지코드" in joined and ("📦" in joined or "붙여넣기" in joined):
+            marker_idx = i
+            break
+    start = marker_idx + 1 if marker_idx >= 0 else 0
+    for row in rows[start:]:
+        for cell in row:
+            v = (cell or "").strip()
+            if PKG_CODE_RE.match(v) and v not in seen:
+                seen.add(v)
+                result.append(v)
+    return result
+
+
+def parse_sub_sheet_meta(rows: list[list[str]]) -> dict[str, str]:
+    """서브시트 상단의 '기획전명', '카테고리' 같은 라벨-값 쌍 추출."""
+    meta: dict[str, str] = {}
+    for row in rows:
+        cells = [c.strip() for c in row]
+        # 라벨이 보통 column 1, 값이 column 2에 있음
+        for i in range(len(cells) - 1):
+            label = cells[i]
+            value = cells[i + 1]
+            if not label or not value:
+                continue
+            if label in ("기획전명", "카테고리") and label not in meta:
+                meta[label] = value
+    return meta
+
+
 def find_header_row(rows: list[list[str]]) -> int:
     """'Key' 와 '채널'이 동시에 들어있는 첫 행 인덱스."""
     for i, r in enumerate(rows):
@@ -172,6 +260,9 @@ def main():
     summer_by_channel = defaultdict(int)
     summer_by_property = defaultdict(int)
     summer_detail = []
+    events: list[dict] = []  # 전체 기획전 (Key별 패키지코드 매칭용)
+    keys_in_order: list[str] = []
+    keys_seen: set[str] = set()
 
     total = 0
     summer_total = 0
@@ -188,6 +279,8 @@ def main():
         cat = categorize_channel(ch_raw)
         ts = parse_kor_date(r[C_TS]) if C_TS >= 0 else None
         te = parse_kor_date(r[C_TE]) if C_TE >= 0 else None
+        ss = parse_kor_date(r[C_SS]) if C_SS >= 0 else None
+        se = parse_kor_date(r[C_SE]) if C_SE >= 0 else None
 
         total += 1
         by_channel_type[cat] += 1
@@ -197,31 +290,112 @@ def main():
             by_month[mkey] += 1
             channel_by_month[cat][mkey] += 1
 
+        prop = (r[C_PROP] or "").strip() if C_PROP >= 0 else ""
+        bun  = (r[C_BUN]  or "").strip() if C_BUN  >= 0 else ""
+        area = (r[C_AREA] or "").strip() if C_AREA >= 0 else ""
+        prod = (r[C_PROD] or "").strip() if C_PROD >= 0 else ""
+        pname = (r[C_PNAME] or "").strip() if C_PNAME >= 0 else ""
+        expo = (r[C_EXPO] or "").strip() if C_EXPO >= 0 else ""
+        note = (r[C_NOTE] or "").strip() if C_NOTE >= 0 else ""
+        kpi_rn = (r[C_KPI_RN] or "").strip() if C_KPI_RN >= 0 else ""
+        kpi_rev = (r[C_KPI_REV] or "").strip() if C_KPI_REV >= 0 else ""
+
+        events.append({
+            "key":       key,
+            "구분":       bun,
+            "사업장":     prop,
+            "채널":       ch_raw,
+            "채널카테고리": cat,
+            "판매시작":   ss.isoformat() if ss else "",
+            "판매종료":   se.isoformat() if se else "",
+            "투숙시작":   ts.isoformat() if ts else "",
+            "투숙종료":   te.isoformat() if te else "",
+            "영업장":     area,
+            "상품":       prod,
+            "상품명":     pname,
+            "노출영역":   expo,
+            "비고":       note,
+            "KPI_RN":     kpi_rn,
+            "KPI_REV_M":  kpi_rev,
+        })
+        if key not in keys_seen:
+            keys_seen.add(key)
+            keys_in_order.append(key)
+
         if is_summer(ts, te):
             summer_total += 1
             summer_by_channel[cat] += 1
-            prop = (r[C_PROP] or "").strip() if C_PROP >= 0 else ""
             if prop:
                 summer_by_property[prop] += 1
-            ss = parse_kor_date(r[C_SS]) if C_SS >= 0 else None
-            se = parse_kor_date(r[C_SE]) if C_SE >= 0 else None
             entry = {
-                "구분":       (r[C_BUN]  or "").strip() if C_BUN  >= 0 else "",
-                "사업장":     (r[C_PROP] or "").strip() if C_PROP >= 0 else "",
+                "구분":       bun,
+                "사업장":     prop,
                 "채널":       ch_raw,
                 "판매시작":   ss.isoformat() if ss else "",
                 "판매종료":   se.isoformat() if se else "",
                 "투숙시작":   ts.isoformat() if ts else "",
                 "투숙종료":   te.isoformat() if te else "",
-                "영업장":     (r[C_AREA]  or "").strip() if C_AREA  >= 0 else "",
-                "상품":       (r[C_PROD]  or "").strip() if C_PROD  >= 0 else "",
+                "영업장":     area,
+                "상품":       prod,
             }
             # 상품명·노출영역은 비어있지 않을 때만
-            if C_PNAME >= 0 and (r[C_PNAME] or "").strip():
-                entry["상품명"] = r[C_PNAME].strip()
-            if C_EXPO >= 0 and (r[C_EXPO] or "").strip():
-                entry["노출영역"] = r[C_EXPO].strip()
+            if pname:
+                entry["상품명"] = pname
+            if expo:
+                entry["노출영역"] = expo
             summer_detail.append(entry)
+
+    # ─ Key 서브시트에서 패키지코드 매핑 ─
+    print(f"pubhtml에서 시트 인덱스 발견 중: {PUBHTML_URL}")
+    name_to_gid = discover_sheet_gids()
+    print(f"  발행된 시트 {len(name_to_gid)}개 발견")
+
+    key_to_codes: dict[str, list[str]] = {}
+    key_to_meta: dict[str, dict[str, str]] = {}
+    fetched = 0
+    skipped_unpublished = 0
+    skipped_empty = 0
+    for key in keys_in_order:
+        gid = name_to_gid.get(key)
+        if not gid:
+            skipped_unpublished += 1
+            continue
+        try:
+            sub_text = fetch_text(sub_sheet_csv_url(gid))
+            sub_rows = list(csv.reader(io.StringIO(sub_text)))
+            codes = parse_sub_sheet_codes(sub_rows)
+            meta  = parse_sub_sheet_meta(sub_rows)
+            if codes:
+                key_to_codes[key] = codes
+                fetched += 1
+            else:
+                skipped_empty += 1
+            if meta:
+                key_to_meta[key] = meta
+        except Exception as e:
+            print(f"  Key={key} (gid={gid}) 페치 실패: {e}")
+    print(f"  Key 서브시트 결과: {fetched}건 패키지코드 적재 / "
+          f"미발행 {skipped_unpublished} / 빈시트 {skipped_empty}")
+
+    # events에 패키지코드 머지 + 동일 Key의 모든 row가 같은 코드를 공유
+    pkg_used_by: dict[str, list[str]] = defaultdict(list)  # 코드 → [keys] (중복 추적)
+    for ev in events:
+        codes = key_to_codes.get(ev["key"], [])
+        ev["package_codes"] = codes
+        meta = key_to_meta.get(ev["key"], {})
+        if meta.get("기획전명") and not ev.get("노출영역"):
+            ev["노출영역"] = meta["기획전명"]
+        if meta.get("카테고리"):
+            ev["서브카테고리"] = meta["카테고리"]
+        for c in codes:
+            if ev["key"] not in pkg_used_by[c]:
+                pkg_used_by[c].append(ev["key"])
+
+    duplicated = {c: keys for c, keys in pkg_used_by.items() if len(keys) > 1}
+    if duplicated:
+        print(f"  ⚠ 다중 Key에 등록된 패키지코드 {len(duplicated)}건 (실적 합산 시 첫 Key에 귀속):")
+        for c, keys in list(duplicated.items())[:10]:
+            print(f"    {c} → keys {keys}")
 
     # 정렬
     by_channel_type_sorted   = dict(sorted(by_channel_type.items(),   key=lambda x: -x[1]))
@@ -240,6 +414,9 @@ def main():
         "summer_by_property":summer_by_property_sorted,
         "summer_detail":     summer_detail,
         "channel_by_month":  channel_by_month_sorted,
+        "events":            events,
+        "key_to_codes":      key_to_codes,
+        "duplicate_codes":   duplicated,
     }
 
     # ─ 보존 필드(다른 소스에서 관리) ─
@@ -261,6 +438,8 @@ def main():
     print(f"  summer_campaigns: {summer_total}")
     print(f"  채널 카테고리: {len(by_channel_type_sorted)}개")
     print(f"  월 분포: {sorted(by_month_sorted.keys())}")
+    print(f"  events: {len(events)}건 / Key 서브시트 적재: {fetched}건 / "
+          f"매핑된 패키지코드: {sum(len(v) for v in key_to_codes.values())}개")
 
 
 if __name__ == "__main__":

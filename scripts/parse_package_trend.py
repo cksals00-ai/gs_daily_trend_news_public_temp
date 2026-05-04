@@ -15,12 +15,16 @@ logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 
-# raw_db는 메인 프로젝트에 있음 (워크트리 3단계 위)
+# raw_db는 메인 프로젝트에 있음 (워크트리 3단계 위).
+# 워크트리에 빈 data/raw_db가 있을 수 있으므로, 연도 서브디렉토리가 있는 경로 우선.
 def find_raw_db():
     candidates = [
         PROJECT_DIR / "data" / "raw_db",
         PROJECT_DIR.parents[2] / "data" / "raw_db",  # worktree 3-level up
     ]
+    for c in candidates:
+        if (c / "2026").exists() or (c / "2025").exists():
+            return c
     for c in candidates:
         if c.exists():
             return c
