@@ -783,7 +783,9 @@ def load_segment_fcst():
         except Exception:
             pass
 
-    # 2) fcst_segment_trend.json: snapshots[-1] (최신 RM FCST 분배본) + ratios
+    # 2) fcst_segment_trend.json: snapshots[-1] 최신 + ratios
+    # New schema: properties[prop][ym] = {rm_fcst_rn, rm_budget_rn, segments: {OTA: {...}, ...}}
+    # Old schema: properties[prop][ym] = {OTA: {...}, G-OTA: {...}, ...}
     if FCST_SEG_TREND_JSON.exists():
         try:
             fst = json.loads(FCST_SEG_TREND_JSON.read_text(encoding="utf-8"))
@@ -791,7 +793,11 @@ def load_segment_fcst():
             if snaps:
                 latest = snaps[-1]
                 for prop, months in latest.get("properties", {}).items():
-                    for ym, segs in months.items():
+                    for ym, ym_data in months.items():
+                        if isinstance(ym_data, dict) and isinstance(ym_data.get("segments"), dict):
+                            segs = ym_data["segments"]
+                        else:
+                            segs = ym_data
                         out["rm_seg_fcst"].setdefault(prop, {})[ym] = segs
             out["ratios"] = fst.get("ratios", {})
         except Exception:
@@ -800,20 +806,19 @@ def load_segment_fcst():
     return out
 
 
-def sum_rm_seg_fcst(seg_fcst_data, display_name, ym):
-    """fcst_segment_trend.json snapshot에서 OTA+G-OTA+Inbound 3개 세그의 rm_fcst_rn / rm_budget_rn 합산.
-    기타(Direct) 제외. 대시보드 실적/budget이 OTA+G-OTA+Inbound 기준이므로 RM FCST도 동일 base 유지.
-    Returns: (rm_fcst_rn_sum or None, rm_budget_rn_sum or None)
+def sum_rm_seg_fcst(rm_fcst_props, display_name, ym):
+    """rm_fcst.json segments(OTA/G-OTA/Inbound) PDF 원본 셀 합산.
+    Returns: (rm_fcst_rn_sum, rm_budget_rn_sum). 분배 X.
     """
-    rm_block = seg_fcst_data.get("rm_seg_fcst", {}).get(display_name, {}).get(ym, {})
-    if not rm_block:
+    segs = rm_fcst_props.get(display_name, {}).get(ym, {}).get("segments", {})
+    if not segs:
         return None, None
     fcst_sum = 0
     bud_sum = 0
     has_fcst = False
     has_bud = False
     for seg in ("OTA", "G-OTA", "Inbound"):
-        s = rm_block.get(seg)
+        s = segs.get(seg)
         if not isinstance(s, dict):
             continue
         v_f = s.get("rm_fcst_rn")
@@ -998,11 +1003,9 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots,
                 ly_pickup_ratio=m_pickup_ratio)
 
-            # RM FCST (전체 세그먼트 기준 — rm_budget_rn 대비 달성률)
+            # RM FCST (OTA+G-OTA+Inbound 세그합 — 대시보드 base와 일치)
             rm_key = f"2026-{m:02d}"
-            rm_entry = rm_fcst_props.get(display_name, {}).get(rm_key, {})
-            rm_rn = rm_entry.get("rm_fcst_rn")
-            rm_budget = rm_entry.get("rm_budget_rn")
+            rm_rn, rm_budget = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach = round(rm_rn / rm_budget * 100, 1) if (rm_rn and rm_budget and rm_budget > 0) else None
 
             yoy = round((act_rn / base_rn - 1) * 100, 1) if base_rn > 0 else None
@@ -1298,10 +1301,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 ly_pickup_ratio=pickup_ratio,
             )
 
-            # RM FCST: fcst_segment_trend.json snapshot에서 OTA+G-OTA+Inbound 3개 세그합.
-            # 대시보드 실적/budget이 OTA+G-OTA+Inbound 기준이라 RM FCST도 동일 base. 분배 X.
+            # RM FCST: rm_fcst.json segments(OTA+G-OTA+Inbound) PDF 원본 셀 합산. 분배 X.
             rm_key = f"2026-{month_idx:02d}"
-            rm_rn_prop, rm_budget_prop = sum_rm_seg_fcst(seg_fcst_data, display_name, rm_key)
+            rm_rn_prop, rm_budget_prop = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
 
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
@@ -1366,9 +1368,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     ai_fcst_lo += mi_lo if mi_lo is not None else 0
                     ai_fcst_hi += mi_hi if mi_hi is not None else 0
 
-                # RM FCST (월별 합산): fcst_segment_trend.json OTA+G-OTA+Inbound 세그합
+                # RM FCST (월별 합산): rm_fcst.json segments PDF 원본 셀 합산
                 mi_rm_key = f"2026-{mi:02d}"
-                mi_rm_rn, mi_rm_bud = sum_rm_seg_fcst(seg_fcst_data, display_name, mi_rm_key)
+                mi_rm_rn, mi_rm_bud = sum_rm_seg_fcst(rm_fcst_props, display_name, mi_rm_key)
                 if mi_rm_rn is not None:
                     rm_rn_prop_sum += mi_rm_rn
                     rm_rn_prop_has = True
