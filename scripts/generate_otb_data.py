@@ -968,6 +968,29 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
     rows = []
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         month_data = {}
+        # ── bottom-up: 세그별 last_rn 먼저 계산하여 합계 행에 사용 ──
+        seg_last_rn_by_month = {}  # {m: sum of segment last_rn}
+        if db_bps is not None and seg_budgets is not None:
+            for m in months:
+                mk_25 = f"2025{m:02d}"
+                seg_sum = 0
+                is_future_or_current_m = (m >= now_kst.month)
+                for seg in BUDGET_SEGMENT_KEYS:
+                    s_ly_rn = 0
+                    used_adj = False
+                    if is_future_or_current_m and adj_by_prop_seg:
+                        for pname in db_props:
+                            ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
+                            s_ly_rn += ps_m.get("booking_rn", 0)
+                        if s_ly_rn > 0:
+                            used_adj = True
+                    if not used_adj:
+                        s_ly_rn = 0
+                        for pname in db_props:
+                            s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    seg_sum += s_ly_rn
+                seg_last_rn_by_month[m] = seg_sum
+
         for m in months:
             mk_26 = f"2026{m:02d}"
             mk_25 = f"2025{m:02d}"
@@ -975,15 +998,19 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
 
             act_rn = sum_db_segments(db_bps, db_props, mk_26)["rn"]
 
-            # 전년 보정값 포함
-            base_rn = 0
-            adj_rn  = 0
-            for pname in db_props:
-                adj_m = adj_by_prop.get(pname, {}).get(mk_25, {}) if adj_by_prop else {}
-                base_rn += adj_m.get("booking_rn", 0)
-                adj_rn  += adj_m.get("adjustment_rn", 0)
-            if base_rn == 0:
-                base_rn = sum_db_segments(db_bps, db_props, mk_25)["rn"]
+            # 전년 보정값: bottom-up (세그합 기반)
+            if m in seg_last_rn_by_month and seg_last_rn_by_month[m] > 0:
+                base_rn = seg_last_rn_by_month[m]
+            else:
+                # fallback: adj_by_prop 또는 풀년 db_bps
+                base_rn = 0
+                adj_rn  = 0
+                for pname in db_props:
+                    adj_m = adj_by_prop.get(pname, {}).get(mk_25, {}) if adj_by_prop else {}
+                    base_rn += adj_m.get("booking_rn", 0)
+                    adj_rn  += adj_m.get("adjustment_rn", 0)
+                if base_rn == 0:
+                    base_rn = sum_db_segments(db_bps, db_props, mk_25)["rn"]
 
             if seg_budgets:
                 bud_rn = sum_seg_budget(seg_budgets, display_name, [bud_label])["rn"]
@@ -1231,10 +1258,33 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 (OTA+G-OTA+Inbound 3개 세그먼트만)
+        # 전년 합산 — bottom-up: 세그별 동기간 보정 합산으로 일관성 확보
         lst_rn = 0
         lst_rev = 0.0
-        if db_bps is not None:
+        is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
+
+        if is_future_or_current and adj_by_prop_seg and db_bps is not None:
+            # bottom-up: OTA+G-OTA+Inbound 세그별 adj_by_prop_seg 합산
+            for seg in BUDGET_SEGMENT_KEYS:
+                s_ly_rn = 0
+                s_ly_rev = 0.0
+                used_adj = False
+                for mk in last_keys:
+                    for pname in db_props:
+                        ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk, {})
+                        s_ly_rn += ps_m.get("booking_rn", 0)
+                        s_ly_rev += ps_m.get("booking_rev_m", 0.0)
+                if s_ly_rn > 0:
+                    used_adj = True
+                if not used_adj:
+                    for mk in last_keys:
+                        for pname in db_props:
+                            m_data = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
+                            s_ly_rn += m_data.get("booking_rn", 0)
+                            s_ly_rev += m_data.get("booking_rev", 0.0)
+                lst_rn += s_ly_rn
+                lst_rev += s_ly_rev
+        elif db_bps is not None:
             for mk in last_keys:
                 d = sum_db_segments(db_bps, db_props, mk)
                 lst_rn  += d["rn"]
@@ -1244,26 +1294,6 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 d = sum_db(db_bp, db_props, mk)
                 lst_rn  += d["rn"]
                 lst_rev += d["rev_m"]
-
-        # 미래월/현재월 LY 동기간 보정
-        # month_idx > 0이고 month_idx >= now_kst.month인 경우: 같은 날짜까지의 2025 데이터만 포함
-        is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
-
-        if is_future_or_current and adj_by_prop and lst_rn > 0:
-            # adj_by_prop에 보정된 동기간 데이터가 있으면 사용
-            adj_lst_rn = 0
-            for pname in db_props:
-                for mk in last_keys:
-                    pm = adj_by_prop.get(pname, {}).get(mk, {})
-                    # booking_rn = orig + adj (기준일 시점 동기간 RN). 없으면 final 사용.
-                    if pm.get("booking_rn") is not None:
-                        adj_lst_rn += pm.get("booking_rn", 0)
-                    else:
-                        adj_lst_rn += 0
-            if adj_lst_rn > 0:
-                # 매출은 동기간 RN 비율로 환산 (ADR 동일 가정)
-                lst_rev = lst_rev * (adj_lst_rn / lst_rn)
-                lst_rn = adj_lst_rn
 
         lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
 
@@ -2033,6 +2063,61 @@ def overlay_daily_booking(all_months, daily_bk, now_kst):
             summary["rns_yoy"] = round((sa / sl - 1) * 100, 1) if sl > 0 else 0.0
 
 
+def validate_otb_data(result):
+    """합계 행 last_rn == 세그별 last_rn 합 검증 (bottom-up 일관성 체크)"""
+    errors = []
+    # 1. yoyTable: 합계 == 세그합
+    yoy = result.get('yoyTable', [])
+    parents = {}
+    children = {}
+    for r in yoy:
+        if r.get('is_segment'):
+            p = r.get('parent', '')
+            if p not in children:
+                children[p] = {}
+            for mk, mv in r.get('months', {}).items():
+                if mk not in children[p]:
+                    children[p][mk] = {'act': 0, 'last': 0}
+                children[p][mk]['act'] += mv.get('act_rn', 0) or 0
+                children[p][mk]['last'] += mv.get('last_rn', 0) or 0
+        else:
+            parents[r['name']] = r.get('months', {})
+    for pn in parents:
+        if pn not in children:
+            continue
+        for mk in parents[pn]:
+            p_last = parents[pn][mk].get('last_rn', 0) or 0
+            c_last = children[pn].get(mk, {}).get('last', 0)
+            if abs(p_last - c_last) > 1:
+                errors.append(f"yoyTable {pn} m{mk}: parent_last={p_last} != seg_sum={c_last}")
+
+    # 2. allMonths byProperty: 합계 == byPropertySegment 세그합
+    for mk_str, mdata in result.get('allMonths', {}).items():
+        bp = mdata.get('byProperty', [])
+        bps = mdata.get('byPropertySegment', {})
+        if not bps:
+            continue
+        for p in bp:
+            pname = p.get('name', '')
+            seg_sum = 0
+            for seg in ['OTA', 'G-OTA', 'Inbound']:
+                for sp in bps.get(seg, []):
+                    if sp.get('name') == pname:
+                        seg_sum += sp.get('rns_last', 0) or 0
+            p_last = p.get('rns_last', 0) or 0
+            if abs(p_last - seg_sum) > 1:
+                errors.append(f"allMonths[{mk_str}] {pname}: bp_last={p_last} != seg_sum={seg_sum}")
+
+    if errors:
+        print(f"\n⚠️  검증 실패: {len(errors)}건 불일치")
+        for e in errors[:20]:
+            print(f"  {e}")
+        return False
+    else:
+        print("\n✅ 검증 통과: 합계=세그합 모두 일치")
+        return True
+
+
 def main():
     print("db_aggregated.json 로드 중...")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -2276,6 +2361,9 @@ def main():
         # 투숙일별 일별 데이터 (stay-date.html 용)
         "stayDateDaily": db.get("stay_date_daily", {}),
     }
+
+    # ── 검증: 합계 행 last_rn == 세그합 ──
+    validate_otb_data(output)
 
     DOCS_DATA_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_JSON.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
