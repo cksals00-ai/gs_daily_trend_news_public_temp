@@ -18,6 +18,7 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
 EXCEL_FILE = DATA_DIR / "overseas" / "overseas_2026.xlsx"
+WRH_FILE = DATA_DIR / "overseas" / "2026년 WRH 객실계획.xlsx"
 
 
 def sv(v):
@@ -185,7 +186,7 @@ def parse_overseas_excel(filepath):
     tl_cats = extract_guam_sheet('탈로_DATA')
 
     guam_exchange = 1480
-    return {
+    result = {
         'generated_at': update_date,
         'exchange_rate_vnd': exchange_rate,
         'exchange_rate_usd': guam_exchange,
@@ -200,6 +201,72 @@ def parse_overseas_excel(filepath):
             'talopopo': tl_cats
         }
     }
+    return result
+
+
+def parse_wrh_excel(filepath):
+    """WRH 객실계획 엑셀 → hawaii dict (프론트엔드 호환 구조)"""
+    try:
+        import openpyxl
+    except ImportError:
+        return None
+
+    wb = openpyxl.load_workbook(filepath, data_only=True)
+    ws = wb['⑴-4 WRHⅠ']
+    logger.info(f"WRH 엑셀 로드: {filepath.name}")
+
+    # Annual Total (col 6), row 5 = 23Y start
+    ann = 5
+    total = {
+        'budget_rn': sv(ws.cell(ann + 9, 6).value),      # 26Y Budget RN
+        'budget_rev': round(sv(ws.cell(ann + 10, 6).value)),  # 26Y Budget Rev
+        'budget_adr': round(sv(ws.cell(ann + 11, 6).value), 2),
+        'actual_rn': 0,   # 26Y Actual — WRH에는 미포함
+        'actual_rev': 0,
+        'actual_adr': 0,
+        'ly_rn': sv(ws.cell(ann + 6, 6).value),           # 25Y RN
+        'ly_rev': round(sv(ws.cell(ann + 7, 6).value)),
+        'ly_adr': round(sv(ws.cell(ann + 8, 6).value), 2),
+    }
+
+    # Monthly data — 54 rows apart, starting at row 59
+    month_starts = {m: 59 + (m - 1) * 54 for m in range(1, 13)}
+    monthly = []
+    for m in range(1, 13):
+        r = month_starts[m]
+        entry = {
+            'month': m,
+            'budget_rn': sv(ws.cell(r + 9, 6).value),
+            'budget_rev': round(sv(ws.cell(r + 10, 6).value)),
+            'budget_adr': round(sv(ws.cell(r + 11, 6).value), 2),
+            'actual_rn': 0,
+            'actual_rev': 0,
+            'actual_adr': 0,
+            'ly_rn': sv(ws.cell(r + 6, 6).value),
+            'ly_rev': round(sv(ws.cell(r + 7, 6).value)),
+        }
+        monthly.append(entry)
+
+    # Wholesale (col 14 = Wholesale Sub TL)
+    # YTD = Jan ~ latest month with 25Y actual data
+    import datetime
+    current_month = min(datetime.date.today().month, 12)
+    ytd_months = range(1, current_month + 1)
+    ws25_ytd_rn = sum(sv(ws.cell(month_starts[m] + 6, 14).value) for m in ytd_months)
+    ws25_ytd_rev = round(sum(sv(ws.cell(month_starts[m] + 7, 14).value) for m in ytd_months))
+    ws26_ytd_rn = sum(sv(ws.cell(month_starts[m] + 9, 14).value) for m in ytd_months)
+    ws26_ytd_rev = round(sum(sv(ws.cell(month_starts[m] + 10, 14).value) for m in ytd_months))
+
+    wholesale = {
+        '2025': {'ytd_rn': ws25_ytd_rn, 'ytd_rev': ws25_ytd_rev},
+        '2026': {'ytd_rn': ws26_ytd_rn, 'ytd_rev': ws26_ytd_rev},
+    }
+
+    return {
+        'total': total,
+        'monthly': monthly,
+        'wholesale': wholesale,
+    }
 
 
 def main():
@@ -211,6 +278,15 @@ def main():
     if not data:
         logger.error("파싱 실패")
         sys.exit(1)
+
+    # ── 하와이 WRH ──
+    if WRH_FILE.exists():
+        hawaii = parse_wrh_excel(WRH_FILE)
+        if hawaii:
+            data['hawaii'] = hawaii
+            logger.info(f"✓ 하와이 WRH 데이터 추가 (월 {len(hawaii['monthly'])}개)")
+    else:
+        logger.warning(f"WRH 파일 없음: {WRH_FILE} — 하와이 데이터 미포함")
 
     # Save to data/
     out_data = DATA_DIR / "overseas_data.json"

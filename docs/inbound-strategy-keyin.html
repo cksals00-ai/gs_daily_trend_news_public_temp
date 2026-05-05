@@ -285,11 +285,11 @@ function loadStrategicMap(){
   if(stored && stored.by_year){
     strategicMap = stored.by_year;
   }else{
-    // 초기값: kpiData.strategic_agencies_2026
-    strategicMap = { '2026': { ...(kpiData.strategic_agencies_2026 || {}) } };
+    // 초기값: kpiData.strategic_agencies_2026 — deep copy로 원본 보호
+    strategicMap = { '2026': JSON.parse(JSON.stringify(kpiData.strategic_agencies_2026 || {})) };
   }
   // 표시용으로 모든 연도에 키 보장
-  if(!strategicMap['2026']) strategicMap['2026'] = { ...(kpiData.strategic_agencies_2026 || {}) };
+  if(!strategicMap['2026']) strategicMap['2026'] = JSON.parse(JSON.stringify(kpiData.strategic_agencies_2026 || {}));
 }
 
 function saveLocal(){
@@ -298,9 +298,14 @@ function saveLocal(){
     updated_at: new Date().toISOString(),
     by_year: strategicMap
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  document.getElementById('lastSaved').textContent = '저장: '+new Date().toLocaleTimeString('ko-KR');
-  toast('로컬 저장 완료');
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    document.getElementById('lastSaved').textContent = '저장: '+new Date().toLocaleTimeString('ko-KR');
+    toast('로컬 저장 완료');
+  }catch(e){
+    console.warn('[saveLocal] localStorage 저장 실패:', e);
+    toast('⚠️ 로컬 저장 실패 (메모리에만 유지)');
+  }
 }
 
 function exportJson(){
@@ -679,7 +684,7 @@ function renderAgencyTable(items){
 
     return `<tr class="${strat?'is-strategic':''}${PSEUDO.has(it.agency)?' unmatched':''}">
       <td class="left">
-        <span class="toggle-pill" onclick="setStrategic('${curYear}','${escapeHtml(curProperty)}','${escapeHtml(it.agency).replace(/'/g,"&#39;")}',${!strat})" title="클릭하여 전환">
+        <span class="toggle-pill" onclick="setStrategic(${escapeHtml(JSON.stringify(curYear))},${escapeHtml(JSON.stringify(curProperty))},${escapeHtml(JSON.stringify(it.agency))},${!strat})" title="클릭하여 전환">
           <span class="tg ${strat?'on strat':''}">전략</span>
           <span class="tg ${!strat?'on norm':''}">일반</span>
         </span>

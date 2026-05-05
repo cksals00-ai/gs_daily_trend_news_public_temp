@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GSA 운영 리포트 · SONO GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+/* ========== GSN NAV (공통) ========== */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){
+  .gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+  .gsn-links.open{display:flex}
+  .gsn-item{padding:8px 12px}
+  .gsn-toggle{display:flex;align-items:center;justify-content:center}
+}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+
+/* ========== BASE ========== */
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.12);
+  --rule-strong: rgba(255,255,255,0.22);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  font-size: 15px;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+
+/* ========== HERO ========== */
+.hero {
+  background: radial-gradient(ellipse at top right, rgba(201,160,99,0.15), transparent 55%),
+              radial-gradient(ellipse at bottom left, rgba(107,163,196,0.10), transparent 50%),
+              var(--bg-deep);
+  padding: 48px 28px 40px;
+  border-bottom: 3px solid var(--gold);
+}
+.hero-inner { max-width: 1300px; margin: 0 auto; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(201,160,99,0.15); border: 1px solid rgba(201,160,99,0.3);
+  border-radius: 20px; padding: 4px 16px; font-size: 12px; color: var(--gold-bright);
+  font-weight: 600; margin-bottom: 16px;
+}
+.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-bright); animation: pulse 2.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.hero h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.hero h1 span { color: var(--gold-bright); }
+.hero-sub { color: var(--ink-muted); font-size: 14px; }
+.hero-stats {
+  display: flex; gap: 32px; margin-top: 24px; flex-wrap: wrap;
+}
+.hero-stat { text-align: center; }
+.hero-stat-val { font-size: 28px; font-weight: 800; color: var(--gold-bright); }
+.hero-stat-label { font-size: 11px; color: var(--ink-muted); margin-top: 2px; letter-spacing: 0.05em; }
+
+/* ========== LAYOUT ========== */
+.container { max-width: 1300px; margin: 0 auto; padding: 32px 28px; }
+.section { margin-bottom: 48px; }
+.section-title {
+  font-size: 20px; font-weight: 800; color: var(--gold-bright);
+  border-left: 4px solid var(--gold); padding-left: 14px;
+  margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+}
+.section-title .icon { font-size: 18px; }
+
+/* ========== CARDS ========== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--rule-strong); }
+.card-title {
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.card-title .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+
+/* ========== GRID ========== */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media(max-width:900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+@media(min-width:901px) and (max-width:1100px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+
+/* ========== KPI CARDS ========== */
+.kpi-box {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.kpi-box.gold::before { background: var(--gold); }
+.kpi-box.green::before { background: var(--positive); }
+.kpi-box.blue::before { background: var(--info); }
+.kpi-box.orange::before { background: var(--warning); }
+.kpi-val { font-size: 32px; font-weight: 800; margin: 8px 0 4px; }
+.kpi-label { font-size: 12px; color: var(--ink-muted); font-weight: 600; letter-spacing: 0.03em; }
+.kpi-sub { font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+
+/* ========== REVENUE ========== */
+.revenue-highlight {
+  background: linear-gradient(135deg, rgba(201,160,99,0.1), rgba(201,160,99,0.03));
+  border: 1px solid rgba(201,160,99,0.25);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 24px;
+}
+.revenue-big { font-size: 40px; font-weight: 800; color: var(--gold-bright); }
+.revenue-tag {
+  display: inline-block; background: var(--positive-bg); color: var(--positive);
+  padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-left: 12px;
+}
+
+/* ========== TABLE ========== */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.report-tbl {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+table.report-tbl th {
+  background: var(--bg-deep);
+  color: var(--gold-bright);
+  font-weight: 700;
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--gold);
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+table.report-tbl td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+table.report-tbl tr:hover td {
+  background: var(--bg-hover);
+}
+table.report-tbl .num { text-align: right; font-family: var(--mono); font-weight: 700; color: var(--ink); }
+table.report-tbl .highlight { color: var(--gold-bright); font-weight: 700; }
+
+/* ========== BADGE ========== */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+}
+.badge-green { background: var(--positive-bg); color: var(--positive); }
+.badge-gold { background: rgba(201,160,99,0.15); color: var(--gold-bright); }
+.badge-blue { background: var(--info-bg); color: var(--info); }
+.badge-orange { background: var(--warning-bg); color: var(--warning); }
+.badge-red { background: var(--negative-bg); color: var(--negative); }
+
+/* ========== KPI PROGRESS ========== */
+.kpi-progress {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px;
+}
+.kpi-progress-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.kpi-progress-title { font-weight: 700; font-size: 14px; }
+.kpi-progress-pct { font-weight: 800; font-size: 18px; }
+.progress-bar {
+  background: var(--bg-deep);
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 1s ease;
+}
+.kpi-progress-detail {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+/* ========== MARKET INSIGHT CARDS ========== */
+.insight-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px;
+  border-top: 3px solid var(--info);
+}
+.insight-card.hawaii { border-top-color: #e6b970; }
+.insight-card.guam { border-top-color: #5a9fc4; }
+.insight-card.korea { border-top-color: #4caf6f; }
+.insight-card.vietnam { border-top-color: #e8a256; }
+.insight-region {
+  font-size: 18px; font-weight: 800; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.insight-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+.insight-item:last-child { border-bottom: none; }
+.insight-item strong { color: var(--ink); font-weight: 700; display: block; margin-bottom: 2px; }
+.insight-item span { color: var(--ink-muted); }
+
+/* ========== ACTION PLAN ========== */
+.ap-quarter {
+  margin-bottom: 24px;
+}
+.ap-quarter-title {
+  font-size: 16px; font-weight: 800; color: var(--info);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ap-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+.ap-item:hover { border-color: var(--gold); }
+.ap-month {
+  background: var(--bg-deep); color: var(--ink-muted);
+  padding: 3px 10px; border-radius: 4px; font-weight: 700; font-size: 12px;
+  white-space: nowrap;
+}
+.ap-cat { font-weight: 700; color: var(--gold-bright); white-space: nowrap; min-width: 80px; }
+.ap-text { flex: 1; color: var(--ink-soft); }
+.ap-priority { font-weight: 700; font-size: 11px; }
+
+/* ========== CHART ========== */
+.chart-box {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 24px;
+}
+.chart-box canvas { max-height: 340px; }
+
+/* ========== FOOTER ========== */
+.footer {
+  background: var(--bg-deep);
+  border-top: 1px solid var(--rule);
+  padding: 24px 28px;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+.footer .gold { color: var(--gold); }
+
+/* ========== TABS ========== */
+.tab-bar {
+  display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--rule);
+  padding-bottom: 0;
+}
+.tab-btn {
+  background: none; border: none;
+  color: var(--ink-muted); font-family: var(--serif);
+  font-size: 14px; font-weight: 600;
+  padding: 10px 20px; cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--gold-bright); border-bottom-color: var(--gold); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ========== SCROLL OFFSET ========== */
+[id] { scroll-margin-top: 60px; }
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:600px) {
+  .hero h1 { font-size: 22px; }
+  .hero-stats { gap: 16px; }
+  .hero-stat-val { font-size: 22px; }
+  .revenue-big { font-size: 28px; }
+  .kpi-val { font-size: 24px; }
+  .container { padding: 20px 16px; }
+  .section-title { font-size: 17px; }
+  table.report-tbl { font-size: 12px; }
+  table.report-tbl th, table.report-tbl td { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== GSN NAV ========== -->
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">&#9672;</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">아웃바운드</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><span class="dot"></span> 관리자 전용 페이지</div>
+    <h1>일본 <span>GSA</span> 운영 리포트</h1>
+    <p class="hero-sub">소노호텔앤리조트 · 계약기간 2025.07.01 ~ 2026.06.30 · 10개월 실적 종합</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">5.2억+</div>
+        <div class="hero-stat-label">GSA 매출 기여 (26Y Q1)</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">3,120</div>
+        <div class="hero-stat-label">Room Nights (26Y Q1)</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">381건</div>
+        <div class="hero-stat-label">총 미팅/세일즈콜</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">30+</div>
+        <div class="hero-stat-label">접촉 거래처</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">1:12</div>
+        <div class="hero-stat-label">ROI 비율</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- ========== TAB NAV ========== -->
+  <div class="tab-bar" id="mainTabs">
+    <button class="tab-btn active" data-tab="overview">운영 개요</button>
+    <button class="tab-btn" data-tab="kpi">KPI 관리</button>
+    <button class="tab-btn" data-tab="agents">에이전트별 실적</button>
+    <button class="tab-btn" data-tab="monthly">월별 추이</button>
+    <button class="tab-btn" data-tab="market">시장 인사이트</button>
+    <button class="tab-btn" data-tab="action">Action Plan</button>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: 운영 개요                -->
+  <!-- ============================= -->
+  <div class="tab-panel active" id="panel-overview">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9670;</span> 운영 개요</div>
+      <div class="grid-4">
+        <div class="kpi-box gold">
+          <div class="kpi-label">계약 기간</div>
+          <div class="kpi-val" style="font-size:18px;color:var(--ink)">25.07 ~ 26.06</div>
+          <div class="kpi-sub">1년간 계약 (시장진입 단계)</div>
+        </div>
+        <div class="kpi-box blue">
+          <div class="kpi-label">대상 권역</div>
+          <div class="kpi-val" style="font-size:22px;color:var(--info)">4개</div>
+          <div class="kpi-sub">하와이 · 괌 · 한국 · 베트남</div>
+        </div>
+        <div class="kpi-box green">
+          <div class="kpi-label">GSA 전담 인력</div>
+          <div class="kpi-val" style="font-size:28px;color:var(--positive)">1명</div>
+          <div class="kpi-sub">전담인력 기반 운영</div>
+        </div>
+        <div class="kpi-box orange">
+          <div class="kpi-label">주간 리포트 제출</div>
+          <div class="kpi-val" style="font-size:28px;color:var(--warning)">29회</div>
+          <div class="kpi-sub">거의 매주 제출</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 매출 하이라이트 -->
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9733;</span> 핵심 매출 성과</div>
+      <div class="revenue-highlight">
+        <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+          <div class="revenue-big">5.2억원+</div>
+          <span class="revenue-tag">&#9650; YOY +$386,461</span>
+        </div>
+        <p style="color:var(--ink-muted);margin-top:8px;font-size:14px;">
+          26Y 1월~3월 GSA 매출 기여 · 3,120 Room Nights · USD 511,224
+        </p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--gold)"></span> 한큐 그룹</div>
+          <div style="font-size:28px;font-weight:800;color:var(--gold-bright);">월 800RN+</div>
+          <p style="color:var(--ink-muted);font-size:13px;margin-top:6px;">전년 대비 <strong style="color:var(--positive)">3배 성장</strong></p>
+          <p style="color:var(--ink-faint);font-size:12px;margin-top:4px;">25년 1-7월 1,200RN → 26년 4,000RN+</p>
+          <p style="color:var(--ink-faint);font-size:12px;">WRH 점유율 27-30% (TOP)</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--info)"></span> JTB</div>
+          <div style="font-size:28px;font-weight:800;color:var(--info);">월 30RN</div>
+          <p style="color:var(--ink-muted);font-size:13px;margin-top:6px;">안정적 베이스라인 확보</p>
+          <p style="color:var(--ink-faint);font-size:12px;margin-top:4px;">26년 팜플렛 WRH 복귀 확정</p>
+          <p style="color:var(--ink-faint);font-size:12px;">와이와이 패밀리 프로모션 진행</p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--positive)"></span> TPI 단체</div>
+          <div style="font-size:28px;font-weight:800;color:var(--positive);">120명</div>
+          <p style="color:var(--ink-muted);font-size:13px;margin-top:6px;">26년 9월 WRH 단체 확정</p>
+          <p style="color:var(--ink-faint);font-size:12px;margin-top:4px;">120명 × 3박 = 약 5,400만원</p>
+          <p style="color:var(--ink-faint);font-size:12px;">알로하투어 경유 부킹</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 지역별 세일즈 방향 -->
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9658;</span> 권역별 세일즈 방향</div>
+      <div class="tbl-wrap">
+        <table class="report-tbl">
+          <thead>
+            <tr>
+              <th>권역</th>
+              <th>세일즈 방향</th>
+              <th>주요 활동</th>
+              <th>정량 성과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-gold">하와이</span></td>
+              <td style="color:var(--ink)">매출 신장</td>
+              <td>대형 에이전트(HIS, 한큐, JTB) 세일즈 강화</td>
+              <td class="num highlight">5.2억원+ / 3,120RN</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">괌</span></td>
+              <td style="color:var(--ink)">항공 연계 상품판매</td>
+              <td>티웨이 연계 + HIS 웨스틴 골프 신상품 런칭</td>
+              <td class="num">신상품 1건 런칭</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">한국</span></td>
+              <td style="color:var(--ink)">브랜드 홍보 · 채널 확대</td>
+              <td>부산/제주 상품 홍보, 레이와TL 온라인 판매</td>
+              <td class="num">채널 2건 확보</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-orange">베트남</span></td>
+              <td style="color:var(--ink)">법인 출장수요 전환</td>
+              <td>하노이/하이퐁 출장 수요 점검, 리스트화</td>
+              <td class="num">30개 업체 리스트</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: KPI 관리                 -->
+  <!-- ============================= -->
+  <div class="tab-panel" id="panel-kpi">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9632;</span> KPI 과업 달성 현황 (25Y 계약 기준)</div>
+      <div class="grid-2">
+        <div class="kpi-progress">
+          <div class="kpi-progress-header">
+            <div class="kpi-progress-title">1. 리포트 <span class="badge badge-gold">20%</span></div>
+            <div class="kpi-progress-pct" style="color:var(--positive)">&#9678; 달성 가능</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:85%;background:var(--positive)"></div></div>
+          <div class="kpi-progress-detail">
+            <strong>목표:</strong> 월간 리포트 매월 10일 제출<br>
+            <strong>현황:</strong> 주간 기준 26회+ 제출 완료 → 월간 전환 시 달성
+          </div>
+        </div>
+        <div class="kpi-progress">
+          <div class="kpi-progress-header">
+            <div class="kpi-progress-title">2. 영업활성화 <span class="badge badge-gold">40%</span></div>
+            <div class="kpi-progress-pct" style="color:var(--positive)">&#9678; 달성 가능</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--gold)"></div></div>
+          <div class="kpi-progress-detail">
+            <strong>목표:</strong> 기획전/프로모션 연 4건+<br>
+            <strong>현황:</strong> 한큐 조식프로모, HIS 괌골프, 한큐 신문광고 등 3건+ 진행 중
+          </div>
+        </div>
+        <div class="kpi-progress">
+          <div class="kpi-progress-header">
+            <div class="kpi-progress-title">3. 시장확대 <span class="badge badge-gold">20%</span></div>
+            <div class="kpi-progress-pct" style="color:var(--gold-bright)">&#9678;&#9678; 초과 달성</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--gold-bright)"></div></div>
+          <div class="kpi-progress-detail">
+            <strong>목표:</strong> 신규 채널 연 4건+<br>
+            <strong>현황:</strong> 레이와TL, 라쿠텐, 골프GO, R&J, 요미우리, 郵船 등 <strong style="color:var(--gold-bright)">6건+ 달성</strong>
+          </div>
+        </div>
+        <div class="kpi-progress">
+          <div class="kpi-progress-header">
+            <div class="kpi-progress-title">4. 브랜딩 <span class="badge badge-gold">20%</span></div>
+            <div class="kpi-progress-pct" style="color:var(--gold-bright)">&#9678;&#9678; 초과 달성</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--gold-bright)"></div></div>
+          <div class="kpi-progress-detail">
+            <strong>목표:</strong> 로드쇼/네트워크 연 2건+<br>
+            <strong>현황:</strong> 하와이협회, 괌로드쇼 3도시, 부산트래블마트, 한국관광공사 <strong style="color:var(--gold-bright)">4건+ 달성</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 26Y KPI 과업 목표 -->
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9654;</span> 26Y 과업별 KPI 목표</div>
+      <div class="tbl-wrap">
+        <table class="report-tbl">
+          <thead>
+            <tr>
+              <th>과업 영역</th>
+              <th>권역</th>
+              <th>세부 내용</th>
+              <th>KPI 목표</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-gold">영업활성화</span></td>
+              <td>하와이</td>
+              <td>기존 판매 채널 유지 및 볼륨 확대</td>
+              <td class="num highlight">전년 대비 매출 +3억원</td>
+              <td style="color:var(--ink-faint)">26년 매출 대비 4.1%</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-gold">영업활성화</span></td>
+              <td>하이퐁</td>
+              <td>소규모 인센티브 단체 유치</td>
+              <td class="num">매출 2천만원 이상</td>
+              <td style="color:var(--ink-faint)">20명 × 3회</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">시장확대</span></td>
+              <td>괌</td>
+              <td>신규 판매 채널 확보 (패키지/골프 전문)</td>
+              <td class="num">신규 채널 3개+</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">브랜딩</span></td>
+              <td>한국</td>
+              <td>지방 연계 상품 출시</td>
+              <td class="num">상품 3건+, 매출 3천만원+</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">브랜딩</span></td>
+              <td>일본</td>
+              <td>나고야 호텔 내수시장 진입 및 홍보</td>
+              <td class="num">제휴 채널 3개+</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">브랜딩</span></td>
+              <td>태국</td>
+              <td>기존 GSA 운영사 협력, 오프라인 채널 홍보</td>
+              <td class="num">여행사 5개+</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-orange">리포트</span></td>
+              <td>전체</td>
+              <td>사업장별 실적/시장동향 정례 분석</td>
+              <td class="num">월 1회 이상</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ROI 분석 -->
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9679;</span> 투자 대비 효과 (ROI)</div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">한큐 실적 증가분</div>
+          <div style="font-size:22px;font-weight:800;color:var(--gold-bright)">월 1.2억원+</div>
+          <p style="color:var(--ink-muted);font-size:12px;margin-top:4px;">순증 매출 월 6,000만원 (보수적 추정)</p>
+        </div>
+        <div class="card">
+          <div class="card-title">JTB 안정 송객</div>
+          <div style="font-size:22px;font-weight:800;color:var(--info)">월 450만원</div>
+          <p style="color:var(--ink-muted);font-size:12px;margin-top:4px;">월 30RN × ADR 150,000원</p>
+        </div>
+        <div class="card">
+          <div class="card-title">TPI 단체 확정</div>
+          <div style="font-size:22px;font-weight:800;color:var(--positive)">약 5,400만원</div>
+          <p style="color:var(--ink-muted);font-size:12px;margin-top:4px;">120명 × 3박 (1회성)</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px;background:linear-gradient(135deg,rgba(76,175,111,0.08),rgba(76,175,111,0.02));border-color:rgba(76,175,111,0.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <p style="color:var(--ink-muted);font-size:13px;">GSA 월 비용 (현행)</p>
+            <div style="font-size:20px;font-weight:800;color:var(--ink)">월 약 370만원</div>
+            <p style="color:var(--ink-faint);font-size:12px;">USD 2,500 × ₩1,460</p>
+          </div>
+          <div style="text-align:center;">
+            <p style="color:var(--ink-muted);font-size:13px;">한큐 순증 매출 대비</p>
+            <div style="font-size:32px;font-weight:800;color:var(--positive)">ROI 1:12</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: 에이전트별 실적           -->
+  <!-- ============================= -->
+  <div class="tab-panel" id="panel-agents">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9632;</span> 에이전트별 영업 비중 (Top 16)</div>
+      <div class="grid-2">
+        <div class="chart-box">
+          <canvas id="agentChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <canvas id="agentBarChart"></canvas>
+        </div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9654;</span> 에이전트별 상세 실적</div>
+      <div class="tbl-wrap">
+        <table class="report-tbl">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>거래처</th>
+              <th>미팅건수</th>
+              <th>비중(%)</th>
+              <th>주요 지역</th>
+              <th>핵심 성과</th>
+            </tr>
+          </thead>
+          <tbody id="agentTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: 월별 추이                 -->
+  <!-- ============================= -->
+  <div class="tab-panel" id="panel-monthly">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9632;</span> 월별 미팅 건수 추이</div>
+      <div class="chart-box" style="margin-bottom:24px;">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9654;</span> 월별 활동 상세</div>
+      <div class="tbl-wrap">
+        <table class="report-tbl">
+          <thead>
+            <tr>
+              <th>월</th>
+              <th>미팅</th>
+              <th>주요 거래처</th>
+              <th>핵심 성과/결과</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: 시장 인사이트             -->
+  <!-- ============================= -->
+  <div class="tab-panel" id="panel-market">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9670;</span> 시장별 핵심 인사이트</div>
+      <div class="grid-2">
+        <!-- 하와이 -->
+        <div class="insight-card hawaii">
+          <div class="insight-region" style="color:#e6b970;">&#127796; 하와이</div>
+          <div class="insight-item"><strong>시장 규모</strong><span>25년 1-9월 일본인 약 53만명 방문 (한국인의 약 5배)</span></div>
+          <div class="insight-item"><strong>회복 추세</strong><span>전년비 80~118% 회복, 26년 1-2월 +4.5%/+9.9% 증가</span></div>
+          <div class="insight-item"><strong>항공 현황</strong><span>항공기수 94%, 좌석 98% (2019년 대비) — 좌석 부족 병목</span></div>
+          <div class="insight-item"><strong>시니어 트렌드</strong><span>65세+ 인구 30.1%, 장기체류형 상품 기획 기회</span></div>
+          <div class="insight-item"><strong>한큐 점유</strong><span>WRH 점유율 27-30% (TOP) — 핵심 거래처 유지 최우선</span></div>
+        </div>
+        <!-- 괌 -->
+        <div class="insight-card guam">
+          <div class="insight-region" style="color:#5a9fc4;">&#9971; 괌</div>
+          <div class="insight-item"><strong>도항자 추세</strong><span>25년 236,428명 (+16.4%), 회복세 뚜렷</span></div>
+          <div class="insight-item"><strong>관광 성향</strong><span>2명 동반 40%, 51세 이상 53% — 커플/시니어 타겟</span></div>
+          <div class="insight-item"><strong>JTB 현황</strong><span>연간 15,000명 (코로나 전 30% 수준), 골프상품 기회</span></div>
+          <div class="insight-item"><strong>항공</strong><span>UA 독점 운영, 티웨이 챠타가 대안</span></div>
+          <div class="insight-item"><strong>신상품</strong><span>HIS 웨스틴+골프 결합상품 런칭 — GSA 주도 첫 성과</span></div>
+        </div>
+        <!-- 한국 -->
+        <div class="insight-card korea">
+          <div class="insight-region" style="color:#4caf6f;">&#127472;&#127479; 한국</div>
+          <div class="insight-item"><strong>방한 일본인</strong><span>25년 약 365만명 (+30%), 관광 수요 급증</span></div>
+          <div class="insight-item"><strong>서울 편중</strong><span>서울 비중 86%, 지방 분산 기회</span></div>
+          <div class="insight-item"><strong>트렌드</strong><span>소도시 여행 지원, K-뷰티/웰니스 수요 증가</span></div>
+          <div class="insight-item"><strong>상품화</strong><span>레이와TL 부산/제주 AIR+HOTEL 판매 개시 (첫 OTA)</span></div>
+        </div>
+        <!-- 베트남 -->
+        <div class="insight-card vietnam">
+          <div class="insight-region" style="color:#e8a256;">&#127987; 베트남</div>
+          <div class="insight-item"><strong>JTB 현황</strong><span>연간 10,000명 (호치민 50%, 하노이 30%), 하이퐁 0%</span></div>
+          <div class="insight-item"><strong>하이퐁 문제</strong><span>항공편 적음, 관광지 부재 — 단독 상품화 사실상 불가</span></div>
+          <div class="insight-item"><strong>대안</strong><span>GOVIGO, GOLFLUX 등 골프 플랫폼 통한 간접 판매 모색</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 리스크 요인 -->
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9888;</span> 주요 리스크 요인</div>
+      <div class="grid-2">
+        <div class="card" style="border-left:3px solid var(--negative)">
+          <div class="card-title" style="color:var(--negative)">엔저 심화</div>
+          <p style="color:var(--ink-muted);font-size:13px;">하와이 수요 감소 우려. 유료할증 3만엔 전후 인상으로 가격 민감 고객 이탈 가능</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--warning)">
+          <div class="card-title" style="color:var(--warning)">항공좌석 부족</div>
+          <p style="color:var(--ink-muted);font-size:13px;">하와이 2019년 대비 좌석 61% 수준. 기종변경 영향. 괌 UA 독점으로 요금 상승</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--info)">
+          <div class="card-title" style="color:var(--info)">한국 지방 상품화</div>
+          <p style="color:var(--ink-muted);font-size:13px;">서울 편중(86%) 지속. 경주 사업장 요금 미스매치. 소재지 문제로 상품화 난항</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--ink-faint)">
+          <div class="card-title" style="color:var(--ink-faint)">베트남 하이퐁</div>
+          <p style="color:var(--ink-muted);font-size:13px;">항공편 부족, 관광지 부재로 단독 상품화 불가. 다른 접근법 필요</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TAB: Action Plan              -->
+  <!-- ============================= -->
+  <div class="tab-panel" id="panel-action">
+    <section class="section">
+      <div class="section-title"><span class="icon">&#9654;</span> 26Y Action Plan</div>
+
+      <div class="ap-quarter">
+        <div class="ap-quarter-title">&#9632; Q2 (4~6월)</div>
+        <div class="ap-item">
+          <span class="ap-month">4월</span>
+          <span class="ap-cat">브랜딩</span>
+          <span class="ap-text">한국관광공사 로드쇼 참가 (4/10-12 그랜드하이아트)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">4월</span>
+          <span class="ap-cat">브랜딩</span>
+          <span class="ap-text">하와이 라임라이트 이벤트 참가 (4/14-18)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">4월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">JTB 괌 골프 블록 Allotment 협의</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">4월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">레이와TL 골든위크 프로모션 확대</span>
+          <span class="ap-priority badge badge-orange">중</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">5월</span>
+          <span class="ap-cat">시장확대</span>
+          <span class="ap-text">GSA 홈페이지 리뉴얼 (소노 사업장 소개)</span>
+          <span class="ap-priority badge badge-orange">중</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">5월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">한큐 나고야·오사카 확대 판매 확정</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item" style="border-color:var(--gold)">
+          <span class="ap-month" style="background:var(--warning-bg);color:var(--warning)">6월</span>
+          <span class="ap-cat">리포트</span>
+          <span class="ap-text" style="color:var(--ink);font-weight:700;">계약 갱신 전 연간 실적 보고서 작성 (6/30 계약 만료)</span>
+          <span class="ap-priority badge badge-red">최상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">6월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">성수기(7~) 사전 요금 협의 (BAR 적용)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+      </div>
+
+      <div class="ap-quarter">
+        <div class="ap-quarter-title">&#9632; Q3 (7~9월)</div>
+        <div class="ap-item" style="border-color:var(--gold)">
+          <span class="ap-month" style="background:var(--warning-bg);color:var(--warning)">7월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text" style="color:var(--ink);font-weight:700;">하와이 성수기 집중 영업 (한큐·JTB·HIS) — 전년 대비 150%+</span>
+          <span class="ap-priority badge badge-red">최상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">7월</span>
+          <span class="ap-cat">리포트</span>
+          <span class="ap-text">26Y 상반기 종합 리포트 제출 (7/10 이내)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">8월</span>
+          <span class="ap-cat">시장확대</span>
+          <span class="ap-text">신규 채널 2건+ 확보 (OTA/전문여행사)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item" style="border-color:var(--gold)">
+          <span class="ap-month" style="background:var(--warning-bg);color:var(--warning)">9월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text" style="color:var(--ink);font-weight:700;">TPI 단체 120명 WRH 대응 (확정건)</span>
+          <span class="ap-priority badge badge-red">최상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">9월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">괌 티웨이 챠타 프로모션 2차 강화</span>
+          <span class="ap-priority badge badge-orange">중</span>
+        </div>
+      </div>
+
+      <div class="ap-quarter">
+        <div class="ap-quarter-title">&#9632; Q4 (10~12월)</div>
+        <div class="ap-item">
+          <span class="ap-month">10월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">성수기 12월~ 요금 운영 BAR 최종 적용</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">10월</span>
+          <span class="ap-cat">시장확대</span>
+          <span class="ap-text">전략여행사 비딩 준비 (연례화 1차년) — Top10 거래처</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">11월</span>
+          <span class="ap-cat">브랜딩</span>
+          <span class="ap-text">도쿄/하와이 로드쇼 2차 참가</span>
+          <span class="ap-priority badge badge-orange">중</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">11월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">한국 지방사업장 팸투어 실시 (경주+해운대, HIS 5개도시)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+        <div class="ap-item" style="border-color:var(--gold)">
+          <span class="ap-month" style="background:var(--warning-bg);color:var(--warning)">12월</span>
+          <span class="ap-cat">리포트</span>
+          <span class="ap-text" style="color:var(--ink);font-weight:700;">26Y 연간 종합 리포트 제출 — 연간 KPI 달성 점검</span>
+          <span class="ap-priority badge badge-red">최상</span>
+        </div>
+        <div class="ap-item">
+          <span class="ap-month">12월</span>
+          <span class="ap-cat">영업활성화</span>
+          <span class="ap-text">27년 상품 기획 사전 미팅 (한큐/JTB/HIS)</span>
+          <span class="ap-priority badge badge-red">상</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <span class="gold">&#9670;</span> SONO Hotel & Resorts · GS팀 GSA 운영 리포트 · 관리자 전용<br>
+  <span style="color:var(--ink-faint)">Last Updated: 2026.04.22 · Data Source: GSA 주간/월간 리포트 종합</span>
+</footer>
+
+<!-- ========== SCRIPTS ========== -->
+<script>
+// ===== TAB LOGIC =====
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    // Re-render charts if needed
+    if (btn.dataset.tab === 'agents') { renderAgentCharts(); }
+    if (btn.dataset.tab === 'monthly') { renderMonthlyChart(); }
+  });
+});
+
+// ===== AGENT DATA =====
+var agents = [
+  { name: 'HIS', meetings: 59, share: 16.5, regions: '하와이, 괌, 한국', highlight: '괌 웨스틴+골프 신상품 런칭' },
+  { name: 'JTB', meetings: 41, share: 11.5, regions: '하와이, 괌, 한국', highlight: '월 30RN 안정, 팜플렛 복귀' },
+  { name: '한큐', meetings: 35, share: 9.8, regions: '하와이', highlight: '월 800RN+, 점유율 27-30%' },
+  { name: '레이와TL', meetings: 24, share: 6.7, regions: '한국, 하와이', highlight: 'AIR+HOTEL 부산/제주 판매 확정' },
+  { name: '민단', meetings: 20, share: 5.6, regions: '전체', highlight: '재일동포 네트워크, 모국방문' },
+  { name: 'T-Life', meetings: 17, share: 4.8, regions: '한국, 베트남', highlight: '수학여행 전문부서 연결' },
+  { name: '한국관광공사', meetings: 10, share: 2.8, regions: '전체', highlight: '뷰티&메디컬, 로드쇼 참가' },
+  { name: '하와이회', meetings: 10, share: 2.8, regions: '전체', highlight: '100+ 회원사 프레젠' },
+  { name: 'ATI', meetings: 9, share: 2.5, regions: '전체', highlight: '수학여행 전문' },
+  { name: 'JALPAK', meetings: 9, share: 2.5, regions: '하와이', highlight: 'TPI 경유 단체 확정' },
+  { name: '킨테츠', meetings: 9, share: 2.5, regions: '하와이', highlight: '수학여행 견적' },
+  { name: '라쿠텐', meetings: 8, share: 2.2, regions: '-', highlight: '호텔 등록, 포인트 특전' },
+  { name: '부산관광공사', meetings: 8, share: 2.2, regions: '-', highlight: '동행세일 3회+' },
+  { name: 'TPI', meetings: 8, share: 2.2, regions: '-', highlight: '단체 120명 확정' },
+  { name: 'KNT', meetings: 7, share: 2.0, regions: '-', highlight: '교육여행 전문' },
+  { name: '덴츠', meetings: 6, share: 1.7, regions: '-', highlight: '광고 협업 가능성' }
+];
+
+// Populate agent table
+var tbody = document.getElementById('agentTableBody');
+agents.forEach(function(a, i) {
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td class="num">' + (i+1) + '</td>'
+    + '<td style="font-weight:700;color:var(--ink)">' + a.name + '</td>'
+    + '<td class="num">' + a.meetings + '</td>'
+    + '<td class="num">' + a.share.toFixed(1) + '%</td>'
+    + '<td>' + a.regions + '</td>'
+    + '<td style="color:var(--ink-muted)">' + a.highlight + '</td>';
+  tbody.appendChild(tr);
+});
+
+// ===== MONTHLY DATA =====
+var monthly = [
+  { month: '25.07~08', meetings: 9, agents: 'JTB, HIS, 한큐, 킨테츠, JALPAK', result: '하와이 시장조사 완료, 괌 브랜드 전환 완료' },
+  { month: '25.09', meetings: 18, agents: 'JTB, HIS, 한큐, 킨테츠', result: '주요 4개 거래처 본사 미팅 완료' },
+  { month: '25.10', meetings: 40, agents: 'HIS, JTB, 한큐, JALPAK 등', result: '하와이카이 가입, 12개사 세일즈콜' },
+  { month: '25.11', meetings: 102, agents: 'JTB, HIS, 한큐 외 다수', result: '하와이 실적 최대치, 부산트래블마트, JTB 팜플렛 복귀' },
+  { month: '25.12', meetings: 52, agents: '한국관광공사, 덴츠, 레이와TL 등', result: '라쿠텐 상품조성, 레이와TL 계약 미팅' },
+  { month: '26.01', meetings: 38, agents: 'J트래블, JTB, TPI 등', result: 'TPI 120명 단체 확정, 레이와TL 온라인 판매' },
+  { month: '26.02', meetings: 34, agents: 'HIS, 레이와TL, 한큐 등', result: '한큐 3배 성장 확인, JTB 월 30RN 안정' },
+  { month: '26.03', meetings: 37, agents: 'HIS, JTB, 부산관광공사 등', result: 'HIS 괌 신상품 런칭, 요미우리 부산 채택' },
+  { month: '26.04', meetings: 16, agents: 'HIS, 한국관광공사, 한큐 등', result: '한국관광공사 행사, JTB 괌 블록 협의' }
+];
+
+var mtbody = document.getElementById('monthlyTableBody');
+monthly.forEach(function(m) {
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td style="font-weight:700;color:var(--ink);white-space:nowrap">' + m.month + '</td>'
+    + '<td class="num highlight">' + m.meetings + '</td>'
+    + '<td style="font-size:12px">' + m.agents + '</td>'
+    + '<td style="color:var(--ink-muted);font-size:12px">' + m.result + '</td>';
+  mtbody.appendChild(tr);
+});
+
+// ===== CHARTS =====
+var agentDoughnut = null;
+var agentBar = null;
+var monthlyLine = null;
+
+Chart.defaults.color = '#a8acb3';
+Chart.defaults.font.family = "'Pretendard Variable','Noto Sans KR',sans-serif";
+Chart.defaults.font.weight = 600;
+
+function renderAgentCharts() {
+  var top8 = agents.slice(0, 8);
+  var labels = top8.map(function(a) { return a.name; });
+  var data = top8.map(function(a) { return a.meetings; });
+  var colors = ['#e6b970','#5a9fc4','#4caf6f','#e8a256','#e57373','#a892c8','#6db58a','#d97a7a'];
+
+  if (agentDoughnut) agentDoughnut.destroy();
+  agentDoughnut = new Chart(document.getElementById('agentChart'), {
+    type: 'doughnut',
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
+        title: { display: true, text: 'Top 8 에이전트 미팅 비중', color: '#e6b970', font: { size: 14, weight: 700 } }
+      },
+      cutout: '55%'
+    }
+  });
+
+  if (agentBar) agentBar.destroy();
+  agentBar = new Chart(document.getElementById('agentBarChart'), {
+    type: 'bar',
+    data: {
+      labels: agents.map(function(a) { return a.name; }),
+      datasets: [{
+        label: '미팅건수',
+        data: agents.map(function(a) { return a.meetings; }),
+        backgroundColor: 'rgba(201,160,99,0.5)',
+        borderColor: '#c9a063',
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: '전체 에이전트 미팅 건수', color: '#e6b970', font: { size: 14, weight: 700 } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderMonthlyChart() {
+  var labels = monthly.map(function(m) { return m.month; });
+  var data = monthly.map(function(m) { return m.meetings; });
+
+  if (monthlyLine) monthlyLine.destroy();
+  monthlyLine = new Chart(document.getElementById('monthlyChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '미팅 건수',
+        data: data,
+        borderColor: '#e6b970',
+        backgroundColor: 'rgba(201,160,99,0.15)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 5,
+        pointBackgroundColor: '#e6b970',
+        pointBorderColor: '#1a1d23',
+        pointBorderWidth: 2,
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: '월별 미팅/세일즈콜 건수 추이', color: '#e6b970', font: { size: 15, weight: 700 } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Initial render for visible tab
+// (Charts render on tab click)
+</script>
+</body>
+</html>
