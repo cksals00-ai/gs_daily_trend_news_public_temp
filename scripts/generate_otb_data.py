@@ -1568,6 +1568,33 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 }
             prop_seg_data[display_name] = seg_aggs
 
+        # RM FCST 세그별 PDF 원본 셀 (OTA/G-OTA/Inbound만 — rm_fcst_props.segments[seg]).
+        # 단일월: 해당 월의 segments[seg]; 전체월: 12개월 합산.
+        def _rm_seg(display_name: str, seg: str):
+            """Return (rm_fcst_rn, rm_budget_rn) for this segment×month_idx. None if missing."""
+            if seg not in ("OTA", "G-OTA", "Inbound"):
+                return None, None
+            prop_data = rm_fcst_props.get(display_name, {})
+            if not prop_data:
+                return None, None
+            if month_idx > 0:
+                ym = f"2026-{month_idx:02d}"
+                seg_data = prop_data.get(ym, {}).get("segments", {}).get(seg, {})
+                f = seg_data.get("rm_fcst_rn")
+                b = seg_data.get("rm_budget_rn")
+                return (f if f is not None else None,
+                        b if b is not None else None)
+            # 전체(연간): 12개월 segment 합
+            f_sum = 0; b_sum = 0; has_f = False; has_b = False
+            for mi in range(1, 13):
+                ym_mi = f"2026-{mi:02d}"
+                seg_data = prop_data.get(ym_mi, {}).get("segments", {}).get(seg, {})
+                vf = seg_data.get("rm_fcst_rn")
+                vb = seg_data.get("rm_budget_rn")
+                if vf is not None: f_sum += int(vf); has_f = True
+                if vb is not None: b_sum += int(vb); has_b = True
+            return (f_sum if has_f else None, b_sum if has_b else None)
+
         for seg in SEGMENT_KEYS:
             seg_props = []
             for _, display_name, region, db_props in PROPERTY_DEFS:
@@ -1673,6 +1700,10 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_rev_fcst_ach = round(s_rev_f / s_bud_rev * 100, 1) if s_bud_rev > 0 else 0.0
                 s_adr_fcst = round((s_rev_f * 1_000_000) / s_rns_f) if s_rns_f > 0 else 0
 
+                # RM FCST: PDF segments 원본 셀 (해당 세그 단일값)
+                s_rm_rn, s_rm_bud = _rm_seg(display_name, seg)
+                s_rm_ach = round(s_rm_rn / s_rm_bud * 100, 1) if (s_rm_rn is not None and s_rm_bud and s_rm_bud > 0) else None
+
                 seg_props.append({
                     "name": display_name,
                     "region": region,
@@ -1684,6 +1715,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     "rns_fcst":        s_rns_f,
                     "fcst_achievement": s_fcst_ach,
                     "fcst_source":     fcst_source,
+                    "rm_fcst_rn":      s_rm_rn,
+                    "rm_budget_rn":    s_rm_bud,
+                    "rm_fcst_ach":     s_rm_ach,
                     "adr_budget":      round(s_bud_adr),
                     "adr_actual":      s_act_adr,
                     "adr_fcst":        s_adr_fcst,

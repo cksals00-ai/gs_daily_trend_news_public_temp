@@ -1442,9 +1442,10 @@ function renderPivot(data) {
     const netRevCls  = (p.today_net_rev != null && p.today_net_rev >= 0) ? 'net-pos' : 'net-neg';
     const netRevSign = (p.today_net_rev != null && p.today_net_rev >= 0) ? '+' : '';
 
-    // RM FCST: rm_fcst_trend.json 최신 스냅샷에서 사업장×활성월 매칭 (없으면 otb_data 폴백)
-    // 달성률은 RM 자료 자체 budget(rm_budget_rn) 기준 — 사업계획 budget(rns_budget)과는 별도 base.
-    const rmRn = rmFcstLookup(p.name);
+    // RM FCST: byProperty/byPropertySegment의 rm_fcst_rn / rm_budget_rn 직접 사용
+    // (이미 PDF segments OTA+G-OTA+Inbound 합산 또는 세그 필터별 합산 적용됨).
+    // 세그 필터에서 mergeSegByProp이 number 필드를 자동 합산하므로 별도 lookup 불필요.
+    const rmRn = (p.rm_fcst_rn != null) ? p.rm_fcst_rn : null;
     const rmAch = (rmRn != null && p.rm_budget_rn > 0) ? +(rmRn / p.rm_budget_rn * 100).toFixed(1) : null;
 
     rows += `<tr>
