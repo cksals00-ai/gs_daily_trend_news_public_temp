@@ -265,7 +265,7 @@ const DIVISION_MAP = {
   '아시아퍼시픽': ['18.소노벨제주','19.소노캄제주','20.소노캄고양']
 };
 const ALL_DIVISION_PROPS = Object.values(DIVISION_MAP).flat();
-let selectedSeg = 'GS'; // ALL = 전체 합계(properties rm_fcst_rn 합산). GS = OTA+G-OTA+Inbound 합산. 그 외는 개별 세그.
+let selectedSeg = 'ALL'; // ALL = 전체 합계(properties rm_fcst_rn 합산). GS = OTA+G-OTA+Inbound 합산. 그 외는 개별 세그.
 const GS_SUB_SEGS = ['OTA', 'G-OTA', 'Inbound']; // GS 합계에 포함되는 세그
 const SEG_LABELS = { 'ALL': '전체 합계', 'GS': 'GS 합계', 'OTA': 'OTA', 'G-OTA': 'G-OTA', 'Inbound': 'Inbound', '기타(Direct)': '기타(Direct)' };
 let availableSegs = []; // 데이터에서 자동 검출 (예: ['Inbound','OTA'])
@@ -334,19 +334,15 @@ function initUI() {
   const latestYear = Math.max(...trendData._years);
   const latestMonths = sortedMonths.filter(m => m.startsWith(String(latestYear)));
 
-  // Default to current month if available, otherwise most data-rich month
-  const now = new Date();
-  const curMonthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  let bestMonth = latestMonths.includes(curMonthStr) ? curMonthStr : latestMonths[0];
-  if (!latestMonths.includes(curMonthStr)) {
-    let bestCount = 0;
-    latestMonths.forEach(m => {
-      const count = trendData.snapshots.filter(s =>
-        Object.values(s.properties).some(p => p[m])
-      ).length;
-      if (count > bestCount) { bestCount = count; bestMonth = m; }
-    });
-  }
+  // Find most data-rich month for latest year
+  let bestMonth = latestMonths[0];
+  let bestCount = 0;
+  latestMonths.forEach(m => {
+    const count = trendData.snapshots.filter(s =>
+      Object.values(s.properties).some(p => p[m])
+    ).length;
+    if (count > bestCount) { bestCount = count; bestMonth = m; }
+  });
   currentStayMonth = bestMonth || sortedMonths[sortedMonths.length - 1];
 
   // Render year chips + month buttons in sidebar

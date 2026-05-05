@@ -808,35 +808,28 @@ def load_segment_fcst():
 
 def sum_rm_seg_fcst(rm_fcst_props, display_name, ym):
     """rm_fcst.json segments(OTA/G-OTA/Inbound) PDF 원본 셀 합산.
-    Returns: (rm_fcst_rn_sum, rm_budget_rn_sum, rm_fcst_rev_sum). 분배 X.
-    rev_sum 단위: 백만원 (PDF 원본 그대로).
+    Returns: (rm_fcst_rn_sum, rm_budget_rn_sum). 분배 X.
     """
     segs = rm_fcst_props.get(display_name, {}).get(ym, {}).get("segments", {})
     if not segs:
-        return None, None, None
+        return None, None
     fcst_sum = 0
     bud_sum = 0
-    rev_sum = 0
     has_fcst = False
     has_bud = False
-    has_rev = False
     for seg in ("OTA", "G-OTA", "Inbound"):
         s = segs.get(seg)
         if not isinstance(s, dict):
             continue
         v_f = s.get("rm_fcst_rn")
         v_b = s.get("rm_budget_rn")
-        v_r = s.get("rm_fcst_rev_mil")
         if v_f is not None:
             fcst_sum += int(v_f)
             has_fcst = True
         if v_b is not None:
             bud_sum += int(v_b)
             has_bud = True
-        if v_r is not None:
-            rev_sum += int(v_r)
-            has_rev = True
-    return (fcst_sum if has_fcst else None, bud_sum if has_bud else None, rev_sum if has_rev else None)
+    return (fcst_sum if has_fcst else None, bud_sum if has_bud else None)
 
 
 def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_int=None,
@@ -1012,9 +1005,8 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
 
             # RM FCST (OTA+G-OTA+Inbound 세그합 — 대시보드 base와 일치)
             rm_key = f"2026-{m:02d}"
-            rm_rn, rm_budget, rm_rev = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
+            rm_rn, rm_budget = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach = round(rm_rn / rm_budget * 100, 1) if (rm_rn and rm_budget and rm_budget > 0) else None
-            rm_adr = round(rm_rev * 1_000_000 / rm_rn) if (rm_rev and rm_rn and rm_rn > 0) else None
 
             yoy = round((act_rn / base_rn - 1) * 100, 1) if base_rn > 0 else None
             month_data[m] = {
@@ -1029,8 +1021,6 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "fcst_lo":      fcst_lo,
                 "fcst_hi":      fcst_hi,
                 "rm_fcst_rn":   rm_rn,
-                "rm_fcst_rev":  rm_rev,
-                "rm_fcst_adr":  rm_adr,
                 "rm_budget_rn": rm_budget,
                 "rm_fcst_ach":  rm_ach,
             }
@@ -1053,8 +1043,6 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                         "rns_fcst_ai":  act_rn,
                         "fcst_ach_ai":  round(act_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0,
                         "rm_fcst_rn":   None,
-                        "rm_fcst_rev":  None,
-                        "rm_fcst_adr":  None,
                         "rm_budget_rn": None,
                         "rm_fcst_ach":  None,
                     }
@@ -1199,7 +1187,6 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     tot_ai_fcst_hi = 0
     tot_rm_fcst_rn = 0
     tot_rm_budget_rn = 0
-    tot_rm_fcst_rev = 0
 
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         # Budget: OTA+G-OTA+Inbound 세그먼트만 합산
@@ -1316,9 +1303,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
 
             # RM FCST: rm_fcst.json segments(OTA+G-OTA+Inbound) PDF 원본 셀 합산. 분배 X.
             rm_key = f"2026-{month_idx:02d}"
-            rm_rn_prop, rm_budget_prop, rm_rev_prop = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
+            rm_rn_prop, rm_budget_prop = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
-            rm_adr_prop = round(rm_rev_prop * 1_000_000 / rm_rn_prop) if (rm_rev_prop and rm_rn_prop and rm_rn_prop > 0) else None
 
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
             if rns_fcst is None:
@@ -1349,9 +1335,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             ai_fcst_rn = 0
             rm_rn_prop_sum = 0
             rm_budget_prop_sum = 0
-            rm_rev_prop_sum = 0
             rm_rn_prop_has = False
-            rm_rev_prop_has = False
             for mi in range(1, 13):
                 mk_mi = f"2026{mi:02d}"
                 if db_bps is not None:
@@ -1386,15 +1370,12 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
 
                 # RM FCST (월별 합산): rm_fcst.json segments PDF 원본 셀 합산
                 mi_rm_key = f"2026-{mi:02d}"
-                mi_rm_rn, mi_rm_bud, mi_rm_rev = sum_rm_seg_fcst(rm_fcst_props, display_name, mi_rm_key)
+                mi_rm_rn, mi_rm_bud = sum_rm_seg_fcst(rm_fcst_props, display_name, mi_rm_key)
                 if mi_rm_rn is not None:
                     rm_rn_prop_sum += mi_rm_rn
                     rm_rn_prop_has = True
                 if mi_rm_bud is not None:
                     rm_budget_prop_sum += mi_rm_bud
-                if mi_rm_rev is not None:
-                    rm_rev_prop_sum += mi_rm_rev
-                    rm_rev_prop_has = True
 
                 mi_rns_f, mi_rev_f, _, _, _ = _calc_fcst(
                     mi_rn, mi_rev, mi, now_kst, mi_bud_rn, mi_bud_rev,
@@ -1423,9 +1404,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             ai_fcst_ach = round(ai_fcst_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
             rm_rn_prop = rm_rn_prop_sum if rm_rn_prop_has else None
             rm_budget_prop = rm_budget_prop_sum if rm_rn_prop_has else None
-            rm_rev_prop = rm_rev_prop_sum if rm_rev_prop_has else None
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
-            rm_adr_prop = round(rm_rev_prop * 1_000_000 / rm_rn_prop) if (rm_rev_prop and rm_rn_prop and rm_rn_prop > 0) else None
 
         props.append({
             "name":            display_name,
@@ -1442,8 +1421,6 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "ai_fcst_lo":      ai_fcst_lo,
             "ai_fcst_hi":      ai_fcst_hi,
             "rm_fcst_rn":      rm_rn_prop,
-            "rm_fcst_rev":     rm_rev_prop,
-            "rm_fcst_adr":     rm_adr_prop,
             "rm_budget_rn":    rm_budget_prop,
             "rm_fcst_ach":     rm_ach_prop,
             "adr_budget":      round(bud_adr),
@@ -1483,8 +1460,6 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             tot_rm_fcst_rn += rm_rn_prop
         if rm_budget_prop is not None:
             tot_rm_budget_rn += rm_budget_prop
-        if rm_rev_prop is not None:
-            tot_rm_fcst_rev += rm_rev_prop
 
     # 미래월 판별: month_idx가 단일 월이고 현재월보다 크면 FCST=None
     is_future_month = (month_idx > 0 and month_idx > now_kst.month)
@@ -1528,8 +1503,6 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "ai_fcst_lo":      tot_ai_fcst_lo,
         "ai_fcst_hi":      tot_ai_fcst_hi,
         "rm_fcst_rn":      tot_rm_fcst_rn if tot_rm_fcst_rn > 0 else None,
-        "rm_fcst_rev":     tot_rm_fcst_rev if tot_rm_fcst_rev > 0 else None,
-        "rm_fcst_adr":     round(tot_rm_fcst_rev * 1_000_000 / tot_rm_fcst_rn) if (tot_rm_fcst_rev > 0 and tot_rm_fcst_rn > 0) else None,
         "rm_budget_rn":    tot_rm_budget_rn if tot_rm_budget_rn > 0 else None,
         "rm_fcst_ach":     tot_rm_fcst_ach,
         "today_booking":   0,
