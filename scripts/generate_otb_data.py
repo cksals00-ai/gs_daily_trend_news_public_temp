@@ -310,11 +310,16 @@ def get_adj_rn(adj_by_prop, prop_names, month_key):
     return total
 
 
-def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
-    """elapsed_ratio 기반 월말 FCST 계산.
-    진행 중인 월: (오늘 일자 / 해당월 총일수)로 extrapolate
-    완료된 과거 월: ratio=1.0 (실적=FCST)
-    미래 월: elapsed_ratio=0 → 실적 그대로 반환
+def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0,
+               ly_pickup_ratio=None):
+    """월말 FCST 계산 (OTB pickup 모델 기반).
+
+    - 과거 월: 실적=FCST
+    - 미래 월: None 반환 (호출자가 fallback 처리)
+    - 진행 중인 월: act_rn × ly_pickup_ratio
+        ly_pickup_ratio = LY 풀년 실적 / LY 동기간(base_date) OTB
+        OTB는 stay-date 기준이라 elapsed_ratio 외삽이 불가 (pickup으로 채워짐).
+        ly_pickup_ratio 부재 시 보수적으로 act_rn 그대로 사용.
     """
     cur_year  = now_kst.year
     cur_month = now_kst.month
@@ -330,10 +335,14 @@ def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
     if elapsed_ratio == 0.0:
         return None, None, None, None, None
 
-    if elapsed_ratio > 0.1:
-        rns_fcst = round(act_rn / elapsed_ratio)
-        rev_fcst = act_rev / elapsed_ratio
+    if elapsed_ratio >= 1.0:
+        rns_fcst = act_rn
+        rev_fcst = act_rev
+    elif ly_pickup_ratio and ly_pickup_ratio > 0:
+        rns_fcst = round(act_rn * ly_pickup_ratio)
+        rev_fcst = act_rev * ly_pickup_ratio
     else:
+        # LY pickup 데이터 부재 — act_rn을 보수적으로 fcst로 사용
         rns_fcst = act_rn
         rev_fcst = act_rev
 
@@ -342,6 +351,33 @@ def _calc_fcst(act_rn, act_rev, month_num, now_kst, bud_rn, bud_rev=0):
     rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
 
     return rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach
+
+
+def _compute_ly_pickup_ratio(adj_by_prop, db_bps, db_bp, db_props, last_keys):
+    """LY pickup ratio = LY 풀년 실적 / LY 동기간(base_date) OTB.
+
+    OTA+G-OTA+Inbound 세그먼트 기준 (parse_yoy_bookings 필터와 일치).
+    pname별 adj_by_prop[pname][mk]['booking_rn'] = LY base_date 시점 OTB.
+    db_bps에서 동일 사업장+세그 합산 = LY 풀년 최종 실적.
+
+    Returns: float ratio (>1.0 일반적: 추가 pickup 발생) 또는 None.
+    """
+    if not adj_by_prop:
+        return None
+    ly_full = 0
+    ly_otb_at_base = 0
+    for mk in last_keys:
+        # LY 풀년 실적 (3 budget 세그)
+        if db_bps is not None:
+            ly_full += sum_db_segments(db_bps, db_props, mk)["rn"]
+        else:
+            ly_full += sum_db(db_bp, db_props, mk)["rn"]
+        # LY base_date OTB (3 budget 세그 — parse_yoy_bookings에서 필터됨)
+        for pname in db_props:
+            ly_otb_at_base += adj_by_prop.get(pname, {}).get(mk, {}).get("booking_rn", 0)
+    if ly_otb_at_base <= 0 or ly_full <= 0:
+        return None
+    return ly_full / ly_otb_at_base
 
 
 def _detect_outlier_years(hist, threshold=0.4):
@@ -408,7 +444,7 @@ def _calc_seasonality_share(db_bp, db_bps, db_props, year):
 
 def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
                          holiday_factors=None, db_bps=None,
-                         rm_trend_snapshots=None):
+                         rm_trend_snapshots=None, ly_pickup_ratio=None):
     """고도화된 AI FCST — 8가지 보정 로직 적용.
 
     핵심 개선:
@@ -469,9 +505,11 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
     outlier_w = _detect_outlier_years(hist)
     tw_avg = _time_weighted_avg(hist, outlier_w)
 
-    # ── 방법 1: 단순 elapsed_ratio 외삽 ──
-    if elapsed_ratio > 0.1:
-        fcst_simple = round(act_rn / elapsed_ratio)
+    # ── 방법 1: 단순 OTB pickup ratio 적용 ──
+    # OTB는 stay-date 기준 → 일별 외삽 불가 (act_rn / elapsed_ratio는 폭주).
+    # ly_pickup_ratio = LY 풀년 / LY 동기간 OTB. 부재 시 act_rn 보수적 사용.
+    if ly_pickup_ratio and ly_pickup_ratio > 0 and elapsed_ratio < 1.0:
+        fcst_simple = round(act_rn * ly_pickup_ratio)
     else:
         fcst_simple = act_rn
 
@@ -529,12 +567,13 @@ def _calc_fcst_enhanced(act_rn, month_num, now_kst, bud_rn, db_bp, db_props,
         last_yr_rn = _seg_rn(db_props, mk_25)
 
     if elapsed_ratio > 0 and hist:
-        # 진행 중인 월
-        if last_yr_rn > 0 and act_rn > 0:
-            yoy_growth = act_rn / (last_yr_rn * elapsed_ratio) if elapsed_ratio > 0.1 else 1.0
-            fcst_pattern = round(last_yr_rn * yoy_growth)
-        elif tw_avg > 0 and elapsed_ratio > 0.1:
-            fcst_pattern = round(tw_avg * (act_rn / (tw_avg * elapsed_ratio)))
+        # 진행 중인 월: OTB pickup ratio 기반 (elapsed_ratio 외삽 금지 — OTB 폭주 방지)
+        if ly_pickup_ratio and ly_pickup_ratio > 0 and act_rn > 0:
+            fcst_pattern = round(act_rn * ly_pickup_ratio)
+        elif last_yr_rn > 0 and act_rn > 0:
+            # pickup 비율 부재 fallback — LY 풀년 × YoY (일별 외삽 X)
+            # YoY 추정 불가 시 LY 풀년 그대로 사용 (보수적)
+            fcst_pattern = last_yr_rn
         else:
             fcst_pattern = fcst_simple
     elif elapsed_ratio == 0 and hist:
@@ -717,17 +756,27 @@ def load_segment_fcst():
         "ratios":        {prop: {month_int_str: {seg: ratio_pct}}},
     }
     """
-    out = {"manager_keyin": {}, "rm_seg_fcst": {}, "ratios": {}}
+    out = {"manager_keyin": {}, "manager_keyin_meta": {}, "rm_seg_fcst": {}, "ratios": {}}
 
-    # 1) ai_fcst.json: manager_keyin_segments
+    # 1) ai_fcst.json: manager_keyin_segments (테스트 입력은 제외)
     if AI_FCST_JSON.exists():
         try:
             ai = json.loads(AI_FCST_JSON.read_text(encoding="utf-8"))
             for prop, months in ai.get("properties", {}).items():
                 for ym, v in months.items():
                     ks = v.get("manager_keyin_segments")
-                    if ks and isinstance(ks, dict):
-                        out["manager_keyin"].setdefault(prop, {})[ym] = ks
+                    if not (ks and isinstance(ks, dict)):
+                        continue
+                    by = (v.get("manager_keyin_by") or "").strip().lower()
+                    if by in ("test", "tester", "demo", ""):
+                        # 테스트/미식별 키인은 무시 (안전장치)
+                        print(f"  [WARN] manager_keyin 무시 (by='{by}'): {prop} {ym}")
+                        continue
+                    out["manager_keyin"].setdefault(prop, {})[ym] = ks
+                    out["manager_keyin_meta"].setdefault(prop, {})[ym] = {
+                        "by": v.get("manager_keyin_by"),
+                        "at": v.get("manager_keyin_at"),
+                    }
         except Exception:
             pass
 
@@ -748,12 +797,17 @@ def load_segment_fcst():
     return out
 
 
-def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_int=None):
+def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_int=None,
+                 s_bud_rn=0, s_lst_rn=0):
     """단일 (사업장, 월, 세그)에 대한 FCST RN 결정. 우선순위:
-      1) manager_keyin_segments[seg]
+      1) manager_keyin_segments[seg]  (단, sanity check 통과 시)
       2) fcst_segment_trend snapshot rm_fcst_rn
       3) ratios[prop][month_int][seg] × p_total_fcst (RM 미커버 월 fallback)
       4) None (데이터 없음)
+
+    Sanity check (manager_keyin):
+      값이 max(seg_budget, LY 실적)의 3배를 초과하면 키인 오류로 간주, 무시.
+      (테스트/오타 입력 방지)
 
     Args:
         seg_fcst_data: load_segment_fcst() 결과
@@ -762,11 +816,18 @@ def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_
         seg: "OTA" / "G-OTA" / "Inbound"
         p_total_fcst: 사업장 총 FCST RN (3순위 fallback에 필요)
         month_int: 월 정수 (1~12). 없으면 ym에서 추출.
+        s_bud_rn: 해당 세그 예산 (sanity check용)
+        s_lst_rn: 해당 세그 LY 풀년 실적 (sanity check용)
     """
-    # 1) manager keyin
+    # 1) manager keyin (sanity check 적용)
     keyin = seg_fcst_data.get("manager_keyin", {}).get(display_name, {}).get(ym, {})
     if seg in keyin and keyin[seg] is not None:
-        return int(keyin[seg]), "manager_keyin"
+        v = int(keyin[seg])
+        sane_cap = max(s_bud_rn, s_lst_rn) * 3
+        if sane_cap > 0 and v > sane_cap:
+            print(f"  [WARN] manager_keyin 무시 (값 폭주: {v} > {sane_cap}): {display_name} {ym} {seg}")
+        else:
+            return v, "manager_keyin"
 
     # 2) RM segment FCST snapshot
     rm_block = seg_fcst_data.get("rm_seg_fcst", {}).get(display_name, {}).get(ym, {})
@@ -892,12 +953,20 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
             else:
                 bud_rn = budgets.get(display_name, {}).get(bud_label, {}).get("rn", 0)
 
-            rns_fcst, _, _, fcst_ach, _ = _calc_fcst(act_rn, 0, m, now_kst, bud_rn)
+            # OTB pickup ratio (해당 월 기준)
+            m_pickup_ratio = _compute_ly_pickup_ratio(
+                adj_by_prop, db_bps, db_bp, db_props, [mk_25]
+            )
+
+            rns_fcst, _, _, fcst_ach, _ = _calc_fcst(
+                act_rn, 0, m, now_kst, bud_rn, ly_pickup_ratio=m_pickup_ratio
+            )
 
             # AI FCST (고도화: 세그먼트 분화 + 계절성 + 이상치 필터 + CI)
             rns_fcst_ai, fcst_ach_ai, fcst_lo, fcst_hi = _calc_fcst_enhanced(
                 act_rn, m, now_kst, bud_rn, db_bp, db_props, holiday_factors,
-                db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots)
+                db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots,
+                ly_pickup_ratio=m_pickup_ratio)
 
             # RM FCST (전체 세그먼트 기준 — rm_budget_rn 대비 달성률)
             rm_key = f"2026-{m:02d}"
@@ -1182,14 +1251,21 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         rm_ach_prop = None
 
         if month_idx > 0:
+            # OTB pickup ratio (LY 풀년 / LY 동기간 OTB) — 진행 중인 월 FCST 산출용
+            pickup_ratio = _compute_ly_pickup_ratio(
+                adj_by_prop, db_bps, db_bp, db_props, last_keys
+            )
+
             rns_fcst, rev_fcst, adr_fcst, fcst_ach, rev_fcst_ach = _calc_fcst(
-                act_rn, act_rev, month_idx, now_kst, bud_rn, bud_rev
+                act_rn, act_rev, month_idx, now_kst, bud_rn, bud_rev,
+                ly_pickup_ratio=pickup_ratio,
             )
 
             # AI FCST 독립 계산 (고도화)
             ai_fcst_rn, ai_fcst_ach, ai_fcst_lo, ai_fcst_hi = _calc_fcst_enhanced(
                 act_rn, month_idx, now_kst, bud_rn, db_bp, db_props,
-                holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots
+                holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots,
+                ly_pickup_ratio=pickup_ratio,
             )
 
             # RM FCST 로드 (전체 세그먼트 기준)
@@ -1245,10 +1321,16 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     mi_bud_rn = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
                     mi_bud_rev = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rev_m", 0)
 
+                # OTB pickup ratio (월별: 이 월의 LY 동기간 기준)
+                mi_pickup_ratio = _compute_ly_pickup_ratio(
+                    adj_by_prop, db_bps, db_bp, db_props, [f"2025{mi:02d}"]
+                )
+
                 # AI FCST (월별 합산, 고도화)
                 mi_ai, _, mi_lo, mi_hi = _calc_fcst_enhanced(
                     mi_rn, mi, now_kst, mi_bud_rn, db_bp, db_props,
-                    holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots
+                    holiday_factors, db_bps=db_bps, rm_trend_snapshots=rm_trend_snapshots,
+                    ly_pickup_ratio=mi_pickup_ratio,
                 )
                 if mi_ai is not None and mi_ai > 0:
                     ai_fcst_rn += mi_ai
@@ -1266,7 +1348,10 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 if mi_rm_bud is not None:
                     rm_budget_prop_sum += mi_rm_bud
 
-                mi_rns_f, mi_rev_f, _, _, _ = _calc_fcst(mi_rn, mi_rev, mi, now_kst, mi_bud_rn, mi_bud_rev)
+                mi_rns_f, mi_rev_f, _, _, _ = _calc_fcst(
+                    mi_rn, mi_rev, mi, now_kst, mi_bud_rn, mi_bud_rev,
+                    ly_pickup_ratio=mi_pickup_ratio,
+                )
                 if mi_rns_f is not None:
                     rns_fcst += mi_rns_f
                     rev_fcst += mi_rev_f
@@ -1471,18 +1556,32 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 p_rns_fcst_total = p_total.get("rns_fcst", 0) or 0
 
                 is_past_single_month = (month_idx > 0 and month_idx < now_kst.month)
+                is_current_single_month = (month_idx > 0 and month_idx == now_kst.month)
                 fcst_source = None  # debug/audit용
 
                 if is_past_single_month:
                     # 과거월: actual = fcst
                     s_rns_f = s_act_rn
                     fcst_source = "past_actual"
+                elif is_current_single_month and seg in BUDGET_SEGMENT_KEYS:
+                    # 현재월: 사업장 pickup_ratio × 세그 OTB
+                    # (manager_keyin/RM 분배는 미래월 계획용 — 현재월에는 OTB 기반이 더 정확)
+                    p_pickup_ratio = _compute_ly_pickup_ratio(
+                        adj_by_prop, db_bps, db_bp, db_props, last_keys
+                    )
+                    if p_pickup_ratio and p_pickup_ratio > 0:
+                        s_rns_f = round(s_act_rn * p_pickup_ratio)
+                        fcst_source = "pickup_ratio"
+                    else:
+                        s_rns_f = s_act_rn
+                        fcst_source = "no_pickup_actual"
                 elif seg in BUDGET_SEGMENT_KEYS and month_idx > 0:
-                    # 현재/미래 단일월: 원본 세그 FCST 우선 사용
+                    # 미래 단일월: 원본 세그 FCST 우선 사용 (sanity check 포함)
                     ym = f"2026-{month_idx:02d}"
                     s_rns_f, fcst_source = get_seg_fcst(
                         seg_fcst_data, display_name, ym, seg,
                         p_total_fcst=p_rns_fcst_total, month_int=month_idx,
+                        s_bud_rn=s_bud_rn, s_lst_rn=s_lst_rn,
                     )
                     if s_rns_f is None:
                         # 모든 source 부재 → actual 보수적 사용
@@ -1493,20 +1592,37 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     s_rns_f = 0
                     for mi in range(1, 13):
                         ym_mi = f"2026-{mi:02d}"
-                        # 과거월: actual / 그 외: 원본 source
+                        mi_seg_bud = seg_budgets.get(display_name, {}).get(seg, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
+                        # 해당 월의 LY 실적 (sanity bound용)
+                        mi_lst_seg = 0
+                        for pname in db_props:
+                            mi_lst_seg += db_bps.get(pname, {}).get(seg, {}).get(MONTHS_25[mi - 1], {}).get("booking_rn", 0)
                         if mi < now_kst.month:
+                            # 과거월: actual
                             mi_act = 0
                             for pname in db_props:
                                 m = db_bps.get(pname, {}).get(seg, {}).get(MONTHS_26[mi - 1], {})
                                 mi_act += m.get("booking_rn", 0)
                             s_rns_f += mi_act
+                        elif mi == now_kst.month:
+                            # 현재월: 사업장 pickup_ratio × 세그 OTB
+                            mi_pickup_ratio = _compute_ly_pickup_ratio(
+                                adj_by_prop, db_bps, db_bp, db_props, [MONTHS_25[mi - 1]]
+                            )
+                            mi_seg_act = 0
+                            for pname in db_props:
+                                mi_seg_act += db_bps.get(pname, {}).get(seg, {}).get(MONTHS_26[mi - 1], {}).get("booking_rn", 0)
+                            if mi_pickup_ratio and mi_pickup_ratio > 0:
+                                s_rns_f += round(mi_seg_act * mi_pickup_ratio)
+                            else:
+                                s_rns_f += mi_seg_act
                         else:
-                            # 사업장 total fcst 추출 (mi 단월) — 본 함수 외부에서 사전 계산 어려움
-                            # → ratio fallback에 p_rns_fcst_total을 활용하므로 대략적 추정 허용
+                            # 미래월: 원본 source (sanity check 적용)
                             mi_seg_f, _ = get_seg_fcst(
                                 seg_fcst_data, display_name, ym_mi, seg,
                                 p_total_fcst=p_rns_fcst_total / max(1, 12 - now_kst.month + 1),
                                 month_int=mi,
+                                s_bud_rn=mi_seg_bud, s_lst_rn=mi_lst_seg,
                             )
                             s_rns_f += mi_seg_f if mi_seg_f is not None else 0
                     fcst_source = "annual_aggregate"
@@ -1795,21 +1911,11 @@ def overlay_daily_booking(all_months, daily_bk, now_kst):
             prop["today_booking"] = max(today_net, 0)
             prop["today_cancel"] = max(-today_net, 0)
 
-            # FCST: 현재월은 elapsed 기반, 미래월은 실적 그대로
+            # FCST: OTB 그대로 사용 (LY pickup 데이터 부재 — 일별 외삽 폭주 방지)
+            #   팔라티움 등 daily_booking 사업장은 LY OTB 동기간 데이터가 없어
+            #   pickup_ratio 추정 불가. act_rn(현재 OTB)을 보수적으로 FCST로 사용.
             if m_idx > 0:
-                cur_month = now_kst.month
-                if m_idx == cur_month:
-                    import calendar as _cal
-                    days = _cal.monthrange(2026, m_idx)[1]
-                    ratio = now_kst.day / days
-                    if ratio > 0.1:
-                        fcst_rn = round(act_rn / ratio)
-                    else:
-                        fcst_rn = act_rn
-                elif m_idx < cur_month:
-                    fcst_rn = act_rn
-                else:
-                    fcst_rn = act_rn  # 미래월: 현재 예약 그대로
+                fcst_rn = act_rn
                 prop["rns_fcst"] = fcst_rn
                 prop["fcst_achievement"] = round(fcst_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0
                 prop["ai_fcst_rn"] = fcst_rn
