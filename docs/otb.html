@@ -1443,8 +1443,9 @@ function renderPivot(data) {
     const netRevSign = (p.today_net_rev != null && p.today_net_rev >= 0) ? '+' : '';
 
     // RM FCST: rm_fcst_trend.json 최신 스냅샷에서 사업장×활성월 매칭 (없으면 otb_data 폴백)
+    // 달성률은 RM 자료 자체 budget(rm_budget_rn) 기준 — 사업계획 budget(rns_budget)과는 별도 base.
     const rmRn = rmFcstLookup(p.name);
-    const rmAch = (rmRn != null && p.rns_budget > 0) ? +(rmRn / p.rns_budget * 100).toFixed(1) : null;
+    const rmAch = (rmRn != null && p.rm_budget_rn > 0) ? +(rmRn / p.rm_budget_rn * 100).toFixed(1) : null;
 
     rows += `<tr>
       <td>${p.name}</td>
@@ -1503,12 +1504,15 @@ function renderPivot(data) {
   const totNetRevCls  = (tot.today_net_rev != null && tot.today_net_rev >= 0) ? 'net-pos' : 'net-neg';
   const totNetRevSign = (tot.today_net_rev != null && tot.today_net_rev >= 0) ? '+' : '';
 
-  // 합계 RM FCST: 표시 중인 사업장들의 합
+  // 합계 RM FCST: 표시 중인 사업장들의 RM FCST RN과 RM Budget 합 (RM 자료 자체 base)
   const totRmRn = data.byProperty.reduce((acc, p) => {
     const v = rmFcstLookup(p.name);
     return v != null ? acc + v : acc;
   }, 0);
-  const totRmAch = (totRmRn > 0 && tot.rns_budget > 0) ? +(totRmRn / tot.rns_budget * 100).toFixed(1) : null;
+  const totRmBud = data.byProperty.reduce((acc, p) => {
+    return p.rm_budget_rn != null ? acc + p.rm_budget_rn : acc;
+  }, 0);
+  const totRmAch = (totRmRn > 0 && totRmBud > 0) ? +(totRmRn / totRmBud * 100).toFixed(1) : null;
 
   rows += `<tr class="total-row">
     <td>합계</td>
