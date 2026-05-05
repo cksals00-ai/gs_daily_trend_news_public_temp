@@ -661,10 +661,31 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
   .sidebar { display: none; }
   .kpi-strip { grid-template-columns: repeat(2, 1fr); }
   .kpi-trio { grid-template-columns: repeat(2, 1fr); }
+  .main-content { padding: 16px 12px; gap: 14px; }
+  .kpi-card { padding: 12px 14px; }
+  /* 모바일: 가로 스크롤 힌트(우측 그라데이션) */
+  .table-wrap { box-shadow: inset -8px 0 12px -8px rgba(255,255,255,0.06); border-radius: 6px; }
+  /* 테이블 폰트/패딩 축소 (가로 스크롤 길이 단축) */
+  table.pivot { font-size: 11.5px; }
+  table.pivot th { font-size: 9.5px; padding: 7px 8px; letter-spacing: 0.06em; }
+  table.pivot th.group-header { font-size: 9px; letter-spacing: 0.06em; }
+  table.pivot td { font-size: 11px; padding: 7px 8px; }
+  table.pivot td.region-cell { font-size: 9.5px; }
+  .ach-pill { font-size: 10px; padding: 2px 5px; }
 }
 @media (max-width: 560px) {
-  .kpi-strip { grid-template-columns: 1fr 1fr; }
-  .main-content { padding: 16px 14px; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-trio { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .main-content { padding: 14px 10px; gap: 12px; }
+  .kpi-card { padding: 10px 12px; }
+  .table-card { padding: 0; }
+  .table-card-header { padding: 10px 12px; flex-wrap: wrap; gap: 6px; }
+  .table-wrap { max-height: 70vh; }
+  table.pivot { font-size: 11px; }
+  table.pivot th { font-size: 9px; padding: 6px 6px; }
+  table.pivot td { font-size: 10.5px; padding: 6px 6px; }
+  .page-header { gap: 8px; }
+  .base-date-tag { font-size: 10.5px; padding: 4px 8px; }
 }
 
 /* ───── MOBILE FILTER BAR ───── */
@@ -682,13 +703,13 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 }
 
 /* ───── MOBILE SHEET TAB BAR ───── */
-.mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:52px;z-index:100;padding:0 4px;}
+.mobile-sheet-tabs{display:none;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:0;z-index:100;padding:0 4px;}
 .mobile-sheet-tabs::-webkit-scrollbar{display:none;}
 @media(max-width:860px){.mobile-sheet-tabs{display:flex;}}
-.mobile-sheet-tab{flex-shrink:0;padding:9px 14px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.mobile-sheet-tab{flex-shrink:0;padding:9px 12px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-muted);text-decoration:none;white-space:nowrap;letter-spacing:0.04em;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;}
 .mobile-sheet-tab:hover{color:var(--ink);}
 .mobile-sheet-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);background:rgba(201,160,99,0.08);}
-@media(max-width:480px){.mobile-sheet-tab{padding:8px 10px;font-size:10px;letter-spacing:0.03em}.mobile-sheet-tabs{-webkit-mask-image:linear-gradient(to right,#000 90%,transparent 100%);mask-image:linear-gradient(to right,#000 90%,transparent 100%);}}
+@media(max-width:480px){.mobile-sheet-tab{padding:8px 10px;font-size:10.5px;letter-spacing:0.02em}.mobile-sheet-tabs{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent 100%);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent 100%);}}
 
 /* ───── NO DATA STATE ───── */
 .loading-state {
@@ -781,7 +802,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 </header>
 
 <!-- MOBILE SHEET TABS (visible < 860px) -->
-<nav class="mobile-sheet-tabs">
+<nav class="mobile-sheet-tabs" id="mobile-sheet-tabs-nav">
   <a href="otb.html" class="mobile-sheet-tab active">당일현황</a>
   <a href="weekly-compare.html" class="mobile-sheet-tab">금주비교</a>
   <a href="channel.html" class="mobile-sheet-tab">채널별</a>
@@ -791,6 +812,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
   <a href="booking-status.html" class="mobile-sheet-tab">Booking Status</a>
   <a href="manager-analysis.html" class="mobile-sheet-tab">담당자 분석</a>
 </nav>
+<script>(function(){try{var nav=document.getElementById('mobile-sheet-tabs-nav');if(nav){var act=nav.querySelector('.mobile-sheet-tab.active');if(act){nav.scrollLeft=Math.max(0,act.offsetLeft-12);}}}catch(e){}})();</script>
 
 <!-- MOBILE FILTER BAR (visible < 860px) -->
 <div class="mobile-filter-bar" id="mobile-filter-bar">
