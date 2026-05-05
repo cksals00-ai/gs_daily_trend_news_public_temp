@@ -186,7 +186,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">아웃바운드</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
     </div>
@@ -207,7 +207,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   <div class="page-title">
     <div class="eyebrow">DATA · AUTO CROSS-CHECK</div>
     <h1>데이터 파이프라인 크로스체크</h1>
-    <p>4개 JSON 데이터소스(OTB, RM FCST, Daily Booking, OCC)를 자동 fetch하여 실시간 정합성을 검증합니다.</p>
+    <p>4개 JSON 데이터소스(OTB, RM FCST, Daily Booking, OCC)를 자동 fetch하여 실시간 정합성을 검증합니다. Revenue Meeting PDF 최신화 시 Check 01/06이 자동 실행됩니다.</p>
   </div>
 
   <!-- ============================================= -->
@@ -230,7 +230,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   <!-- 2. AUTO CROSS-CHECK RESULTS (4 cards)         -->
   <!-- ============================================= -->
   <div class="card" id="card-crosscheck">
-    <div class="card-head"><span class="card-icon">⚡</span><span class="card-title">AUTO CROSS-CHECK</span><span class="card-desc">4개 데이터소스 교차 검증</span></div>
+    <div class="card-head"><span class="card-icon">⚡</span><span class="card-title">AUTO CROSS-CHECK</span><span class="card-desc">4개 데이터소스 교차 검증 (6항목)</span></div>
     <div class="check-grid" id="check-grid">
       <!-- Check 1 -->
       <div class="check-card loading" id="chk1">
@@ -276,6 +276,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
         <div class="check-stat" id="chk5-stat"></div>
         <button class="check-detail-toggle" onclick="toggleDetail('chk5')">▸ 세부 결과 보기</button>
         <div class="check-detail" id="chk5-detail"></div>
+      </div>
+      <!-- Check 6: YoY 정합성 체크 -->
+      <div class="check-card loading" id="chk6">
+        <div class="check-header"><span class="check-num">CHECK 06</span><span class="check-badge loading" id="chk6-badge">LOADING</span></div>
+        <div class="check-title">동기간(YoY) 정합성 체크</div>
+        <div class="check-desc">6-1: yoyTable 합계=세그합 일치 / 6-2: byProperty=byPropertySegment 합 일치 / 6-3: 권역합=사업장합 일치. Revenue Meeting 파이프라인 실행 시 Check 01과 동시 실행.</div>
+        <div class="check-stat" id="chk6-stat"></div>
+        <button class="check-detail-toggle" onclick="toggleDetail('chk6')">▸ 세부 결과 보기</button>
+        <div class="check-detail" id="chk6-detail"></div>
       </div>
     </div>
   </div>
@@ -464,7 +473,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     // Reset
     totalMatch = 0; totalMismatch = 0; totalInfo = 0;
     document.getElementById('summary-timestamp').textContent = '검증 중...';
-    ['chk1','chk2','chk3','chk4','chk5'].forEach(id => {
+    ['chk1','chk2','chk3','chk4','chk5','chk6'].forEach(id => {
       const el = document.getElementById(id);
       el.className = 'check-card loading';
       document.getElementById(id+'-badge').className = 'check-badge loading';
@@ -482,23 +491,29 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     runCheck3();
     await runCheck4();
     runCheck5();
+    runCheck6();
 
     // Update summary
     updateSummary();
   };
 
   /* ---- CHECK 1: RM FCST rm_fcst_rn vs OTB rm_fcst_rn ---- */
+  /* 원인 분석: rm_fcst.json의 rm_fcst_rn은 전체 합계(모든 세그먼트 포함),
+     otb_data.json byProperty의 rm_fcst_rn은 OTA+G-OTA+Inbound 3세그먼트 합계만.
+     따라서 RM 측에서도 segments(OTA+G-OTA+Inbound) 합계를 사용해야 일치.
+     추가: 세그별(OTA/G-OTA/Inbound) rm_fcst_rn도 비교하도록 확장.
+     트리거: Revenue Meeting PDF 데이터 최신화 시 자동 실행 (페이지 로드 시 runAutoCheck) */
   function runCheck1() {
     const id = 'chk1';
     if (!DATA.rm || !DATA.otb) return setCheckError(id, 'DATA MISSING');
 
     const rmProps = DATA.rm.properties;
     const otbMonths = DATA.otb.allMonths;
+    const yoyTable = DATA.otb.yoyTable || [];
     const rmMonthsCovered = DATA.rm._months_covered || [];
     let match = 0, mismatch = 0;
     const details = [];
 
-    // For each RM month, find matching OTB allMonths key
     rmMonthsCovered.forEach(monthKey => {
       const monthNum = parseInt(monthKey.split('-')[1]);
       const otbMonth = otbMonths[String(monthNum)];
@@ -509,23 +524,52 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       Object.entries(rmProps).forEach(([propCode, months]) => {
         const rmData = months[monthKey];
         if (!rmData) return;
-        const rmVal = rmData.rm_fcst_rn;
 
-        // Find matching OTB property
+        // RM 세그먼트 합계 (OTA+G-OTA+Inbound) — OTB와 동일 기준
+        const rmSegs = rmData.segments || {};
+        const rmSegSum = ['OTA','G-OTA','Inbound'].reduce((s, seg) => s + ((rmSegs[seg] || {}).rm_fcst_rn || 0), 0);
+
+        // OTB byProperty rm_fcst_rn (= OTA+G-OTA+Inbound 합계)
         const otbProp = otbByProp.find(p => p.name === propCode);
         const otbVal = otbProp ? otbProp.rm_fcst_rn : null;
 
         if (otbVal === null || otbVal === undefined) {
-          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: '—', status: 'na' });
+          details.push({ prop: propCode, month: monthKey, rm: rmSegSum, otb: '—', status: 'na', type: '합계' });
           return;
         }
 
-        if (rmVal === otbVal) {
+        if (rmSegSum === otbVal) {
           match++;
-          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: otbVal, status: 'match' });
+          details.push({ prop: propCode, month: monthKey, rm: rmSegSum, otb: otbVal, status: 'match', type: '합계' });
         } else {
           mismatch++;
-          details.push({ prop: propCode, month: monthKey, rm: rmVal, otb: otbVal, diff: otbVal - rmVal, status: 'mismatch' });
+          details.push({ prop: propCode, month: monthKey, rm: rmSegSum, otb: otbVal, diff: otbVal - rmSegSum, status: 'mismatch', type: '합계' });
+        }
+
+        // 세그별 비교: yoyTable에서 해당 사업장의 세그먼트 행과 RM 세그먼트 비교
+        let parentIdx = yoyTable.findIndex(r => r.name === propCode && !r.is_segment);
+        if (parentIdx >= 0) {
+          for (let si = parentIdx + 1; si < yoyTable.length && yoyTable[si].is_segment; si++) {
+            const segRow = yoyTable[si];
+            const segName = segRow.name; // OTA, G-OTA, Inbound
+            if (!['OTA','G-OTA','Inbound'].includes(segName)) continue;
+            const otbSegRn = (segRow.months || {})[String(monthNum)] ? segRow.months[String(monthNum)].rm_fcst_rn : null;
+            const rmSegRn = (rmSegs[segName] || {}).rm_fcst_rn;
+
+            if (otbSegRn == null && rmSegRn == null) continue;
+            if (otbSegRn == null || rmSegRn == null) {
+              details.push({ prop: propCode, month: monthKey, rm: rmSegRn || 0, otb: otbSegRn != null ? otbSegRn : '—', status: 'na', type: segName });
+              continue;
+            }
+
+            if (rmSegRn === otbSegRn) {
+              match++;
+              details.push({ prop: propCode, month: monthKey, rm: rmSegRn, otb: otbSegRn, status: 'match', type: segName });
+            } else {
+              mismatch++;
+              details.push({ prop: propCode, month: monthKey, rm: rmSegRn, otb: otbSegRn, diff: otbSegRn - rmSegRn, status: 'mismatch', type: segName });
+            }
+          }
         }
       });
     });
@@ -538,14 +582,22 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   }
 
   function renderCheck1Detail(details) {
-    let html = '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>월</th><th>RM FCST RN</th><th>OTB RN</th><th>차이</th><th>상태</th></tr></thead><tbody>';
-    // Show mismatches first
-    const sorted = [...details].sort((a,b) => (a.status==='mismatch'?0:1) - (b.status==='mismatch'?0:1));
+    let html = '<div style="font-size:10px;color:var(--ink-muted);margin-bottom:10px;line-height:1.6">';
+    html += '<strong style="color:var(--gold-bright)">비교 기준:</strong> RM FCST 세그먼트(OTA+G-OTA+Inbound) 합계 vs OTB byProperty rm_fcst_rn<br>';
+    html += '<strong style="color:var(--gold-bright)">세그별:</strong> RM 개별 세그먼트 vs OTB yoyTable 세그먼트 행의 rm_fcst_rn';
+    html += '</div>';
+    html += '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>사업장</th><th>구분</th><th>월</th><th>RM FCST RN</th><th>OTB RN</th><th>차이</th><th>상태</th></tr></thead><tbody>';
+    const sorted = [...details].sort((a,b) => {
+      if (a.status !== b.status) return (a.status==='mismatch'?0:a.status==='na'?2:1) - (b.status==='mismatch'?0:b.status==='na'?2:1);
+      return a.prop.localeCompare(b.prop);
+    });
     sorted.forEach(d => {
       const cls = d.status === 'match' ? 'cell-green' : d.status === 'mismatch' ? 'cell-red' : 'cell-na';
       const statusText = d.status === 'match' ? '✓ 일치' : d.status === 'mismatch' ? '✗ 불일치' : '—';
+      const typeCls = d.type === '합계' ? 'font-weight:700' : 'color:var(--ink-faint);font-size:9px';
       html += `<tr>
         <td class="prop-col">${esc(d.prop)}</td>
+        <td style="${typeCls}">${esc(d.type)}</td>
         <td>${d.month}</td>
         <td>${fmtNum(d.rm)}</td>
         <td>${d.otb === '—' ? '<span class="cell-na">—</span>' : fmtNum(d.otb)}</td>
@@ -558,6 +610,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   }
 
   /* ---- CHECK 2: Daily Booking budget_rns vs RM budget_rn ---- */
+  /* 원인 분석: rm_fcst.json의 필드명은 'rm_budget_rn'이었으나 코드가 'budget_rn'을 참조 → 항상 null.
+     수정: rmProp[monthKey].rm_budget_rn으로 변경하여 올바른 필드 참조 */
   function runCheck2() {
     const id = 'chk2';
     if (!DATA.rm || !DATA.daily) return setCheckError(id, 'DATA MISSING');
@@ -582,7 +636,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
         if (!rmProp || !rmProp[monthKey]) return;
 
         const dbBudget = p.budget_rns;
-        const rmBudget = rmProp[monthKey].budget_rn;
+        const rmBudget = rmProp[monthKey].rm_budget_rn;
 
         if (dbBudget === rmBudget) {
           match++;
@@ -893,6 +947,173 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     document.getElementById('chk5-detail').innerHTML = html;
   }
 
+  /* ---- CHECK 6: 동기간(YoY) 정합성 체크 ---- */
+  /* 트리거: Revenue Meeting 자동화 파이프라인 실행 시 (Check 01과 동시 실행)
+     6-1: yoyTable 부모 행 last_rn == 자식 세그(OTA+G-OTA+Inbound) last_rn 합
+     6-2: allMonths[m].byProperty rns_last == byPropertySegment OTA+G-OTA+Inbound rns_last 합
+     6-3: 권역합 전년 == 해당 권역 사업장들의 전년(rns_last) 합 */
+  function runCheck6() {
+    const id = 'chk6';
+    if (!DATA.otb) return setCheckError(id, 'OTB DATA MISSING');
+
+    let match = 0, mismatch = 0;
+    const details = [];
+    const yoyTable = DATA.otb.yoyTable || [];
+    const allMonths = DATA.otb.allMonths || {};
+
+    // --- 6-1: yoyTable 합계=세그합 ---
+    const availableMonths = Object.keys(allMonths).filter(k => k !== 'summary' && k !== '0');
+    let i = 0;
+    while (i < yoyTable.length) {
+      const row = yoyTable[i];
+      if (!row.is_segment) {
+        const parent = row;
+        const segs = [];
+        let j = i + 1;
+        while (j < yoyTable.length && yoyTable[j].is_segment) {
+          segs.push(yoyTable[j]);
+          j++;
+        }
+        const targetSegs = segs.filter(s => ['OTA','G-OTA','Inbound'].includes(s.name));
+
+        availableMonths.forEach(mKey => {
+          const parentMonth = (parent.months || {})[mKey];
+          if (!parentMonth || parentMonth.last_rn == null) return;
+          const parentLast = parentMonth.last_rn;
+          const segSum = targetSegs.reduce((s, seg) => {
+            const sm = (seg.months || {})[mKey];
+            return s + (sm ? (sm.last_rn || 0) : 0);
+          }, 0);
+
+          if (parentLast === segSum) {
+            match++;
+            details.push({ check: '6-1', prop: parent.name, month: mKey, expected: parentLast, actual: segSum, status: 'match' });
+          } else {
+            mismatch++;
+            details.push({ check: '6-1', prop: parent.name, month: mKey, expected: parentLast, actual: segSum, diff: parentLast - segSum, status: 'mismatch' });
+          }
+        });
+        i = j;
+      } else {
+        i++;
+      }
+    }
+
+    // --- 6-2: byProperty rns_last == byPropertySegment 합 ---
+    availableMonths.forEach(mKey => {
+      const monthData = allMonths[mKey];
+      if (!monthData) return;
+      const bp = monthData.byProperty || [];
+      const bps = monthData.byPropertySegment || {};
+
+      bp.forEach(prop => {
+        const name = prop.name;
+        const totalLast = prop.rns_last;
+        if (totalLast == null) return;
+
+        let segSum = 0;
+        ['OTA','G-OTA','Inbound'].forEach(segName => {
+          const segList = bps[segName] || [];
+          const segProp = segList.find(s => s.name === name);
+          if (segProp) segSum += (segProp.rns_last || 0);
+        });
+
+        if (totalLast === segSum) {
+          match++;
+          details.push({ check: '6-2', prop: name, month: mKey, expected: totalLast, actual: segSum, status: 'match' });
+        } else {
+          mismatch++;
+          details.push({ check: '6-2', prop: name, month: mKey, expected: totalLast, actual: segSum, diff: totalLast - segSum, status: 'mismatch' });
+        }
+      });
+    });
+
+    // --- 6-3: 권역합=사업장합 ---
+    // Build region map from yoyTable
+    const regionMap = {};
+    for (const row of yoyTable) {
+      if (!row.is_segment && row.region) {
+        if (!regionMap[row.region]) regionMap[row.region] = [];
+        regionMap[row.region].push(row.name);
+      }
+    }
+
+    availableMonths.forEach(mKey => {
+      const monthData = allMonths[mKey];
+      if (!monthData) return;
+      const bp = monthData.byProperty || [];
+
+      Object.entries(regionMap).forEach(([region, propNames]) => {
+        const propValues = propNames.map(name => {
+          const p = bp.find(x => x.name === name);
+          return p ? (p.rns_last || 0) : 0;
+        });
+        const regionSum = propValues.reduce((a, b) => a + b, 0);
+
+        // Cross-check: sum of individual props should be self-consistent
+        // Compare sum from byProperty vs sum from yoyTable parent rows
+        let yoySum = 0;
+        propNames.forEach(name => {
+          const yoyRow = yoyTable.find(r => r.name === name && !r.is_segment);
+          if (yoyRow) {
+            const ym = (yoyRow.months || {})[mKey];
+            yoySum += ym ? (ym.last_rn || 0) : 0;
+          }
+        });
+
+        if (regionSum === yoySum) {
+          match++;
+          details.push({ check: '6-3', prop: region, month: mKey, expected: regionSum, actual: yoySum, status: 'match' });
+        } else {
+          mismatch++;
+          details.push({ check: '6-3', prop: region, month: mKey, expected: regionSum, actual: yoySum, diff: regionSum - yoySum, status: 'mismatch' });
+        }
+      });
+    });
+
+    totalMatch += match; totalMismatch += mismatch;
+    const pass = mismatch === 0;
+    setCheckResult(id, pass ? 'PASS' : 'FAIL', pass ? 'pass' : 'fail', match, mismatch);
+    renderCheck6Detail(details);
+    checkResults.check6 = { result: pass ? 'PASS' : 'FAIL', match, mismatch };
+  }
+
+  function renderCheck6Detail(details) {
+    let html = '<div style="font-size:10px;color:var(--ink-muted);margin-bottom:10px;line-height:1.6">';
+    html += '<strong style="color:var(--gold-bright)">6-1:</strong> yoyTable 부모 last_rn == OTA+G-OTA+Inbound 세그 last_rn 합<br>';
+    html += '<strong style="color:var(--gold-bright)">6-2:</strong> byProperty rns_last == byPropertySegment(OTA+G-OTA+Inbound) rns_last 합<br>';
+    html += '<strong style="color:var(--gold-bright)">6-3:</strong> 권역 byProperty 합 == 권역 yoyTable 합 (전년 기준)';
+    html += '</div>';
+    html += '<div class="result-wrap"><table class="result-tbl"><thead><tr><th>검증</th><th>대상</th><th>월</th><th>기대값</th><th>실제값</th><th>차이</th><th>상태</th></tr></thead><tbody>';
+    const sorted = [...details].sort((a,b) => {
+      if (a.status !== b.status) return (a.status==='mismatch'?0:1) - (b.status==='mismatch'?0:1);
+      return a.check.localeCompare(b.check) || a.prop.localeCompare(b.prop);
+    });
+    // Show mismatches + first 20 matches
+    const mismatches = sorted.filter(d => d.status === 'mismatch');
+    const matches = sorted.filter(d => d.status === 'match').slice(0, 20);
+    const display = [...mismatches, ...matches];
+
+    display.forEach(d => {
+      const cls = d.status === 'match' ? 'cell-green' : 'cell-red';
+      const statusText = d.status === 'match' ? '✓ 일치' : '✗ 불일치';
+      html += `<tr>
+        <td style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold-bright)">${esc(d.check)}</td>
+        <td class="prop-col">${esc(d.prop)}</td>
+        <td>${d.month}월</td>
+        <td>${fmtNum(d.expected)}</td>
+        <td>${fmtNum(d.actual)}</td>
+        <td class="${cls}">${d.diff !== undefined ? fmtNum(d.diff) : '0'}</td>
+        <td class="${cls}">${statusText}</td>
+      </tr>`;
+    });
+    if (sorted.length > display.length) {
+      html += `<tr><td colspan="7" style="text-align:center;color:var(--ink-faint);font-size:9px;padding:8px">... 외 ${sorted.length - display.length}건 일치 (생략)</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    document.getElementById('chk6-detail').innerHTML = html;
+  }
+
   /* ========================================================
      CHECK HELPERS
      ======================================================== */
@@ -928,9 +1149,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   };
 
   function updateSummary() {
-    const totalChecks = 5;
-    const passCount = ['check1','check2','check3','check5'].filter(k => checkResults[k]?.result === 'PASS').length;
-    const failCount = ['check1','check2','check3','check5'].filter(k => checkResults[k]?.result === 'FAIL' || checkResults[k]?.result === 'WARN').length;
+    const totalChecks = 6;
+    const passCount = ['check1','check2','check3','check5','check6'].filter(k => checkResults[k]?.result === 'PASS').length;
+    const failCount = ['check1','check2','check3','check5','check6'].filter(k => checkResults[k]?.result === 'FAIL' || checkResults[k]?.result === 'WARN').length;
     const infoCount = checkResults.check4 ? 1 : 0;
     const totalItems = totalMatch + totalMismatch + totalInfo;
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>해외사업장 실적 대시보드 | SONO GS팀</title>
+  <title>아웃바운드 실적 대시보드 | SONO GS팀</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -471,7 +471,7 @@
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">해외사업장</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/overseas.html" data-gsn="overseas">아웃바운드</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
     </div>
@@ -485,7 +485,7 @@
     <div class="masthead-inner">
       <div class="logo-wrap">
         <div class="logo-mark">SONO &amp; TRINITY</div>
-        <div class="team-tag">GS팀 · 해외사업장</div>
+        <div class="team-tag">GS팀 · 아웃바운드</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span class="page-badge">🌐 해외 아웃바운드</span>
@@ -512,7 +512,7 @@
     <div class="empty-state" id="emptyState">
       <div class="empty-state-icon">📈</div>
       <div class="empty-state-text">데이터를 불러오는 중...</div>
-      <div class="empty-state-subtext">해외사업장 실적 데이터를 로드합니다</div>
+      <div class="empty-state-subtext">아웃바운드 실적 데이터를 로드합니다</div>
     </div>
 
     <!-- Tabs container -->
@@ -640,13 +640,60 @@
 
       <!-- 하와이 Tab -->
       <div class="tab-content" id="tab-hawaii">
-        <div class="empty-state" style="margin-top:30px;">
-          <div class="empty-state-icon">🌺</div>
-          <div class="empty-state-text">하와이 사업장 — 데이터 준비중</div>
-          <div class="empty-state-subtext">객실 부문만 운영 예정 · 실적 데이터 입수 후 업데이트됩니다</div>
-          <div style="margin-top:24px;display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-            <span class="page-badge" style="font-size:10px;">🏨 객실 단일 부문</span>
-            <span class="page-badge" style="font-size:10px;background:rgba(90,159,196,0.12);border-color:rgba(90,159,196,0.3);color:#7ec8e3;">📋 계획 단계</span>
+        <div class="kpi-cards" id="hawaiiKPI"></div>
+
+        <div class="table-section">
+          <div class="table-title">객실 월별 실적 (단위: USD)</div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>월</th>
+                  <th>Budget RN</th>
+                  <th>Actual RN</th>
+                  <th>달성률</th>
+                  <th>Budget REV</th>
+                  <th>Actual REV</th>
+                  <th>달성률</th>
+                  <th>Budget ADR</th>
+                  <th>Actual ADR</th>
+                  <th>LY RN</th>
+                  <th>LY REV</th>
+                </tr>
+              </thead>
+              <tbody id="hawaiiTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <div class="chart-title">월별 객실매출 추이 (USD)</div>
+          <div class="chart-container">
+            <canvas id="hawaiiChart"></canvas>
+          </div>
+        </div>
+
+        <div class="table-section">
+          <div class="table-title">Wholesale FIT Production (단위: USD)</div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>구분</th>
+                  <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
+                  <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+                  <th>YTD</th>
+                </tr>
+              </thead>
+              <tbody id="wholesaleTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <div class="chart-title">Wholesale 월별 RN 비교 (2025 vs 2026)</div>
+          <div class="chart-container">
+            <canvas id="wholesaleChart"></canvas>
           </div>
         </div>
       </div>
@@ -704,6 +751,7 @@
       renderHaiphong();
       renderGuamLocation('mangilao', DATA.guam.mangilao, DATA.guam.summary.filter(s => s.location === '망길라오'));
       renderGuamLocation('talopopo', DATA.guam.talopopo, DATA.guam.summary.filter(s => s.location === '탈로포포'));
+      if (DATA.hawaii) renderHawaii();
 
       // Show content
       document.getElementById('emptyState').style.display = 'none';
@@ -715,22 +763,20 @@
     function renderSummaryBanner() {
       const hp = DATA.haiphong.summary.find(s => s.name === '합계');
       const guam = DATA.guam.summary.find(s => s.location === '괌합계');
+      const hw = DATA.hawaii;
       const banner = document.getElementById('summaryBanner');
 
       const items = [];
       if (hp) {
-        items.push({ label: '하이퐁 매출 실적', value: fmtD(hp.year.actual, 0) + ' 백만', sub: `목표 ${fmtD(hp.year.target, 0)} 백만 · 달성 ${fmtPct(hp.year.rate)}` });
+        items.push({ label: '하이퐁 합계', value: fmtD(hp.year.actual, 0) + ' 백만', sub: `목표 ${fmtD(hp.year.target, 0)} 백만 · 달성 ${fmtPct(hp.year.rate)}` });
       }
       if (guam) {
-        const gActual = (guam.year.actual / 1000000).toFixed(0);
-        const gTarget = (guam.year.target / 1000000).toFixed(0);
-        items.push({ label: '괌 매출 실적', value: fmtD(guam.year.actual / 1000000, 0) + ' 백만', sub: `목표 ${fmtD(guam.year.target / 1000000, 0)} 백만 · 달성 ${fmtPct(guam.year.rate)}` });
+        items.push({ label: '괌 합계', value: fmtD(guam.year.actual / 1000000, 0) + ' 백만', sub: `목표 ${fmtD(guam.year.target / 1000000, 0)} 백만 · 달성 ${fmtPct(guam.year.rate)}` });
       }
-      if (hp) {
-        items.push({ label: '하이퐁 전년 진도율', value: fmtPct(hp.yoy), sub: `전년 동기간 실적 ${fmtD(hp.prev, 0)} 백만` });
-      }
-      if (guam) {
-        items.push({ label: '괌 전년 진도율', value: fmtPct(guam.yoy), sub: `전년 동기간 실적 ${fmtD(guam.prev / 1000000, 0)} 백만` });
+      if (hw) {
+        const rnRate = hw.total.budget_rn > 0 ? (hw.total.actual_rn / hw.total.budget_rn * 100) : 0;
+        const revRate = hw.total.budget_rev > 0 ? (hw.total.actual_rev / hw.total.budget_rev * 100) : 0;
+        items.push({ label: '하와이 WRH', value: '$' + fmt(hw.total.actual_rev), sub: `Budget $${fmt(hw.total.budget_rev)} · RN 달성 ${fmtPct(rnRate)}` });
       }
 
       banner.innerHTML = items.map(it => `
@@ -1060,6 +1106,300 @@
                 label: ctx => `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()} 천원`
               }
             }
+          },
+          scales: {
+            y: {
+              ticks: { color: 'rgba(255,255,255,0.5)', font: { family: "'JetBrains Mono', monospace", size: 11 }, callback: v => v.toLocaleString() },
+              grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }
+            },
+            x: {
+              ticks: { color: 'rgba(255,255,255,0.7)', font: { family: "'Pretendard Variable', sans-serif", size: 12 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // ── Hawaii ──
+    function renderHawaii() {
+      const hw = DATA.hawaii;
+      if (!hw) return;
+
+      const t = hw.total;
+      const rnRate = t.budget_rn > 0 ? (t.actual_rn / t.budget_rn * 100) : 0;
+      const revRate = t.budget_rev > 0 ? (t.actual_rev / t.budget_rev * 100) : 0;
+      const lyRnRate = t.ly_rn > 0 ? (t.actual_rn / t.ly_rn * 100) : 0;
+      const lyRevRate = t.ly_rev > 0 ? (t.actual_rev / t.ly_rev * 100) : 0;
+
+      // Wholesale summary
+      const ws26 = hw.wholesale['2026'];
+      const ws25 = hw.wholesale['2025'];
+      const wsYoyRn = ws25.ytd_rn > 0 ? ((ws26.ytd_rn - ws25.ytd_rn) / ws25.ytd_rn * 100) : 0;
+
+      // KPI
+      const kpi = document.getElementById('hawaiiKPI');
+      kpi.innerHTML = `
+        <div class="kpi-card">
+          <div class="kpi-label">객실 수 (Room Nights)</div>
+          <div class="kpi-value-row">
+            <div class="kpi-actual">${fmt(t.actual_rn)}</div>
+            <div>
+              <div class="kpi-target-label">Budget</div>
+              <div class="kpi-target">${fmt(t.budget_rn)}</div>
+            </div>
+          </div>
+          <div class="kpi-achievement">
+            <span class="kpi-achievement-rate ${rateClass(rnRate)}">${fmtPct(rnRate)}</span>
+          </div>
+          <div class="kpi-yoy">전년 대비: <span class="${lyRnRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRnRate)}</span> (LY ${fmt(t.ly_rn)} RN)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">객실 매출 (Revenue, USD)</div>
+          <div class="kpi-value-row">
+            <div class="kpi-actual">$${fmt(t.actual_rev)}</div>
+            <div>
+              <div class="kpi-target-label">Budget</div>
+              <div class="kpi-target">$${fmt(t.budget_rev)}</div>
+            </div>
+          </div>
+          <div class="kpi-achievement">
+            <span class="kpi-achievement-rate ${rateClass(revRate)}">${fmtPct(revRate)}</span>
+          </div>
+          <div class="kpi-yoy">전년 대비: <span class="${lyRevRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRevRate)}</span> (LY $${fmt(t.ly_rev)})</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">ADR (Average Daily Rate)</div>
+          <div class="kpi-value-row">
+            <div class="kpi-actual">$${fmtD(t.actual_adr, 2)}</div>
+            <div>
+              <div class="kpi-target-label">Budget</div>
+              <div class="kpi-target">$${fmtD(t.budget_adr, 2)}</div>
+            </div>
+          </div>
+          <div class="kpi-achievement">
+            <span class="kpi-achievement-rate ${t.actual_adr >= t.budget_adr ? 'positive' : 'negative'}">${t.budget_adr > 0 ? fmtPct(t.actual_adr / t.budget_adr * 100) : '-'}</span>
+          </div>
+          <div class="kpi-yoy">전년 ADR: <span class="${t.actual_adr >= t.ly_adr ? 'up' : 'down'}">$${fmtD(t.ly_adr, 2)}</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Wholesale FIT (2026 YTD)</div>
+          <div class="kpi-value-row">
+            <div class="kpi-actual">${fmt(ws26.ytd_rn)} RN</div>
+            <div>
+              <div class="kpi-target-label">매출</div>
+              <div class="kpi-target">$${fmt(ws26.ytd_rev)}</div>
+            </div>
+          </div>
+          <div class="kpi-achievement">
+            <span class="kpi-achievement-rate ${wsYoyRn >= 0 ? 'negative' : 'positive'}">${wsYoyRn >= 0 ? '▼' : '▲'} ${fmtPct(Math.abs(wsYoyRn))} YoY</span>
+          </div>
+          <div class="kpi-yoy">2025 YTD: ${fmt(ws25.ytd_rn)} RN · $${fmt(ws25.ytd_rev)}</div>
+        </div>
+      `;
+
+      // Monthly table
+      const tbody = document.getElementById('hawaiiTableBody');
+      tbody.innerHTML = '';
+      let sumBudRn=0, sumActRn=0, sumBudRev=0, sumActRev=0, sumLyRn=0, sumLyRev=0;
+      hw.monthly.forEach(m => {
+        const rnR = m.budget_rn > 0 ? (m.actual_rn / m.budget_rn * 100) : 0;
+        const revR = m.budget_rev > 0 ? (m.actual_rev / m.budget_rev * 100) : 0;
+        const hasData = m.actual_rn > 0;
+        sumBudRn += m.budget_rn; sumActRn += m.actual_rn;
+        sumBudRev += m.budget_rev; sumActRev += m.actual_rev;
+        sumLyRn += m.ly_rn; sumLyRev += m.ly_rev;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="table-category">${m.month}월</td>
+          <td class="table-number">${fmt(m.budget_rn)}</td>
+          <td class="table-number">${hasData ? fmt(m.actual_rn) : '-'}</td>
+          <td class="table-percent ${hasData ? rateClass(rnR) : ''}">${hasData ? fmtPct(rnR) : '-'}</td>
+          <td class="table-number">$${fmt(m.budget_rev)}</td>
+          <td class="table-number">${hasData ? '$' + fmt(m.actual_rev) : '-'}</td>
+          <td class="table-percent ${hasData ? rateClass(revR) : ''}">${hasData ? fmtPct(revR) : '-'}</td>
+          <td class="table-number">$${fmtD(m.budget_adr, 0)}</td>
+          <td class="table-number">${hasData ? '$' + fmtD(m.actual_adr, 0) : '-'}</td>
+          <td class="table-number">${fmt(m.ly_rn)}</td>
+          <td class="table-number">$${fmt(m.ly_rev)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // Total row
+      const totalTr = document.createElement('tr');
+      totalTr.className = 'total-row';
+      const totalRnR = sumBudRn > 0 ? (sumActRn / sumBudRn * 100) : 0;
+      const totalRevR = sumBudRev > 0 ? (sumActRev / sumBudRev * 100) : 0;
+      totalTr.innerHTML = `
+        <td class="table-category">합계</td>
+        <td class="table-number">${fmt(sumBudRn)}</td>
+        <td class="table-number">${fmt(sumActRn)}</td>
+        <td class="table-percent ${rateClass(totalRnR)}">${fmtPct(totalRnR)}</td>
+        <td class="table-number">$${fmt(sumBudRev)}</td>
+        <td class="table-number">$${fmt(sumActRev)}</td>
+        <td class="table-percent ${rateClass(totalRevR)}">${fmtPct(totalRevR)}</td>
+        <td class="table-number">$${fmtD(t.budget_adr, 0)}</td>
+        <td class="table-number">$${fmtD(t.actual_adr, 0)}</td>
+        <td class="table-number">${fmt(sumLyRn)}</td>
+        <td class="table-number">$${fmt(sumLyRev)}</td>
+      `;
+      tbody.appendChild(totalTr);
+
+      // Revenue chart
+      renderHawaiiChart(hw);
+
+      // Wholesale table
+      renderWholesaleTable(hw);
+      renderWholesaleChart(hw);
+    }
+
+    function renderHawaiiChart(hw) {
+      if (chartInstances.hawaii) chartInstances.hawaii.destroy();
+      const ctx = document.getElementById('hawaiiChart').getContext('2d');
+      const months = hw.monthly.map(m => m.month + '월');
+      const budgetData = hw.monthly.map(m => m.budget_rev);
+      const actualData = hw.monthly.map(m => m.actual_rev || null);
+      const lyData = hw.monthly.map(m => m.ly_rev);
+
+      chartInstances.hawaii = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: '26Y Budget',
+              data: budgetData,
+              backgroundColor: 'rgba(201, 160, 99, 0.3)',
+              borderColor: 'rgba(201, 160, 99, 0.8)',
+              borderWidth: 1
+            },
+            {
+              label: '25Y Actual',
+              data: actualData,
+              backgroundColor: 'rgba(90, 159, 196, 0.6)',
+              borderColor: 'rgba(90, 159, 196, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '24Y (LY)',
+              data: lyData,
+              type: 'line',
+              borderColor: 'rgba(229, 115, 115, 0.7)',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointRadius: 3,
+              pointBackgroundColor: 'rgba(229, 115, 115, 0.7)',
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { family: "'Pretendard Variable', sans-serif", size: 12 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}` } }
+          },
+          scales: {
+            y: {
+              ticks: { color: 'rgba(255,255,255,0.5)', font: { family: "'JetBrains Mono', monospace", size: 11 }, callback: v => '$' + v.toLocaleString() },
+              grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }
+            },
+            x: {
+              ticks: { color: 'rgba(255,255,255,0.7)', font: { family: "'Pretendard Variable', sans-serif", size: 12 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderWholesaleTable(hw) {
+      const tbody = document.getElementById('wholesaleTableBody');
+      tbody.innerHTML = '';
+      const ws26 = hw.wholesale['2026'];
+      const ws25 = hw.wholesale['2025'];
+      const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+      // 2026 RN row
+      let tr = document.createElement('tr');
+      tr.innerHTML = `<td class="table-category">2026 RN</td>` +
+        ws26.monthly_rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">${fmt(ws26.ytd_rn)}</td>`;
+      tbody.appendChild(tr);
+
+      // 2026 REV row
+      tr = document.createElement('tr');
+      tr.innerHTML = `<td class="table-category">2026 Revenue</td>` +
+        ws26.monthly_rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmt(ws26.ytd_rev)}</td>`;
+      tbody.appendChild(tr);
+
+      // 2026 ADR row
+      tr = document.createElement('tr');
+      tr.innerHTML = `<td class="table-category">2026 ADR</td>` +
+        ws26.monthly_adr.map(v => `<td class="table-number">${v > 0 ? '$' + fmtD(v, 0) : '-'}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmtD(ws26.ytd_adr, 0)}</td>`;
+      tbody.appendChild(tr);
+
+      // Separator
+      tr = document.createElement('tr');
+      tr.style.borderTop = '2px solid var(--rule-strong)';
+      tr.innerHTML = `<td class="table-category">2025 RN</td>` +
+        ws25.monthly_rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">${fmt(ws25.ytd_rn)}</td>`;
+      tbody.appendChild(tr);
+
+      tr = document.createElement('tr');
+      tr.innerHTML = `<td class="table-category">2025 Revenue</td>` +
+        ws25.monthly_rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmt(ws25.ytd_rev)}</td>`;
+      tbody.appendChild(tr);
+
+      // YoY change row
+      tr = document.createElement('tr');
+      tr.className = 'total-row';
+      tr.innerHTML = `<td class="table-category">YoY RN 증감</td>` +
+        ws26.monthly_rn.map((v, i) => {
+          const diff = v - ws25.monthly_rn[i];
+          const cls = diff >= 0 ? 'positive' : 'negative';
+          return `<td class="table-percent ${cls}">${diff >= 0 ? '+' : ''}${fmt(diff)}</td>`;
+        }).join('') +
+        `<td class="table-percent ${ws26.ytd_rn >= ws25.ytd_rn ? 'positive' : 'negative'}" style="font-weight:600;">${ws26.ytd_rn >= ws25.ytd_rn ? '+' : ''}${fmt(ws26.ytd_rn - ws25.ytd_rn)}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    function renderWholesaleChart(hw) {
+      if (chartInstances.wholesale) chartInstances.wholesale.destroy();
+      const ctx = document.getElementById('wholesaleChart').getContext('2d');
+      const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+      chartInstances.wholesale = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: '2025 RN',
+              data: hw.wholesale['2025'].monthly_rn,
+              backgroundColor: 'rgba(201, 160, 99, 0.4)',
+              borderColor: 'rgba(201, 160, 99, 0.8)',
+              borderWidth: 1
+            },
+            {
+              label: '2026 RN',
+              data: hw.wholesale['2026'].monthly_rn,
+              backgroundColor: 'rgba(90, 159, 196, 0.6)',
+              borderColor: 'rgba(90, 159, 196, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { family: "'Pretendard Variable', sans-serif", size: 12 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} RN` } }
           },
           scales: {
             y: {
