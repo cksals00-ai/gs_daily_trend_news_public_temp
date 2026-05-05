@@ -922,11 +922,15 @@ def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
     mk_26 = f"2026{month_idx:02d}"
     mk_25 = f"2025{month_idx:02d}"
 
-    # 과거월: 전체 2025 데이터 사용
+    all_props = [p for _, _, _, props in PROPERTY_DEFS for p in props]
+
+    # 과거월: 전체 2025 데이터 사용 (OTA+G-OTA+Inbound만)
     if month_idx < cur_month:
-        ly_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
-        ly_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
-        return ly_rn, ly_rev
+        if db_bps is not None:
+            d = sum_db_segments(db_bps, all_props, mk_25)
+        else:
+            d = sum_db(db_bp, all_props, mk_25)
+        return d["rn"], d["rev_m"]
 
     # 현재월 또는 미래월: 진행률 기반 스케일링
     if month_idx == cur_month:
@@ -934,21 +938,19 @@ def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
         days_in_month = calendar.monthrange(2026, month_idx)[1]
         elapsed_ratio = now_kst.day / days_in_month
 
-        # 2025년 같은 월의 동기간 데이터 (현재 진행률까지만)
-        # 주의: 원본 데이터가 booking_date별 분해 정보가 없으므로 근사치 사용
-        # 실제로는 booking_date를 필터링해야 하는데, 월 aggregate 데이터만 있음
-        ly_all_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
-        ly_all_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
+        # 2025년 같은 월의 동기간 데이터 (OTA+G-OTA+Inbound만)
+        if db_bps is not None:
+            d = sum_db_segments(db_bps, all_props, mk_25)
+        else:
+            d = sum_db(db_bp, all_props, mk_25)
+        return d["rn"], d["rev_m"]
 
-        # 간단한 근사: 진행률로 2025년 데이터를 스케일
-        # (이상적으로는 2025-01-01 ~ 2025-04-29의 booking_date 필터링)
-        # 현재 구조에서는 그대로 반환 (동일월의 전체 데이터)
-        return ly_all_rn, ly_all_rev
-
-    # 미래월: 전체 2025 데이터 사용 (예측이므로)
-    ly_rn = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rn"]
-    ly_rev = sum_db(db_bp, [p for _, _, _, props in PROPERTY_DEFS for p in props], mk_25)["rev_m"]
-    return ly_rn, ly_rev
+    # 미래월: 전체 2025 데이터 사용 (OTA+G-OTA+Inbound만)
+    if db_bps is not None:
+        d = sum_db_segments(db_bps, all_props, mk_25)
+    else:
+        d = sum_db(db_bp, all_props, mk_25)
+    return d["rn"], d["rev_m"]
 
 
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
@@ -971,7 +973,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
             mk_25 = f"2025{m:02d}"
             bud_label = BUDGET_MONTH_LABEL[m - 1]
 
-            act_rn = sum_db(db_bp, db_props, mk_26)["rn"]
+            act_rn = sum_db_segments(db_bps, db_props, mk_26)["rn"]
 
             # 전년 보정값 포함
             base_rn = 0
@@ -981,7 +983,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 base_rn += adj_m.get("booking_rn", 0)
                 adj_rn  += adj_m.get("adjustment_rn", 0)
             if base_rn == 0:
-                base_rn = sum_db(db_bp, db_props, mk_25)["rn"]
+                base_rn = sum_db_segments(db_bps, db_props, mk_25)["rn"]
 
             if seg_budgets:
                 bud_rn = sum_seg_budget(seg_budgets, display_name, [bud_label])["rn"]
@@ -1759,9 +1761,12 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_pr
             if adj_by_prop:
                 for pname in db_props:
                     adj_m = adj_by_prop.get(pname, {}).get(mk_25, {})
-                    lst_rn += adj_m.get("booking_rn", 0) if adj_m else sum_db(db_bp, [pname], mk_25)["rn"]
+                    lst_rn += adj_m.get("booking_rn", 0) if adj_m else sum_db_segments(db_bps, [pname], mk_25)["rn"] if db_bps else sum_db(db_bp, [pname], mk_25)["rn"]
             else:
-                d_last = sum_db(db_bp, db_props, mk_25)
+                if db_bps is not None:
+                    d_last = sum_db_segments(db_bps, db_props, mk_25)
+                else:
+                    d_last = sum_db(db_bp, db_props, mk_25)
                 lst_rn += d_last["rn"]
         result.append({
             "month": i + 1,
