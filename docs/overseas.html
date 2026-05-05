@@ -1320,55 +1320,64 @@
     function renderWholesaleTable(hw) {
       const tbody = document.getElementById('wholesaleTableBody');
       tbody.innerHTML = '';
-      const ws26 = hw.wholesale['2026'];
-      const ws25 = hw.wholesale['2025'];
-      const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      const ws26 = hw.wholesale['2026']||{};
+      const ws25 = hw.wholesale['2025']||{};
+      const m26rn=ws26.monthly_rn||[], m26rev=ws26.monthly_rev||[], m26adr=ws26.monthly_adr||[];
+      const m25rn=ws25.monthly_rn||[], m25rev=ws25.monthly_rev||[];
+      const hasMonthly=m26rn.length>0;
+
+      if(!hasMonthly){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td class="table-category" colspan="14" style="text-align:center;color:var(--ink-faint)">YTD 요약: 2026 RN ${fmt(ws26.ytd_rn||0)} / REV $${fmt(ws26.ytd_rev||0)} — 2025 RN ${fmt(ws25.ytd_rn||0)} / REV $${fmt(ws25.ytd_rev||0)}</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
 
       // 2026 RN row
       let tr = document.createElement('tr');
       tr.innerHTML = `<td class="table-category">2026 RN</td>` +
-        ws26.monthly_rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
-        `<td class="table-number" style="font-weight:600;">${fmt(ws26.ytd_rn)}</td>`;
+        m26rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">${fmt(ws26.ytd_rn||0)}</td>`;
       tbody.appendChild(tr);
 
       // 2026 REV row
       tr = document.createElement('tr');
       tr.innerHTML = `<td class="table-category">2026 Revenue</td>` +
-        ws26.monthly_rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
-        `<td class="table-number" style="font-weight:600;">$${fmt(ws26.ytd_rev)}</td>`;
+        m26rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmt(ws26.ytd_rev||0)}</td>`;
       tbody.appendChild(tr);
 
       // 2026 ADR row
       tr = document.createElement('tr');
       tr.innerHTML = `<td class="table-category">2026 ADR</td>` +
-        ws26.monthly_adr.map(v => `<td class="table-number">${v > 0 ? '$' + fmtD(v, 0) : '-'}</td>`).join('') +
-        `<td class="table-number" style="font-weight:600;">$${fmtD(ws26.ytd_adr, 0)}</td>`;
+        m26adr.map(v => `<td class="table-number">${v > 0 ? '$' + fmtD(v, 0) : '-'}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmtD(ws26.ytd_adr||0, 0)}</td>`;
       tbody.appendChild(tr);
 
       // Separator
       tr = document.createElement('tr');
       tr.style.borderTop = '2px solid var(--rule-strong)';
       tr.innerHTML = `<td class="table-category">2025 RN</td>` +
-        ws25.monthly_rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
-        `<td class="table-number" style="font-weight:600;">${fmt(ws25.ytd_rn)}</td>`;
+        m25rn.map(v => `<td class="table-number">${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">${fmt(ws25.ytd_rn||0)}</td>`;
       tbody.appendChild(tr);
 
       tr = document.createElement('tr');
       tr.innerHTML = `<td class="table-category">2025 Revenue</td>` +
-        ws25.monthly_rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
-        `<td class="table-number" style="font-weight:600;">$${fmt(ws25.ytd_rev)}</td>`;
+        m25rev.map(v => `<td class="table-number">$${fmt(v)}</td>`).join('') +
+        `<td class="table-number" style="font-weight:600;">$${fmt(ws25.ytd_rev||0)}</td>`;
       tbody.appendChild(tr);
 
       // YoY change row
       tr = document.createElement('tr');
       tr.className = 'total-row';
       tr.innerHTML = `<td class="table-category">YoY RN 증감</td>` +
-        ws26.monthly_rn.map((v, i) => {
-          const diff = v - ws25.monthly_rn[i];
+        m26rn.map((v, i) => {
+          const diff = v - (m25rn[i]||0);
           const cls = diff >= 0 ? 'positive' : 'negative';
           return `<td class="table-percent ${cls}">${diff >= 0 ? '+' : ''}${fmt(diff)}</td>`;
         }).join('') +
-        `<td class="table-percent ${ws26.ytd_rn >= ws25.ytd_rn ? 'positive' : 'negative'}" style="font-weight:600;">${ws26.ytd_rn >= ws25.ytd_rn ? '+' : ''}${fmt(ws26.ytd_rn - ws25.ytd_rn)}</td>`;
+        `<td class="table-percent ${(ws26.ytd_rn||0) >= (ws25.ytd_rn||0) ? 'positive' : 'negative'}" style="font-weight:600;">${(ws26.ytd_rn||0) >= (ws25.ytd_rn||0) ? '+' : ''}${fmt((ws26.ytd_rn||0) - (ws25.ytd_rn||0))}</td>`;
       tbody.appendChild(tr);
     }
 
@@ -1384,14 +1393,14 @@
           datasets: [
             {
               label: '2025 RN',
-              data: hw.wholesale['2025'].monthly_rn,
+              data: (hw.wholesale['2025']||{}).monthly_rn||[],
               backgroundColor: 'rgba(201, 160, 99, 0.4)',
               borderColor: 'rgba(201, 160, 99, 0.8)',
               borderWidth: 1
             },
             {
               label: '2026 RN',
-              data: hw.wholesale['2026'].monthly_rn,
+              data: (hw.wholesale['2026']||{}).monthly_rn||[],
               backgroundColor: 'rgba(90, 159, 196, 0.6)',
               borderColor: 'rgba(90, 159, 196, 1)',
               borderWidth: 1
