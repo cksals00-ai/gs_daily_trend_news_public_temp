@@ -4616,20 +4616,23 @@ function buildHawaiiView(od){
 
   let right;
   if(curOBSeg==='Wholesale'&&ws){
+    const r26=ws['2026']||{},r25=ws['2025']||{};
     let tbody='';
-    for(let i=0;i<12;i++){
-      if(curOBMonth>0&&(i+1)!==curOBMonth)continue;
-      const r26=ws['2026'],r25=ws['2025'];
-      tbody+=`<tr><td>${i+1}월</td>
-        <td>${(r26.monthly_rn[i]||0).toLocaleString()}</td><td>$${(r26.monthly_adr[i]||0).toFixed(0)}</td><td>${obFmtUSD(r26.monthly_rev[i])}</td>
-        <td>${(r25.monthly_rn[i]||0).toLocaleString()}</td><td>$${(r25.monthly_adr[i]||0).toFixed(0)}</td><td>${obFmtUSD(r25.monthly_rev[i])}</td></tr>`;
+    if(r26.monthly_rn&&r26.monthly_rn.length){
+      for(let i=0;i<12;i++){
+        if(curOBMonth>0&&(i+1)!==curOBMonth)continue;
+        tbody+=`<tr><td>${i+1}월</td>
+          <td>${((r26.monthly_rn||[])[i]||0).toLocaleString()}</td><td>$${((r26.monthly_adr||[])[i]||0).toFixed(0)}</td><td>${obFmtUSD((r26.monthly_rev||[])[i])}</td>
+          <td>${((r25.monthly_rn||[])[i]||0).toLocaleString()}</td><td>$${((r25.monthly_adr||[])[i]||0).toFixed(0)}</td><td>${obFmtUSD((r25.monthly_rev||[])[i])}</td></tr>`;
+      }
     }
     const summ=`<div style="display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px">
-      <div><span style="color:var(--ink-faint)">2026 YTD:</span> <span style="font-weight:700">RN ${ws['2026'].ytd_rn.toLocaleString()} · ADR $${ws['2026'].ytd_adr.toFixed(0)} · ${obFmtUSD(ws['2026'].ytd_rev)}</span></div>
-      <div><span style="color:var(--ink-faint)">2025 YTD:</span> <span style="color:var(--ink-muted)">RN ${ws['2025'].ytd_rn.toLocaleString()} · ADR $${ws['2025'].ytd_adr.toFixed(0)} · ${obFmtUSD(ws['2025'].ytd_rev)}</span></div>
+      <div><span style="color:var(--ink-faint)">2026 YTD:</span> <span style="font-weight:700">RN ${(r26.ytd_rn||0).toLocaleString()} · ${obFmtUSD(r26.ytd_rev)}</span></div>
+      <div><span style="color:var(--ink-faint)">2025 YTD:</span> <span style="color:var(--ink-muted)">RN ${(r25.ytd_rn||0).toLocaleString()} · ${obFmtUSD(r25.ytd_rev)}</span></div>
     </div>`;
-    right=buildOBDetailCard('Wholesale 월별 상세','단위: USD',
-      ['월','2026 RN','ADR','REV','2025 RN','ADR','REV'],tbody,summ);
+    right=tbody?buildOBDetailCard('Wholesale 월별 상세','단위: USD',
+      ['월','2026 RN','ADR','REV','2025 RN','ADR','REV'],tbody,summ)
+      :buildOBDetailCard('Wholesale YTD 요약','단위: USD',[],[],summ);
   } else {
     let tbody='';
     hw.monthly.forEach(m=>{
