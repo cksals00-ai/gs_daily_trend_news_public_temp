@@ -800,6 +800,33 @@ def load_segment_fcst():
     return out
 
 
+def sum_rm_seg_fcst(seg_fcst_data, display_name, ym):
+    """fcst_segment_trend.json snapshot에서 OTA+G-OTA+Inbound 3개 세그의 rm_fcst_rn / rm_budget_rn 합산.
+    기타(Direct) 제외. 대시보드 실적/budget이 OTA+G-OTA+Inbound 기준이므로 RM FCST도 동일 base 유지.
+    Returns: (rm_fcst_rn_sum or None, rm_budget_rn_sum or None)
+    """
+    rm_block = seg_fcst_data.get("rm_seg_fcst", {}).get(display_name, {}).get(ym, {})
+    if not rm_block:
+        return None, None
+    fcst_sum = 0
+    bud_sum = 0
+    has_fcst = False
+    has_bud = False
+    for seg in ("OTA", "G-OTA", "Inbound"):
+        s = rm_block.get(seg)
+        if not isinstance(s, dict):
+            continue
+        v_f = s.get("rm_fcst_rn")
+        v_b = s.get("rm_budget_rn")
+        if v_f is not None:
+            fcst_sum += int(v_f)
+            has_fcst = True
+        if v_b is not None:
+            bud_sum += int(v_b)
+            has_bud = True
+    return (fcst_sum if has_fcst else None, bud_sum if has_bud else None)
+
+
 def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_int=None,
                  s_bud_rn=0, s_lst_rn=0):
     """단일 (사업장, 월, 세그)에 대한 FCST RN 결정. 우선순위:
@@ -1271,12 +1298,10 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 ly_pickup_ratio=pickup_ratio,
             )
 
-            # RM FCST: data/rm_fcst.json (Revenue Meeting PDF 파싱) 사업장×월 값 그대로.
-            # 사업계획 budget(rns_budget)과는 base가 다른 별도 지표 (분배 X).
+            # RM FCST: fcst_segment_trend.json snapshot에서 OTA+G-OTA+Inbound 3개 세그합.
+            # 대시보드 실적/budget이 OTA+G-OTA+Inbound 기준이라 RM FCST도 동일 base. 분배 X.
             rm_key = f"2026-{month_idx:02d}"
-            rm_entry = rm_fcst_props.get(display_name, {}).get(rm_key, {})
-            rm_rn_prop = rm_entry.get("rm_fcst_rn")
-            rm_budget_prop = rm_entry.get("budget_rn")  # RM 회의 budget
+            rm_rn_prop, rm_budget_prop = sum_rm_seg_fcst(seg_fcst_data, display_name, rm_key)
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
 
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
@@ -1341,11 +1366,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     ai_fcst_lo += mi_lo if mi_lo is not None else 0
                     ai_fcst_hi += mi_hi if mi_hi is not None else 0
 
-                # RM FCST (월별 합산): rm_fcst.json 사업장×월 값 그대로 합산
+                # RM FCST (월별 합산): fcst_segment_trend.json OTA+G-OTA+Inbound 세그합
                 mi_rm_key = f"2026-{mi:02d}"
-                mi_rm_entry = rm_fcst_props.get(display_name, {}).get(mi_rm_key, {})
-                mi_rm_rn = mi_rm_entry.get("rm_fcst_rn")
-                mi_rm_bud = mi_rm_entry.get("budget_rn")
+                mi_rm_rn, mi_rm_bud = sum_rm_seg_fcst(seg_fcst_data, display_name, mi_rm_key)
                 if mi_rm_rn is not None:
                     rm_rn_prop_sum += mi_rm_rn
                     rm_rn_prop_has = True
