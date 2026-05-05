@@ -2275,7 +2275,16 @@ def render_yoy_property_table(yoy_table: list, base_date: str, rm_fcst_data: dic
                     fcst_html = ""
                 rm_key = f"2026-{m:02d}"
                 rm_entry = rm_props.get(row.get("name", ""), {}).get(rm_key, {})
-                rm_rn = rm_entry.get("rm_fcst_rn")
+                # RM FCST: 세그먼트 합(OTA+G-OTA+Inbound) 사용, 총량 사용 금지
+                rm_segments = rm_entry.get("segments", {})
+                if rm_segments:
+                    seg_sum = sum(
+                        s.get("rm_fcst_rn", 0) or 0
+                        for s in rm_segments.values()
+                    )
+                    rm_rn = seg_sum if seg_sum > 0 else None
+                else:
+                    rm_rn = md.get("rm_fcst_rn")  # yoyTable 원본 폴백
                 if rm_rn is not None and bud > 0:
                     rm_ach = round(rm_rn / bud * 100, 1)
                     rm_html = (
