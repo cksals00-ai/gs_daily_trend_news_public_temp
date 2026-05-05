@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인바운드 전략여행사 키인 · GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;--bg-card:#1a1d23;--bg-deep:#0d1117;--bg-soft:#22272e;--bg-hover:#2d333b;
+  --ink:#e8e6e1;--ink-soft:#d4d2c8;--ink-muted:#9e9b93;--ink-faint:#6e6c62;
+  --gold:#c9a063;--gold-bright:#e6b970;--gold-dim:rgba(201,160,99,0.15);
+  --positive:#4caf6f;--positive-bg:#1f3a28;
+  --warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;
+  --info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.08);--rule-strong:rgba(255,255,255,0.18);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;word-break:keep-all}
+
+/* MASTHEAD */
+.masthead{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:10px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.mast-inner{max-width:1500px;margin:0 auto;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.logo{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}
+.mast-title{font-size:13px;color:var(--ink-soft);font-weight:600}
+.mast-left{display:flex;align-items:center;gap:12px}
+.mast-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mast-ts{font-size:11px;color:var(--ink-faint);font-family:var(--mono)}
+
+.btn{padding:6px 14px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-weight:600;font-size:12px;border-radius:4px;cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.btn:hover{color:var(--ink);border-color:var(--gold);background:var(--gold-dim)}
+.btn-gold{background:var(--gold);color:var(--bg-deep);border-color:var(--gold)}
+.btn-gold:hover{background:var(--gold-bright)}
+.btn-positive{border-color:var(--positive);color:var(--positive)}
+.btn-positive:hover{background:var(--positive-bg)}
+.btn-sm{padding:3px 9px;font-size:10.5px}
+
+.content{max-width:1500px;margin:0 auto;padding:18px 22px 60px}
+
+/* Year tabs */
+.year-tabs{display:flex;gap:4px;margin-bottom:18px;background:var(--bg-soft);padding:4px;border-radius:8px;width:fit-content}
+.year-tab{padding:7px 22px;border:none;background:transparent;color:var(--ink-muted);font-weight:600;font-size:13px;cursor:pointer;border-radius:6px;transition:all .15s;font-family:var(--sans)}
+.year-tab:hover{color:var(--ink)}
+.year-tab.active{background:var(--bg-card);color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.year-tab .yr-meta{font-family:var(--mono);font-size:10px;opacity:.7;margin-left:8px}
+
+/* KPI summary */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.kpi-cell{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:11px 14px}
+.kpi-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink-faint);font-weight:700;text-transform:uppercase;margin-bottom:5px}
+.kpi-value{font-family:var(--mono);font-size:21px;font-weight:800;line-height:1.05}
+.kpi-value .unit{font-size:12px;color:var(--ink-faint);font-weight:500;margin-left:3px}
+.kpi-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-top:4px}
+.kpi-sub .pos{color:var(--positive)}.kpi-sub .neg{color:var(--negative)}
+
+/* Property chips */
+.prop-bar{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.prop-bar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.prop-bar-label{font-family:var(--mono);font-size:10.5px;color:var(--gold-bright);letter-spacing:.1em;font-weight:700;text-transform:uppercase}
+.prop-bar-search{padding:4px 9px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:11.5px;width:140px;font-family:var(--sans);outline:none}
+.prop-bar-search:focus{border-color:var(--gold)}
+.prop-chips{display:flex;flex-wrap:wrap;gap:5px}
+.prop-chip{padding:5px 11px;border-radius:14px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-size:11.5px;font-weight:600;cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
+.prop-chip:hover{color:var(--ink);border-color:var(--ink-muted)}
+.prop-chip.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-bright)}
+.prop-chip .pc-strat{font-family:var(--mono);font-size:9.5px;background:rgba(76,175,111,.18);color:var(--positive);padding:1px 5px;border-radius:8px;font-weight:700}
+.prop-chip.active .pc-strat{background:rgba(76,175,111,.35)}
+
+/* Property panel */
+.prop-panel{background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.pp-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between}
+.pp-title{font-size:18px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:10px}
+.pp-title .yr-badge{font-family:var(--mono);font-size:11px;background:var(--gold-dim);color:var(--gold-bright);padding:3px 10px;border-radius:4px;letter-spacing:.05em}
+.pp-meta{display:grid;grid-template-columns:repeat(3,auto);gap:14px;align-items:center}
+.pp-meta-cell{font-size:11px}
+.pp-meta-cell .lbl{color:var(--ink-faint);font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.pp-meta-cell .val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--ink)}
+.pp-meta-cell .val .delta{font-size:10.5px;margin-left:5px}
+.pp-meta-cell .val .pos{color:var(--positive)}.pp-meta-cell .val .neg{color:var(--negative)}
+
+.pp-context{padding:11px 18px;background:var(--bg-soft);border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px}
+.pp-ctx-block{}
+.pp-ctx-label{font-family:var(--mono);font-size:9.5px;color:var(--gold-bright);letter-spacing:.08em;font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.pp-ctx-text{color:var(--ink-soft);line-height:1.5}
+.pp-ctx-text.muted{color:var(--ink-faint);font-style:italic}
+
+/* Country group */
+.country-group{border-bottom:1px solid var(--rule)}
+.country-group:last-child{border-bottom:none}
+.cg-head{padding:9px 18px;background:var(--bg-deep);display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;user-select:none}
+.cg-head:hover{background:var(--bg-hover)}
+.cg-title{font-weight:700;font-size:13px;color:var(--gold-bright);display:flex;align-items:center;gap:8px}
+.cg-title .flag{font-size:14px}
+.cg-title .arrow{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-right:6px;transition:transform .15s}
+.country-group.collapsed .cg-title .arrow{transform:rotate(-90deg)}
+.cg-stats{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--ink-muted)}
+.cg-stats strong{color:var(--ink);font-weight:700}
+.cg-body{padding:0}
+.country-group.collapsed .cg-body{display:none}
+
+/* Agency table */
+.ag-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ag-tbl th{background:var(--bg-soft);padding:7px 9px;font-weight:600;color:var(--ink-muted);text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+.ag-tbl th:first-child,.ag-tbl th.left{text-align:left}
+.ag-tbl td{padding:7px 9px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:11.5px;white-space:nowrap;vertical-align:middle}
+.ag-tbl td.left{text-align:left;font-family:var(--sans);color:var(--ink-soft);font-weight:500}
+.ag-tbl tr:hover{background:var(--bg-hover)}
+.ag-tbl tr.is-strategic{background:rgba(201,160,99,.04)}
+.ag-tbl tr.is-strategic:hover{background:rgba(201,160,99,.09)}
+.ag-tbl tr.unmatched td.left{color:var(--ink-muted);font-style:italic}
+.ag-tbl tr.unmatched td.left::after{content:' (그룹)';font-size:10px;color:var(--ink-faint);font-style:italic}
+
+/* Strategic toggle */
+.toggle-pill{display:inline-flex;align-items:center;gap:0;border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;font-family:var(--sans);font-size:10.5px;font-weight:700;cursor:pointer}
+.toggle-pill .tg{padding:3px 11px;color:var(--ink-faint);background:transparent;transition:all .12s}
+.toggle-pill .tg.on.strat{background:var(--gold);color:var(--bg-deep)}
+.toggle-pill .tg.on.norm{background:var(--bg-hover);color:var(--ink)}
+.toggle-pill:hover{border-color:var(--gold)}
+
+/* Mini-spark */
+.spark-cell{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);white-space:nowrap}
+.spark-cell .month{display:inline-block;width:14px;text-align:center}
+.spark-cell .month.high{color:var(--positive);font-weight:700}
+.spark-cell .month.zero{color:var(--ink-faint);opacity:.4}
+
+/* Diff cell — 26 도전 vs 25 actual */
+.diff-pos{color:var(--positive)}
+.diff-neg{color:var(--negative)}
+.diff-na{color:var(--ink-faint)}
+.cell-empty{color:var(--ink-faint);font-style:italic}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--positive);color:#fff;padding:9px 18px;border-radius:6px;font-weight:600;font-size:12px;z-index:999;animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+
+/* Add agency mini-form */
+.add-agency-row{padding:8px 18px;background:var(--bg-soft);display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid var(--rule)}
+.add-agency-row input,.add-agency-row select{padding:4px 8px;background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:11.5px;font-family:var(--sans);outline:none}
+.add-agency-row input:focus,.add-agency-row select:focus{border-color:var(--gold)}
+.add-agency-row .lbl{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);font-weight:700;letter-spacing:.05em}
+
+/* Empty state */
+.empty-state{padding:40px 20px;text-align:center;color:var(--ink-muted);font-size:12px}
+.empty-state-icon{font-size:24px;margin-bottom:8px}
+
+/* Note bar */
+.note-bar{background:var(--info-bg);border-left:3px solid var(--info);padding:8px 14px;font-size:11.5px;color:var(--ink-soft);margin-bottom:14px;border-radius:0 4px 4px 0;line-height:1.55}
+.note-bar.warn{background:var(--warning-bg);border-left-color:var(--warning)}
+.note-bar strong{color:var(--ink)}
+
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .pp-meta{grid-template-columns:1fr 1fr}
+  .pp-context{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="mast-inner">
+    <div class="mast-left">
+      <span class="logo">GS HOTELS</span>
+      <span class="mast-title">인바운드 전략여행사 키인 · 연도별 사업장 관리</span>
+    </div>
+    <div class="mast-right">
+      <a href="admin.html" class="btn">← 관리자</a>
+      <span class="mast-ts" id="lastSaved"></span>
+      <button class="btn" onclick="saveLocal()">💾 로컬 저장</button>
+      <button class="btn btn-gold" onclick="exportJson()">📤 JSON 내보내기</button>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="note-bar">
+    <strong>운영 안내</strong> · 사업장별·연도별로 전략여행사를 지정하면 세일즈 리포트(인바운드 도전목표 카드)에 별도 색으로 노출됩니다.
+    26년 초기값은 <code style="font-family:var(--mono);background:var(--bg-soft);padding:1px 5px;border-radius:3px">월별 KPI(도전목표) 시트</code>의 <em>전략</em> 표시로 사전 셋팅되어 있습니다.
+    27년부터는 직접 토글하며, <strong>26년 도전목표 + 25년 실적 + DB 누적 RN</strong>이 함께 노출되어 의사결정을 돕습니다.
+  </div>
+
+  <div class="year-tabs" id="yearTabs"></div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="prop-bar">
+    <div class="prop-bar-head">
+      <span class="prop-bar-label">사업장 선택</span>
+      <input type="search" id="propSearch" class="prop-bar-search" placeholder="사업장명…" oninput="renderPropChips()">
+    </div>
+    <div class="prop-chips" id="propChips"></div>
+  </div>
+
+  <div id="propPanel">
+    <div class="empty-state">
+      <div class="empty-state-icon">⏳</div>
+      <div>데이터 로딩 중…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ── State ───────────────────────────────────── */
+const STORAGE_KEY = 'gs_inbound_strategic_v1';
+const COUNTRY_FLAGS = {
+  '대만':'🇹🇼','중국':'🇨🇳','홍콩':'🇭🇰','일본':'🇯🇵','베트남':'🇻🇳','말레이시아':'🇲🇾',
+  '싱가폴':'🇸🇬','싱가포르':'🇸🇬','인도네시아':'🇮🇩','태국':'🇹🇭','필리핀':'🇵🇭',
+  '미주':'🇺🇸','미국':'🇺🇸','호주':'🇦🇺','유럽/호주':'🇪🇺','유럽':'🇪🇺',
+  '기타':'🌐'
+};
+const PROP_ORDER = ["고양","해운대","비발디","단양","여수","델피노","삼척","벨제주","양평","캄제주","천안","변산","거제","청송","양양","경주","진도","남해"];
+
+let kpiData      = null;  // inbound_kpi.json
+let enrichedData = null;  // inbound_enriched.json (실적 보조)
+let strategicMap = {};    // { '2026': { '고양': ['화동여행사', ...], ... }, '2027': ... }
+
+let curYear = '2026';
+let curProperty = null;
+let collapsedCountries = new Set();  // 국가별 접기 상태
+let propSearch = '';
+
+const fmt    = n => (n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR');
+const fmtDec = (n,d=1) => (n==null||isNaN(n))?'—':Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+
+/* ── 데이터 로드 ──────────────────────────────── */
+async function loadAll(){
+  try{
+    const [k, e] = await Promise.all([
+      fetch('data/inbound_kpi.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null),
+      fetch('data/inbound_enriched.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null)
+    ]);
+    kpiData = k;
+    enrichedData = e;
+  }catch(err){
+    console.error('[InboundStrategyKeyin] 데이터 로드 실패:', err);
+  }
+  if(!kpiData){
+    document.getElementById('propPanel').innerHTML =
+      `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>data/inbound_kpi.json 을 불러오지 못했습니다.<br>scripts/build_inbound_kpi.py 실행 후 새로고침하세요.</div></div>`;
+    return;
+  }
+  // 전략여행사 키인 데이터 — localStorage 우선, 없으면 inbound_kpi.json 의 26년 초기값
+  loadStrategicMap();
+  // 27년 슬롯이 없으면 자동 추가 (빈 dict)
+  if(!strategicMap['2027']) strategicMap['2027'] = {};
+  initUI();
+}
+
+function loadStrategicMap(){
+  let stored = null;
+  try{ stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }catch{}
+  if(stored && stored.by_year){
+    strategicMap = stored.by_year;
+  }else{
+    // 초기값: kpiData.strategic_agencies_2026
+    strategicMap = { '2026': { ...(kpiData.strategic_agencies_2026 || {}) } };
+  }
+  // 표시용으로 모든 연도에 키 보장
+  if(!strategicMap['2026']) strategicMap['2026'] = { ...(kpiData.strategic_agencies_2026 || {}) };
+}
+
+function saveLocal(){
+  const payload = {
+    version: '1.0',
+    updated_at: new Date().toISOString(),
+    by_year: strategicMap
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  document.getElementById('lastSaved').textContent = '저장: '+new Date().toLocaleTimeString('ko-KR');
+  toast('로컬 저장 완료');
+}
+
+function exportJson(){
+  const payload = {
+    version: '1.0',
+    updated_at: new Date().toISOString(),
+    updated_by: '',
+    _description: '인바운드 전략여행사 연도별 지정. 세일즈 리포트(인바운드 도전목표 카드)가 이 파일을 읽어 전략/일반 구분 표기.',
+    by_year: strategicMap
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'inbound_strategic_agencies.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('JSON 내보내기 — data/ 폴더에 inbound_strategic_agencies.json 으로 저장하세요');
+}
+
+function toast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+/* ── 토글 동작 ────────────────────────────────── */
+function isStrategic(year, prop, agency){
+  return (strategicMap[year]?.[prop] || []).includes(agency);
+}
+
+function setStrategic(year, prop, agency, on){
+  if(!strategicMap[year]) strategicMap[year] = {};
+  const list = strategicMap[year][prop] || [];
+  const idx = list.indexOf(agency);
+  if(on && idx<0) list.push(agency);
+  if(!on && idx>=0) list.splice(idx, 1);
+  strategicMap[year][prop] = list;
+  // 즉시 로컬 저장 (잃어버리지 않도록)
+  saveLocal();
+  renderKpiRow();
+  renderPropChips();
+  renderPropPanel();
+}
+
+/* ── 사업장별 grid 추출 (kpiData.grid 기반) ── */
+function getPropertyGrid(prop){
+  if(!kpiData) return [];
+  return kpiData.grid.filter(g => g.property === prop);
+}
+
+/* 사업장별 거래처 그룹핑 (국가→agency rows) */
+function groupByCountry(rows){
+  const out = {};
+  rows.forEach(r => {
+    if(!out[r.country]) out[r.country] = [];
+    out[r.country].push(r);
+  });
+  // 국가별 stretch 합 내림차순
+  return Object.entries(out)
+    .map(([country, items]) => {
+      items.sort((a,b)=>(b.stretch.total||0)-(a.stretch.total||0));
+      const sum = items.reduce((s,it)=>s+(it.stretch.total||0), 0);
+      const sumB = items.reduce((s,it)=>s+(it.budget.total||0), 0);
+      return { country, items, sum, sumB };
+    })
+    .sort((a,b)=>b.sum-a.sum);
+}
+
+/* DB 실적 lookup */
+function getEnrichedActual(agency){
+  if(!enrichedData?.by_partner_nationality) return null;
+  const nats = enrichedData.by_partner_nationality[agency];
+  if(!nats) return null;
+  // 모든 국적 합산
+  let rn=0, rev=0, years_rn={};
+  Object.values(nats).forEach(d => {
+    rn  += d.rn_net  || 0;
+    rev += d.rev_net || 0;
+    Object.entries(d.years_rn||{}).forEach(([y,c])=>{
+      years_rn[y] = (years_rn[y]||0) + c;
+    });
+  });
+  return { rn_net: rn, rev_net: rev, years_rn };
+}
+
+/* ── 렌더 ────────────────────────────────────── */
+function initUI(){
+  // 첫 활성 사업장 = 고양 (비어있을 시 첫번째)
+  const props = (kpiData?.grid || []).map(g=>g.property);
+  const uniqProps = PROP_ORDER.filter(p => props.includes(p));
+  curProperty = uniqProps[0] || PROP_ORDER[0];
+  renderYearTabs();
+  renderKpiRow();
+  renderPropChips();
+  renderPropPanel();
+}
+
+function renderYearTabs(){
+  const years = Object.keys(strategicMap).filter(y=>y).sort();
+  if(!years.includes('2026')) years.unshift('2026');
+  if(!years.includes('2027')) years.push('2027');
+  // 다음 해 추가 버튼
+  const html = years.map(y => {
+    const n = Object.values(strategicMap[y]||{}).reduce((s,a)=>s+(a?.length||0), 0);
+    return `<button class="year-tab${y===curYear?' active':''}" onclick="switchYear('${y}')">${y}년<span class="yr-meta">${n}개사</span></button>`;
+  }).join('');
+  const addBtn = `<button class="year-tab" onclick="addYear()" title="다음 연도 추가" style="color:var(--ink-faint)">+</button>`;
+  document.getElementById('yearTabs').innerHTML = html + addBtn;
+}
+
+function switchYear(y){
+  curYear = y;
+  renderYearTabs();
+  renderKpiRow();
+  renderPropChips();
+  renderPropPanel();
+}
+
+function addYear(){
+  const years = Object.keys(strategicMap).map(Number).filter(n=>!isNaN(n));
+  const next = (years.length?Math.max(...years):2026) + 1;
+  if(strategicMap[next]){ toast(next+'년 이미 있음'); return; }
+  strategicMap[next] = {};
+  saveLocal();
+  curYear = String(next);
+  renderYearTabs();
+  renderPropPanel();
+}
+
+function renderKpiRow(){
+  const totals = kpiData?.totals?.stretch || {};
+  const totalsB = kpiData?.totals?.budget || {};
+  // 26년 도전목표는 항상 같은 값. 다른 연도는 비교용으로 같이 노출.
+  const yearMap = strategicMap[curYear] || {};
+  const stratCnt = Object.values(yearMap).reduce((s,a)=>s+(a?.length||0), 0);
+  const propCnt = Object.keys(yearMap).filter(p=>(yearMap[p]||[]).length>0).length;
+
+  // 26 stretch vs budget 비
+  const stretchT = totals.rns_total || 0;
+  const budgetT  = totalsB.rns_total || 0;
+  const upliftPct = budgetT?Math.round((stretchT/budgetT-1)*1000)/10:null;
+
+  const stretch3yr = kpiData?.totals_3yr?.rns || {};
+  const yLabel = curYear+'Y';
+  const yValueKey = 'y'+curYear.slice(2);
+  const yProj = stretch3yr[yValueKey];
+  const projAdr = (kpiData?.totals_3yr?.adr || {})[yValueKey];
+
+  const cells = [
+    {
+      label: `${curYear}년 도전목표 RNs`,
+      value: curYear==='2026' ? fmt(stretchT) : fmt(yProj),
+      unit: '실',
+      sub: curYear==='2026'
+        ? `Budget ${fmt(budgetT)} 대비 <span class="pos">+${upliftPct}%</span>`
+        : '3개년 도전목표 시트 기반'
+    },
+    {
+      label: `${curYear}년 도전목표 ADR`,
+      value: curYear==='2026' ? (totals.adr ? fmtDec(totals.adr,1) : '—') : (projAdr ? fmtDec(projAdr,1) : '—'),
+      unit: '천원',
+      sub: '회사 평균'
+    },
+    {
+      label: `${curYear}년 전략여행사`,
+      value: fmt(stratCnt),
+      unit: '개사',
+      sub: `${propCnt}개 사업장 · 연도별 자유 셋팅`
+    },
+    {
+      label: '전년(26) vs 25 실적',
+      value: budgetT? `+${Math.round(((stretchT/(kpiData?.totals?.ly25_rns_total||1))-1)*100)}%` : '—',
+      unit: '',
+      sub: `25 실적 ${fmt(kpiData?.totals?.ly25_rns_total)} → 26 도전 ${fmt(stretchT)}`
+    }
+  ];
+  document.getElementById('kpiRow').innerHTML = cells.map(c=>`
+    <div class="kpi-cell">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}<span class="unit">${c.unit||''}</span></div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderPropChips(){
+  propSearch = (document.getElementById('propSearch')?.value || '').trim().toLowerCase();
+  const props = PROP_ORDER.filter(p => (kpiData?.grid || []).some(g=>g.property===p));
+  const filtered = propSearch ? props.filter(p=>p.toLowerCase().includes(propSearch)) : props;
+  const yearMap = strategicMap[curYear] || {};
+  const html = filtered.map(p => {
+    const stratN = (yearMap[p] || []).length;
+    const grid = getPropertyGrid(p);
+    const stretchSum = grid.reduce((s,g)=>s+(g.stretch.total||0), 0);
+    return `<button class="prop-chip${p===curProperty?' active':''}" onclick="switchProp('${p}')">
+      <span>${escapeHtml(p)}</span>
+      <span style="color:var(--ink-faint);font-family:var(--mono);font-size:9.5px">${fmt(stretchSum)}</span>
+      ${stratN>0?`<span class="pc-strat">전략 ${stratN}</span>`:''}
+    </button>`;
+  }).join('');
+  document.getElementById('propChips').innerHTML = html;
+}
+
+function switchProp(p){
+  curProperty = p;
+  renderPropChips();
+  renderPropPanel();
+}
+
+function toggleCountry(country){
+  const key = curProperty+'|'+country;
+  if(collapsedCountries.has(key)) collapsedCountries.delete(key);
+  else collapsedCountries.add(key);
+  renderPropPanel();
+}
+
+function renderPropPanel(){
+  if(!curProperty){ document.getElementById('propPanel').innerHTML=''; return; }
+  const prop = kpiData?.properties?.[curProperty] || {};
+  const grid = getPropertyGrid(curProperty);
+  const groups = groupByCountry(grid);
+
+  // 사업장 헤더 metrics
+  const stretch = prop.y26_stretch || {};
+  const budget  = prop.y26_budget || {};
+  const ly25    = prop.ly25_actual || {};
+  const yrSel = curYear;
+  const yrStretch = prop['y'+yrSel.slice(2)+'_stretch'] || {};
+
+  const upliftPct = budget.rns ? Math.round(((stretch.rns||0)/budget.rns-1)*1000)/10 : null;
+  const yoyPct    = ly25.rns ? Math.round(((stretch.rns||0)/ly25.rns-1)*1000)/10 : null;
+
+  const headHtml = `
+    <div class="pp-head">
+      <div class="pp-title">
+        <span>${escapeHtml(curProperty)}</span>
+        <span class="yr-badge">${curYear}년 셋팅</span>
+      </div>
+      <div class="pp-meta">
+        <div class="pp-meta-cell">
+          <div class="lbl">26 도전목표</div>
+          <div class="val">${fmt(stretch.rns)}<span class="delta ${upliftPct>=0?'pos':'neg'}">${upliftPct!=null?(upliftPct>=0?'+':'')+upliftPct+'% vs B':''}</span></div>
+        </div>
+        <div class="pp-meta-cell">
+          <div class="lbl">26 Budget</div>
+          <div class="val">${fmt(budget.rns)}<span class="delta">@ADR ${fmtDec(budget.adr,0)}</span></div>
+        </div>
+        <div class="pp-meta-cell">
+          <div class="lbl">25 실적</div>
+          <div class="val">${fmt(ly25.rns)}<span class="delta ${yoyPct>=0?'pos':'neg'}">${yoyPct!=null?(yoyPct>=0?'+':'')+yoyPct+'% YoY':''}</span></div>
+        </div>
+      </div>
+    </div>`;
+
+  const ctxHtml = `
+    <div class="pp-context">
+      <div class="pp-ctx-block">
+        <div class="pp-ctx-label">달성 KEY 전략</div>
+        <div class="pp-ctx-text${prop.strategy_text?'':' muted'}">${prop.strategy_text?escapeHtml(prop.strategy_text):'(엑셀에 키 전략 미기재)'}</div>
+      </div>
+      <div class="pp-ctx-block">
+        <div class="pp-ctx-label">사업장 이슈</div>
+        <div class="pp-ctx-text${prop.issue_text?'':' muted'}">${prop.issue_text?escapeHtml(prop.issue_text):'(이슈 사항 미기재)'}</div>
+      </div>
+    </div>`;
+
+  // 27년+ 셋팅이라면 안내 노트
+  let helperNote = '';
+  if(curYear !== '2026'){
+    helperNote = `<div style="padding:9px 18px;background:var(--info-bg);border-bottom:1px solid var(--rule);font-size:11.5px;color:var(--ink-soft);line-height:1.55">
+      💡 <strong>${curYear}년 셋팅 가이드</strong> — 우측 표의 <em>26 도전</em>·<em>26 B</em>·<em>25 실적</em>·<em>DB 누적 RN</em>을 참고하여 거래처를 전략/일반으로 지정하세요.
+      ${curYear==='2027'?'27년 도전목표 RNs는 사업장별 <em>27Y Stretch</em> 컬럼에서 자동 산출 ('+fmt(yrStretch.rns)+'실).':''}
+    </div>`;
+  }
+
+  // 국가 그룹 렌더
+  const groupHtml = groups.map(g => {
+    const collapsedKey = curProperty+'|'+g.country;
+    const isCollapsed = collapsedCountries.has(collapsedKey);
+    const stratInGroup = g.items.filter(it => isStrategic(curYear, curProperty, it.agency)).length;
+    return `<div class="country-group${isCollapsed?' collapsed':''}">
+      <div class="cg-head" onclick="toggleCountry('${escapeHtml(g.country)}')">
+        <div class="cg-title">
+          <span class="arrow">▼</span>
+          <span class="flag">${COUNTRY_FLAGS[g.country] || '🌐'}</span>
+          <span>${escapeHtml(g.country)}</span>
+          <span style="color:var(--ink-muted);font-weight:500;font-size:11px">${g.items.length}개 거래처</span>
+          ${stratInGroup>0?`<span style="background:rgba(201,160,99,.18);color:var(--gold-bright);padding:2px 7px;border-radius:8px;font-size:10px;font-family:var(--mono)">전략 ${stratInGroup}</span>`:''}
+        </div>
+        <div class="cg-stats">
+          <span>26도전 <strong>${fmt(g.sum)}</strong></span>
+          <span>26B <strong>${fmt(g.sumB)}</strong></span>
+        </div>
+      </div>
+      <div class="cg-body">${renderAgencyTable(g.items)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('propPanel').innerHTML = `<div class="prop-panel">
+    ${headHtml}
+    ${ctxHtml}
+    ${helperNote}
+    ${groups.length===0
+      ? '<div class="empty-state"><div class="empty-state-icon">🔍</div><div>이 사업장의 거래처 데이터가 KPI 엑셀에 없습니다.</div></div>'
+      : groupHtml}
+  </div>`;
+}
+
+function renderAgencyTable(items){
+  const PSEUDO = new Set(['패키지여행사','FIT여행사','인센전문여행사']);  // DB 매칭 제외 그룹 라벨
+  const rows = items.map(it => {
+    const strat = isStrategic(curYear, curProperty, it.agency);
+    const enr = PSEUDO.has(it.agency) ? null : getEnrichedActual(it.agency);
+    const sumDB = enr?.rn_net || null;
+    const yr2025 = enr?.years_rn?.['2025'] || null;
+    const yr2024 = enr?.years_rn?.['2024'] || null;
+
+    // mini-spark : stretch 월별
+    const max = Math.max(...it.stretch.monthly, 1);
+    const sparkHtml = it.stretch.monthly.map(v => {
+      if(!v) return `<span class="month zero">·</span>`;
+      const cls = (v/max)>0.7?'high':'';
+      return `<span class="month ${cls}">${Math.round(v)}</span>`;
+    }).join('');
+
+    return `<tr class="${strat?'is-strategic':''}${PSEUDO.has(it.agency)?' unmatched':''}">
+      <td class="left">
+        <span class="toggle-pill" onclick="setStrategic('${curYear}','${escapeHtml(curProperty)}','${escapeHtml(it.agency).replace(/'/g,"&#39;")}',${!strat})" title="클릭하여 전환">
+          <span class="tg ${strat?'on strat':''}">전략</span>
+          <span class="tg ${!strat?'on norm':''}">일반</span>
+        </span>
+        &nbsp;<strong>${escapeHtml(it.agency)}</strong>
+      </td>
+      <td>${fmt(it.stretch.total)}</td>
+      <td>${fmt(it.budget.total)}</td>
+      <td>${yr2025!=null?fmt(yr2025):'<span class="cell-empty">—</span>'}</td>
+      <td>${yr2024!=null?fmt(yr2024):'<span class="cell-empty">—</span>'}</td>
+      <td>${sumDB!=null?fmt(sumDB):'<span class="cell-empty">—</span>'}</td>
+      <td><span class="spark-cell">${sparkHtml}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto"><table class="ag-tbl">
+    <thead>
+      <tr>
+        <th class="left">전략구분 · 거래처명</th>
+        <th>26 도전</th>
+        <th>26 B</th>
+        <th>25 실적</th>
+        <th>24 실적</th>
+        <th>DB 누적 RN</th>
+        <th>월별 도전(1~12월)</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+/* ── INIT ────────────────────────────────────── */
+loadAll();
+</script>
+</body>
+</html>
