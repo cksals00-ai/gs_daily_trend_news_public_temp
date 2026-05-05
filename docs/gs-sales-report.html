@@ -1545,6 +1545,8 @@ const STRAT_SEG_BY_ROLE = {ota:'OTA', gota:'G-OTA', inbound:'Inbound'};
 
 async function renderStrategyWidget(){
   const sec = document.getElementById('strat-section');
+  /* 인바운드 모드에서는 기획팀 목표·우선순위 가이드 카드를 숨김 (도전목표 카드로 대체) */
+  if(curRole==='inbound'){ sec.style.display='none'; return; }
   const data = await ensureStrategyTargets();
   if(!data || !curGoalMonth){ sec.style.display='none'; return; }
 
