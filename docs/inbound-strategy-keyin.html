@@ -183,7 +183,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13.
     <strong>운영 안내</strong> · 사업장별·연도별로 전략여행사를 지정하면 세일즈 리포트(인바운드 도전목표 카드)에 별도 색으로 노출됩니다.
     26년 초기값은 <code style="font-family:var(--mono);background:var(--bg-soft);padding:1px 5px;border-radius:3px">월별 KPI(도전목표) 시트</code>의 <em>전략</em> 표시로 사전 셋팅되어 있습니다.
     27년 탭에서 <strong>"26년 전략 복사"</strong> 버튼으로 초기 데이터를 가져올 수 있고, 이후 사업장별로 자유 편집합니다.
-    거래처별 <strong>24~26년 실적 RN · 누적 REV · DB 누적 RN</strong>이 함께 노출되어 전략여행사 선정 의사결정을 돕습니다.
+    거래처별 <strong>26년 실적 RN · REV</strong>과 <strong>전년 동기간 대비 YoY%</strong>가 함께 노출되어 전략여행사 선정 의사결정을 돕습니다.
   </div>
 
   <div class="year-tabs" id="yearTabs"></div>
@@ -598,7 +598,7 @@ function renderPropPanel(){
   let helperNote = '';
   if(curYear !== '2026'){
     helperNote = `<div style="padding:9px 18px;background:var(--info-bg);border-bottom:1px solid var(--rule);font-size:11.5px;color:var(--ink-soft);line-height:1.55">
-      💡 <strong>${curYear}년 셋팅 가이드</strong> — 표의 <em>24~26년 실적 RN</em>·<em>누적 REV</em>·<em>DB 누적 RN</em>·<em>YoY 성장률</em>을 참고하여 거래처를 전략/일반으로 지정하세요.
+      💡 <strong>${curYear}년 셋팅 가이드</strong> — 표의 <em>26년 실적 RN·REV</em>와 <em>전년 동기간 대비 YoY%</em>를 참고하여 거래처를 전략/일반으로 지정하세요.
       ${curYear==='2027'?'상단 연도 탭 옆 <strong>"26년 전략 복사"</strong> 버튼으로 26년 셋팅을 가져온 뒤 개별 수정할 수 있습니다.':''}
     </div>`;
   }
@@ -648,20 +648,25 @@ function renderAgencyTable(items){
   const rows = items.map(it => {
     const strat = isStrategic(curYear, curProperty, it.agency);
     const enr = PSEUDO.has(it.agency) ? null : getEnrichedActual(it.agency);
-    const sumDB = enr?.rn_net || null;
-    const yr2026rn = enr?.years_rn?.['2026'] || null;
-    const yr2025rn = enr?.years_rn?.['2025'] || null;
-    const yr2024rn = enr?.years_rn?.['2024'] || null;
+    const yr2026rn  = enr?.years_rn?.['2026']  || null;
+    const yr2025rn  = enr?.years_rn?.['2025']  || null;
+    const yr2026rev = enr?.years_rev?.['2026'] || null;
     const yr2025rev = enr?.years_rev?.['2025'] || null;
-    const yr2024rev = enr?.years_rev?.['2024'] || null;
-    const totalRev = enr?.rev_net || null;
 
-    // YoY 성장률 (25 vs 24)
-    let yoyBadge = '';
-    if(yr2025rn && yr2024rn && yr2024rn !== 0){
-      const yoyPct = Math.round(((yr2025rn / yr2024rn) - 1) * 100);
-      const cls = yoyPct >= 0 ? 'diff-pos' : 'diff-neg';
-      yoyBadge = `<span class="${cls}" style="font-size:9.5px;margin-left:3px">${yoyPct>=0?'+':''}${yoyPct}%</span>`;
+    // YoY% — 26년 vs 25년 동기간 (RN)
+    let yoyRnHtml = '<span class="diff-na">—</span>';
+    if(yr2026rn != null && yr2025rn && yr2025rn !== 0){
+      const pct = Math.round(((yr2026rn / yr2025rn) - 1) * 100);
+      const cls = pct >= 0 ? 'diff-pos' : 'diff-neg';
+      yoyRnHtml = `<span class="${cls}">${pct>=0?'+':''}${pct}%</span>`;
+    }
+
+    // YoY% — 26년 vs 25년 동기간 (REV)
+    let yoyRevHtml = '<span class="diff-na">—</span>';
+    if(yr2026rev != null && yr2025rev && yr2025rev !== 0){
+      const pct = Math.round(((yr2026rev / yr2025rev) - 1) * 100);
+      const cls = pct >= 0 ? 'diff-pos' : 'diff-neg';
+      yoyRevHtml = `<span class="${cls}">${pct>=0?'+':''}${pct}%</span>`;
     }
 
     // mini-spark : stretch 월별
@@ -683,10 +688,9 @@ function renderAgencyTable(items){
       <td>${fmt(it.stretch.total)}</td>
       <td>${fmt(it.budget.total)}</td>
       <td>${yr2026rn!=null?fmt(yr2026rn):'<span class="cell-empty">—</span>'}</td>
-      <td>${yr2025rn!=null?fmt(yr2025rn):'<span class="cell-empty">—</span>'}${yoyBadge}</td>
-      <td>${yr2024rn!=null?fmt(yr2024rn):'<span class="cell-empty">—</span>'}</td>
-      <td>${totalRev!=null?fmtRev(totalRev):'<span class="cell-empty">—</span>'}</td>
-      <td>${sumDB!=null?fmt(sumDB):'<span class="cell-empty">—</span>'}</td>
+      <td>${yr2026rev!=null?fmtRev(yr2026rev):'<span class="cell-empty">—</span>'}</td>
+      <td>${yoyRnHtml}</td>
+      <td>${yoyRevHtml}</td>
       <td><span class="spark-cell">${sparkHtml}</span></td>
     </tr>`;
   }).join('');
@@ -697,11 +701,10 @@ function renderAgencyTable(items){
         <th class="left">전략구분 · 거래처명</th>
         <th>26 도전</th>
         <th>26 B</th>
-        <th>26 실적</th>
-        <th>25 실적</th>
-        <th>24 실적</th>
-        <th>누적 REV<br><span style="font-size:9px;font-weight:400">(백만원)</span></th>
-        <th>DB 누적 RN</th>
+        <th>26 RN</th>
+        <th>26 REV<br><span style="font-size:9px;font-weight:400">(백만원)</span></th>
+        <th>RN YoY%<br><span style="font-size:9px;font-weight:400">(vs 25)</span></th>
+        <th>REV YoY%<br><span style="font-size:9px;font-weight:400">(vs 25)</span></th>
         <th>월별 도전(1~12월)</th>
       </tr>
     </thead>

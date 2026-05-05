@@ -199,7 +199,19 @@ a{color:inherit}
 .strat-empty{padding:22px 18px;text-align:center;color:var(--ink-faint);font-size:12px}
 
 /* Outbound mode */
-.ob-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:0}
+.ob-summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:0}
+.ob-dual-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ob-slicer-row{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 10px}
+.ob-slicer-btn{padding:4px 12px;border-radius:14px;border:1px solid var(--rule);background:transparent;color:var(--ink-soft);font-size:11px;font-family:var(--mono);cursor:pointer;font-weight:500;transition:all .12s}
+.ob-slicer-btn:hover{border-color:var(--rule-strong);color:var(--ink)}
+.ob-slicer-btn.active{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700}
+.ob-seg-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;transition:background .12s}
+.ob-seg-row:hover{background:var(--bg-soft)}
+.ob-seg-row.active{background:rgba(201,160,99,0.1);border-left:3px solid var(--gold)}
+.ob-seg-row .seg-name{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft)}
+.ob-seg-row.active .seg-name{color:var(--gold-bright)}
+.ob-seg-row .seg-vals{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px;align-items:baseline}
+.ob-seg-row .seg-rate{font-weight:800}
 .ob-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
 .ob-card-head{padding:12px 16px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-deep)}
 .ob-card-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
@@ -226,7 +238,7 @@ a{color:inherit}
 .ob-tbl td:first-child{text-align:left;color:var(--ink);font-weight:700}
 .ob-tbl tr.ob-total td{font-weight:800;color:var(--ink);border-top:2px solid var(--rule-strong);background:rgba(201,160,99,0.06)}
 .ob-tbl .rate-high{color:var(--positive)}.ob-tbl .rate-mid{color:var(--gold-bright)}.ob-tbl .rate-low{color:var(--warning)}.ob-tbl .rate-vlow{color:var(--negative)}
-@media(max-width:1100px){.ob-summary-grid{grid-template-columns:1fr}}
+@media(max-width:1100px){.ob-summary-grid{grid-template-columns:1fr}.ob-dual-grid{grid-template-columns:1fr}}
 
 /* Filter bar */
 .filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:10px 14px}
@@ -4239,60 +4251,83 @@ let campaignPropShowAll=false;
 /* ═══ 아웃바운드 모드 (overseas_data.json) ═══ */
 
 let overseasData=null;
-let curOutboundProp='all'; /* 'all' | 'hawaii' | 'guam' | 'haiphong' */
+let curOutboundProp='guam_mangilao';
+let curOBChannel='all';
+let curOBMonth=new Date().getMonth()+1;
+let curOBSeg=null;
 
 const OB_PROPS=[
-  {key:'all',      label:'전체',    emoji:'🌏'},
-  {key:'hawaii',   label:'하와이',  emoji:'🏖️'},
-  {key:'guam',     label:'괌',      emoji:'🏝️'},
-  {key:'haiphong', label:'하이퐁',  emoji:'⛳'},
+  {key:'all',           label:'전체'},
+  {key:'hawaii',        label:'하와이'},
+  {key:'guam_mangilao', label:'괌·망길라오'},
+  {key:'guam_talopopo', label:'괌·탈로포포'},
+  {key:'haiphong',      label:'하이퐁'},
 ];
 
 function renderOutboundPropChips(){
   const chipsEl=document.getElementById('prop-chips');
   const sec=document.getElementById('prop-section');
   const divider=document.getElementById('prop-divider');
-  sec.style.display='block';
-  divider.style.display='block';
-  document.getElementById('prop-region-label').textContent='';
+  sec.style.display='block'; divider.style.display='block';
+  document.getElementById('prop-region-label').textContent='사업장';
   chipsEl.innerHTML=OB_PROPS.map(p=>
-    `<button class="prop-chip ${curOutboundProp===p.key?'active':''}" onclick="setOutboundProp('${p.key}')">${p.emoji} ${p.label}</button>`
+    `<button class="prop-chip ${curOutboundProp===p.key?'active':''}" onclick="setOutboundProp('${p.key}')">${p.label}</button>`
   ).join('');
 }
+function setOutboundProp(key){ curOutboundProp=key; curOBSeg=null; curOBChannel='all'; renderOutboundPropChips(); render(); }
+function setOBChannel(ch){ curOBChannel=ch; curOBSeg=null; renderOutboundPane(); }
+function setOBMonth(m){ curOBMonth=m; renderOutboundPane(); }
+function setOBSeg(name){ curOBSeg=(curOBSeg===name)?null:name; renderOutboundPane(); }
 
-function setOutboundProp(key){
-  curOutboundProp=key;
-  renderOutboundPropChips();
-  render();
+function obSafe(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+
+/* ── Slicers ── */
+function buildOBChipRow(items,cur,fn){
+  return `<div class="ob-slicer-row">${items.map(it=>{
+    const v=typeof it.k==='number'?it.k:"'"+obSafe(String(it.k))+"'";
+    return `<button class="ob-slicer-btn${cur===it.k?' active':''}" onclick="${fn}(${v})">${it.l}</button>`;
+  }).join('')}</div>`;
+}
+function buildOBMonthSlicer(){
+  const m=[{k:0,l:'전체'}]; for(let i=1;i<=12;i++) m.push({k:i,l:i+'월'});
+  return buildOBChipRow(m,curOBMonth,'setOBMonth');
+}
+function buildOBChannelSlicer(){
+  return buildOBChipRow([
+    {k:'all',l:'전체'},{k:'overseas',l:'해외 실적'},{k:'local',l:'현지(로컬) 실적'}
+  ],curOBChannel,'setOBChannel');
 }
 
+/* ── Data ── */
 async function ensureOverseasData(){
   if(overseasData)return overseasData;
-  try{
-    const r=await fetch('data/overseas_data.json');
-    overseasData=await r.json();
-  }catch(e){console.error('overseas_data.json load fail',e);overseasData=null}
+  try{const r=await fetch('data/overseas_data.json');overseasData=await r.json();}
+  catch(e){console.error('overseas_data.json load fail',e);overseasData=null;}
   return overseasData;
 }
 
+/* ── Formatting ── */
 function obFmtNum(v,dec=0){
-  if(v==null||isNaN(v))return '—';
+  if(v==null||isNaN(v))return '-';
   if(Math.abs(v)>=1e8) return (v/1e8).toFixed(1)+'억';
   if(Math.abs(v)>=1e4) return (v/1e4).toFixed(dec>0?dec:0)+'만';
   return v.toLocaleString('ko-KR',{maximumFractionDigits:dec});
 }
 function obFmtKRW(v){
-  if(v==null||isNaN(v))return '—';
+  if(v==null||isNaN(v))return '-';
   if(Math.abs(v)>=1e8) return (v/1e8).toFixed(1)+'억';
   if(Math.abs(v)>=1e6) return (v/1e6).toFixed(0)+'백만';
   return v.toLocaleString('ko-KR',{maximumFractionDigits:0});
 }
+function obFmtUSD(v){
+  if(v==null||isNaN(v))return '-';
+  if(Math.abs(v)>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
+  if(Math.abs(v)>=1e3) return '$'+(v/1e3).toFixed(0)+'K';
+  return '$'+v.toLocaleString('en-US',{maximumFractionDigits:0});
+}
 function obRateCls(r){
   if(r==null||isNaN(r))return '';
-  if(r>=100)return 'rate-high';
-  if(r>=70)return 'rate-mid';
-  if(r>=40)return 'rate-low';
-  return 'rate-vlow';
+  return r>=100?'rate-high':r>=70?'rate-mid':r>=40?'rate-low':'rate-vlow';
 }
 function obGaugeGrad(r){
   if(r>=100)return 'linear-gradient(90deg,var(--positive) 0%,var(--gold) 100%)';
@@ -4300,265 +4335,345 @@ function obGaugeGrad(r){
   if(r>=40)return 'linear-gradient(90deg,var(--warning) 0%,var(--gold) 100%)';
   return 'linear-gradient(90deg,var(--negative) 0%,var(--warning) 100%)';
 }
-
-function buildHawaiiCard(hw){
-  const t=hw.total;
-  const rnRate=t.budget_rn?((t.actual_rn/t.budget_rn)*100).toFixed(1):0;
-  const revRate=t.budget_rev?((t.actual_rev/t.budget_rev)*100).toFixed(1):0;
-  /* 실적이 있는 월까지만 */
-  const activeMonths=hw.monthly.filter(m=>m.actual_rn>0);
-  const lastMonth=activeMonths.length?activeMonths[activeMonths.length-1]:null;
-  const lastLabel=lastMonth?lastMonth.month+'월':'—';
-  return `<div class="ob-card">
-    <div class="ob-card-head">
-      <div class="ob-card-title">🏖️ 하와이 · ${hw.property}</div>
-      <div class="ob-card-unit">단위: ${hw.unit}</div>
-    </div>
-    <div class="ob-card-body">
-      <div class="ob-kpi-row">
-        <span class="ob-kpi-label">객실(RN) 예산 / 실적</span>
-        <span class="ob-kpi-val">${t.actual_rn.toLocaleString()} <span class="unit">/ ${t.budget_rn.toLocaleString()}</span></span>
-      </div>
-      <div class="ob-gauge">
-        <div class="ob-gauge-fill" style="width:${Math.min(rnRate,100)}%;background:${obGaugeGrad(rnRate)}"></div>
-        <div class="ob-gauge-text">${rnRate}%</div>
-      </div>
-      <div class="ob-kpi-row">
-        <span class="ob-kpi-label">매출(REV) 예산 / 실적</span>
-        <span class="ob-kpi-val">$${(t.actual_rev/1e6).toFixed(1)}M <span class="unit">/ $${(t.budget_rev/1e6).toFixed(1)}M</span></span>
-      </div>
-      <div class="ob-gauge">
-        <div class="ob-gauge-fill" style="width:${Math.min(revRate,100)}%;background:${obGaugeGrad(revRate)}"></div>
-        <div class="ob-gauge-text">${revRate}%</div>
-      </div>
-      <div class="ob-kpi-sub">
-        <span>ADR 실적 $${t.actual_adr.toFixed(0)} / 예산 $${t.budget_adr.toFixed(0)}</span>
-        <span>전년 $${t.ly_adr.toFixed(0)}</span>
-        <span>최신: ${lastLabel}</span>
-      </div>
-    </div>
-  </div>`;
+function obGauge(rate){
+  return `<div class="ob-gauge"><div class="ob-gauge-fill" style="width:${Math.min(rate||0,100)}%;background:${obGaugeGrad(rate||0)}"></div><div class="ob-gauge-text">${rate!=null?rate.toFixed(1):'--'}%</div></div>`;
 }
 
-function buildHaiphongCard(hp){
-  const total=hp.summary.find(s=>s.name==='합계');
-  if(!total)return '<div class="ob-card"><div class="ob-card-body">데이터 없음</div></div>';
-  const yr=total.year;
-  const rate=yr.rate||0;
-  const activeMonths=total.months||[];
-  const lastMonth=activeMonths.length?activeMonths[activeMonths.length-1]:null;
-  return `<div class="ob-card">
-    <div class="ob-card-head">
-      <div class="ob-card-title">⛳ 하이퐁</div>
-      <div class="ob-card-unit">단위: 백만VND</div>
-    </div>
-    <div class="ob-card-body">
-      <div class="ob-kpi-row">
-        <span class="ob-kpi-label">연간 목표 / 실적</span>
-        <span class="ob-kpi-val">${obFmtNum(yr.actual)} <span class="unit">/ ${obFmtNum(yr.target)}</span></span>
-      </div>
-      <div class="ob-gauge">
-        <div class="ob-gauge-fill" style="width:${Math.min(rate,100)}%;background:${obGaugeGrad(rate)}"></div>
-        <div class="ob-gauge-text">${rate.toFixed(1)}%</div>
-      </div>
-      <div class="ob-kpi-sub">
-        <span>전년 실적 ${obFmtNum(total.prev)}</span>
-        <span>YoY <span class="${total.yoy>=100?'pos':'warn'}">${total.yoy}%</span></span>
-        <span>최신: ${lastMonth?lastMonth.month:'—'}</span>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-        ${hp.summary.filter(s=>s.name!=='합계').map(s=>`<span style="font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--rule);background:var(--bg-soft)">
-          <span style="color:var(--ink-soft);font-weight:700">${s.name}</span>
-          <span class="${obRateCls(s.year.rate)}" style="font-weight:800;margin-left:4px">${s.year.rate}%</span>
-        </span>`).join('')}
-      </div>
-    </div>
-  </div>`;
+/* ── Guam helpers ── */
+function guamSegList(locArr,ch){
+  const total=locArr.find(s=>s.is_total);
+  const ob=locArr.find(s=>s.name==='OUT BOUND');
+  const local=locArr.find(s=>s.name==='LOCAL');
+  const subs=locArr.filter(s=>s.is_sub);
+  if(ch==='overseas') return {parent:ob, items:[{name:'OUT BOUND',seg:ob,indent:false},...subs.map(s=>({name:s.name,seg:s,indent:true}))]};
+  if(ch==='local') return {parent:local, items:[{name:'LOCAL',seg:local,indent:false}]};
+  return {parent:total, items:[{name:'OUT BOUND',seg:ob,indent:false},...subs.map(s=>({name:s.name,seg:s,indent:true})),{name:'LOCAL',seg:local,indent:false}]};
+}
+function guamAgg(seg,mf){
+  if(!seg)return {rt:0,ra:0,rp:0,pt:0,pa:0,pp:0,rate:0};
+  if(mf>0){
+    const m=seg.months&&seg.months[mf-1];
+    if(!m)return {rt:0,ra:0,rp:0,pt:0,pa:0,pp:0,rate:0};
+    return {rt:m.rev_budget||0,ra:m.rev_actual||0,rp:m.rev_prev||0,pt:m.pax_budget||0,pa:m.pax_actual||0,pp:m.pax_prev||0,rate:m.rev_budget?(m.rev_actual/m.rev_budget*100):0};
+  }
+  const t=seg.total;
+  return {rt:t.rev_budget||0,ra:t.rev_actual||0,rp:t.rev_prev||0,pt:t.pax_budget||0,pa:t.pax_actual||0,pp:t.pax_prev||0,rate:t.rev_rate||0};
 }
 
-function buildGuamCard(gm){
-  const total=gm.summary.find(s=>s.segment==='합계'&&s.location==='괌합계');
-  if(!total)return '<div class="ob-card"><div class="ob-card-body">데이터 없음</div></div>';
-  const yr=total.year;
-  const rate=yr.rate||0;
-  const activeMonths=total.months||[];
-  const lastMonth=activeMonths.length?activeMonths[activeMonths.length-1]:null;
-  return `<div class="ob-card">
-    <div class="ob-card-head">
-      <div class="ob-card-title">🏝️ 괌</div>
-      <div class="ob-card-unit">단위: KRW (원)</div>
-    </div>
-    <div class="ob-card-body">
-      <div class="ob-kpi-row">
-        <span class="ob-kpi-label">연간 목표 / 실적</span>
-        <span class="ob-kpi-val">${obFmtKRW(yr.actual)} <span class="unit">/ ${obFmtKRW(yr.target)}</span></span>
-      </div>
-      <div class="ob-gauge">
-        <div class="ob-gauge-fill" style="width:${Math.min(rate,100)}%;background:${obGaugeGrad(rate)}"></div>
-        <div class="ob-gauge-text">${rate.toFixed(1)}%</div>
-      </div>
-      <div class="ob-kpi-sub">
-        <span>전년 ${obFmtKRW(total.prev)}</span>
-        <span>YoY <span class="${total.yoy>=100?'pos':'warn'}">${total.yoy}%</span></span>
-        <span>최신: ${lastMonth?lastMonth.month:'—'}</span>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-        ${gm.summary.filter(s=>s.segment!=='합계').map(s=>`<span style="font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--rule);background:var(--bg-soft)">
-          <span style="color:var(--ink-soft);font-weight:700">${s.location} ${s.segment}</span>
-          <span class="${obRateCls(s.year.rate)}" style="font-weight:800;margin-left:4px">${s.year.rate}%</span>
-        </span>`).join('')}
-      </div>
-    </div>
-  </div>`;
+/* ── Haiphong helpers ── */
+function hpSegList(cats,ch){
+  const gt=cats.find(c=>c.name==='GRAND TOTAL');
+  const os=cats.find(c=>c.name==='해외 실적');
+  const lc=cats.find(c=>c.name==='현지 실적');
+  if(ch==='overseas'){
+    const children=cats.filter(c=>c.parent==='해외 실적');
+    let segs=[{name:'해외 실적',cat:os,indent:false}];
+    children.forEach(ch2=>{
+      segs.push({name:ch2.name,cat:ch2,indent:true});
+      cats.filter(c=>c.parent===ch2.name).forEach(gc=>segs.push({name:gc.name,cat:gc,indent:true,sub:true}));
+    });
+    return {parent:os, items:segs};
+  }
+  if(ch==='local') return {parent:lc, items:[{name:'현지 실적',cat:lc,indent:false}]};
+  let segs=[];
+  segs.push({name:'해외 실적',cat:os,indent:false});
+  cats.filter(c=>c.parent==='해외 실적').forEach(ch2=>segs.push({name:ch2.name,cat:ch2,indent:true}));
+  segs.push({name:'현지 실적',cat:lc,indent:false});
+  return {parent:gt, items:segs};
+}
+function hpAgg(cat,mf){
+  if(!cat)return {t:0,a:0,p:0,rate:0};
+  if(mf>0){
+    const m=cat.months&&cat.months[mf-1];
+    if(!m)return {t:0,a:0,p:0,rate:0};
+    return {t:m.target||0,a:m.actual||0,p:m.prev||0,rate:m.target?(m.actual/m.target*100):0};
+  }
+  return {t:cat.total.target||0,a:cat.total.actual||0,p:cat.total.prev||0,rate:cat.total.target?(cat.total.actual/cat.total.target*100):0};
 }
 
-function buildOBMonthlyTable_hawaii(hw){
-  const rows=hw.monthly.filter(m=>m.actual_rn>0||m.actual_rev>0);
-  if(!rows.length)return '';
-  return `<div class="ob-table-section">
+/* ── Generic Card Builders ── */
+function buildOBSegCard(title,unit,rows){
+  let h=`<div class="ob-card"><div class="ob-card-head"><div class="ob-card-title">${title}</div><div class="ob-card-unit">${unit}</div></div><div style="overflow-y:auto;max-height:520px">`;
+  rows.forEach(r=>{
+    const act=curOBSeg===r.name;
+    const pl=r.sub?36:r.indent?20:8;
+    h+=`<div class="ob-seg-row${act?' active':''}" onclick="setOBSeg('${obSafe(r.name)}')" style="padding-left:${pl}px${r.isTotal?';border-top:2px solid var(--rule-strong);background:rgba(201,160,99,0.06)':''}">
+      <span class="seg-name"${r.isTotal?' style="color:var(--gold-bright)"':''}>${r.name}</span>
+      <span class="seg-vals">
+        <span>${r.val}</span>
+        <span style="color:var(--ink-faint)">/ ${r.target}</span>
+        <span class="seg-rate ${obRateCls(r.rate)}">${r.rate!=null?r.rate.toFixed(1):'--'}%</span>
+      </span>
+    </div>`;
+  });
+  h+=`</div></div>`;
+  return h;
+}
+
+function buildOBDetailCard(title,unit,cols,bodyRows,summary){
+  let h=`<div class="ob-card"><div class="ob-card-head"><div class="ob-card-title">${title}</div><div class="ob-card-unit">${unit}</div></div>`;
+  if(summary) h+=`<div style="padding:12px 16px;border-bottom:1px solid var(--rule)">${summary}</div>`;
+  h+=`<div style="overflow-x:auto"><table class="ob-tbl"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${bodyRows}</tbody></table></div></div>`;
+  return h;
+}
+
+/* ── Guam View ── */
+function buildGuamView(od,locKey){
+  const locArr=locKey==='guam_mangilao'?od.guam.mangilao:od.guam.talopopo;
+  const locLabel=locKey==='guam_mangilao'?'망길라오':'탈로포포';
+  const {parent:parentSeg,items:segments}=guamSegList(locArr,curOBChannel);
+
+  const rows=segments.map(s=>{
+    const a=guamAgg(s.seg,curOBMonth);
+    return {name:s.name, val:obFmtUSD(a.ra), target:obFmtUSD(a.rt), rate:a.rate, indent:s.indent};
+  });
+  const left=buildOBSegCard('세그먼트별 실적 · 괌 '+locLabel,'단위: USD',rows);
+
+  const sel=segments.find(s=>s.name===curOBSeg);
+  const dSeg=sel?sel.seg:parentSeg;
+  const dName=sel?sel.name:(parentSeg?parentSeg.name||'TOTAL':'TOTAL');
+  const da=guamAgg(dSeg,curOBMonth);
+  const summ=`<div class="ob-kpi-row"><span class="ob-kpi-label">${dName} ${curOBMonth>0?curOBMonth+'월':'연간'}</span><span class="ob-kpi-val">${obFmtUSD(da.ra)} <span class="unit">/ ${obFmtUSD(da.rt)}</span></span></div>
+    ${obGauge(da.rate)}
+    <div class="ob-kpi-sub" style="margin-top:6px"><span>PAX ${da.pa.toLocaleString()} / ${da.pt.toLocaleString()}</span><span>전년 REV ${obFmtUSD(da.rp)}</span></div>`;
+
+  let tbody='';
+  if(dSeg&&dSeg.months) dSeg.months.forEach((m,i)=>{
+    if(curOBMonth>0&&(i+1)!==curOBMonth)return;
+    const rr=m.rev_budget?(m.rev_actual/m.rev_budget*100):0;
+    const pr=m.pax_budget?(m.pax_actual/m.pax_budget*100):0;
+    tbody+=`<tr><td>${i+1}월</td>
+      <td>${(m.pax_budget||0).toLocaleString()}</td><td>${(m.pax_actual||0).toLocaleString()}</td><td class="${obRateCls(pr)}">${pr.toFixed(1)}%</td>
+      <td>${obFmtUSD(m.rev_budget)}</td><td>${obFmtUSD(m.rev_actual)}</td><td class="${obRateCls(rr)}">${rr.toFixed(1)}%</td>
+      <td>${obFmtUSD(m.rev_prev)}</td></tr>`;
+  });
+  const right=buildOBDetailCard(dName+' 상세','단위: USD',
+    ['월','목표 PAX','실적 PAX','달성률','목표 REV','실적 REV','달성률','전년 REV'],tbody,summ);
+
+  return `<div class="ob-dual-grid">${left}${right}</div>`;
+}
+
+/* ── Haiphong View ── */
+function buildHaiphongView(od){
+  const cats=od.haiphong.categories;
+  const {parent:parentCat,items:segments}=hpSegList(cats,curOBChannel);
+
+  const rows=segments.map(s=>{
+    const a=hpAgg(s.cat,curOBMonth);
+    return {name:s.name, val:obFmtNum(a.a), target:obFmtNum(a.t), rate:a.rate, indent:s.indent, sub:s.sub};
+  });
+  const left=buildOBSegCard('세그먼트별 실적 · 하이퐁','단위: 백만VND',rows);
+
+  const sel=segments.find(s=>s.name===curOBSeg);
+  const dCat=sel?sel.cat:parentCat;
+  const dName=sel?sel.name:(parentCat?parentCat.name:'GRAND TOTAL');
+  const da=hpAgg(dCat,curOBMonth);
+  const summ=`<div class="ob-kpi-row"><span class="ob-kpi-label">${dName} ${curOBMonth>0?curOBMonth+'월':'연간'}</span><span class="ob-kpi-val">${obFmtNum(da.a)} <span class="unit">/ ${obFmtNum(da.t)}</span></span></div>
+    ${obGauge(da.rate)}
+    <div class="ob-kpi-sub" style="margin-top:6px"><span>전년 ${obFmtNum(da.p)}</span></div>`;
+
+  const children=cats.filter(c=>c.parent===dName);
+  let tbody='';
+  let rightTitle, rightCols;
+  if(children.length>0){
+    children.forEach(ch=>{
+      const a=hpAgg(ch,curOBMonth);
+      tbody+=`<tr><td>${ch.name}</td><td>${obFmtNum(a.t)}</td><td>${obFmtNum(a.a)}</td><td class="${obRateCls(a.rate)}">${a.rate.toFixed(1)}%</td><td>${obFmtNum(a.p)}</td></tr>`;
+    });
+    rightTitle=dName+' 하위 항목'; rightCols=['항목','목표','실적','달성률','전년'];
+  } else {
+    if(dCat&&dCat.months) dCat.months.forEach((m,i)=>{
+      if(curOBMonth>0&&(i+1)!==curOBMonth)return;
+      const r=m.target?(m.actual/m.target*100):0;
+      tbody+=`<tr><td>${i+1}월</td><td>${obFmtNum(m.target)}</td><td>${obFmtNum(m.actual)}</td><td class="${obRateCls(r)}">${r.toFixed(1)}%</td><td>${obFmtNum(m.prev)}</td></tr>`;
+    });
+    rightTitle=dName+' 월별'; rightCols=['월','목표','실적','달성률','전년'];
+  }
+  const right=buildOBDetailCard(rightTitle,'단위: 백만VND',rightCols,tbody,summ);
+  return `<div class="ob-dual-grid">${left}${right}</div>`;
+}
+
+/* ── Hawaii View ── */
+function buildHawaiiView(od){
+  const hw=od.hawaii;
+  const seg=hw.segment;
+  const ws=hw.wholesale;
+  const segList=[
+    {name:'Contract',rn:seg.contract_rn,rev:seg.contract_rev},
+    {name:'Group',rn:seg.group_rn,rev:seg.group_rev},
+    {name:'Wholesale',rn:seg.wholesale_rn,rev:seg.wholesale_rev},
+    {name:'Transient',rn:seg.transient_rn,rev:seg.transient_rev},
+  ];
+
+  let left=`<div class="ob-card"><div class="ob-card-head"><div class="ob-card-title">세그먼트별 목표 · 하와이</div><div class="ob-card-unit">${hw.property} · USD</div></div>
+    <div style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);border-bottom:1px solid var(--rule)">올해 실적: <span style="color:var(--warning);font-weight:700">작성중</span></div>
+    <div style="overflow-y:auto;max-height:480px">`;
+  segList.forEach(s=>{
+    const act=curOBSeg===s.name;
+    const pct=seg.total_rev?(s.rev/seg.total_rev*100):0;
+    left+=`<div class="ob-seg-row${act?' active':''}" onclick="setOBSeg('${s.name}')">
+      <span class="seg-name">${s.name}</span>
+      <span class="seg-vals"><span>${obFmtUSD(s.rev)}</span><span style="color:var(--ink-faint)">RN ${s.rn.toLocaleString()}</span><span class="seg-rate" style="color:var(--ink-muted)">${pct.toFixed(1)}%</span></span>
+    </div>`;
+  });
+  left+=`<div class="ob-seg-row" style="border-top:2px solid var(--rule-strong);background:rgba(201,160,99,0.06);cursor:default">
+    <span class="seg-name" style="color:var(--gold-bright)">TOTAL</span>
+    <span class="seg-vals"><span style="color:var(--gold-bright);font-weight:800">${obFmtUSD(seg.total_rev)}</span><span style="color:var(--ink-faint)">RN ${seg.total_rn.toLocaleString()}</span></span>
+  </div></div></div>`;
+
+  let right;
+  if(curOBSeg==='Wholesale'&&ws){
+    let tbody='';
+    for(let i=0;i<12;i++){
+      if(curOBMonth>0&&(i+1)!==curOBMonth)continue;
+      const r26=ws['2026'],r25=ws['2025'];
+      tbody+=`<tr><td>${i+1}월</td>
+        <td>${(r26.monthly_rn[i]||0).toLocaleString()}</td><td>$${(r26.monthly_adr[i]||0).toFixed(0)}</td><td>${obFmtUSD(r26.monthly_rev[i])}</td>
+        <td>${(r25.monthly_rn[i]||0).toLocaleString()}</td><td>$${(r25.monthly_adr[i]||0).toFixed(0)}</td><td>${obFmtUSD(r25.monthly_rev[i])}</td></tr>`;
+    }
+    const summ=`<div style="display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px">
+      <div><span style="color:var(--ink-faint)">2026 YTD:</span> <span style="font-weight:700">RN ${ws['2026'].ytd_rn.toLocaleString()} · ADR $${ws['2026'].ytd_adr.toFixed(0)} · ${obFmtUSD(ws['2026'].ytd_rev)}</span></div>
+      <div><span style="color:var(--ink-faint)">2025 YTD:</span> <span style="color:var(--ink-muted)">RN ${ws['2025'].ytd_rn.toLocaleString()} · ADR $${ws['2025'].ytd_adr.toFixed(0)} · ${obFmtUSD(ws['2025'].ytd_rev)}</span></div>
+    </div>`;
+    right=buildOBDetailCard('Wholesale 월별 상세','단위: USD',
+      ['월','2026 RN','ADR','REV','2025 RN','ADR','REV'],tbody,summ);
+  } else {
+    let tbody='';
+    hw.monthly.forEach(m=>{
+      if(curOBMonth>0&&m.month!==curOBMonth)return;
+      tbody+=`<tr><td>${m.month}월</td>
+        <td>${m.budget_rn.toLocaleString()}</td><td>${obFmtUSD(m.budget_rev)}</td><td>$${m.budget_adr?m.budget_adr.toFixed(0):'-'}</td>
+        <td>${(m.ly_rn||0).toLocaleString()}</td><td>${obFmtUSD(m.ly_rev)}</td><td>$${m.ly_adr?m.ly_adr.toFixed(0):'-'}</td></tr>`;
+    });
+    const summ=`<div style="display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px">
+      <div><span style="color:var(--ink-faint)">목표:</span> <span style="font-weight:700">RN ${hw.total.budget_rn.toLocaleString()} · ${obFmtUSD(hw.total.budget_rev)} · ADR $${hw.total.budget_adr.toFixed(0)}</span></div>
+      <div><span style="color:var(--ink-faint)">전년:</span> <span style="color:var(--ink-muted)">RN ${hw.total.ly_rn.toLocaleString()} · ${obFmtUSD(hw.total.ly_rev)} · ADR $${hw.total.ly_adr.toFixed(0)}</span></div>
+    </div>`;
+    right=buildOBDetailCard('월별 목표','단위: USD · 실적 작성중',
+      ['월','목표 RN','목표 REV','ADR','전년 RN','전년 REV','전년 ADR'],tbody,summ);
+  }
+
+  return `<div class="ob-dual-grid">${left}${right}</div>`;
+}
+
+/* ── All Properties Summary ── */
+function buildAllSummary(od){
+  let h='<div class="ob-summary-grid">';
+  if(od.hawaii){
+    const hw=od.hawaii;
+    h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('hawaii')">
+      <div class="ob-card-head"><div class="ob-card-title">하와이</div><div class="ob-card-unit">${hw.property}</div></div>
+      <div class="ob-card-body">
+        <div class="ob-kpi-row"><span class="ob-kpi-label">목표 RN / REV</span><span class="ob-kpi-val">${hw.total.budget_rn.toLocaleString()} <span class="unit">/ ${obFmtUSD(hw.total.budget_rev)}</span></span></div>
+        <div class="ob-kpi-sub"><span>전년 RN ${hw.total.ly_rn.toLocaleString()}</span><span>전년 REV ${obFmtUSD(hw.total.ly_rev)}</span></div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--warning);margin-top:4px">실적 작성중</div>
+      </div></div>`;
+  }
+  ['mangilao','talopopo'].forEach(loc=>{
+    const arr=od.guam&&od.guam[loc];
+    if(!arr)return;
+    const total=arr.find(s=>s.is_total);
+    if(!total)return;
+    const a=guamAgg(total,curOBMonth);
+    const label=loc==='mangilao'?'괌·망길라오':'괌·탈로포포';
+    const pk=loc==='mangilao'?'guam_mangilao':'guam_talopopo';
+    h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('${pk}')">
+      <div class="ob-card-head"><div class="ob-card-title">${label}</div><div class="ob-card-unit">단위: USD</div></div>
+      <div class="ob-card-body">
+        <div class="ob-kpi-row"><span class="ob-kpi-label">${curOBMonth>0?curOBMonth+'월':'연간'} 실적 / 목표</span><span class="ob-kpi-val">${obFmtUSD(a.ra)} <span class="unit">/ ${obFmtUSD(a.rt)}</span></span></div>
+        ${obGauge(a.rate)}
+        <div class="ob-kpi-sub"><span>PAX ${a.pa.toLocaleString()} / ${a.pt.toLocaleString()}</span><span>전년 ${obFmtUSD(a.rp)}</span></div>
+      </div></div>`;
+  });
+  if(od.haiphong&&od.haiphong.categories){
+    const gt=od.haiphong.categories.find(c=>c.name==='GRAND TOTAL');
+    if(gt){
+      const a=hpAgg(gt,curOBMonth);
+      h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('haiphong')">
+        <div class="ob-card-head"><div class="ob-card-title">하이퐁</div><div class="ob-card-unit">단위: 백만VND</div></div>
+        <div class="ob-card-body">
+          <div class="ob-kpi-row"><span class="ob-kpi-label">${curOBMonth>0?curOBMonth+'월':'연간'} 실적 / 목표</span><span class="ob-kpi-val">${obFmtNum(a.a)} <span class="unit">/ ${obFmtNum(a.t)}</span></span></div>
+          ${obGauge(a.rate)}
+          <div class="ob-kpi-sub"><span>전년 ${obFmtNum(a.p)}</span></div>
+        </div></div>`;
+    }
+  }
+  h+='</div>';
+  return h;
+}
+
+/* ── Japan GSA Placeholder ── */
+function buildJapanGSA(od){
+  return `<div class="ob-table-section" style="margin-top:16px">
     <div class="ob-table-head">
-      <div class="ob-table-head-title">하와이 월별 실적</div>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">단위: USD</span>
+      <div class="ob-table-head-title">일본 GSA 채널</div>
+      <span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:8px;background:var(--info);color:#000;font-weight:700">GSA</span>
     </div>
-    <div style="overflow-x:auto">
-    <table class="ob-tbl">
-      <thead><tr>
-        <th>월</th><th>예산 RN</th><th>실적 RN</th><th>달성률</th><th>예산 REV</th><th>실적 REV</th><th>달성률</th><th>ADR</th><th>전년 ADR</th>
-      </tr></thead>
-      <tbody>
-      ${rows.map(m=>{
-        const rnR=m.budget_rn?(m.actual_rn/m.budget_rn*100):0;
-        const revR=m.budget_rev?(m.actual_rev/m.budget_rev*100):0;
-        return `<tr>
-          <td>${m.month}월</td>
-          <td>${m.budget_rn.toLocaleString()}</td>
-          <td>${m.actual_rn.toLocaleString()}</td>
-          <td class="${obRateCls(rnR)}">${rnR.toFixed(1)}%</td>
-          <td>$${(m.budget_rev/1e3).toFixed(0)}K</td>
-          <td>$${(m.actual_rev/1e3).toFixed(0)}K</td>
-          <td class="${obRateCls(revR)}">${revR.toFixed(1)}%</td>
-          <td>$${m.actual_adr.toFixed(0)}</td>
-          <td>$${m.ly_adr.toFixed(0)}</td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>
+    <div style="padding:24px 16px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:12px;border:1px dashed var(--rule);border-radius:8px;margin-top:8px">
+      <div style="font-size:13px;margin-bottom:6px;color:var(--ink-soft)">일본 GSA(General Sales Agent) 물량</div>
+      <div style="color:var(--warning);font-weight:700">데이터 준비중</div>
+      <div style="margin-top:6px;font-size:10px">일본 국적 PAX · REV · 에이전트별 실적 향후 추가 예정</div>
     </div>
   </div>`;
 }
 
-function buildOBMonthlyTable_haiphong(hp){
-  const cats=hp.summary.filter(s=>s.months&&s.months.length>0);
-  if(!cats.length)return '';
-  const months=cats[0].months.map(m=>m.month);
-  return `<div class="ob-table-section">
-    <div class="ob-table-head">
-      <div class="ob-table-head-title">하이퐁 카테고리별 월간 실적</div>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">단위: 백만VND</span>
-    </div>
-    <div style="overflow-x:auto">
-    <table class="ob-tbl">
-      <thead><tr>
-        <th>카테고리</th>${months.map(m=>`<th colspan="2">${m}</th>`).join('')}<th>연간목표</th><th>연간실적</th><th>달성률</th>
-      </tr>
-      <tr>
-        <th></th>${months.map(()=>`<th>목표</th><th>실적</th>`).join('')}<th></th><th></th><th></th>
-      </tr></thead>
-      <tbody>
-      ${cats.map(c=>{
-        const isTotal=c.name==='합계';
-        return `<tr class="${isTotal?'ob-total':''}">
-          <td>${c.name}</td>
-          ${c.months.map(m=>`<td>${obFmtNum(m.target)}</td><td class="${obRateCls(m.rate)}">${obFmtNum(m.actual)}</td>`).join('')}
-          <td>${obFmtNum(c.year.target)}</td>
-          <td>${obFmtNum(c.year.actual)}</td>
-          <td class="${obRateCls(c.year.rate)}">${c.year.rate}%</td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
-function buildOBMonthlyTable_guam(gm){
-  const grandMonthly=gm.grand_monthly;
-  if(!grandMonthly||!grandMonthly.length)return '';
-  const activeM=grandMonthly.filter(m=>m.rev_actual>0);
-  if(!activeM.length)return '';
-  return `<div class="ob-table-section">
-    <div class="ob-table-head">
-      <div class="ob-table-head-title">괌 월별 실적 (Grand Total)</div>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">단위: USD (천)</span>
-    </div>
-    <div style="overflow-x:auto">
-    <table class="ob-tbl">
-      <thead><tr>
-        <th>월</th><th>예산 PAX</th><th>실적 PAX</th><th>달성률</th><th>예산 REV</th><th>실적 REV</th><th>달성률</th><th>전년 REV</th><th>YoY</th>
-      </tr></thead>
-      <tbody>
-      ${activeM.map(m=>{
-        const paxR=m.pax_budget?(m.pax_actual/m.pax_budget*100):0;
-        const revR=m.rev_budget?(m.rev_actual/m.rev_budget*100):0;
-        const yoy=m.rev_prev?(m.rev_actual/m.rev_prev*100):0;
-        return `<tr>
-          <td>${m.month}월</td>
-          <td>${m.pax_budget.toLocaleString()}</td>
-          <td>${m.pax_actual.toLocaleString()}</td>
-          <td class="${obRateCls(paxR)}">${paxR.toFixed(1)}%</td>
-          <td>$${(m.rev_budget/1e3).toFixed(0)}K</td>
-          <td>$${(m.rev_actual/1e3).toFixed(0)}K</td>
-          <td class="${obRateCls(revR)}">${revR.toFixed(1)}%</td>
-          <td>$${(m.rev_prev/1e3).toFixed(0)}K</td>
-          <td class="${obRateCls(yoy)}">${yoy.toFixed(1)}%</td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
+/* ── Main Render ── */
 async function renderOutboundPane(){
   const pane=document.getElementById('outbound-pane');
   const od=await ensureOverseasData();
-  if(!od){pane.innerHTML='<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">해외 사업장 데이터 로드 실패</div><div class="empty-state-sub">docs/data/overseas_data.json을 확인해주세요.</div></div>';return}
+  if(!od){pane.innerHTML='<div class="empty-state"><div class="empty-state-title">해외 사업장 데이터 로드 실패</div><div class="empty-state-sub">docs/data/overseas_data.json을 확인해주세요.</div></div>';return}
 
-  /* 스코프 표시 업데이트 */
   const scopeEl=document.getElementById('scope-display');
   const propLabel=OB_PROPS.find(p=>p.key===curOutboundProp);
   scopeEl.textContent='아웃바운드'+(curOutboundProp!=='all'?' · '+(propLabel?propLabel.label:''):'');
-  document.getElementById('count-label').textContent='해외 3개 사업장';
-
-  const showHawaii=curOutboundProp==='all'||curOutboundProp==='hawaii';
-  const showGuam=curOutboundProp==='all'||curOutboundProp==='guam';
-  const showHaiphong=curOutboundProp==='all'||curOutboundProp==='haiphong';
+  document.getElementById('count-label').textContent='해외 사업장';
 
   let html='';
 
-  /* 요약 카드 */
-  html+='<div class="ob-summary-grid">';
-  if(showHawaii && od.hawaii) html+=buildHawaiiCard(od.hawaii);
-  if(showGuam && od.guam) html+=buildGuamCard(od.guam);
-  if(showHaiphong && od.haiphong) html+=buildHaiphongCard(od.haiphong);
-  html+='</div>';
+  /* Channel slicer (guam/haiphong only) */
+  if(curOutboundProp.startsWith('guam')||curOutboundProp==='haiphong'){
+    html+=`<div style="margin-bottom:2px"><span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700;letter-spacing:0.06em">채널</span></div>`;
+    html+=buildOBChannelSlicer();
+  }
 
-  /* 환율 정보 */
+  /* Month slicer */
+  html+=`<div style="margin-bottom:2px;margin-top:4px"><span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700;letter-spacing:0.06em">기간</span></div>`;
+  html+=buildOBMonthSlicer();
+
+  /* Main content */
+  if(curOutboundProp==='all') html+=buildAllSummary(od);
+  else if(curOutboundProp==='hawaii') html+=buildHawaiiView(od);
+  else if(curOutboundProp.startsWith('guam')) html+=buildGuamView(od,curOutboundProp);
+  else if(curOutboundProp==='haiphong') html+=buildHaiphongView(od);
+
+  /* Exchange rates */
   if(od.exchange_rate_usd||od.exchange_rate_vnd){
-    html+=`<div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);padding:4px 2px">`;
+    html+=`<div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);padding:8px 2px">`;
     if(od.exchange_rate_usd)html+=`<span>USD/KRW: <strong style="color:var(--ink-soft)">${od.exchange_rate_usd.toLocaleString()}</strong></span>`;
     if(od.exchange_rate_vnd)html+=`<span>VND/KRW: <strong style="color:var(--ink-soft)">${od.exchange_rate_vnd.toLocaleString()}</strong></span>`;
     if(od.generated_at)html+=`<span style="margin-left:auto">데이터 기준: <strong style="color:var(--gold-bright)">${od.generated_at}</strong></span>`;
     html+=`</div>`;
   }
 
-  /* 월별 실적 테이블 */
-  if(showHawaii && od.hawaii) html+=buildOBMonthlyTable_hawaii(od.hawaii);
-  if(showGuam && od.guam) html+=buildOBMonthlyTable_guam(od.guam);
-  if(showHaiphong && od.haiphong) html+=buildOBMonthlyTable_haiphong(od.haiphong);
+  /* Japan GSA */
+  if(curOutboundProp==='all'||curOutboundProp.startsWith('guam')) html+=buildJapanGSA(od);
+
+  /* Competition placeholder */
+  html+=`<div class="ob-table-section" style="margin-top:16px">
+    <div class="ob-table-head">
+      <div class="ob-table-head-title">경쟁사 상품 현황</div>
+      <span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:8px;background:var(--gold);color:#000;font-weight:700">개발중</span>
+    </div>
+    <div style="padding:32px 16px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:12px;border:1px dashed var(--rule);border-radius:8px;margin-top:8px">
+      <div style="font-size:14px;margin-bottom:8px;color:var(--ink-soft)">하나투어 · 모두투어 · 괌이지 · 몽키트래블</div>
+      <div>괌 패키지/골프 상품 가격 및 구성 자동 수집 예정</div>
+      <div style="margin-top:4px;font-size:10px;color:var(--ink-faint)">상품명 · 가격 · 일정 · 포함내역(항공/호텔/골프/식사)</div>
+    </div>
+  </div>`;
 
   pane.innerHTML=html;
 }
+
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded',()=>{

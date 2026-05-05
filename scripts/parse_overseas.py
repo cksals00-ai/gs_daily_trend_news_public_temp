@@ -98,7 +98,7 @@ def parse_overseas_excel(filepath):
             'yoy': pct(ws.cell(r, 9).value),
             'months': []
         }
-        for col_s, mn in [(11, '1월'), (14, '2월'), (17, '3월')]:
+        for col_s, mn in [(11, '1월'), (14, '2월'), (17, '3월'), (20, '4월')]:
             row['months'].append({
                 'month': mn,
                 'target': sv(ws.cell(r, col_s).value),
@@ -129,7 +129,7 @@ def parse_overseas_excel(filepath):
             },
             'months': []
         }
-        for m in range(4):
+        for m in range(5):
             base = 9 + m * 3
             entry['months'].append({
                 'target': round(sv(ws_hp.cell(r, base).value), 2),
@@ -168,7 +168,7 @@ def parse_overseas_excel(filepath):
                 },
                 'months': []
             }
-            for m in range(3):
+            for m in range(5):
                 base = 21 + m * 16
                 entry['months'].append({
                     'pax_budget': sv(ws_g.cell(r, base).value),

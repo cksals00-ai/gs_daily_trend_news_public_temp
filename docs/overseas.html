@@ -768,10 +768,13 @@
 
       const items = [];
       if (hp) {
-        items.push({ label: '하이퐁 합계', value: fmtD(hp.year.actual, 0) + ' 백만', sub: `목표 ${fmtD(hp.year.target, 0)} 백만 · 달성 ${fmtPct(hp.year.rate)}` });
+        items.push({ label: '하이퐁 매출 실적', value: fmtD(hp.year.actual, 0) + ' 백만', sub: `목표 ${fmtD(hp.year.target, 0)} 백만 · 달성 ${fmtPct(hp.year.rate)}`, unit: '백만VND' });
       }
       if (guam) {
-        items.push({ label: '괌 합계', value: fmtD(guam.year.actual / 1000000, 0) + ' 백만', sub: `목표 ${fmtD(guam.year.target / 1000000, 0)} 백만 · 달성 ${fmtPct(guam.year.rate)}` });
+        const gRevActual = Math.round(guam.year.actual / 100000000);
+        const gRevTarget = Math.round(guam.year.target / 100000000);
+        const guamYoy = guam.prev ? (guam.year.actual / guam.prev * 100) : 0;
+        items.push({ label: '괌 매출 실적', value: fmtD(gRevActual, 1) + '억', sub: `목표 ${fmtD(gRevTarget, 1)}억 · 달성 ${fmtPct(guam.year.rate)}`, unit: 'KRW(원)' });
       }
       if (hw) {
         const rnRate = hw.total.budget_rn > 0 ? (hw.total.actual_rn / hw.total.budget_rn * 100) : 0;
@@ -781,7 +784,7 @@
 
       banner.innerHTML = items.map(it => `
         <div class="summary-item">
-          <div class="summary-item-label">${it.label}</div>
+          <div class="summary-item-label">${it.label}${it.unit?` <span style="font-size:10px;color:var(--ink-faint)">(${it.unit})</span>`:''}</div>
           <div class="summary-item-value">${it.value}</div>
           <div class="summary-item-sub">${it.sub}</div>
         </div>
