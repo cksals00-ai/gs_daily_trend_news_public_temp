@@ -4259,6 +4259,7 @@ let curOBSeg=null;
 const OB_PROPS=[
   {key:'all',           label:'전체'},
   {key:'hawaii',        label:'하와이'},
+  {key:'guam_all',      label:'괌 전체'},
   {key:'guam_mangilao', label:'괌·망길라오'},
   {key:'guam_talopopo', label:'괌·탈로포포'},
   {key:'haiphong',      label:'하이퐁'},
@@ -4364,6 +4365,45 @@ function guamAgg(seg,mf){
   return {rt:t.rev_budget||0,ra:t.rev_actual||0,rp:t.rev_prev||0,pt:t.pax_budget||0,pa:t.pax_actual||0,pp:t.pax_prev||0,rate:t.rev_rate||0};
 }
 
+/* ── Guam All (aggregate) helpers ── */
+function guamAllAgg(od,mf){
+  const mTotal=od.guam.mangilao.find(s=>s.is_total);
+  const tTotal=od.guam.talopopo.find(s=>s.is_total);
+  const ma=guamAgg(mTotal,mf);
+  const ta=guamAgg(tTotal,mf);
+  return {
+    rt:ma.rt+ta.rt, ra:ma.ra+ta.ra, rp:ma.rp+ta.rp,
+    pt:ma.pt+ta.pt, pa:ma.pa+ta.pa, pp:ma.pp+ta.pp,
+    rate:(ma.rt+ta.rt)?((ma.ra+ta.ra)/(ma.rt+ta.rt)*100):0
+  };
+}
+
+/* ── YTD (누계) helpers ── */
+function guamYTDAgg(seg,mf){
+  if(!seg||!seg.months||mf<=0) return guamAgg(seg,0);
+  let rt=0,ra=0,rp=0,pt=0,pa=0,pp=0;
+  for(let i=0;i<mf;i++){const m=seg.months[i];if(!m)continue;rt+=m.rev_budget||0;ra+=m.rev_actual||0;rp+=m.rev_prev||0;pt+=m.pax_budget||0;pa+=m.pax_actual||0;pp+=m.pax_prev||0;}
+  return {rt,ra,rp,pt,pa,pp,rate:rt?(ra/rt*100):0};
+}
+function guamAllYTDAgg(od,mf){
+  const mT=od.guam.mangilao.find(s=>s.is_total);
+  const tT=od.guam.talopopo.find(s=>s.is_total);
+  const ma=guamYTDAgg(mT,mf),ta=guamYTDAgg(tT,mf);
+  return {rt:ma.rt+ta.rt,ra:ma.ra+ta.ra,rp:ma.rp+ta.rp,pt:ma.pt+ta.pt,pa:ma.pa+ta.pa,pp:ma.pp+ta.pp,rate:(ma.rt+ta.rt)?((ma.ra+ta.ra)/(ma.rt+ta.rt)*100):0};
+}
+function hpYTDAgg(cat,mf){
+  if(!cat||!cat.months||mf<=0) return hpAgg(cat,0);
+  let t=0,a=0,p=0;
+  for(let i=0;i<mf;i++){const m=cat.months[i];if(!m)continue;t+=m.target||0;a+=m.actual||0;p+=m.prev||0;}
+  return {t,a,p,rate:t?(a/t*100):0};
+}
+function obYTDBar(label,val,target,rate,fmtFn){
+  return `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--rule)">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);margin-bottom:3px">
+      <span>${label}</span><span>${fmtFn(val)} / ${fmtFn(target)}</span>
+    </div>${obGauge(rate)}</div>`;
+}
+
 /* ── Haiphong helpers ── */
 function hpSegList(cats,ch){
   const gt=cats.find(c=>c.name==='GRAND TOTAL');
@@ -4437,8 +4477,10 @@ function buildGuamView(od,locKey){
   const dSeg=sel?sel.seg:parentSeg;
   const dName=sel?sel.name:(parentSeg?parentSeg.name||'TOTAL':'TOTAL');
   const da=guamAgg(dSeg,curOBMonth);
+  const daYtd=curOBMonth>0?guamYTDAgg(dSeg,curOBMonth):null;
   const summ=`<div class="ob-kpi-row"><span class="ob-kpi-label">${dName} ${curOBMonth>0?curOBMonth+'월':'연간'}</span><span class="ob-kpi-val">${obFmtUSD(da.ra)} <span class="unit">/ ${obFmtUSD(da.rt)}</span></span></div>
     ${obGauge(da.rate)}
+    ${daYtd?obYTDBar('1~'+curOBMonth+'월 누계',daYtd.ra,daYtd.rt,daYtd.rate,obFmtUSD):''}
     <div class="ob-kpi-sub" style="margin-top:6px"><span>PAX ${da.pa.toLocaleString()} / ${da.pt.toLocaleString()}</span><span>전년 REV ${obFmtUSD(da.rp)}</span></div>`;
 
   let tbody='';
@@ -4453,6 +4495,51 @@ function buildGuamView(od,locKey){
   });
   const right=buildOBDetailCard(dName+' 상세','단위: USD',
     ['월','목표 PAX','실적 PAX','달성률','목표 REV','실적 REV','달성률','전년 REV'],tbody,summ);
+
+  return `<div class="ob-dual-grid">${left}${right}</div>`;
+}
+
+/* ── Guam All (aggregate) View ── */
+function buildGuamAllView(od){
+  const mTotal=od.guam.mangilao.find(s=>s.is_total);
+  const tTotal=od.guam.talopopo.find(s=>s.is_total);
+  const ma=guamAgg(mTotal,curOBMonth);
+  const ta=guamAgg(tTotal,curOBMonth);
+  const all=guamAllAgg(od,curOBMonth);
+
+  /* Left: segment card with per-location rows */
+  const rows=[
+    {name:'망길라오', val:obFmtUSD(ma.ra), target:obFmtUSD(ma.rt), rate:ma.rate, indent:false},
+    {name:'탈로포포', val:obFmtUSD(ta.ra), target:obFmtUSD(ta.rt), rate:ta.rate, indent:false},
+    {name:'괌 전체 합산', val:obFmtUSD(all.ra), target:obFmtUSD(all.rt), rate:all.rate, indent:false, isTotal:true},
+  ];
+  const left=buildOBSegCard('사업장별 실적 · 괌 전체','단위: USD',rows);
+
+  /* Right: combined KPI + monthly breakdown */
+  const allYtd=curOBMonth>0?guamAllYTDAgg(od,curOBMonth):null;
+  const summ=`<div class="ob-kpi-row"><span class="ob-kpi-label">괌 전체 ${curOBMonth>0?curOBMonth+'월':'연간'}</span><span class="ob-kpi-val">${obFmtUSD(all.ra)} <span class="unit">/ ${obFmtUSD(all.rt)}</span></span></div>
+    ${obGauge(all.rate)}
+    ${allYtd?obYTDBar('1~'+curOBMonth+'월 누계',allYtd.ra,allYtd.rt,allYtd.rate,obFmtUSD):''}
+    <div class="ob-kpi-sub" style="margin-top:6px"><span>PAX ${all.pa.toLocaleString()} / ${all.pt.toLocaleString()}</span><span>전년 REV ${obFmtUSD(all.rp)}</span></div>`;
+
+  let tbody='';
+  for(let i=0;i<12;i++){
+    if(curOBMonth>0&&(i+1)!==curOBMonth)continue;
+    const mm=mTotal&&mTotal.months&&mTotal.months[i];
+    const tm=tTotal&&tTotal.months&&tTotal.months[i];
+    const mRev=mm?(mm.rev_actual||0):0, mBud=mm?(mm.rev_budget||0):0;
+    const tRev=tm?(tm.rev_actual||0):0, tBud=tm?(tm.rev_budget||0):0;
+    const aRev=mRev+tRev, aBud=mBud+tBud;
+    const mPax=mm?(mm.pax_actual||0):0, tPax=tm?(tm.pax_actual||0):0;
+    const rr=aBud?(aRev/aBud*100):0;
+    tbody+=`<tr><td>${i+1}월</td>
+      <td>${obFmtUSD(mBud)}</td><td>${obFmtUSD(mRev)}</td>
+      <td>${obFmtUSD(tBud)}</td><td>${obFmtUSD(tRev)}</td>
+      <td>${obFmtUSD(aBud)}</td><td>${obFmtUSD(aRev)}</td>
+      <td class="${obRateCls(rr)}">${rr.toFixed(1)}%</td></tr>`;
+  }
+  const right=buildOBDetailCard('괌 전체 월별 상세','단위: USD',
+    ['월','망길라오 목표','망길라오 실적','탈로포포 목표','탈로포포 실적','합산 목표','합산 실적','달성률'],tbody,summ);
 
   return `<div class="ob-dual-grid">${left}${right}</div>`;
 }
@@ -4472,8 +4559,10 @@ function buildHaiphongView(od){
   const dCat=sel?sel.cat:parentCat;
   const dName=sel?sel.name:(parentCat?parentCat.name:'GRAND TOTAL');
   const da=hpAgg(dCat,curOBMonth);
+  const daHpYtd=curOBMonth>0?hpYTDAgg(dCat,curOBMonth):null;
   const summ=`<div class="ob-kpi-row"><span class="ob-kpi-label">${dName} ${curOBMonth>0?curOBMonth+'월':'연간'}</span><span class="ob-kpi-val">${obFmtNum(da.a)} <span class="unit">/ ${obFmtNum(da.t)}</span></span></div>
     ${obGauge(da.rate)}
+    ${daHpYtd?obYTDBar('1~'+curOBMonth+'월 누계',daHpYtd.a,daHpYtd.t,daHpYtd.rate,obFmtNum):''}
     <div class="ob-kpi-sub" style="margin-top:6px"><span>전년 ${obFmtNum(da.p)}</span></div>`;
 
   const children=cats.filter(c=>c.parent===dName);
@@ -4573,12 +4662,27 @@ function buildAllSummary(od){
         <div style="font-family:var(--mono);font-size:10px;color:var(--warning);margin-top:4px">실적 작성중</div>
       </div></div>`;
   }
+  /* 괌 전체 합산 카드 */
+  if(od.guam){
+    const ga=guamAllAgg(od,curOBMonth);
+    const gaYtd=curOBMonth>0?guamAllYTDAgg(od,curOBMonth):null;
+    h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('guam_all')">
+      <div class="ob-card-head"><div class="ob-card-title">괌 전체</div><div class="ob-card-unit">망길라오 + 탈로포포 합산 · USD</div></div>
+      <div class="ob-card-body">
+        <div class="ob-kpi-row"><span class="ob-kpi-label">${curOBMonth>0?curOBMonth+'월':'연간'} 실적 / 목표</span><span class="ob-kpi-val">${obFmtUSD(ga.ra)} <span class="unit">/ ${obFmtUSD(ga.rt)}</span></span></div>
+        ${obGauge(ga.rate)}
+        ${gaYtd?obYTDBar('1~'+curOBMonth+'월 누계',gaYtd.ra,gaYtd.rt,gaYtd.rate,obFmtUSD):''}
+        <div class="ob-kpi-sub"><span>PAX ${ga.pa.toLocaleString()} / ${ga.pt.toLocaleString()}</span><span>전년 ${obFmtUSD(ga.rp)}</span></div>
+      </div></div>`;
+  }
+  /* 괌 개별 카드 (망길라오 → 탈로포포) */
   ['mangilao','talopopo'].forEach(loc=>{
     const arr=od.guam&&od.guam[loc];
     if(!arr)return;
     const total=arr.find(s=>s.is_total);
     if(!total)return;
     const a=guamAgg(total,curOBMonth);
+    const ytd=curOBMonth>0?guamYTDAgg(total,curOBMonth):null;
     const label=loc==='mangilao'?'괌·망길라오':'괌·탈로포포';
     const pk=loc==='mangilao'?'guam_mangilao':'guam_talopopo';
     h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('${pk}')">
@@ -4586,18 +4690,22 @@ function buildAllSummary(od){
       <div class="ob-card-body">
         <div class="ob-kpi-row"><span class="ob-kpi-label">${curOBMonth>0?curOBMonth+'월':'연간'} 실적 / 목표</span><span class="ob-kpi-val">${obFmtUSD(a.ra)} <span class="unit">/ ${obFmtUSD(a.rt)}</span></span></div>
         ${obGauge(a.rate)}
+        ${ytd?obYTDBar('1~'+curOBMonth+'월 누계',ytd.ra,ytd.rt,ytd.rate,obFmtUSD):''}
         <div class="ob-kpi-sub"><span>PAX ${a.pa.toLocaleString()} / ${a.pt.toLocaleString()}</span><span>전년 ${obFmtUSD(a.rp)}</span></div>
       </div></div>`;
   });
+  /* 하이퐁 카드 */
   if(od.haiphong&&od.haiphong.categories){
     const gt=od.haiphong.categories.find(c=>c.name==='GRAND TOTAL');
     if(gt){
       const a=hpAgg(gt,curOBMonth);
+      const hytd=curOBMonth>0?hpYTDAgg(gt,curOBMonth):null;
       h+=`<div class="ob-card" style="cursor:pointer" onclick="setOutboundProp('haiphong')">
         <div class="ob-card-head"><div class="ob-card-title">하이퐁</div><div class="ob-card-unit">단위: 백만VND</div></div>
         <div class="ob-card-body">
           <div class="ob-kpi-row"><span class="ob-kpi-label">${curOBMonth>0?curOBMonth+'월':'연간'} 실적 / 목표</span><span class="ob-kpi-val">${obFmtNum(a.a)} <span class="unit">/ ${obFmtNum(a.t)}</span></span></div>
           ${obGauge(a.rate)}
+          ${hytd?obYTDBar('1~'+curOBMonth+'월 누계',hytd.a,hytd.t,hytd.rate,obFmtNum):''}
           <div class="ob-kpi-sub"><span>전년 ${obFmtNum(a.p)}</span></div>
         </div></div>`;
     }
@@ -4647,6 +4755,7 @@ async function renderOutboundPane(){
   /* Main content */
   if(curOutboundProp==='all') html+=buildAllSummary(od);
   else if(curOutboundProp==='hawaii') html+=buildHawaiiView(od);
+  else if(curOutboundProp==='guam_all') html+=buildGuamAllView(od);
   else if(curOutboundProp.startsWith('guam')) html+=buildGuamView(od,curOutboundProp);
   else if(curOutboundProp==='haiphong') html+=buildHaiphongView(od);
 
