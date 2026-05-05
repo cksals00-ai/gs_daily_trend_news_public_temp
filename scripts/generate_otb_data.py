@@ -955,7 +955,7 @@ def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
 
 def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
                     months=(4, 5, 6), now_kst=None, rm_fcst_props=None, daily_bk=None,
-                    rm_trend_snapshots=None):
+                    rm_trend_snapshots=None, adj_by_prop_seg=None):
     """사업장별 4·5·6월 YoY 추이 테이블 데이터 생성.
     rm_fcst_props: RM FCST 데이터 (load_rm_fcst() 결과)
     daily_bk: 온북 DB 미포함 사업장 보정 데이터
@@ -1063,7 +1063,19 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                     s_ly_rn = 0
                     for pname in db_props:
                         s_act_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_26, {}).get("booking_rn", 0)
-                        s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    # LY: 동기간 보정(adj_by_prop_seg) 우선, 없으면 풀년 db_bps
+                    is_future_or_current_m = (m >= now_kst.month)
+                    used_adj = False
+                    if is_future_or_current_m and adj_by_prop_seg:
+                        for pname in db_props:
+                            ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
+                            s_ly_rn += ps_m.get("booking_rn", 0)
+                        if s_ly_rn > 0:
+                            used_adj = True
+                    if not used_adj:
+                        s_ly_rn = 0
+                        for pname in db_props:
+                            s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
                     sb = seg_budgets.get(display_name, {}).get(seg, {})
                     s_bud_rn = sb.get(bud_label, {}).get("rn", 0)
                     s_yoy = round((s_act_rn / s_ly_rn - 1) * 100, 1) if s_ly_rn > 0 else None
@@ -1158,7 +1170,8 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, 
 
 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
-                         adj_by_prop=None, adj_by_segment=None, holiday_factors=None, lead_time_by_prop=None, now_kst=None,
+                         adj_by_prop=None, adj_by_segment=None, adj_by_prop_seg=None,
+                         holiday_factors=None, lead_time_by_prop=None, now_kst=None,
                          rm_fcst_props=None, rm_trend_snapshots=None, seg_fcst_data=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
@@ -1558,11 +1571,25 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                         m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
                         s_act_rn  += m.get("booking_rn",  0)
                         s_act_rev += m.get("booking_rev", 0.0)
-                for mk in last_keys:
-                    for pname in db_props:
-                        m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
-                        s_lst_rn  += m.get("booking_rn",  0)
-                        s_lst_rev += m.get("booking_rev", 0.0)
+                # LY: 동기간 보정 (adj_by_prop_seg) 우선, 없으면 풀년 db_bps
+                is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
+                used_adj_seg = False
+                if is_future_or_current and adj_by_prop_seg:
+                    for mk in last_keys:
+                        for pname in db_props:
+                            ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk, {})
+                            s_lst_rn  += ps_m.get("booking_rn", 0)
+                            s_lst_rev += ps_m.get("booking_rev_m", 0.0)
+                    if s_lst_rn > 0:
+                        used_adj_seg = True
+                if not used_adj_seg:
+                    s_lst_rn = 0
+                    s_lst_rev = 0.0
+                    for mk in last_keys:
+                        for pname in db_props:
+                            m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
+                            s_lst_rn  += m.get("booking_rn",  0)
+                            s_lst_rev += m.get("booking_rev", 0.0)
                 seg_aggs[seg] = {
                     "bud_rn": s_bud_rn, "bud_rev": s_bud_rev, "bud_adr": s_bud_adr,
                     "act_rn": s_act_rn, "act_rev": s_act_rev,
@@ -2037,13 +2064,15 @@ def main():
     # YoY 동기간 보정값 로드
     adj_by_prop = {}
     adj_by_segment = {}
+    adj_by_prop_seg = {}
     yoy_base_date = ""
     yoy_adj_section = db.get("yoy_adjusted", {})
     if "2025" in yoy_adj_section:
         adj_by_prop    = yoy_adj_section["2025"].get("by_property", {})
         adj_by_segment = yoy_adj_section["2025"].get("by_segment", {})
+        adj_by_prop_seg = yoy_adj_section["2025"].get("by_property_segment", {})
         yoy_base_date  = yoy_adj_section["2025"].get("base_date_full", "")
-    print(f"  YoY 동기간 보정 로드: 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, base={yoy_base_date}")
+    print(f"  YoY 동기간 보정 로드: 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}, base={yoy_base_date}")
 
     # 사업장별 리드타임 분포
     lead_time_by_prop = db.get("lead_time_by_property", {})
@@ -2089,7 +2118,7 @@ def main():
     all_months[SUMMARY_KEY] = build_month_snapshot(
         db_bp, budgets, 0,
         db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
-        adj_by_prop=adj_by_prop, adj_by_segment=adj_by_segment,
+        adj_by_prop=adj_by_prop, adj_by_segment=adj_by_segment, adj_by_prop_seg=adj_by_prop_seg,
         holiday_factors=holiday_factors,
         lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
         rm_fcst_props=rm_fcst_props,
@@ -2100,7 +2129,7 @@ def main():
         all_months[str(m)] = build_month_snapshot(
             db_bp, budgets, m,
             db_seg=db_seg, seg_budgets=seg_budgets, db_bps=db_bps,
-            adj_by_prop=adj_by_prop, adj_by_segment=adj_by_segment,
+            adj_by_prop=adj_by_prop, adj_by_segment=adj_by_segment, adj_by_prop_seg=adj_by_prop_seg,
             holiday_factors=holiday_factors,
             lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
             rm_fcst_props=rm_fcst_props,
@@ -2216,7 +2245,7 @@ def main():
     yoy_table = build_yoy_table(
         db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_factors,
         months=TARGET_MONTHS, now_kst=now_kst, rm_fcst_props=rm_fcst_props,
-        daily_bk=daily_bk, rm_trend_snapshots=rm_trend_snapshots,
+        daily_bk=daily_bk, rm_trend_snapshots=rm_trend_snapshots, adj_by_prop_seg=adj_by_prop_seg,
     )
 
     output = {
