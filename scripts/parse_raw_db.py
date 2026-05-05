@@ -938,7 +938,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             }
             for seg in all_nd_segs
         }
-        # 투숙월별 순예약 집계
+        # 투숙월별 순예약 집계 (전 세그먼트 합산 — 하위호환용)
         all_months_nd = sorted(set(_pd_month.keys()) | set(_cd_month.keys()))
         result['net_daily_by_month'] = {
             sm: {
@@ -952,6 +952,29 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             }
             for sm in all_months_nd
         }
+        # 투숙월×세그먼트별 순예약 집계 (예약페이스 차트가 OTA+G-OTA+Inbound 합산용으로 사용)
+        # Booking Status 표(OTA+G-OTA+Inbound)와 정합 위해 신설.
+        all_segs_nd_m = sorted(set(_pd_seg_month.keys()) | set(_cd_seg_month.keys()))
+        result['net_daily_by_month_seg'] = {}
+        for seg in all_segs_nd_m:
+            seg_pd_m = _pd_seg_month.get(seg, {})
+            seg_cd_m = _cd_seg_month.get(seg, {})
+            seg_months = sorted(set(seg_pd_m.keys()) | set(seg_cd_m.keys()))
+            seg_block = {}
+            for sm in seg_months:
+                pd_block = seg_pd_m.get(sm, {})
+                cd_block = seg_cd_m.get(sm, {})
+                dates = sorted(set(pd_block.keys()) | set(cd_block.keys()))
+                seg_block[sm] = {
+                    d: {
+                        'pickup_rn': pd_block.get(d, {'rn': 0})['rn'],
+                        'cancel_rn': cd_block.get(d, {'rn': 0})['rn'],
+                        'net_rn':    pd_block.get(d, {'rn': 0})['rn']
+                                   - cd_block.get(d, {'rn': 0})['rn'],
+                    }
+                    for d in dates
+                }
+            result['net_daily_by_month_seg'][seg] = seg_block
 
     # 6단계: 리드타임 분포 (예약~투숙 간격) — 전체 + 사업장별
     if lead_time_agg:

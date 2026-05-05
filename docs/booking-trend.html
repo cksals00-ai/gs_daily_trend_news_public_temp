@@ -697,9 +697,34 @@ function renderPaceChart() {
   const datasets = [];
   const legendEl = document.getElementById('pace-legend');
 
+  // Booking Status 표와 정합을 위해 OTA+G-OTA+Inbound 3세그먼트만 합산.
+  // net_daily_by_month_seg가 있으면 사용, 없으면 fallback으로 net_daily_by_month(전체).
+  const BUDGET_SEGS = ['OTA', 'G-OTA', 'Inbound'];
+  const segScoped = !!db.net_daily_by_month_seg;
+
+  function _getMonthData(monthKey) {
+    if (!segScoped) return db.net_daily_by_month[monthKey] || null;
+    // 세그먼트 합산
+    const acc = {};
+    let any = false;
+    BUDGET_SEGS.forEach(seg => {
+      const segMonth = (db.net_daily_by_month_seg[seg] || {})[monthKey];
+      if (!segMonth) return;
+      any = true;
+      Object.keys(segMonth).forEach(d => {
+        if (!acc[d]) acc[d] = { pickup_rn: 0, cancel_rn: 0, net_rn: 0 };
+        const v = segMonth[d];
+        acc[d].pickup_rn += v.pickup_rn || 0;
+        acc[d].cancel_rn += v.cancel_rn || 0;
+        acc[d].net_rn    += v.net_rn    || 0;
+      });
+    });
+    return any ? acc : null;
+  }
+
   years.forEach(y => {
     const monthKey = y + mm;
-    const monthData = db.net_daily_by_month[monthKey];
+    const monthData = _getMonthData(monthKey);
     if (!monthData) return;
 
     // 투숙월 1일 기준
@@ -707,7 +732,7 @@ function renderPaceChart() {
     const sortedDates = Object.keys(monthData).sort();
     if (sortedDates.length === 0) return;
 
-    // 누적 계산 (취소 반영 net_rn)
+    // 누적 계산 (취소 반영 net_rn) — OTA+G-OTA+Inbound 합산
     let cumulative = 0;
     const points = [];
     sortedDates.forEach(d => {

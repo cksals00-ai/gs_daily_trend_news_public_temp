@@ -24,6 +24,8 @@ DOCS_DATA_DIR = PROJECT_DIR / "docs" / "data"
 BUDGET_XLSX = DATA_DIR / "raw_db" / "budget" / "★최종★(검토완료)_2026년 객실 사업계획_총량 수립(2차+사업장변경건).xlsx"
 DB_JSON = DATA_DIR / "db_aggregated.json"
 RM_FCST_JSON = DATA_DIR / "rm_fcst.json"
+FCST_SEG_TREND_JSON = DATA_DIR / "fcst_segment_trend.json"  # 사업장×월×세그 RM FCST 분배본
+AI_FCST_JSON = DOCS_DATA_DIR / "ai_fcst.json"               # manager_keyin_segments 포함
 HOLIDAYS_KR_JSON = DATA_DIR / "holidays_kr.json"
 DAILY_BOOKING_JSON = DATA_DIR / "daily_booking.json"
 OUTPUT_JSON = DOCS_DATA_DIR / "otb_data.json"
@@ -701,6 +703,95 @@ def load_rm_fcst():
         return {}
 
 
+def load_segment_fcst():
+    """세그먼트별 FCST 원본 데이터 로드 (분배 X, 원본 그대로).
+
+    우선순위 (각 사업장×월×세그 단위):
+      1) manager_keyin_segments[seg]: 매니저가 직접 키인한 값 (ai_fcst.json) — 최우선
+      2) fcst_segment_trend snapshot rm_fcst_rn: RM 회의 결과를 4년 가중 historical mix로 분배한 공식 값
+      3) ratios[prop][월][seg]: historical mix 점유율 (1~12월 모두 존재) — 미커버 월 fallback용
+
+    Returns: {
+        "manager_keyin": {prop: {ym: {seg: rn}}},
+        "rm_seg_fcst":   {prop: {ym: {seg: {"rm_fcst_rn", "rm_budget_rn", "ratio"}}}},
+        "ratios":        {prop: {month_int_str: {seg: ratio_pct}}},
+    }
+    """
+    out = {"manager_keyin": {}, "rm_seg_fcst": {}, "ratios": {}}
+
+    # 1) ai_fcst.json: manager_keyin_segments
+    if AI_FCST_JSON.exists():
+        try:
+            ai = json.loads(AI_FCST_JSON.read_text(encoding="utf-8"))
+            for prop, months in ai.get("properties", {}).items():
+                for ym, v in months.items():
+                    ks = v.get("manager_keyin_segments")
+                    if ks and isinstance(ks, dict):
+                        out["manager_keyin"].setdefault(prop, {})[ym] = ks
+        except Exception:
+            pass
+
+    # 2) fcst_segment_trend.json: snapshots[-1] (최신 RM FCST 분배본) + ratios
+    if FCST_SEG_TREND_JSON.exists():
+        try:
+            fst = json.loads(FCST_SEG_TREND_JSON.read_text(encoding="utf-8"))
+            snaps = fst.get("snapshots", [])
+            if snaps:
+                latest = snaps[-1]
+                for prop, months in latest.get("properties", {}).items():
+                    for ym, segs in months.items():
+                        out["rm_seg_fcst"].setdefault(prop, {})[ym] = segs
+            out["ratios"] = fst.get("ratios", {})
+        except Exception:
+            pass
+
+    return out
+
+
+def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_int=None):
+    """단일 (사업장, 월, 세그)에 대한 FCST RN 결정. 우선순위:
+      1) manager_keyin_segments[seg]
+      2) fcst_segment_trend snapshot rm_fcst_rn
+      3) ratios[prop][month_int][seg] × p_total_fcst (RM 미커버 월 fallback)
+      4) None (데이터 없음)
+
+    Args:
+        seg_fcst_data: load_segment_fcst() 결과
+        display_name: 사업장 표시명 (예: "01.벨비발디")
+        ym: "YYYY-MM" 형식 (예: "2026-07")
+        seg: "OTA" / "G-OTA" / "Inbound"
+        p_total_fcst: 사업장 총 FCST RN (3순위 fallback에 필요)
+        month_int: 월 정수 (1~12). 없으면 ym에서 추출.
+    """
+    # 1) manager keyin
+    keyin = seg_fcst_data.get("manager_keyin", {}).get(display_name, {}).get(ym, {})
+    if seg in keyin and keyin[seg] is not None:
+        return int(keyin[seg]), "manager_keyin"
+
+    # 2) RM segment FCST snapshot
+    rm_block = seg_fcst_data.get("rm_seg_fcst", {}).get(display_name, {}).get(ym, {})
+    if seg in rm_block:
+        v = rm_block[seg].get("rm_fcst_rn")
+        if v is not None:
+            return int(v), "rm_seg_fcst"
+
+    # 3) ratio × property total fcst (RM 미커버 월 fallback)
+    if p_total_fcst is not None and p_total_fcst > 0:
+        if month_int is None and ym and len(ym) >= 7:
+            try:
+                month_int = int(ym[5:7])
+            except Exception:
+                month_int = None
+        if month_int is not None:
+            ratios = seg_fcst_data.get("ratios", {}).get(display_name, {}).get(str(month_int), {})
+            if ratios and seg in ratios:
+                pct = ratios.get(seg)
+                if pct is not None:
+                    return int(round(p_total_fcst * pct / 100)), "ratio_fallback"
+
+    return None, None
+
+
 def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst):
     """동기간 기준으로 LY 데이터를 필터링하여 동적 보정 데이터 생성.
     today가 2026-04-29라면, 2025년 데이터는 <= 2025-04-29 기준일 시점의 데이터만 포함.
@@ -964,14 +1055,18 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, 
 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
                          adj_by_prop=None, adj_by_segment=None, holiday_factors=None, lead_time_by_prop=None, now_kst=None,
-                         rm_fcst_props=None, rm_trend_snapshots=None):
+                         rm_fcst_props=None, rm_trend_snapshots=None, seg_fcst_data=None):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
+
+    seg_fcst_data: load_segment_fcst() 결과. 세그별 FCST는 분배 X, 원본 데이터 직접 사용.
     """
     if now_kst is None:
         now_kst = datetime.now(KST)
     if rm_fcst_props is None:
         rm_fcst_props = {}
+    if seg_fcst_data is None:
+        seg_fcst_data = {"manager_keyin": {}, "rm_seg_fcst": {}, "ratios": {}}
 
     if month_idx == 0:
         target_keys = MONTHS_26
@@ -1109,11 +1204,19 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 if ai_fcst_rn is not None and ai_fcst_rn > 0:
                     rns_fcst = ai_fcst_rn
                     fcst_ach = ai_fcst_ach
-                    # 매출 FCST도 전년 기반 추정
+                    # 매출 FCST = AI FCST RN × LY 풀년 ADR (OTA+G-OTA+Inbound 기준).
+                    # ※ lst_rn/lst_rev는 위에서 동기간 보정(adj_by_prop)이 적용돼 양쪽 모두 축소된 값이라
+                    #   ratio 계산 시 LY 풀년 ADR로 정규화하지 않으면 rev_fcst 폭주 (예: 92조).
                     mk_25 = f"2025{month_idx:02d}"
-                    lst_rev_m = sum_db(db_bp, db_props, mk_25)["rev_m"]
-                    if lst_rev_m > 0 and lst_rn > 0:
-                        rev_fcst = lst_rev_m * (rns_fcst / lst_rn)
+                    if db_bps is not None:
+                        ly_full = sum_db_segments(db_bps, db_props, mk_25)
+                    else:
+                        ly_full = sum_db(db_bp, db_props, mk_25)
+                    ly_full_rn = ly_full["rn"]
+                    ly_full_rev = ly_full["rev_m"]
+                    if ly_full_rn > 0:
+                        ly_adr_m = ly_full_rev / ly_full_rn  # 백만원/RN
+                        rev_fcst = rns_fcst * ly_adr_m
                     else:
                         rev_fcst = 0.0
                     adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
@@ -1168,13 +1271,17 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     rns_fcst += mi_rns_f
                     rev_fcst += mi_rev_f
                 else:
-                    # 미래월 fallback: AI FCST 사용
+                    # 미래월 fallback: AI FCST × LY 풀년 ADR (OTA+G-OTA+Inbound)
                     if mi_ai is not None and mi_ai > 0:
                         rns_fcst += mi_ai
                         mk_25_mi = f"2025{mi:02d}"
-                        mi_lst = sum_db(db_bp, db_props, mk_25_mi)
-                        if mi_lst["rev_m"] > 0 and mi_lst["rn"] > 0:
-                            rev_fcst += mi_lst["rev_m"] * (mi_ai / mi_lst["rn"])
+                        if db_bps is not None:
+                            mi_lst = sum_db_segments(db_bps, db_props, mk_25_mi)
+                        else:
+                            mi_lst = sum_db(db_bp, db_props, mk_25_mi)
+                        if mi_lst["rn"] > 0:
+                            ly_adr_m = mi_lst["rev_m"] / mi_lst["rn"]  # 백만원/RN
+                            rev_fcst += mi_ai * ly_adr_m
                         else:
                             rev_fcst += mi_bud_rev
             adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
@@ -1309,41 +1416,138 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     if db_seg is not None and seg_budgets is not None:
         seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=adj_by_segment, now_kst=now_kst)
 
-    # 세그먼트별 byProperty (각 세그먼트 단독 기준)
+    # ── 세그먼트별 byProperty (각 세그먼트 단독 기준) ──
+    # FCST는 분배/추정하지 않고 ORIGINAL 데이터를 직접 사용:
+    #   1) ai_fcst.json manager_keyin_segments (매니저가 키인한 세그별 FCST)
+    #   2) fcst_segment_trend.json snapshots latest rm_fcst_rn (RM 회의 결과 4년 가중 mix 분배)
+    #   3) historical mix ratio (RM 미커버 월: 7월 이후) — RM이 4-6월에 사용한 동일 mix 로직
+    #   4) 과거월: actual = fcst
+    prop_total_by_name = {p["name"]: p for p in props}
     by_prop_seg = {}
     if db_bps is not None and seg_budgets is not None:
-        for seg in SEGMENT_KEYS:
-            seg_props = []
-            for _, display_name, region, db_props in PROPERTY_DEFS:
+        # 사업장별 세그먼트 actual/LY/budget 합 사전 계산
+        prop_seg_data = {}
+        for _, display_name, region, db_props in PROPERTY_DEFS:
+            seg_aggs = {}
+            for seg in SEGMENT_KEYS:
                 sb = seg_budgets.get(display_name, {}).get(seg, {})
                 s_bud_rn  = sum(sb.get(l, {}).get("rn",    0) for l in bud_labels)
                 s_bud_rev = sum(sb.get(l, {}).get("rev_m", 0) for l in bud_labels)
                 s_bud_adr = (sum(sb.get(l, {}).get("adr", 0) * sb.get(l, {}).get("rn", 0)
                                  for l in bud_labels) / s_bud_rn) if s_bud_rn > 0 else 0
                 s_act_rn = s_act_rev = 0
+                s_lst_rn = s_lst_rev = 0
                 for mk in target_keys:
                     for pname in db_props:
                         m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
                         s_act_rn  += m.get("booking_rn",  0)
                         s_act_rev += m.get("booking_rev", 0.0)
+                for mk in last_keys:
+                    for pname in db_props:
+                        m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
+                        s_lst_rn  += m.get("booking_rn",  0)
+                        s_lst_rev += m.get("booking_rev", 0.0)
+                seg_aggs[seg] = {
+                    "bud_rn": s_bud_rn, "bud_rev": s_bud_rev, "bud_adr": s_bud_adr,
+                    "act_rn": s_act_rn, "act_rev": s_act_rev,
+                    "lst_rn": s_lst_rn, "lst_rev": s_lst_rev,
+                }
+            prop_seg_data[display_name] = seg_aggs
+
+        for seg in SEGMENT_KEYS:
+            seg_props = []
+            for _, display_name, region, db_props in PROPERTY_DEFS:
+                sa = prop_seg_data[display_name][seg]
+                s_bud_rn = sa["bud_rn"]; s_bud_rev = sa["bud_rev"]; s_bud_adr = sa["bud_adr"]
+                s_act_rn = sa["act_rn"]; s_act_rev = sa["act_rev"]
+                s_lst_rn = sa["lst_rn"]; s_lst_rev = sa["lst_rev"]
+
                 s_rns_ach = round((s_act_rn / s_bud_rn * 100), 1) if s_bud_rn > 0 else 0.0
                 s_rev_ach = round((s_act_rev / s_bud_rev * 100), 1) if s_bud_rev > 0 else 0.0
                 s_act_adr = round((s_act_rev * 1_000_000) / s_act_rn) if s_act_rn > 0 else 0
+
+                # 사업장 total FCST (RM 미커버 월 ratio fallback에 필요)
+                p_total = prop_total_by_name.get(display_name, {})
+                p_rns_fcst_total = p_total.get("rns_fcst", 0) or 0
+
+                is_past_single_month = (month_idx > 0 and month_idx < now_kst.month)
+                fcst_source = None  # debug/audit용
+
+                if is_past_single_month:
+                    # 과거월: actual = fcst
+                    s_rns_f = s_act_rn
+                    fcst_source = "past_actual"
+                elif seg in BUDGET_SEGMENT_KEYS and month_idx > 0:
+                    # 현재/미래 단일월: 원본 세그 FCST 우선 사용
+                    ym = f"2026-{month_idx:02d}"
+                    s_rns_f, fcst_source = get_seg_fcst(
+                        seg_fcst_data, display_name, ym, seg,
+                        p_total_fcst=p_rns_fcst_total, month_int=month_idx,
+                    )
+                    if s_rns_f is None:
+                        # 모든 source 부재 → actual 보수적 사용
+                        s_rns_f = s_act_rn
+                        fcst_source = "no_source_actual"
+                elif seg in BUDGET_SEGMENT_KEYS and month_idx == 0:
+                    # 전체(연간): 12개월 합산
+                    s_rns_f = 0
+                    for mi in range(1, 13):
+                        ym_mi = f"2026-{mi:02d}"
+                        # 과거월: actual / 그 외: 원본 source
+                        if mi < now_kst.month:
+                            mi_act = 0
+                            for pname in db_props:
+                                m = db_bps.get(pname, {}).get(seg, {}).get(MONTHS_26[mi - 1], {})
+                                mi_act += m.get("booking_rn", 0)
+                            s_rns_f += mi_act
+                        else:
+                            # 사업장 total fcst 추출 (mi 단월) — 본 함수 외부에서 사전 계산 어려움
+                            # → ratio fallback에 p_rns_fcst_total을 활용하므로 대략적 추정 허용
+                            mi_seg_f, _ = get_seg_fcst(
+                                seg_fcst_data, display_name, ym_mi, seg,
+                                p_total_fcst=p_rns_fcst_total / max(1, 12 - now_kst.month + 1),
+                                month_int=mi,
+                            )
+                            s_rns_f += mi_seg_f if mi_seg_f is not None else 0
+                    fcst_source = "annual_aggregate"
+                else:
+                    # 기타 세그(단체/패키지 등): actual 사용
+                    s_rns_f = s_act_rn
+                    fcst_source = "non_budget_actual"
+
+                # 매출 FCST: rev = rn × ADR(LY 동일 세그 ADR 우선, 없으면 budget ADR)
+                if s_lst_rn > 0:
+                    seg_adr_m = s_lst_rev / s_lst_rn  # 백만원/RN
+                elif s_bud_rn > 0:
+                    seg_adr_m = s_bud_rev / s_bud_rn
+                else:
+                    seg_adr_m = 0.0
+                s_rev_f = s_rns_f * seg_adr_m
+
+                s_fcst_ach = round(s_rns_f / s_bud_rn * 100, 1) if s_bud_rn > 0 else 0.0
+                s_rev_fcst_ach = round(s_rev_f / s_bud_rev * 100, 1) if s_bud_rev > 0 else 0.0
+                s_adr_fcst = round((s_rev_f * 1_000_000) / s_rns_f) if s_rns_f > 0 else 0
+
                 seg_props.append({
                     "name": display_name,
                     "region": region,
                     "rns_budget":      s_bud_rn,
                     "rns_actual":      s_act_rn,
                     "rns_achievement": s_rns_ach,
-                    "rns_last":        0,
-                    "rns_yoy":         0.0,
-                    "rns_fcst":        s_act_rn,
-                    "fcst_achievement": s_rns_ach,
+                    "rns_last":        s_lst_rn,
+                    "rns_yoy":         round((s_act_rn / s_lst_rn - 1) * 100, 1) if s_lst_rn > 0 else 0.0,
+                    "rns_fcst":        s_rns_f,
+                    "fcst_achievement": s_fcst_ach,
+                    "fcst_source":     fcst_source,
                     "adr_budget":      round(s_bud_adr),
                     "adr_actual":      s_act_adr,
+                    "adr_fcst":        s_adr_fcst,
                     "rev_budget":      round(s_bud_rev * 1_000_000),
                     "rev_actual":      round(s_act_rev * 1_000_000),
+                    "rev_last":        round(s_lst_rev * 1_000_000),
+                    "rev_fcst":        round(s_rev_f * 1_000_000),
                     "rev_achievement": s_rev_ach,
+                    "rev_fcst_achievement": s_rev_fcst_ach,
                     "today_booking":   0,
                     "today_cancel":    0,
                     "today_net":       0,
@@ -1696,6 +1900,12 @@ def main():
     print(f"  오늘 데이터 날짜: {today_date}")
     print(f"  today_booking={today_booking}, today_cancel={today_cancel}, today_net={today_net}")
 
+    # 세그먼트별 FCST 원본 로드 (manager_keyin + RM segment FCST 분배본 + historical mix ratios)
+    seg_fcst_data = load_segment_fcst()
+    _km = sum(len(v) for v in seg_fcst_data.get("manager_keyin", {}).values())
+    _rm = sum(len(v) for v in seg_fcst_data.get("rm_seg_fcst", {}).values())
+    print(f"  세그먼트 FCST source: manager_keyin={_km}건, rm_seg_fcst={_rm}건, ratios={len(seg_fcst_data.get('ratios', {}))}개 사업장")
+
     # 월별 스냅샷
     #   "summary" : 전체 합산 (12개월 통합)
     #   "1"~"12"  : 해당 월
@@ -1710,6 +1920,7 @@ def main():
         lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
         rm_fcst_props=rm_fcst_props,
         rm_trend_snapshots=rm_trend_snapshots,
+        seg_fcst_data=seg_fcst_data,
     )
     for m in range(1, 13):
         all_months[str(m)] = build_month_snapshot(
@@ -1720,6 +1931,7 @@ def main():
             lead_time_by_prop=lead_time_by_prop, now_kst=now_kst,
             rm_fcst_props=rm_fcst_props,
             rm_trend_snapshots=rm_trend_snapshots,
+            seg_fcst_data=seg_fcst_data,
         )
 
     # today 데이터를 월 스냅샷에 주입 (월별로 stay_month 필터 적용)
