@@ -149,7 +149,7 @@ a{color:inherit}
 .goal-mini-value.warn{color:var(--warning)}
 .goal-mini-value.pos{color:var(--positive)}
 
-/* Strategy widget — 기획팀 목표 + 우선순위 배너 (read-only) */
+/* Strategy widget — 전략 가이드 (read-only) */
 .strat-section{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
 .strat-head{padding:13px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,rgba(201,160,99,0.08) 0%,transparent 50%)}
 .strat-head-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
@@ -942,10 +942,10 @@ a{color:inherit}
       </div>
     </div>
 
-    <!-- 기획팀 목표 + 우선순위 배너 (read-only · strategy_targets.json) -->
+    <!-- 전략 가이드 (read-only · strategy_targets.json) -->
     <div class="strat-section" id="strat-section" style="display:none">
       <div class="strat-head">
-        <div class="strat-head-title">기획팀 목표 · 우선순위 가이드</div>
+        <div class="strat-head-title">전략 가이드</div>
         <div class="strat-head-meta">
           <span id="strat-meta-month">—</span>
           <span id="strat-meta-seg">—</span>
@@ -1229,12 +1229,16 @@ function renderRegionList(){
     }).join('');
 
     renderPropChips();
+  }else if(curRole==='inbound'){
+    regSection.style.display='none';
+    /* 인바운드 모드에서는 사업장 필터 표시 (PROP_ORDER_INB 기반) */
+    sub.innerHTML='Inbound 담당 — 사업장 선택 시 해당 사업장만 필터됩니다.';
+    renderInboundPropChips();
   }else{
     regSection.style.display='none';
     document.getElementById('prop-divider').style.display='none';
     document.getElementById('prop-section').style.display='none';
     if(curRole==='gota')sub.innerHTML='G-OTA 담당 — 글로벌 OTA 채널(Booking·Expedia·Agoda·Trip.com 등) 통합 표시.';
-    else if(curRole==='inbound')sub.innerHTML='Inbound 담당 — 인바운드 여행사·랜드사 통합 표시.';
   }
 }
 
@@ -1263,6 +1267,28 @@ function renderPropChips(){
   }).join('');
 }
 
+function renderInboundPropChips(){
+  const propSec=document.getElementById('prop-section');
+  const propDiv=document.getElementById('prop-divider');
+  const propLabel=document.getElementById('prop-region-label');
+  const chipsEl=document.getElementById('prop-chips');
+  propSec.style.display='block';
+  propDiv.style.display='block';
+  propLabel.textContent='· 인바운드';
+  const allBtn=`<button class="prop-chip ${activeProps.size===0?'active':''}" onclick="clearInboundProps()">전체</button>`;
+  const propBtns=PROP_ORDER_INB.map(p=>{
+    const isActive=activeProps.has(p);
+    return `<button class="prop-chip ${isActive?'active':''}" onclick="toggleProp('${escapeHtml(p)}')">${escapeHtml(p)}</button>`;
+  }).join('');
+  chipsEl.innerHTML=allBtn+propBtns;
+}
+function clearInboundProps(){
+  activeProps.clear();
+  renderInboundPropChips();
+  initFilters();
+  render();
+}
+
 function setRole(role){
   curRole=role;
   curRegion='전체';
@@ -1275,6 +1301,7 @@ function setRole(role){
   mgmtChanExpand=false;
   inboundExpandedNats=new Set();
   inboundShowAllNats=false;
+  inboundPartnerYear='all';
   initSidebar();
   initFilters();
   initGoalMonths();
@@ -1300,7 +1327,8 @@ function toggleProp(p){
   selectedDate=null;
   mgmtSelProperty=null;
   mgmtSelChannel=null;
-  renderPropChips();
+  if(curRole==='inbound') renderInboundPropChips();
+  else renderPropChips();
   initFilters();
   render();
 }
@@ -1526,7 +1554,7 @@ async function renderGoal(){
   document.getElementById('mini-ct-sub').textContent=`${channels} 채널 · ${props} 사업장`;
 }
 
-/* ── Strategy targets (기획팀 목표 + 우선순위) ── */
+/* ── Strategy targets (전략 가이드) ── */
 let stratCache = null;
 async function ensureStrategyTargets(){
   if(stratCache !== null) return stratCache;
@@ -1545,7 +1573,7 @@ const STRAT_SEG_BY_ROLE = {ota:'OTA', gota:'G-OTA', inbound:'Inbound'};
 
 async function renderStrategyWidget(){
   const sec = document.getElementById('strat-section');
-  /* 인바운드 모드에서는 기획팀 목표·우선순위 가이드 카드를 숨김 (도전목표 카드로 대체) */
+  /* 인바운드 모드에서는 전략 가이드 카드를 숨김 (도전목표 카드로 대체) */
   if(curRole==='inbound'){ sec.style.display='none'; return; }
   const data = await ensureStrategyTargets();
   if(!data || !curGoalMonth){ sec.style.display='none'; return; }
@@ -1846,17 +1874,19 @@ async function render(){
   updateScopeDisplay();
   const data=sortRows(getFiltered());
   document.getElementById('count-label').textContent=`${data.length} / ${getScoped().length}건 · 전체 ${allRows.length}`;
-  if(curRole==='inbound'){
-    await renderInboundCalendarList();
-  }else{
-    await renderCalendarList(data);
-  }
+  try{
+    if(curRole==='inbound'){
+      await renderInboundCalendarList();
+    }else{
+      await renderCalendarList(data);
+    }
+  }catch(e){console.error('[SalesReport] 캘린더 렌더 오류:',e)}
   /* Goal는 scope 기준이므로 필터와 무관 */
   renderGoal();
   renderStrategyWidget();
   renderMgmtCards();
-  renderInboundKpiPane();
-  renderInboundPartners();
+  try{await renderInboundKpiPane()}catch(e){console.error('[SalesReport] KPI pane 렌더 오류:',e)}
+  try{await renderInboundPartners()}catch(e){console.error('[SalesReport] Inbound partners 렌더 오류:',e)}
   renderCompetitorCards();
   renderOccHeatmap();
   renderCampaignRoi();
@@ -3028,6 +3058,7 @@ function natFlag(n){return NATIONALITY_FLAGS[n]||'🌐'}
 
 let inboundExpandedNats=new Set();
 let inboundShowAllNats=false;
+let inboundPartnerYear='all';  // 'all' | '2022' | '2023' | '2024' | '2025' | '2026'
 
 /* 도전목표 카드 상태 */
 let inbkMode='stretch';            // 'stretch' | 'budget' | 'gap' (도전 vs Budget 차이)
@@ -3046,6 +3077,12 @@ function toggleInbNat(n){
 }
 function toggleInbAllNats(){
   inboundShowAllNats=!inboundShowAllNats;
+  renderInboundPartners();
+}
+function setInboundPartnerYear(y){
+  inboundPartnerYear=y;
+  inboundExpandedNats=new Set();
+  inboundShowAllNats=false;
   renderInboundPartners();
 }
 
@@ -3328,10 +3365,16 @@ async function renderInboundPartners(){
   const yoyCurMonth=monthNum?((myn[monthNum]||{})[curYear]||{}):{};
   const yoyPrevMonth=monthNum?((myn[monthNum]||{})[prevYear]||{}):{};
 
-  /* === 국적별 partner 그룹 (lifetime 기준) === */
+  /* === 연도 필터 === */
+  const yearFilter=inboundPartnerYear;  // 'all' or '2022'~'2026'
+  const yearsCovered=inboundCache.years_covered||['2022','2023','2024','2025','2026'];
+
+  /* === 국적별 partner 그룹 (연도 필터 적용) === */
   const byNat={};
   Object.entries(bpn).forEach(([partner,nats])=>{
     Object.entries(nats).forEach(([nat,d])=>{
+      /* 연도 필터: 해당 연도에 활동한 거래처만 포함 */
+      if(yearFilter!=='all' && d.years && !d.years.includes(yearFilter)) return;
       if(!byNat[nat])byNat[nat]={partners:[],rn_net:0,rev_net:0,rn_booking:0};
       byNat[nat].partners.push({partner,...d});
       byNat[nat].rn_net+=d.rn_net||0;
@@ -3469,23 +3512,31 @@ async function renderInboundPartners(){
     ?unconfirmed.map(u=>renderUnmappedRow(u,'unconfirmed')).join('')
     :`<div class="inb-empty-mini">미확인 거래처 없음</div>`;
 
+  const yearChipsHtml=['all',...yearsCovered].map(y=>{
+    const lbl=y==='all'?'전체':y.slice(2)+'년';
+    const cls=yearFilter===y?'active':'';
+    return `<button class="inbk-mode-pill ${cls}" onclick="setInboundPartnerYear('${y}')">${lbl}</button>`;
+  }).join('');
+  const yearLabel=yearFilter==='all'?'22~26년 통합':`${yearFilter}년 활동 거래처`;
+
   pane.innerHTML=`<div class="inb-section">
     <div class="inb-head">
       <div>
         <div class="inb-head-title">인바운드 거래처 × 국적 분석</div>
         <div class="inb-head-sub">${monthLbl} 기준 · 데이터 ${escapeHtml(inboundCache.generated_at||'—')} · ${allNats.length}개 국적 / ${Object.keys(bpn).length}개 거래처 (master ${inboundCache.master_partner_count||0} + 키인 ${inboundCache.keyin_mapping_count||0})</div>
       </div>
+      <div class="inbk-mode-pills">${yearChipsHtml}</div>
     </div>
     <div class="inb-summary">
       <div class="inb-summary-cell">
         <div class="inb-summary-label">국적 수</div>
         <div class="inb-summary-value">${allNats.length}<span class="inb-unit">개</span></div>
-        <div class="inb-summary-sub">'기타' 묶음 없이 개별 노출</div>
+        <div class="inb-summary-sub">${yearLabel} 기준</div>
       </div>
       <div class="inb-summary-cell">
         <div class="inb-summary-label">누적 RN net</div>
         <div class="inb-summary-value">${fmtNum(totalLifetimeRn)}</div>
-        <div class="inb-summary-sub">22~26년 통합 (booking-cancel)</div>
+        <div class="inb-summary-sub">${yearLabel} (booking-cancel)</div>
       </div>
       <div class="inb-summary-cell">
         <div class="inb-summary-label">누적 매출</div>
@@ -3523,7 +3574,7 @@ async function renderInboundPartners(){
     <div class="inb-meta-note">
       💡 <strong>데이터 단위</strong>: 변경예약집계코드 = 58 (인바운드). RN net = booking − cancel. 매핑 신뢰도 <strong>${confPct!=null?confPct+'%':'—'}</strong> (전체 ${fmtNum(totalRows)}행 중 미확인 ${fmtNum(unconfRows)}행 / RN ${fmtNum(totalUnconfRn)}).
       <br>거래처 카드의 prefix는 <strong>57</strong>(국내 카운터) / <strong>87</strong>(GSA 마스터). 동일 거래처가 다국적 운영 시 국적별로 별도 집계됩니다.
-      <br>※ 인바운드 데이터는 <strong>거래처×국적</strong> 단위로만 집계되어 권역/사업장 차원 분해를 지원하지 않습니다 (사이드바 필터 비적용).
+      <br>※ 연도 필터는 해당 연도에 활동한 거래처만 표시하며, RN/매출 수치는 전체 기간 누적값입니다.
     </div>
   </div>`;
 }
