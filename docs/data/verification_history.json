@@ -28,9 +28,7 @@
         "match_count": 1,
         "mismatch_count": 22,
         "match_threshold": "사업장별 ±2% 이내",
-        "matched_properties": [
-          "양양"
-        ],
+        "matched_properties": ["양양"],
         "max_rn_diff_pct": "+13.9% (고양: +5,315)",
         "max_rev_diff_pct": "-18.7% (비발디(빌리지): -396.53M)"
       },
@@ -137,87 +135,54 @@
     },
     {
       "verification_date": "2026-05-05",
-      "verification_time": "08:30",
-      "type": "code_regression_fix",
-      "verdict": "정상 (수정 완료)",
-      "title": "FCST 세그별 정합 회귀 — 근본 원인 + 재발 방지책",
-      "issues": [
-        {
-          "id": "당일 분석 빈값",
-          "symptom": "index.html 당일 분석 섹션 INSIGHT_DATA.dailyAnalysis.byProperty = {} → 화면 비어있음",
-          "root_cause": "stale 빌드. agg_data 갱신(5/5 06:40) 후 build.py 미재실행. parse_raw_db.py 산출 daily_breakdowns가 INSIGHT_DATA로 주입되지 않은 채 inline 됨",
-          "fix": "build.py 재실행 + 검증 [2-2] 추가: INSIGHT_DATA.dailyAnalysis.byProperty 비어있으면 ERROR"
-        },
-        {
-          "id": "FCST 세그먼트 미분리",
-          "symptom": "OTA만 필터하면 fcst_achievement 400~800% 폭주",
-          "root_cause": [
-            "(1차 root cause) generate_otb_data.py:1340 byPropertySegment에서 'rns_fcst': s_act_rn 하드코딩 — 세그별 FCST 미산출",
-            "(2차 root cause) 잘못된 분배: 사업장 total FCST를 LY 점유율로 나눠 사용 — RM 회의 결과/매니저 키인 무시",
-            "(3차 root cause) 세그먼트별 FCST 원본 데이터(ai_fcst.json manager_keyin_segments + fcst_segment_trend.json snapshots rm_fcst_rn) 존재 사실을 코드가 인지하지 못함"
-          ],
-          "fix": [
-            "load_segment_fcst() + get_seg_fcst() 신설: 원본 source 우선순위 (manager_keyin > rm_seg_fcst > ratio fallback)",
-            "byPropertySegment 빌드를 새 함수로 교체. 추정/분배 X, 원본 데이터 그대로 사용",
-            "각 세그 record에 fcst_source 라벨 부착 (감사용)"
-          ]
-        },
-        {
-          "id": "7월 페이스 vs Booking Status 모순",
-          "symptom": "페이스 그래프(누적)에서 7월 CY < LY로 보이지만 Booking Status는 CY > LY",
-          "root_cause": "scope mismatch — net_daily_by_month는 ALL 20개 세그먼트 합산이고 Booking Status는 OTA+G-OTA+Inbound 3개만. 다른 scope를 비교",
-          "fix": [
-            "parse_raw_db.py: net_daily_by_month_seg (segment-keyed) 신규 추가",
-            "build.py docs sync에 net_daily_by_month_seg 포함",
-            "booking-trend.html paceChart: OTA+G-OTA+Inbound만 합산"
-          ]
-        },
-        {
-          "id": "rev_fcst 폭주",
-          "symptom": "월별 rev_fcst가 연 rev_fcst보다 큼 (7월 단일 440조)",
-          "root_cause": "lst_rn은 OTA+G-OTA+Inbound + 동기간 보정으로 축소된 값(예: 320), lst_rev_m은 sum_db로 ALL segs 풀년 fetch(예: 2787M). ratio = rns_fcst/lst_rn 폭주 → rev_fcst 폭주",
-          "fix": "rev_fcst = rns_fcst × LY 풀년 ADR (rev/rn 동일 scope)로 단위 정합화"
+      "verification_time": "18:35",
+      "category": "운영 인시던트 — FCST 빌드/배포 불일치",
+      "verdict": "이상 → 해결",
+      "incident": {
+        "원인": "워크트리(claude/sharp-cray-99c976)에서 generate_otb_data.py 신규 버전(manager_keyin/rm_seg_fcst/fcst_source 도입)을 origin/main으로 머지했으나, 메인 워킹디렉토리는 4 커밋 뒤쳐진 채 staged 변경(scripts/generate_otb_data.py 구버전 포함)이 쌓여 있어 실제 사용자 작업 환경에 새 빌드 로직이 반영되지 않음. stash pop 시 generate_otb_data.py 구버전이 working tree에 다시 풀리면서 추가 재빌드 시 FCST 세그먼트 원본 데이터 로직(load_segment_fcst) 누락 위험 발생.",
+        "증상": [
+          "라이브 사이트(GitHub Pages)에 FCST 수정사항(byPropertySegment 세그먼트별 rns_fcst/rev_fcst/fcst_source) 미반영",
+          "stash pop 후 working tree generate_otb_data.py에서 manager_keyin/rm_seg_fcst/fcst_source 키워드 0건 (HEAD: 27건)",
+          "구버전으로 재빌드 시 fcst_source 부재 → 세그먼트 FCST 빈값/비정상 달성률(>1000% or 0%) 위험"
+        ],
+        "탐지_방법": "메인 디렉토리 git status로 4커밋 behind 확인 → otb_data.json refreshTime이 06:40 KST로 정체 → grep \"manager_keyin\" scripts/generate_otb_data.py 결과 0건",
+        "해결_절차": [
+          "1. 메인 디렉토리 staged 변경 → git stash -u 보관",
+          "2. git pull origin main → fast-forward 4커밋 (35023e8 → 2a97b32)",
+          "3. python3 scripts/generate_otb_data.py 1차 재실행 → otb_data.json 갱신 (refreshTime 18:25 KST)",
+          "4. 단독 커밋·푸시 c0f7df9 'fix: FCST 데이터 재생성'",
+          "5. git stash pop → 8개 자동갱신 파일 충돌 → ours(최신) 채택, scripts/generate_otb_data.py가 구버전으로 풀린 것 발견",
+          "6. git checkout HEAD -- scripts/generate_otb_data.py로 신버전 복원",
+          "7. python3 scripts/generate_otb_data.py 2차 재실행 → refreshTime 18:35 KST",
+          "8. byPropertySegment 검증: 달성률 89~178% 정상 범위, 비정상 0건, fcst_source 분포 annual_aggregate 72 / non_budget_actual 408"
+        ],
+        "재발_방지": [
+          "빌드 스크립트(scripts/generate_otb_data.py, scripts/build.py) 변경 워크트리 머지 직후 메인 워킹디렉토리에서 git pull → 재빌드 → 커밋 → push 까지 1회 검증 필수",
+          "stash pop 직후 변경된 빌드 스크립트는 grep으로 핵심 키워드(manager_keyin/rm_seg_fcst/fcst_source) 존재 확인 후 재실행",
+          "메인 디렉토리에 staged 변경이 다수 쌓인 상태로 자동 빌드/머지가 누적되면 워크플로우 산출물이 로컬 변경에 의해 가려질 위험 — 정기적으로 staged 변경 정리"
+        ],
+        "검증_결과": {
+          "byPropertySegment_seg_count": 20,
+          "abnormal_entries": 0,
+          "fcst_achievement_range": "89.1% ~ 178.2% (정상)",
+          "fcst_source_distribution": {
+            "annual_aggregate": 72,
+            "non_budget_actual": 408
+          },
+          "summary_rns_fcst": 1143106,
+          "summary_rev_fcst": 239280506857,
+          "summary_ai_fcst_rn": 1135701
         }
-      ],
-      "why_validation_missed_it": [
-        "이전 validate_consistency.py는 sum invariant만 검사 — '분배가 어디서 오느냐'를 검증하지 않음",
-        "분배가 LY 점유율로 들어가도 sum invariant는 통과 → 실제 데이터가 RM/매니저 의도와 달라도 PASS",
-        "FCST source가 정해진 원본 데이터(manager_keyin / RM segment FCST)를 정확히 가져왔는지 cross-check 부재"
-      ],
-      "validation_strengthened": [
-        "[0] check_fcst_source_match: ai_fcst.json manager_keyin_segments 및 fcst_segment_trend snapshots rm_fcst_rn과 byPropertySegment.rns_fcst를 정확히 일치 검증 → 분배 회귀 시 즉시 ERROR",
-        "[1] sum(BUDGET segs FCST) vs property total fcst — INFO 보고 (source 정책상 자연 차이지만 모니터링)",
-        "[2] today_booking/cancel 0이 아닌지",
-        "[2-2] INSIGHT_DATA.dailyAnalysis.byProperty 비어있지 않은지",
-        "[3] 페이스 누적 vs Booking Status RN 미래월 차이 5%/100RN 이내",
-        "[4] rev_fcst: 월별 < 연간, 월별 합 ≈ 연간 (5%)",
-        "[5] sum(byProperty.rns_actual) ≈ summary.rns_actual",
-        "build.py 후처리에 validate_consistency.py 호출 통합. ERROR 감지 시 빌드 로그 경고."
-      ],
-      "files_changed": [
-        "scripts/generate_otb_data.py (load_segment_fcst, get_seg_fcst, byPropertySegment 빌드 교체, rev_fcst 단위 정합)",
-        "scripts/parse_raw_db.py (net_daily_by_month_seg 신설)",
-        "scripts/build.py (docs sync 키 추가, validate_consistency 호출)",
-        "scripts/validate_consistency.py (신규 — source 일치 검증 포함 7개 검사)",
-        "scripts/patch_net_daily_by_month_seg.py (기존 db_aggregated.json 패치용)",
-        "docs/booking-trend.html (paceChart segment 필터)"
-      ],
-      "fcst_source_priority_documented": {
-        "1_manager_keyin": "ai_fcst.json properties[prop][ym].manager_keyin_segments[seg] — 매니저가 직접 키인. 최우선.",
-        "2_rm_seg_fcst": "fcst_segment_trend.json snapshots[-1].properties[prop][ym][seg].rm_fcst_rn — RM 회의 결과를 4년 가중 historical mix로 분배한 공식 값.",
-        "3_ratio_fallback": "fcst_segment_trend.json ratios[prop][month_int][seg]/100 × property_total_fcst — RM 미커버 월(7월~)에 RM이 사용하는 동일 mix 적용.",
-        "4_past_actual": "과거 완료월: actual = fcst.",
-        "5_no_source_actual": "모든 source 부재 시 보수적으로 actual 사용."
       },
-      "notes": "사용자 명시 요구: '추정/분배 하지 말고 원본 데이터를 확인해서 세그별 FCST를 정확히 넣어라'. 이번 수정으로 manager_keyin 6건/RM segment FCST 132건 모두 100% 원본 일치 확인. ratio fallback은 7월 이후 RM 미커버 월에만 적용되며, 이는 RM 자신이 4-6월 분배 시 사용한 동일 mix이므로 정합.",
-      "validation_result_after_fix": {
-        "ERROR": 0,
-        "WARN": 1,
-        "OK": 9,
-        "manager_keyin_match": "6/6 (100%)",
-        "rm_seg_fcst_match": "132/132 (100%)",
-        "pace_vs_booking_status": "5월 차 3.6%, 6월 2.8%, 7월 0.4% — 모두 정합"
-      },
+      "notes": "FCST 빌드 파이프라인 누락으로 인한 라이브 사이트 데이터 정체. 워크트리-메인 디렉토리 동기화 절차 누락이 근본 원인. 2회 재실행 끝에 정상화 (18:35 KST).",
+      "related_commits": [
+        "4456e45 fix(otb): otb_data.json FCST 재생성 + 모바일 반응형 강화 (워크트리 산출물)",
+        "c0f7df9 fix: FCST 데이터 재생성 (1차 메인 디렉토리 재빌드)"
+      ],
+      "source_files": [
+        "scripts/generate_otb_data.py",
+        "docs/data/otb_data.json"
+      ],
       "author": "claude"
     }
   ]
