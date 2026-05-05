@@ -2784,6 +2784,7 @@ def main():
             docs_agg = load_json(docs_agg_path)
             synced_keys = []
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
+                         "net_daily_by_month_seg",  # 페이스 차트가 OTA+G-OTA+Inbound 필터용으로 사용
                          "by_segment", "by_region_segment", "by_property_segment", "meta",
                          "yoy_adjusted"):
                 if key in agg_data:
@@ -2840,6 +2841,23 @@ def main():
                 logger.warning(f"✗ parse_overseas 실패: {result.stderr.strip()}")
         except Exception as e:
             logger.warning(f"✗ parse_overseas 실행 오류: {e}")
+
+    # ── 빌드 후 정합성 검증 (validate_consistency.py) ──
+    # 회귀 방지: FCST 세그분리, 당일분석 빈값, 페이스↔BS 불일치, rev_fcst 폭주, byProp↔summary 정합
+    validate_script = Path(__file__).resolve().parent / "validate_consistency.py"
+    if validate_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(validate_script)],
+                capture_output=True, text=True, timeout=60,
+            )
+            tail = "\n".join(result.stdout.strip().splitlines()[-12:])
+            if result.returncode == 0:
+                logger.info(f"✓ validate_consistency 통과\n{tail}")
+            else:
+                logger.warning(f"⚠ validate_consistency ERROR 감지 (계속 진행):\n{tail}")
+        except Exception as e:
+            logger.warning(f"✗ validate_consistency 실행 오류: {e}")
 
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)
