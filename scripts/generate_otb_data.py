@@ -30,6 +30,9 @@ HOLIDAYS_KR_JSON = DATA_DIR / "holidays_kr.json"
 DAILY_BOOKING_JSON = DATA_DIR / "daily_booking.json"
 OUTPUT_JSON = DOCS_DATA_DIR / "otb_data.json"
 
+# Budget/RM FCST 비교 base 세그먼트 (rns_budget이 이 3개 세그 합으로 정의됨)
+BUDGET_SEGS = ('OTA', 'G-OTA', 'Inbound')
+
 KST = timezone(timedelta(hours=9))
 
 def _calc_target_months_tuple():
@@ -1268,11 +1271,12 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 ly_pickup_ratio=pickup_ratio,
             )
 
-            # RM FCST 로드 (전체 세그먼트 기준)
+            # RM FCST: data/rm_fcst.json (Revenue Meeting PDF 파싱) 사업장×월 값 그대로.
+            # 사업계획 budget(rns_budget)과는 base가 다른 별도 지표 (분배 X).
             rm_key = f"2026-{month_idx:02d}"
             rm_entry = rm_fcst_props.get(display_name, {}).get(rm_key, {})
             rm_rn_prop = rm_entry.get("rm_fcst_rn")
-            rm_budget_prop = rm_entry.get("rm_budget_rn")
+            rm_budget_prop = rm_entry.get("budget_rn")  # RM 회의 budget
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
 
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
@@ -1337,11 +1341,11 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     ai_fcst_lo += mi_lo if mi_lo is not None else 0
                     ai_fcst_hi += mi_hi if mi_hi is not None else 0
 
-                # RM FCST (월별 합산)
+                # RM FCST (월별 합산): rm_fcst.json 사업장×월 값 그대로 합산
                 mi_rm_key = f"2026-{mi:02d}"
                 mi_rm_entry = rm_fcst_props.get(display_name, {}).get(mi_rm_key, {})
                 mi_rm_rn = mi_rm_entry.get("rm_fcst_rn")
-                mi_rm_bud = mi_rm_entry.get("rm_budget_rn")
+                mi_rm_bud = mi_rm_entry.get("budget_rn")
                 if mi_rm_rn is not None:
                     rm_rn_prop_sum += mi_rm_rn
                     rm_rn_prop_has = True
