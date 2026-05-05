@@ -1136,9 +1136,9 @@
       const lyRevRate = t.ly_rev > 0 ? (t.actual_rev / t.ly_rev * 100) : 0;
 
       // Wholesale summary
-      const ws26 = hw.wholesale['2026'];
-      const ws25 = hw.wholesale['2025'];
-      const wsYoyRn = ws25.ytd_rn > 0 ? ((ws26.ytd_rn - ws25.ytd_rn) / ws25.ytd_rn * 100) : 0;
+      const ws26 = (hw.wholesale||{})['2026']||{};
+      const ws25 = (hw.wholesale||{})['2025']||{};
+      const wsYoyRn = (ws25.ytd_rn||0) > 0 ? (((ws26.ytd_rn||0) - (ws25.ytd_rn||0)) / (ws25.ytd_rn||0) * 100) : 0;
 
       // KPI
       const kpi = document.getElementById('hawaiiKPI');
