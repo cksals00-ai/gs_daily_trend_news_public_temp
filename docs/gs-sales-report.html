@@ -1756,10 +1756,10 @@ async function renderInboundGoalTable(){
     <div class="inb-ach-summary-cell">
       <div class="lbl">${periodLabel} 도전목표</div>
       <div class="val">${fmtNum(totStretch)}<span class="unit">실</span></div>
-      <div class="sub">Stretch (Budget +${totBudget>0?Math.round((totStretch/totBudget-1)*100):'—'}%)</div>
+      <div class="sub">Stretch (목표 +${totBudget>0?Math.round((totStretch/totBudget-1)*100):'—'}%)</div>
     </div>
     <div class="inb-ach-summary-cell">
-      <div class="lbl">${periodLabel} Budget</div>
+      <div class="lbl">${periodLabel} 목표</div>
       <div class="val">${fmtNum(totBudget)}<span class="unit">실</span></div>
       <div class="sub">사업계획 예산 기준</div>
     </div>
@@ -1771,7 +1771,7 @@ async function renderInboundGoalTable(){
     <div class="inb-ach-summary-cell">
       <div class="lbl">달성률</div>
       <div class="val"><span class="${achCls(totAchStretch)}">${totAchStretch!=null?totAchStretch+'%':'—'}</span></div>
-      <div class="sub">도전 ${totAchStretch!=null?totAchStretch:'—'}% · Budget ${totAchBudget!=null?totAchBudget:'—'}%</div>
+      <div class="sub">도전 ${totAchStretch!=null?totAchStretch:'—'}% · 목표 ${totAchBudget!=null?totAchBudget:'—'}%</div>
     </div>
   </div>`;
 
@@ -1807,11 +1807,11 @@ async function renderInboundGoalTable(){
       <thead><tr>
         <th style="text-align:left">사업장</th>
         <th>도전목표</th>
-        <th>Budget</th>
+        <th>목표</th>
         <th>OTB 실적</th>
         <th>전년</th>
         <th>도전 달성률</th>
-        <th>Budget 달성률</th>
+        <th>목표 달성률</th>
         <th style="min-width:70px">진행</th>
       </tr></thead>
       <tbody>${tableRows}${totalRow}</tbody>
@@ -1823,7 +1823,7 @@ async function renderInboundGoalTable(){
     <div class="goal-head">
       <div>
         <div class="goal-head-title">🎯 인바운드 도전목표 달성 현황</div>
-        <div class="goal-head-sub">도전목표 vs Budget vs OTB 실적 · 사업장별 달성률 (${periodLabel})</div>
+        <div class="goal-head-sub">도전목표 vs 목표 vs OTB 실적 · 사업장별 달성률 (${periodLabel})</div>
       </div>
       <div class="goal-month-tabs" id="goal-month-tabs"></div>
     </div>
@@ -1935,7 +1935,7 @@ async function renderGoal(){
     const fillMM=Math.round(fillForGauge/1000000);
     gaugeSide.textContent=`매출 ${fillMM.toLocaleString('ko-KR')}백만 · 목표 미설정`;
     goalBadge.className='goal-status-badge warn';
-    goalBadge.innerHTML='● 월 목표(OTB Budget) 미연동';
+    goalBadge.innerHTML='● 월 목표(OTB 목표) 미연동';
   }
 
   /* REV 요약 cell — 메인은 OTB 실적(rev_actual), 부가로 기획전 채움 */
@@ -3546,9 +3546,9 @@ let inboundShowAllNats=false;
 let inboundPartnerYear='all';  // 'all' | '2022' | '2023' | '2024' | '2025' | '2026'
 
 /* 도전목표 카드 상태 */
-let inbkMode='stretch';            // 'stretch' | 'budget' | 'gap' (도전 vs Budget 차이)
+let inbkMode='stretch';            // 'stretch' | 'budget' | 'gap' (도전 vs 목표 차이)
 let inbkExpandedProps=new Set();   // 펼친 사업장 행
-const PROP_ORDER_INB = ["고양","해운대","비발디","단양","여수","델피노","삼척","벨제주","양평","캄제주","천안","변산","거제","청송","양양","경주","진도","남해"];
+const PROP_ORDER_INB = ["고양","해운대","비발디","단양","여수","델피노","삼척","벨제주","양평","캄제주","천안","변산","거제","청송","양양","경주","진도","남해","그외 사업장"];
 const COUNTRY_FLAGS_INB = {
   '대만':'🇹🇼','중국':'🇨🇳','홍콩':'🇭🇰','일본':'🇯🇵','베트남':'🇻🇳','말레이시아':'🇲🇾',
   '싱가폴':'🇸🇬','싱가포르':'🇸🇬','인도네시아':'🇮🇩','태국':'🇹🇭','필리핀':'🇵🇭',
@@ -3631,10 +3631,10 @@ async function renderInboundKpiPane(){
     <div class="inbk-summary-cell">
       <div class="inbk-summary-label">26 도전목표 RNs</div>
       <div class="inbk-summary-value">${fmtNum(totS.rns_total)}<span class="inb-unit">실</span></div>
-      <div class="inbk-summary-sub">Budget ${fmtNum(totB.rns_total)} 대비 <span class="${upliftPct>=0?'pos':'neg'}" style="color:${upliftPct>=0?'var(--positive)':'var(--negative)'}">${upliftPct!=null?(upliftPct>=0?'+':'')+upliftPct+'%':''}</span></div>
+      <div class="inbk-summary-sub">목표 ${fmtNum(totB.rns_total)} 대비 <span class="${upliftPct>=0?'pos':'neg'}" style="color:${upliftPct>=0?'var(--positive)':'var(--negative)'}">${upliftPct!=null?(upliftPct>=0?'+':'')+upliftPct+'%':''}</span></div>
     </div>
     <div class="inbk-summary-cell">
-      <div class="inbk-summary-label">${isGoalYTD()?curGoalYear+'년 누계 ':(curGoalMonth?parseInt(curGoalMonth.slice(5))+'월 ':'')}OTB Budget ADR</div>
+      <div class="inbk-summary-label">${isGoalYTD()?curGoalYear+'년 누계 ':(curGoalMonth?parseInt(curGoalMonth.slice(5))+'월 ':'')}OTB 목표 ADR</div>
       <div class="inbk-summary-value">${inbOtbAdr?inbOtbAdr.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):'—'}<span class="inb-unit">천원</span></div>
       <div class="inbk-summary-sub">도전목표 ${totS.adr?totS.adr.toFixed(1):'—'}천원 · REV ${fmtNum(totS.rev)}백만 · 25년比 <span style="color:${yoyPct>=0?'var(--positive)':'var(--negative)'}">${yoyPct!=null?(yoyPct>=0?'+':'')+yoyPct+'%':'—'}</span></div>
     </div>
@@ -3671,16 +3671,16 @@ async function renderInboundKpiPane(){
   /* 모드 셀렉터 */
   const modeBtns = [
     {k:'stretch', l:'도전목표'},
-    {k:'budget',  l:'Budget'},
-    {k:'gap',     l:'도전 − Budget'},
+    {k:'budget',  l:'목표'},
+    {k:'gap',     l:'도전 − 목표'},
     {k:'actual',  l:'OTB 실적'},
     {k:'achStretch', l:'도전 달성률'},
-    {k:'achBudget',  l:'Budget 달성률'}
+    {k:'achBudget',  l:'목표 달성률'}
   ].map(m => `<button class="inbk-mode-pill${m.k===inbkMode?' active':''}" onclick="inbkSetMode('${m.k}')">${m.l}</button>`).join('');
 
   /* 사업장 테이블 (사업장 row + 12 month + total + LY) */
   const monthLbl = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const modeTitle = {stretch:'도전목표',budget:'Budget',gap:'도전 − Budget',actual:'OTB 실적',achStretch:'도전목표 달성률',achBudget:'Budget 달성률'};
+  const modeTitle = {stretch:'도전목표',budget:'목표',gap:'도전 − 목표',actual:'OTB 실적',achStretch:'도전목표 달성률',achBudget:'목표 달성률'};
   const headHtml = `<div class="inbk-tbl-head">
     <div>
       <div class="inbk-tbl-title">📊 사업장 × 월 매트릭스 — ${modeTitle[inbkMode]||''}</div>
@@ -3799,16 +3799,16 @@ async function renderInboundKpiPane(){
     <div class="inbk-head">
       <div>
         <div class="inbk-head-title">🎯 인바운드 도전목표 (사업장 × 국가 × 거래처 × 월)</div>
-        <div class="inbk-head-sub">2026 stretch ${fmtNum(totS.rns_total)} 실 · Budget ${fmtNum(totB.rns_total)} 실 · 데이터 ${escapeHtml(k.generated_at||'—')}</div>
+        <div class="inbk-head-sub">2026 stretch ${fmtNum(totS.rns_total)} 실 · 목표 ${fmtNum(totB.rns_total)} 실 · 데이터 ${escapeHtml(k.generated_at||'—')}</div>
       </div>
     </div>
     ${summaryHtml}
     ${tblHtml}
     <div class="inbk-meta-note">
       💡 <strong>데이터 출처</strong>: <code>data/inbound_kpi.json</code> ← (인바운드)2026_도전목표KPI.xlsx 자동 변환 (<code>scripts/build_inbound_kpi.py</code>).
-      Budget = 사업계획 베이스 / 도전목표 = Stretch (Budget +20.7%).
+      목표 = 사업계획 베이스 / 도전목표 = Stretch (목표 +20.7%).
       <br>★ 마크는 <strong>전략여행사</strong> (사업장별 26년 초기값은 KPI 엑셀의 H컬럼 기반 · 연도별 변경은 <a href="inbound-strategy-keyin.html" style="color:var(--info);text-decoration:none;border-bottom:1px dashed rgba(90,159,196,.4)">전략여행사 키인 ↗</a>).
-      <br>※ Budget 그리드는 일부 사업장이 '그외 사업장'으로 묶여있어 거래처 단위 Budget 합이 사업장 합과 일치하지 않을 수 있습니다 (사업장 합은 정확).
+      <br>※ 목표 그리드는 일부 사업장이 '그외 사업장'으로 묶여있어 거래처 단위 목표 합이 사업장 합과 일치하지 않을 수 있습니다 (사업장 합은 정확).
     </div>
   </div>`;
 }
@@ -3858,13 +3858,13 @@ function renderInbkPropDetail(prop, strSet){
         <span class="flag">${COUNTRY_FLAGS_INB[country]||'🌐'}</span>
         <span>${escapeHtml(country)}</span>
         <span style="color:var(--ink-faint)">${d.items.length}개 거래처${stratInGroup?` · 전략 ${stratInGroup}`:''}</span>
-        <span class="stat">26 도전 ${Math.round(d.sumS).toLocaleString('ko-KR')} · Budget ${Math.round(d.sumB).toLocaleString('ko-KR')}</span>
+        <span class="stat">26 도전 ${Math.round(d.sumS).toLocaleString('ko-KR')} · 목표 ${Math.round(d.sumB).toLocaleString('ko-KR')}</span>
       </div>
       <div style="overflow-x:auto"><table class="inbk-ag-tbl">
         <thead><tr>
           <th>거래처</th>
           ${['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'].map(m=>`<th class="month-col">${m}</th>`).join('')}
-          <th>${inbkMode==='budget'?'B합':inbkMode==='gap'?'차이':'도전합'}</th>
+          <th>${inbkMode==='budget'?'목표합':inbkMode==='gap'?'차이':'도전합'}</th>
           <th>26B</th>
           <th>26도전</th>
         </tr></thead>

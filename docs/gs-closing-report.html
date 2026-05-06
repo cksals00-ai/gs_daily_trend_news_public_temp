@@ -177,6 +177,8 @@ tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: v
 .ch-prop-row td { border-bottom: 1px solid var(--rule) !important; }
 .ch-prop-row:last-of-type td { border-bottom: none !important; }
 .channel-detail-table .ch-parent-row { transition: background .15s; }
+.cd-more-row td { border-bottom: 1px solid var(--rule) !important; }
+.cd-more-row button:active { transform: scale(0.97); }
 
 /* ───── DATA MISSING ───── */
 .data-missing { background: var(--bg-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--ink-muted); font-size: 13px; }
@@ -760,6 +762,9 @@ function getChannelDetailData(months) {
     const revYoy = rev25 > 0 ? (rev26 - rev25) / rev25 * 100 : null;
     const adrYoy = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
 
+    // 실적 0인 거래처 숨기기: 2026 RN과 2025 RN 모두 0이면 제외
+    if (rn26 === 0 && rn25 === 0) return;
+
     segGroups[seg].push({ name: chName, segment: seg, rn26, rev26, adr26, rn25, rev25, adr25, rnsYoy, revYoy, adrYoy });
   });
 
@@ -801,13 +806,17 @@ function downloadChannelDetailExcel(months) {
   const data = getChannelDetailData(months);
   if (!data) return;
 
-  let csvRows = ['﻿거래처,세그먼트,RN_2026,RN_2025,RN_YoY(%),ADR_2026,ADR_2025,ADR_YoY(%),매출_2026(백만),매출_2025(백만),매출_YoY(%)'];
+  // Grand Total RN for share calculation
+  const totalRn = ['OTA','G-OTA'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
+
+  let csvRows = ['﻿거래처,세그먼트,RN_2026,RN_2025,RN_YoY(%),비중(%),ADR_2026,ADR_2025,ADR_YoY(%),매출_2026(백만),매출_2025(백만),매출_YoY(%)'];
 
   ['OTA', 'G-OTA'].forEach(seg => {
     const channels = data[seg] || [];
     channels.forEach(ch => {
+      const share = totalRn > 0 ? (ch.rn26 / totalRn * 100).toFixed(1) : '0.0';
       csvRows.push([
-        ch.name, seg, ch.rn26, ch.rn25, ch.rnsYoy != null ? ch.rnsYoy.toFixed(1) : '',
+        ch.name, seg, ch.rn26, ch.rn25, ch.rnsYoy != null ? ch.rnsYoy.toFixed(1) : '', share,
         ch.adr26, ch.adr25, ch.adrYoy != null ? ch.adrYoy.toFixed(1) : '',
         Math.round(ch.rev26), Math.round(ch.rev25), ch.revYoy != null ? ch.revYoy.toFixed(1) : ''
       ].join(','));
@@ -815,8 +824,9 @@ function downloadChannelDetailExcel(months) {
       // Add property-level rows
       const props = getChannelPropertyData(ch.name, months);
       props.forEach(p => {
+        const pShare = totalRn > 0 ? (p.rn26 / totalRn * 100).toFixed(1) : '0.0';
         csvRows.push([
-          '  ' + p.name, seg + '/' + ch.name, p.rn26, p.rn25, p.rnsYoy != null ? p.rnsYoy.toFixed(1) : '',
+          '  ' + p.name, seg + '/' + ch.name, p.rn26, p.rn25, p.rnsYoy != null ? p.rnsYoy.toFixed(1) : '', pShare,
           p.adr26, p.adr25, p.adrYoy != null ? p.adrYoy.toFixed(1) : '',
           Math.round(p.rev26), Math.round(p.rev25), p.revYoy != null ? p.revYoy.toFixed(1) : ''
         ].join(','));
@@ -833,6 +843,15 @@ function downloadChannelDetailExcel(months) {
   URL.revokeObjectURL(url);
 }
 
+/* 더보기 상태 관리 (per container) */
+const _cdState = {}; // keyed by containerId: { expandOTA, expandGOTA, searchQuery, months }
+function _cdGetState(cid) {
+  if (!_cdState[cid]) _cdState[cid] = { expandOTA: false, expandGOTA: false, searchQuery: '', months: null };
+  return _cdState[cid];
+}
+let _cdCurrentMonths = null;
+let _cdCurrentContainer = null;
+
 function renderChannelDetailTable(months, containerId) {
   const data = getChannelDetailData(months);
   const el = document.getElementById(containerId);
@@ -842,23 +861,39 @@ function renderChannelDetailTable(months, containerId) {
     return;
   }
 
-  // Excel download button
-  let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-    <button onclick="downloadChannelDetailExcel(window._cdMonths || [1,2,3,4])" style="background:var(--bg-soft);color:var(--ink-soft);border:1px solid var(--rule-strong);padding:6px 14px;border-radius:6px;font-family:'Batang','바탕',serif;font-weight:400;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-soft)'">
+  const st = _cdGetState(containerId);
+  st.months = months;
+  _cdCurrentMonths = months;
+  _cdCurrentContainer = containerId;
+  const SHOW_LIMIT = 10;
+  const query = st.searchQuery.trim().toLowerCase();
+  const isSearching = query.length > 0;
+
+  // Excel download button + Search input
+  const escapedQuery = st.searchQuery.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap;">
+    <div style="position:relative;flex:1;max-width:280px;">
+      <input type="text" id="cd-search-${containerId}" value="${escapedQuery}" placeholder="거래처 검색..." oninput="_cdGetState('${containerId}').searchQuery=this.value;renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="width:100%;padding:7px 12px 7px 32px;background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule-strong);border-radius:6px;font-family:inherit;font-size:12px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--rule-strong)'" />
+      <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink-faint)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <button onclick="downloadChannelDetailExcel(_cdGetState('${containerId}').months||[1,2,3,4])" style="background:var(--bg-soft);color:var(--ink-soft);border:1px solid var(--rule-strong);padding:6px 14px;border-radius:6px;font-family:'Batang','바탕',serif;font-weight:400;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-soft)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       엑셀 다운로드
     </button>
   </div>`;
 
+  // Grand Total RN (for share % calculation)
+  const totalRn26ForShare = ['OTA','G-OTA'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
+
   html += `<table class="full-table channel-detail-table"><thead>
     <tr>
       <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:100px">거래처</th>
-      <th class="group-header" colspan="3">객실수 (RN)</th>
+      <th class="group-header" colspan="4">객실수 (RN)</th>
       <th class="group-header" colspan="3">ADR (천원)</th>
       <th class="group-header" colspan="3">매출 (백만원)</th>
     </tr>
     <tr>
-      <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
+      <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th><th class="sub-header">비중</th>
       <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
       <th class="sub-header">2026</th><th class="sub-header">2025</th><th class="sub-header">YoY</th>
     </tr>
@@ -868,22 +903,42 @@ function renderChannelDetailTable(months, containerId) {
   let chIndex = 0;
 
   ['OTA', 'G-OTA'].forEach(seg => {
-    const channels = data[seg] || [];
+    let channels = data[seg] || [];
     if (channels.length === 0) return;
 
-    // Segment header
-    html += `<tr class="seg-header-row"><td colspan="10" style="text-align:left;padding-left:16px">${seg} 채널</td></tr>`;
+    // 검색 필터 적용
+    const filteredChannels = isSearching
+      ? channels.filter(ch => ch.name.toLowerCase().includes(query))
+      : channels;
 
+    // 소계는 전체 채널 기준으로 계산 (검색과 무관)
     let segRn26 = 0, segRn25 = 0, segRev26 = 0, segRev25 = 0;
-    channels.forEach((ch) => {
-      segRn26 += ch.rn26; segRn25 += ch.rn25; segRev26 += ch.rev26; segRev25 += ch.rev25;
+    channels.forEach(ch => { segRn26 += ch.rn26; segRn25 += ch.rn25; segRev26 += ch.rev26; segRev25 += ch.rev25; });
+
+    // 검색 중이면 매칭 결과 없으면 그룹 전체 숨김
+    if (isSearching && filteredChannels.length === 0) {
+      grandRn26 += segRn26; grandRn25 += segRn25; grandRev26 += segRev26; grandRev25 += segRev25;
+      return;
+    }
+
+    // Segment header
+    html += `<tr class="seg-header-row"><td colspan="11" style="text-align:left;padding-left:16px">${seg} 채널</td></tr>`;
+
+    // 더보기 로직: 검색 중이면 제한 해제
+    const expandKey = seg === 'OTA' ? 'expandOTA' : 'expandGOTA';
+    const isExpanded = st[expandKey] || isSearching;
+    const visibleChannels = isExpanded ? filteredChannels : filteredChannels.slice(0, SHOW_LIMIT);
+    const hiddenCount = filteredChannels.length - visibleChannels.length;
+
+    visibleChannels.forEach((ch) => {
       const rnsCol = ch.rnsYoy != null ? (ch.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const adrCol = ch.adrYoy != null ? (ch.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const revCol = ch.revYoy != null ? (ch.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const toggleId = 'chprop-' + containerId + '-' + chIndex;
+      const sharePct = totalRn26ForShare > 0 ? (ch.rn26 / totalRn26ForShare * 100).toFixed(1) : '0.0';
       html += `<tr class="ch-parent-row" data-toggle="${toggleId}" style="cursor:pointer" title="클릭하여 사업장별 실적 보기">
         <td style="padding-left:20px"><span class="ch-toggle-icon" id="icon-${toggleId}">▶</span> ${ch.name}</td>
-        <td style="font-weight:700">${fmt.n(ch.rn26)}</td><td>${fmt.n(ch.rn25)}</td><td style="color:${rnsCol};font-weight:700">${ch.rnsYoy != null ? fmt.pct(ch.rnsYoy) : '—'}</td>
+        <td style="font-weight:700">${fmt.n(ch.rn26)}</td><td>${fmt.n(ch.rn25)}</td><td style="color:${rnsCol};font-weight:700">${ch.rnsYoy != null ? fmt.pct(ch.rnsYoy) : '—'}</td><td style="color:var(--ink-muted);font-size:11px">${sharePct}%</td>
         <td style="font-weight:700">${fmt.won(ch.adr26)}</td><td>${fmt.won(ch.adr25)}</td><td style="color:${adrCol};font-weight:700">${ch.adrYoy != null ? fmt.pct(ch.adrYoy) : '—'}</td>
         <td style="font-weight:700">${fmt.n(Math.round(ch.rev26))}</td><td>${fmt.n(Math.round(ch.rev25))}</td><td style="color:${revCol};font-weight:700">${ch.revYoy != null ? fmt.pct(ch.revYoy) : '—'}</td>
       </tr>`;
@@ -896,7 +951,7 @@ function renderChannelDetailTable(months, containerId) {
         const pRevCol = p.revYoy != null ? (p.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
         html += `<tr class="ch-prop-row" data-parent="${toggleId}" style="display:none;background:var(--bg-deep)">
           <td style="padding-left:44px;font-size:12.5px;color:var(--ink-soft)">└ ${p.name}</td>
-          <td style="font-size:12.5px">${fmt.n(p.rn26)}</td><td style="font-size:12.5px">${fmt.n(p.rn25)}</td><td style="color:${pRnsCol};font-size:12.5px">${p.rnsYoy != null ? fmt.pct(p.rnsYoy) : '—'}</td>
+          <td style="font-size:12.5px">${fmt.n(p.rn26)}</td><td style="font-size:12.5px">${fmt.n(p.rn25)}</td><td style="color:${pRnsCol};font-size:12.5px">${p.rnsYoy != null ? fmt.pct(p.rnsYoy) : '—'}</td><td style="font-size:11px;color:var(--ink-faint)">${totalRn26ForShare>0?(p.rn26/totalRn26ForShare*100).toFixed(1):'0.0'}%</td>
           <td style="font-size:12.5px">${fmt.won(p.adr26)}</td><td style="font-size:12.5px">${fmt.won(p.adr25)}</td><td style="color:${pAdrCol};font-size:12.5px">${p.adrYoy != null ? fmt.pct(p.adrYoy) : '—'}</td>
           <td style="font-size:12.5px">${fmt.n(Math.round(p.rev26))}</td><td style="font-size:12.5px">${fmt.n(Math.round(p.rev25))}</td><td style="color:${pRevCol};font-size:12.5px">${p.revYoy != null ? fmt.pct(p.revYoy) : '—'}</td>
         </tr>`;
@@ -904,22 +959,34 @@ function renderChannelDetailTable(months, containerId) {
       chIndex++;
     });
 
-    // Subtotal
+    // 더보기 버튼 (검색 중이 아닐 때만)
+    if (!isSearching && hiddenCount > 0) {
+      html += `<tr class="cd-more-row"><td colspan="11" style="text-align:center;padding:8px">
+        <button onclick="_cdGetState('${containerId}').${expandKey}=true;renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="background:var(--bg-soft);color:var(--ink-muted);border:1px solid var(--rule);padding:5px 16px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)';this.style.borderColor='var(--gold)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-muted)';this.style.borderColor='var(--rule)'">+ ${hiddenCount}개 거래처 더보기</button>
+      </td></tr>`;
+    } else if (!isSearching && st[expandKey] && filteredChannels.length > SHOW_LIMIT) {
+      html += `<tr class="cd-more-row"><td colspan="11" style="text-align:center;padding:8px">
+        <button onclick="_cdGetState('${containerId}').${expandKey}=false;renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="background:var(--bg-soft);color:var(--ink-muted);border:1px solid var(--rule);padding:5px 16px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)';this.style.borderColor='var(--gold)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-muted)';this.style.borderColor='var(--rule)'">접기</button>
+      </td></tr>`;
+    }
+
+    // Subtotal (항상 노출)
     const segAdr26 = segRn26 > 0 ? Math.round((segRev26 * 1000000) / segRn26) : 0;
     const segAdr25 = segRn25 > 0 ? Math.round((segRev25 * 1000000) / segRn25) : 0;
     const segRnYoy = segRn25 > 0 ? (segRn26 - segRn25) / segRn25 * 100 : null;
     const segRevYoy = segRev25 > 0 ? (segRev26 - segRev25) / segRev25 * 100 : null;
     const segAdrYoy = segAdr25 > 0 ? (segAdr26 - segAdr25) / segAdr25 * 100 : null;
+    const segSharePct = totalRn26ForShare > 0 ? (segRn26 / totalRn26ForShare * 100).toFixed(1) : '0.0';
     html += `<tr class="seg-subtotal">
       <td>${seg} 소계</td>
-      <td>${fmt.n(segRn26)}</td><td>${fmt.n(segRn25)}</td><td style="color:${segRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRnYoy != null ? fmt.pct(segRnYoy) : '—'}</td>
+      <td>${fmt.n(segRn26)}</td><td>${fmt.n(segRn25)}</td><td style="color:${segRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRnYoy != null ? fmt.pct(segRnYoy) : '—'}</td><td style="font-weight:800">${segSharePct}%</td>
       <td>${fmt.won(segAdr26)}</td><td>${fmt.won(segAdr25)}</td><td style="color:${segAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segAdrYoy != null ? fmt.pct(segAdrYoy) : '—'}</td>
       <td>${fmt.n(Math.round(segRev26))}</td><td>${fmt.n(Math.round(segRev25))}</td><td style="color:${segRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRevYoy != null ? fmt.pct(segRevYoy) : '—'}</td>
     </tr>`;
     grandRn26 += segRn26; grandRn25 += segRn25; grandRev26 += segRev26; grandRev25 += segRev25;
   });
 
-  // Grand Total
+  // Grand Total (항상 노출)
   const gAdr26 = grandRn26 > 0 ? Math.round((grandRev26 * 1000000) / grandRn26) : 0;
   const gAdr25 = grandRn25 > 0 ? Math.round((grandRev25 * 1000000) / grandRn25) : 0;
   const gRnYoy = grandRn25 > 0 ? (grandRn26 - grandRn25) / grandRn25 * 100 : null;
@@ -927,14 +994,23 @@ function renderChannelDetailTable(months, containerId) {
   const gAdrYoy = gAdr25 > 0 ? (gAdr26 - gAdr25) / gAdr25 * 100 : null;
   html += `<tr class="total-row">
     <td>Grand Total</td>
-    <td>${fmt.n(grandRn26)}</td><td>${fmt.n(grandRn25)}</td><td style="color:${gRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gRnYoy != null ? fmt.pct(gRnYoy) : '—'}</td>
+    <td>${fmt.n(grandRn26)}</td><td>${fmt.n(grandRn25)}</td><td style="color:${gRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gRnYoy != null ? fmt.pct(gRnYoy) : '—'}</td><td style="font-weight:900">100%</td>
     <td>${fmt.won(gAdr26)}</td><td>${fmt.won(gAdr25)}</td><td style="color:${gAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gAdrYoy != null ? fmt.pct(gAdrYoy) : '—'}</td>
     <td>${fmt.n(Math.round(grandRev26))}</td><td>${fmt.n(Math.round(grandRev25))}</td><td style="color:${gRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:900">${gRevYoy != null ? fmt.pct(gRevYoy) : '—'}</td>
   </tr>`;
   html += '</tbody></table>';
+
+  // 검색 결과 없음 안내
+  if (isSearching) {
+    const totalMatches = ['OTA','G-OTA'].reduce((sum, seg) => sum + ((data[seg]||[]).filter(ch => ch.name.toLowerCase().includes(query)).length), 0);
+    if (totalMatches === 0) {
+      html += `<div style="text-align:center;padding:20px;color:var(--ink-faint);font-size:12px">「${st.searchQuery}」에 매칭되는 거래처가 없습니다.</div>`;
+    }
+  }
+
   el.innerHTML = html;
 
-  // Store months for Excel download
+  // Store months for Excel download (per-container state already has it; keep global for backward compat)
   window._cdMonths = months;
 
   // Attach toggle event listeners to parent rows
@@ -949,6 +1025,13 @@ function renderChannelDetailTable(months, containerId) {
       this.style.background = isHidden ? 'var(--bg-soft)' : '';
     });
   });
+
+  // Restore search input focus and cursor position
+  const searchInput = document.getElementById('cd-search-' + containerId);
+  if (searchInput && isSearching) {
+    searchInput.focus();
+    searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+  }
 }
 
 /* ── Channel Detail Insight (거래처 성장/역성장) ── */
