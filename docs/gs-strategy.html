@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>GS 운영전략 대시보드</title>
 
+<!-- PWA - 영업기획 대시보드 -->
+<link rel="manifest" href="./manifest-strategy.json">
+<meta name="theme-color" content="#1a1d23">
+<meta name="description" content="SONO & TRINITY GS팀 영업기획 대시보드 - 월별 전략 수립 및 실행 관리 (관리자 전용)">
+
+<!-- Apple 모바일 웹 앱 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GS 전략">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><defs><style>.icon-bg{fill:%231a1d23}.icon-circle{fill:%23252932}.icon-badge{fill:%2367b26f}</style></defs><rect class='icon-bg' width='180' height='180'/><circle class='icon-circle' cx='90' cy='90' r='75'/><circle class='icon-badge' cx='90' cy='90' r='67'/><text x='90' y='95' font-size='85' fill='%23f5f5f7' text-anchor='middle' dominant-baseline='central' font-family='sans-serif' font-weight='700'>🎯</text></svg>">
+
+<!-- PWA 메타태그 -->
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><defs><style>.icon-bg{fill:%231a1d23}.icon-circle{fill:%23252932}.icon-badge{fill:%2367b26f}</style></defs><rect class='icon-bg' width='192' height='192'/><circle class='icon-circle' cx='96' cy='96' r='85'/><circle class='icon-badge' cx='96' cy='96' r='75'/><text x='96' y='100' font-size='96' fill='%23f5f5f7' text-anchor='middle' dominant-baseline='central' font-family='sans-serif' font-weight='700'>🎯</text></svg>">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Nanum+Pen+Script&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -919,6 +934,20 @@
   }
 </style>
 <!-- GSN CSS 제거됨 -->
+
+<!-- Service Worker 등록 - 영업기획 대시보드 PWA -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw-strategy.js', { scope: './' })
+    .then(registration => {
+      console.log('[PWA] 영업기획 대시보드 Service Worker 등록 성공:', registration);
+    })
+    .catch(err => {
+      console.warn('[PWA] Service Worker 등록 실패:', err);
+    });
+}
+</script>
+
 </head>
 <body>
 

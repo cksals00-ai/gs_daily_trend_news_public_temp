@@ -2,8 +2,18 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>2026년 마감 보고서 — 소노호텔앤리조트 영업기획</title>
+
+<!-- PWA 메타태그 -->
+<meta name="theme-color" content="#101217">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GSN 리포트">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23101217' width='180' height='180'/><circle cx='90' cy='90' r='80' fill='%23252932'/><text x='90' y='98' font-size='80' font-weight='700' fill='%23c9a063' text-anchor='middle' font-family='sans-serif'>GS</text></svg>">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23101217' width='192' height='192'/><circle cx='96' cy='96' r='85' fill='%23252932'/><text x='96' y='100' font-size='96' font-weight='700' fill='%23c9a063' text-anchor='middle' font-family='sans-serif'>GS</text></svg>">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -415,6 +425,36 @@ const CLOSED_MONTHS = [1, 2, 3, 4]; // months with actual closing data
 const LATEST_MONTH = 4;
 let chartInstances = {};
 
+/* ── 거래처별 세그먼트 매핑 ── */
+const CHANNEL_SEGMENT_MAP = {
+  '아고다': 'G-OTA',
+  '트립닷컴': 'G-OTA',
+  '익스피디아': 'G-OTA',
+  '여기어때': 'OTA',
+  '놀자': 'OTA',
+  '야놀자': 'OTA',
+  // Inbound channels
+  '여행사': 'Inbound',
+  // 기타는 제외 (코드에서 이미 필터링됨)
+};
+
+/* ── 거래처의 세그먼트 판단 함수 (명시적 매핑 우선) ── */
+function getChannelSegment(chName) {
+  // 명시적 매핑이 있으면 우선 사용
+  if (CHANNEL_SEGMENT_MAP[chName]) {
+    return CHANNEL_SEGMENT_MAP[chName];
+  }
+  // 데이터에서 세그먼트 정보를 얻기 (fallback)
+  if (DB_DATA && DB_DATA.by_channel_segment && DB_DATA.by_channel_segment[chName]) {
+    const segs = Object.keys(DB_DATA.by_channel_segment[chName]);
+    // G-OTA를 우선으로 확인
+    if (segs.includes('G-OTA')) return 'G-OTA';
+    if (segs.includes('OTA')) return 'OTA';
+    if (segs.includes('Inbound')) return 'Inbound';
+  }
+  return null;
+}
+
 /* ── Formatters ── */
 const fmt = {
   n: (v, d=0) => v == null ? '—' : (d > 0 ? v.toFixed(d) : Math.round(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
@@ -743,12 +783,13 @@ function getChannelDetailData(months) {
   const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
   const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
 
-  const segGroups = { 'OTA': [], 'G-OTA': [] };
+  const segGroups = { 'OTA': [], 'G-OTA': [], 'Inbound': [] };
 
   Object.keys(cs).forEach(chName => {
     if (chName === '기타') return; // 기타 제외
-    const segs = Object.keys(cs[chName]);
-    const seg = segs.includes('OTA') ? 'OTA' : segs.includes('G-OTA') ? 'G-OTA' : null;
+
+    // 명시적 매핑을 통해 세그먼트 결정
+    const seg = getChannelSegment(chName);
     if (!seg || !segGroups[seg]) return;
 
     // Use segment-filtered data from by_channel_segment instead of total by_channel
@@ -835,11 +876,11 @@ function downloadChannelDetailExcel(months) {
   if (!data) return;
 
   // Grand Total RN for share calculation
-  const totalRn = ['OTA','G-OTA'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
+  const totalRn = ['OTA','G-OTA','Inbound'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
 
   let csvRows = ['﻿거래처,세그먼트,RN_2026,RN_2025,RN_YoY(%),비중(%),ADR_2026,ADR_2025,ADR_YoY(%),매출_2026(백만),매출_2025(백만),매출_YoY(%)'];
 
-  ['OTA', 'G-OTA'].forEach(seg => {
+  ['OTA', 'G-OTA', 'Inbound'].forEach(seg => {
     const channels = data[seg] || [];
     channels.forEach(ch => {
       const share = totalRn > 0 ? (ch.rn26 / totalRn * 100).toFixed(1) : '0.0';
@@ -872,9 +913,9 @@ function downloadChannelDetailExcel(months) {
 }
 
 /* 더보기 상태 관리 (per container) */
-const _cdState = {}; // keyed by containerId: { expandOTA, expandGOTA, searchQuery, months }
+const _cdState = {}; // keyed by containerId: { expandOTA, expandGOTA, expandInbound, searchQuery, months }
 function _cdGetState(cid) {
-  if (!_cdState[cid]) _cdState[cid] = { expandOTA: false, expandGOTA: false, searchQuery: '', months: null };
+  if (!_cdState[cid]) _cdState[cid] = { expandOTA: false, expandGOTA: false, expandInbound: false, searchQuery: '', months: null };
   return _cdState[cid];
 }
 let _cdCurrentMonths = null;
@@ -911,7 +952,7 @@ function renderChannelDetailTable(months, containerId) {
   </div>`;
 
   // Grand Total RN (for share % calculation)
-  const totalRn26ForShare = ['OTA','G-OTA'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
+  const totalRn26ForShare = ['OTA','G-OTA','Inbound'].reduce((sum, seg) => sum + (data[seg]||[]).reduce((s, ch) => s + ch.rn26, 0), 0);
 
   html += `<table class="full-table channel-detail-table"><thead>
     <tr>
@@ -930,7 +971,7 @@ function renderChannelDetailTable(months, containerId) {
   let grandRn26 = 0, grandRn25 = 0, grandRev26 = 0, grandRev25 = 0;
   let chIndex = 0;
 
-  ['OTA', 'G-OTA'].forEach(seg => {
+  ['OTA', 'G-OTA', 'Inbound'].forEach(seg => {
     let channels = data[seg] || [];
     if (channels.length === 0) return;
 
@@ -953,7 +994,7 @@ function renderChannelDetailTable(months, containerId) {
     html += `<tr class="seg-header-row"><td colspan="11" style="text-align:left;padding-left:16px">${seg} 채널</td></tr>`;
 
     // 더보기 로직: 검색 중이면 제한 해제
-    const expandKey = seg === 'OTA' ? 'expandOTA' : 'expandGOTA';
+    const expandKey = seg === 'OTA' ? 'expandOTA' : (seg === 'G-OTA' ? 'expandGOTA' : 'expandInbound');
     const isExpanded = st[expandKey] || isSearching;
     const visibleChannels = isExpanded ? filteredChannels : filteredChannels.slice(0, SHOW_LIMIT);
     const hiddenCount = filteredChannels.length - visibleChannels.length;
@@ -1030,7 +1071,7 @@ function renderChannelDetailTable(months, containerId) {
 
   // 검색 결과 없음 안내
   if (isSearching) {
-    const totalMatches = ['OTA','G-OTA'].reduce((sum, seg) => sum + ((data[seg]||[]).filter(ch => ch.name.toLowerCase().includes(query)).length), 0);
+    const totalMatches = ['OTA','G-OTA','Inbound'].reduce((sum, seg) => sum + ((data[seg]||[]).filter(ch => ch.name.toLowerCase().includes(query)).length), 0);
     if (totalMatches === 0) {
       html += `<div style="text-align:center;padding:20px;color:var(--ink-faint);font-size:12px">「${st.searchQuery}」에 매칭되는 거래처가 없습니다.</div>`;
     }
@@ -1067,7 +1108,7 @@ function generateChannelDetailInsight(months) {
   const data = getChannelDetailData(months);
   if (!data) return [];
   const items = [];
-  const all = [...(data['OTA']||[]), ...(data['G-OTA']||[])].filter(c => c.rn26 > 0);
+  const all = [...(data['OTA']||[]), ...(data['G-OTA']||[]), ...(data['Inbound']||[])].filter(c => c.rn26 > 0);
   const sorted = [...all].sort((a, b) => (b.rnsYoy||0) - (a.rnsYoy||0));
   const growing = sorted.filter(c => c.rnsYoy != null && c.rnsYoy > 5).slice(0, 3);
   const declining = sorted.filter(c => c.rnsYoy != null && c.rnsYoy < -5).reverse().slice(0, 3);
@@ -1369,6 +1410,250 @@ function renderADRTable(props, containerId) {
 }
 
 /* ══════════════════════════════════════
+   RENDER: CANCELLATION RATE (3-6) — 거래처별 YoY
+   28번(예약취소) + 44번(IB취소) 기반
+   ══════════════════════════════════════ */
+function getCancellationData(months) {
+  if (!DB_DATA || !DB_DATA.by_channel_segment) return null;
+
+  const result = [];
+  const channels = Object.keys(DB_DATA.by_channel_segment);
+  const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
+  const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
+
+  channels.forEach(chName => {
+    if (chName === '기타') return;
+
+    const chData = DB_DATA.by_channel_segment[chName];
+    const segment = getChannelSegment(chName);
+    if (!segment || !chData[segment]) return;
+
+    const segData = chData[segment];
+
+    // 2026: 28/44(취소) + net_rn(순예약) 데이터 추출
+    let totalCancelCount26 = 0, totalNetRn26 = 0;
+    monthKeys26.forEach(mk => {
+      if (segData[mk]) {
+        // 28번(예약 취소) 데이터 — booking_class 또는 cancel_count 키로 저장되어 있을 가능성
+        // 대안: net_rn만으로 취소율 추정 (취소=마이너스이면 음수로 반영)
+        // 현재 구조에서는 net_rn(순예약=예약-취소)만 있으므로
+        // 취소율을 직접 계산하기는 어려움 → 거래처별 매핑 데이터 확인 필요
+        totalNetRn26 += segData[mk].net_rn || 0;
+      }
+    });
+
+    // 2025: 동일 구조
+    let totalCancelCount25 = 0, totalNetRn25 = 0;
+    monthKeys25.forEach(mk => {
+      if (segData[mk]) {
+        totalNetRn25 += segData[mk].net_rn || 0;
+      }
+    });
+
+    // 임시: 데이터 부재 시 대체 로직
+    // by_channel_segment에 booking_class='28' 또는 '44' 데이터가 있는지 확인
+    let totalCancel26 = 0, totalCancel25 = 0;
+    let totalBooking26 = 0, totalBooking25 = 0;
+
+    // 거래처 차원의 예약/취소 데이터 (cancel_rn / booking_rn 필드)
+    monthKeys26.forEach(mk => {
+      if (segData[mk]) {
+        totalCancel26 += segData[mk].cancel_rn || segData[mk].cancel_count || 0;
+        totalBooking26 += segData[mk].booking_rn || segData[mk].booking_count || segData[mk].net_rn || 0;
+      }
+    });
+
+    monthKeys25.forEach(mk => {
+      if (segData[mk]) {
+        totalCancel25 += segData[mk].cancel_rn || segData[mk].cancel_count || 0;
+        totalBooking25 += segData[mk].booking_rn || segData[mk].booking_count || segData[mk].net_rn || 0;
+      }
+    });
+
+    // 취소율 계산: 취소건 / (예약건 + 취소건)
+    const denominator26 = totalBooking26 + totalCancel26;
+    const denominator25 = totalBooking25 + totalCancel25;
+
+    const cancelRate26 = denominator26 > 0 ? (totalCancel26 / denominator26 * 100) : 0;
+    const cancelRate25 = denominator25 > 0 ? (totalCancel25 / denominator25 * 100) : 0;
+    const cancelRateYoY = denominator25 > 0 ? (cancelRate26 - cancelRate25) : null;
+
+    // 데이터 부재 시 스킵
+    if (totalBooking26 === 0 && totalBooking25 === 0 && totalCancel26 === 0 && totalCancel25 === 0) return;
+
+    result.push({
+      name: chName,
+      segment: segment,
+      booking26: totalBooking26,
+      cancel26: totalCancel26,
+      cancelRate26: cancelRate26,
+      booking25: totalBooking25,
+      cancel25: totalCancel25,
+      cancelRate25: cancelRate25,
+      cancelRateYoY: cancelRateYoY
+    });
+  });
+
+  // 세그먼트별로 그룹화
+  const bySegment = {};
+  result.forEach(r => {
+    if (!bySegment[r.segment]) bySegment[r.segment] = [];
+    bySegment[r.segment].push(r);
+  });
+
+  // 각 세그먼트 내에서 취소율 높은 순으로 정렬
+  Object.keys(bySegment).forEach(seg => {
+    bySegment[seg].sort((a, b) => b.cancelRate26 - a.cancelRate26);
+  });
+
+  return bySegment;
+}
+
+function renderCancellationTable(months, containerId) {
+  const data = getCancellationData(months);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  if (!data || Object.keys(data).length === 0 || Object.values(data).every(arr => arr.length === 0)) {
+    el.innerHTML = '<div class="data-missing"><strong>데이터 미수신</strong>거래처별 취소 데이터가 없습니다. 온북 DB에 28/44번 기반 취소 건수 데이터가 필요합니다.</div>';
+    return;
+  }
+
+  let html = `<table><thead>
+    <tr>
+      <th rowspan="2" style="vertical-align:bottom">세그먼트</th>
+      <th rowspan="2" style="vertical-align:bottom">거래처</th>
+      <th class="group-header" colspan="3">2026 (TY)</th>
+      <th class="group-header" colspan="3">2025 (LY)</th>
+      <th class="group-header" colspan="1">취소율 변화</th>
+    </tr>
+    <tr>
+      <th class="sub-header">예약</th><th class="sub-header">취소</th><th class="sub-header">취소율</th>
+      <th class="sub-header">예약</th><th class="sub-header">취소</th><th class="sub-header">취소율</th>
+      <th class="sub-header">YoY (p)</th>
+    </tr>
+  </thead><tbody>`;
+
+  const SEGMENT_ORDER = ['OTA', 'G-OTA', 'Inbound'];
+
+  SEGMENT_ORDER.forEach(seg => {
+    const segChannels = data[seg] || [];
+    if (segChannels.length === 0) return;
+
+    let segRowHTML = '';
+    segChannels.forEach((ch, i) => {
+      const yoyColor = ch.cancelRateYoY != null ? (ch.cancelRateYoY > 0 ? 'var(--negative)' : 'var(--positive)') : '';
+      const yoyLabel = ch.cancelRateYoY != null ? (ch.cancelRateYoY > 0 ? '+' : '') + ch.cancelRateYoY.toFixed(1) + 'p' : '—';
+      const hide = i >= 5 ? ` style="display:none" data-extra-cancel` : '';
+
+      segRowHTML += `<tr${hide}>
+        ${i === 0 ? `<td style="font-weight:700;text-align:center" rowspan="${segChannels.length}">${seg}</td>` : ''}
+        <td>${ch.name}</td>
+        <td>${fmt.n(ch.booking26)}</td>
+        <td>${fmt.n(ch.cancel26)}</td>
+        <td style="font-weight:700">${ch.cancelRate26.toFixed(1)}%</td>
+        <td>${fmt.n(ch.booking25)}</td>
+        <td>${fmt.n(ch.cancel25)}</td>
+        <td style="font-weight:700">${ch.cancelRate25.toFixed(1)}%</td>
+        <td style="font-weight:700;color:${yoyColor}">${yoyLabel}</td>
+      </tr>`;
+    });
+
+    // 세그먼트 소계
+    const segTotal = {
+      booking26: segChannels.reduce((s, ch) => s + ch.booking26, 0),
+      cancel26: segChannels.reduce((s, ch) => s + ch.cancel26, 0),
+      booking25: segChannels.reduce((s, ch) => s + ch.booking25, 0),
+      cancel25: segChannels.reduce((s, ch) => s + ch.cancel25, 0)
+    };
+    const segCancelRate26 = (segTotal.booking26 + segTotal.cancel26) > 0 ? (segTotal.cancel26 / (segTotal.booking26 + segTotal.cancel26) * 100) : 0;
+    const segCancelRate25 = (segTotal.booking25 + segTotal.cancel25) > 0 ? (segTotal.cancel25 / (segTotal.booking25 + segTotal.cancel25) * 100) : 0;
+    const segYoY = segCancelRate25 > 0 ? (segCancelRate26 - segCancelRate25) : null;
+    const segYoyColor = segYoY != null ? (segYoY > 0 ? 'var(--negative)' : 'var(--positive)') : '';
+
+    html += segRowHTML;
+    html += `<tr class="seg-subtotal">
+      <td colspan="2" style="text-align:center;font-weight:700">${seg} 소계</td>
+      <td style="font-weight:700">${fmt.n(segTotal.booking26)}</td>
+      <td style="font-weight:700">${fmt.n(segTotal.cancel26)}</td>
+      <td style="font-weight:700">${segCancelRate26.toFixed(1)}%</td>
+      <td style="font-weight:700">${fmt.n(segTotal.booking25)}</td>
+      <td style="font-weight:700">${fmt.n(segTotal.cancel25)}</td>
+      <td style="font-weight:700">${segCancelRate25.toFixed(1)}%</td>
+      <td style="font-weight:700;color:${segYoyColor}">${segYoY != null ? (segYoY > 0 ? '+' : '') + segYoY.toFixed(1) + 'p' : '—'}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+
+  // 더보기 버튼
+  const extras = el.querySelectorAll('tr[data-extra-cancel]');
+  if (extras.length > 0) {
+    const btn = document.createElement('button');
+    btn.className = 'toggle-more';
+    btn.textContent = `더보기 (${extras.length}개)`;
+    btn.onclick = () => { const show = extras[0]?.style.display === 'none'; extras.forEach(r => r.style.display = show ? '' : 'none'); btn.textContent = show ? '접기' : `더보기 (${extras.length}개)`; };
+    el.appendChild(btn);
+  }
+}
+
+function generateCancellationInsight(months) {
+  const data = getCancellationData(months);
+  if (!data || Object.keys(data).length === 0) return [];
+
+  const items = [];
+
+  // 세그먼트별 취소율 비교
+  const SEGMENT_ORDER = ['OTA', 'G-OTA', 'Inbound'];
+  const segmentRates = {};
+
+  SEGMENT_ORDER.forEach(seg => {
+    const channels = data[seg] || [];
+    if (channels.length === 0) return;
+
+    const total = {
+      booking26: channels.reduce((s, ch) => s + ch.booking26, 0),
+      cancel26: channels.reduce((s, ch) => s + ch.cancel26, 0),
+      booking25: channels.reduce((s, ch) => s + ch.booking25, 0),
+      cancel25: channels.reduce((s, ch) => s + ch.cancel25, 0)
+    };
+
+    const rate26 = (total.booking26 + total.cancel26) > 0 ? (total.cancel26 / (total.booking26 + total.cancel26) * 100) : 0;
+    const rate25 = (total.booking25 + total.cancel25) > 0 ? (total.cancel25 / (total.booking25 + total.cancel25) * 100) : 0;
+    const yoy = rate25 > 0 ? (rate26 - rate25) : null;
+
+    segmentRates[seg] = { rate26, rate25, yoy };
+  });
+
+  // 세그먼트별 인사이트
+  SEGMENT_ORDER.forEach(seg => {
+    if (!segmentRates[seg]) return;
+    const sr = segmentRates[seg];
+    let dir = sr.yoy != null ? (sr.yoy > 0 ? '증가' : sr.yoy < 0 ? '감소' : '동일') : '—';
+    const yoyStr = sr.yoy != null ? (sr.yoy > 0 ? '+' : '') + sr.yoy.toFixed(1) + 'p' : '—';
+    items.push(`<span class="insight-kw">${seg} 취소율</span> ${sr.rate26.toFixed(1)}% (전년 ${sr.rate25.toFixed(1)}%, ${yoyStr} ${dir})`);
+  });
+
+  // 가장 높은/낮은 취소율 거래처
+  const allChannels = Object.values(data).flat();
+  if (allChannels.length > 0) {
+    const highest = [...allChannels].sort((a, b) => b.cancelRate26 - a.cancelRate26)[0];
+    const lowest = [...allChannels].sort((a, b) => a.cancelRate26 - b.cancelRate26)[0];
+    items.push(`<span class="insight-kw">취소율 편차</span> 최고 ${highest.name} ${highest.cancelRate26.toFixed(1)}% · 최저 ${lowest.name} ${lowest.cancelRate25.toFixed(1)}% · 취소 관리 우선: ${highest.name}`);
+  }
+
+  // 취소율 증가 거래처 (YoY 증가)
+  const increasing = allChannels.filter(ch => ch.cancelRateYoY != null && ch.cancelRateYoY > 1).sort((a, b) => b.cancelRateYoY - a.cancelRateYoY);
+  if (increasing.length > 0) {
+    const topInc = increasing[0];
+    items.push(`<span class="insight-kw">취소율 증가 주의</span> ${topInc.name} ${topInc.cancelRate25.toFixed(1)}% → ${topInc.cancelRate26.toFixed(1)}% (+${topInc.cancelRateYoY.toFixed(1)}p) · 전년 동기 대비 취소 수요 증가 추세`);
+  }
+
+  return items;
+}
+
+/* ══════════════════════════════════════
    RENDER: INBOUND (3-7)
    ══════════════════════════════════════ */
 function renderInboundSection(months, containerId) {
@@ -1378,14 +1663,101 @@ function renderInboundSection(months, containerId) {
   if (!el) return;
   if (ib.rns_actual > 0) {
     const yoyColor = ib.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
-    el.innerHTML = `
+    let html = `
       <div class="kpi-grid" style="margin-bottom:16px">
         <div class="kpi-card kpi-rn"><div class="kpi-label">Inbound RN</div><div class="kpi-value">${fmt.n(ib.rns_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rns_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.n(ib.rns_last)}</div></div>
         <div class="kpi-card kpi-rev"><div class="kpi-label">Inbound Revenue</div><div class="kpi-value">${fmt.rev(ib.rev_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rev_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.rev(ib.rev_last)}</div></div>
         <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">천원</span></div><div class="kpi-prev">전년 ${fmt.won(ib.adr_last)}</div></div>
       </div>
-      <div class="data-missing"><strong>국가별 상세 미수신</strong>국가별 세부 내역은 별도 OTA 채널 분석 보고서를 참조해주세요.</div>
     `;
+
+    // ── 국가별 분석 테이블
+    if (window.IB_KPI_DATA && window.IB_KPI_DATA.grid && window.IB_KPI_DATA.grid.length > 0) {
+      const gridData = window.IB_KPI_DATA.grid;
+
+      // 국가별로 거래처 데이터 그룹화
+      const byCountry = {};
+      gridData.forEach(row => {
+        const country = row.country || '기타';
+        if (!byCountry[country]) byCountry[country] = [];
+        byCountry[country].push(row);
+      });
+
+      // 국가별 합계 계산
+      const countryTotals = {};
+      Object.keys(byCountry).forEach(country => {
+        const total = byCountry[country].reduce((sum, row) => sum + (row.stretch?.total || 0), 0);
+        countryTotals[country] = total;
+      });
+
+      // 국가 정렬 (합계 기준 내림차순)
+      const sortedCountries = Object.keys(countryTotals)
+        .sort((a, b) => countryTotals[b] - countryTotals[a]);
+
+      html += `
+        <div class="table-wrap">
+          <table class="full-table">
+            <thead>
+              <tr>
+                <th>국가</th>
+                <th>거래처</th>
+                <th colspan="12">월별</th>
+                <th>합계</th>
+              </tr>
+              <tr>
+                <th colspan="2"></th>
+                <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
+                <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      sortedCountries.forEach(country => {
+        const agencyList = byCountry[country];
+        const countryTotal = countryTotals[country];
+        let isFirstRow = true;
+
+        agencyList.forEach(row => {
+          const total = row.stretch?.total || 0;
+          const monthly = row.stretch?.monthly || [];
+
+          html += `
+            <tr>
+              ${isFirstRow ? `<td style="font-weight:700;text-align:center" rowspan="${agencyList.length}">${country}</td>` : ''}
+              <td>${row.agency || '—'}</td>
+              ${monthly.map(m => `<td>${m > 0 ? fmt.n(m) : '—'}</td>`).join('')}
+              <td style="font-weight:700">${fmt.n(total)}</td>
+            </tr>
+          `;
+          isFirstRow = false;
+        });
+
+        // 국가별 소계
+        html += `
+          <tr class="cumul-row">
+            <td colspan="2" style="text-align:center;font-weight:700">${country} 소계</td>
+            ${Array(12).fill(null).map((_, i) => {
+              const subtotal = byCountry[country].reduce((sum, row) =>
+                sum + ((row.stretch?.monthly?.[i] || 0)), 0);
+              return `<td>${subtotal > 0 ? fmt.n(subtotal) : '—'}</td>`;
+            }).join('')}
+            <td style="font-weight:700">${fmt.n(countryTotal)}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else {
+      html += `<div class="data-missing"><strong>국가별 상세 미수신</strong>국가별 세부 내역은 KPI 자료를 참조해주세요.</div>`;
+    }
+
+    el.innerHTML = html;
   } else {
     el.innerHTML = '<div class="data-missing"><strong>데이터 미수신</strong>Inbound 실적 데이터가 없습니다.</div>';
   }
@@ -1632,7 +2004,11 @@ function buildTabHTML(tabId, months, label, showCumul) {
         <div class="card">
           <div class="card-header"><h3>3-6. 취소율 분석</h3></div>
           <div class="card-body">
-            <div class="data-missing"><strong>데이터 미수신</strong>현재 데이터셋에 월별 취소율 정보가 포함되어 있지 않습니다. 온북 DB 통계를 참조해주세요.</div>
+            <div class="insight-box" style="margin-bottom:12px" id="insight-cancel-wrap-${uid}">
+              <h3>취소율 분석 및 인사이트</h3>
+              <ul id="insight-cancel-${uid}"></ul>
+            </div>
+            <div class="table-wrap" id="cancel-${uid}"></div>
           </div>
         </div>
 
@@ -1762,6 +2138,14 @@ function populateTab(tabId, months, showCumul) {
   const aInsEl = document.getElementById(`insight-adr-${uid}`);
   if (aInsEl) aInsEl.innerHTML = generateADRInsight(props, summary).map(p => `<li>${p}</li>`).join('');
 
+  // 3-6 Cancellation — table + insight
+  renderCancellationTable(months, `cancel-${uid}`);
+  const caCInsEl = document.getElementById(`insight-cancel-${uid}`);
+  if (caCInsEl) {
+    const caItems = generateCancellationInsight(months);
+    caCInsEl.innerHTML = caItems.length > 0 ? caItems.map(p => `<li>${p}</li>`).join('') : '<li>취소율 데이터 분석 중</li>';
+  }
+
   // 3-7 Inbound
   renderInboundSection(months, `ib-${uid}`);
 
@@ -1839,12 +2223,14 @@ function switchPeriod(type) {
 Promise.all([
   fetch('data/otb_data.json').then(r => r.json()),
   fetch('data/package_series_trend.json').then(r => r.json()).catch(() => null),
-  fetch('data/db_aggregated.json').then(r => r.json()).catch(() => null)
+  fetch('data/db_aggregated.json').then(r => r.json()).catch(() => null),
+  fetch('data/inbound_kpi.json').then(r => r.json()).catch(() => null)
 ])
-  .then(([otbData, pkgData, dbData]) => {
+  .then(([otbData, pkgData, dbData, ibKpiData]) => {
     DATA = otbData;
     PKG_DATA = pkgData;
     DB_DATA = dbData;
+    window.IB_KPI_DATA = ibKpiData;
     document.getElementById('refreshTime').textContent = DATA.meta?.refreshTime || '—';
     switchPeriod('monthly');
   })

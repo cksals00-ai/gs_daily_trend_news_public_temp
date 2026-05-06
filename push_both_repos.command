@@ -2,7 +2,7 @@
 cd ~/Desktop/gs_daily_trend_news_public_temp
 rm -f .git/index.lock .git/HEAD.lock
 git add -A
-git commit -m "fix: OTB FCST 버그 + 합계목표 GS 61205 + 예약추이 페이스 + 상품상세 월탭 + weekly GS필터"
+git commit -m "fix: 마감 거래처 G-OTA매핑 + 취소율분석 + 국가별인바운드 + 캘린더사업장필터"
 git pull --no-rebase || {
   git checkout --theirs docs/admin_suggestions.json docs/index.html 2>/dev/null
   git add -A

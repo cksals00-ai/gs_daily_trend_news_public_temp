@@ -146,6 +146,13 @@ code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:
     <div class="week-selector" id="week-selector"></div>
   </div>
 
+  <!-- ═══ REGION / PROPERTY FILTER ═══ -->
+  <div class="card">
+    <div class="card-head"><span class="card-icon">🏢</span><span class="card-title">권역 · 사업장 필터</span><span class="card-desc" id="filter-label">전체</span></div>
+    <div id="region-filter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <div id="prop-filter" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+  </div>
+
   <!-- ═══ SUMMARY KPIs ═══ -->
   <div class="card">
     <div class="card-head"><span class="card-icon">📊</span><span class="card-title">요약 지표</span></div>
@@ -200,7 +207,10 @@ code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:
             <th style="text-align:right">금주 키인</th>
             <th style="text-align:right">변동</th>
             <th style="text-align:right">AI FCST</th>
-            <th style="text-align:right">RM FCST</th>
+            <th style="text-align:right;border-left:2px solid var(--rule-strong);">RM FCST</th>
+            <th style="text-align:right;color:var(--seg-ota);">OTA</th>
+            <th style="text-align:right;color:var(--seg-gota);">G-OTA</th>
+            <th style="text-align:right;color:var(--seg-inbound);">Inbound</th>
             <th style="text-align:right">예산</th>
             <th style="text-align:right">달성률</th>
           </tr>
@@ -233,6 +243,11 @@ let propertyList = [];
 let uniqueProperties = [];
 let activeWeekKey = '';
 let activeMonth = '4';
+let activeRegion = '전체';  // 권역 필터
+let activeProps = new Set(); // 사업장 필터
+
+const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+const REGION_KEYS = ['전체','vivaldi','central','south','apac'];
 
 /* ═══ WEEK UTILS ═══ */
 function getISOWeek(d) {
@@ -265,6 +280,7 @@ function getWeekLabel(d) {
 /* ═══ INIT ═══ */
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
+  renderRegionFilter();
   renderWeekSelector();
   selectWeek(activeWeekKey);
 });
@@ -365,6 +381,62 @@ function selectWeek(weekKey) {
   updateKPIs();
 }
 
+/* ═══ REGION/PROPERTY FILTER ═══ */
+function renderRegionFilter() {
+  const container = document.getElementById('region-filter');
+  container.innerHTML = REGION_KEYS.map(r => {
+    const isActive = r === activeRegion;
+    const label = r === '전체' ? '전체' : (REGION_LABEL[r] || r);
+    return `<button class="wtab${isActive ? ' active' : ''}" onclick="selectRegion('${r}')" style="font-size:11px;padding:5px 11px;">${label}</button>`;
+  }).join('');
+  renderPropFilter();
+}
+
+function renderPropFilter() {
+  const container = document.getElementById('prop-filter');
+  if (activeRegion === '전체') { container.innerHTML = ''; updateFilterLabel(); return; }
+  const propsInRegion = uniqueProperties.filter(p => p.region === activeRegion);
+  container.innerHTML = propsInRegion.map(p => {
+    const isActive = activeProps.has(p.name);
+    const shortName = p.name.replace(/^\d+\./, '');
+    return `<button class="wtab${isActive ? ' active' : ''}" onclick="toggleProp('${p.name}')" style="font-size:10px;padding:4px 9px;">${shortName}</button>`;
+  }).join('');
+  updateFilterLabel();
+}
+
+function selectRegion(region) {
+  activeRegion = region;
+  activeProps.clear();
+  renderRegionFilter();
+  refreshAll();
+}
+
+function toggleProp(propName) {
+  if (activeProps.has(propName)) activeProps.delete(propName);
+  else activeProps.add(propName);
+  renderPropFilter();
+  refreshAll();
+}
+
+function updateFilterLabel() {
+  const label = document.getElementById('filter-label');
+  if (!label) return;
+  if (activeRegion === '전체') { label.textContent = '전체'; return; }
+  const rLabel = REGION_LABEL[activeRegion] || activeRegion;
+  if (activeProps.size > 0) {
+    label.textContent = [...activeProps].map(n => n.replace(/^\d+\./, '')).join(', ');
+  } else {
+    label.textContent = rLabel + ' 전체';
+  }
+}
+
+function refreshAll() {
+  renderMatrix();
+  renderComparisonMonthSelector();
+  renderComparison();
+  updateKPIs();
+}
+
 /* ═══ GET KEYIN VALUE ═══ */
 function getKeyinValue(propName, segment, month) {
   // Look through fcst history for this property+segment keyin
@@ -390,7 +462,22 @@ function getAiFcst(propName, month) {
 function getRmFcst(propName, month) {
   const propData = rmFcstData[propName];
   if (!propData) return null;
-  return propData[`month_${month}`] || null;
+  const mk = `2026-${String(month).padStart(2,'0')}`;
+  return propData[mk]?.rm_fcst_rn || null;
+}
+
+function getRmFcstSeg(propName, month, segment) {
+  const propData = rmFcstData[propName];
+  if (!propData) return null;
+  const mk = `2026-${String(month).padStart(2,'0')}`;
+  return propData[mk]?.segments?.[segment]?.rm_fcst_rn || null;
+}
+
+function getRmBudgetSeg(propName, month, segment) {
+  const propData = rmFcstData[propName];
+  if (!propData) return null;
+  const mk = `2026-${String(month).padStart(2,'0')}`;
+  return propData[mk]?.segments?.[segment]?.rm_budget_rn || null;
 }
 
 function getBudget(propName, month) {
@@ -407,7 +494,8 @@ function renderMatrix() {
   headerRow.innerHTML = '<th class="prop-name">사업장</th>' +
     MONTHS_DISPLAY.map((m, i) => `<th>${m}</th>`).join('');
 
-  bodyRows.innerHTML = uniqueProperties.map(prop => {
+  const filteredProps = getFilteredProperties();
+  bodyRows.innerHTML = filteredProps.map(prop => {
     const cells = MONTHS_DISPLAY.map((m, i) => {
       const month = String(4 + i);
       let keyinValue = null;
@@ -459,8 +547,15 @@ function selectMonth(month) {
 }
 
 /* ═══ COMPARISON TABLE ═══ */
+function getFilteredProperties() {
+  if (activeRegion === '전체' && activeProps.size === 0) return uniqueProperties;
+  if (activeProps.size > 0) return uniqueProperties.filter(p => activeProps.has(p.name));
+  return uniqueProperties.filter(p => p.region === activeRegion);
+}
+
 function renderComparison() {
   const body = document.getElementById('comparison-body');
+  const filteredProps = getFilteredProperties();
 
   // Get previous week key
   const today = new Date();
@@ -468,7 +563,7 @@ function renderComparison() {
   prevDate.setDate(prevDate.getDate() - 7);
   const prevWeekKey = getISOWeekKey(prevDate);
 
-  body.innerHTML = uniqueProperties.map(prop => {
+  body.innerHTML = filteredProps.map(prop => {
     let currKeyin = null;
     let prevKeyin = null;
     let delta = null;
@@ -499,6 +594,9 @@ function renderComparison() {
 
     const aiFcst = getAiFcst(prop.name, activeMonth);
     const rmFcst = getRmFcst(prop.name, activeMonth);
+    const rmOta = getRmFcstSeg(prop.name, activeMonth, 'OTA');
+    const rmGota = getRmFcstSeg(prop.name, activeMonth, 'G-OTA');
+    const rmInbound = getRmFcstSeg(prop.name, activeMonth, 'Inbound');
     const budget = getBudget(prop.name, activeMonth);
     const ach = budget && currKeyin ? Math.round((currKeyin / budget) * 100) : null;
 
@@ -515,7 +613,10 @@ function renderComparison() {
       <td class="num-col">${currKeyin ? currKeyin.toLocaleString() : '—'}</td>
       <td class="num-col ${deltaClass}">${deltaSign}${delta ? Math.abs(delta).toLocaleString() : '—'}</td>
       <td class="num-col">${aiFcst ? aiFcst.toLocaleString() : '—'}</td>
-      <td class="num-col">${rmFcst ? rmFcst.toLocaleString() : '—'}</td>
+      <td class="num-col" style="border-left:2px solid var(--rule-strong);color:var(--warning);">${rmFcst ? rmFcst.toLocaleString() : '—'}</td>
+      <td class="num-col" style="color:var(--seg-ota);font-size:10px;">${rmOta ? rmOta.toLocaleString() : '—'}</td>
+      <td class="num-col" style="color:var(--seg-gota);font-size:10px;">${rmGota ? rmGota.toLocaleString() : '—'}</td>
+      <td class="num-col" style="color:var(--seg-inbound);font-size:10px;">${rmInbound ? rmInbound.toLocaleString() : '—'}</td>
       <td class="num-col">${budget ? budget.toLocaleString() : '—'}</td>
       <td class="num-col ach-cell ${achClass}">${ach !== null ? ach + '%' : '—'}</td>
     </tr>`;
@@ -526,16 +627,18 @@ function renderComparison() {
 function updateKPIs() {
   const weekData = fcstHistory[activeWeekKey];
   const keyin = weekData?.keyin || {};
+  const filteredProps = getFilteredProperties();
 
-  // Count unique properties with keyin
+  // Count unique properties with keyin (within filter)
+  const filteredNames = new Set(filteredProps.map(p => p.name));
   const keyinProps = new Set();
   Object.keys(keyin).forEach(k => {
     const [propName] = k.split('|');
-    if (keyin[k] !== null) keyinProps.add(propName);
+    if (keyin[k] !== null && filteredNames.has(propName)) keyinProps.add(propName);
   });
 
   const keyinCount = keyinProps.size;
-  const totalCount = uniqueProperties.length;
+  const totalCount = filteredProps.length;
   const completionRate = totalCount > 0 ? Math.round((keyinCount / totalCount) * 100) : 0;
 
   // Changed count (vs previous week)
@@ -547,7 +650,7 @@ function updateKPIs() {
 
   let changedCount = 0;
   const prevKeyin = prevWeekData?.keyin || {};
-  uniqueProperties.forEach(prop => {
+  filteredProps.forEach(prop => {
     let currVal = null, prevVal = null;
 
     // Current keyin sum
@@ -568,14 +671,14 @@ function updateKPIs() {
     }
   });
 
-  // Budget achievement (sum of keyin / sum of budget for month 4)
+  // Budget achievement (sum of keyin / sum of budget for active month)
   let totalKeyin = 0, totalBudget = 0;
-  uniqueProperties.forEach(prop => {
+  filteredProps.forEach(prop => {
     SEGMENTS.forEach(seg => {
       const k = `${prop.name}|${seg}`;
       if (keyin[k] !== null) totalKeyin += keyin[k];
     });
-    const budget = getBudget(prop.name, '4');
+    const budget = getBudget(prop.name, activeMonth);
     if (budget) totalBudget += budget;
   });
   const budgetAch = totalBudget > 0 ? Math.round((totalKeyin / totalBudget) * 100) : 0;

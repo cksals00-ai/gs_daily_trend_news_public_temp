@@ -325,12 +325,14 @@ def iter_inbound_rows(specs):
                 night_rate = parse_int(parts[spec['idx_night_rate']])
                 rn = rooms if rooms > 0 else 1
                 rev = int(night_rate * rn / 1.1)
+                prop_name = parts[spec['idx_prop']].strip() if spec.get('idx_prop') is not None and spec['idx_prop'] < len(parts) else ''
                 n_emitted += 1
                 yield {
                     'btype': spec['btype'],
                     'member_no': member_no,
                     'prefix': member_no[:2],
                     'member_name': member_name,
+                    'property': prop_name,
                     'stay_month': stay_month,
                     'stay_year': year,
                     'sell_date': sell_date[:8],
@@ -508,7 +510,7 @@ def aggregate_member_detail(enriched, recent_months=24):
     recent_set = set(all_months[:recent_months])
 
     detail = defaultdict(lambda: defaultdict(lambda: {
-        'base_partner': '', 'nationality': '', 'prefix': '',
+        'base_partner': '', 'nationality': '', 'prefix': '', 'property': '',
         'rn_booking': 0, 'rev_booking': 0, 'rn_cancel': 0, 'rev_cancel': 0,
         'stay_days': set(),
     }))
@@ -521,6 +523,7 @@ def aggregate_member_detail(enriched, recent_months=24):
         d['base_partner'] = r['base_partner'] or '(미상)'
         d['nationality'] = r['nationality']
         d['prefix'] = r['prefix']
+        d['property'] = r.get('property', '')
         if r['btype'] == 'booking':
             d['rn_booking'] += r['rn']
             d['rev_booking'] += r['rev']
@@ -538,6 +541,7 @@ def aggregate_member_detail(enriched, recent_months=24):
                 'base_partner': v['base_partner'],
                 'nationality': v['nationality'],
                 'prefix': v['prefix'],
+                'property': v['property'],
                 'rn_booking': v['rn_booking'],
                 'rn_cancel': v['rn_cancel'],
                 'rn_net': v['rn_booking'] - v['rn_cancel'],
