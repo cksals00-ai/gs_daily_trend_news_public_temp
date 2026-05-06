@@ -500,10 +500,11 @@ function generateAiFactor(propName, segment, month) {
   const autoFcst=seg.rns_fcst||0;
   const ach = bud>0 ? act/bud*100 : 0;
 
-  // RM FCST vs 자동 FCST 괴리 분석 (사업장 단위)
+  // RM FCST vs 자동 FCST 괴리 분석 (사업장 단위) — 세그먼트 합 사용
   const rmKey = '2026-' + String(month).padStart(2,'0');
   const rmEntry = rmFcstData[propName]?.[rmKey];
-  const rmRn = rmEntry?.rm_fcst_rn ?? null;
+  const _rmSegs = rmEntry?.segments;
+  const rmRn = _rmSegs ? Object.values(_rmSegs).reduce((s, seg) => s + (seg?.rm_fcst_rn || 0), 0) || null : (rmEntry?.rm_fcst_rn ?? null);
   if (rmRn !== null && autoFcst > 0) {
     const propYoy = getPropYoy(propName, month);
     const propAutoFcst = propYoy ? SEGMENTS.reduce((s, seg2) => {
@@ -607,9 +608,11 @@ function renderFcstTable() {
 
     // RM FCST = Revenue Meeting forecast Room Nights from latest RM PDF (data/rm_fcst.json).
     // Keys in rmFcstData are canonical property names ("11.소노캄경주") and month keys are "2026-MM".
+    // 세그먼트 합(OTA+G-OTA+Inbound)만 사용 — 총량(rm_fcst_rn)은 직판/법인 등 포함하여 과대계상됨
     const rmKey = '2026-' + String(fcstCurrentMonth).padStart(2,'0');
     const rmEntry = rmFcstData[prop.name]?.[rmKey];
-    const rmVal = rmEntry?.rm_fcst_rn ?? null;
+    const rmSegs = rmEntry?.segments;
+    const rmVal = rmSegs ? Object.values(rmSegs).reduce((s, seg) => s + (seg?.rm_fcst_rn || 0), 0) || null : (rmEntry?.rm_fcst_rn ?? null);
     const rmDisplay = rmVal !== null ? fmt(rmVal) : '—';
     if (rmVal !== null) totRm += rmVal;
 

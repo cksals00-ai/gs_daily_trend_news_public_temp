@@ -2265,22 +2265,35 @@ def main():
                 cdbps = db.get("cancel_daily_by_property_segment", {})
                 if is_summary:
                     prop_booking, prop_cancel = 0, 0
+                    prop_booking_rev, prop_cancel_rev = 0.0, 0.0
                     if today_date:
                         for pname in db_props:
-                            prop_booking += pdbps.get(pname, {}).get(seg_name, {}).get(today_date, {}).get("rn", 0) or 0
-                            prop_cancel  += cdbps.get(pname, {}).get(seg_name, {}).get(today_date, {}).get("rn", 0) or 0
+                            pd_entry = pdbps.get(pname, {}).get(seg_name, {}).get(today_date, {})
+                            cd_entry = cdbps.get(pname, {}).get(seg_name, {}).get(today_date, {})
+                            prop_booking += pd_entry.get("rn", 0) or 0
+                            prop_cancel  += cd_entry.get("rn", 0) or 0
+                            prop_booking_rev += pd_entry.get("rev", 0.0) or 0.0
+                            prop_cancel_rev  += cd_entry.get("rev", 0.0) or 0.0
                 else:
                     stay_month = f"2026{int(m_str):02d}"
                     pdbpsm = db.get("pickup_daily_by_property_segment_month", {})
                     cdbpsm = db.get("cancel_daily_by_property_segment_month", {})
                     prop_booking, prop_cancel = 0, 0
+                    prop_booking_rev, prop_cancel_rev = 0.0, 0.0
                     if today_date:
                         for pname in db_props:
-                            prop_booking += pdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {}).get("rn", 0) or 0
-                            prop_cancel  += cdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {}).get("rn", 0) or 0
+                            pd_entry = pdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {})
+                            cd_entry = cdbpsm.get(pname, {}).get(seg_name, {}).get(stay_month, {}).get(today_date, {})
+                            prop_booking += pd_entry.get("rn", 0) or 0
+                            prop_cancel  += cd_entry.get("rn", 0) or 0
+                            prop_booking_rev += pd_entry.get("rev", 0.0) or 0.0
+                            prop_cancel_rev  += cd_entry.get("rev", 0.0) or 0.0
                 prop["today_booking"] = prop_booking
                 prop["today_cancel"]  = prop_cancel
                 prop["today_net"]     = prop_booking - prop_cancel
+                prop["today_booking_rev"] = round(prop_booking_rev * 1_000_000)
+                prop["today_cancel_rev"]  = round(prop_cancel_rev * 1_000_000)
+                prop["today_net_rev"]     = prop["today_booking_rev"] - prop["today_cancel_rev"]
 
         # ── segmentData에 today 주입 ──
         for seg, seg_summary in snap.get("segmentData", {}).items():
