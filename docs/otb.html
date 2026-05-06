@@ -1509,7 +1509,8 @@ function renderPivot(data) {
   }
 
   // ─── 합계 행 ───
-  const tot = data.summary;
+  // GS 세그먼트(OTA+G-OTA+Inbound) 기준 summary 재계산
+  const tot = summaryFromProps(props);
   const totRnsYoy = tot.rns_yoy != null ? tot.rns_yoy : null;
   const totAdrAch = (tot.adr_actual != null && tot.adr_budget > 0) ? (tot.adr_actual / tot.adr_budget * 100) : null;
   const totAdrBook = (tot.today_booking_rev != null && tot.today_booking > 0) ? tot.today_booking_rev / tot.today_booking : null;

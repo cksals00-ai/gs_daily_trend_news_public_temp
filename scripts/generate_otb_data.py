@@ -1794,8 +1794,9 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             by_prop_seg[seg] = seg_props
 
     # ── segmentData에 FCST 주입 (byPropertySegment 합산) ──
+    # BUDGET_SEGMENT_KEYS(OTA/G-OTA/Inbound)만 FCST 주입 (non-budget 세그는 제외)
     for seg, seg_props_list in by_prop_seg.items():
-        if seg not in seg_data:
+        if seg not in seg_data or seg not in BUDGET_SEGMENT_KEYS:
             continue
         sd = seg_data[seg]
         sd["rns_fcst"] = sum(p.get("rns_fcst", 0) or 0 for p in seg_props_list)

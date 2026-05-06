@@ -247,6 +247,22 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <span class="table-card-title" id="cat-table-title">&#52852;&#53580;&#44256;&#47532;&#48324; &#49892;&#51201;</span>
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="cat-table-sub">&mdash;</span>
       </div>
+      <!-- 월별 탭 -->
+      <div style="display:flex;gap:2px;padding:8px 10px;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;">
+        <button id="cat-month-all" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">연합계</button>
+        <button id="cat-month-01" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">1월</button>
+        <button id="cat-month-02" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">2월</button>
+        <button id="cat-month-03" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">3월</button>
+        <button id="cat-month-04" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">4월</button>
+        <button id="cat-month-05" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">5월</button>
+        <button id="cat-month-06" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">6월</button>
+        <button id="cat-month-07" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">7월</button>
+        <button id="cat-month-08" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">8월</button>
+        <button id="cat-month-09" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">9월</button>
+        <button id="cat-month-10" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">10월</button>
+        <button id="cat-month-11" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">11월</button>
+        <button id="cat-month-12" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">12월</button>
+      </div>
       <div class="table-wrap">
         <table class="pivot">
           <thead>
@@ -369,6 +385,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
                    '세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
   var YEAR_COLORS = {'2022':'#9e9e9e','2023':'#6ba3c4','2024':'#e6b970','2025':'#d97a7a','2026':'#6db58a'};
   var pkg = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', chart = null;
+  var catMonthFilter = 'ALL'; // 연합계 또는 월번호 (01-12)
   var activeRegion = '전체';
   var activePropsSet = new Set();
   var REGION_DEFS = [
@@ -427,10 +444,15 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       source = mergedByCategory;
     }
 
+    // 월별 필터 적용
+    var monthFilter = catMonthFilter === 'ALL' ? null : catMonthFilter;
+
     if (cat === 'ALL') {
       Object.values(source).forEach(function(byYr) {
         var yrData = byYr[year] || {};
         Object.keys(yrData).forEach(function(ym) {
+          // monthFilter가 설정되었으면 해당 월만 포함
+          if (monthFilter && !ym.endsWith(monthFilter)) return;
           var v = yrData[ym];
           if (!data[ym]) data[ym] = {rn:0, rev_won:0};
           data[ym].rn += v.rn; data[ym].rev_won += v.rev * 1000000;
@@ -439,6 +461,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     } else {
       var yrData = (source[cat] || {})[year] || {};
       Object.keys(yrData).forEach(function(ym) {
+        // monthFilter가 설정되었으면 해당 월만 포함
+        if (monthFilter && !ym.endsWith(monthFilter)) return;
         var v = yrData[ym];
         data[ym] = {rn: v.rn, rev_won: v.rev * 1000000};
       });
@@ -492,7 +516,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   }
 
   function renderCatTable(lyYear, totalRn) {
-    set('cat-table-title', selYear + '년 카테고리별 실적');
+    var monthLabel = catMonthFilter === 'ALL' ? '(연합계)' : '(' + parseInt(catMonthFilter) + '월)';
+    set('cat-table-title', selYear + '년 카테고리별 실적 ' + monthLabel);
     set('cat-table-sub', selYear + ' vs ' + lyYear);
     var rows = '', totRn=0, totLy=0, totRev=0;
     CAT_ORDER.forEach(function(cat) {
@@ -675,6 +700,25 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     buildRegionChips();
     buildMobileRegionChips();
     updatePropFilterVisibility();
+    buildCatMonthTabs();
+  }
+
+  function buildCatMonthTabs() {
+    // 월별 탭 버튼 설정
+    var months = ['all', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    months.forEach(function(m) {
+      var btn = el('cat-month-' + m);
+      if (!btn) return;
+      btn.classList.toggle('active', (m === 'all' ? catMonthFilter === 'ALL' : catMonthFilter === m));
+      btn.onclick = function() {
+        catMonthFilter = (m === 'all' ? 'ALL' : m);
+        months.forEach(function(mm) {
+          var b = el('cat-month-' + mm);
+          if (b) b.classList.toggle('active', (mm === 'all' ? catMonthFilter === 'ALL' : catMonthFilter === mm));
+        });
+        render();
+      };
+    });
   }
 
   window._pd_selCat = function(cat) {};

@@ -1089,6 +1089,9 @@ function renderTable(stayMonth, lyMonth) {
     relevantSnaps.some(s => s.properties[p]?.[stayMonth])
   ).sort();
 
+  // ALL 모드에서도 GS 세그(OTA+G-OTA+Inbound) 기준 목표 적용
+  const GS_SUB_SEGS = ['OTA', 'G-OTA', 'Inbound'];
+
   // Header
   let hdr = '<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>';
   relevantSnaps.forEach((snap, i) => {
@@ -1111,7 +1114,14 @@ function renderTable(stayMonth, lyMonth) {
 
   sortedProps.forEach(propName => {
     const firstSnap = relevantSnaps.find(s => s.properties[propName]?.[stayMonth]);
-    const budget = firstSnap?.properties[propName]?.[stayMonth]?.rm_budget_rn || 0;
+    const propMonthData = firstSnap?.properties[propName]?.[stayMonth];
+    // GS 세그(OTA+G-OTA+Inbound) 기준 목표 합산
+    let budget = 0;
+    if (propMonthData?.segments) {
+      GS_SUB_SEGS.forEach(seg => {
+        budget += propMonthData.segments[seg]?.rm_budget_rn || 0;
+      });
+    }
     totBud += budget;
 
     html += `<tr><td class="prop-name">${esc(propName)}</td>`;
@@ -1120,7 +1130,15 @@ function renderTable(stayMonth, lyMonth) {
     let lastFcst = null, firstFcst = null;
     relevantSnaps.forEach((snap, i) => {
       const entry = snap.properties[propName]?.[stayMonth];
-      const fcst = entry?.rm_fcst_rn ?? null;
+      // GS 세그(OTA+G-OTA+Inbound) 기준 FCST 합산
+      let fcst = null;
+      if (entry?.segments) {
+        let sum = 0, found = false;
+        GS_SUB_SEGS.forEach(seg => {
+          if (entry.segments[seg]) { sum += entry.segments[seg].rm_fcst_rn || 0; found = true; }
+        });
+        fcst = found ? sum : null;
+      }
       const isLast = i === relevantSnaps.length - 1;
 
       if (fcst !== null) {
@@ -1133,7 +1151,14 @@ function renderTable(stayMonth, lyMonth) {
       let delta = '';
       if (i > 0) {
         const prevEntry = relevantSnaps[i-1].properties[propName]?.[stayMonth];
-        const prevFcst = prevEntry?.rm_fcst_rn ?? null;
+        let prevFcst = null;
+        if (prevEntry?.segments) {
+          let sum = 0, found = false;
+          GS_SUB_SEGS.forEach(seg => {
+            if (prevEntry.segments[seg]) { sum += prevEntry.segments[seg].rm_fcst_rn || 0; found = true; }
+          });
+          prevFcst = found ? sum : null;
+        }
         if (prevFcst !== null && fcst !== null) {
           const d = fcst - prevFcst;
           if (d !== 0) delta = `<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};display:block">${d>0?'+':''}${fmt(d)}</span>`;
@@ -1148,9 +1173,16 @@ function renderTable(stayMonth, lyMonth) {
     const achCls = achV !== null ? (parseFloat(achV) >= 100 ? 'positive' : parseFloat(achV) >= 80 ? 'warning' : 'negative') : '';
     html += `<td class="week-col"><span class="tbadge ${achCls}">${achV !== null ? achV + '%' : '—'}</span></td>`;
 
-    // YoY
+    // YoY (GS 세그 기준)
     const lyEntry = lySnap?.properties[propName]?.[lyMonth];
-    const lyFcst = lyEntry?.rm_fcst_rn ?? null;
+    let lyFcst = null;
+    if (lyEntry?.segments) {
+      let sum = 0, found = false;
+      GS_SUB_SEGS.forEach(seg => {
+        if (lyEntry.segments[seg]) { sum += lyEntry.segments[seg].rm_fcst_rn || 0; found = true; }
+      });
+      lyFcst = found ? sum : null;
+    }
     let yoyHtml = '—';
     if (lyFcst !== null && lastFcst !== null && lyFcst > 0) {
       const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
@@ -1176,12 +1208,16 @@ function renderTable(stayMonth, lyMonth) {
   const totAchCls = totAch !== null ? (parseFloat(totAch) >= 100 ? 'positive' : parseFloat(totAch) >= 80 ? 'warning' : 'negative') : '';
   html += `<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAch !== null ? totAch + '%' : '—'}</span></td>`;
 
-  // Total YoY
+  // Total YoY (GS 세그 기준)
   let totLyFcst = 0;
   if (lySnap) {
     Object.entries(lySnap.properties).forEach(([pName, months]) => {
       if (divProps && !divProps.includes(pName)) return;
-      if (months[lyMonth]) totLyFcst += months[lyMonth].rm_fcst_rn || 0;
+      if (months[lyMonth]?.segments) {
+        GS_SUB_SEGS.forEach(seg => {
+          totLyFcst += months[lyMonth].segments[seg]?.rm_fcst_rn || 0;
+        });
+      }
     });
   }
   let totYoyHtml = '—';

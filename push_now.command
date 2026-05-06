@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 cd ~/Desktop/gs_daily_trend_news_public_temp
 rm -f .git/index.lock .git/HEAD.lock
 git add -A
@@ -10,5 +10,5 @@ git pull --no-rebase || {
 }
 git push
 echo ""
-echo "✅ 푸시 완료!"
+echo "✅ 푸시 완료! 이 창을 닫아도 됩니다."
 read -p "아무 키나 누르세요..."

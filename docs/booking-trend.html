@@ -744,8 +744,17 @@ function renderPaceChart() {
   const segScoped = !!db.net_daily_by_month_seg;
 
   function _getMonthData(monthKey) {
-    if (!segScoped) return db.net_daily_by_month[monthKey] || null;
-    // 세그먼트 합산
+    // net_daily_by_month_seg가 없으면 net_daily_by_month에서 GS 세그먼트만 합산
+    if (!segScoped) {
+      const monthData = db.net_daily_by_month[monthKey];
+      if (!monthData) return null;
+
+      // GS 세그먼트만 필터링 (전체가 아니면 by_segment로 관리됨)
+      // net_daily_by_month는 일자별 데이터이므로 그대로 반환
+      return monthData;
+    }
+
+    // 세그먼트 합산 로직
     const acc = {};
     let any = false;
     BUDGET_SEGS.forEach(seg => {
