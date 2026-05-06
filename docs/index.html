@@ -13811,9 +13811,10 @@ function toggleNewsMore(btn, id) {
     miniEl.innerHTML = smHtml;
   }
 
+  function _hasKeys(obj) { return obj && Object.keys(obj).length > 0; }
   function _getDailyData(month, view) {
     if (month === 'all') {
-      return view === 'property' ? (DA.byProperty || {}) : (DA.byChannel || DA.bySegment || {});
+      return view === 'property' ? (DA.byProperty || {}) : (_hasKeys(DA.byChannel) ? DA.byChannel : DA.bySegment || {});
     } else {
       if (view === 'property') {
         return (DA.byPropertyMonth || {})[month] || {};
@@ -13821,7 +13822,7 @@ function toggleNewsMore(btn, id) {
         var chMonth = (DA.byChannelMonth || {})[month];
         if (chMonth && Object.keys(chMonth).length) return chMonth;
         var segMonth = (DA.bySegmentMonth || {})[month];
-        return segMonth && Object.keys(segMonth).length ? segMonth : (DA.byChannel || DA.bySegment || {});
+        return segMonth && Object.keys(segMonth).length ? segMonth : (_hasKeys(DA.byChannel) ? DA.byChannel : DA.bySegment || {});
       }
     }
   }

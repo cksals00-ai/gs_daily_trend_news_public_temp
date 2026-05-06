@@ -471,6 +471,9 @@ function generateTables(){
     let gs_bud_rn=0, gs_otb_rn=0, gs_fcst_rn=0;
     let gs_otb_rev=0;
     let gs_adr_bud_w=0, gs_bud_rn_bp=0;
+    // GS ADR: rm_fcst 세그먼트별 월간 Budget/FCST (천원 단위 누적)
+    let gs_seg_bud_rev_k=0, gs_seg_bud_rn=0;
+    let gs_seg_fcst_rev_k=0, gs_seg_fcst_rn=0;
 
     let t_fcst_rev_k=0;
     let t_bud_adr_rn=0;
@@ -495,6 +498,18 @@ function generateTables(){
           const adr_won = (rm.rm_budget_rev_mil||0)*1000000/rm.rm_budget_rn;
           t_bud_adr_w += adr_won*rm.rm_budget_rn;
           t_bud_adr_rn += rm.rm_budget_rn;
+        }
+        // GS ADR: rm_fcst 세그먼트별 월간 데이터 누적
+        if(rm.segments){
+          segsArr.forEach(seg=>{
+            const s = rm.segments[seg];
+            if(s){
+              gs_seg_bud_rn += s.rm_budget_rn||0;
+              gs_seg_bud_rev_k += (s.rm_budget_rev_mil||0)*1000; // 백만→천원
+              gs_seg_fcst_rn += s.rm_fcst_rn||0;
+              gs_seg_fcst_rev_k += (s.rm_fcst_rev_mil||0)*1000;
+            }
+          });
         }
       }
 
@@ -541,9 +556,10 @@ function generateTables(){
     const t_adr_bud = t_bud_adr_rn>0 ? Math.round(t_bud_adr_w/t_bud_adr_rn/1000) : null;
     const t_adr_otb = t_adr_bud;
     const t_adr_ach = t_adr_bud ? 100 : null;
-    const t_adr_fcst = t_adr_bud; // FCST ADR ≈ Budget ADR
-    const t_adr_f_diff = 0;
-    const t_adr_f_ach = t_adr_bud ? 100 : null;
+    // FCST ADR = FCST REV(천원) / FCST RN (rm_fcst 실제 Forecast 데이터)
+    const t_adr_fcst = (t_fcst_rn>0 && t_fcst_rev_k>0) ? Math.round(t_fcst_rev_k/t_fcst_rn) : t_adr_bud;
+    const t_adr_f_diff = (t_adr_fcst!=null&&t_adr_bud!=null) ? t_adr_fcst-t_adr_bud : null;
+    const t_adr_f_ach = (t_adr_bud&&t_adr_fcst) ? t_adr_fcst/t_adr_bud*100 : null;
     // REV (천원 → 백만원 표시). OTB REV = OTB RN × Budget ADR (proxy)
     const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null;
     const t_rev_otb = (t_otb_rn>0&&t_adr_bud) ? Math.round(t_otb_rn*t_adr_bud/1000) : null;
@@ -564,13 +580,14 @@ function generateTables(){
     const gs_rn_ach = gs_bud_rn>0 ? gs_otb_rn/gs_bud_rn*100 : null;
     const gs_fcst_ach_rn = gs_bud_rn>0 ? gs_fcst_rn/gs_bud_rn*100 : null;
     const gs_fcst_diff_rn = gs_fcst_rn - gs_bud_rn;
-    // GS ADR (천원)
+    // GS ADR (천원): rm_fcst 세그먼트 월간 데이터 우선, fallback으로 byProperty 연간
     const gs_adr_otb = gs_otb_rn>0 ? Math.round(gs_otb_rev/gs_otb_rn*1000) : null;
-    const gs_adr_bud = gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null;
-    const gs_adr_fcst = gs_adr_bud; // FCST ADR ≈ Budget ADR
+    const gs_adr_bud = gs_seg_bud_rn>0 ? Math.round(gs_seg_bud_rev_k/gs_seg_bud_rn)
+                     : (gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null);
+    const gs_adr_fcst = gs_seg_fcst_rn>0 ? Math.round(gs_seg_fcst_rev_k/gs_seg_fcst_rn) : gs_adr_bud;
     const gs_adr_ach = (gs_adr_bud&&gs_adr_otb) ? gs_adr_otb/gs_adr_bud*100 : null;
-    const gs_adr_f_diff = 0;
-    const gs_adr_f_ach = gs_adr_bud ? 100 : null;
+    const gs_adr_f_diff = (gs_adr_fcst!=null&&gs_adr_bud!=null) ? gs_adr_fcst-gs_adr_bud : null;
+    const gs_adr_f_ach = (gs_adr_bud&&gs_adr_fcst) ? gs_adr_fcst/gs_adr_bud*100 : null;
     // GS REV (백만원)
     const gs_rev_otb = gs_otb_rev;
     const gs_rev_bud = (gs_bud_rn&&gs_adr_bud) ? Math.round(gs_bud_rn*gs_adr_bud/1000) : null;

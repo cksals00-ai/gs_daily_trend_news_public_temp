@@ -1646,7 +1646,8 @@ const INB_OTB_TO_KPI = {
   '12.소노벨청송':'청송','13.소노벨천안':'천안','14.소노벨변산':'변산',
   '15.소노캄여수':'여수','16.소노캄거제':'거제','17.쏠비치진도':'진도',
   '18.소노벨제주':'벨제주','19.소노캄제주':'캄제주',
-  '20.소노캄고양':'고양','21.소노문해운대':'해운대','22.쏠비치남해':'남해'
+  '20.소노캄고양':'고양','21.소노문해운대':'해운대','22.쏠비치남해':'남해',
+  '23.르네블루':'그외 사업장','25.팔라티움':'그외 사업장'
 };
 
 /* OTB에서 Inbound 세그먼트의 사업장별 실적을 KPI 사업장 기준으로 합산 반환 */
@@ -3834,16 +3835,18 @@ function renderInbkPropDetail(prop, strSet){
 
   const blocks = groups.map(([country, d])=>{
     const stratInGroup = d.items.filter(it => strSet.has(it.agency)).length;
+    /* 'actual','achStretch','achBudget' 모드에서는 거래처 단위 OTB 실적이 없으므로 도전목표(stretch) 기준으로 표시 */
+    const detailMode = ['actual','achStretch','achBudget'].includes(inbkMode) ? 'stretch' : inbkMode;
     const rows = d.items.map(it=>{
       const isStrat = strSet.has(it.agency);
       const monthlyS = it.stretch.monthly || [];
       const monthlyB = it.budget.monthly  || [];
       const monthCells = monthlyS.map((s,i)=>{
         const b = monthlyB[i]||0;
-        const v = inbkMode==='budget'?b: inbkMode==='gap'?(s-b):s;
+        const v = detailMode==='budget'?b: detailMode==='gap'?(s-b):s;
         return `<td class="month-col">${v?Math.round(v).toLocaleString('ko-KR'):'·'}</td>`;
       }).join('');
-      const totV = inbkMode==='budget'?(it.budget.total||0): inbkMode==='gap'?((it.stretch.total||0)-(it.budget.total||0)):(it.stretch.total||0);
+      const totV = detailMode==='budget'?(it.budget.total||0): detailMode==='gap'?((it.stretch.total||0)-(it.budget.total||0)):(it.stretch.total||0);
       return `<tr class="${isStrat?'is-strategic':''}">
         <td>${escapeHtml(it.agency)}${it.type==='전략'?'<span class="inbk-tag-strat">전략</span>':''}</td>
         ${monthCells}
@@ -3860,11 +3863,12 @@ function renderInbkPropDetail(prop, strSet){
         <span style="color:var(--ink-faint)">${d.items.length}개 거래처${stratInGroup?` · 전략 ${stratInGroup}`:''}</span>
         <span class="stat">26 도전 ${Math.round(d.sumS).toLocaleString('ko-KR')} · 목표 ${Math.round(d.sumB).toLocaleString('ko-KR')}</span>
       </div>
+      ${['actual','achStretch','achBudget'].includes(inbkMode)?'<div style="font-size:10px;color:var(--ink-faint);padding:4px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-radius:3px">※ OTB 실적은 사업장 합계만 가능 — 거래처 하위는 도전목표 기준 표시</div>':''}
       <div style="overflow-x:auto"><table class="inbk-ag-tbl">
         <thead><tr>
           <th>거래처</th>
           ${['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'].map(m=>`<th class="month-col">${m}</th>`).join('')}
-          <th>${inbkMode==='budget'?'목표합':inbkMode==='gap'?'차이':'도전합'}</th>
+          <th>${detailMode==='budget'?'목표합':detailMode==='gap'?'차이':'도전합'}</th>
           <th>26B</th>
           <th>26도전</th>
         </tr></thead>
@@ -4348,6 +4352,9 @@ async function renderOccHeatmap(){
 let c86Cache=null;
 let c86Tab='segment';  // segment | property | channel
 let c86Month='all';    // 'all' | '202505' etc
+let c86ChExpandOTA=false;   // 거래처별 탭 OTA 그룹 더보기
+let c86ChExpandGOTA=false;  // 거래처별 탭 G-OTA 그룹 더보기
+let c86ChSearch='';         // 거래처별 탭 검색어
 
 async function ensureC86Data(){
   if(c86Cache!==null)return c86Cache;
@@ -4568,26 +4575,92 @@ function renderC86(){
     html+=`</tbody></table></div>`;
 
   } else if(c86Tab==='channel'){
-    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>거래처</th>${colHeaders}</tr></thead><tbody>`;
-
+    /* ── 거래처별: OTA / G-OTA 그룹핑 + 더보기 + 0제외 + 검색 ── */
     const chHasMonthly=Object.keys(chMonthlyMap).length>0;
-    const sortedCh=[...channels].sort((a,b)=>(chTotalsMap[b]?.rn||0)-(chTotalsMap[a]?.rn||0));
-    sortedCh.forEach(ch=>{
+    const searchQ=c86ChSearch.trim().toLowerCase();
+
+    /* 채널별 값 계산 + 세그먼트 분류 */
+    const chEntries=[];
+    channels.forEach(ch=>{
       let v;
-      if(c86Month==='all'){
-        v=chTotalsMap[ch]||{};
-      } else if(chHasMonthly){
-        v=(chMonthlyMap[ch]||{})[c86Month]||{};
-      } else {
-        /* monthly 데이터 없으면 totals 폴백 */
-        v=chTotalsMap[ch]||{};
-      }
-      if(c86Month!=='all' && chHasMonthly && !v.rn) return;
-      html+=`<tr><td>${escapeHtml(ch)}</td>${c86Row(v)}</tr>`;
+      if(c86Month==='all') v=chTotalsMap[ch]||{};
+      else if(chHasMonthly) v=(chMonthlyMap[ch]||{})[c86Month]||{};
+      else v=chTotalsMap[ch]||{};
+      /* 실적 0 제외: rn이 0이면 스킵 */
+      if(!v.rn) return;
+      /* 세그먼트 판정 */
+      const seg=GOTA_PATTERNS.test(ch)?'G-OTA':'OTA';
+      chEntries.push({ch,v,seg});
     });
 
-    /* 합계 */
-    html+=`<tr class="total-row"><td>합계</td>${c86Row(tFiltered)}</tr>`;
+    /* 검색 필터 */
+    const filtered=searchQ?chEntries.filter(e=>e.ch.toLowerCase().includes(searchQ)):chEntries;
+
+    /* 그룹 분리 */
+    const otaGroup=filtered.filter(e=>e.seg==='OTA').sort((a,b)=>(b.v.rn||0)-(a.v.rn||0));
+    const gotaGroup=filtered.filter(e=>e.seg==='G-OTA').sort((a,b)=>(b.v.rn||0)-(a.v.rn||0));
+
+    /* 더보기 제한: 검색 시 해제 */
+    const CH_LIMIT=10;
+    const otaExpanded=c86ChExpandOTA||!!searchQ;
+    const gotaExpanded=c86ChExpandGOTA||!!searchQ;
+    const otaShown=otaExpanded?otaGroup:otaGroup.slice(0,CH_LIMIT);
+    const gotaShown=gotaExpanded?gotaGroup:gotaGroup.slice(0,CH_LIMIT);
+    const otaMore=otaGroup.length-otaShown.length;
+    const gotaMore=gotaGroup.length-gotaShown.length;
+
+    /* 소계 계산 */
+    function sumGroup(grp){
+      const s={rn:0,adr:0,room_rev_m:0,total_rev_m:0,commission_m:0};
+      grp.forEach(e=>{s.rn+=(e.v.rn||0);s.room_rev_m+=(e.v.room_rev_m||0);s.total_rev_m+=(e.v.total_rev_m||0);s.commission_m+=(e.v.commission_m||0)});
+      s.adr=s.rn>0?Math.round(s.room_rev_m*1000000/s.rn/1000):0;
+      return s;
+    }
+    const otaSub=sumGroup(otaGroup);
+    const gotaSub=sumGroup(gotaGroup);
+
+    /* 비중 계산 (전체 대비 RN %) */
+    const grandRn=(otaSub.rn||0)+(gotaSub.rn||0);
+    function pctOf(rn){return grandRn>0?(rn/grandRn*100).toFixed(1):'0.0'}
+
+    /* 검색 입력 */
+    html+=`<div style="padding:8px 12px 4px;display:flex;align-items:center;gap:8px">
+      <input type="text" id="c86-ch-search" placeholder="거래처 검색…" value="${escapeHtml(c86ChSearch)}"
+        oninput="c86ChSearch=this.value;clearTimeout(window._c86ST);window._c86ST=setTimeout(renderC86,200)"
+        style="flex:1;max-width:260px;padding:6px 10px;border-radius:5px;border:1px solid var(--rule);background:var(--bg-soft);color:var(--ink);font-size:12px;font-family:var(--sans);outline:none">
+      ${searchQ?`<button onclick="c86ChSearch='';renderC86()" style="background:none;border:1px solid var(--rule);border-radius:4px;padding:4px 8px;color:var(--ink-muted);cursor:pointer;font-size:11px">초기화</button>`:''}
+    </div>`;
+
+    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>거래처</th>${colHeaders}<th>비중</th></tr></thead><tbody>`;
+
+    /* OTA 그룹 */
+    if(otaGroup.length){
+      html+=`<tr class="seg-row" style="color:var(--gold)"><td colspan="8" style="text-align:left;font-size:12px;letter-spacing:0.03em">OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${otaGroup.length}개</span></td></tr>`;
+      otaShown.forEach(e=>{
+        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
+      });
+      if(otaMore>0){
+        html+=`<tr><td colspan="8" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandOTA=!c86ChExpandOTA;renderC86()">${c86ChExpandOTA?'접기':`+${otaMore}개 더보기`}</button></td></tr>`;
+      }
+      /* OTA 소계 */
+      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--gold);background:rgba(201,160,99,.05)"><td style="color:var(--gold-bright)">OTA 소계</td>${c86Row(otaSub)}<td style="font-family:var(--mono);font-size:11px;color:var(--gold-bright)">${pctOf(otaSub.rn)}%</td></tr>`;
+    }
+
+    /* G-OTA 그룹 */
+    if(gotaGroup.length){
+      html+=`<tr class="seg-row" style="color:var(--info)"><td colspan="8" style="text-align:left;font-size:12px;letter-spacing:0.03em">G-OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${gotaGroup.length}개</span></td></tr>`;
+      gotaShown.forEach(e=>{
+        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
+      });
+      if(gotaMore>0){
+        html+=`<tr><td colspan="8" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandGOTA=!c86ChExpandGOTA;renderC86()">${c86ChExpandGOTA?'접기':`+${gotaMore}개 더보기`}</button></td></tr>`;
+      }
+      /* G-OTA 소계 */
+      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--info);background:rgba(90,159,196,.05)"><td style="color:#9ec5dd">G-OTA 소계</td>${c86Row(gotaSub)}<td style="font-family:var(--mono);font-size:11px;color:#9ec5dd">${pctOf(gotaSub.rn)}%</td></tr>`;
+    }
+
+    /* Grand Total */
+    html+=`<tr class="total-row"><td>Grand Total</td>${c86Row(tFiltered)}<td style="font-family:var(--mono);font-size:11px">100%</td></tr>`;
     html+=`</tbody></table></div>`;
   }
 
@@ -4614,10 +4687,14 @@ function renderC86(){
 
   html+=`</div>`; // close c86-section
   pane.innerHTML=html;
+  /* 검색 입력 포커스 복원 */
+  const srch=document.getElementById('c86-ch-search');
+  if(srch&&c86ChSearch){srch.focus();srch.setSelectionRange(srch.value.length,srch.value.length)}
 }
 
 function c86SwitchTab(tab){
   c86Tab=tab;
+  c86ChExpandOTA=false; c86ChExpandGOTA=false; c86ChSearch='';
   renderC86();
 }
 function c86SwitchMonth(mo){
