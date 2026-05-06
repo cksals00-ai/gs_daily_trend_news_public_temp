@@ -1714,8 +1714,16 @@ def inject_insight_panel_data(html: str, otb_data: dict, agg_data: dict, now: da
     pdbc = agg_data.get("pickup_daily_by_channel", {})
     cdbc = agg_data.get("cancel_daily_by_channel", {})
     bcs_map = agg_data.get("by_channel_segment", {})
-    OTA_GOTA_CHANNELS = {ch for ch, segs in bcs_map.items()
-                         if isinstance(segs, list) and any(s in ("OTA", "G-OTA") for s in segs)}
+    # by_channel_segment 구조: {channel: {segment: {month: data}}} (dict) 또는 {channel: [segments]} (list)
+    # dict인 경우 키가 세그먼트 이름, list인 경우 원소가 세그먼트 이름
+    OTA_GOTA_CHANNELS = set()
+    for ch, segs in bcs_map.items():
+        if isinstance(segs, list):
+            if any(s in ("OTA", "G-OTA") for s in segs):
+                OTA_GOTA_CHANNELS.add(ch)
+        elif isinstance(segs, dict):
+            if any(s in ("OTA", "G-OTA") for s in segs.keys()):
+                OTA_GOTA_CHANNELS.add(ch)
     for ch in sorted(set(list(pdbc.keys()) + list(cdbc.keys()))):
         if ch not in OTA_GOTA_CHANNELS:
             continue
@@ -2794,7 +2802,10 @@ def main():
             synced_keys = []
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
                          "by_segment", "by_region_segment", "by_property_segment", "meta",
-                         "yoy_adjusted"):
+                         "yoy_adjusted",
+                         "pickup_daily_by_channel", "cancel_daily_by_channel",
+                         "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
+                         "by_channel_segment"):
                 if key in agg_data:
                     docs_agg[key] = agg_data[key]
                     synced_keys.append(key)
