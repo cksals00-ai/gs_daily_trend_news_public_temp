@@ -1793,6 +1793,18 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 })
             by_prop_seg[seg] = seg_props
 
+    # ── segmentData에 FCST 주입 (byPropertySegment 합산) ──
+    for seg, seg_props_list in by_prop_seg.items():
+        if seg not in seg_data:
+            continue
+        sd = seg_data[seg]
+        sd["rns_fcst"] = sum(p.get("rns_fcst", 0) or 0 for p in seg_props_list)
+        sd["rev_fcst"] = sum(p.get("rev_fcst", 0) or 0 for p in seg_props_list)
+        sd["fcst_achievement"] = round(sd["rns_fcst"] / sd["rns_budget"] * 100, 1) if sd.get("rns_budget", 0) > 0 else 0.0
+        sd["rev_fcst_achievement"] = round(sd["rev_fcst"] / sd["rev_budget"] * 100, 1) if sd.get("rev_budget", 0) > 0 else 0.0
+        sd["adr_fcst"] = round(sd["rev_fcst"] / sd["rns_fcst"]) if sd["rns_fcst"] > 0 else 0
+        sd["adr_fcst_achievement"] = round(sd["adr_fcst"] / sd["adr_budget"] * 100, 1) if sd.get("adr_budget", 0) > 0 else 0.0
+
     return {"byProperty": props, "byPropertySegment": by_prop_seg, "summary": summary, "segmentData": seg_data}
 
 

@@ -122,6 +122,15 @@ jobs:
           python scripts/generate_insights.py
           echo "::endgroup::"
 
+      - name: 📊 [Step 3.5] 사업장별 투숙일 데이터 생성
+        if: steps.mode.outputs.full == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          echo "::group::사업장별 SDD 생성"
+          python scripts/gen_sdd_by_prop.py || echo "⚠ SDD by prop 생성 실패 - 기존 데이터 유지"
+          echo "::endgroup::"
+
       - name: 🔨 [Step 4] HTML 빌드 (모든 데이터 주입)
         if: steps.mode.outputs.full == 'true'
         timeout-minutes: 10

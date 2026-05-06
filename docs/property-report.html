@@ -807,10 +807,13 @@ let appState = {
 // ========== DATA LOADING ==========
 async function loadData() {
   try {
-    const [dbAgg, otbData] = await Promise.all([
+    const [dbAgg, otbData, sddByProp] = await Promise.all([
       fetch('data/db_aggregated.json?t=' + Date.now()).then(r => r.json()),
       fetch('data/otb_data.json?t=' + Date.now()).then(r => r.json()),
+      fetch('data/sdd_by_prop.json?t=' + Date.now()).then(r => r.json()).catch(() => null),
     ]);
+    // sdd_by_prop.json → otbData에 주입
+    if (sddByProp) otbData.stayDateDailyByProp = sddByProp;
 
     appState.allData = { dbAgg, otbData };
     appState.meta = dbAgg.meta || otbData.meta;
@@ -1348,8 +1351,10 @@ function renderCategoryChart(catData) {
 // ========== DAY OF WEEK TABLE (요일별) ==========
 function renderDayOfWeekTable() {
   const { otbData } = appState.allData;
-  const sdd = otbData?.stayDateDaily;
-  if (!sdd) return;
+  // 사업장별 stayDateDaily 우선 사용 (property 필터 적용), 없으면 전체 fallback
+  const sddByProp = otbData?.stayDateDailyByProp;
+  const sddGlobal = otbData?.stayDateDaily;
+  if (!sddByProp && !sddGlobal) return;
 
   const { year, prevYear } = getMonthKeys();
   // Update dynamic year labels in header
@@ -1365,7 +1370,10 @@ function renderDayOfWeekTable() {
   const { mCur, mPrev } = getMonthKeys();
   const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound'] : appState.activeSegs);
 
-  function aggregateDOW(monthKeys, target) {
+  // 필터된 사업장 목록
+  const filteredProps = getFilteredProps();
+
+  function aggregateDOWFromSDD(sdd, monthKeys, target) {
     monthKeys.forEach(mk => {
       const md = sdd[mk];
       if (!md || !md.days || !md.segments) return;
@@ -1375,9 +1383,8 @@ function renderDayOfWeekTable() {
         const date = new Date(yr, month, dayNum);
         if (date.getMonth() !== month) return;
         const dow = date.getDay() === 0 ? 6 : date.getDay() - 1;
-        // Apply day type filter
-        if (appState.activeDayType === '주중' && dow >= 5) return; // skip Sat(5), Sun(6)
-        if (appState.activeDayType === '주말' && dow < 5) return;  // skip Mon-Fri
+        if (appState.activeDayType === '주중' && dow >= 5) return;
+        if (appState.activeDayType === '주말' && dow < 5) return;
         for (const [segName, segData] of Object.entries(md.segments)) {
           if (!activeSegSet.has(segName)) continue;
           if (segData.net_rn && segData.net_rn[i] != null) target[dow].rn += segData.net_rn[i];
@@ -1385,6 +1392,21 @@ function renderDayOfWeekTable() {
         }
       });
     });
+  }
+
+  function aggregateDOW(monthKeys, target) {
+    if (sddByProp) {
+      // 사업장별 데이터 사용 → property 필터 적용
+      const propNames = filteredProps || Object.keys(sddByProp);
+      propNames.forEach(propName => {
+        const propSdd = sddByProp[propName];
+        if (!propSdd) return;
+        aggregateDOWFromSDD(propSdd, monthKeys, target);
+      });
+    } else {
+      // fallback: 전체 stayDateDaily
+      aggregateDOWFromSDD(sddGlobal, monthKeys, target);
+    }
   }
 
   aggregateDOW(mCur, dayDataCur);
