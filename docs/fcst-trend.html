@@ -250,9 +250,11 @@ td,th{font-weight:600}th{font-weight:800}
 /* ═══════════════════════════════════════════════
    FCST 추이 분석 - rm_fcst_trend.json 기반
    2025+2026 YoY 비교 지원
+   OTA/G-OTA/Inbound 목표값은 otb_data.json에서 가져옴
    ═══════════════════════════════════════════════ */
 
 let trendData = null;
+let otbData = null;  // otb_data.json 로드용
 let currentStayMonth = null;  // e.g. "2026-04" (year-month of the STAY month)
 let charts = {};
 let selectedDivision = '전체';
@@ -293,13 +295,18 @@ function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete chart
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const resp = await fetch('data/rm_fcst_trend.json?t=' + Date.now());
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    trendData = await resp.json();
+    const respTrend = await fetch('data/rm_fcst_trend.json?t=' + Date.now());
+    if (!respTrend.ok) throw new Error('HTTP ' + respTrend.status);
+    trendData = await respTrend.json();
+
+    const respOtb = await fetch('data/otb_data.json?t=' + Date.now());
+    if (!respOtb.ok) throw new Error('HTTP ' + respOtb.status);
+    otbData = await respOtb.json();
+
     initUI();
   } catch(e) {
     document.getElementById('trend-tbody').innerHTML =
-      '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">rm_fcst_trend.json 로딩 실패: ' + e.message + '</td></tr>';
+      '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">데이터 로딩 실패: ' + e.message + '</td></tr>';
   }
 });
 
@@ -453,10 +460,33 @@ function populatePropDropdown(allProps) {
   }
 }
 
+/* ── Get OTB target budget (GS segments) from otb_data.json ── */
+function getOtbTargetBudget(stayMonth) {
+  if (!otbData?.byMonth) return 0;
+
+  const [yr, mm] = stayMonth.split('-');
+  const monthNum = String(parseInt(mm));
+  const monthData = otbData.byMonth[monthNum];
+  if (!monthData?.byPropertySegment) return 0;
+
+  let total = 0;
+  GS_SUB_SEGS.forEach(seg => {
+    const segData = monthData.byPropertySegment[seg] || [];
+    if (Array.isArray(segData)) {
+      total += segData.reduce((sum, item) => sum + (item.rns_budget || 0), 0);
+    }
+  });
+  return total;
+}
+
 /* ── Get series data for a stay month ── */
 function getSeriesForMonth(stayMonth, propFilter) {
   const divProps = getFilteredProps(); // null = all, or array of prop names
   const series = [];
+
+  // Get target budget from otb_data.json for GS segments (used for all snapshots)
+  const otbBudget = getOtbTargetBudget(stayMonth);
+
   trendData.snapshots.forEach(snap => {
     // Only include snapshots from the same year as the stay month
     const stayYear = parseInt(stayMonth.split('-')[0]);
@@ -474,7 +504,6 @@ function getSeriesForMonth(stayMonth, propFilter) {
         GS_SUB_SEGS.forEach(seg => {
           if (segs[seg]) {
             fcst += segs[seg].rm_fcst_rn || 0;
-            budget += segs[seg].rm_budget_rn || 0;
             hasPerProp = true;
           }
         });
@@ -486,9 +515,24 @@ function getSeriesForMonth(stayMonth, propFilter) {
           const segEntry = snap.segments?.[stayMonth]?.[seg];
           if (segEntry) {
             fcst += segEntry.rm_fcst_rn || 0;
-            budget += segEntry.rm_budget_rn || 0;
             count = 1;
           }
+        });
+      }
+      // Use OTB budget for GS segments (권역 필터 미적용 시)
+      if (!divProps) {
+        budget = otbBudget;
+      } else {
+        // 권역 필터 적용시: rm_fcst_trend.json에서 목표값 가져옴 (변동없이 유지)
+        Object.entries(snap.properties).forEach(([pName, months]) => {
+          if (divProps && !divProps.includes(pName)) return;
+          const segs = months[stayMonth]?.segments;
+          if (!segs) return;
+          GS_SUB_SEGS.forEach(seg => {
+            if (segs[seg]) {
+              budget += segs[seg].rm_budget_rn || 0;
+            }
+          });
         });
       }
     } else if (selectedSeg !== 'ALL') {

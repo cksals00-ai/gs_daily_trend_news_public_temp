@@ -342,23 +342,52 @@ const REGION_DEFS = [
 ];
 const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
 const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
+const GS_SEGS = ['OTA', 'G-OTA', 'Inbound']; // GS 기준 세그먼트
 
 const fmt = {
   num: v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
   adr: v => v == null ? '—' : Math.round(v / 1000).toLocaleString('ko-KR'),
 };
 
+function sumGsSegments(monthKey, sourceObj) {
+  // GS 세그먼트만 합산: OTA + G-OTA + Inbound
+  let result = { net_rn: 0, net_rev: 0 };
+  GS_SEGS.forEach(seg => {
+    const data = (sourceObj[seg] || {})[monthKey];
+    if (data) {
+      result.net_rn += data.net_rn || 0;
+      result.net_rev += data.net_rev || 0;
+    }
+  });
+  return result;
+}
+
 function getMonthData(key) {
-  if (activeRegion !== '전체' && activeSegment !== '전체') {
-    return ((db.by_region_segment[activeRegion] || {})[activeSegment] || {})[key] || null;
-  }
-  if (activeRegion !== '전체') {
-    return (db.by_region[activeRegion] || {})[key] || null;
-  }
+  // 특정 세그먼트 선택: 해당 세그먼트만 사용
   if (activeSegment !== '전체') {
+    if (activeRegion !== '전체') {
+      return ((db.by_region_segment[activeRegion] || {})[activeSegment] || {})[key] || null;
+    }
     return (db.by_segment[activeSegment] || {})[key] || null;
   }
-  return db.monthly_total[key] || null;
+
+  // 권역 선택 + 세그먼트 전체: 해당 권역의 GS만 합산
+  if (activeRegion !== '전체') {
+    // by_region_segment[region][seg][key] 구조에서 GS만 합산
+    let result = { net_rn: 0, net_rev: 0 };
+    const regionData = db.by_region_segment[activeRegion] || {};
+    GS_SEGS.forEach(seg => {
+      const data = (regionData[seg] || {})[key];
+      if (data) {
+        result.net_rn += data.net_rn || 0;
+        result.net_rev += data.net_rev || 0;
+      }
+    });
+    return result;
+  }
+
+  // 필터 없을 때: GS 세그먼트만 합산
+  return sumGsSegments(key, db.by_segment);
 }
 
 function getYearData(year) {
@@ -387,11 +416,20 @@ function getYearTotal(year, months) {
 
 function renderWeeklyTable() {
   if (!db || !db.net_daily) return;
-  const nd = db.net_daily;
   const yr = parseInt(activeYear);
   const lyYr = yr - 1;
   const tbody = document.getElementById('weekly-tbody');
   if (!tbody) return;
+
+  // GS 세그먼트만: OTA + G-OTA + Inbound
+  function getSumGsDailyRn(dateStr) {
+    let sum = 0;
+    GS_SEGS.forEach(seg => {
+      const segData = (db.net_daily_by_segment[seg] || {})[dateStr];
+      if (segData) sum += segData.net_rn || 0;
+    });
+    return sum;
+  }
 
   // Build 7-day intervals for the year
   const weeks = [];
@@ -407,16 +445,16 @@ function renderWeeklyTable() {
     }
     if (start > today) break;
 
-    // Sum TY
+    // Sum TY (GS 세그먼트만)
     let tyRn = 0;
     let lyRn = 0;
     const d = new Date(start);
     while (d <= end && d.getFullYear() === yr) {
       const ds = String(d.getFullYear()) + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
-      if (nd[ds]) tyRn += nd[ds].net_rn || 0;
+      tyRn += getSumGsDailyRn(ds);
       // LY same calendar date
       const lyDs = String(lyYr) + ds.slice(4);
-      if (nd[lyDs]) lyRn += nd[lyDs].net_rn || 0;
+      lyRn += getSumGsDailyRn(lyDs);
       d.setDate(d.getDate() + 1);
     }
 

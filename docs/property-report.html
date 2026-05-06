@@ -639,6 +639,25 @@ tr.total-row td {
   <!-- ========== MAIN CONTENT ========== -->
   <main class="main-content" id="main-content">
 
+    <!-- Summary KPI Card: 상단 요약 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:8px">총 객실수(RN)</div>
+        <div style="font-size:28px;font-weight:800;color:var(--gold-bright);margin-bottom:4px" id="kpi-total-rn">—</div>
+        <div style="font-size:12px;color:var(--ink-muted)"><span id="kpi-total-rn-yoy">—</span></div>
+      </div>
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:8px">평균 ADR(천원)</div>
+        <div style="font-size:28px;font-weight:800;color:var(--gold-bright);margin-bottom:4px" id="kpi-avg-adr">—</div>
+        <div style="font-size:12px;color:var(--ink-muted)"><span id="kpi-avg-adr-yoy">—</span></div>
+      </div>
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:8px">총 매출(백만원)</div>
+        <div style="font-size:28px;font-weight:800;color:var(--gold-bright);margin-bottom:4px" id="kpi-total-rev">—</div>
+        <div style="font-size:12px;color:var(--ink-muted)"><span id="kpi-total-rev-yoy">—</span></div>
+      </div>
+    </div>
+
     <!-- Card 1: 거래처별 실적 -->
     <div class="table-card">
       <div class="table-card-header">
@@ -793,7 +812,7 @@ const REGION_DEFS = [
 let appState = {
   activeYear: '2026',
   activeMonthNums: [],   // e.g. ['01','02',...]
-  activeSegs: ['전체'],
+  activeSegs: ['전체'],  // '전체' → ['OTA', 'G-OTA', 'Inbound'] GS 세그먼트만
   activeRegion: '전체',
   activeProps: [],        // db_aggregated property names (e.g. "소노캄 거제")
   activeDayType: '전체',  // '전체' | '주중' | '주말'
@@ -1271,6 +1290,7 @@ function renderCategoryTable() {
   const bps = dbAgg.by_property_segment || {};
   const { mCur, mPrev, year, prevYear } = getMonthKeys();
   const filteredProps = getFilteredProps();
+  const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound'] : appState.activeSegs);
 
   const categoryMap = {
     '룸온리': ['OTA', 'G-OTA', 'Inbound'],
@@ -1290,8 +1310,9 @@ function renderCategoryTable() {
     const propSegs = bps[propName];
     if (!propSegs) return;
     Object.entries(propSegs).forEach(([segName, monthData]) => {
-      // GS 채널만 집계
+      // GS 채널만 집계 + 활성 세그먼트만 필터
       if (!GS_SEGS.has(segName)) return;
+      if (!activeSegSet.has(segName)) return;
       let cat = '룸온리';
 
       mCur.forEach(mk => { if (monthData[mk]) { catData[cat].rnCur += monthData[mk].net_rn || 0; catData[cat].revCur += monthData[mk].net_rev || 0; } });
@@ -1385,8 +1406,11 @@ function renderDayOfWeekTable() {
         const dow = date.getDay() === 0 ? 6 : date.getDay() - 1;
         if (appState.activeDayType === '주중' && dow >= 5) return;
         if (appState.activeDayType === '주말' && dow < 5) return;
-        for (const [segName, segData] of Object.entries(md.segments)) {
+        // GS 세그먼트만 집계 (OTA, G-OTA, Inbound)
+        for (const segName of ['OTA', 'G-OTA', 'Inbound']) {
           if (!activeSegSet.has(segName)) continue;
+          const segData = md.segments[segName];
+          if (!segData) continue;
           if (segData.net_rn && segData.net_rn[i] != null) target[dow].rn += segData.net_rn[i];
           if (segData.net_rev && segData.net_rev[i] != null) target[dow].rev += segData.net_rev[i];
         }
@@ -1516,8 +1540,84 @@ function renderDayTypeRatio(dayDataCur) {
   tbody.innerHTML = html;
 }
 
+// ========== SUMMARY KPI ==========
+function renderSummaryKPI() {
+  const { dbAgg } = appState.allData;
+  const byChannel = dbAgg.by_channel || {};
+  const bcs = dbAgg.by_channel_segment || {};
+  const bpc = dbAgg.by_property_channel || {};
+  const filteredProps = getFilteredProps();
+  const { mCur, mPrev, year, prevYear } = getMonthKeys();
+  const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound'] : appState.activeSegs);
+
+  let totalRnCur = 0, totalRevCur = 0, totalRnPrev = 0, totalRevPrev = 0;
+
+  // Aggregate all channels with GS segment filter
+  Object.keys(bcs).forEach(chName => {
+    if (chName === '기타') return;
+    const chSegs = Object.keys(bcs[chName]);
+
+    for (const seg of ['OTA', 'G-OTA', 'Inbound']) {
+      if (!activeSegSet.has(seg)) continue;
+      if (!chSegs.includes(seg)) continue;
+
+      let rnCur = 0, revCur = 0, rnPrev = 0, revPrev = 0;
+
+      if (filteredProps) {
+        filteredProps.forEach(propName => {
+          const propChannels = bpc[propName];
+          if (!propChannels || !propChannels[chName]) return;
+          const chData = propChannels[chName];
+          mCur.forEach(mk => { if (chData[mk]) { rnCur += chData[mk].net_rn || 0; revCur += chData[mk].net_rev || 0; } });
+          mPrev.forEach(mk => { if (chData[mk]) { rnPrev += chData[mk].net_rn || 0; revPrev += chData[mk].net_rev || 0; } });
+        });
+      } else {
+        const chData = byChannel[chName] || {};
+        mCur.forEach(mk => { if (chData[mk]) { rnCur += chData[mk].net_rn || 0; revCur += chData[mk].net_rev || 0; } });
+        mPrev.forEach(mk => { if (chData[mk]) { rnPrev += chData[mk].net_rn || 0; revPrev += chData[mk].net_rev || 0; } });
+      }
+
+      totalRnCur += rnCur;
+      totalRevCur += revCur;
+      totalRnPrev += rnPrev;
+      totalRevPrev += revPrev;
+    }
+  });
+
+  const totalAdrCur = totalRnCur > 0 ? Math.round((totalRevCur * 1000000) / totalRnCur) : 0;
+  const totalAdrPrev = totalRnPrev > 0 ? Math.round((totalRevPrev * 1000000) / totalRnPrev) : 0;
+  const rnYoy = totalRnPrev > 0 ? (totalRnCur - totalRnPrev) / totalRnPrev * 100 : null;
+  const adrYoy = totalAdrPrev > 0 ? (totalAdrCur - totalAdrPrev) / totalAdrPrev * 100 : null;
+  const revYoy = totalRevPrev > 0 ? (totalRevCur - totalRevPrev) / totalRevPrev * 100 : null;
+
+  // Update KPI cards
+  const kpiTotalRn = document.getElementById('kpi-total-rn');
+  const kpiTotalRnYoy = document.getElementById('kpi-total-rn-yoy');
+  const kpiAvgAdr = document.getElementById('kpi-avg-adr');
+  const kpiAvgAdrYoy = document.getElementById('kpi-avg-adr-yoy');
+  const kpiTotalRev = document.getElementById('kpi-total-rev');
+  const kpiTotalRevYoy = document.getElementById('kpi-total-rev-yoy');
+
+  if (kpiTotalRn) {
+    kpiTotalRn.textContent = fmt.n(totalRnCur);
+    kpiTotalRnYoy.textContent = rnYoy != null ? fmt.pct(rnYoy) : '—';
+    kpiTotalRnYoy.style.color = rnYoy != null ? (rnYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-muted)';
+  }
+  if (kpiAvgAdr) {
+    kpiAvgAdr.textContent = fmt.won(totalAdrCur);
+    kpiAvgAdrYoy.textContent = adrYoy != null ? fmt.pct(adrYoy) : '—';
+    kpiAvgAdrYoy.style.color = adrYoy != null ? (adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-muted)';
+  }
+  if (kpiTotalRev) {
+    kpiTotalRev.textContent = fmt.n(Math.round(totalRevCur));
+    kpiTotalRevYoy.textContent = revYoy != null ? fmt.pct(revYoy) : '—';
+    kpiTotalRevYoy.style.color = revYoy != null ? (revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-muted)';
+  }
+}
+
 // ========== RENDER ALL ==========
 function renderAllCards() {
+  renderSummaryKPI();
   renderChannelTable();
   renderCategoryTable();
   renderDayOfWeekTable();

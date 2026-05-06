@@ -393,8 +393,42 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   function sumCat(cat, year) {
     if (!pkg) return {rn:0, rev_m:0, adr:0};
     var data = {};
+    var source = pkg.by_category;
+
+    // 사업장이 선택된 경우, by_property 사용
+    if (activePropsSet.size > 0 && pkg.by_property) {
+      var props = Array.from(activePropsSet);
+      var mergedByCategory = {};
+      props.forEach(function(prop) {
+        var propData = pkg.by_property[prop];
+        if (!propData || !propData.by_category) return;
+        Object.keys(propData.by_category).forEach(function(c) {
+          if (!mergedByCategory[c]) {
+            mergedByCategory[c] = {};
+            Object.keys(propData.by_category[c]).forEach(function(yr) {
+              mergedByCategory[c][yr] = {};
+              Object.keys(propData.by_category[c][yr]).forEach(function(ym) {
+                mergedByCategory[c][yr][ym] = propData.by_category[c][yr][ym];
+              });
+            });
+          } else {
+            Object.keys(propData.by_category[c]).forEach(function(yr) {
+              if (!mergedByCategory[c][yr]) mergedByCategory[c][yr] = {};
+              Object.keys(propData.by_category[c][yr]).forEach(function(ym) {
+                var v = propData.by_category[c][yr][ym];
+                if (!mergedByCategory[c][yr][ym]) mergedByCategory[c][yr][ym] = {rn:0, rev:0, adr:0};
+                mergedByCategory[c][yr][ym].rn += v.rn;
+                mergedByCategory[c][yr][ym].rev += v.rev;
+              });
+            });
+          }
+        });
+      });
+      source = mergedByCategory;
+    }
+
     if (cat === 'ALL') {
-      Object.values(pkg.by_category).forEach(function(byYr) {
+      Object.values(source).forEach(function(byYr) {
         var yrData = byYr[year] || {};
         Object.keys(yrData).forEach(function(ym) {
           var v = yrData[ym];
@@ -403,7 +437,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         });
       });
     } else {
-      var yrData = (pkg.by_category[cat] || {})[year] || {};
+      var yrData = (source[cat] || {})[year] || {};
       Object.keys(yrData).forEach(function(ym) {
         var v = yrData[ym];
         data[ym] = {rn: v.rn, rev_won: v.rev * 1000000};
@@ -415,7 +449,19 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   }
 
   function filteredRanking() {
-    var r = pkg.by_year_ranking[selYear] || [];
+    var r = [];
+
+    // 사업장이 선택된 경우, by_property에서 데이터 수집
+    if (activePropsSet.size > 0 && pkg.by_property) {
+      var props = Array.from(activePropsSet);
+      props.forEach(function(prop) {
+        var propRanking = (pkg.by_property[prop] && pkg.by_property[prop].by_year_ranking) ? pkg.by_property[prop].by_year_ranking[selYear] || [] : [];
+        r = r.concat(propRanking);
+      });
+    } else {
+      r = pkg.by_year_ranking[selYear] || [];
+    }
+
     if (selCat !== 'ALL') {
       r = r.filter(function(x){return x.category === selCat;});
     }
@@ -560,6 +606,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
           b.classList.add('active');
         }
         buildMobilePropChips();
+        render();
       };
       pc.appendChild(b);
     });
@@ -608,6 +655,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
           b.classList.add('active');
         }
         buildPropChips();
+        render();
       };
       mpc.appendChild(b);
     });

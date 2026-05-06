@@ -205,8 +205,8 @@ def classify_v4(series_name: str) -> str:
     return '기타'
 
 
-def parse_file(fpath: Path, is_cancel: bool, agg: dict):
-    """type 27/28 파일 파싱 → agg[시리즈][YYYYMM] 집계"""
+def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
+    """type 27/28 파일 파싱 → agg[시리즈][YYYYMM] 집계 + prop_agg[사업장][시리즈][YYYYMM] 집계"""
     try:
         with open(fpath, encoding='cp949', errors='replace') as f:
             lines = f.readlines()
@@ -225,6 +225,11 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict):
     idx_date = col.get('판매일자', 1)
     idx_rn = col.get('객실수', 28)
     idx_rate = col.get('1박객실료', 26)
+    idx_seg_code = col.get('변경예약집계코드')
+    idx_prop = col.get('변경사업장명', 4)  # 사업장명 추가
+
+    # GS 채널만 집계 (OTA + G-OTA + Inbound)
+    GS_CODES = {'A4', 'A5', '53', '72', '58'}
 
     count = 0
     for line in lines[1:]:
@@ -234,6 +239,12 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict):
         mem_no = parts[idx_mem].strip()
         if not mem_no.startswith('86'):
             continue
+
+        # GS 채널 필터: 변경예약집계코드가 GS_CODES에 해당하는 행만 집계
+        if idx_seg_code is not None:
+            seg_code = parts[idx_seg_code].strip() if len(parts) > idx_seg_code else ''
+            if seg_code not in GS_CODES:
+                continue
 
         date_str = parts[idx_date].strip()
         if len(date_str) < 6:
@@ -251,6 +262,13 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict):
 
         series = normalize_series(parts[idx_mem_name].strip())
 
+        # 사업장명 추출
+        prop_name = ''
+        if idx_prop is not None and len(parts) > idx_prop:
+            prop_name = parts[idx_prop].strip()
+        prop_name = prop_name if prop_name else '미분류'
+
+        # 전체 집계
         m = agg[series][yyyymm]
         if is_cancel:
             m['cancel_rn'] += rn
@@ -258,6 +276,18 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict):
         else:
             m['booking_rn'] += rn
             m['booking_rev'] += rate
+
+        # 사업장별 집계
+        def new_month():
+            return {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}
+
+        m_prop = prop_agg[prop_name][series][yyyymm]
+        if is_cancel:
+            m_prop['cancel_rn'] += rn
+            m_prop['cancel_rev'] += rate
+        else:
+            m_prop['booking_rn'] += rn
+            m_prop['booking_rev'] += rate
 
         count += 1
 
@@ -272,6 +302,8 @@ def main():
     def new_month():
         return {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}
     agg = defaultdict(lambda: defaultdict(new_month))
+    # prop_name → series → yyyymm → {booking_rn, booking_rev, cancel_rn, cancel_rev}
+    prop_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(new_month)))
 
     total_rows = 0
     for year in years:
@@ -281,11 +313,11 @@ def main():
             continue
         for fname in sorted(os.listdir(year_dir)):
             if fname.startswith('27.'):
-                n = parse_file(year_dir / fname, is_cancel=False, agg=agg)
+                n = parse_file(year_dir / fname, is_cancel=False, agg=agg, prop_agg=prop_agg)
                 logger.info(f"  {year}/{fname[:40]}: {n:,}행")
                 total_rows += n
             elif fname.startswith('28.'):
-                n = parse_file(year_dir / fname, is_cancel=True, agg=agg)
+                n = parse_file(year_dir / fname, is_cancel=True, agg=agg, prop_agg=prop_agg)
                 logger.info(f"  {year}/{fname[:40]} (취소): {n:,}행")
                 total_rows += n
 
@@ -378,11 +410,74 @@ def main():
 
     # by_year_ranking은 이미 카테고리 기준으로 합산되어 category 필드 포함됨
 
+    # by_property: 사업장별 상품계열 집계
+    by_property = {}
+    for prop_name, series_months in prop_agg.items():
+        prop_data = {'by_category': {}, 'by_year_ranking': {}}
+
+        # 사업장별 카테고리 집계
+        prop_cat_agg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev_won': 0}))
+        for series, months in series_months.items():
+            cat = classify_v4(series)
+            for yyyymm, m in months.items():
+                net_rn = max(0, m['booking_rn'] - m['cancel_rn'])
+                net_rev_won = max(0, m['booking_rev'] - m['cancel_rev'])
+                prop_cat_agg[cat][yyyymm]['rn'] += net_rn
+                prop_cat_agg[cat][yyyymm]['rev_won'] += net_rev_won
+
+        # 사업장별 by_category 포맷
+        prop_by_category = {}
+        for cat, months in prop_cat_agg.items():
+            by_yr = defaultdict(dict)
+            for yyyymm in sorted(months):
+                net_rn = months[yyyymm]['rn']
+                net_rev_won = months[yyyymm]['rev_won']
+                by_yr[yyyymm[:4]][yyyymm] = {
+                    'rn': net_rn,
+                    'rev': round(net_rev_won / 1_000_000, 1),
+                    'adr': round(net_rev_won / net_rn / 1000) if net_rn > 0 else 0,
+                }
+            prop_by_category[cat] = {yr: dict(ms) for yr, ms in by_yr.items()}
+
+        # 사업장별 by_year_ranking (카테고리 기준)
+        prop_by_year_ranking = {}
+        for year in years:
+            prop_year_cat_totals = defaultdict(lambda: {'rn': 0, 'rev_won': 0})
+            for series, months in series_months.items():
+                cat = classify_v4(series)
+                yr_rn = sum(
+                    max(0, m['booking_rn'] - m['cancel_rn'])
+                    for ym, m in months.items() if ym.startswith(year)
+                )
+                yr_rev_won = sum(
+                    max(0, m['booking_rev'] - m['cancel_rev'])
+                    for ym, m in months.items() if ym.startswith(year)
+                )
+                if yr_rn > 0:
+                    prop_year_cat_totals[cat]['rn'] += yr_rn
+                    prop_year_cat_totals[cat]['rev_won'] += yr_rev_won
+            ranking = []
+            for cat, v in prop_year_cat_totals.items():
+                ranking.append({
+                    'name': cat,
+                    'category': cat,
+                    'rn': v['rn'],
+                    'rev': round(v['rev_won'] / 1_000_000, 1),
+                    'adr': round(v['rev_won'] / v['rn'] / 1000) if v['rn'] > 0 else 0,
+                })
+            ranking.sort(key=lambda x: x['rn'], reverse=True)
+            prop_by_year_ranking[year] = ranking[:20]
+
+        prop_data['by_category'] = prop_by_category
+        prop_data['by_year_ranking'] = prop_by_year_ranking
+        by_property[prop_name] = prop_data
+
     output = {
         'top_series': top_series_out,
         'by_series': by_series,
         'by_category': by_category,
         'by_year_ranking': by_year_ranking,
+        'by_property': by_property,
         'meta': {
             'years': years,
             'total_series': len(series_totals),
