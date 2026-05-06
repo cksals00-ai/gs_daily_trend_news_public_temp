@@ -31,67 +31,24 @@ def load_package_codes(campaign_key="196"):
 
 
 # ─── 세그먼트 분류 ───
-# OTA = 여기어때 / 놀(야놀자/놀유니버스)
-# G-OTA = 아고다 / 트립닷컴 / 익스피디아
-# Inbound = 여행사
-# 회원 = 회원PKG (code MP)
-# 무기명 = 자사패키지 (code 73) + AGENT 없는 건
-# D멤버스 = code 34
-# 기타 = 나머지 (쿠팡, 네이버, 스마트인피니 등)
-
-OTA_KW = ["여기어때", "놀유니버스", "야놀자"]
-GOTA_KW = ["아고다", "트립닷컴", "익스피디아"]
-INBOUND_KW = ["여행사", "하나투어"]
-
+# parse_raw_db.py와 동일한 로직: 변경예약집계코드 기준
+# A4, A5      → G-OTA
+# 53, 72      → OTA
+# 58          → Inbound
+# 나머지      → 코드명 그대로 (회원PKG, D멤버스 등)
 
 def classify_segment(code_num, code_name, agent_name):
-    """세그먼트 분류 (기획전 196번 전용)"""
-    code = (code_num or "").strip()
+    """변경예약집계코드(숫자/알파) 기준 세그먼트 결정 — parse_raw_db.py와 동일"""
+    num = (code_num or "").strip()
     name = (code_name or "").strip()
-    agent = (agent_name or "").strip()
 
-    # D멤버스
-    if code == "34" or "D멤버스" in name:
-        return "D멤버스"
-
-    # 회원PKG
-    if code == "MP" or "회원" in name:
-        return "회원"
-
-    # G-OTA (코드 기반)
-    if code in ("A4", "A5"):
-        # A4/A5 중에서도 AGENT로 세분화
-        for kw in GOTA_KW:
-            if kw in agent:
-                return "G-OTA"
-        return "G-OTA"  # A4/A5는 모두 G-OTA
-
-    # Inbound
-    if code == "58":
+    if num in ("A4", "A5"):
+        return "G-OTA"
+    if num in ("53", "72"):
+        return "OTA"
+    if num == "58":
         return "Inbound"
-
-    # OTA 계열 코드 (53, 72) → AGENT로 세분화
-    if code in ("53", "72"):
-        for kw in OTA_KW:
-            if kw in agent:
-                return "OTA"
-        for kw in GOTA_KW:
-            if kw in agent:
-                return "G-OTA"
-        for kw in INBOUND_KW:
-            if kw in agent:
-                return "Inbound"
-        # AGENT 없거나 매핑 안 됨
-        if not agent:
-            return "기타"
-        return "기타"
-
-    # 자사패키지 → 무기명
-    if code == "73" or "자사" in name:
-        return "무기명"
-
-    # 나머지
-    return "기타"
+    return name if name else "기타"
 
 
 def extract_channel(agent_name):
@@ -409,12 +366,15 @@ def build_output(agg, kpi, events):
                     raw_total[k] += d.get(k, 0)
             prop_seg[p][s]['total'] = m(raw_total)
 
-    # ─ 거래처별 ─
+    # ─ 거래처별 (월별 + 합계) ─
     ch_totals = {}
+    ch_monthly = {}
     for ch in all_channels:
         raw_total = {'rn': 0, 'room_rev': 0, 'total_rev': 0, 'commission': 0}
+        ch_monthly[ch] = {}
         for mo in all_months:
             d = by_channel[ch].get(mo, {})
+            ch_monthly[ch][mo] = m(d)
             for k in raw_total:
                 raw_total[k] += d.get(k, 0)
         ch_totals[ch] = m(raw_total)
@@ -495,7 +455,7 @@ def build_output(agg, kpi, events):
         'by_segment': {'monthly': seg_monthly, 'totals': seg_totals},
         'by_property': {'monthly': prop_monthly, 'totals': prop_totals},
         'by_property_segment': prop_seg,
-        'by_channel': ch_totals,
+        'by_channel': {'totals': ch_totals, 'monthly': ch_monthly},
         'stay_daily': stay_daily,
         'kpi': {
             'total_kpi_rn': kpi['total_kpi_rn'],
