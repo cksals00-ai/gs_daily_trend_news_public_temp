@@ -29,9 +29,9 @@ permissions:
   pages: write
   id-token: write
 
-# push가 실행 중인 schedule 빌드를 취소하고 즉시 배포되도록
+# 트리거별로 concurrency 분리 — push/schedule/dispatch가 서로 취소하지 않도록
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.event_name }}"
   cancel-in-progress: true
 
 jobs:
