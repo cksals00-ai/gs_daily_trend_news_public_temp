@@ -401,7 +401,7 @@ function getGsData(dbName, month, segs){
 }
 
 // rm_fcst.json: Budget RN/REV + RM FCST RN/REV per property per month
-// Schema: {budget_rn, budget_rev_mil, rm_fcst_rn, rm_fcst_rev_mil}
+// Schema: {rm_budget_rn, rm_budget_rev_mil, rm_fcst_rn, rm_fcst_rev_mil}
 function getRmFcst(otbName, month){
   if(!DATA.fcst) return null;
   const props = DATA.fcst.properties || {};
@@ -487,14 +487,14 @@ function generateTables(){
       // 전체 Budget REV/FCST RN/FCST REV: Revenue Meeting (rm_fcst.json)
       const rm = getRmFcst(p.otb, month);
       if(rm){
-        t_bud_rev += (rm.budget_rev_mil||0)*1000; // 백만→천원
+        t_bud_rev += (rm.rm_budget_rev_mil||0)*1000; // 백만→천원
         t_fcst_rn += rm.rm_fcst_rn||0;
         t_fcst_rev_k += (rm.rm_fcst_rev_mil||0)*1000; // 백만→천원
         // Budget ADR (원) = REV/RN, weighted by Budget RN
-        if(rm.budget_rn>0){
-          const adr_won = (rm.budget_rev_mil||0)*1000000/rm.budget_rn;
-          t_bud_adr_w += adr_won*rm.budget_rn;
-          t_bud_adr_rn += rm.budget_rn;
+        if(rm.rm_budget_rn>0){
+          const adr_won = (rm.rm_budget_rev_mil||0)*1000000/rm.rm_budget_rn;
+          t_bud_adr_w += adr_won*rm.rm_budget_rn;
+          t_bud_adr_rn += rm.rm_budget_rn;
         }
       }
 
