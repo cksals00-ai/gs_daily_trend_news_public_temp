@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>거래처 매핑 관리 · GS 영업기획</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+/* ─── CSS Variables ─── */
+:root {
+  --bg:#0f1117; --bg-card:#1a1d23; --bg-deep:#0d1117;
+  --bg-soft:#22272e; --bg-hover:#2d333b;
+  --ink:#e8e6e1; --ink-soft:#d0ccc4; --ink-muted:#9e9b93; --ink-faint:#6e6c62;
+  --gold:#c9a063; --gold-bright:#e6b970;
+  --positive:#4caf6f; --positive-bg:#1f3a28;
+  --negative:#e57373; --negative-bg:#3d1f1f;
+  --info:#5a9fc4; --info-bg:#1a2e3d;
+  --warning:#e8a256; --warning-bg:#3d2e1a;
+  --rule:rgba(255,255,255,0.08); --rule-strong:rgba(255,255,255,0.18);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --radius:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.65;font-size:15px;font-weight:500;letter-spacing:-0.01em;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;
+  padding-bottom:80px;overflow-x:hidden;
+}
+*,*::before,*::after{font-family:inherit;}
+input,button,textarea,select{font-family:var(--sans)!important;}
+
+/* ─── Masthead ─── */
+.mast{
+  background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);
+  padding:0 24px;height:54px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:200;
+}
+.mast-logo{display:flex;align-items:baseline;gap:10px;}
+.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright);}
+.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600;}
+.mast-nav{display:flex;align-items:center;gap:8px;}
+.nav-btn{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);
+  text-decoration:none;letter-spacing:.1em;padding:6px 11px;
+  border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer;
+}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5);}
+
+/* ─── Layout ─── */
+.wrap{max-width:1200px;margin:0 auto;padding:26px 18px 40px;}
+
+/* ─── Page Title ─── */
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700;}
+.page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em;}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.75;}
+code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:1px 5px;border-radius:3px;color:var(--gold);}
+
+/* ─── Cards ─── */
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px;margin-bottom:12px;}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule);}
+.card-icon{font-size:14px;line-height:1;}
+.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright);}
+.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto;}
+
+/* ─── Summary Stats ─── */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.stat-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;text-align:center;}
+.stat-label{font-size:11px;color:var(--ink-muted);font-weight:600;margin-bottom:5px;font-family:var(--mono);letter-spacing:.08em;}
+.stat-value{font-family:var(--mono);font-size:24px;font-weight:800;color:var(--ink);}
+.stat-box.ota{border-color:rgba(76,175,111,.3);}
+.stat-box.gota{border-color:rgba(90,159,196,.3);}
+.stat-box.inbound{border-color:rgba(212,76,165,.3);}
+.stat-box.unmapped{border-color:rgba(229,115,115,.3);}
+
+/* ─── Channel Table ─── */
+.table-wrapper{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--bg-card);}
+table{
+  width:100%;border-collapse:collapse;font-size:13px;
+}
+thead{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);}
+th{
+  padding:12px 14px;text-align:left;font-weight:700;
+  color:var(--ink-muted);font-family:var(--mono);font-size:11px;
+  letter-spacing:.08em;border-right:1px solid var(--rule);
+}
+th:last-child{border-right:none;}
+td{
+  padding:12px 14px;border-bottom:1px solid var(--rule);
+  border-right:1px solid var(--rule);
+}
+td:last-child{border-right:none;}
+tbody tr{transition:background .15s;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody tr.highlight{background:rgba(201,160,99,.12);border-left:3px solid var(--gold);}
+
+/* ─── Rank ─── */
+.rank{font-family:var(--mono);font-weight:800;color:var(--ink-muted);}
+
+/* ─── Channel name ─── */
+.channel-name{font-weight:700;color:var(--ink);}
+
+/* ─── Segment badge ─── */
+.seg-badge{
+  display:inline-block;padding:4px 10px;border-radius:4px;font-size:11px;
+  font-weight:700;font-family:var(--mono);letter-spacing:.06em;
+}
+.seg-badge.ota{background:rgba(76,175,111,.18);color:#4caf6f;}
+.seg-badge.gota{background:rgba(90,159,196,.18);color:#5a9fc4;}
+.seg-badge.inbound{background:rgba(212,76,165,.18);color:#d44ca5;}
+.seg-badge.unmapped{background:rgba(229,115,115,.18);color:#e57373;}
+
+/* ─── Numbers ─── */
+.num{font-family:var(--mono);text-align:right;color:var(--ink-soft);}
+.num.yoy.positive{color:#4caf6f;}
+.num.yoy.negative{color:#e57373;}
+
+/* ─── Dropdown select ─── */
+.seg-select{
+  padding:6px 8px;background:var(--bg-soft);border:1px solid var(--rule);
+  color:var(--ink);border-radius:4px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:border-color .15s;font-family:var(--mono);
+}
+.seg-select:hover{border-color:var(--rule-strong);}
+.seg-select:focus{outline:none;border-color:var(--gold);}
+.seg-select option{background:var(--bg-deep);color:var(--ink);}
+
+/* ─── Form fields ─── */
+.fg{margin-bottom:14px;}
+.fg:last-child{margin-bottom:0;}
+label.lbl{display:block;font-size:12px;font-weight:700;color:var(--ink-muted);margin-bottom:5px;}
+label.lbl .hint{color:var(--ink-faint);font-weight:400;margin-left:4px;font-size:11px;}
+input[type=text],textarea,select{
+  width:100%;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;
+  color:var(--ink);font-size:13.5px;font-weight:500;padding:9px 12px;outline:none;
+  transition:border-color .18s,background .18s;
+}
+textarea{resize:vertical;min-height:74px;line-height:1.6;}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--gold);background:var(--bg-hover);}
+select option{background:var(--bg-deep);}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* ─── Buttons ─── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+  border-radius:5px;font-size:12.5px;font-weight:700;cursor:pointer;border:none;
+  transition:all .18s;white-space:nowrap;min-height:40px;
+}
+.btn-primary{background:linear-gradient(135deg,#e6b970,#c9a063);color:#0a0a0a;}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-secondary{background:var(--bg-soft);color:var(--ink-muted);border:1px solid var(--rule);}
+.btn-secondary:hover{background:var(--bg-hover);color:var(--ink);}
+.btn-ghost{background:transparent;color:var(--ink-faint);border:1px solid var(--rule);}
+.btn-ghost:hover{color:var(--ink-muted);border-color:var(--rule-strong);}
+.btn-sm{padding:6px 12px;font-size:12px;min-height:32px;}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+
+/* ─── Collapsible Section ─── */
+.collapsible{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:12px;}
+.collapsible-head{
+  padding:14px 18px;display:flex;align-items:center;gap:10px;
+  cursor:pointer;user-select:none;transition:background .15s;
+  border-bottom:1px solid var(--rule);
+}
+.collapsible-head:hover{background:var(--bg-soft);}
+.collapsible-icon{
+  display:inline-block;width:18px;height:18px;transition:transform .2s;
+  text-align:center;line-height:18px;font-size:12px;color:var(--ink-muted);
+}
+.collapsible.open .collapsible-icon{transform:rotate(180deg);}
+.collapsible-title{font-family:var(--mono);font-size:12px;font-weight:800;
+  letter-spacing:.1em;color:var(--gold-bright);}
+.collapsible-body{
+  display:none;padding:14px 18px;border-top:1px solid var(--rule);
+  max-height:400px;overflow-y:auto;
+}
+.collapsible.open .collapsible-body{display:block;}
+
+/* ─── Add Row Form ─── */
+.add-form{display:grid;grid-template-columns:1fr 1fr 160px auto;gap:10px;align-items:flex-end;}
+.add-form .fg{margin-bottom:0;}
+.add-form label{margin-bottom:8px;}
+
+/* ─── Pending list ─── */
+.pending-item{
+  background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;
+  padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;
+}
+.pending-item:last-child{margin-bottom:0;}
+.pending-info{flex:1;}
+.pending-key{font-family:var(--mono);font-size:11px;color:var(--ink-muted);}
+.pending-channel{font-weight:700;color:var(--ink);}
+.pending-seg{display:inline-block;margin-left:8px;font-size:10px;color:var(--ink-faint);}
+
+/* ─── Toast ─── */
+.toast{
+  position:fixed;top:64px;right:16px;background:var(--bg-card);
+  border:1px solid var(--rule-strong);border-left:3px solid var(--positive);
+  padding:11px 15px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--ink);
+  box-shadow:0 8px 28px rgba(0,0,0,.45);opacity:0;transform:translateX(14px);
+  transition:all .26s;pointer-events:none;z-index:300;max-width:300px;
+}
+.toast.show{opacity:1;transform:translateX(0);}
+.toast.err{border-left-color:var(--negative);}
+
+/* ─── Loading state ─── */
+.loading{text-align:center;padding:20px;color:var(--ink-muted);}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--rule);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ─── Error state ─── */
+.error{background:var(--negative-bg);border:1px solid var(--negative);
+  color:var(--negative);padding:14px 16px;border-radius:6px;font-size:13px;}
+
+/* ─── Responsive ─── */
+@media(max-width:1200px){
+  .wrap{max-width:100%;}
+  .summary-grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));}
+  table{font-size:12px;}
+  th,td{padding:10px 12px;}
+}
+@media(max-width:768px){
+  .mast{padding:0 14px;}
+  .mast-sub{display:none;}
+  .mast-nav{gap:4px;}
+  .nav-btn{padding:5px 8px;font-size:10px;}
+  .wrap{padding:14px 12px 36px;}
+  .card{padding:14px;}
+  .g2,.g3{grid-template-columns:1fr;}
+  .add-form{grid-template-columns:1fr;align-items:flex-start;}
+  .summary-grid{grid-template-columns:repeat(2,1fr);}
+  table{font-size:11.5px;}
+  th,td{padding:8px 10px;}
+  .seg-select{font-size:11px;padding:5px 6px;}
+  .channel-name{font-size:12px;}
+}
+@media(max-width:480px){
+  .mast{height:auto;flex-direction:column;gap:10px;padding:12px 10px;}
+  .mast-logo{gap:6px;}
+  .mast-name{font-size:12px;}
+  .mast-sub{font-size:10px;display:block;}
+  .mast-nav{flex-wrap:wrap;width:100%;}
+  .nav-btn{flex:1;min-width:calc(50% - 4px);}
+  .wrap{padding:10px 10px 36px;}
+  .page-title h1{font-size:16px;}
+  .page-title p{font-size:11px;}
+  .summary-grid{grid-template-columns:1fr;}
+  .stat-box{padding:10px 12px;}
+  .stat-value{font-size:18px;}
+  .card{padding:10px;}
+  .table-wrapper{margin:0 -10px;border-radius:0;}
+  .add-form{gap:8px;}
+  .btn-group{width:100%;}
+  .btn{width:100%;justify-content:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- Masthead -->
+<header class="mast">
+  <div class="mast-logo">
+    <span class="mast-name">GS 영업기획</span>
+    <span class="mast-sub">거래처 매핑 관리</span>
+  </div>
+  <nav class="mast-nav">
+    <a href="gs-map.html" class="nav-btn">← 영업기획맵</a>
+  </nav>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main class="wrap">
+
+  <!-- Page Title -->
+  <div class="page-title">
+    <div class="eyebrow">ADMIN · CHANNEL MANAGEMENT</div>
+    <h1>거래처 매핑 관리</h1>
+    <p>
+      모든 거래처(채널)의 현재 세그먼트를 확인하고 잘못된 매핑을 수정하세요.
+      변경사항은 JSON으로 내보내어 <code>data/channel_mapping_overrides.json</code>에 저장됩니다.
+    </p>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading" class="loading" style="display:none;">
+    <div class="spinner"></div>
+    <p style="margin-top:10px;">데이터 로딩 중...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="error" style="display:none;"></div>
+
+  <!-- Summary Stats -->
+  <div id="summary" style="display:none;">
+    <div class="summary-grid">
+      <div class="stat-box">
+        <div class="stat-label">전체 채널</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-box ota">
+        <div class="stat-label">OTA</div>
+        <div class="stat-value" id="stat-ota">0</div>
+      </div>
+      <div class="stat-box gota">
+        <div class="stat-label">G-OTA</div>
+        <div class="stat-value" id="stat-gota">0</div>
+      </div>
+      <div class="stat-box inbound">
+        <div class="stat-label">INBOUND</div>
+        <div class="stat-value" id="stat-inbound">0</div>
+      </div>
+      <div class="stat-box unmapped">
+        <div class="stat-label">미분류</div>
+        <div class="stat-value" id="stat-unmapped">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Channel Mapping Table -->
+  <div class="card" id="table-card" style="display:none;padding:0;overflow:hidden;">
+    <div class="card-head" style="border-radius:7px 7px 0 0;margin:0;padding:16px 22px;background:var(--bg-deep);">
+      <span class="card-icon">📊</span>
+      <span class="card-title">거래처 세그먼트 매핑</span>
+      <span class="card-desc" id="table-count"></span>
+    </div>
+    <div class="table-wrapper">
+      <table id="channelTable">
+        <thead>
+          <tr>
+            <th style="width:50px;">순위</th>
+            <th style="width:140px;">채널명</th>
+            <th style="width:100px;">현재 세그</th>
+            <th style="width:80px;text-align:right;">2026 RN</th>
+            <th style="width:80px;text-align:right;">2025 RN</th>
+            <th style="width:60px;text-align:right;">YoY%</th>
+            <th style="width:110px;">변경</th>
+          </tr>
+        </thead>
+        <tbody id="channelBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Current OTA_CHANNEL_MAP Display -->
+  <div class="collapsible">
+    <div class="collapsible-head">
+      <span class="collapsible-icon">▼</span>
+      <span class="collapsible-title">현재 OTA_CHANNEL_MAP (키워드 → 채널)</span>
+    </div>
+    <div class="collapsible-body">
+      <div style="font-size:12px;line-height:1.8;color:var(--ink-muted);font-family:var(--mono);">
+        <div style="margin-bottom:16px;">
+          <div style="color:var(--gold-bright);font-weight:700;margin-bottom:8px;">OTA:</div>
+          <div>야놀자/놀유니버스, 아고다, 여기어때/여기어때컴퍼니, 트립닷컴, 트립비토즈, 네이버, 익스피디아, 부킹닷컴/부킹, 쿠팡, 호텔스닷컴, 프리즘, 종이비행기, 스마트인피니, 인터파크, 티몬, 위메프, 타이드스퀘어, 웹투어, 올마이투어, 코이스토리, 마이리얼트립, 온라인콘도, 맥스모바일, 트립토파즈</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="color:var(--gold-bright);font-weight:700;margin-bottom:8px;">INBOUND (여행사):</div>
+          <div>가자고투어, 플러스앤, 이참조은레저, 아이러브레저, 스테이원, 새서울여행사, 샬레코리아, 웅진컴퍼스, 기븐존여행클럽, 레저프라자, 대원관광, 다보, 디다트래블, 가고파여행, 호텔패스, 호텔패키지, 위더스컴즈, 콘도닷컴, 보군여행사, 이제너두, 노랑풍선, 제주닷컴, 디어먼데이, 탐나오, 참좋은여행, 하이월드투어</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Mapping -->
+  <div class="card" style="margin-top:12px;">
+    <div class="card-head">
+      <span class="card-icon">➕</span>
+      <span class="card-title">새 매핑 추가</span>
+      <span class="card-desc">parse_raw_db.py의 OTA_CHANNEL_MAP에 추가될 예정</span>
+    </div>
+    <div class="add-form">
+      <div class="fg">
+        <label class="lbl" for="addKeyword">키워드 <span class="hint">(AGENT명에서 찾을 텍스트)</span></label>
+        <input type="text" id="addKeyword" placeholder="예: 새로운채널">
+      </div>
+      <div class="fg">
+        <label class="lbl" for="addChannel">채널명 <span class="hint"></span></label>
+        <input type="text" id="addChannel" placeholder="예: 새로운채널">
+      </div>
+      <div class="fg">
+        <label class="lbl" for="addSegment">세그먼트</label>
+        <select id="addSegment">
+          <option value="OTA">OTA</option>
+          <option value="G-OTA">G-OTA</option>
+          <option value="Inbound">Inbound</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addNewMapping()">추가</button>
+    </div>
+    <div id="pendingList" style="margin-top:14px;display:none;">
+      <div style="font-size:11px;color:var(--ink-muted);margin-bottom:8px;font-weight:700;letter-spacing:.08em;">대기 중인 추가</div>
+      <div id="pendingItems"></div>
+    </div>
+  </div>
+
+  <!-- Export / Download -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-icon">💾</span>
+      <span class="card-title">변경사항 저장</span>
+      <span class="card-desc">JSON 형식으로 내보내기</span>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="exportJSON()">변경사항 다운로드</button>
+      <button class="btn btn-secondary" onclick="copyJSON()">JSON 복사</button>
+      <button class="btn btn-ghost" onclick="resetChanges()">초기화</button>
+    </div>
+    <div id="exportPreview" style="margin-top:14px;display:none;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;line-height:1.5;"></div>
+  </div>
+
+</main>
+
+<script>
+// ─── STATE ───
+let allChannels = [];
+let channelSegments = {}; // { channelName: { OTA: count, 'G-OTA': count, ... } }
+let channelRN = {}; // { channelName: { 2026: {}, 2025: {} } }
+let overrides = {}; // { channelName: 'OTA'|'G-OTA'|'Inbound' }
+let pendingAdditions = [];
+
+// ─── Load Data ───
+async function loadData() {
+  const loading = document.getElementById('loading');
+  const error = document.getElementById('error');
+  const summary = document.getElementById('summary');
+  const tableCard = document.getElementById('table-card');
+
+  loading.style.display = 'block';
+  error.style.display = 'none';
+  summary.style.display = 'none';
+  tableCard.style.display = 'none';
+
+  try {
+    const response = await fetch('data/db_aggregated.json');
+    if (!response.ok) throw new Error('Failed to load db_aggregated.json');
+
+    const data = await response.json();
+
+    // Extract channels
+    allChannels = data.meta?.channels || [];
+    if (!allChannels.length) throw new Error('No channels found in data');
+
+    // Build channel segments and RN data
+    channelSegments = {};
+    channelRN = {};
+
+    allChannels.forEach(ch => {
+      channelSegments[ch] = {};
+      channelRN[ch] = { 2026: {}, 2025: {} };
+    });
+
+    // Process by_channel_segment
+    if (data.by_channel_segment) {
+      Object.entries(data.by_channel_segment).forEach(([ch, segData]) => {
+        if (!channelSegments[ch]) channelSegments[ch] = {};
+        Object.entries(segData).forEach(([seg, monthData]) => {
+          if (!channelSegments[ch][seg]) channelSegments[ch][seg] = 0;
+          Object.values(monthData).forEach(val => {
+            channelSegments[ch][seg] += val || 0;
+          });
+        });
+      });
+    }
+
+    // Process by_channel for 2026/2025 RN
+    if (data.by_channel) {
+      Object.entries(data.by_channel).forEach(([ch, monthData]) => {
+        if (!channelRN[ch]) channelRN[ch] = { 2026: {}, 2025: {} };
+        Object.entries(monthData).forEach(([month, val]) => {
+          const year = month.substring(0, 4);
+          if (year === '2026') channelRN[ch][2026] = (channelRN[ch][2026] || 0) + (val || 0);
+          else if (year === '2025') channelRN[ch][2025] = (channelRN[ch][2025] || 0) + (val || 0);
+        });
+      });
+    }
+
+    // Try to load overrides
+    try {
+      const ovResp = await fetch('data/channel_mapping_overrides.json');
+      if (ovResp.ok) {
+        const ovData = await ovResp.json();
+        overrides = ovData.channel_segment_overrides || {};
+      }
+    } catch (e) {
+      // Ignore if file doesn't exist yet
+    }
+
+    loading.style.display = 'none';
+    summary.style.display = 'block';
+    tableCard.style.display = 'block';
+
+    renderSummary();
+    renderTable();
+  } catch (e) {
+    console.error(e);
+    loading.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = '데이터 로딩 실패: ' + e.message;
+  }
+}
+
+// ─── Get current segment for channel (max RN in by_channel_segment) ───
+function getCurrentSegment(ch) {
+  if (overrides[ch]) return overrides[ch];
+
+  const segData = channelSegments[ch] || {};
+  let maxSeg = '미분류';
+  let maxCount = 0;
+
+  Object.entries(segData).forEach(([seg, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      maxSeg = seg;
+    }
+  });
+
+  return maxSeg;
+}
+
+// ─── Is channel unmapped or mixed ───
+function isHighlight(ch) {
+  const segData = channelSegments[ch] || {};
+  const segCount = Object.keys(segData).length;
+  const current = getCurrentSegment(ch);
+  return segCount > 1 || current === '미분류';
+}
+
+// ─── Render Summary ───
+function renderSummary() {
+  let otaCount = 0, gotaCount = 0, inboundCount = 0, unmappedCount = 0;
+
+  allChannels.forEach(ch => {
+    const seg = getCurrentSegment(ch);
+    if (seg === 'OTA') otaCount++;
+    else if (seg === 'G-OTA') gotaCount++;
+    else if (seg === 'Inbound') inboundCount++;
+    else unmappedCount++;
+  });
+
+  document.getElementById('stat-total').textContent = allChannels.length;
+  document.getElementById('stat-ota').textContent = otaCount;
+  document.getElementById('stat-gota').textContent = gotaCount;
+  document.getElementById('stat-inbound').textContent = inboundCount;
+  document.getElementById('stat-unmapped').textContent = unmappedCount;
+}
+
+// ─── Render Table ───
+function renderTable() {
+  const tbody = document.getElementById('channelBody');
+  const count = document.getElementById('table-count');
+
+  // Sort by 2026 RN descending
+  const sorted = [...allChannels].sort((a, b) => {
+    const arn = channelRN[a]?.[2026] || 0;
+    const brn = channelRN[b]?.[2026] || 0;
+    return brn - arn;
+  });
+
+  count.textContent = `${sorted.length}개 채널`;
+  tbody.innerHTML = '';
+
+  sorted.forEach((ch, idx) => {
+    const rn2026 = channelRN[ch]?.[2026] || 0;
+    const rn2025 = channelRN[ch]?.[2025] || 0;
+    const yoy = rn2025 ? ((rn2026 - rn2025) / rn2025 * 100).toFixed(1) : 0;
+    const current = getCurrentSegment(ch);
+    const highlight = isHighlight(ch);
+
+    const row = document.createElement('tr');
+    if (highlight) row.classList.add('highlight');
+
+    const segOptions = ['OTA', 'G-OTA', 'Inbound'];
+    const segSelect = `<select class="seg-select" onchange="updateOverride('${ch}', this.value)">
+      ${segOptions.map(s => `<option value="${s}" ${current === s ? 'selected' : ''}>${s}</option>`).join('')}
+    </select>`;
+
+    row.innerHTML = `
+      <td class="rank">#${idx + 1}</td>
+      <td class="channel-name">${ch}</td>
+      <td><span class="seg-badge ${current.toLowerCase().replace('-', '')}">${current}</span></td>
+      <td class="num">${rn2026.toLocaleString()}</td>
+      <td class="num">${rn2025.toLocaleString()}</td>
+      <td class="num yoy ${yoy >= 0 ? 'positive' : 'negative'}">${yoy}%</td>
+      <td>${segSelect}</td>
+    `;
+
+    tbody.appendChild(row);
+  });
+}
+
+// ─── Update Override ───
+function updateOverride(ch, seg) {
+  overrides[ch] = seg;
+  renderSummary();
+  renderTable();
+  showToast(`${ch} → ${seg}로 변경됨`);
+}
+
+// ─── Add New Mapping ───
+function addNewMapping() {
+  const keyword = document.getElementById('addKeyword').value.trim();
+  const channel = document.getElementById('addChannel').value.trim();
+  const segment = document.getElementById('addSegment').value;
+
+  if (!keyword || !channel) {
+    showToast('키워드와 채널명을 입력하세요', true);
+    return;
+  }
+
+  pendingAdditions.push({ keyword, channel, segment });
+  document.getElementById('addKeyword').value = '';
+  document.getElementById('addChannel').value = '';
+
+  renderPendingList();
+  showToast(`"${keyword}" → "${channel}"이 추가 대기 중입니다`);
+}
+
+// ─── Render Pending List ───
+function renderPendingList() {
+  const list = document.getElementById('pendingList');
+  const items = document.getElementById('pendingItems');
+
+  if (pendingAdditions.length === 0) {
+    list.style.display = 'none';
+    return;
+  }
+
+  list.style.display = 'block';
+  items.innerHTML = pendingAdditions.map((p, i) => `
+    <div class="pending-item">
+      <div class="pending-info">
+        <div class="pending-key">키워드: <strong>${p.keyword}</strong></div>
+        <div class="pending-channel">${p.channel} <span class="pending-seg">${p.segment}</span></div>
+      </div>
+      <button class="btn btn-sm btn-ghost" onclick="removePending(${i})">삭제</button>
+    </div>
+  `).join('');
+}
+
+// ─── Remove Pending ───
+function removePending(i) {
+  pendingAdditions.splice(i, 1);
+  renderPendingList();
+}
+
+// ─── Export JSON ───
+function exportJSON() {
+  const data = {
+    channel_segment_overrides: overrides,
+    pending_additions: pendingAdditions.length > 0 ? pendingAdditions : undefined
+  };
+
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'channel_mapping_overrides.json';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('JSON 다운로드 시작');
+}
+
+// ─── Copy JSON ───
+function copyJSON() {
+  const data = {
+    channel_segment_overrides: overrides,
+    pending_additions: pendingAdditions.length > 0 ? pendingAdditions : undefined
+  };
+
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    showToast('JSON이 클립보드에 복사되었습니다');
+  }).catch(() => {
+    showToast('복사 실패', true);
+  });
+}
+
+// ─── Reset Changes ───
+function resetChanges() {
+  if (confirm('모든 변경사항을 초기화하시겠습니까?')) {
+    overrides = {};
+    pendingAdditions = [];
+    document.getElementById('exportPreview').style.display = 'none';
+    renderSummary();
+    renderTable();
+    renderPendingList();
+    showToast('초기화되었습니다');
+  }
+}
+
+// ─── Show Toast ───
+function showToast(msg, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.toggle('err', isError);
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ─── Toggle Collapsible ───
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.collapsible-head').forEach(head => {
+    head.addEventListener('click', function() {
+      this.closest('.collapsible').classList.toggle('open');
+    });
+  });
+
+  // Open first collapsible by default
+  document.querySelector('.collapsible').classList.add('open');
+
+  loadData();
+});
+</script>
+
+</body>
+</html>

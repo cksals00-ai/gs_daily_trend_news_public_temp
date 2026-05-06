@@ -97,13 +97,23 @@ def classify_segment(code_num, code_name, agent_name, file_type):
 
 
 def extract_channel(agent_name):
-    """AGENT명에서 OTA 채널 추출"""
+    """AGENT명에서 OTA 채널 추출
+    매핑 안 되면 AGENT명 그대로 사용 (기타 미사용)
+    """
     if not agent_name:
-        return "기타"
+        return "미분류"
     for keyword, channel in OTA_CHANNEL_MAP.items():
         if keyword in agent_name:
             return channel
-    return "기타"
+    # 매핑 안 된 AGENT명은 'OTA_' 접두어 제거 후 그대로 사용
+    cleaned = agent_name
+    if cleaned.startswith('OTA_'):
+        cleaned = cleaned[4:]
+    # 괄호 이후 제거 (예: "스마트인피니(독점)" → "스마트인피니")
+    paren_idx = cleaned.find('(')
+    if paren_idx > 0:
+        cleaned = cleaned[:paren_idx].strip()
+    return cleaned if cleaned else "미분류"
 
 
 # ─── 리드타임 구간 분류 ───
@@ -717,7 +727,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
         'by_channel': {
             c: {m: calc_adr(v) for m, v in sorted(months.items())}
             for c, months in sorted(channel_monthly.items())
-            if c != '기타'
+            if c not in ('기타', '미분류')
         },
         'by_region': {
             r: {m: calc_adr(v) for m, v in sorted(months.items())}
@@ -757,7 +767,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
                 if s != '기타'
             }
             for c, segs in sorted(channel_segment_monthly.items())
-            if c != '기타'
+            if c not in ('기타', '미분류')
         },
         'by_property_channel_segment': {
             p: {
@@ -776,7 +786,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     all_months = sorted(monthly_total.keys())
     all_years = sorted(set(m[:4] for m in all_months))
     all_props = sorted(prop_monthly.keys())
-    all_channels = sorted(c for c in channel_monthly.keys() if c != '기타')
+    all_channels = sorted(c for c in channel_monthly.keys() if c not in ('기타', '미분류'))
     all_regions = sorted(region_monthly.keys())
 
     # 사업장→권역 매핑 (HTML 필터에서 사용)

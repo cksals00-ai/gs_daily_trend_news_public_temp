@@ -106,7 +106,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .prop-chips .chip{font-size:9px;padding:3px 7px;}
 </style>
 <style>
-.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200}
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200;padding-top:env(safe-area-inset-top,0px)}
 .gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
 .gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
 .gsn-brand:hover{color:#c9d1d9}
@@ -207,6 +207,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <div class="filter-chips prop-chips" id="prop-chips"></div>
       </div>
     </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">월</div>
+      <div class="filter-chips" id="month-chips"></div>
+    </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA SOURCE</div>
       <div class="refresh-time">&#50728;&#48513; DB 86&#48264; &#54364;&#53580;&#51648;</div>
@@ -246,22 +251,6 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="table-card-header">
         <span class="table-card-title" id="cat-table-title">&#52852;&#53580;&#44256;&#47532;&#48324; &#49892;&#51201;</span>
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="cat-table-sub">&mdash;</span>
-      </div>
-      <!-- 월별 탭 -->
-      <div style="display:flex;gap:2px;padding:8px 10px;background:var(--bg-deep);border-bottom:1px solid var(--rule);overflow-x:auto;">
-        <button id="cat-month-all" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">연합계</button>
-        <button id="cat-month-01" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">1월</button>
-        <button id="cat-month-02" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">2월</button>
-        <button id="cat-month-03" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">3월</button>
-        <button id="cat-month-04" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">4월</button>
-        <button id="cat-month-05" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">5월</button>
-        <button id="cat-month-06" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">6월</button>
-        <button id="cat-month-07" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">7월</button>
-        <button id="cat-month-08" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">8월</button>
-        <button id="cat-month-09" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">9월</button>
-        <button id="cat-month-10" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">10월</button>
-        <button id="cat-month-11" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">11월</button>
-        <button id="cat-month-12" class="chip" style="flex-shrink:0;padding:4px 10px;border-radius:2px;font-size:10px;margin:0;">12월</button>
       </div>
       <div class="table-wrap">
         <table class="pivot">
@@ -491,8 +480,21 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   }
 
   function filteredRanking() {
+    // 월 필터 활성화 시: sumCat 기반 재계산
+    if (catMonthFilter !== 'ALL') {
+      var cats = selCat !== 'ALL' ? [selCat] : CAT_ORDER.slice();
+      var result = [];
+      cats.forEach(function(cat) {
+        if (!pkg.by_category[cat] && selCat === 'ALL') return;
+        var s = sumCat(cat, selYear);
+        if (s.rn > 0) {
+          result.push({name: cat, category: cat, rn: s.rn, rev: s.rev_m, rev_won: s.rev_m * 1000000, adr: s.adr});
+        }
+      });
+      result.sort(function(a,b){ return b.rn - a.rn; });
+      return result;
+    }
     var r = [];
-
     // 사업장이 선택된 경우, by_property에서 데이터 수집
     if (activePropsSet.size > 0 && pkg.by_property) {
       var props = Array.from(activePropsSet);
@@ -518,7 +520,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     var ly = sumCat(selCat, lyYear);
     var rank = filteredRanking();
 
-    set('period-display', selYear + '년');
+    var periodSuffix = catMonthFilter === 'ALL' ? '' : ' ' + parseInt(catMonthFilter) + '월';
+    set('period-display', selYear + '년' + periodSuffix);
     set('kpi-rn', fmtN(cur.rn));
     var yoyRn = ly.rn > 0 ? ((cur.rn - ly.rn) / ly.rn * 100).toFixed(1) : null;
     set('kpi-rn-sub', '전년 ' + fmtN(ly.rn) + ' · YoY <span style="color:' + (yoyRn !== null && parseFloat(yoyRn) >= 0 ? 'var(--positive)' : 'var(--negative)') + '">' + (yoyRn !== null ? (parseFloat(yoyRn) >= 0 ? '+' : '') + yoyRn + '%' : '-') + '</span>');
@@ -723,20 +726,21 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   }
 
   function buildCatMonthTabs() {
-    // 월별 탭 버튼 설정
-    var months = ['all', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-    months.forEach(function(m) {
-      var btn = el('cat-month-' + m);
-      if (!btn) return;
-      btn.classList.toggle('active', (m === 'all' ? catMonthFilter === 'ALL' : catMonthFilter === m));
-      btn.onclick = function() {
-        catMonthFilter = (m === 'all' ? 'ALL' : m);
-        months.forEach(function(mm) {
-          var b = el('cat-month-' + mm);
-          if (b) b.classList.toggle('active', (mm === 'all' ? catMonthFilter === 'ALL' : catMonthFilter === mm));
-        });
+    var mc = el('month-chips');
+    if (!mc) return;
+    mc.innerHTML = '';
+    var items = [{key:'ALL',label:'전체'},{key:'01',label:'1월'},{key:'02',label:'2월'},{key:'03',label:'3월'},{key:'04',label:'4월'},{key:'05',label:'5월'},{key:'06',label:'6월'},{key:'07',label:'7월'},{key:'08',label:'8월'},{key:'09',label:'9월'},{key:'10',label:'10월'},{key:'11',label:'11월'},{key:'12',label:'12월'}];
+    items.forEach(function(item) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (catMonthFilter === item.key ? ' active' : '');
+      b.textContent = item.label;
+      b.onclick = function() {
+        catMonthFilter = item.key;
+        mc.querySelectorAll('.chip').forEach(function(x) { x.classList.remove('active'); });
+        b.classList.add('active');
         render();
       };
+      mc.appendChild(b);
     });
   }
 
@@ -768,11 +772,31 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     return out;
   }
 
+  function getCategoryRanking(year) {
+    if (catMonthFilter !== 'ALL') {
+      var result = [];
+      CAT_ORDER.forEach(function(cat) {
+        if (!pkg.by_category[cat]) return;
+        var s = sumCat(cat, year);
+        if (s.rn > 0) result.push({name: cat, category: cat, rn: s.rn, rev: s.rev_m, rev_won: s.rev_m * 1000000, adr: s.adr});
+      });
+      // 기타 포함
+      Object.keys(pkg.by_category).forEach(function(cat) {
+        if (CAT_ORDER.indexOf(cat) >= 0) return;
+        var s = sumCat(cat, year);
+        if (s.rn > 0) result.push({name: cat, category: cat, rn: s.rn, rev: s.rev_m, rev_won: s.rev_m * 1000000, adr: s.adr});
+      });
+      result.sort(function(a,b){ return b.rn - a.rn; });
+      return result;
+    }
+    return aggByCategory(pkg.by_year_ranking[year]||[]);
+  }
+
   function renderLyp() {
     if (!pkg) return;
     var cy = selYear, ly = String(parseInt(cy)-1);
-    var cyData = aggByCategory(pkg.by_year_ranking[cy]||[]);
-    var lyData = aggByCategory(pkg.by_year_ranking[ly]||[]);
+    var cyData = getCategoryRanking(cy);
+    var lyData = getCategoryRanking(ly);
     var cyTotal = cyData.reduce(function(s,d){return s+(d.rn||0);},0);
     var lyTotal = lyData.reduce(function(s,d){return s+(d.rn||0);},0);
     var yoy = lyTotal>0?((cyTotal-lyTotal)/lyTotal*100):null;
@@ -781,10 +805,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     lyData.forEach(function(d,i){lyRankMap[d.name]={rank:i+1,rn:d.rn||0,rev:d.rev||0};});
     var common = cyData.filter(function(d){return lyRankMap[d.name];}).length;
 
-    lypSet('lyp-kpi-cy-label', cy+'년 RNS');
+    var monthSuffix = catMonthFilter === 'ALL' ? '' : ' '+parseInt(catMonthFilter)+'월';
+    lypSet('lyp-kpi-cy-label', cy+'년'+monthSuffix+' RNS');
     lypSet('lyp-kpi-cy-rns', fmtN(cyTotal));
-    lypSet('lyp-kpi-cy-sub', cy+'년 · '+cyData.length+'개 카테고리');
-    lypSet('lyp-kpi-ly-label', ly+'년 RNS');
+    lypSet('lyp-kpi-cy-sub', cy+'년'+monthSuffix+' · '+cyData.length+'개 카테고리');
+    lypSet('lyp-kpi-ly-label', ly+'년'+monthSuffix+' RNS');
     lypSet('lyp-kpi-ly-rns', fmtN(lyTotal));
     lypSet('lyp-kpi-ly-sub', ly+'년 · '+lyData.length+'개 카테고리');
     lypSet('lyp-kpi-yoy', yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1));
