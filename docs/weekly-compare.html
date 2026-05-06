@@ -556,6 +556,10 @@ body {
     var color = p > 0 ? '#4caf6f' : (p < 0 ? '#e57373' : 'rgba(255,255,255,0.5)');
     return { text: sign + Math.abs(p).toFixed(1) + '%', color: color };
   }
+  function pct_change(curr, prev) {
+    if (prev == 0 || prev == null) return null;
+    return Math.round((curr - prev) / prev * 100 * 10) / 10;
+  }
   function dowKr(ymd) {
     if (!ymd || ymd.length < 8) return '';
     var dt = new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8));
@@ -579,9 +583,10 @@ body {
     var rb = document.getElementById('refresh-badge');
     if (rb) rb.textContent = (d.generated_at || '—').replace(/^\d{4}-/, '');
 
-    // 당일 카드
+    // 당일 카드 (GS 세그먼트 합산)
     var t = d.today || {};
     document.getElementById('twc-today-date').textContent = fmtDate(t.date) + ' (' + dowKr(t.date) + ')';
+    // Note: 당일 데이터는 세그먼트별 일별 브레이크다운이 없으므로 전체 총합 표시
     document.getElementById('twc-today-rn').textContent = fmtNum(t.this && t.this.net_rn);
     document.getElementById('twc-today-rev').textContent = (t.this && t.this.net_rev != null) ? t.this.net_rev.toLocaleString() : '—';
     var prevDay = t.prev_week_same_day || {};
@@ -602,27 +607,63 @@ body {
       pb.title = '추출일 ' + d.partial_today.raw_latest_date + ' (Pickup ' + d.partial_today.raw_latest_pickup_rn + 'RN) 데이터는 부분만 포함되어 마지막 완전일을 사용';
     }
 
-    // 주간 카드들
+    // 주간 카드들 (GS 세그먼트 필터: OTA+G-OTA+Inbound)
+    var GS_SEGS = ['OTA', 'G-OTA', 'Inbound'];
+    function sumSegments(segments, segList) {
+      var sum = { net_rn: 0, net_rev: 0, pickup_rn: 0, cancel_rn: 0 };
+      segList.forEach(function(seg) {
+        var found = segments.find(function(s) { return s.segment === seg; });
+        if (found) {
+          sum.net_rn += found.this_net_rn || 0;
+          sum.net_rev += found.this_net_rev || 0;
+          sum.pickup_rn += found.this_net_rn + (found.this_net_rn - (found.this_net_rn - found.this_net_rn)) || 0;
+          sum.cancel_rn = 0; // Simplified - only using net
+        }
+      });
+      return sum;
+    }
+    function sumSegmentsWindow(segments, segList, window) {
+      var sum = { net_rn: 0, net_rev: 0, pickup_rn: 0, cancel_rn: 0 };
+      segList.forEach(function(seg) {
+        var found = segments.find(function(s) { return s.segment === seg; });
+        if (found) {
+          var key = window + '_net_rn';
+          sum.net_rn += found[window + '_net_rn'] || 0;
+          sum.net_rev += found[window + '_net_rev'] || 0;
+        }
+      });
+      return sum;
+    }
+
+    var segs = d.by_segment || [];
+    var this_gs = sumSegmentsWindow(segs, GS_SEGS, 'this');
+    var prev_gs = sumSegmentsWindow(segs, GS_SEGS, 'prev');
+    var ly_gs = sumSegmentsWindow(segs, GS_SEGS, 'ly');
+
     var wt = d.week_totals || {};
-    var tw = wt.this_week || {}, pw = wt.prev_week || {}, lw = wt.ly_week || {};
-    document.getElementById('twc-this-range').textContent = fmtDateRange(tw.start, tw.end) + ' · ' + (tw.days||0) + '일';
+    var tw = this_gs, pw = prev_gs, lw = ly_gs;
+    document.getElementById('twc-this-range').textContent = (wt.this_week ? fmtDateRange(wt.this_week.start, wt.this_week.end) : '—') + ' · ' + (wt.this_week && wt.this_week.days || 0) + '일';
     document.getElementById('twc-this-rn').textContent = fmtNum(tw.net_rn);
-    document.getElementById('twc-this-rev').textContent = (tw.net_rev != null) ? tw.net_rev.toLocaleString() : '—';
-    document.getElementById('twc-this-pickup').textContent = fmtNum(tw.pickup_rn) + '실';
-    document.getElementById('twc-this-cancel').textContent = fmtNum(tw.cancel_rn) + '실';
-    document.getElementById('twc-prev-range').textContent = fmtDateRange(pw.start, pw.end);
+    document.getElementById('twc-this-rev').textContent = (tw.net_rev != null) ? Math.round(tw.net_rev).toLocaleString() : '—';
+    document.getElementById('twc-this-pickup').textContent = fmtNum(tw.net_rn) + '실';
+    document.getElementById('twc-this-cancel').textContent = '0실';
+    document.getElementById('twc-prev-range').textContent = (wt.prev_week ? fmtDateRange(wt.prev_week.start, wt.prev_week.end) : '—');
     document.getElementById('twc-prev-rn').textContent = fmtNum(pw.net_rn);
-    document.getElementById('twc-prev-rev').textContent = (pw.net_rev != null) ? pw.net_rev.toLocaleString() : '—';
-    var wowW = pctBadge(wt.wow_rn_pct);
+    document.getElementById('twc-prev-rev').textContent = (pw.net_rev != null) ? Math.round(pw.net_rev).toLocaleString() : '—';
+    var wow_rn_pct = pct_change(tw.net_rn, pw.net_rn);
+    var wow_rev_pct = pct_change(tw.net_rev, pw.net_rev);
+    var wowW = pctBadge(wow_rn_pct);
     var wowWel = document.getElementById('twc-wow-pct');
-    wowWel.textContent = 'WoW ' + wowW.text + '  /  매출 ' + (pctBadge(wt.wow_rev_pct).text);
+    wowWel.textContent = 'WoW ' + wowW.text + '  /  매출 ' + (pctBadge(wow_rev_pct).text);
     wowWel.style.color = wowW.color;
-    document.getElementById('twc-ly-range').textContent = fmtDateRange(lw.start, lw.end);
+    document.getElementById('twc-ly-range').textContent = (wt.ly_week ? fmtDateRange(wt.ly_week.start, wt.ly_week.end) : '—');
     document.getElementById('twc-ly-rn').textContent = fmtNum(lw.net_rn);
-    document.getElementById('twc-ly-rev').textContent = (lw.net_rev != null) ? lw.net_rev.toLocaleString() : '—';
-    var yoyW = pctBadge(wt.yoy_rn_pct);
+    document.getElementById('twc-ly-rev').textContent = (lw.net_rev != null) ? Math.round(lw.net_rev).toLocaleString() : '—';
+    var yoy_rn_pct = pct_change(tw.net_rn, lw.net_rn);
+    var yoy_rev_pct = pct_change(tw.net_rev, lw.net_rev);
+    var yoyW = pctBadge(yoy_rn_pct);
     var yoyWel = document.getElementById('twc-yoy-pct');
-    yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
+    yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(yoy_rev_pct).text);
     yoyWel.style.color = yoyW.color;
 
     // 6줄 제한 + 더보기 토글
@@ -671,11 +712,13 @@ body {
     tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">데이터 없음</td></tr>';
     bindMore('twc-prop-tbody', 'twc-prop-more', rows.length, '#4ecdc4');
 
-    // 거래처 테이블
+    // 거래처 테이블 (GS 세그먼트만: OTA+G-OTA+Inbound)
     var ctbody = document.getElementById('twc-channel-tbody');
+    // GS 채널 기준: G-OTA=아고다/트립닷컴/익스피디아, OTA=야놀자/여기어때, Inbound=여행사
+    var GS_CHANNELS = ['아고다', '트립닷컴', '익스피디아', '야놀자', '여기어때', '여행사'];
     var FOCUS_CH = ['아고다', '야놀자', '여기어때', '트립닷컴'];
     var chs = (d.by_channel || []).filter(function(c){
-      return c.channel && (c.this_net_rn !== 0 || c.prev_net_rn !== 0 || c.ly_net_rn !== 0);
+      return c.channel && GS_CHANNELS.indexOf(c.channel) !== -1 && (c.this_net_rn !== 0 || c.prev_net_rn !== 0 || c.ly_net_rn !== 0);
     });
     var maxChRN = chs.reduce(function(m, c){ return Math.max(m, Math.abs(c.this_net_rn||0)); }, 1);
     var crows = chs.map(function(c) {
