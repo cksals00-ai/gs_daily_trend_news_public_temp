@@ -1152,6 +1152,7 @@ a{color:inherit}
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ═══ 세일즈 리포트 ═══ */
 
@@ -1700,9 +1701,10 @@ async function renderInboundGoalTable(){
   const k = inboundKpiCache;
   const monthIdx = curGoalMonth && !isGoalYTD() ? parseInt(curGoalMonth.split('-')[1]) : null;
   const isYtd = isGoalYTD();
+  const isYear26 = (curGoalYear === 26);
 
-  /* OTB 실적 가져오기 */
-  const otbByProp = isYtd ? await getInbOtbByKpiPropYTD() : (monthIdx ? await getInbOtbByKpiProp(monthIdx) : {});
+  /* OTB 실적 가져오기 (OTB는 2026년 데이터만 보유) */
+  const otbByProp = isYear26 ? (isYtd ? await getInbOtbByKpiPropYTD() : (monthIdx ? await getInbOtbByKpiProp(monthIdx) : {})) : {};
 
   /* 사업장 목록 (필터 적용) */
   const props = PROP_ORDER_INB.filter(p => k.properties && k.properties[p]);
@@ -1715,7 +1717,10 @@ async function renderInboundGoalTable(){
   const rowsData = propsScoped.map(p=>{
     const pp = k.properties[p];
     let stretch=0, budget=0;
-    if(isYtd){
+    if(!isYear26){
+      /* 25년 등 다른 연도에는 도전목표 없음 */
+      stretch=0; budget=0;
+    } else if(isYtd){
       stretch = pp.stretch_rns_total||0;
       budget = pp.budget_rns_total||0;
     } else if(monthIdx){
@@ -3628,27 +3633,54 @@ async function renderInboundKpiPane(){
     </div>
   </div>`;
 
+  /* OTB 실적 데이터 (월별 사업장별) 가져오기 */
+  const otbMonthly = {};  // { month(1-12): { kpiProp: {rns_actual, rns_last, ...} } }
+  const otbYtd = {};      // { kpiProp: {rns_actual, rns_last} }
+  const isActualMode = ['actual','achStretch','achBudget'].includes(inbkMode);
+  if(isActualMode){
+    for(let mi=1;mi<=12;mi++){
+      otbMonthly[mi] = await getInbOtbByKpiProp(mi);
+    }
+    /* YTD 합산 */
+    Object.values(otbMonthly).forEach(mo=>{
+      Object.entries(mo).forEach(([kp,v])=>{
+        if(!otbYtd[kp]) otbYtd[kp]={rns_actual:0,rns_last:0};
+        otbYtd[kp].rns_actual+=v.rns_actual;
+        otbYtd[kp].rns_last+=v.rns_last;
+      });
+    });
+  }
+
   /* 모드 셀렉터 */
   const modeBtns = [
     {k:'stretch', l:'도전목표'},
     {k:'budget',  l:'Budget'},
-    {k:'gap',     l:'도전 − Budget'}
+    {k:'gap',     l:'도전 − Budget'},
+    {k:'actual',  l:'OTB 실적'},
+    {k:'achStretch', l:'도전 달성률'},
+    {k:'achBudget',  l:'Budget 달성률'}
   ].map(m => `<button class="inbk-mode-pill${m.k===inbkMode?' active':''}" onclick="inbkSetMode('${m.k}')">${m.l}</button>`).join('');
 
   /* 사업장 테이블 (사업장 row + 12 month + total + LY) */
   const monthLbl = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const modeTitle = {stretch:'도전목표',budget:'Budget',gap:'도전 − Budget',actual:'OTB 실적',achStretch:'도전목표 달성률',achBudget:'Budget 달성률'};
   const headHtml = `<div class="inbk-tbl-head">
     <div>
-      <div class="inbk-tbl-title">📊 사업장 × 월 매트릭스</div>
-      <div class="inbk-tbl-sub">행 클릭 → 거래처 상세 펼침 (전략여행사 ★ 표시)</div>
+      <div class="inbk-tbl-title">📊 사업장 × 월 매트릭스 — ${modeTitle[inbkMode]||''}</div>
+      <div class="inbk-tbl-sub">행 클릭 → 거래처 상세 펼침 (전략여행사 ★ 표시)${isActualMode?' · 실적 = OTB Inbound 세그먼트':''}</div>
     </div>
     <div class="inbk-mode-pills">${modeBtns}</div>
   </div>`;
 
-  const valueOf = (b, s, ly, mode) => {
+  const achColor = (pct)=> pct==null?'':pct>=100?'gain-pos':pct>=80?'':pct>=50?'':'gain-neg';
+
+  const valueOf = (b, s, ly, mode, actualVal) => {
     if(mode==='budget') return b;
     if(mode==='stretch') return s;
     if(mode==='gap')   return (s||0) - (b||0);
+    if(mode==='actual') return actualVal||0;
+    if(mode==='achStretch') return s>0&&actualVal!=null ? Math.round(actualVal/s*100) : null;
+    if(mode==='achBudget')  return b>0&&actualVal!=null ? Math.round(actualVal/b*100) : null;
     return s;
   };
 
@@ -3661,11 +3693,18 @@ async function renderInboundKpiPane(){
     const strSet = inbkStrategicSet(stratYear, p);
 
     const cells = monthly.map((m,i)=>{
-      const v = valueOf(m.budget, m.stretch, m.ly, inbkMode);
-      const cls = inbkMode==='gap' ? (v>0?'gain-pos':v<0?'gain-neg':'') : '';
-      return `<td class="month-col ${cls}">${v?Math.round(v).toLocaleString('ko-KR'):'·'}</td>`;
+      const mi = i+1;
+      const act = isActualMode && otbMonthly[mi] && otbMonthly[mi][p] ? otbMonthly[mi][p].rns_actual : null;
+      const v = valueOf(m.budget, m.stretch, m.ly, inbkMode, act);
+      const isAch = inbkMode==='achStretch'||inbkMode==='achBudget';
+      const cls = inbkMode==='gap' ? (v>0?'gain-pos':v<0?'gain-neg':'') : isAch ? achColor(v) : '';
+      const fmt = isAch ? (v!=null?v+'%':'·') : (v?Math.round(v).toLocaleString('ko-KR'):'·');
+      return `<td class="month-col ${cls}">${fmt}</td>`;
     }).join('');
-    const totalVal = valueOf(pp.budget_rns_total, pp.stretch_rns_total, pp.ly_rns_total, inbkMode);
+    const ytdAct = isActualMode && otbYtd[p] ? otbYtd[p].rns_actual : null;
+    const totalVal = valueOf(pp.budget_rns_total, pp.stretch_rns_total, pp.ly_rns_total, inbkMode, ytdAct);
+    const isAchMode = inbkMode==='achStretch'||inbkMode==='achBudget';
+    const totalFmt = isAchMode ? (totalVal!=null?totalVal+'%':'·') : (totalVal?Math.round(totalVal).toLocaleString('ko-KR'):'·');
     const lyTotal = pp.ly_rns_total || 0;
     const lyDelta = lyTotal ? Math.round((((pp.stretch_rns_total||0)/lyTotal)-1)*100) : null;
 
@@ -3681,7 +3720,7 @@ async function renderInboundKpiPane(){
       <td class="arrow-cell">${expand?'▼':'▶'}</td>
       <td class="left">${escapeHtml(p)}${strSet.size>0?` <span class="inbk-tag-strat">전략 ${strSet.size}</span>`:''}</td>
       ${cells}
-      <td><strong>${totalVal?Math.round(totalVal).toLocaleString('ko-KR'):'·'}</strong></td>
+      <td class="${isAchMode?achColor(totalVal):''}"><strong>${totalFmt}</strong></td>
       <td>${lyTotal?Math.round(lyTotal).toLocaleString('ko-KR'):'—'}</td>
       <td>${lyDelta!=null?`<span class="${lyDelta>=0?'gain-pos':'gain-neg'}">${lyDelta>=0?'+':''}${lyDelta}%</span>`:'—'}</td>
     </tr>${stratRow}${detailRow}`;
@@ -3690,16 +3729,29 @@ async function renderInboundKpiPane(){
   /* Total row */
   const totMonthly = totS.monthly || [];
   const budMonthly = totB.monthly || [];
+  /* 전체 OTB 실적 합산 */
+  let grandActYtd = 0;
+  Object.values(otbYtd).forEach(v=>{grandActYtd+=v.rns_actual;});
   const totRow = `<tr class="total-row">
     <td class="arrow-cell"></td>
     <td class="left">합계 (${propsScoped.length}개 사업장)</td>
     ${totMonthly.map((s,i)=>{
       const b = budMonthly[i]||0;
-      const v = inbkMode==='budget'?b: inbkMode==='gap'?(s-b):s;
-      const cls = inbkMode==='gap'?(v>0?'gain-pos':v<0?'gain-neg':''):'';
-      return `<td class="month-col ${cls}">${v?Math.round(v).toLocaleString('ko-KR'):'·'}</td>`;
+      const mi = i+1;
+      let totMonAct = 0;
+      if(isActualMode) propsScoped.forEach(p=>{ if(otbMonthly[mi]&&otbMonthly[mi][p]) totMonAct+=otbMonthly[mi][p].rns_actual; });
+      const v = valueOf(b, s, 0, inbkMode, isActualMode?totMonAct:null);
+      const isAch = inbkMode==='achStretch'||inbkMode==='achBudget';
+      const cls = inbkMode==='gap'?(v>0?'gain-pos':v<0?'gain-neg':''):isAch?achColor(v):'';
+      const fmt = isAch?(v!=null?v+'%':'·'):(v?Math.round(v).toLocaleString('ko-KR'):'·');
+      return `<td class="month-col ${cls}">${fmt}</td>`;
     }).join('')}
-    <td><strong>${(inbkMode==='budget'?totB.rns_total:inbkMode==='gap'?((totS.rns_total||0)-(totB.rns_total||0)):totS.rns_total||0).toLocaleString('ko-KR')}</strong></td>
+    ${(()=>{
+      const isAch = inbkMode==='achStretch'||inbkMode==='achBudget';
+      const tv = valueOf(totB.rns_total, totS.rns_total, 0, inbkMode, isActualMode?grandActYtd:null);
+      const fmt = isAch?(tv!=null?tv+'%':'·'):(tv!=null?Math.round(tv).toLocaleString('ko-KR'):'·');
+      return `<td class="${isAch?achColor(tv):''}"><strong>${fmt}</strong></td>`;
+    })()}
     <td>${ly25?ly25.toLocaleString('ko-KR'):'—'}</td>
     <td>${yoyPct!=null?`<span class="${yoyPct>=0?'gain-pos':'gain-neg'}">${yoyPct>=0?'+':''}${yoyPct}%</span>`:'—'}</td>
   </tr>`;
@@ -4309,6 +4361,10 @@ function c86SegColor(seg){
 function renderC86(){
   const pane=document.getElementById('campaign86-pane');
   if(!pane)return;
+  /* OTA 모드에서만 기획전 실적 카드 표시 */
+  if(typeof curRole!=='undefined'&&curRole!=='ota'){
+    pane.style.display='none';return;
+  }
   const d=c86Cache;
   if(!d||!d.total||d.total.rn===0){
     pane.style.display='none';
@@ -4352,6 +4408,7 @@ function renderC86(){
         <span>KPI ${c86Fmt(totalKpiRn)}실 / ${c86Fmt(totalKpiRevM)}백만</span>
         <span>코드 ${d.meta.total_pkg_codes||0}개</span>
         <span>${d.generated_at||''}</span>
+        <button onclick="downloadC86Excel()" style="background:var(--gold);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer;letter-spacing:0.05em;white-space:nowrap">엑셀 다운로드</button>
       </div>
     </div>
     <div class="c86-summary">
@@ -4520,6 +4577,130 @@ function c86SwitchTab(tab){
 function c86SwitchMonth(mo){
   c86Month=mo;
   renderC86();
+}
+
+/* ── C86 엑셀 다운로드 ── */
+function downloadC86Excel(){
+  if(!c86Cache){alert('데이터가 로드되지 않았습니다.');return;}
+  const d=c86Cache;
+  const wb=XLSX.utils.book_new();
+  const hdr={font:{name:'대명체',bold:true,sz:10},fill:{fgColor:{rgb:'F2E8D4'}},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}},alignment:{horizontal:'center',vertical:'center'}};
+  const cell={font:{name:'대명체',sz:10},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}},alignment:{vertical:'center'}};
+  const numFmt='#,##0';
+  const decFmt='#,##0.00';
+
+  function applyStyles(ws,range,rows){
+    if(!ws['!ref'])return;
+    const R=XLSX.utils.decode_range(ws['!ref']);
+    for(let r=R.s.r;r<=R.e.r;r++){
+      for(let c=R.s.c;c<=R.e.c;c++){
+        const addr=XLSX.utils.encode_cell({r,c});
+        if(!ws[addr])continue;
+        if(r===0){ws[addr].s=hdr;}
+        else{ws[addr].s={...cell};}
+        if(r>0&&c>=1){
+          const v=ws[addr].v;
+          if(typeof v==='number'){
+            ws[addr].s.alignment={horizontal:'right',vertical:'center'};
+            ws[addr].z=(v===Math.round(v))?numFmt:decFmt;
+          }
+        }
+      }
+    }
+  }
+
+  /* 1) 서머리 시트 */
+  const summData=[
+    ['항목','객실수(실)','ADR(천원)','객실매출(백만)','총매출(백만)','수수료(백만)'],
+    ['전체합계',d.total.rn,d.total.adr,d.total.room_rev_m,d.total.total_rev_m,d.total.commission_m]
+  ];
+  const months=d.meta.months||[];
+  months.forEach(m=>{
+    const md=d.monthly[m]||{};
+    summData.push([m.slice(0,4)+'-'+m.slice(4),md.rn||0,md.adr||0,md.room_rev_m||0,md.total_rev_m||0,md.commission_m||0]);
+  });
+  const wsSumm=XLSX.utils.aoa_to_sheet(summData);
+  wsSumm['!cols']=[{wch:14},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14}];
+  applyStyles(wsSumm);
+  XLSX.utils.book_append_sheet(wb,wsSumm,'서머리');
+
+  /* 2) 세그먼트별 시트 */
+  const segData=[['세그먼트','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']];
+  const segTotals=d.by_segment&&d.by_segment.totals||{};
+  Object.keys(segTotals).forEach(seg=>{
+    const s=segTotals[seg];
+    segData.push([seg,s.rn,s.adr,s.room_rev_m,s.total_rev_m,s.commission_m]);
+  });
+  if(d.by_segment&&d.by_segment.monthly){
+    segData.push([]);
+    segData.push(['세그먼트','월','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']);
+    Object.keys(d.by_segment.monthly).forEach(seg=>{
+      Object.keys(d.by_segment.monthly[seg]).forEach(m=>{
+        const v=d.by_segment.monthly[seg][m];
+        segData.push([seg,m.slice(0,4)+'-'+m.slice(4),v.rn,v.adr,v.room_rev_m,v.total_rev_m,v.commission_m]);
+      });
+    });
+  }
+  const wsSeg=XLSX.utils.aoa_to_sheet(segData);
+  wsSeg['!cols']=[{wch:12},{wch:12},{wch:10},{wch:12},{wch:14},{wch:14},{wch:14}];
+  applyStyles(wsSeg);
+  XLSX.utils.book_append_sheet(wb,wsSeg,'세그먼트별');
+
+  /* 3) 사업장별 시트 */
+  const propData=[['사업장','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']];
+  const propTotals=d.by_property&&d.by_property.totals||{};
+  Object.keys(propTotals).forEach(p=>{
+    const v=propTotals[p];
+    propData.push([p,v.rn,v.adr,v.room_rev_m,v.total_rev_m,v.commission_m]);
+  });
+  if(d.by_property&&d.by_property.monthly){
+    propData.push([]);
+    propData.push(['사업장','월','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']);
+    Object.keys(d.by_property.monthly).forEach(p=>{
+      Object.keys(d.by_property.monthly[p]).forEach(m=>{
+        const v=d.by_property.monthly[p][m];
+        propData.push([p,m.slice(0,4)+'-'+m.slice(4),v.rn,v.adr,v.room_rev_m,v.total_rev_m,v.commission_m]);
+      });
+    });
+  }
+  const wsProp=XLSX.utils.aoa_to_sheet(propData);
+  wsProp['!cols']=[{wch:26},{wch:12},{wch:10},{wch:14},{wch:14},{wch:14},{wch:14}];
+  applyStyles(wsProp);
+  XLSX.utils.book_append_sheet(wb,wsProp,'사업장별');
+
+  /* 4) 거래처(채널)별 시트 */
+  const chData=[['거래처','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']];
+  const byChannel=d.by_channel||{};
+  Object.keys(byChannel).forEach(ch=>{
+    const v=byChannel[ch];
+    chData.push([ch,v.rn,v.adr,v.room_rev_m,v.total_rev_m,v.commission_m]);
+  });
+  const wsCh=XLSX.utils.aoa_to_sheet(chData);
+  wsCh['!cols']=[{wch:18},{wch:12},{wch:10},{wch:14},{wch:14},{wch:14}];
+  applyStyles(wsCh);
+  XLSX.utils.book_append_sheet(wb,wsCh,'거래처별');
+
+  /* 5) KPI 달성 시트 */
+  const kpi=d.kpi||{};
+  const ach=kpi.achievement||{};
+  const kpiData=[['세그먼트','KPI 목표(실)','실적(실)','달성률(%)']];
+  Object.keys(ach).forEach(seg=>{
+    const a=ach[seg];
+    kpiData.push([seg,a.kpi_rn||0,a.actual_rn||0,a.pct!=null?a.pct:0]);
+  });
+  kpiData.push([]);
+  kpiData.push(['전체 KPI 목표(실)',kpi.total_kpi_rn||0]);
+  kpiData.push(['전체 KPI 목표(백만)',kpi.total_kpi_rev_m||0]);
+  kpiData.push(['전체 실적(실)',d.total.rn]);
+  kpiData.push(['전체 실적(백만)',d.total.total_rev_m]);
+  const wsKpi=XLSX.utils.aoa_to_sheet(kpiData);
+  wsKpi['!cols']=[{wch:16},{wch:14},{wch:12},{wch:12}];
+  applyStyles(wsKpi);
+  XLSX.utils.book_append_sheet(wb,wsKpi,'KPI달성');
+
+  /* 다운로드 */
+  const fname='기획전실적_'+( d.campaign_name||'C86').replace(/[\\/:*?"<>|]/g,'')+'_'+(d.generated_at||'').slice(0,10).replace(/-/g,'')+'.xlsx';
+  XLSX.writeFile(wb,fname);
 }
 
 /* ═══ 기획전 ROI 분석 ═══ */
