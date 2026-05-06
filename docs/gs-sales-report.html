@@ -1027,11 +1027,11 @@ a{color:inherit}
       </div>
       <div class="goal-grid">
         <div class="goal-cell">
-          <div class="goal-cell-label">월별 목표 vs OTB 실적</div>
+          <div class="goal-cell-label">OTB 실적 vs 월별 목표</div>
           <div class="gauge-wrap">
             <div class="gauge-bar" id="gauge-bar" style="width:0%"></div>
             <div class="gauge-marker" id="gauge-marker" style="left:0%;display:none"></div>
-            <div class="gauge-text"><span id="gauge-pct">—%</span><span id="gauge-side" style="color:var(--ink-faint);font-weight:600">목표 — / 채움 —</span></div>
+            <div class="gauge-text"><span id="gauge-pct">—%</span><span id="gauge-side" style="color:var(--ink-faint);font-weight:600">매출 — / 목표 —</span></div>
           </div>
           <div class="goal-cell-sub" id="gauge-status-row">
             <span class="goal-status-badge" id="goal-status-badge">상태 —</span>
@@ -1054,18 +1054,21 @@ a{color:inherit}
       <!-- Mini KPI cards (RN/ADR/REV breakdown) -->
       <div style="padding:14px 18px 18px;border-top:1px solid var(--rule)">
         <div class="goal-mini-grid">
-          <div class="goal-mini">
-            <div class="goal-mini-label">객실수 채움 / 목표</div>
-            <div class="goal-mini-value" id="mini-rn">— / —</div>
-            <div class="goal-mini-label" id="mini-rn-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">달성률 —</div>
+          <div class="goal-mini" style="grid-column:1/-1">
+            <div class="goal-mini-label">객실수(RN) 실적 vs 목표</div>
+            <div class="gauge-wrap" style="height:32px;margin-top:4px">
+              <div class="gauge-bar" id="rn-gauge-bar" style="width:0%"></div>
+              <div class="gauge-text" style="font-size:11px"><span id="rn-gauge-pct">—%</span><span id="rn-gauge-side" style="color:var(--ink-faint);font-weight:600">실적 — / 목표 —</span></div>
+            </div>
+            <div class="goal-mini-label" id="mini-rn-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0;margin-top:4px">달성률 —</div>
           </div>
           <div class="goal-mini">
-            <div class="goal-mini-label">매출 채움 / 목표 (백만원)</div>
+            <div class="goal-mini-label">매출 실적 / 목표 (백만원)</div>
             <div class="goal-mini-value gold" id="mini-rev">— / —</div>
             <div class="goal-mini-label" id="mini-rev-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">달성률 —</div>
           </div>
           <div class="goal-mini">
-            <div class="goal-mini-label">건수 / 채널 / 사업장</div>
+            <div class="goal-mini-label">기획전 건수 / 채널 / 사업장</div>
             <div class="goal-mini-value pos" id="mini-ct">—건</div>
             <div class="goal-mini-label" id="mini-ct-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">— 채널 · — 사업장</div>
           </div>
@@ -1131,10 +1134,8 @@ a{color:inherit}
     <!-- 아웃바운드 해외 사업장 (아웃바운드 담당 모드 전용 — overseas_data.json) -->
     <div id="outbound-pane" style="display:none"></div>
 
-    <!-- 경쟁사 가격 비교 -->
-    <div id="comp-pane">
-      <div class="empty-state" style="padding:30px 20px"><div class="empty-state-icon">⏳</div><div class="empty-state-title">경쟁사 가격 데이터 로딩 중...</div></div>
-    </div>
+    <!-- 경쟁사 가격 비교 (삭제됨) -->
+    <div id="comp-pane" style="display:none!important"></div>
 
     <!-- OCC / 재고 히트맵 -->
     <div id="occ-pane">
@@ -1188,7 +1189,7 @@ let selStatus = '전체';
 let curGoalMonth = null;       // 'YYYY-MM'
 let curGoalYear = 26;          // 25 or 26
 /* 원본 goal-section 내부 HTML (인바운드 ↔ 다른 모드 전환 시 복원용) */
-const GOAL_SECTION_ORIGINAL_HTML = `<div class="goal-head"><div><div class="goal-head-title">월별 목표 게이지</div><div class="goal-head-sub">OTB 실적 vs. 월별 목표 · 추가 필요량 · FCST · 전년 비교 (기획전 KPI는 부가 표시)</div></div><div class="goal-month-tabs" id="goal-month-tabs"></div></div><div class="goal-grid"><div class="goal-cell"><div class="goal-cell-label">월별 목표 vs OTB 실적</div><div class="gauge-wrap"><div class="gauge-bar" id="gauge-bar" style="width:0%"></div><div class="gauge-marker" id="gauge-marker" style="left:0%;display:none"></div><div class="gauge-text"><span id="gauge-pct">—%</span><span id="gauge-side" style="color:var(--ink-faint);font-weight:600">목표 — / 채움 —</span></div></div><div class="goal-cell-sub" id="gauge-status-row"><span class="goal-status-badge" id="goal-status-badge">상태 —</span></div></div><div class="goal-cell"><div class="goal-cell-label">REVENUE 실적 (OTB)</div><div class="goal-cell-value" id="rev-actual-val">—<span class="unit">백만원</span></div><div class="goal-cell-sub">목표 <strong id="rev-target-val">—</strong> · 추가 필요 <span id="rev-gap-val" class="warn">—</span><br>기획전 채움 <strong id="rev-fill-val" style="color:var(--gold-bright)">—</strong></div></div><div class="goal-cell"><div class="goal-cell-label">전년 / FCST 비교</div><div class="goal-cell-value" id="ly-vs-fcst-val" style="font-size:18px">전년 — / FCST —</div><div class="goal-cell-sub" id="ly-fcst-sub">—</div></div></div><div style="padding:14px 18px 18px;border-top:1px solid var(--rule)"><div class="goal-mini-grid"><div class="goal-mini"><div class="goal-mini-label">객실수 채움 / 목표</div><div class="goal-mini-value" id="mini-rn">— / —</div><div class="goal-mini-label" id="mini-rn-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">달성률 —</div></div><div class="goal-mini"><div class="goal-mini-label">매출 채움 / 목표 (백만원)</div><div class="goal-mini-value gold" id="mini-rev">— / —</div><div class="goal-mini-label" id="mini-rev-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">달성률 —</div></div><div class="goal-mini"><div class="goal-mini-label">건수 / 채널 / 사업장</div><div class="goal-mini-value pos" id="mini-ct">—건</div><div class="goal-mini-label" id="mini-ct-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">— 채널 · — 사업장</div></div></div></div>`;
+const GOAL_SECTION_ORIGINAL_HTML = `<div class="goal-head"><div><div class="goal-head-title">월별 목표 게이지</div><div class="goal-head-sub">OTB 실적 vs. 월별 목표 · 추가 필요량 · FCST · 전년 비교 (기획전 KPI는 부가 표시)</div></div><div class="goal-month-tabs" id="goal-month-tabs"></div></div><div class="goal-grid"><div class="goal-cell"><div class="goal-cell-label">OTB 실적 vs 월별 목표</div><div class="gauge-wrap"><div class="gauge-bar" id="gauge-bar" style="width:0%"></div><div class="gauge-marker" id="gauge-marker" style="left:0%;display:none"></div><div class="gauge-text"><span id="gauge-pct">—%</span><span id="gauge-side" style="color:var(--ink-faint);font-weight:600">매출 — / 목표 —</span></div></div><div class="goal-cell-sub" id="gauge-status-row"><span class="goal-status-badge" id="goal-status-badge">상태 —</span></div></div><div class="goal-cell"><div class="goal-cell-label">REVENUE 실적 (OTB)</div><div class="goal-cell-value" id="rev-actual-val">—<span class="unit">백만원</span></div><div class="goal-cell-sub">목표 <strong id="rev-target-val">—</strong> · 추가 필요 <span id="rev-gap-val" class="warn">—</span><br>기획전 채움 <strong id="rev-fill-val" style="color:var(--gold-bright)">—</strong></div></div><div class="goal-cell"><div class="goal-cell-label">전년 / FCST 비교</div><div class="goal-cell-value" id="ly-vs-fcst-val" style="font-size:18px">전년 — / FCST —</div><div class="goal-cell-sub" id="ly-fcst-sub">—</div></div></div><div style="padding:14px 18px 18px;border-top:1px solid var(--rule)"><div class="goal-mini-grid"><div class="goal-mini" style="grid-column:1/-1"><div class="goal-mini-label">객실수(RN) 실적 vs 목표</div><div class="gauge-wrap" style="height:32px;margin-top:4px"><div class="gauge-bar" id="rn-gauge-bar" style="width:0%"></div><div class="gauge-text" style="font-size:11px"><span id="rn-gauge-pct">—%</span><span id="rn-gauge-side" style="color:var(--ink-faint);font-weight:600">실적 — / 목표 —</span></div></div><div class="goal-mini-label" id="mini-rn-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0;margin-top:4px">달성률 —</div></div><div class="goal-mini"><div class="goal-mini-label">매출 실적 / 목표 (백만원)</div><div class="goal-mini-value gold" id="mini-rev">— / —</div><div class="goal-mini-label" id="mini-rev-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">달성률 —</div></div><div class="goal-mini"><div class="goal-mini-label">기획전 건수 / 채널 / 사업장</div><div class="goal-mini-value pos" id="mini-ct">—건</div><div class="goal-mini-label" id="mini-ct-sub" style="color:var(--ink-muted);font-weight:600;text-transform:none;letter-spacing:0">— 채널 · — 사업장</div></div></div></div>`;
 let calCursor = null;
 let calMode = 'stay';          // 투숙기간 기준 default
 let selectedEventIdx = null;   // 우측 목록에서 선택된 기획전 idx → 캘린더에서 투숙기간 강조
@@ -1912,7 +1913,7 @@ async function renderGoal(){
     gaugePct.textContent=pct+'%';
     const tgtMM=Math.round(targetForGauge/1000000);
     const fillMM=Math.round(fillForGauge/1000000);
-    gaugeSide.textContent=`목표 ${tgtMM.toLocaleString('ko-KR')}백만 / 채움 ${fillMM.toLocaleString('ko-KR')}백만`;
+    gaugeSide.textContent=`매출 ${fillMM.toLocaleString('ko-KR')}백만 / 목표 ${tgtMM.toLocaleString('ko-KR')}백만`;
 
     if(fcstPct!=null){
       gaugeMarker.style.left=Math.min(98,fcstPct)+'%';
@@ -1932,7 +1933,7 @@ async function renderGoal(){
     gaugeMarker.style.display='none';
     gaugePct.textContent='—%';
     const fillMM=Math.round(fillForGauge/1000000);
-    gaugeSide.textContent=`목표 미설정 · 채움 ${fillMM.toLocaleString('ko-KR')}백만`;
+    gaugeSide.textContent=`매출 ${fillMM.toLocaleString('ko-KR')}백만 · 목표 미설정`;
     goalBadge.className='goal-status-badge warn';
     goalBadge.innerHTML='● 월 목표(OTB Budget) 미연동';
   }
@@ -1947,8 +1948,8 @@ async function renderGoal(){
   document.getElementById('rev-fill-val').textContent=Math.round(kpiRev/1000000).toLocaleString('ko-KR')+'백만';
 
   /* 전년/FCST cell */
-  const lyTxt=revLY?Math.round(revLY/100000000).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억':'—';
-  const fcstTxt=revFcst?Math.round(revFcst/100000000).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억':'—';
+  const lyTxt=revLY?(revLY/100000000).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})+'억':'—';
+  const fcstTxt=revFcst?(revFcst/100000000).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})+'억':'—';
   document.getElementById('ly-vs-fcst-val').innerHTML=`전년 <strong>${lyTxt}</strong> / FCST <strong style="color:var(--info)">${fcstTxt}</strong>`;
   let lyDiff='—';
   if(revLY&&fillForGauge){
@@ -1959,9 +1960,25 @@ async function renderGoal(){
   document.getElementById('ly-fcst-sub').innerHTML=lyDiff;
 
   /* Mini cards — 채움은 OTB 실적 기준 */
-  document.getElementById('mini-rn').textContent=`${fmtNum(fillRnForGauge)} / ${fmtNum(rnsTarget)}`;
+  /* RN 게이지 바 */
   const rnAch=rnsTarget>0?Math.round((fillRnForGauge/rnsTarget)*100):null;
-  document.getElementById('mini-rn-sub').textContent=rnAch!=null?`달성률 ${rnAch}%`:'목표 미설정';
+  const rnGaugeBar=document.getElementById('rn-gauge-bar');
+  const rnGaugePct=document.getElementById('rn-gauge-pct');
+  const rnGaugeSide=document.getElementById('rn-gauge-side');
+  if(rnGaugeBar){
+    if(rnAch!=null){
+      const rnW=Math.min(120,rnAch);
+      rnGaugeBar.style.width=rnW+'%';
+      rnGaugeBar.className='gauge-bar '+(rnAch>=90?'':rnAch>=60?'warn':'neg');
+      rnGaugePct.textContent=rnAch+'%';
+      rnGaugeSide.textContent=`실적 ${fmtNum(fillRnForGauge)} / 목표 ${fmtNum(rnsTarget)}`;
+    }else{
+      rnGaugeBar.style.width='0%';
+      rnGaugePct.textContent='—%';
+      rnGaugeSide.textContent=`실적 ${fmtNum(fillRnForGauge)} · 목표 미설정`;
+    }
+  }
+  document.getElementById('mini-rn-sub').textContent=rnAch!=null?`달성률 ${rnAch}% · 추가 필요 ${fmtNum(Math.max(0,(rnsTarget||0)-fillRnForGauge))}실`:'목표 미설정';
 
   document.getElementById('mini-rev').textContent=`${Math.round(fillForGauge/1000000).toLocaleString('ko-KR')} / ${targetForGauge?Math.round(targetForGauge/1000000).toLocaleString('ko-KR'):'—'}`;
   document.getElementById('mini-rev-sub').textContent=pct!=null?`달성률 ${pct}%`:'목표 미설정';
@@ -2334,7 +2351,7 @@ async function render(){
   document.getElementById('cal-list-pane').style.display='';
   document.querySelector('.cal-legend').style.display='';
   document.getElementById('mgmt-pane').style.display='';
-  document.getElementById('comp-pane').style.display='';
+  /* comp-pane 삭제됨 — display 복원 안 함 */
   document.getElementById('occ-pane').style.display='';
   document.getElementById('campaign-roi-pane').style.display='';
 
@@ -2353,7 +2370,7 @@ async function render(){
   renderMgmtCards();
   try{await renderInboundKpiPane()}catch(e){console.error('[SalesReport] KPI pane 렌더 오류:',e)}
   try{await renderInboundPartners()}catch(e){console.error('[SalesReport] Inbound partners 렌더 오류:',e)}
-  renderCompetitorCards();
+  /* renderCompetitorCards(); — 경쟁사 가격비교 섹션 삭제됨 */
   renderOccHeatmap();
   renderCampaignRoi();
   /* 기획전 86 실적 카드 */
@@ -4930,6 +4947,119 @@ async function renderCampaignRoi(){
         ${adr?`<div style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--rule);font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);text-align:center">평균 ADR ₩${fmtNum(adr)} · ${fmtNum(totalRev/totalRn*1000)}천원/실</div>`:''}
       </div>
     </div>`;
+
+    /* ── 인플루언서 상세 표 (campaign_data.json events 기반) ── */
+    const infEvents=(campaignDataCache.events||[]).filter(e=>e['채널카테고리']==='인플루언서');
+    if(infEvents.length){
+      /* top_performers에서 인플루언서별 RN/매출 매핑 (이름 정규화) */
+      const perfMap=new Map();
+      top.forEach(t=>{perfMap.set(t.name.trim(),t)});
+      const infDetailRows=infEvents.map(ev=>{
+        /* 채널명에서 인플루언서명 추출: "인플루언서xG마켓(요미맘)" → "요미맘" 또는 "인플루언서(스마트인피니)" → "스마트인피니" */
+        let infName='—';
+        const chName=ev['채널']||'';
+        const pMatch=chName.match(/\(([^)]+)\)/);
+        if(pMatch) infName=pMatch[1];
+        else if(chName.includes('x')) infName=chName.split('x').pop().trim();
+        /* top_performers에서 매칭 시도 */
+        let rn='—', rev='—', adrVal='—';
+        for(const [k,v] of perfMap){
+          if(k.includes(infName)||infName.includes(k.replace(/@/g,'').replace(/\(.*\)/g,'').trim())){
+            rn=fmtNum(v.rns);
+            rev=fmtNum(v.rev)+'백만';
+            adrVal=v.rns>0?'₩'+fmtNum(Math.round(v.rev*1000000/v.rns)):'—';
+            break;
+          }
+        }
+        return `<tr>
+          <td style="text-align:left">${escapeHtml(ev['사업장']||'—')}</td>
+          <td style="text-align:left">${escapeHtml(infName)}</td>
+          <td>${escapeHtml(ev['판매시작']||'—')}~${escapeHtml((ev['판매종료']||'').slice(5))}</td>
+          <td>${escapeHtml(ev['투숙시작']||'—')}~${escapeHtml((ev['투숙종료']||'').slice(5))}</td>
+          <td>${rn}</td>
+          <td>${adrVal}</td>
+          <td>${rev}</td>
+        </tr>`;
+      });
+      infHtml+=`<div class="cmproi-card" style="grid-column:1/-1">
+        <div class="cmproi-card-head">
+          <div class="cmproi-card-title">인플루언서 상세 현황 (${infEvents.length}건)</div>
+          <div class="cmproi-card-sub">campaign_data 기반 · 객실수/ADR/매출은 top_performers 매칭 시 표시</div>
+        </div>
+        <div class="cmproi-card-body" style="padding:0;max-height:360px;overflow-y:auto">
+          <table class="c86-table" style="font-size:10.5px">
+            <thead><tr>
+              <th style="text-align:left">판매사업장</th>
+              <th style="text-align:left">인플루언서명</th>
+              <th>판매일자</th>
+              <th>투숙일자</th>
+              <th>객실수</th>
+              <th>ADR</th>
+              <th>매출</th>
+            </tr></thead>
+            <tbody>${infDetailRows.join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+
+    /* ── 인플루언서 매출 비중 추이 라인 차트 ── */
+    const infCbm=(campaignDataCache.channel_by_month||{})['인플루언서']||{};
+    const infTotalRev=i26.total_rev||0; /* 백만원 */
+    /* 월별 기획전 건수 기반 매출 비례 배분 */
+    const infMonthCounts={};
+    let infCountSum=0;
+    for(let mi=1;mi<=12;mi++){
+      const mk=`2026-${String(mi).padStart(2,'0')}`;
+      const cnt=infCbm[mk]||0;
+      infMonthCounts[mi]=cnt;
+      infCountSum+=cnt;
+    }
+    if(infCountSum>0&&otbCache&&otbCache.allMonths){
+      const shareData=[];
+      for(let mi=1;mi<=12;mi++){
+        const mBlock=otbCache.allMonths[String(mi)];
+        const otaRev=mBlock&&mBlock.segmentData&&mBlock.segmentData['OTA']?mBlock.segmentData['OTA'].rev_actual||0:0;
+        const infRevM=infTotalRev*(infMonthCounts[mi]/infCountSum); /* 백만원 */
+        const infRevWon=infRevM*1000000;
+        const share=otaRev>0?(infRevWon/otaRev*100):0;
+        shareData.push({month:mi,share:parseFloat(share.toFixed(1)),infRev:Math.round(infRevM),otaRev:Math.round(otaRev/1000000)});
+      }
+      const maxShare=Math.max(...shareData.map(s=>s.share),10);
+      const chartH=120,chartW=400,padL=36,padR=10,padT=10,padB=24;
+      const plotW=chartW-padL-padR,plotH=chartH-padT-padB;
+      const points=shareData.map((s,i)=>{
+        const x=padL+i*(plotW/11);
+        const y=padT+plotH-(s.share/maxShare)*plotH;
+        return {x,y,...s};
+      });
+      const polyline=points.map(p=>`${p.x},${p.y}`).join(' ');
+      const area=`${points[0].x},${padT+plotH} ${polyline} ${points[points.length-1].x},${padT+plotH}`;
+      const gridLines=Array.from({length:5},(_,i)=>{
+        const val=Math.round(maxShare/4*i*10)/10;
+        const yy=padT+plotH-plotH*(val/maxShare);
+        return `<line x1="${padL}" x2="${chartW-padR}" y1="${yy}" y2="${yy}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                <text x="${padL-4}" y="${yy+3}" text-anchor="end" fill="var(--ink-faint)" font-size="8" font-family="var(--mono)">${val}%</text>`;
+      }).join('');
+      const xLabels=points.map(p=>`<text x="${p.x}" y="${padT+plotH+14}" text-anchor="middle" fill="var(--ink-faint)" font-size="8" font-family="var(--mono)">${p.month}월</text>`).join('');
+      const dots=points.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--gold)" stroke="var(--bg-card)" stroke-width="1.5"><title>${p.month}월: ${p.share}% (인플 ${fmtNum(p.infRev)}백만 / OTA ${fmtNum(p.otaRev)}백만)</title></circle>`).join('');
+
+      infHtml+=`<div class="cmproi-card" style="grid-column:1/-1">
+        <div class="cmproi-card-head">
+          <div class="cmproi-card-title">인플루언서 매출 비중 추이</div>
+          <div class="cmproi-card-sub">월별 인플루언서 매출 / 전체 OTA 매출 비중 (%) · 기획전 건수 기반 비례 배분 추정</div>
+        </div>
+        <div class="cmproi-card-body" style="display:flex;justify-content:center;padding:12px 8px">
+          <svg viewBox="0 0 ${chartW} ${chartH}" width="100%" style="max-width:${chartW}px">
+            ${gridLines}
+            ${xLabels}
+            <polygon points="${area}" fill="rgba(201,160,99,0.10)"/>
+            <polyline points="${polyline}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>
+            ${dots}
+          </svg>
+        </div>
+      </div>`;
+    }
   }
 
   /* KPI 미등록 알림 (CSV의 'KPI (객실수 실)' / 'KPI 매출 (백만원)' 두 컬럼 모두 빈 행 카운트) */
