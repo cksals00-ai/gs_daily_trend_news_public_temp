@@ -2805,7 +2805,8 @@ def main():
                          "yoy_adjusted",
                          "pickup_daily_by_channel", "cancel_daily_by_channel",
                          "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
-                         "by_channel_segment"):
+                         "by_channel_segment",
+                         "net_daily_by_segment", "net_daily_by_month_seg"):
                 if key in agg_data:
                     docs_agg[key] = agg_data[key]
                     synced_keys.append(key)

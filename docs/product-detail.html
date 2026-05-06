@@ -407,6 +407,24 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   function fmtN(v){return Math.round(v).toLocaleString('ko-KR');}
   function fmtR(v){return (Math.round(v*10)/10).toLocaleString('ko-KR');}
 
+  // by_property 키가 "17. 소노캄 거제" 형태이므로 번호 접두어 제거 후 매칭
+  var _propKeyMap = null;
+  function getPropData(propName) {
+    if (!pkg || !pkg.by_property) return null;
+    // 직접 매칭 시도
+    if (pkg.by_property[propName]) return pkg.by_property[propName];
+    // 번호 접두어 제거 매핑 생성 (1회)
+    if (!_propKeyMap) {
+      _propKeyMap = {};
+      Object.keys(pkg.by_property).forEach(function(k) {
+        var stripped = k.replace(/^\d+\.\s*/, '');
+        _propKeyMap[stripped] = k;
+      });
+    }
+    var realKey = _propKeyMap[propName];
+    return realKey ? pkg.by_property[realKey] : null;
+  }
+
   function sumCat(cat, year) {
     if (!pkg) return {rn:0, rev_m:0, adr:0};
     var data = {};
@@ -417,7 +435,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       var props = Array.from(activePropsSet);
       var mergedByCategory = {};
       props.forEach(function(prop) {
-        var propData = pkg.by_property[prop];
+        var propData = getPropData(prop);
         if (!propData || !propData.by_category) return;
         Object.keys(propData.by_category).forEach(function(c) {
           if (!mergedByCategory[c]) {
@@ -479,7 +497,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     if (activePropsSet.size > 0 && pkg.by_property) {
       var props = Array.from(activePropsSet);
       props.forEach(function(prop) {
-        var propRanking = (pkg.by_property[prop] && pkg.by_property[prop].by_year_ranking) ? pkg.by_property[prop].by_year_ranking[selYear] || [] : [];
+        var pd = getPropData(prop);
+        var propRanking = (pd && pd.by_year_ranking) ? pd.by_year_ranking[selYear] || [] : [];
         r = r.concat(propRanking);
       });
     } else {
