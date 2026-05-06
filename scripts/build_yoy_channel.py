@@ -97,7 +97,7 @@ def _proc_booking_file(fp: Path, base_date_str: str, by_ch_month):
                         seg = classify_segment(code_num, code_name, agent_nm, file_type)
                         if seg not in ("OTA", "G-OTA", "Inbound"):
                             continue
-                        ch = extract_channel(agent_nm)
+                        ch = extract_channel(agent_nm, code_num)
                         rooms_s = parts[idx_rooms].strip() if 0 <= idx_rooms < plen else ''
                         rooms = int(rooms_s) if rooms_s else 0
                         rate_s = parts[idx_1night].strip() if 0 <= idx_1night < plen else ''
@@ -164,7 +164,7 @@ def _proc_cancel_file(fp: Path, base_date_str: str, by_ch_month):
                         seg = classify_segment(code_num, code_name, agent_nm, file_type)
                         if seg not in ("OTA", "G-OTA", "Inbound"):
                             continue
-                        ch = extract_channel(agent_nm)
+                        ch = extract_channel(agent_nm, code_num)
                         rooms_s = parts[idx_rooms].strip() if 0 <= idx_rooms < plen else ''
                         rooms = int(rooms_s) if rooms_s else 0
                         rate_s = parts[idx_1night].strip() if 0 <= idx_1night < plen else ''

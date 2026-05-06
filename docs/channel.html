@@ -194,6 +194,11 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
 
+<div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">구분:</span>
+  <div id="mobile-segment-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+</div>
+
 <div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
   <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
@@ -227,7 +232,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="sidebar-divider"></div>
     <div>
-      <div class="filter-section-label">세그먼트</div>
+      <div class="filter-section-label">구분</div>
       <div class="filter-chips" id="segment-chips"></div>
     </div>
     <div class="sidebar-divider"></div>
@@ -996,7 +1001,6 @@ function buildFilters() {
       btn.textContent = y;
       btn.addEventListener('click', () => {
         activeYear = y;
-        showAllChannels = false;
         document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip').forEach(b => b.classList.toggle('active', b.textContent === activeYear));
         buildMonthChips();
         render();
@@ -1027,7 +1031,6 @@ function buildMonthChips() {
     btn.textContent = l;
     btn.addEventListener('click', () => {
       activeMonth = v;
-      showAllChannels = false;
       mc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent.replace('월','') === (v==='0'?'전체':parseInt(v).toString()+'') || (v==='0'&&b.textContent==='전체')));
       render();
     });
@@ -1037,25 +1040,27 @@ function buildMonthChips() {
 
 function buildSegmentChips() {
   const sc = document.getElementById('segment-chips');
-  if (!sc) return;
-  sc.innerHTML = '';
+  const msc = document.getElementById('mobile-segment-chips');
   const segments = [
     { v: 'ALL', l: '전체' },
     { v: 'OTA', l: 'OTA' },
     { v: 'G-OTA', l: 'G-OTA' },
-    { v: 'Inbound', l: 'Inbound' },
   ];
-  segments.forEach(({v, l}) => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (v === activeSegment ? ' active' : '');
-    btn.textContent = l;
-    btn.addEventListener('click', () => {
-      activeSegment = v;
-      showAllChannels = false;
-      sc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent === l));
-      render();
+  [sc, msc].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    segments.forEach(({v, l}) => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (v === activeSegment ? ' active' : '');
+      btn.textContent = l;
+      btn.dataset.value = v;
+      btn.addEventListener('click', () => {
+        activeSegment = v;
+        document.querySelectorAll('#segment-chips .chip, #mobile-segment-chips .chip').forEach(b => b.classList.toggle('active', b.dataset.value === v));
+        render();
+      });
+      c.appendChild(btn);
     });
-    sc.appendChild(btn);
   });
 }
 
@@ -1077,7 +1082,6 @@ function buildRegionChips() {
           b.classList.toggle('active', b.dataset.value === activeRegion);
         });
         buildPropChips();
-        showAllChannels = false;
         render();
       });
       c.appendChild(btn);
@@ -1120,7 +1124,6 @@ function buildPropChips() {
       document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
         b.classList.toggle('active', b.dataset.value === '__all__');
       });
-      showAllChannels = false;
       render();
     });
     c.appendChild(allBtn);
@@ -1137,7 +1140,6 @@ function buildPropChips() {
           if (b.dataset.value === '__all__') b.classList.toggle('active', activeProps.size === 0);
           else b.classList.toggle('active', activeProps.has(b.dataset.value));
         });
-        showAllChannels = false;
         render();
       });
       c.appendChild(btn);

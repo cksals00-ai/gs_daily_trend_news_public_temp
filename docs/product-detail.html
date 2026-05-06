@@ -214,7 +214,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="refresh-info">
       <div class="refresh-label">DATA SOURCE</div>
-      <div class="refresh-time">&#50728;&#48513; DB 86&#48264; &#54364;&#53580;&#51648;</div>
+      <div class="refresh-time">&#50728;&#48513; DB 27&#48264; FIT&#50696;&#50557;</div>
     </div>
   </aside>
 
@@ -363,15 +363,14 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
 
     <div style="padding:10px 0 2px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-align:center;border-top:1px solid var(--rule);">
-      DATA: package_series_trend.json &middot; 온북 DB 86번 폰테지 (2022&ndash;2026)
+      DATA: db_aggregated.json &middot; 온북 DB 27번 FIT예약 · 변경예약집계코드명 기준 (2022&ndash;2026)
     </div>
   </main>
 </div>
 
 <script>
 (function () {
-  var CAT_ORDER = ['룸온니/프로모션','연박/투나잇','올인클루시브','조식패키지',
-                   '세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
+  var CAT_ORDER = ['GOTA PKG','온라인 패키지','회원PKG','자사 패키지','D멤버스','사업장 대매점'];
   var YEAR_COLORS = {'2022':'#9e9e9e','2023':'#6ba3c4','2024':'#e6b970','2025':'#d97a7a','2026':'#6db58a'};
   var pkg = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', chart = null;
   var catMonthFilter = 'ALL'; // 연합계 또는 월번호 (01-12)
@@ -709,7 +708,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
   }
 
   function buildFilters() {
-    var years = (pkg.meta && pkg.meta.years ? pkg.meta.years.slice() : Object.keys(pkg.by_year_ranking).sort()).reverse();
+    var years = (pkg.meta && pkg.meta.years ? pkg.meta.years.slice() : Object.keys(pkg.by_year_ranking || {}).sort()).reverse();
     var yc = el('year-chips'); yc.innerHTML = '';
     years.forEach(function(y) {
       var b = document.createElement('button');
@@ -748,9 +747,25 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
   (function(){var h=location.href,m={otb:'otb.html',channel:'channel.html',ytd:'ytd.html',monthly:'monthly.html','stay-date':'stay-date.html','booking-trend':'booking-trend.html','ly-trend':'ly-trend.html','product-detail':'product-detail.html','ly-product':'ly-product.html',fcst:'fcst-admin.html',overseas:'overseas.html'};for(var k in m){if(h.includes(m[k])){document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(e){e.classList.remove('active');});var n=document.querySelector('.gsn-item[data-gsn="'+k+'"]');if(n)n.classList.add('active');break;}}})();
 
-  fetch('data/package_series_trend.json?t=' + Date.now())
+  fetch('data/db_aggregated.json?t=' + Date.now())
     .then(function(r){return r.json();})
-    .then(function(d){ pkg = d; buildFilters(); render(); })
+    .then(function(d){
+      // db_aggregated.json의 product_detail 섹션 사용
+      if (d.product_detail) {
+        pkg = d.product_detail;
+        // CAT_ORDER를 실제 카테고리 목록으로 갱신 (데이터에 있는 것만)
+        if (pkg.meta && pkg.meta.categories) {
+          var dataCategories = pkg.meta.categories;
+          // CAT_ORDER에 없는 카테고리 추가
+          dataCategories.forEach(function(c) {
+            if (CAT_ORDER.indexOf(c) < 0) CAT_ORDER.push(c);
+          });
+        }
+      } else {
+        pkg = d;
+      }
+      buildFilters(); render();
+    })
     .catch(function(e){ console.error(e); el('cat-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--negative);">데이터 로드 실패</td></tr>'; });
   // ── 전년 비교 (ly-product) 섹션 렌더링 ──
   var lypChart = null, lypShowAll = false, LYP_ROWS = 20;
