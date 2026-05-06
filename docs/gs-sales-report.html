@@ -1682,6 +1682,12 @@ async function renderStrategyWidget(){
   const revRatio = budget.rev>0 ? Math.round((totals.rev||0)/budget.rev*100) : null;
   const ratioCls = (r) => r==null?'':r>=100?'ratio-pos':r>=85?'ratio-warn':'ratio-neg';
 
+  /* OTB budget ADR (월별 동적 계산) */
+  const otbForAdr = await getOTBSummary(month);
+  const otbAdrBudget = (otbForAdr && otbForAdr.rns_budget > 0)
+    ? Math.round(otbForAdr.rev_budget / otbForAdr.rns_budget / 1000 * 10) / 10
+    : null;
+
   document.getElementById('strat-grid').innerHTML = `
     <div class="strat-cell">
       <div class="strat-cell-label">기획팀 RN 목표</div>
@@ -1694,9 +1700,9 @@ async function renderStrategyWidget(){
       <div class="strat-cell-sub ${ratioCls(revRatio)}">사업계획 ${fmtNum(budget.rev)}백만 대비 ${revRatio!=null?revRatio+'%':'—'}</div>
     </div>
     <div class="strat-cell">
-      <div class="strat-cell-label">기획팀 ADR 목표</div>
-      <div class="strat-cell-value">${totals.adr?Number(totals.adr).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):'—'}<span class="unit">천원</span></div>
-      <div class="strat-cell-sub">세그 ${seg} · 우선순위 <strong style="color:var(--gold-bright)">${segPriority}등급</strong></div>
+      <div class="strat-cell-label">OTB Budget ADR</div>
+      <div class="strat-cell-value">${otbAdrBudget?otbAdrBudget.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):'—'}<span class="unit">천원</span></div>
+      <div class="strat-cell-sub">세그 ${seg} · 기획팀 ${totals.adr?Number(totals.adr).toFixed(1):'—'}천원</div>
     </div>`;
 
   /* 채널 칩 — 현재 세그먼트의 채널 + 가이드(focus/hold/reduce) */
@@ -3216,6 +3222,12 @@ async function renderInboundKpiPane(){
   const totB = k.totals?.budget  || {};
   const ly25 = k.totals?.ly25_rns_total || 0;
 
+  /* OTB budget ADR (월별 동적 계산) — Inbound 세그먼트 */
+  const inbOtb = curGoalMonth ? await getOTBSummary(curGoalMonth) : null;
+  const inbOtbAdr = (inbOtb && inbOtb.rns_budget > 0)
+    ? Math.round(inbOtb.rev_budget / inbOtb.rns_budget / 1000 * 10) / 10
+    : null;
+
   /* 사이드바 필터: 사업장 한정 */
   const props = PROP_ORDER_INB.filter(p => k.properties && k.properties[p]);
   const propsScoped = (activeProps.size>0) ? props.filter(p => activeProps.has(p)) : props;
@@ -3238,9 +3250,9 @@ async function renderInboundKpiPane(){
       <div class="inbk-summary-sub">Budget ${fmtNum(totB.rns_total)} 대비 <span class="${upliftPct>=0?'pos':'neg'}" style="color:${upliftPct>=0?'var(--positive)':'var(--negative)'}">${upliftPct!=null?(upliftPct>=0?'+':'')+upliftPct+'%':''}</span></div>
     </div>
     <div class="inbk-summary-cell">
-      <div class="inbk-summary-label">26 도전목표 ADR / REV</div>
-      <div class="inbk-summary-value">${totS.adr?totS.adr.toLocaleString('ko-KR'):'—'}<span class="inb-unit">천원</span></div>
-      <div class="inbk-summary-sub">REV ${fmtNum(totS.rev)}백만 · 25년比 RNs <span style="color:${yoyPct>=0?'var(--positive)':'var(--negative)'}">${yoyPct!=null?(yoyPct>=0?'+':'')+yoyPct+'%':'—'}</span></div>
+      <div class="inbk-summary-label">${curGoalMonth?curGoalMonth.slice(5)+'월 ':''}OTB Budget ADR</div>
+      <div class="inbk-summary-value">${inbOtbAdr?inbOtbAdr.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):'—'}<span class="inb-unit">천원</span></div>
+      <div class="inbk-summary-sub">도전목표 ${totS.adr?totS.adr.toFixed(1):'—'}천원 · REV ${fmtNum(totS.rev)}백만 · 25년比 <span style="color:${yoyPct>=0?'var(--positive)':'var(--negative)'}">${yoyPct!=null?(yoyPct>=0?'+':'')+yoyPct+'%':'—'}</span></div>
     </div>
     <div class="inbk-summary-cell">
       <div class="inbk-summary-label">전략여행사 (26년)</div>

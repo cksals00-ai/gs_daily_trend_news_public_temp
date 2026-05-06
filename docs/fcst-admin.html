@@ -140,8 +140,14 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
   <div class="card" id="fcst-card">
     <div class="card-head"><span class="card-icon">📈</span><span class="card-title">FCST 키인 수정</span><span class="card-desc">세그먼트별 키인 → 사업장 합산</span></div>
 
-    <!-- 투숙월 탭 -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="fcst-tabs"></div>
+    <!-- 투숙월 탭 + 세그먼트 필터 -->
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="fcst-tabs"></div>
+      <span style="width:1px;height:20px;background:var(--rule);flex-shrink:0;"></span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;" id="seg-filter">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px;">세그:</span>
+      </div>
+    </div>
 
     <div class="summary-row">
       <div class="summary-box"><div class="summary-val" id="sum-budget" style="color:var(--ink-muted)">—</div><div class="summary-lbl">목표 RN</div></div>
@@ -273,6 +279,7 @@ let activeWeekKey = CURRENT_WEEK_KEY;
 let fcstCurrentMonth = '4';
 let collapsedProps = new Set();
 let allCollapsed = false;
+let fcstSegFilter = 'GS'; // 'GS'=OTA+GOTA+IB 합산, 'OTA','G-OTA','Inbound'=개별 세그
 
 /* Computed: current week's keyin values */
 function getActiveKeyin() {
@@ -440,6 +447,38 @@ async function loadFcstData() {
       tabC.appendChild(btn);
     });
 
+    // Build segment filter chips (GS 합계 + 하위 뎁스: OTA, G-OTA, Inbound)
+    const segFilterEl = document.getElementById('seg-filter');
+    if (segFilterEl) {
+      segFilterEl.innerHTML = '<span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px;">세그:</span>';
+      [
+        { key:'GS', label:'GS 합계', title:'OTA + G-OTA + Inbound 합산' },
+        { key:'OTA', label:'OTA', title:'여기어때 / 놀' },
+        { key:'G-OTA', label:'G-OTA', title:'아고다 / 트립닷컴 / 익스피디아' },
+        { key:'Inbound', label:'Inbound', title:'여행사' }
+      ].forEach((opt, idx) => {
+        if (idx === 1) {
+          const d = document.createElement('span');
+          d.style.cssText = 'width:1px;height:14px;background:var(--rule);margin:0 2px;flex-shrink:0;';
+          segFilterEl.appendChild(d);
+        }
+        const btn = document.createElement('button');
+        btn.className = 'ftab' + (fcstSegFilter === opt.key ? ' active' : '');
+        btn.setAttribute('data-seg', opt.key);
+        btn.textContent = opt.label;
+        btn.title = opt.title;
+        btn.style.cssText = 'font-size:11px;padding:4px 9px;';
+        if (idx > 0) btn.style.fontSize = '10.5px';
+        btn.onclick = () => {
+          fcstSegFilter = opt.key;
+          document.querySelectorAll('#seg-filter .ftab').forEach(t =>
+            t.classList.toggle('active', t.getAttribute('data-seg') === opt.key));
+          renderFcstTable(); updateEditableState();
+        };
+        segFilterEl.appendChild(btn);
+      });
+    }
+
     renderFcstTable();
     updateEditableState();
   } catch(e) {
@@ -583,19 +622,25 @@ function renderFcstTable() {
     const isColl=collapsedProps.has(prop.name);
     const propYoy=getPropYoy(prop.name,fcstCurrentMonth);
 
-    let pBud=0,pAct=0,pAuto=0,pFinal=0,pPrev=0;
+    let pBud=0,pAct=0,pAuto=0,pFinal=0,pPrev=0,pRm=0;
+    let hasRm=false;
     const segRows=[];
+    const displaySegs=fcstSegFilter==='GS'?SEGMENTS:[fcstSegFilter];
+    const rmKey='2026-'+String(fcstCurrentMonth).padStart(2,'0');
+    const rmEntryProp=rmFcstData[prop.name]?.[rmKey];
 
-    SEGMENTS.forEach(seg=>{
+    displaySegs.forEach(seg=>{
       const sd=getSegData(prop.name,seg,fcstCurrentMonth);
       const bud=sd?.rns_budget||0,act=sd?.rns_actual||0,autoF=sd?.rns_fcst||0;
       const kKey=`${prop.name}|${seg}`;
       const kVal=keyin[kKey]??null;
       const prevVal=prevKeyin[kKey]??null;
       const finalV=kVal!==null?kVal:autoF;
+      const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??sd?.rm_fcst_rn??null;
+      if(segRm!==null){pRm+=segRm;hasRm=true;}
 
       pBud+=bud;pAct+=act;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
-      segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey});
+      segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey,rmVal:segRm});
     });
 
     const pAch=pBud>0?(pFinal/pBud*100).toFixed(1):'—';
@@ -606,13 +651,8 @@ function renderFcstTable() {
 
     totBud+=pBud;totAct+=pAct;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
 
-    // RM FCST = Revenue Meeting forecast Room Nights from latest RM PDF (data/rm_fcst.json).
-    // Keys in rmFcstData are canonical property names ("11.소노캄경주") and month keys are "2026-MM".
-    // 세그먼트 합(OTA+G-OTA+Inbound)만 사용 — 총량(rm_fcst_rn)은 직판/법인 등 포함하여 과대계상됨
-    const rmKey = '2026-' + String(fcstCurrentMonth).padStart(2,'0');
-    const rmEntry = rmFcstData[prop.name]?.[rmKey];
-    const rmSegs = rmEntry?.segments;
-    const rmVal = rmSegs ? Object.values(rmSegs).reduce((s, seg) => s + (seg?.rm_fcst_rn || 0), 0) || null : (rmEntry?.rm_fcst_rn ?? null);
+    // RM FCST: 세그 필터에 따라 해당 세그먼트(들) 합산
+    const rmVal = hasRm ? pRm : null;
     const rmDisplay = rmVal !== null ? fmt(rmVal) : '—';
     if (rmVal !== null) totRm += rmVal;
 
@@ -630,12 +670,19 @@ function renderFcstTable() {
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pPrev)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmt(pAuto)}${ciHtml}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
-      <td style="text-align:center;font-size:9.5px;color:var(--ink-faint)">세그 합산</td>
+      <td style="text-align:center;padding:3px 4px">${fcstSegFilter==='GS'
+        ?'<span style="font-size:9.5px;color:var(--ink-faint)">세그 합산</span>'
+        :`<input type="number" class="fcst-keyin-input" data-key="${esca(segRows[0]?.kKey||'')}"
+                value="${segRows[0]?.kVal!==null?segRows[0].kVal:''}" placeholder="${fmt(pAuto)}"
+                ${editable?'':'disabled'}
+                style="width:72px;background:var(--bg-soft);border:1px solid ${segRows[0]?.kVal!==null?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}"
+                onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)'">`
+      }</td>
       <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmt(pFinal)} ${dHtml}</td>
       <td style="text-align:right"><span class="tbadge ${pAchCls}" style="font-size:10px">${pAch}${pAch!=='—'?'%':''}</span></td>
-      <td></td></tr>`;
+      <td>${fcstSegFilter!=='GS'?'<span class="ai-factor">'+renderFactorHtml(generateAiFactor(prop.name,fcstSegFilter,fcstCurrentMonth))+'</span>':''}</td></tr>`;
 
-    if(!isColl){
+    if(!isColl && fcstSegFilter==='GS'){
       segRows.forEach(sr=>{
         const ach=sr.bud>0?(sr.finalV/sr.bud*100).toFixed(1):'—';
         const achN=sr.bud>0?sr.finalV/sr.bud*100:0;
@@ -643,6 +690,7 @@ function renderFcstTable() {
         const segCls=sr.seg==='OTA'?'ota':sr.seg==='G-OTA'?'gota':'inbound';
         const factors=generateAiFactor(prop.name,sr.seg,fcstCurrentMonth);
         const prevDisp=sr.prevVal!==null?fmt(sr.prevVal):'—';
+        const segRmDisp=sr.rmVal!==null?fmt(sr.rmVal):'—';
 
         html+=`<tr class="seg-row">
           <td><span class="seg-badge ${segCls}">${esc(sr.seg)}</span></td>
@@ -650,7 +698,7 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(sr.act)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${prevDisp}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(sr.autoF)}</td>
-          <td style="text-align:center;padding:3px 4px;font-size:9.5px;color:var(--ink-faint)">—</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${segRmDisp}</td>
           <td style="text-align:center;padding:3px 4px">
             <input type="number" class="fcst-keyin-input" data-key="${esca(sr.kKey)}"
                    value="${sr.kVal!==null?sr.kVal:''}" placeholder="${fmt(sr.autoF)}"
