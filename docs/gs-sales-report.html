@@ -4392,8 +4392,10 @@ function renderC86(){
   const props=d.meta.properties||[];
   const months=d.meta.months||[];
   const segs=d.meta.segments||[];
-  const chTotalsMap=d.by_channel?.totals||d.by_channel||{};
-  const chMonthlyMap=d.by_channel?.monthly||{};
+  /* by_channel: monthly/totals 구조 또는 flat 구조 모두 지원 */
+  const chHasNested=d.by_channel&&(d.by_channel.totals||d.by_channel.monthly);
+  const chTotalsMap=chHasNested?(d.by_channel.totals||{}):(d.by_channel||{});
+  const chMonthlyMap=chHasNested?(d.by_channel.monthly||{}):{};
   const channels=(d.meta.channels||[]).sort((a,b)=>(chTotalsMap[b]?.rn||0)-(chTotalsMap[a]?.rn||0));
 
   /* 사이드바 스코프와 기획전 사업장이 매칭되는지 확인 */
@@ -4506,14 +4508,23 @@ function renderC86(){
   }
 
   if(c86Tab==='segment'){
-    const segMonthly=d.by_segment?.monthly||{};
-    const segTotals=d.by_segment?.totals||{};
+    const segHasNested=d.by_segment&&(d.by_segment.totals||d.by_segment.monthly);
+    const segMonthly=segHasNested?(d.by_segment.monthly||{}):{};
+    const segTotals=segHasNested?(d.by_segment.totals||{}):(d.by_segment||{});
+    const segHasMonthly=Object.keys(segMonthly).length>0;
 
     html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>세그먼트 / 거래처</th>${colHeaders}</tr></thead><tbody>`;
 
     segs.forEach(s=>{
-      const v = c86Month==='all' ? (segTotals[s]||{}) : ((segMonthly[s]||{})[c86Month]||{});
-      if(c86Month!=='all' && !v.rn) return;
+      let v;
+      if(c86Month==='all'){
+        v=segTotals[s]||{};
+      } else if(segHasMonthly){
+        v=(segMonthly[s]||{})[c86Month]||{};
+      } else {
+        v=segTotals[s]||{};
+      }
+      if(c86Month!=='all' && segHasMonthly && !v.rn) return;
       html+=`<tr class="seg-row" style="color:${c86SegColor(s)}"><td>${s}</td>${c86Row(v)}</tr>`;
 
       /* 2뎁스: 해당 세그먼트 소속 거래처 (by_channel에서 세그먼트 매칭은 데이터 구조상 어려우므로 생략) */
@@ -4524,15 +4535,24 @@ function renderC86(){
     html+=`</tbody></table></div>`;
 
   } else if(c86Tab==='property'){
-    const propMonthly=d.by_property?.monthly||{};
-    const propTotals=d.by_property?.totals||{};
+    const propHasNested=d.by_property&&(d.by_property.totals||d.by_property.monthly);
+    const propMonthly=propHasNested?(d.by_property.monthly||{}):{};
+    const propTotals=propHasNested?(d.by_property.totals||{}):(d.by_property||{});
+    const propHasMonthly=Object.keys(propMonthly).length>0;
 
     html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>사업장</th>${colHeaders}</tr></thead><tbody>`;
 
     const sortedProps=[...props].sort((a,b)=>(propTotals[b]?.rn||0)-(propTotals[a]?.rn||0));
     sortedProps.forEach(p=>{
-      const v = c86Month==='all' ? (propTotals[p]||{}) : ((propMonthly[p]||{})[c86Month]||{});
-      if(c86Month!=='all' && !v.rn) return;
+      let v;
+      if(c86Month==='all'){
+        v=propTotals[p]||{};
+      } else if(propHasMonthly){
+        v=(propMonthly[p]||{})[c86Month]||{};
+      } else {
+        v=propTotals[p]||{};
+      }
+      if(c86Month!=='all' && propHasMonthly && !v.rn) return;
       html+=`<tr><td>${escapeHtml(p)}</td>${c86Row(v)}</tr>`;
 
       /* 사업장 내 세그먼트 서브행 */
@@ -4550,10 +4570,19 @@ function renderC86(){
   } else if(c86Tab==='channel'){
     html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>거래처</th>${colHeaders}</tr></thead><tbody>`;
 
+    const chHasMonthly=Object.keys(chMonthlyMap).length>0;
     const sortedCh=[...channels].sort((a,b)=>(chTotalsMap[b]?.rn||0)-(chTotalsMap[a]?.rn||0));
     sortedCh.forEach(ch=>{
-      const v = c86Month==='all' ? (chTotalsMap[ch]||{}) : ((chMonthlyMap[ch]||{})[c86Month]||{});
-      if(c86Month!=='all' && !v.rn) return;
+      let v;
+      if(c86Month==='all'){
+        v=chTotalsMap[ch]||{};
+      } else if(chHasMonthly){
+        v=(chMonthlyMap[ch]||{})[c86Month]||{};
+      } else {
+        /* monthly 데이터 없으면 totals 폴백 */
+        v=chTotalsMap[ch]||{};
+      }
+      if(c86Month!=='all' && chHasMonthly && !v.rn) return;
       html+=`<tr><td>${escapeHtml(ch)}</td>${c86Row(v)}</tr>`;
     });
 
