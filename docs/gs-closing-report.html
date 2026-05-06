@@ -170,6 +170,14 @@ tr.cumul-row td { font-weight: 700; border-top: 1px dashed var(--gold); color: v
 .toggle-more { font-size: 11.5px; color: var(--info); cursor: pointer; background: none; border: 1px solid rgba(96,165,250,0.2); padding: 7px 16px; border-radius: 6px; margin: 8px 0 0; font-weight: 600; width: 100%; text-align: center; transition: all .2s; }
 .toggle-more:hover { background: rgba(96,165,250,0.08); border-color: rgba(96,165,250,0.4); }
 
+/* ───── CHANNEL TOGGLE (사업장 하위 펼침) ───── */
+.ch-parent-row:hover { background: var(--bg-hover) !important; }
+.ch-parent-row td:first-child { user-select: none; }
+.ch-toggle-icon { display: inline-block; width: 14px; font-size: 10px; color: var(--ink-muted); transition: transform .2s; margin-right: 4px; }
+.ch-prop-row td { border-bottom: 1px solid var(--rule) !important; }
+.ch-prop-row:last-of-type td { border-bottom: none !important; }
+.channel-detail-table .ch-parent-row { transition: background .15s; }
+
 /* ───── DATA MISSING ───── */
 .data-missing { background: var(--bg-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--ink-muted); font-size: 13px; }
 .data-missing strong { display: block; color: var(--ink-soft); margin-bottom: 4px; font-size: 14px; }
@@ -760,6 +768,71 @@ function getChannelDetailData(months) {
   return segGroups;
 }
 
+/* ── Get property-level data for a specific channel ── */
+function getChannelPropertyData(chName, months) {
+  if (!DB_DATA || !DB_DATA.by_property_channel) return [];
+  const bpc = DB_DATA.by_property_channel;
+  const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
+  const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
+  const results = [];
+
+  Object.keys(bpc).forEach(propName => {
+    const channels = bpc[propName];
+    if (!channels[chName]) return;
+    const chData = channels[chName];
+    let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
+    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
+    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+    if (rn26 === 0 && rn25 === 0) return;
+    const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
+    const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
+    const rnsYoy = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
+    const revYoy = rev25 > 0 ? (rev26 - rev25) / rev25 * 100 : null;
+    const adrYoy = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
+    results.push({ name: propName, rn26, rev26, adr26, rn25, rev25, adr25, rnsYoy, revYoy, adrYoy });
+  });
+
+  results.sort((a, b) => b.rn26 - a.rn26);
+  return results;
+}
+
+/* ── Excel download for channel detail table ── */
+function downloadChannelDetailExcel(months) {
+  const data = getChannelDetailData(months);
+  if (!data) return;
+
+  let csvRows = ['﻿거래처,세그먼트,RN_2026,RN_2025,RN_YoY(%),ADR_2026,ADR_2025,ADR_YoY(%),매출_2026(백만),매출_2025(백만),매출_YoY(%)'];
+
+  ['OTA', 'G-OTA'].forEach(seg => {
+    const channels = data[seg] || [];
+    channels.forEach(ch => {
+      csvRows.push([
+        ch.name, seg, ch.rn26, ch.rn25, ch.rnsYoy != null ? ch.rnsYoy.toFixed(1) : '',
+        ch.adr26, ch.adr25, ch.adrYoy != null ? ch.adrYoy.toFixed(1) : '',
+        Math.round(ch.rev26), Math.round(ch.rev25), ch.revYoy != null ? ch.revYoy.toFixed(1) : ''
+      ].join(','));
+
+      // Add property-level rows
+      const props = getChannelPropertyData(ch.name, months);
+      props.forEach(p => {
+        csvRows.push([
+          '  ' + p.name, seg + '/' + ch.name, p.rn26, p.rn25, p.rnsYoy != null ? p.rnsYoy.toFixed(1) : '',
+          p.adr26, p.adr25, p.adrYoy != null ? p.adrYoy.toFixed(1) : '',
+          Math.round(p.rev26), Math.round(p.rev25), p.revYoy != null ? p.revYoy.toFixed(1) : ''
+        ].join(','));
+      });
+    });
+  });
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '채널별_실적_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function renderChannelDetailTable(months, containerId) {
   const data = getChannelDetailData(months);
   const el = document.getElementById(containerId);
@@ -769,7 +842,15 @@ function renderChannelDetailTable(months, containerId) {
     return;
   }
 
-  let html = `<table class="full-table"><thead>
+  // Excel download button
+  let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+    <button onclick="downloadChannelDetailExcel(window._cdMonths || [1,2,3,4])" style="background:var(--bg-soft);color:var(--ink-soft);border:1px solid var(--rule-strong);padding:6px 14px;border-radius:6px;font-family:'Batang','바탕',serif;font-weight:400;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-soft)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      엑셀 다운로드
+    </button>
+  </div>`;
+
+  html += `<table class="full-table channel-detail-table"><thead>
     <tr>
       <th rowspan="2" style="vertical-align:bottom;text-align:left;min-width:100px">거래처</th>
       <th class="group-header" colspan="3">객실수 (RN)</th>
@@ -784,7 +865,7 @@ function renderChannelDetailTable(months, containerId) {
   </thead><tbody>`;
 
   let grandRn26 = 0, grandRn25 = 0, grandRev26 = 0, grandRev25 = 0;
-  let visibleCount = 0;
+  let chIndex = 0;
 
   ['OTA', 'G-OTA'].forEach(seg => {
     const channels = data[seg] || [];
@@ -794,20 +875,34 @@ function renderChannelDetailTable(months, containerId) {
     html += `<tr class="seg-header-row"><td colspan="10" style="text-align:left;padding-left:16px">${seg} 채널</td></tr>`;
 
     let segRn26 = 0, segRn25 = 0, segRev26 = 0, segRev25 = 0;
-    channels.forEach((ch, i) => {
+    channels.forEach((ch) => {
       segRn26 += ch.rn26; segRn25 += ch.rn25; segRev26 += ch.rev26; segRev25 += ch.rev25;
       const rnsCol = ch.rnsYoy != null ? (ch.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const adrCol = ch.adrYoy != null ? (ch.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const revCol = ch.revYoy != null ? (ch.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
-      const hide = (visibleCount + i >= 10) ? ' style="display:none" data-extra-ch' : '';
-      html += `<tr${hide}>
-        <td style="padding-left:20px">${ch.name}</td>
+      const toggleId = 'chprop-' + containerId + '-' + chIndex;
+      html += `<tr class="ch-parent-row" data-toggle="${toggleId}" style="cursor:pointer" title="클릭하여 사업장별 실적 보기">
+        <td style="padding-left:20px"><span class="ch-toggle-icon" id="icon-${toggleId}">▶</span> ${ch.name}</td>
         <td style="font-weight:700">${fmt.n(ch.rn26)}</td><td>${fmt.n(ch.rn25)}</td><td style="color:${rnsCol};font-weight:700">${ch.rnsYoy != null ? fmt.pct(ch.rnsYoy) : '—'}</td>
         <td style="font-weight:700">${fmt.won(ch.adr26)}</td><td>${fmt.won(ch.adr25)}</td><td style="color:${adrCol};font-weight:700">${ch.adrYoy != null ? fmt.pct(ch.adrYoy) : '—'}</td>
         <td style="font-weight:700">${fmt.n(Math.round(ch.rev26))}</td><td>${fmt.n(Math.round(ch.rev25))}</td><td style="color:${revCol};font-weight:700">${ch.revYoy != null ? fmt.pct(ch.revYoy) : '—'}</td>
       </tr>`;
+
+      // Property sub-rows (hidden by default)
+      const props = getChannelPropertyData(ch.name, months);
+      props.forEach(p => {
+        const pRnsCol = p.rnsYoy != null ? (p.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+        const pAdrCol = p.adrYoy != null ? (p.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+        const pRevCol = p.revYoy != null ? (p.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
+        html += `<tr class="ch-prop-row" data-parent="${toggleId}" style="display:none;background:var(--bg-deep)">
+          <td style="padding-left:44px;font-size:12.5px;color:var(--ink-soft)">└ ${p.name}</td>
+          <td style="font-size:12.5px">${fmt.n(p.rn26)}</td><td style="font-size:12.5px">${fmt.n(p.rn25)}</td><td style="color:${pRnsCol};font-size:12.5px">${p.rnsYoy != null ? fmt.pct(p.rnsYoy) : '—'}</td>
+          <td style="font-size:12.5px">${fmt.won(p.adr26)}</td><td style="font-size:12.5px">${fmt.won(p.adr25)}</td><td style="color:${pAdrCol};font-size:12.5px">${p.adrYoy != null ? fmt.pct(p.adrYoy) : '—'}</td>
+          <td style="font-size:12.5px">${fmt.n(Math.round(p.rev26))}</td><td style="font-size:12.5px">${fmt.n(Math.round(p.rev25))}</td><td style="color:${pRevCol};font-size:12.5px">${p.revYoy != null ? fmt.pct(p.revYoy) : '—'}</td>
+        </tr>`;
+      });
+      chIndex++;
     });
-    visibleCount += channels.length;
 
     // Subtotal
     const segAdr26 = segRn26 > 0 ? Math.round((segRev26 * 1000000) / segRn26) : 0;
@@ -839,15 +934,21 @@ function renderChannelDetailTable(months, containerId) {
   html += '</tbody></table>';
   el.innerHTML = html;
 
-  // Toggle for >10 rows
-  const extras = el.querySelectorAll('tr[data-extra-ch]');
-  if (extras.length > 0) {
-    const btn = document.createElement('button');
-    btn.className = 'toggle-more';
-    btn.textContent = `더보기 (${extras.length}개 거래처)`;
-    btn.onclick = () => { const show = extras[0]?.style.display === 'none'; extras.forEach(r => r.style.display = show ? '' : 'none'); btn.textContent = show ? '접기' : `더보기 (${extras.length}개 거래처)`; };
-    el.appendChild(btn);
-  }
+  // Store months for Excel download
+  window._cdMonths = months;
+
+  // Attach toggle event listeners to parent rows
+  el.querySelectorAll('.ch-parent-row').forEach(row => {
+    row.addEventListener('click', function() {
+      const toggleId = this.getAttribute('data-toggle');
+      const icon = document.getElementById('icon-' + toggleId);
+      const childRows = el.querySelectorAll(`tr[data-parent="${toggleId}"]`);
+      const isHidden = childRows[0]?.style.display === 'none';
+      childRows.forEach(r => r.style.display = isHidden ? '' : 'none');
+      if (icon) icon.textContent = isHidden ? '▼' : '▶';
+      this.style.background = isHidden ? 'var(--bg-soft)' : '';
+    });
+  });
 }
 
 /* ── Channel Detail Insight (거래처 성장/역성장) ── */
