@@ -627,6 +627,9 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     # 9) 채널×세그먼트별 월별 (채널별 OTA/G-OTA 구분용)
     channel_segment_monthly = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0})))
 
+    # 10) 사업장×채널×세그먼트별 월별 (채널 하위 사업장 세그먼트 필터용)
+    prop_channel_segment_monthly = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}))))
+
     for (prop, region, month, channel, segment, btype), vals in agg.items():
         rn = vals['rn']
         rev = vals['rev']
@@ -659,6 +662,9 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
 
         channel_segment_monthly[channel][segment][month][f'{prefix}_rn'] += rn
         channel_segment_monthly[channel][segment][month][f'{prefix}_rev'] += rev
+
+        prop_channel_segment_monthly[prop][channel][segment][month][f'{prefix}_rn'] += rn
+        prop_channel_segment_monthly[prop][channel][segment][month][f'{prefix}_rev'] += rev
 
     def calc_adr(d):
         """
@@ -752,6 +758,17 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             }
             for c, segs in sorted(channel_segment_monthly.items())
             if c != '기타'
+        },
+        'by_property_channel_segment': {
+            p: {
+                c: {
+                    s: {m: calc_adr(v) for m, v in sorted(months.items())}
+                    for s, months in sorted(segs.items())
+                    if s != '기타'
+                }
+                for c, segs in sorted(channels.items())
+            }
+            for p, channels in sorted(prop_channel_segment_monthly.items())
         },
     }
 

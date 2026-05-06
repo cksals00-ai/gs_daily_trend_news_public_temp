@@ -593,6 +593,12 @@ tr.total-row td {
       </div>
     </div>
 
+    <!-- 연도 Filter -->
+    <div>
+      <div class="filter-section-label">연도</div>
+      <div class="filter-chips" id="year-chips"></div>
+    </div>
+
     <!-- 투숙월 Filter -->
     <div>
       <div class="filter-section-label">투숙월</div>
@@ -615,6 +621,12 @@ tr.total-row td {
     <div id="property-filter-wrapper" style="display:none;">
       <div class="filter-section-label">사업장</div>
       <div class="filter-chips prop-chips" id="property-chips"></div>
+    </div>
+
+    <!-- 요일 Filter -->
+    <div>
+      <div class="filter-section-label">요일 구분</div>
+      <div class="filter-chips" id="daytype-chips"></div>
     </div>
 
     <!-- Refresh Info -->
@@ -686,21 +698,43 @@ tr.total-row td {
               <tr>
                 <th>카테고리</th>
                 <th class="group-header">RN</th>
-                <th class="group-header">구성비</th>
+                <th class="group-header">RN 비중</th>
                 <th class="group-header">YoY</th>
                 <th class="group-header">Revenue</th>
+                <th class="group-header">Rev 비중</th>
                 <th class="group-header">ADR</th>
               </tr>
             </thead>
             <tbody id="category-tbody">
-              <tr class="loading-state"><td colspan="6">데이터 로딩 중...</td></tr>
+              <tr class="loading-state"><td colspan="7">데이터 로딩 중...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Card 3: 요일별 현황 -->
+    <!-- Card 3: 주중/주말 비율 -->
+    <div class="table-card" id="daytype-ratio-card">
+      <div class="table-card-header">
+        <div class="table-card-title">주중/주말 비율</div>
+      </div>
+      <div class="table-wrap">
+        <table id="daytype-ratio-table">
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th class="group-header">RN</th>
+              <th class="group-header">비중(%)</th>
+              <th class="group-header">Revenue</th>
+              <th class="group-header">ADR</th>
+            </tr>
+          </thead>
+          <tbody id="daytype-ratio-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Card 4: 요일별 현황 -->
     <div class="table-card">
       <div class="table-card-header">
         <div class="table-card-title">요일별 현황</div>
@@ -710,23 +744,24 @@ tr.total-row td {
           <thead>
             <tr>
               <th>요일</th>
-              <th colspan="3" class="group-header">객실수(RN)</th>
+              <th colspan="4" class="group-header">객실수(RN)</th>
               <th colspan="3" class="group-header">ADR(천원)</th>
               <th class="group-header">매출(백만원)</th>
             </tr>
             <tr>
               <th>요일</th>
-              <th class="sub-header">2026</th>
-              <th class="sub-header">2025</th>
+              <th class="sub-header" id="dow-year-cur">금년</th>
+              <th class="sub-header" id="dow-year-prev">전년</th>
               <th class="sub-header">YoY</th>
-              <th class="sub-header">2026</th>
-              <th class="sub-header">2025</th>
+              <th class="sub-header">비중(%)</th>
+              <th class="sub-header" id="dow-adr-cur">금년</th>
+              <th class="sub-header" id="dow-adr-prev">전년</th>
               <th class="sub-header">YoY</th>
-              <th class="sub-header">2026</th>
+              <th class="sub-header" id="dow-rev-cur">금년</th>
             </tr>
           </thead>
           <tbody id="dayofweek-tbody">
-            <tr class="loading-state"><td colspan="8">데이터 로딩 중...</td></tr>
+            <tr class="loading-state"><td colspan="9">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -742,6 +777,7 @@ const fmt = {
   won: v => v != null && v > 0 ? Math.round(v/1000).toLocaleString() + '천' : '—',
   pct: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '—',
   rev: v => v != null ? Math.round(v).toLocaleString() : '—',
+  share: v => v != null ? v.toFixed(1) + '%' : '—',
 };
 
 // ========== REGION DEFINITIONS ==========
@@ -755,10 +791,12 @@ const REGION_DEFS = [
 
 // ========== STATE ==========
 let appState = {
-  activeMonths: [],
+  activeYear: '2026',
+  activeMonthNums: [],   // e.g. ['01','02',...]
   activeSegs: ['전체'],
   activeRegion: '전체',
-  activeProps: [],
+  activeProps: [],        // db_aggregated property names (e.g. "소노캄 거제")
+  activeDayType: '전체',  // '전체' | '주중' | '주말'
   allData: null,
   meta: null,
   channelExpanded: {},
@@ -777,14 +815,18 @@ async function loadData() {
     appState.allData = { dbAgg, otbData };
     appState.meta = dbAgg.meta || otbData.meta;
 
-    // Initialize months: only 2026 months that have data
-    const months2026 = (dbAgg.meta?.months || []).filter(m => m.startsWith('2026'));
-    appState.activeMonths = months2026.length > 0 ? [...months2026] : [];
+    // Initialize: default to 2026, all available months
+    const allMonths = dbAgg.meta?.months || [];
+    const months2026 = allMonths.filter(m => m.startsWith('2026'));
+    appState.activeYear = '2026';
+    appState.activeMonthNums = months2026.map(m => m.substring(4));
 
     // Set refresh time
     if (otbData.meta?.refreshTime) {
       const el = document.getElementById('refresh-time');
       if (el) el.textContent = otbData.meta.refreshTime;
+      const rb = document.getElementById('refresh-badge');
+      if (rb) rb.textContent = otbData.meta.refreshTime;
     }
 
     renderFilters();
@@ -794,35 +836,51 @@ async function loadData() {
   }
 }
 
-// ========== HELPER: get filtered property list ==========
+// ========== HELPER: get filtered property list (uses db_aggregated names) ==========
 function getFilteredProps() {
-  const { otbData } = appState.allData;
-  if (!otbData?.byProperty) return null; // null = no filter
+  const { dbAgg } = appState.allData;
+  const prm = dbAgg.meta?.property_region_map;
+  if (!prm) return null;
   if (appState.activeProps.length > 0) return appState.activeProps;
   if (appState.activeRegion !== '전체') {
-    return otbData.byProperty.filter(p => p.region === appState.activeRegion).map(p => p.name);
+    return Object.entries(prm).filter(([_, r]) => r === appState.activeRegion).map(([n]) => n);
   }
   return null; // all properties
 }
 
-// ========== HELPER: get 2025 month keys matching selected 2026 months ==========
+// ========== HELPER: get current/prev year month keys ==========
 function getMonthKeys() {
-  const m26 = appState.activeMonths.filter(m => m.startsWith('2026'));
-  const m25 = m26.map(m => '2025' + m.substring(4));
-  return { m26, m25 };
+  const year = appState.activeYear;
+  const prevYear = String(parseInt(year) - 1);
+  const mCur = appState.activeMonthNums.map(m => year + m);
+  const mPrev = appState.activeMonthNums.map(m => prevYear + m);
+  return { mCur, mPrev, year, prevYear };
 }
 
 // ========== FILTER RENDERING ==========
 function renderFilters() {
   const { dbAgg } = appState.allData;
+  const allMonths = dbAgg.meta?.months || [];
 
-  // Months — show only 2026 months, as "1월", "2월", etc.
-  const months2026 = (dbAgg.meta?.months || []).filter(m => m.startsWith('2026'));
+  // Years — extract unique years that have data
+  const yearsWithData = [...new Set(allMonths.map(m => m.substring(0, 4)))].filter(y => parseInt(y) >= 2025).sort();
+  let yearHtml = '';
+  yearsWithData.forEach(y => {
+    const isActive = appState.activeYear === y;
+    yearHtml += `<button class="chip${isActive ? ' active' : ''}" onclick="setYear('${y}')">${y}년</button>`;
+  });
+  document.getElementById('year-chips').innerHTML = yearHtml;
+
+  // Months — show months available for the selected year
+  const monthsForYear = allMonths.filter(m => m.startsWith(appState.activeYear));
   let monthHtml = '';
-  months2026.forEach(m => {
-    const label = parseInt(m.substring(4)) + '월';
-    const isActive = appState.activeMonths.includes(m);
-    monthHtml += `<button class="chip${isActive ? ' active' : ''}" onclick="toggleMonth('${m}')">${label}</button>`;
+  const allSelected = appState.activeMonthNums.length === monthsForYear.length;
+  monthHtml += `<button class="chip${allSelected ? ' active' : ''}" onclick="selectAllMonths()">전체</button>`;
+  monthsForYear.forEach(m => {
+    const mn = m.substring(4);
+    const label = parseInt(mn) + '월';
+    const isActive = appState.activeMonthNums.includes(mn);
+    monthHtml += `<button class="chip${isActive ? ' active' : ''}" onclick="toggleMonth('${mn}')">${label}</button>`;
   });
   document.getElementById('month-chips').innerHTML = monthHtml;
 
@@ -843,34 +901,61 @@ function renderFilters() {
   });
   document.getElementById('region-chips').innerHTML = regHtml;
 
-  // Properties
+  // Properties — use db_aggregated property_region_map
   updatePropertyFilter();
+
+  // Day type
+  const dayTypes = ['전체', '주중', '주말'];
+  let dtHtml = '';
+  dayTypes.forEach(dt => {
+    const isActive = appState.activeDayType === dt;
+    dtHtml += `<button class="chip${isActive ? ' active' : ''}" onclick="setDayType('${dt}')">${dt}</button>`;
+  });
+  document.getElementById('daytype-chips').innerHTML = dtHtml;
 }
 
 function updatePropertyFilter() {
-  const { otbData } = appState.allData;
-  if (!otbData?.byProperty) return;
+  const { dbAgg } = appState.allData;
+  const prm = dbAgg.meta?.property_region_map;
+  if (!prm) return;
   const wrap = document.getElementById('property-filter-wrapper');
   if (appState.activeRegion === '전체') {
     wrap.style.display = 'none';
     return;
   }
-  const props = otbData.byProperty.filter(p => p.region === appState.activeRegion);
+  const props = Object.entries(prm).filter(([_, r]) => r === appState.activeRegion).map(([n]) => n);
   if (props.length === 0) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   let html = `<button class="chip${appState.activeProps.length === 0 ? ' active' : ''}" onclick="clearProps()">전체</button>`;
-  props.forEach(p => {
-    const isActive = appState.activeProps.includes(p.name);
-    const label = p.name.replace(/^\d+\./, '');
-    html += `<button class="chip${isActive ? ' active' : ''}" onclick="toggleProperty('${p.name.replace(/'/g, "\\'")}')">${label}</button>`;
+  props.forEach(name => {
+    const isActive = appState.activeProps.includes(name);
+    html += `<button class="chip${isActive ? ' active' : ''}" onclick="toggleProperty('${name.replace(/'/g, "\\'")}')">${name}</button>`;
   });
   document.getElementById('property-chips').innerHTML = html;
 }
 
-function toggleMonth(m) {
-  const idx = appState.activeMonths.indexOf(m);
-  if (idx >= 0 && appState.activeMonths.length > 1) appState.activeMonths.splice(idx, 1);
-  else if (idx < 0) appState.activeMonths.push(m);
+function setYear(y) {
+  appState.activeYear = y;
+  const allMonths = appState.allData.dbAgg.meta?.months || [];
+  const monthsForYear = allMonths.filter(m => m.startsWith(y));
+  appState.activeMonthNums = monthsForYear.map(m => m.substring(4));
+  renderFilters();
+  renderAllCards();
+}
+
+function selectAllMonths() {
+  const allMonths = appState.allData.dbAgg.meta?.months || [];
+  const monthsForYear = allMonths.filter(m => m.startsWith(appState.activeYear));
+  appState.activeMonthNums = monthsForYear.map(m => m.substring(4));
+  renderFilters();
+  renderAllCards();
+}
+
+function toggleMonth(mn) {
+  const idx = appState.activeMonthNums.indexOf(mn);
+  if (idx >= 0 && appState.activeMonthNums.length > 1) appState.activeMonthNums.splice(idx, 1);
+  else if (idx < 0) appState.activeMonthNums.push(mn);
+  appState.activeMonthNums.sort();
   renderFilters();
   renderAllCards();
 }
@@ -909,18 +994,38 @@ function clearProps() {
   renderAllCards();
 }
 
-// ========== CHANNEL TABLE (거래처별 실적 — gs-closing-report 양식) ==========
+function setDayType(dt) {
+  appState.activeDayType = dt;
+  renderFilters();
+  renderAllCards();
+}
+
+// ========== CHANNEL TABLE (거래처별 실적) ==========
 function renderChannelTable() {
-  const { dbAgg, otbData } = appState.allData;
+  const { dbAgg } = appState.allData;
   const byChannel = dbAgg.by_channel || {};
   const bcs = dbAgg.by_channel_segment || {};
   const bpc = dbAgg.by_property_channel || {};
   const filteredProps = getFilteredProps();
-  const { m26, m25 } = getMonthKeys();
+  const { mCur, mPrev, year, prevYear } = getMonthKeys();
   const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound'] : appState.activeSegs);
 
   const tbody = document.getElementById('channel-tbody');
   if (!tbody) return;
+
+  // Update table header year labels
+  const thRows = document.querySelectorAll('#channel-table thead tr');
+  if (thRows.length >= 2) {
+    const subHeaders = thRows[1].querySelectorAll('th');
+    if (subHeaders.length >= 10) {
+      subHeaders[1].textContent = year;
+      subHeaders[2].textContent = prevYear;
+      subHeaders[5].textContent = year;
+      subHeaders[6].textContent = prevYear;
+      subHeaders[8].textContent = year;
+      subHeaders[9].textContent = prevYear;
+    }
+  }
 
   // Build channel data grouped by segment
   const segGroups = {};
@@ -929,7 +1034,6 @@ function renderChannelTable() {
     segGroups[seg] = [];
   }
 
-  // Determine which channels belong to which segment
   Object.keys(bcs).forEach(chName => {
     if (chName === '기타') return;
     const chSegs = Object.keys(bcs[chName]);
@@ -937,45 +1041,41 @@ function renderChannelTable() {
     for (const seg of Object.keys(segGroups)) {
       if (!chSegs.includes(seg)) continue;
 
-      let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
+      let rnCur = 0, revCur = 0, rnPrev = 0, revPrev = 0;
 
       if (filteredProps) {
-        // Filter by property
         filteredProps.forEach(propName => {
           const propChannels = bpc[propName];
           if (!propChannels || !propChannels[chName]) return;
           const chData = propChannels[chName];
-          m26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
-          m25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+          mCur.forEach(mk => { if (chData[mk]) { rnCur += chData[mk].net_rn || 0; revCur += chData[mk].net_rev || 0; } });
+          mPrev.forEach(mk => { if (chData[mk]) { rnPrev += chData[mk].net_rn || 0; revPrev += chData[mk].net_rev || 0; } });
         });
       } else {
-        // All properties — use by_channel
         const chData = byChannel[chName] || {};
-        m26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
-        m25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+        mCur.forEach(mk => { if (chData[mk]) { rnCur += chData[mk].net_rn || 0; revCur += chData[mk].net_rev || 0; } });
+        mPrev.forEach(mk => { if (chData[mk]) { rnPrev += chData[mk].net_rn || 0; revPrev += chData[mk].net_rev || 0; } });
       }
 
-      if (rn26 === 0 && rn25 === 0) continue;
+      if (rnCur === 0 && rnPrev === 0) continue;
 
-      const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
-      const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
-      const rnsYoy = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
-      const revYoy = rev25 > 0 ? (rev26 - rev25) / rev25 * 100 : null;
-      const adrYoy = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
+      const adrCur = rnCur > 0 ? Math.round((revCur * 1000000) / rnCur) : 0;
+      const adrPrev = rnPrev > 0 ? Math.round((revPrev * 1000000) / rnPrev) : 0;
+      const rnsYoy = rnPrev > 0 ? (rnCur - rnPrev) / rnPrev * 100 : null;
+      const revYoy = revPrev > 0 ? (revCur - revPrev) / revPrev * 100 : null;
+      const adrYoy = adrPrev > 0 ? (adrCur - adrPrev) / adrPrev * 100 : null;
 
-      segGroups[seg].push({ name: chName, rn26, rev26, adr26, rn25, rev25, adr25, rnsYoy, revYoy, adrYoy });
+      segGroups[seg].push({ name: chName, rnCur, revCur, adrCur, rnPrev, revPrev, adrPrev, rnsYoy, revYoy, adrYoy });
     }
   });
 
-  // Sort each group by rn26 desc
-  Object.values(segGroups).forEach(arr => arr.sort((a, b) => b.rn26 - a.rn26));
+  Object.values(segGroups).forEach(arr => arr.sort((a, b) => b.rnCur - a.rnCur));
 
-  // Grand total RN for share calc
-  let grandTotalRn26 = 0;
-  Object.values(segGroups).forEach(arr => arr.forEach(ch => { grandTotalRn26 += ch.rn26; }));
+  let grandTotalRnCur = 0;
+  Object.values(segGroups).forEach(arr => arr.forEach(ch => { grandTotalRnCur += ch.rnCur; }));
 
   let html = '';
-  let grandRn26 = 0, grandRn25 = 0, grandRev26 = 0, grandRev25 = 0;
+  let grandRnCur = 0, grandRnPrev = 0, grandRevCur = 0, grandRevPrev = 0;
   let chIdx = 0;
   const query = (appState.channelSearch || '').trim().toLowerCase();
   const isSearching = query.length > 0;
@@ -987,12 +1087,11 @@ function renderChannelTable() {
 
     const filtered = isSearching ? channels.filter(ch => ch.name.toLowerCase().includes(query)) : channels;
 
-    // Subtotal always from full list
-    let segRn26 = 0, segRn25 = 0, segRev26 = 0, segRev25 = 0;
-    channels.forEach(ch => { segRn26 += ch.rn26; segRn25 += ch.rn25; segRev26 += ch.rev26; segRev25 += ch.rev25; });
+    let segRnCur = 0, segRnPrev = 0, segRevCur = 0, segRevPrev = 0;
+    channels.forEach(ch => { segRnCur += ch.rnCur; segRnPrev += ch.rnPrev; segRevCur += ch.revCur; segRevPrev += ch.revPrev; });
 
     if (isSearching && filtered.length === 0) {
-      grandRn26 += segRn26; grandRn25 += segRn25; grandRev26 += segRev26; grandRev25 += segRev25;
+      grandRnCur += segRnCur; grandRnPrev += segRnPrev; grandRevCur += segRevCur; grandRevPrev += segRevPrev;
       continue;
     }
 
@@ -1006,42 +1105,40 @@ function renderChannelTable() {
       const rnsCol = ch.rnsYoy != null ? (ch.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const adrCol = ch.adrYoy != null ? (ch.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
       const revCol = ch.revYoy != null ? (ch.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
-      const sharePct = grandTotalRn26 > 0 ? (ch.rn26 / grandTotalRn26 * 100).toFixed(1) : '0.0';
+      const sharePct = grandTotalRnCur > 0 ? (ch.rnCur / grandTotalRnCur * 100).toFixed(1) : '0.0';
       const toggleId = 'chprop-' + chIdx;
 
       html += `<tr class="ch-parent-row" data-toggle="${toggleId}" onclick="toggleChDetail('${toggleId}')" style="cursor:pointer" title="클릭하여 사업장별 보기">
         <td style="padding-left:20px"><span class="ch-toggle-icon" id="icon-${toggleId}">▶</span> ${ch.name}</td>
-        <td style="font-weight:700">${fmt.n(ch.rn26)}</td><td>${fmt.n(ch.rn25)}</td>
+        <td style="font-weight:700">${fmt.n(ch.rnCur)}</td><td>${fmt.n(ch.rnPrev)}</td>
         <td style="color:${rnsCol};font-weight:700">${ch.rnsYoy != null ? fmt.pct(ch.rnsYoy) : '—'}</td>
         <td style="color:var(--ink-muted);font-size:11px">${sharePct}%</td>
-        <td style="font-weight:700">${fmt.won(ch.adr26)}</td><td>${fmt.won(ch.adr25)}</td>
+        <td style="font-weight:700">${fmt.won(ch.adrCur)}</td><td>${fmt.won(ch.adrPrev)}</td>
         <td style="color:${adrCol};font-weight:700">${ch.adrYoy != null ? fmt.pct(ch.adrYoy) : '—'}</td>
-        <td style="font-weight:700">${fmt.n(Math.round(ch.rev26))}</td><td>${fmt.n(Math.round(ch.rev25))}</td>
+        <td style="font-weight:700">${fmt.n(Math.round(ch.revCur))}</td><td>${fmt.n(Math.round(ch.revPrev))}</td>
         <td style="color:${revCol};font-weight:700">${ch.revYoy != null ? fmt.pct(ch.revYoy) : '—'}</td>
       </tr>`;
 
-      // Property sub-rows (hidden by default)
       const propRows = getChannelPropertyData(ch.name);
       propRows.forEach(p => {
         const pRnsCol = p.rnsYoy != null ? (p.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
         const pAdrCol = p.adrYoy != null ? (p.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
         const pRevCol = p.revYoy != null ? (p.revYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
-        const pShare = grandTotalRn26 > 0 ? (p.rn26 / grandTotalRn26 * 100).toFixed(1) : '0.0';
+        const pShare = grandTotalRnCur > 0 ? (p.rnCur / grandTotalRnCur * 100).toFixed(1) : '0.0';
         html += `<tr class="ch-prop-row" data-parent="${toggleId}" style="display:none;background:var(--bg-deep)">
-          <td style="padding-left:44px;font-size:12.5px;color:var(--ink-soft)">└ ${p.name.replace(/^\d+\./, '')}</td>
-          <td style="font-size:12.5px">${fmt.n(p.rn26)}</td><td style="font-size:12.5px">${fmt.n(p.rn25)}</td>
+          <td style="padding-left:44px;font-size:12.5px;color:var(--ink-soft)">└ ${p.name}</td>
+          <td style="font-size:12.5px">${fmt.n(p.rnCur)}</td><td style="font-size:12.5px">${fmt.n(p.rnPrev)}</td>
           <td style="color:${pRnsCol};font-size:12.5px">${p.rnsYoy != null ? fmt.pct(p.rnsYoy) : '—'}</td>
           <td style="font-size:11px;color:var(--ink-faint)">${pShare}%</td>
-          <td style="font-size:12.5px">${fmt.won(p.adr26)}</td><td style="font-size:12.5px">${fmt.won(p.adr25)}</td>
+          <td style="font-size:12.5px">${fmt.won(p.adrCur)}</td><td style="font-size:12.5px">${fmt.won(p.adrPrev)}</td>
           <td style="color:${pAdrCol};font-size:12.5px">${p.adrYoy != null ? fmt.pct(p.adrYoy) : '—'}</td>
-          <td style="font-size:12.5px">${fmt.n(Math.round(p.rev26))}</td><td style="font-size:12.5px">${fmt.n(Math.round(p.rev25))}</td>
+          <td style="font-size:12.5px">${fmt.n(Math.round(p.revCur))}</td><td style="font-size:12.5px">${fmt.n(Math.round(p.revPrev))}</td>
           <td style="color:${pRevCol};font-size:12.5px">${p.revYoy != null ? fmt.pct(p.revYoy) : '—'}</td>
         </tr>`;
       });
       chIdx++;
     });
 
-    // Show more button
     if (!isSearching && hiddenCount > 0) {
       html += `<tr class="cd-more-row"><td colspan="11" style="text-align:center;padding:8px">
         <button onclick="appState.channelShowAll['${seg}']=true;renderChannelTable()" style="background:var(--bg-soft);color:var(--ink-muted);border:1px solid var(--rule);padding:5px 16px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-muted)'">+ ${hiddenCount}개 거래처 더보기</button>
@@ -1052,51 +1149,48 @@ function renderChannelTable() {
       </td></tr>`;
     }
 
-    // Segment subtotal
-    const segAdr26 = segRn26 > 0 ? Math.round((segRev26 * 1000000) / segRn26) : 0;
-    const segAdr25 = segRn25 > 0 ? Math.round((segRev25 * 1000000) / segRn25) : 0;
-    const segRnYoy = segRn25 > 0 ? (segRn26 - segRn25) / segRn25 * 100 : null;
-    const segRevYoy = segRev25 > 0 ? (segRev26 - segRev25) / segRev25 * 100 : null;
-    const segAdrYoy = segAdr25 > 0 ? (segAdr26 - segAdr25) / segAdr25 * 100 : null;
-    const segSharePct = grandTotalRn26 > 0 ? (segRn26 / grandTotalRn26 * 100).toFixed(1) : '0.0';
+    const segAdrCur = segRnCur > 0 ? Math.round((segRevCur * 1000000) / segRnCur) : 0;
+    const segAdrPrev = segRnPrev > 0 ? Math.round((segRevPrev * 1000000) / segRnPrev) : 0;
+    const segRnYoy = segRnPrev > 0 ? (segRnCur - segRnPrev) / segRnPrev * 100 : null;
+    const segRevYoy = segRevPrev > 0 ? (segRevCur - segRevPrev) / segRevPrev * 100 : null;
+    const segAdrYoy = segAdrPrev > 0 ? (segAdrCur - segAdrPrev) / segAdrPrev * 100 : null;
+    const segSharePct = grandTotalRnCur > 0 ? (segRnCur / grandTotalRnCur * 100).toFixed(1) : '0.0';
     html += `<tr class="seg-subtotal">
       <td>${seg} 소계</td>
-      <td>${fmt.n(segRn26)}</td><td>${fmt.n(segRn25)}</td>
+      <td>${fmt.n(segRnCur)}</td><td>${fmt.n(segRnPrev)}</td>
       <td style="color:${segRnYoy!=null&&segRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRnYoy != null ? fmt.pct(segRnYoy) : '—'}</td>
       <td style="font-weight:800">${segSharePct}%</td>
-      <td>${fmt.won(segAdr26)}</td><td>${fmt.won(segAdr25)}</td>
+      <td>${fmt.won(segAdrCur)}</td><td>${fmt.won(segAdrPrev)}</td>
       <td style="color:${segAdrYoy!=null&&segAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segAdrYoy != null ? fmt.pct(segAdrYoy) : '—'}</td>
-      <td>${fmt.n(Math.round(segRev26))}</td><td>${fmt.n(Math.round(segRev25))}</td>
+      <td>${fmt.n(Math.round(segRevCur))}</td><td>${fmt.n(Math.round(segRevPrev))}</td>
       <td style="color:${segRevYoy!=null&&segRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${segRevYoy != null ? fmt.pct(segRevYoy) : '—'}</td>
     </tr>`;
-    grandRn26 += segRn26; grandRn25 += segRn25; grandRev26 += segRev26; grandRev25 += segRev25;
+    grandRnCur += segRnCur; grandRnPrev += segRnPrev; grandRevCur += segRevCur; grandRevPrev += segRevPrev;
   }
 
-  // Grand total
-  const gAdr26 = grandRn26 > 0 ? Math.round((grandRev26 * 1000000) / grandRn26) : 0;
-  const gAdr25 = grandRn25 > 0 ? Math.round((grandRev25 * 1000000) / grandRn25) : 0;
-  const gRnYoy = grandRn25 > 0 ? (grandRn26 - grandRn25) / grandRn25 * 100 : null;
-  const gRevYoy = grandRev25 > 0 ? (grandRev26 - grandRev25) / grandRev25 * 100 : null;
-  const gAdrYoy = gAdr25 > 0 ? (gAdr26 - gAdr25) / gAdr25 * 100 : null;
+  const gAdrCur = grandRnCur > 0 ? Math.round((grandRevCur * 1000000) / grandRnCur) : 0;
+  const gAdrPrev = grandRnPrev > 0 ? Math.round((grandRevPrev * 1000000) / grandRnPrev) : 0;
+  const gRnYoy = grandRnPrev > 0 ? (grandRnCur - grandRnPrev) / grandRnPrev * 100 : null;
+  const gRevYoy = grandRevPrev > 0 ? (grandRevCur - grandRevPrev) / grandRevPrev * 100 : null;
+  const gAdrYoy = gAdrPrev > 0 ? (gAdrCur - gAdrPrev) / gAdrPrev * 100 : null;
   html += `<tr class="total-row">
     <td style="color:var(--gold-bright)">합계</td>
-    <td>${fmt.n(grandRn26)}</td><td>${fmt.n(grandRn25)}</td>
+    <td>${fmt.n(grandRnCur)}</td><td>${fmt.n(grandRnPrev)}</td>
     <td style="color:${gRnYoy!=null&&gRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${gRnYoy != null ? fmt.pct(gRnYoy) : '—'}</td>
     <td>—</td>
-    <td>${fmt.won(gAdr26)}</td><td>${fmt.won(gAdr25)}</td>
+    <td>${fmt.won(gAdrCur)}</td><td>${fmt.won(gAdrPrev)}</td>
     <td style="color:${gAdrYoy!=null&&gAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${gAdrYoy != null ? fmt.pct(gAdrYoy) : '—'}</td>
-    <td>${fmt.n(Math.round(grandRev26))}</td><td>${fmt.n(Math.round(grandRev25))}</td>
+    <td>${fmt.n(Math.round(grandRevCur))}</td><td>${fmt.n(Math.round(grandRevPrev))}</td>
     <td style="color:${gRevYoy!=null&&gRevYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${gRevYoy != null ? fmt.pct(gRevYoy) : '—'}</td>
   </tr>`;
 
   tbody.innerHTML = html;
 }
 
-// Get property-level data for a specific channel
 function getChannelPropertyData(chName) {
-  const { dbAgg, otbData } = appState.allData;
+  const { dbAgg } = appState.allData;
   const bpc = dbAgg.by_property_channel || {};
-  const { m26, m25 } = getMonthKeys();
+  const { mCur, mPrev } = getMonthKeys();
   const filteredProps = getFilteredProps();
   const results = [];
 
@@ -1105,22 +1199,21 @@ function getChannelPropertyData(chName) {
     const channels = bpc[propName];
     if (!channels[chName]) return;
     const chData = channels[chName];
-    let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
-    m26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
-    m25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
-    if (rn26 === 0 && rn25 === 0) return;
-    const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
-    const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
-    const rnsYoy = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
-    const revYoy = rev25 > 0 ? (rev26 - rev25) / rev25 * 100 : null;
-    const adrYoy = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
-    results.push({ name: propName, rn26, rev26, adr26, rn25, rev25, adr25, rnsYoy, revYoy, adrYoy });
+    let rnCur = 0, revCur = 0, rnPrev = 0, revPrev = 0;
+    mCur.forEach(mk => { if (chData[mk]) { rnCur += chData[mk].net_rn || 0; revCur += chData[mk].net_rev || 0; } });
+    mPrev.forEach(mk => { if (chData[mk]) { rnPrev += chData[mk].net_rn || 0; revPrev += chData[mk].net_rev || 0; } });
+    if (rnCur === 0 && rnPrev === 0) return;
+    const adrCur = rnCur > 0 ? Math.round((revCur * 1000000) / rnCur) : 0;
+    const adrPrev = rnPrev > 0 ? Math.round((revPrev * 1000000) / rnPrev) : 0;
+    const rnsYoy = rnPrev > 0 ? (rnCur - rnPrev) / rnPrev * 100 : null;
+    const revYoy = revPrev > 0 ? (revCur - revPrev) / revPrev * 100 : null;
+    const adrYoy = adrPrev > 0 ? (adrCur - adrPrev) / adrPrev * 100 : null;
+    results.push({ name: propName, rnCur, revCur, adrCur, rnPrev, revPrev, adrPrev, rnsYoy, revYoy, adrYoy });
   });
-  results.sort((a, b) => b.rn26 - a.rn26);
+  results.sort((a, b) => b.rnCur - a.rnCur);
   return results;
 }
 
-// Toggle channel detail rows
 function toggleChDetail(toggleId) {
   const icon = document.getElementById('icon-' + toggleId);
   const rows = document.querySelectorAll(`tr[data-parent="${toggleId}"]`);
@@ -1129,36 +1222,34 @@ function toggleChDetail(toggleId) {
   if (icon) icon.textContent = isOpen ? '▶' : '▼';
 }
 
-// Channel search
 function onChannelSearch(val) {
   appState.channelSearch = val;
   renderChannelTable();
 }
 
-// Excel download
 function downloadChannelExcel() {
   const { dbAgg } = appState.allData;
   const byChannel = dbAgg.by_channel || {};
   const bcs = dbAgg.by_channel_segment || {};
-  const { m26, m25 } = getMonthKeys();
+  const { mCur, mPrev, year, prevYear } = getMonthKeys();
   const filteredProps = getFilteredProps();
   const bpc = dbAgg.by_property_channel || {};
 
-  let csvRows = ['﻿거래처,세그먼트,RN_2026,RN_2025,RN_YoY(%),ADR_2026,ADR_2025,ADR_YoY(%),매출_2026(백만),매출_2025(백만),매출_YoY(%)'];
+  let csvRows = [`﻿거래처,세그먼트,RN_${year},RN_${prevYear},RN_YoY(%),ADR_${year},ADR_${prevYear},ADR_YoY(%),매출_${year}(백만),매출_${prevYear}(백만),매출_YoY(%)`];
 
   ['OTA', 'G-OTA', 'Inbound'].forEach(seg => {
     Object.keys(bcs).forEach(chName => {
       if (chName === '기타') return;
       if (!Object.keys(bcs[chName]).includes(seg)) return;
-      let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
+      let rnCur = 0, revCur = 0, rnPrev = 0, revPrev = 0;
       if (filteredProps) {
-        filteredProps.forEach(pn => { const pc = bpc[pn]; if (!pc || !pc[chName]) return; const cd = pc[chName]; m26.forEach(mk => { if (cd[mk]) { rn26 += cd[mk].net_rn||0; rev26 += cd[mk].net_rev||0; } }); m25.forEach(mk => { if (cd[mk]) { rn25 += cd[mk].net_rn||0; rev25 += cd[mk].net_rev||0; } }); });
+        filteredProps.forEach(pn => { const pc = bpc[pn]; if (!pc || !pc[chName]) return; const cd = pc[chName]; mCur.forEach(mk => { if (cd[mk]) { rnCur += cd[mk].net_rn||0; revCur += cd[mk].net_rev||0; } }); mPrev.forEach(mk => { if (cd[mk]) { rnPrev += cd[mk].net_rn||0; revPrev += cd[mk].net_rev||0; } }); });
       } else {
-        const cd = byChannel[chName]||{}; m26.forEach(mk => { if (cd[mk]) { rn26 += cd[mk].net_rn||0; rev26 += cd[mk].net_rev||0; } }); m25.forEach(mk => { if (cd[mk]) { rn25 += cd[mk].net_rn||0; rev25 += cd[mk].net_rev||0; } });
+        const cd = byChannel[chName]||{}; mCur.forEach(mk => { if (cd[mk]) { rnCur += cd[mk].net_rn||0; revCur += cd[mk].net_rev||0; } }); mPrev.forEach(mk => { if (cd[mk]) { rnPrev += cd[mk].net_rn||0; revPrev += cd[mk].net_rev||0; } });
       }
-      if (rn26 === 0 && rn25 === 0) return;
-      const adr26 = rn26>0?Math.round((rev26*1e6)/rn26):0, adr25 = rn25>0?Math.round((rev25*1e6)/rn25):0;
-      csvRows.push([chName, seg, rn26, rn25, rn25>0?((rn26-rn25)/rn25*100).toFixed(1):'', adr26, adr25, adr25>0?((adr26-adr25)/adr25*100).toFixed(1):'', Math.round(rev26), Math.round(rev25), rev25>0?((rev26-rev25)/rev25*100).toFixed(1):''].join(','));
+      if (rnCur === 0 && rnPrev === 0) return;
+      const adrCur = rnCur>0?Math.round((revCur*1e6)/rnCur):0, adrPrev = rnPrev>0?Math.round((revPrev*1e6)/rnPrev):0;
+      csvRows.push([chName, seg, rnCur, rnPrev, rnPrev>0?((rnCur-rnPrev)/rnPrev*100).toFixed(1):'', adrCur, adrPrev, adrPrev>0?((adrCur-adrPrev)/adrPrev*100).toFixed(1):'', Math.round(revCur), Math.round(revPrev), revPrev>0?((revCur-revPrev)/revPrev*100).toFixed(1):''].join(','));
     });
   });
 
@@ -1175,7 +1266,7 @@ function downloadChannelExcel() {
 function renderCategoryTable() {
   const { dbAgg } = appState.allData;
   const bps = dbAgg.by_property_segment || {};
-  const { m26, m25 } = getMonthKeys();
+  const { mCur, mPrev, year, prevYear } = getMonthKeys();
   const filteredProps = getFilteredProps();
 
   const categoryMap = {
@@ -1187,10 +1278,9 @@ function renderCategoryTable() {
 
   const catData = {};
   for (const cat of Object.keys(categoryMap)) {
-    catData[cat] = { rn26: 0, rev26: 0, rn25: 0, rev25: 0 };
+    catData[cat] = { rnCur: 0, revCur: 0, rnPrev: 0, revPrev: 0 };
   }
 
-  // Aggregate from by_property_segment
   const propsToProcess = filteredProps || Object.keys(bps);
   propsToProcess.forEach(propName => {
     const propSegs = bps[propName];
@@ -1201,40 +1291,40 @@ function renderCategoryTable() {
         if (c === '기타') continue;
         if (segs.includes(segName)) { cat = c; break; }
       }
-      if (!knownSegs.has(segName) && cat === '기타') cat = '기타'; // catch-all
 
-      m26.forEach(mk => { if (monthData[mk]) { catData[cat].rn26 += monthData[mk].net_rn || 0; catData[cat].rev26 += monthData[mk].net_rev || 0; } });
-      m25.forEach(mk => { if (monthData[mk]) { catData[cat].rn25 += monthData[mk].net_rn || 0; catData[cat].rev25 += monthData[mk].net_rev || 0; } });
+      mCur.forEach(mk => { if (monthData[mk]) { catData[cat].rnCur += monthData[mk].net_rn || 0; catData[cat].revCur += monthData[mk].net_rev || 0; } });
+      mPrev.forEach(mk => { if (monthData[mk]) { catData[cat].rnPrev += monthData[mk].net_rn || 0; catData[cat].revPrev += monthData[mk].net_rev || 0; } });
     });
   });
 
   const tbody = document.getElementById('category-tbody');
   if (!tbody) return;
 
-  let totalRn26 = 0;
-  Object.values(catData).forEach(d => totalRn26 += d.rn26);
+  let totalRnCur = 0, totalRevCur = 0;
+  Object.values(catData).forEach(d => { totalRnCur += d.rnCur; totalRevCur += d.revCur; });
 
   let html = '';
   for (const [cat, d] of Object.entries(catData)) {
-    const adr26 = d.rn26 > 0 ? Math.round((d.rev26 * 1000000) / d.rn26) : 0;
-    const pct = totalRn26 > 0 ? (d.rn26 / totalRn26 * 100).toFixed(1) + '%' : '—';
-    const yoyRn = d.rn25 > 0 ? (d.rn26 - d.rn25) / d.rn25 * 100 : null;
+    const adrCur = d.rnCur > 0 ? Math.round((d.revCur * 1000000) / d.rnCur) : 0;
+    const rnPct = totalRnCur > 0 ? (d.rnCur / totalRnCur * 100).toFixed(1) + '%' : '—';
+    const revPct = totalRevCur > 0 ? (d.revCur / totalRevCur * 100).toFixed(1) + '%' : '—';
+    const yoyRn = d.rnPrev > 0 ? (d.rnCur - d.rnPrev) / d.rnPrev * 100 : null;
     const yoyCol = yoyRn != null ? (yoyRn >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
     html += `<tr>
       <td style="font-weight:700">${cat}</td>
-      <td>${fmt.n(d.rn26)}</td>
-      <td>${pct}</td>
+      <td>${fmt.n(d.rnCur)}</td>
+      <td>${rnPct}</td>
       <td style="color:${yoyCol};font-weight:700">${yoyRn != null ? fmt.pct(yoyRn) : '—'}</td>
-      <td>${fmt.n(Math.round(d.rev26))}</td>
-      <td>${fmt.won(adr26)}</td>
+      <td>${fmt.n(Math.round(d.revCur))}</td>
+      <td>${revPct}</td>
+      <td>${fmt.won(adrCur)}</td>
     </tr>`;
   }
-  // Total
-  const tAdr = totalRn26 > 0 ? Math.round((Object.values(catData).reduce((s,d) => s + d.rev26, 0) * 1000000) / totalRn26) : 0;
+  const tAdr = totalRnCur > 0 ? Math.round((totalRevCur * 1000000) / totalRnCur) : 0;
   html += `<tr class="total-row">
     <td style="color:var(--gold-bright)">합계</td>
-    <td>${fmt.n(totalRn26)}</td><td>100%</td><td>—</td>
-    <td>${fmt.n(Math.round(Object.values(catData).reduce((s,d) => s + d.rev26, 0)))}</td>
+    <td>${fmt.n(totalRnCur)}</td><td>100%</td><td>—</td>
+    <td>${fmt.n(Math.round(totalRevCur))}</td><td>100%</td>
     <td>${fmt.won(tAdr)}</td>
   </tr>`;
   tbody.innerHTML = html;
@@ -1246,7 +1336,7 @@ function renderCategoryChart(catData) {
   const ctx = document.getElementById('category-chart');
   if (!ctx) return;
   const labels = Object.keys(catData);
-  const values = labels.map(k => catData[k].rn26);
+  const values = labels.map(k => catData[k].rnCur);
   const colors = ['#c9a063', '#5a9fc4', '#4caf6f'];
   if (window.catChart) window.catChart.destroy();
   window.catChart = new Chart(ctx, {
@@ -1258,26 +1348,37 @@ function renderCategoryChart(catData) {
 
 // ========== DAY OF WEEK TABLE (요일별) ==========
 function renderDayOfWeekTable() {
-  const { otbData, dbAgg } = appState.allData;
+  const { otbData } = appState.allData;
   const sdd = otbData?.stayDateDaily;
   if (!sdd) return;
 
+  const { year, prevYear } = getMonthKeys();
+  // Update dynamic year labels in header
+  const el1 = document.getElementById('dow-year-cur'); if (el1) el1.textContent = year;
+  const el2 = document.getElementById('dow-year-prev'); if (el2) el2.textContent = prevYear;
+  const el3 = document.getElementById('dow-adr-cur'); if (el3) el3.textContent = year;
+  const el4 = document.getElementById('dow-adr-prev'); if (el4) el4.textContent = prevYear;
+  const el5 = document.getElementById('dow-rev-cur'); if (el5) el5.textContent = year;
+
   const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
-  const dayData26 = dayNames.map(() => ({ rn: 0, rev: 0 }));
-  const dayData25 = dayNames.map(() => ({ rn: 0, rev: 0 }));
-  const { m26, m25 } = getMonthKeys();
+  const dayDataCur = dayNames.map(() => ({ rn: 0, rev: 0 }));
+  const dayDataPrev = dayNames.map(() => ({ rn: 0, rev: 0 }));
+  const { mCur, mPrev } = getMonthKeys();
   const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound', 'D멤버스', 'FIT'] : appState.activeSegs);
 
   function aggregateDOW(monthKeys, target) {
     monthKeys.forEach(mk => {
       const md = sdd[mk];
       if (!md || !md.days || !md.segments) return;
-      const year = parseInt(mk.substring(0, 4));
+      const yr = parseInt(mk.substring(0, 4));
       const month = parseInt(mk.substring(4)) - 1;
       md.days.forEach((dayNum, i) => {
-        const date = new Date(year, month, dayNum);
+        const date = new Date(yr, month, dayNum);
         if (date.getMonth() !== month) return;
-        const dow = date.getDay() === 0 ? 6 : date.getDay() - 1; // Mon=0 ... Sun=6
+        const dow = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        // Apply day type filter
+        if (appState.activeDayType === '주중' && dow >= 5) return; // skip Sat(5), Sun(6)
+        if (appState.activeDayType === '주말' && dow < 5) return;  // skip Mon-Fri
         for (const [segName, segData] of Object.entries(md.segments)) {
           if (!activeSegSet.has(segName)) continue;
           if (segData.net_rn && segData.net_rn[i] != null) target[dow].rn += segData.net_rn[i];
@@ -1287,51 +1388,109 @@ function renderDayOfWeekTable() {
     });
   }
 
-  aggregateDOW(m26, dayData26);
-  aggregateDOW(m25, dayData25);
+  aggregateDOW(mCur, dayDataCur);
+  aggregateDOW(mPrev, dayDataPrev);
 
   const tbody = document.getElementById('dayofweek-tbody');
   if (!tbody) return;
 
+  // Total RN for share calc
+  const totalRnCur = dayDataCur.reduce((s, d) => s + d.rn, 0);
+
   let html = '';
-  dayNames.forEach((day, i) => {
-    const rn26 = dayData26[i].rn;
-    const rn25 = dayData25[i].rn;
-    const rev26 = dayData26[i].rev; // in 백만원
-    const rev25 = dayData25[i].rev;
-    const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
-    const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
-    const yoyRn = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
-    const yoyAdr = adr25 > 0 ? (adr26 - adr25) / adr25 * 100 : null;
+  // Filter day indices based on dayType
+  let dayIndices = [0, 1, 2, 3, 4, 5, 6];
+  if (appState.activeDayType === '주중') dayIndices = [0, 1, 2, 3, 4];
+  else if (appState.activeDayType === '주말') dayIndices = [5, 6];
+
+  dayIndices.forEach(i => {
+    const day = dayNames[i];
+    const rnCur = dayDataCur[i].rn;
+    const rnPrev = dayDataPrev[i].rn;
+    const revCur = dayDataCur[i].rev;
+    const adrCur = rnCur > 0 ? Math.round((revCur * 1000000) / rnCur) : 0;
+    const adrPrev = rnPrev > 0 ? Math.round((dayDataPrev[i].rev * 1000000) / rnPrev) : 0;
+    const yoyRn = rnPrev > 0 ? (rnCur - rnPrev) / rnPrev * 100 : null;
+    const yoyAdr = adrPrev > 0 ? (adrCur - adrPrev) / adrPrev * 100 : null;
     const rnCol = yoyRn != null ? (yoyRn >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
     const adrCol = yoyAdr != null ? (yoyAdr >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
-    const isWeekend = i >= 4; // 금, 토, 일
+    const isWeekend = i >= 5;
     const bgStyle = isWeekend ? 'background:rgba(201,160,99,0.04)' : '';
+    const rnShare = totalRnCur > 0 ? (rnCur / totalRnCur * 100).toFixed(1) : '0.0';
     html += `<tr style="${bgStyle}">
-      <td style="font-weight:700;${i >= 5 ? 'color:var(--gold-bright)' : ''}">${day}요일</td>
-      <td style="font-weight:700">${fmt.n(rn26)}</td><td>${fmt.n(rn25)}</td>
+      <td style="font-weight:700;${isWeekend ? 'color:var(--gold-bright)' : ''}">${day}요일</td>
+      <td style="font-weight:700">${fmt.n(rnCur)}</td><td>${fmt.n(rnPrev)}</td>
       <td style="color:${rnCol};font-weight:700">${yoyRn != null ? fmt.pct(yoyRn) : '—'}</td>
-      <td style="font-weight:700">${fmt.won(adr26)}</td><td>${fmt.won(adr25)}</td>
+      <td style="color:var(--ink-muted);font-size:11px">${rnShare}%</td>
+      <td style="font-weight:700">${fmt.won(adrCur)}</td><td>${fmt.won(adrPrev)}</td>
       <td style="color:${adrCol};font-weight:700">${yoyAdr != null ? fmt.pct(yoyAdr) : '—'}</td>
-      <td style="font-weight:700">${fmt.n(Math.round(rev26))}</td>
+      <td style="font-weight:700">${fmt.n(Math.round(revCur))}</td>
     </tr>`;
   });
 
   // Total
-  const tRn26 = dayData26.reduce((s,d) => s+d.rn, 0);
-  const tRn25 = dayData25.reduce((s,d) => s+d.rn, 0);
-  const tRev26 = dayData26.reduce((s,d) => s+d.rev, 0);
-  const tAdr26 = tRn26 > 0 ? Math.round((tRev26*1e6)/tRn26) : 0;
-  const tAdr25 = tRn25 > 0 ? Math.round((dayData25.reduce((s,d) => s+d.rev, 0)*1e6)/tRn25) : 0;
-  const tRnYoy = tRn25 > 0 ? (tRn26-tRn25)/tRn25*100 : null;
-  const tAdrYoy = tAdr25 > 0 ? (tAdr26-tAdr25)/tAdr25*100 : null;
+  const tRnCur = dayIndices.reduce((s, i) => s + dayDataCur[i].rn, 0);
+  const tRnPrev = dayIndices.reduce((s, i) => s + dayDataPrev[i].rn, 0);
+  const tRevCur = dayIndices.reduce((s, i) => s + dayDataCur[i].rev, 0);
+  const tRevPrev = dayIndices.reduce((s, i) => s + dayDataPrev[i].rev, 0);
+  const tAdrCur = tRnCur > 0 ? Math.round((tRevCur*1e6)/tRnCur) : 0;
+  const tAdrPrev = tRnPrev > 0 ? Math.round((tRevPrev*1e6)/tRnPrev) : 0;
+  const tRnYoy = tRnPrev > 0 ? (tRnCur-tRnPrev)/tRnPrev*100 : null;
+  const tAdrYoy = tAdrPrev > 0 ? (tAdrCur-tAdrPrev)/tAdrPrev*100 : null;
   html += `<tr class="total-row">
     <td style="color:var(--gold-bright)">합계</td>
-    <td>${fmt.n(tRn26)}</td><td>${fmt.n(tRn25)}</td>
+    <td>${fmt.n(tRnCur)}</td><td>${fmt.n(tRnPrev)}</td>
     <td style="color:${tRnYoy!=null&&tRnYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${tRnYoy!=null?fmt.pct(tRnYoy):'—'}</td>
-    <td>${fmt.won(tAdr26)}</td><td>${fmt.won(tAdr25)}</td>
+    <td>100%</td>
+    <td>${fmt.won(tAdrCur)}</td><td>${fmt.won(tAdrPrev)}</td>
     <td style="color:${tAdrYoy!=null&&tAdrYoy>=0?'var(--positive)':'var(--negative)'};font-weight:800">${tAdrYoy!=null?fmt.pct(tAdrYoy):'—'}</td>
-    <td>${fmt.n(Math.round(tRev26))}</td>
+    <td>${fmt.n(Math.round(tRevCur))}</td>
+  </tr>`;
+  tbody.innerHTML = html;
+
+  // Render weekday/weekend ratio card
+  renderDayTypeRatio(dayDataCur);
+}
+
+// ========== WEEKDAY/WEEKEND RATIO ==========
+function renderDayTypeRatio(dayDataCur) {
+  const tbody = document.getElementById('daytype-ratio-tbody');
+  if (!tbody) return;
+
+  // 주중: Mon(0)~Fri(4), 주말: Sat(5)~Sun(6)
+  let weekdayRn = 0, weekdayRev = 0, weekendRn = 0, weekendRev = 0;
+  dayDataCur.forEach((d, i) => {
+    if (i < 5) { weekdayRn += d.rn; weekdayRev += d.rev; }
+    else { weekendRn += d.rn; weekendRev += d.rev; }
+  });
+  const totalRn = weekdayRn + weekendRn;
+  const totalRev = weekdayRev + weekendRev;
+
+  const rows = [
+    { label: '주중 (월~금)', rn: weekdayRn, rev: weekdayRev },
+    { label: '주말 (토~일)', rn: weekendRn, rev: weekendRev },
+  ];
+
+  let html = '';
+  rows.forEach(r => {
+    const pct = totalRn > 0 ? (r.rn / totalRn * 100).toFixed(1) : '0.0';
+    const adr = r.rn > 0 ? Math.round((r.rev * 1000000) / r.rn) : 0;
+    html += `<tr>
+      <td style="font-weight:700">${r.label}</td>
+      <td>${fmt.n(r.rn)}</td>
+      <td style="font-weight:700">${pct}%</td>
+      <td>${fmt.n(Math.round(r.rev))}</td>
+      <td>${fmt.won(adr)}</td>
+    </tr>`;
+  });
+
+  const tAdr = totalRn > 0 ? Math.round((totalRev * 1000000) / totalRn) : 0;
+  html += `<tr class="total-row">
+    <td style="color:var(--gold-bright)">합계</td>
+    <td>${fmt.n(totalRn)}</td>
+    <td>100%</td>
+    <td>${fmt.n(Math.round(totalRev))}</td>
+    <td>${fmt.won(tAdr)}</td>
   </tr>`;
   tbody.innerHTML = html;
 }

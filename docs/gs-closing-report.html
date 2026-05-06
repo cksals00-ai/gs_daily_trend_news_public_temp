@@ -740,7 +740,6 @@ function renderChannelTable(months, containerId) {
 function getChannelDetailData(months) {
   if (!DB_DATA || !DB_DATA.by_channel_segment) return null;
   const cs = DB_DATA.by_channel_segment;
-  const byChannel = DB_DATA.by_channel || {};
   const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
   const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
 
@@ -752,7 +751,8 @@ function getChannelDetailData(months) {
     const seg = segs.includes('OTA') ? 'OTA' : segs.includes('G-OTA') ? 'G-OTA' : null;
     if (!seg || !segGroups[seg]) return;
 
-    const chData = byChannel[chName] || {};
+    // Use segment-filtered data from by_channel_segment instead of total by_channel
+    const chData = cs[chName][seg] || {};
     let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
     monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
     monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
@@ -774,17 +774,45 @@ function getChannelDetailData(months) {
 }
 
 /* ── Get property-level data for a specific channel ── */
-function getChannelPropertyData(chName, months) {
-  if (!DB_DATA || !DB_DATA.by_property_channel) return [];
-  const bpc = DB_DATA.by_property_channel;
+function getChannelPropertyData(chName, months, segment) {
   const monthKeys26 = months.map(m => '2026' + String(m).padStart(2, '0'));
   const monthKeys25 = months.map(m => '2025' + String(m).padStart(2, '0'));
   const results = [];
 
-  Object.keys(bpc).forEach(propName => {
-    const channels = bpc[propName];
-    if (!channels[chName]) return;
-    const chData = channels[chName];
+  // 우선: by_property_channel_segment (사업장×채널×세그먼트 교차) 사용
+  const bpcs = DB_DATA && DB_DATA.by_property_channel_segment;
+  const bpc = DB_DATA && DB_DATA.by_property_channel;
+  if (!bpcs && !bpc) return [];
+
+  const source = bpcs || bpc;
+
+  Object.keys(source).forEach(propName => {
+    let chData = null;
+
+    if (bpcs && bpcs[propName] && bpcs[propName][chName]) {
+      // 세그먼트 필터링된 데이터 사용
+      if (segment && bpcs[propName][chName][segment]) {
+        chData = bpcs[propName][chName][segment];
+      } else if (!segment) {
+        // 세그먼트 미지정 시 모든 세그먼트 합산
+        chData = {};
+        Object.values(bpcs[propName][chName]).forEach(segData => {
+          Object.entries(segData).forEach(([mk, vals]) => {
+            if (!chData[mk]) chData[mk] = { net_rn: 0, net_rev: 0 };
+            chData[mk].net_rn += vals.net_rn || 0;
+            chData[mk].net_rev += vals.net_rev || 0;
+          });
+        });
+      } else {
+        return; // 해당 세그먼트 데이터 없음
+      }
+    } else if (bpc && bpc[propName] && bpc[propName][chName]) {
+      // fallback: 세그먼트 구분 없는 기존 데이터
+      chData = bpc[propName][chName];
+    } else {
+      return;
+    }
+
     let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
     monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
     monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
@@ -822,7 +850,7 @@ function downloadChannelDetailExcel(months) {
       ].join(','));
 
       // Add property-level rows
-      const props = getChannelPropertyData(ch.name, months);
+      const props = getChannelPropertyData(ch.name, months, ch.segment);
       props.forEach(p => {
         const pShare = totalRn > 0 ? (p.rn26 / totalRn * 100).toFixed(1) : '0.0';
         csvRows.push([
@@ -944,7 +972,7 @@ function renderChannelDetailTable(months, containerId) {
       </tr>`;
 
       // Property sub-rows (hidden by default)
-      const props = getChannelPropertyData(ch.name, months);
+      const props = getChannelPropertyData(ch.name, months, ch.segment);
       props.forEach(p => {
         const pRnsCol = p.rnsYoy != null ? (p.rnsYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
         const pAdrCol = p.adrYoy != null ? (p.adrYoy >= 0 ? 'var(--positive)' : 'var(--negative)') : '';
@@ -1154,6 +1182,56 @@ function renderADRTrendChart(chartId) {
       scales: { y: { beginAtZero: false, ticks: { color: 'rgba(255,255,255,0.4)', callback: v => fmt.won(v) }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { display: false } } }
     }
   });
+}
+
+/* ══════════════════════════════════════
+   RENDER: CATEGORY MONTH FILTER (3-3)
+   ══════════════════════════════════════ */
+const _catFilterState = {}; // uid → { selectedMonths: [...], baseMonths: [...] }
+
+function renderCatMonthFilter(baseMonths, uid) {
+  const el = document.getElementById(`cat-month-filter-${uid}`);
+  if (!el) return;
+
+  if (!_catFilterState[uid]) {
+    _catFilterState[uid] = { selectedMonths: [...baseMonths], baseMonths: [...baseMonths] };
+  }
+  const state = _catFilterState[uid];
+  const MONTH_LABELS = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  let html = '<span style="font-size:12px;color:var(--ink-muted);font-weight:600;">투숙월:</span>';
+
+  // "전체" button (select all base months)
+  const allSelected = state.selectedMonths.length === state.baseMonths.length;
+  html += `<button onclick="_catToggleAll('${uid}')" style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${allSelected ? 'var(--gold)' : 'var(--rule-strong)'};background:${allSelected ? 'var(--gold-dim)' : 'var(--bg-soft)'};color:${allSelected ? 'var(--gold-bright)' : 'var(--ink-muted)'};transition:all .15s">전체</button>`;
+
+  // Individual month buttons
+  baseMonths.forEach(m => {
+    const isActive = state.selectedMonths.includes(m);
+    html += `<button onclick="_catToggleMonth('${uid}',${m})" style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${isActive ? 'var(--gold)' : 'var(--rule-strong)'};background:${isActive ? 'var(--gold-dim)' : 'var(--bg-soft)'};color:${isActive ? 'var(--gold-bright)' : 'var(--ink-muted)'};transition:all .15s">${MONTH_LABELS[m]}</button>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function _catToggleMonth(uid, month) {
+  const state = _catFilterState[uid];
+  const idx = state.selectedMonths.indexOf(month);
+  if (idx >= 0 && state.selectedMonths.length > 1) {
+    state.selectedMonths.splice(idx, 1);
+  } else if (idx < 0) {
+    state.selectedMonths.push(month);
+    state.selectedMonths.sort((a, b) => a - b);
+  }
+  renderCatMonthFilter(state.baseMonths, uid);
+  renderCategorySection(state.selectedMonths, `catpie-${uid}`, `cattbl-${uid}`);
+}
+
+function _catToggleAll(uid) {
+  const state = _catFilterState[uid];
+  state.selectedMonths = [...state.baseMonths];
+  renderCatMonthFilter(state.baseMonths, uid);
+  renderCategorySection(state.selectedMonths, `catpie-${uid}`, `cattbl-${uid}`);
 }
 
 /* ══════════════════════════════════════
@@ -1516,6 +1594,9 @@ function buildTabHTML(tabId, months, label, showCumul) {
         <div class="card">
           <div class="card-header"><h3>3-3. 상품(카테고리)별 구성</h3></div>
           <div class="card-body">
+            <div id="cat-month-filter-${uid}" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:12px;color:var(--ink-muted);font-weight:600;">투숙월:</span>
+            </div>
             <div class="chart-row">
               <div class="chart-wrap"><h4>상품 카테고리 구성 (RN)</h4><div class="chart-container"><canvas id="catpie-${uid}"></canvas></div></div>
               <div class="table-wrap" id="cattbl-${uid}"></div>
@@ -1668,7 +1749,8 @@ function populateTab(tabId, months, showCumul) {
     cdInsEl.innerHTML = cdItems.length > 0 ? cdItems.map(p => `<li>${p}</li>`).join('') : '<li>거래처별 상세 데이터 분석 중</li>';
   }
 
-  // 3-3 Category
+  // 3-3 Category — with month slicer
+  renderCatMonthFilter(months, uid);
   renderCategorySection(months, `catpie-${uid}`, `cattbl-${uid}`);
 
   // 3-4 Lead time
