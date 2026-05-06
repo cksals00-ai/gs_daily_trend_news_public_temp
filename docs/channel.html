@@ -556,13 +556,13 @@ function render() {
     .filter(([,d]) => d.booking_rn > 0)
     .sort(([,a],[,b]) => b.booking_rn - a.booking_rn);
 
-  const totalRNS = sorted.reduce((s,[,d]) => s + d.booking_rn, 0);
-  const totalREV = sorted.reduce((s,[,d]) => s + d.booking_rev, 0);
+  const totalRNS = sorted.reduce((s,[,d]) => s + (d.net_rn || 0), 0);
+  const totalREV = sorted.reduce((s,[,d]) => s + (d.net_rev || 0), 0);
   const totalBookRNS = sorted.reduce((s,[,d]) => s + d.booking_rn, 0);
   const totalCancelRNS = sorted.reduce((s,[,d]) => s + d.cancel_rn, 0);
   const avgADR = totalRNS > 0 ? totalREV * 1000 / totalRNS : 0;
-  const totalLyRNS = Object.values(channelDataLY).reduce((s,d) => s + (d.booking_rn||0), 0);
-  const totalLyREV = Object.values(channelDataLY).reduce((s,d) => s + (d.booking_rev||0), 0);
+  const totalLyRNS = Object.values(channelDataLY).reduce((s,d) => s + (d.net_rn||0), 0);
+  const totalLyREV = Object.values(channelDataLY).reduce((s,d) => s + (d.net_rev||0), 0);
   const avgLyADR = totalLyRNS > 0 ? totalLyREV * 1000 / totalLyRNS : 0;
 
   // KPIs: 객실수 → ADR → 매출 → 활성채널
