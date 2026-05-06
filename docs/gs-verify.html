@@ -343,6 +343,7 @@ input, button, select, table, th, td {
     <button class="tab-btn" onclick="switchTab('auth')" role="tab"><span class="tab-icon">🔐</span>권한 검증</button>
     <button class="tab-btn" onclick="switchTab('schedule')" role="tab"><span class="tab-icon">⏰</span>스케줄 검증</button>
     <button class="tab-btn" onclick="switchTab('env')" role="tab"><span class="tab-icon">🛠️</span>작업환경 검증</button>
+    <button class="tab-btn" onclick="switchTab('consistency')" role="tab"><span class="tab-icon">🔄</span>뷰 정합성</button>
   </div>
 
   <!-- ═══════════ TAB 1: 데이터 검증 ═══════════ -->
@@ -719,6 +720,96 @@ input, button, select, table, th, td {
     </div>
   </div>
 
+  <!-- ═══════════ TAB 6: 뷰 정합성 ═══════════ -->
+  <div class="tab-panel" id="panel-consistency">
+
+    <div class="card">
+      <div class="card-title">🔄 뷰 간 데이터 정합성 검증</div>
+      <p style="font-size:12px;color:var(--ink-faint);margin-bottom:16px;">db_aggregated.json에서 3개 뷰(투숙일기준, 채널별, 상품카테고리별)의 RN 합계가 동일한지 실시간으로 검증합니다.</p>
+
+      <!-- Filters -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="display:block;font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">사업장</label>
+          <select id="consistency-property" style="width:100%;padding:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:13px;">
+            <option value="전체">전체</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">연도</label>
+          <select id="consistency-year" style="width:100%;padding:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:13px;">
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">월</label>
+          <select id="consistency-month" style="width:100%;padding:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:13px;">
+            <option value="0">전체</option>
+            <option value="1">1월</option>
+            <option value="2">2월</option>
+            <option value="3">3월</option>
+            <option value="4">4월</option>
+            <option value="5">5월</option>
+            <option value="6">6월</option>
+            <option value="7">7월</option>
+            <option value="8">8월</option>
+            <option value="9">9월</option>
+            <option value="10">10월</option>
+            <option value="11">11월</option>
+            <option value="12">12월</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="runConsistencyCheck()" style="padding:10px 20px;background:var(--gold);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px;transition:background 0.2s;" onmouseover="this.style.background='var(--gold-bright)'" onmouseout="this.style.background='var(--gold)'">검증 실행</button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-bar" id="consistency-summary-bar">
+      <div class="summary-card">
+        <div class="s-label">투숙일기준 RN</div>
+        <div class="s-value" id="consistency-v1-rn" style="color:var(--ink-soft);">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">채널별 RN</div>
+        <div class="s-value" id="consistency-v2-rn" style="color:var(--ink-soft);">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">상품카테고리별 RN</div>
+        <div class="s-value" id="consistency-v3-rn" style="color:var(--ink-soft);">—</div>
+      </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="card">
+      <div class="card-title">비교 테이블</div>
+      <table class="v-table" id="consistency-table">
+        <thead><tr><th>뷰</th><th>RN</th><th>Revenue</th><th>ADR</th><th>상태</th></tr></thead>
+        <tbody id="consistency-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--ink-faint);padding:16px">필터를 설정하고 "검증 실행" 버튼을 클릭하세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Explanation -->
+    <div class="card" style="background:rgba(76,175,111,0.08);border:1px solid rgba(76,175,111,0.3);">
+      <div class="card-title">ℹ️ 정보</div>
+      <p style="font-size:12px;color:var(--ink-soft);line-height:1.6;">
+        <strong>데이터 구조:</strong> db_aggregated.json은 3개의 독립적인 뷰를 제공합니다:<br>
+        • <strong>by_property</strong> (투숙일기준): 전체 예약 데이터, 취소료=0<br>
+        • <strong>by_property_channel</strong> (채널별): GS 추적 채널만 포함<br>
+        • <strong>by_property_segment</strong> (상품카테고리별): GS 추적 세그먼트만 포함<br>
+        <br>
+        <strong>예상 결과:</strong> 채널별과 상품카테고리별은 항상 일치하며, 투숙일기준과 차이가 나는 경우 GS 미추적 예약의 존재를 의미합니다.
+      </p>
+    </div>
+
+  </div>
+
 </main>
 
 <!-- ───── FOOTER ───── -->
@@ -734,7 +825,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
   document.getElementById('panel-' + tab).classList.add('active');
-  var tabMap = { data:0, ui:1, auth:2, schedule:3, env:4 };
+  var tabMap = { data:0, ui:1, auth:2, schedule:3, env:4, consistency:5 };
   var btns = document.querySelectorAll('.tab-btn');
   if (btns[tabMap[tab]]) { btns[tabMap[tab]].classList.add('active'); btns[tabMap[tab]].setAttribute('aria-selected','true'); }
 }
@@ -1203,6 +1294,175 @@ document.addEventListener('DOMContentLoaded', function() {
     else a.classList.remove('active');
   });
 })();
+
+/* ───── CONSISTENCY CHECK ───── */
+var AGGREGATED_DATA = null;
+
+function loadAggregatedData() {
+  if (AGGREGATED_DATA) return Promise.resolve(AGGREGATED_DATA);
+  return fetch('data/db_aggregated.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      AGGREGATED_DATA = data;
+      populatePropertyDropdown();
+      return data;
+    })
+    .catch(function(e) {
+      console.error('db_aggregated.json 로드 실패:', e);
+      return null;
+    });
+}
+
+function populatePropertyDropdown() {
+  if (!AGGREGATED_DATA || !AGGREGATED_DATA.by_property) return;
+  var select = document.getElementById('consistency-property');
+  var currentValue = select.value;
+  var props = Object.keys(AGGREGATED_DATA.by_property).sort();
+
+  // Remove existing options (except "전체")
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  // Add property options
+  props.forEach(function(prop) {
+    var opt = document.createElement('option');
+    opt.value = prop;
+    opt.textContent = prop;
+    select.appendChild(opt);
+  });
+
+  if (currentValue !== '전체') {
+    select.value = currentValue;
+  }
+}
+
+function computeViewTotals(data, prop, year, month) {
+  var monthPrefix = month === 0 ? String(year) : String(year) + String(month).padStart(2,'0');
+
+  // View 1: by_property
+  var v1_rn = 0, v1_rev = 0, v1_adr = 0;
+  var props = prop === '전체' ? Object.keys(data.by_property || {}) : [prop];
+  props.forEach(function(p) {
+    Object.entries(data.by_property[p] || {}).forEach(function(entry) {
+      var m = entry[0];
+      var v = entry[1];
+      if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+        v1_rn += v.net_rn || 0;
+        v1_rev += v.net_rev || 0;
+      }
+    });
+  });
+  var v1_adr = v1_rn > 0 ? Math.round(v1_rev / v1_rn) : 0;
+
+  // View 2: by_property_channel
+  var v2_rn = 0, v2_rev = 0, v2_adr = 0;
+  props.forEach(function(p) {
+    Object.values(data.by_property_channel[p] || {}).forEach(function(chData) {
+      Object.entries(chData).forEach(function(entry) {
+        var m = entry[0];
+        var v = entry[1];
+        if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+          v2_rn += v.net_rn || 0;
+          v2_rev += v.net_rev || 0;
+        }
+      });
+    });
+  });
+  var v2_adr = v2_rn > 0 ? Math.round(v2_rev / v2_rn) : 0;
+
+  // View 3: by_property_segment
+  var v3_rn = 0, v3_rev = 0, v3_adr = 0;
+  props.forEach(function(p) {
+    Object.values(data.by_property_segment[p] || {}).forEach(function(segData) {
+      Object.entries(segData).forEach(function(entry) {
+        var m = entry[0];
+        var v = entry[1];
+        if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+          v3_rn += v.net_rn || 0;
+          v3_rev += v.net_rev || 0;
+        }
+      });
+    });
+  });
+  var v3_adr = v3_rn > 0 ? Math.round(v3_rev / v3_rn) : 0;
+
+  return {
+    v1_rn: v1_rn, v1_rev: v1_rev, v1_adr: v1_adr,
+    v2_rn: v2_rn, v2_rev: v2_rev, v2_adr: v2_adr,
+    v3_rn: v3_rn, v3_rev: v3_rev, v3_adr: v3_adr
+  };
+}
+
+function runConsistencyCheck() {
+  var prop = document.getElementById('consistency-property').value;
+  var year = parseInt(document.getElementById('consistency-year').value, 10);
+  var month = parseInt(document.getElementById('consistency-month').value, 10);
+
+  if (!AGGREGATED_DATA) {
+    document.getElementById('consistency-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--negative);padding:16px">데이터 로드 실패. 새로고침 후 다시 시도하세요.</td></tr>';
+    return;
+  }
+
+  var totals = computeViewTotals(AGGREGATED_DATA, prop, year, month);
+
+  // Update summary cards
+  document.getElementById('consistency-v1-rn').textContent = totals.v1_rn.toLocaleString();
+  document.getElementById('consistency-v2-rn').textContent = totals.v2_rn.toLocaleString();
+  document.getElementById('consistency-v3-rn').textContent = totals.v3_rn.toLocaleString();
+
+  // Update comparison table
+  var tbody = document.getElementById('consistency-tbody');
+  tbody.innerHTML = '';
+
+  var views = [
+    { name: '투숙일기준 (by_property)', rn: totals.v1_rn, rev: totals.v1_rev, adr: totals.v1_adr },
+    { name: '채널별 (by_property_channel)', rn: totals.v2_rn, rev: totals.v2_rev, adr: totals.v2_adr },
+    { name: '상품카테고리별 (by_property_segment)', rn: totals.v3_rn, rev: totals.v3_rev, adr: totals.v3_adr }
+  ];
+
+  views.forEach(function(view) {
+    var tr = document.createElement('tr');
+    var statusHtml, statusClass;
+
+    // Check if channel and segment match
+    if (view.name === '채널별 (by_property_channel)' || view.name === '상품카테고리별 (by_property_segment)') {
+      if (totals.v2_rn === totals.v3_rn) {
+        statusHtml = '<span class="status-pass">✅ 일치</span>';
+        statusClass = 'match';
+      } else {
+        statusHtml = '<span class="status-fail">❌ 불일치</span>';
+        statusClass = 'mismatch';
+      }
+    } else {
+      // by_property vs others
+      if (totals.v1_rn === totals.v2_rn && totals.v1_rn === totals.v3_rn) {
+        statusHtml = '<span class="status-pass">✅ 완전 일치</span>';
+        statusClass = 'match';
+      } else if (totals.v2_rn === totals.v3_rn) {
+        var gap = totals.v1_rn - totals.v2_rn;
+        var gapPct = totals.v2_rn > 0 ? ((gap / totals.v2_rn) * 100).toFixed(1) : 0;
+        statusHtml = '<span class="status-warn">⚠️ 차이: ' + gap.toLocaleString() + ' (' + gapPct + '%)</span>';
+        statusClass = 'gap';
+      } else {
+        statusHtml = '<span class="status-fail">❌ 불일치</span>';
+        statusClass = 'mismatch';
+      }
+    }
+
+    tr.innerHTML =
+      '<td style="font-weight:600;">' + view.name + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;">' + view.rn.toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;">' + view.rev.toLocaleString() + '</td>' +
+      '<td style="font-family:var(--mono);text-align:right;">' + view.adr.toLocaleString() + '</td>' +
+      '<td>' + statusHtml + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadAggregatedData();
+});
 </script>
 
 

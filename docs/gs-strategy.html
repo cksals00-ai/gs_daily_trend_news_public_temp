@@ -956,6 +956,7 @@
       <a href="#deep-ch11" class="nav-l1" data-section="action">실행</a>
       <a href="#strategySection" class="nav-l1" data-section="strategy">3대전략</a>
       <a href="#trendSection" class="nav-l1" data-section="trend">4개년</a>
+      <a href="#dataConsistency" class="nav-l1" data-section="verify">정합성</a>
     </div>
 
     <!-- Level 2: ★ 보고용 하위 -->
@@ -11692,11 +11693,269 @@ function renderBizPlanCharts() {
       </div>
     </div>
 
+  <!-- ═════════════ DATA CONSISTENCY VERIFICATION ═════════════ -->
+  <div id="dataConsistency" style="padding:40px 0; border-top:3px solid var(--gold); margin-top:60px;">
+    <div style="max-width:1640px; margin:0 auto; padding:0 28px;">
+      <div style="margin-bottom:32px;">
+        <h2 style="font-size:28px; font-weight:800; color:var(--gold-bright); margin-bottom:8px; font-family:var(--serif);">뷰 간 데이터 정합성 검증</h2>
+        <p style="font-size:14px; color:var(--ink-soft); font-family:var(--sans);">db_aggregated.json의 3개 뷰(투숙일기준, 채널별, 상품카테고리별) RN 합계 일치도 실시간 검증</p>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; background:var(--bg-card); padding:20px; border:1px solid var(--rule); border-radius:8px;">
+        <div>
+          <label style="display:block; font-size:11px; color:var(--ink-faint); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">사업장</label>
+          <select id="admin-consistency-property" style="width:100%; padding:10px; background:var(--bg-soft); border:1px solid var(--rule); border-radius:4px; color:var(--ink); font-size:13px; font-family:var(--sans);">
+            <option value="전체">전체</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; color:var(--ink-faint); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">연도</label>
+          <select id="admin-consistency-year" style="width:100%; padding:10px; background:var(--bg-soft); border:1px solid var(--rule); border-radius:4px; color:var(--ink); font-size:13px; font-family:var(--sans);">
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; color:var(--ink-faint); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">월</label>
+          <select id="admin-consistency-month" style="width:100%; padding:10px; background:var(--bg-soft); border:1px solid var(--rule); border-radius:4px; color:var(--ink); font-size:13px; font-family:var(--sans);">
+            <option value="0">전체</option>
+            <option value="1">1월</option>
+            <option value="2">2월</option>
+            <option value="3">3월</option>
+            <option value="4">4월</option>
+            <option value="5">5월</option>
+            <option value="6">6월</option>
+            <option value="7">7월</option>
+            <option value="8">8월</option>
+            <option value="9">9월</option>
+            <option value="10">10월</option>
+            <option value="11">11월</option>
+            <option value="12">12월</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="runAdminConsistencyCheck()" style="padding:12px 28px; background:var(--gold); color:#000; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:14px; transition:background 0.2s; font-family:var(--sans);" onmouseover="this.style.background='var(--gold-bright)'" onmouseout="this.style.background='var(--gold)'">검증 실행</button>
+
+      <!-- Summary Cards -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:24px 0;">
+        <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:20px; text-align:center;">
+          <div style="font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">투숙일기준 RN</div>
+          <div style="font-size:28px; font-weight:800; font-family:var(--mono); color:var(--ink-soft);" id="admin-consistency-v1-rn">—</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:20px; text-align:center;">
+          <div style="font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">채널별 RN</div>
+          <div style="font-size:28px; font-weight:800; font-family:var(--mono); color:var(--ink-soft);" id="admin-consistency-v2-rn">—</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:20px; text-align:center;">
+          <div style="font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">상품카테고리별 RN</div>
+          <div style="font-size:28px; font-weight:800; font-family:var(--mono); color:var(--ink-soft);" id="admin-consistency-v3-rn">—</div>
+        </div>
+      </div>
+
+      <!-- Comparison Table -->
+      <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:20px; margin-bottom:24px; overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="background:var(--bg-deep); border-bottom:2px solid var(--rule-strong);">
+              <th style="padding:10px 12px; text-align:left; color:var(--ink-muted); font-weight:700; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">뷰</th>
+              <th style="padding:10px 12px; text-align:right; color:var(--ink-muted); font-weight:700; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">RN</th>
+              <th style="padding:10px 12px; text-align:right; color:var(--ink-muted); font-weight:700; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">Revenue</th>
+              <th style="padding:10px 12px; text-align:right; color:var(--ink-muted); font-weight:700; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">ADR</th>
+              <th style="padding:10px 12px; text-align:left; color:var(--ink-muted); font-weight:700; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">상태</th>
+            </tr>
+          </thead>
+          <tbody id="admin-consistency-tbody">
+            <tr><td colspan="5" style="text-align:center; color:var(--ink-faint); padding:20px;">필터를 설정하고 "검증 실행" 버튼을 클릭하세요</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Explanation -->
+      <div style="background:rgba(76,175,111,0.08); border:1px solid rgba(76,175,111,0.3); border-radius:8px; padding:20px;">
+        <div style="font-weight:700; color:var(--positive); margin-bottom:12px; font-size:13px;">ℹ️ 데이터 구조 설명</div>
+        <div style="font-size:12px; color:var(--ink-soft); line-height:1.7; font-family:var(--sans);">
+          <p style="margin-bottom:8px;"><strong>3개 뷰의 의미:</strong></p>
+          <ul style="margin-left:16px; margin-bottom:8px;">
+            <li><strong>by_property (투숙일기준)</strong>: 전체 예약 데이터, 취소=0 (스테이 기준)</li>
+            <li><strong>by_property_channel (채널별)</strong>: GS 추적 채널만 포함</li>
+            <li><strong>by_property_segment (상품카테고리별)</strong>: GS 추적 세그먼트만 포함</li>
+          </ul>
+          <p style="margin-bottom:0;"><strong>예상 결과:</strong> 채널별과 상품카테고리별은 항상 일치하며, 투숙일기준과 차이가 있으면 GS 미추적 예약 존재를 의미합니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 <!-- /content -->
 
 
 <!-- ============ COPYRIGHT FOOTER ============ -->
 <footer style="background:#0a0a0a;color:rgba(255,255,255,0.5);text-align:center;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:0.08em;border-top:1px solid rgba(184,137,63,0.18);margin-top:0;"></footer>
+
+<script>
+/* ═══════════════════════════════════════════════════ */
+/* ADMIN: Data Consistency Verification */
+/* ═══════════════════════════════════════════════════ */
+
+var ADMIN_AGGREGATED_DATA = null;
+
+function loadAdminAggregatedData() {
+  if (ADMIN_AGGREGATED_DATA) return Promise.resolve(ADMIN_AGGREGATED_DATA);
+  return fetch('data/db_aggregated.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      ADMIN_AGGREGATED_DATA = data;
+      populateAdminPropertyDropdown();
+      return data;
+    })
+    .catch(function(e) {
+      console.error('db_aggregated.json 로드 실패:', e);
+      return null;
+    });
+}
+
+function populateAdminPropertyDropdown() {
+  if (!ADMIN_AGGREGATED_DATA || !ADMIN_AGGREGATED_DATA.by_property) return;
+  var select = document.getElementById('admin-consistency-property');
+  var currentValue = select.value;
+  var props = Object.keys(ADMIN_AGGREGATED_DATA.by_property).sort();
+
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  props.forEach(function(prop) {
+    var opt = document.createElement('option');
+    opt.value = prop;
+    opt.textContent = prop;
+    select.appendChild(opt);
+  });
+
+  if (currentValue !== '전체') {
+    select.value = currentValue;
+  }
+}
+
+function computeAdminViewTotals(data, prop, year, month) {
+  var monthPrefix = month === 0 ? String(year) : String(year) + String(month).padStart(2,'0');
+
+  var v1_rn = 0, v1_rev = 0;
+  var v2_rn = 0, v2_rev = 0;
+  var v3_rn = 0, v3_rev = 0;
+
+  var props = prop === '전체' ? Object.keys(data.by_property || {}) : [prop];
+
+  props.forEach(function(p) {
+    Object.entries(data.by_property[p] || {}).forEach(function(entry) {
+      var m = entry[0];
+      var v = entry[1];
+      if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+        v1_rn += v.net_rn || 0;
+        v1_rev += v.net_rev || 0;
+      }
+    });
+  });
+
+  props.forEach(function(p) {
+    Object.values(data.by_property_channel[p] || {}).forEach(function(chData) {
+      Object.entries(chData).forEach(function(entry) {
+        var m = entry[0];
+        var v = entry[1];
+        if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+          v2_rn += v.net_rn || 0;
+          v2_rev += v.net_rev || 0;
+        }
+      });
+    });
+  });
+
+  props.forEach(function(p) {
+    Object.values(data.by_property_segment[p] || {}).forEach(function(segData) {
+      Object.entries(segData).forEach(function(entry) {
+        var m = entry[0];
+        var v = entry[1];
+        if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+          v3_rn += v.net_rn || 0;
+          v3_rev += v.net_rev || 0;
+        }
+      });
+    });
+  });
+
+  return {
+    v1_rn: v1_rn, v1_rev: v1_rev, v1_adr: v1_rn > 0 ? Math.round(v1_rev / v1_rn) : 0,
+    v2_rn: v2_rn, v2_rev: v2_rev, v2_adr: v2_rn > 0 ? Math.round(v2_rev / v2_rn) : 0,
+    v3_rn: v3_rn, v3_rev: v3_rev, v3_adr: v3_rn > 0 ? Math.round(v3_rev / v3_rn) : 0
+  };
+}
+
+function runAdminConsistencyCheck() {
+  var prop = document.getElementById('admin-consistency-property').value;
+  var year = parseInt(document.getElementById('admin-consistency-year').value, 10);
+  var month = parseInt(document.getElementById('admin-consistency-month').value, 10);
+
+  if (!ADMIN_AGGREGATED_DATA) {
+    document.getElementById('admin-consistency-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--negative);padding:20px">데이터 로드 실패. 새로고침 후 다시 시도하세요.</td></tr>';
+    return;
+  }
+
+  var totals = computeAdminViewTotals(ADMIN_AGGREGATED_DATA, prop, year, month);
+
+  document.getElementById('admin-consistency-v1-rn').textContent = totals.v1_rn.toLocaleString();
+  document.getElementById('admin-consistency-v2-rn').textContent = totals.v2_rn.toLocaleString();
+  document.getElementById('admin-consistency-v3-rn').textContent = totals.v3_rn.toLocaleString();
+
+  var tbody = document.getElementById('admin-consistency-tbody');
+  tbody.innerHTML = '';
+
+  var views = [
+    { name: '투숙일기준 (by_property)', rn: totals.v1_rn, rev: totals.v1_rev, adr: totals.v1_adr },
+    { name: '채널별 (by_property_channel)', rn: totals.v2_rn, rev: totals.v2_rev, adr: totals.v2_adr },
+    { name: '상품카테고리별 (by_property_segment)', rn: totals.v3_rn, rev: totals.v3_rev, adr: totals.v3_adr }
+  ];
+
+  views.forEach(function(view) {
+    var tr = document.createElement('tr');
+    var statusHtml;
+
+    if (view.name === '채널별 (by_property_channel)' || view.name === '상품카테고리별 (by_property_segment)') {
+      if (totals.v2_rn === totals.v3_rn) {
+        statusHtml = '<span style="color:var(--positive); background:var(--positive-bg); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:700;">✅ 일치</span>';
+      } else {
+        statusHtml = '<span style="color:var(--negative); background:var(--negative-bg); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:700;">❌ 불일치</span>';
+      }
+    } else {
+      if (totals.v1_rn === totals.v2_rn && totals.v1_rn === totals.v3_rn) {
+        statusHtml = '<span style="color:var(--positive); background:var(--positive-bg); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:700;">✅ 완전 일치</span>';
+      } else if (totals.v2_rn === totals.v3_rn) {
+        var gap = totals.v1_rn - totals.v2_rn;
+        var gapPct = totals.v2_rn > 0 ? ((gap / totals.v2_rn) * 100).toFixed(1) : 0;
+        statusHtml = '<span style="color:var(--warning); background:var(--warning-bg); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:700;">⚠️ 차이: ' + gap.toLocaleString() + ' (' + gapPct + '%)</span>';
+      } else {
+        statusHtml = '<span style="color:var(--negative); background:var(--negative-bg); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:700;">❌ 불일치</span>';
+      }
+    }
+
+    tr.innerHTML =
+      '<td style="padding:10px 12px; font-weight:600;">' + view.name + '</td>' +
+      '<td style="padding:10px 12px; text-align:right; font-family:var(--mono);">' + view.rn.toLocaleString() + '</td>' +
+      '<td style="padding:10px 12px; text-align:right; font-family:var(--mono);">' + view.rev.toLocaleString() + '</td>' +
+      '<td style="padding:10px 12px; text-align:right; font-family:var(--mono);">' + view.adr.toLocaleString() + '</td>' +
+      '<td style="padding:10px 12px;">' + statusHtml + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadAdminAggregatedData();
+});
+</script>
+
 </body>
 </html>
