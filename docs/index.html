@@ -13675,15 +13675,16 @@ function toggleNewsMore(btn, id) {
     var rnEl = document.getElementById('da-yoy-rn-val');
     var revEl = document.getElementById('da-yoy-rev-val');
     var adrEl = document.getElementById('da-yoy-adr-val');
-    var segData = DA.byPropertySegment || {};
+    var segDataAll = DA.byPropertySegment || {};
+    var segDataMonth = (month && month !== 'all' && DA.byPropertySegmentMonth) ? (DA.byPropertySegmentMonth[month] || {}) : null;
+    var segData = segDataMonth || segDataAll;
     var ALLOWED_SEGS = {'OTA': 1, 'G-OTA': 1, 'Inbound': 1};
-    var useSegOverride = (!month || month === 'all');
     var showRev = _daCurrentView === 'property';
 
     var totP = 0, totC = 0, totRP = 0.0, totRC = 0.0;
     Object.keys(data).forEach(function(k) {
       var d2 = data[k];
-      if (showRev && useSegOverride && segData[k]) {
+      if (showRev && segData[k]) {
         Object.keys(segData[k]).forEach(function(s) {
           if (ALLOWED_SEGS[s]) {
             var sd = segData[k][s];
@@ -13761,7 +13762,6 @@ function toggleNewsMore(btn, id) {
     var segDataAll = DA.byPropertySegment || {};
     var segDataMonth = (month && month !== 'all' && DA.byPropertySegmentMonth) ? (DA.byPropertySegmentMonth[month] || {}) : null;
     var segData = segDataMonth || segDataAll;
-    var useSegOverride = (!month || month === 'all');
     var ALLOWED_SEGS = {'OTA': 1, 'G-OTA': 1, 'Inbound': 1};
 
     // YoY OTB 사업장별 데이터 (현재 탭 기준)
@@ -13771,9 +13771,9 @@ function toggleNewsMore(btn, id) {
 
     var entries = Object.keys(data).map(function(k) {
       var d = data[k];
-      // 사업장 하위에 OTA/G-OTA/Inbound 세그먼트가 있으면 그 합으로 재계산 (전체 월만)
+      // 사업장 하위에 OTA/G-OTA/Inbound 세그먼트가 있으면 그 합으로 재계산 (GS 채널만)
       var propSegs = segData[k];
-      if (showRev && useSegOverride && propSegs) {
+      if (showRev && propSegs) {
         var fp = 0, fc = 0, frp = 0, frc = 0;
         Object.keys(propSegs).forEach(function(s) {
           if (ALLOWED_SEGS[s]) {

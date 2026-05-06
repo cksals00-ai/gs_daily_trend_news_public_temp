@@ -800,11 +800,11 @@ input, button, select, table, th, td {
       <div class="card-title">ℹ️ 정보</div>
       <p style="font-size:12px;color:var(--ink-soft);line-height:1.6;">
         <strong>데이터 구조:</strong> db_aggregated.json은 3개의 독립적인 뷰를 제공합니다:<br>
-        • <strong>by_property</strong> (투숙일기준): 전체 예약 데이터, 취소료=0<br>
+        • <strong>by_property</strong> (투숙일기준): GS 채널(OTA+G-OTA+Inbound) 합산 기준<br>
         • <strong>by_property_channel</strong> (채널별): GS 추적 채널만 포함<br>
         • <strong>by_property_segment</strong> (상품카테고리별): GS 추적 세그먼트만 포함<br>
         <br>
-        <strong>예상 결과:</strong> 채널별과 상품카테고리별은 항상 일치하며, 투숙일기준과 차이가 나는 경우 GS 미추적 예약의 존재를 의미합니다.
+        <strong>예상 결과:</strong> 모든 뷰가 GS 채널만 집계하므로 3개 뷰의 합계가 일치해야 합니다.
       </p>
     </div>
 
@@ -1339,26 +1339,33 @@ function populatePropertyDropdown() {
 
 function computeViewTotals(data, prop, year, month) {
   var monthPrefix = month === 0 ? String(year) : String(year) + String(month).padStart(2,'0');
-
-  // View 1: by_property
-  var v1_rn = 0, v1_rev = 0, v1_adr = 0;
+  var GS_CHANNELS = {'OTA': 1, 'G-OTA': 1, 'Inbound': 1};
   var props = prop === '전체' ? Object.keys(data.by_property || {}) : [prop];
+
+  // View 1: by_property — GS 채널(OTA+G-OTA+Inbound)만 합산 (by_property_channel 기준)
+  var v1_rn = 0, v1_rev = 0, v1_adr = 0;
   props.forEach(function(p) {
-    Object.entries(data.by_property[p] || {}).forEach(function(entry) {
-      var m = entry[0];
-      var v = entry[1];
-      if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
-        v1_rn += v.net_rn || 0;
-        v1_rev += v.net_rev || 0;
-      }
+    Object.entries(data.by_property_channel[p] || {}).forEach(function(chEntry) {
+      var chName = chEntry[0];
+      // by_property_channel은 이미 GS 채널만 포함하지만 안전하게 필터
+      var chData = chEntry[1];
+      Object.entries(chData).forEach(function(entry) {
+        var m = entry[0];
+        var v = entry[1];
+        if (month === 0 ? String(m).startsWith(String(year)) : String(m) === monthPrefix) {
+          v1_rn += v.net_rn || 0;
+          v1_rev += v.net_rev || 0;
+        }
+      });
     });
   });
   var v1_adr = v1_rn > 0 ? Math.round(v1_rev / v1_rn) : 0;
 
-  // View 2: by_property_channel
+  // View 2: by_property_channel (GS 채널만)
   var v2_rn = 0, v2_rev = 0, v2_adr = 0;
   props.forEach(function(p) {
-    Object.values(data.by_property_channel[p] || {}).forEach(function(chData) {
+    Object.entries(data.by_property_channel[p] || {}).forEach(function(chEntry) {
+      var chData = chEntry[1];
       Object.entries(chData).forEach(function(entry) {
         var m = entry[0];
         var v = entry[1];
@@ -1371,10 +1378,13 @@ function computeViewTotals(data, prop, year, month) {
   });
   var v2_adr = v2_rn > 0 ? Math.round(v2_rev / v2_rn) : 0;
 
-  // View 3: by_property_segment
+  // View 3: by_property_segment (GS 세그먼트만)
   var v3_rn = 0, v3_rev = 0, v3_adr = 0;
   props.forEach(function(p) {
-    Object.values(data.by_property_segment[p] || {}).forEach(function(segData) {
+    Object.entries(data.by_property_segment[p] || {}).forEach(function(segEntry) {
+      var segName = segEntry[0];
+      if (!GS_CHANNELS[segName]) return;  // GS 채널만 필터
+      var segData = segEntry[1];
       Object.entries(segData).forEach(function(entry) {
         var m = entry[0];
         var v = entry[1];

@@ -1270,11 +1270,12 @@ function renderCategoryTable() {
   const filteredProps = getFilteredProps();
 
   const categoryMap = {
-    '룸온리': ['OTA', 'G-OTA', 'FIT', 'D멤버스', 'Inbound', 'GSA'],
-    '패키지': ['자사 패키지', '회원PKG', '제휴사PKG'],
+    '룸온리': ['OTA', 'G-OTA', 'Inbound'],
     '기타': [],
   };
-  const knownSegs = new Set([...categoryMap['룸온리'], ...categoryMap['패키지']]);
+  // GS 채널(OTA + G-OTA + Inbound)만 집계 — 비GS 세그먼트 제외
+  const GS_SEGS = new Set(['OTA', 'G-OTA', 'Inbound']);
+  const knownSegs = new Set([...categoryMap['룸온리']]);
 
   const catData = {};
   for (const cat of Object.keys(categoryMap)) {
@@ -1286,11 +1287,9 @@ function renderCategoryTable() {
     const propSegs = bps[propName];
     if (!propSegs) return;
     Object.entries(propSegs).forEach(([segName, monthData]) => {
-      let cat = '기타';
-      for (const [c, segs] of Object.entries(categoryMap)) {
-        if (c === '기타') continue;
-        if (segs.includes(segName)) { cat = c; break; }
-      }
+      // GS 채널만 집계
+      if (!GS_SEGS.has(segName)) return;
+      let cat = '룸온리';
 
       mCur.forEach(mk => { if (monthData[mk]) { catData[cat].rnCur += monthData[mk].net_rn || 0; catData[cat].revCur += monthData[mk].net_rev || 0; } });
       mPrev.forEach(mk => { if (monthData[mk]) { catData[cat].rnPrev += monthData[mk].net_rn || 0; catData[cat].revPrev += monthData[mk].net_rev || 0; } });
@@ -1364,7 +1363,7 @@ function renderDayOfWeekTable() {
   const dayDataCur = dayNames.map(() => ({ rn: 0, rev: 0 }));
   const dayDataPrev = dayNames.map(() => ({ rn: 0, rev: 0 }));
   const { mCur, mPrev } = getMonthKeys();
-  const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound', 'D멤버스', 'FIT'] : appState.activeSegs);
+  const activeSegSet = new Set(appState.activeSegs.includes('전체') ? ['OTA', 'G-OTA', 'Inbound'] : appState.activeSegs);
 
   function aggregateDOW(monthKeys, target) {
     monthKeys.forEach(mk => {
