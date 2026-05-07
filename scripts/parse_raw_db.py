@@ -374,8 +374,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         ok_count += 1
 
                         # 상품카테고리별 집계: 회원번호 86xx(패키지) → 9개 카테고리
-                        # 27 예약 + 28 취소 둘 다 사용 — net = 예약 − 취소
-                        if category_agg is not None and file_type in ("27", "28"):
+                        # 27(예약)만 사용 — 동기간이 아닌 경우 취소(28) 불필요
+                        if category_agg is not None and file_type == "27":
                             mem_num = parts[idx_member_num].strip() if 0 <= idx_member_num < plen else ''
                             mem_name = parts[idx_member].strip() if 0 <= idx_member < plen else ''
                             cat_name = classify_product_category(mem_num, mem_name)
@@ -398,8 +398,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 cancel_daily_agg[ckey]['rn'] += rn
                                 cancel_daily_agg[ckey]['rev'] += rev
                                 # 채널×취소일별 직접 집계 (비례 배분 금지, 원본 합산)
-                                # 27/28(OTA)만 — 43/44(Inbound)는 거래처별 페이지에서 제외
-                                if cancel_channel_agg is not None and file_type == "28":
+                                if cancel_channel_agg is not None:
                                     cck = (cancel_date_str[:8], channel, stay_month)
                                     cancel_channel_agg[cck]['rn'] += rn
                                     cancel_channel_agg[cck]['rev'] += rev
@@ -412,8 +411,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 pickup_daily_agg[pkey]['rn'] += rn
                                 pickup_daily_agg[pkey]['rev'] += rev
                                 # 채널×픽업일별 직접 집계 (비례 배분 금지, 원본 합산)
-                                # 27(OTA 예약)만 — 43(Inbound 예약)은 거래처별 페이지에서 제외
-                                if pickup_channel_agg is not None and not is_cancel and file_type == "27":
+                                if pickup_channel_agg is not None and not is_cancel:
                                     pck = (pickup_date_str[:8], channel, stay_month)
                                     pickup_channel_agg[pck]['rn'] += rn
                                     pickup_channel_agg[pck]['rev'] += rev
