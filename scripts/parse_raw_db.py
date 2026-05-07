@@ -390,28 +390,29 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                             stay_date_agg[sd_key]['rn'] += rn
                             stay_date_agg[sd_key]['rev'] += rev
 
-                        # 취소일자 기반 집계 (28/44)
+                        # 취소일자 기반 집계 (28/44) — daily는 Inbound 포함, channel은 OTA(28)만
                         if is_cancel and cancel_daily_agg is not None and idx_cancel_date >= 0 and idx_cancel_date < plen:
                             cancel_date_str = parts[idx_cancel_date].strip()
                             if len(cancel_date_str) >= 8:
                                 ckey = (cancel_date_str[:8], prop_name, region, segment, stay_month)
                                 cancel_daily_agg[ckey]['rn'] += rn
                                 cancel_daily_agg[ckey]['rev'] += rev
-                                # 채널×취소일별 직접 집계 (비례 배분 금지, 원본 합산)
-                                if cancel_channel_agg is not None:
+                                # 채널×취소일별 직접 집계 — 27/28 OTA만 (Inbound 44 제외)
+                                if cancel_channel_agg is not None and file_type in ("27", "28"):
                                     cck = (cancel_date_str[:8], channel, stay_month)
                                     cancel_channel_agg[cck]['rn'] += rn
                                     cancel_channel_agg[cck]['rev'] += rev
 
                         # 최초입력일자 기반 픽업 집계 (27/43 + 28/44): 취소파일도 포함해야 today_booking 정확
+                        # daily는 Inbound 포함, channel은 OTA(27)만
                         if pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
                             pickup_date_str = parts[idx_pickup_date].strip()
                             if len(pickup_date_str) >= 8:
                                 pkey = (pickup_date_str[:8], prop_name, region, segment, stay_month)
                                 pickup_daily_agg[pkey]['rn'] += rn
                                 pickup_daily_agg[pkey]['rev'] += rev
-                                # 채널×픽업일별 직접 집계 (비례 배분 금지, 원본 합산)
-                                if pickup_channel_agg is not None and not is_cancel:
+                                # 채널×픽업일별 직접 집계 — 27/28 OTA만 (Inbound 43 제외)
+                                if pickup_channel_agg is not None and not is_cancel and file_type in ("27", "28"):
                                     pck = (pickup_date_str[:8], channel, stay_month)
                                     pickup_channel_agg[pck]['rn'] += rn
                                     pickup_channel_agg[pck]['rev'] += rev
