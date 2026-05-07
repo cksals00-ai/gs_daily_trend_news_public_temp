@@ -570,9 +570,19 @@ def build():
 
         all_chs = sorted(set(this_c_pu.keys()) | set(prev_c_pu.keys()) | set(ly_c_pu.keys())
                          | set(this_c_cn.keys()) | set(prev_c_cn.keys()) | set(ly_c_cn.keys()))
+        # by_channel_segment에서 Inbound-전용 거래처 식별 → 제외
+        bcs = agg.get("by_channel_segment", {})
+        _ib_only_channels = set()
+        for _ch, _segs in bcs.items():
+            if "Inbound" in _segs and "OTA" not in _segs and "G-OTA" not in _segs:
+                _ib_only_channels.add(_ch)
+
         for ch in all_chs:
             if not ch or ch == "기타":
                 # 사용자 메모리: '기타' 카테고리 절대 금지 → 노출 제외
+                continue
+            if ch in _ib_only_channels:
+                # 채널별 페이지는 OTA + G-OTA만 노출, Inbound 제외
                 continue
             this_n = calc_net(this_c_pu.get(ch, {}), this_c_cn.get(ch, {}))
             prev_n = calc_net(prev_c_pu.get(ch, {}), prev_c_cn.get(ch, {}))
