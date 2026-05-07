@@ -92,6 +92,32 @@ EXCLUDE_KEYWORDS = [
     "오션캐슬",
 ]
 
+# ─────────────────────────────────────────────
+# 소노(자사) 뉴스 수집용 키워드
+# ─────────────────────────────────────────────
+SONO_KEYWORDS = [
+    "소노호텔앤리조트", "소노인터내셔널", "소노그룹",
+    "소노벨 비발디", "소노캄 비발디", "소노문 비발디",
+    "소노벨 천안", "소노벨 변산", "소노벨 거제",
+    "소노캄 여수", "소노캄 고양", "소노캄 델피노",
+    "소노문 해운대",
+    "쏠비치 삼척", "쏠비치 양양", "쏠비치 진도",
+    "소노펠리체", "소노펠리체 비발디", "소노펠리체 델피노", "소노펠리체 괌",
+    "오션월드", "대명리조트",
+    "소노호텔", "소노리조트",
+]
+
+# 소노 기사 판별용 (제목에 하나라도 포함되면 소노 기사)
+SONO_DETECT_KEYWORDS = [
+    "소노", "SONO", "Sono",
+    "대명리조트", "대명소노",
+    "비발디파크", "Vivaldi Park",
+    "쏠비치", "솔비치",
+    "델피노", "Delpino",
+    "오션월드",
+    "소노캄", "소노벨", "소노문", "소노펫", "소노펠리체", "소노휴",
+]
+
 # 권역 매핑 (제주·고양은 APAC, 2026-04-21 변경)
 REGION_MAP = {
     "비발디": "vivaldi",
@@ -218,6 +244,7 @@ def detect_region(title: str) -> str:
 def detect_category_emoji(category: str) -> str:
     """카테고리별 이모지"""
     return {
+        "소노": "🏢",
         "호텔/리조트": "📰",
         "항공/공항": "✈️",
         "OTA/여행": "🌐",
@@ -232,6 +259,8 @@ def detect_category_emoji(category: str) -> str:
 
 # 제목 → 카테고리 라우팅 (직접 RSS용)
 _CATEGORY_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("소노", "SONO", "대명리조트", "비발디파크", "쏠비치", "솔비치",
+      "델피노", "오션월드", "소노캄", "소노벨", "소노문", "소노펠리체"), "소노"),
     (("대한항공", "아시아나", "제주항공", "티웨이", "에어부산", "에어서울", "진에어",
       "이스타항공", "공항", "노선", "유류할증", "증편", "감편", "취항", "결항",
       "전세기", "직항"), "항공/공항"),
@@ -419,7 +448,7 @@ def main():
         lkey = (item.get("link") or "").strip()
         if (tkey and tkey in seen_titles) or (lkey and lkey in seen_links):
             return False
-        if is_excluded(title):
+        if category != "소노" and is_excluded(title):
             logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
             return False
         if is_stale_by_pub_date(item.get("pub_date", ""), now):
@@ -450,6 +479,36 @@ def main():
             for item in fetch_google_news(query, limit=3):
                 _accept(item, category=category, query=query, default_emoji=emoji)
         logger.info(f"  → 신규 수집 누계: {len(new_news)}건")
+
+    # 소노(자사) 뉴스 수집 — EXCLUDE 필터 우회
+    logger.info(f"카테고리: 소노 ({len(SONO_KEYWORDS)}개 쿼리)")
+    sono_count_before = len(new_news)
+    for query in SONO_KEYWORDS:
+        for item in fetch_google_news(query, limit=3):
+            title = item["title"]
+            tkey = _norm_title_key(title)
+            lkey = (item.get("link") or "").strip()
+            if (tkey and tkey in seen_titles) or (lkey and lkey in seen_links):
+                continue
+            if is_stale_by_pub_date(item.get("pub_date", ""), now):
+                continue
+            if tkey:
+                seen_titles.add(tkey)
+            if lkey:
+                seen_links.add(lkey)
+            new_news.append({
+                "title": title,
+                "link": item["link"],
+                "source": item.get("source", ""),
+                "pub_date": item.get("pub_date", ""),
+                "category": "소노",
+                "category_emoji": "🏢",
+                "region": detect_region(title),
+                "query": query,
+                "collected_at": now_iso,
+                "is_new": True,
+            })
+    logger.info(f"  → 소노 신규: {len(new_news) - sono_count_before}건")
 
     # 직접 RSS 피드 (여행 전문지)
     for feed in RSS_FEEDS:
@@ -486,10 +545,13 @@ def main():
     top_news = top_news[:12]
 
     # build.py 호환: 카테고리별 그룹화 (by_category)
-    category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
+    category_order = ["소노", "호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
     by_category: dict = {}
     for art in all_news:
         cat = art.get("category", "기타")
+        # 소노 관련 키워드가 제목에 있으면 소노 카테고리로 재분류
+        if cat != "소노" and any(kw in art.get("title", "") for kw in SONO_DETECT_KEYWORDS):
+            cat = "소노"
         if cat not in by_category:
             by_category[cat] = {"emoji": art.get("category_emoji", "📰"), "articles": []}
         entry = dict(art)

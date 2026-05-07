@@ -118,8 +118,10 @@ def _parse_10_tokens(s: str):
 def _to_rec(nums) -> dict:
     return {
         "rm_budget_rn":      int(nums[0]),
+        "rm_budget_adr":     int(nums[2]),
         "rm_budget_rev_mil": int(nums[3]),
         "rm_fcst_rn":        int(nums[5]),
+        "rm_fcst_adr":       int(nums[7]),
         "rm_fcst_rev_mil":   int(nums[8]),
     }
 
@@ -139,6 +141,14 @@ def detect_property_name(page_text: str) -> str | None:
         )):
             continue
         if cand in NAME_MAP or cand.endswith("_Total"):
+            return cand
+
+    # Fallback: 2026.05+ PDFs use "#N\r\n<name>\r\nSegment" format
+    for m in re.finditer(r"#\d+\r?\n(.+?)\r?\n", page_text):
+        cand = m.group(1).strip()
+        if not cand or cand == "Segment":
+            continue
+        if cand in NAME_MAP or cand in REGION_NAMES:
             return cand
     return None
 
@@ -222,6 +232,28 @@ def parse(pdf_path: Path) -> dict:
             continue
         rows.append({"page": i + 1, **rec})
 
+    # Fallback: 2026.05+ PDFs drop the [N월] cover pages and instead embed
+    # "YYYY년 N월" inline on every property page. Scan pages in order and
+    # collect unique months by first appearance.
+    if not detected_months:
+        for p in pages:
+            m = re.search(r"\d{4}년\s*(\d{1,2})월", p)
+            if m:
+                mo = int(m.group(1))
+                if mo not in detected_months:
+                    detected_months.append(mo)
+
+    if not detected_months:
+        return {
+            "_source_pdf":     pdf_path.name,
+            "_extracted_at":   datetime.now().isoformat() + "Z",
+            "_snapshot_date":  pdf_path.stem.split("_")[-1],
+            "_months_covered": [],
+            "_validation":     {"unmapped_pdf_names": []},
+            "regions":         {},
+            "properties":      {},
+        }
+
     # Assign months by section (advance when same name appears again)
     section_idx = 0
     seen_in_section: set[str] = set()
@@ -234,18 +266,6 @@ def parse(pdf_path: Path) -> dict:
             r["month"] = detected_months[section_idx]
         else:
             r["month"] = None
-
-    # If no [N월] markers were found (rare older PDFs), bail.
-    if not detected_months:
-        return {
-            "_source_pdf":     pdf_path.name,
-            "_extracted_at":   datetime.now().isoformat() + "Z",
-            "_snapshot_date":  pdf_path.stem.split("_")[-1],
-            "_months_covered": [],
-            "_validation":     {"unmapped_pdf_names": []},
-            "regions":         {},
-            "properties":      {},
-        }
 
     # Determine the base year from the pdf filename for ym keys.
     # detected_months may wrap (e.g. 12, 1, 2) → bump year on wrap.

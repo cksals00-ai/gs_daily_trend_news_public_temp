@@ -855,7 +855,7 @@ def build_news_html(news_data: dict) -> str:
     region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC", "general": "일반"}
 
     # 카테고리 순서
-    category_order = ["호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
+    category_order = ["소노", "호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
 
     sections = []
     seen_titles: set[str] = set()
@@ -1274,11 +1274,13 @@ def _validate_daily_analysis_consistency(da: dict) -> dict:
     """당일 분석 데이터 정합성 검증.
 
     규칙:
-      1. 사업장별(OTA+G-OTA+Inbound) NET ≥ 채널별(OTA+G-OTA) NET — 채널별이 사업장별보다 크면 안 됨.
-      2. 사업장별 NET - 채널별 NET ≒ Inbound NET (채널은 비례추정이라 ±오차 허용).
+      1. 사업장별(OTA+G-OTA+Inbound) NET ≒ 세그먼트별(OTA+G-OTA+Inbound) NET — 동일 소스 교차검증.
+      2. 사업장별 NET - (OTA+G-OTA 세그먼트) ≒ Inbound NET — 세그먼트 분할 정합성.
 
-    위반 시 빌드 로그에 ERROR 출력하고, 검증 결과를 dict로 반환해
-    docs/data/daily_analysis_validation.json·data-check.html에서 표시 가능하게 함.
+    참고: 채널별(byChannel) 일별 데이터는 patch_channel_daily에서 property 전체(모든 세그먼트)를
+    by_property_channel 비율로 비례 분배한 추정치이므로, OTA/G-OTA 채널 합계가 사업장별
+    OTA+G-OTA+Inbound 합계를 초과할 수 있음 (다른 세그먼트 예약이 채널에 배분되기 때문).
+    따라서 prop_net vs chan_net 비교는 WARNING으로만 표시하고, 세그먼트별 교차검증을 주 검증으로 사용.
     """
     def _net(d):
         return sum((v.get("pickup", 0) or 0) - (v.get("cancel", 0) or 0) for v in d.values())
@@ -1286,41 +1288,43 @@ def _validate_daily_analysis_consistency(da: dict) -> dict:
     prop_net = _net(da.get("byProperty", {}))
     chan_net = _net(da.get("byChannel", {}))
     seg = da.get("bySegment", {}) or {}
-    ib = (seg.get("Inbound", {}) or {}).get("net", 0) or 0
+    ota_net = (seg.get("OTA", {}) or {}).get("net", 0) or 0
+    gota_net = (seg.get("G-OTA", {}) or {}).get("net", 0) or 0
+    ib_net = (seg.get("Inbound", {}) or {}).get("net", 0) or 0
+    seg_total = ota_net + gota_net + ib_net
 
-    # 채널 분배는 by_property_channel 비례 추정이라 정확히 일치하지 않음. 절대값 5% 또는 100실 둘 중 큰 값 허용.
-    expected_diff = ib  # 사업장별 - 채널별 = Inbound (이상)
-    actual_diff = prop_net - chan_net
-    tolerance = max(100, abs(prop_net) * 0.05)
-    diff_ok = abs(actual_diff - expected_diff) <= tolerance
-    inequality_ok = prop_net >= chan_net  # 강한 룰
+    # 사업장별 vs 세그먼트별 교차검증 (동일 소스이므로 정확히 일치해야 함)
+    tolerance = max(50, abs(prop_net) * 0.02)
+    seg_match = abs(prop_net - seg_total) <= tolerance
 
     result = {
         "prop_net": prop_net,
         "chan_net": chan_net,
-        "inbound_net": ib,
-        "expected_diff": expected_diff,
-        "actual_diff": actual_diff,
+        "seg_total": seg_total,
+        "ota_net": ota_net,
+        "gota_net": gota_net,
+        "inbound_net": ib_net,
         "tolerance": round(tolerance, 1),
-        "inequality_ok": inequality_ok,
-        "diff_ok": diff_ok,
-        "passed": inequality_ok and diff_ok,
+        "seg_match": seg_match,
+        "passed": seg_match,
     }
 
-    if not inequality_ok:
+    if not seg_match:
         logger.error(
-            f"✗ 당일분석 교차검증 실패: 사업장별 NET({prop_net}) < 채널별 NET({chan_net}). "
-            f"채널별이 사업장별보다 클 수 없음 (Inbound·기타 세그먼트가 채널 합계에 섞여있을 가능성)."
-        )
-    elif not diff_ok:
-        logger.warning(
-            f"⚠ 당일분석 교차검증 경고: 사업장별-채널별({actual_diff}) ≠ Inbound({ib}), "
-            f"오차 {abs(actual_diff - expected_diff):.0f} > 허용 {tolerance:.0f}"
+            f"✗ 당일분석 교차검증 실패: 사업장별 NET({prop_net}) ≠ 세그먼트합 NET({seg_total}). "
+            f"OTA={ota_net}, G-OTA={gota_net}, Inbound={ib_net}, 오차={abs(prop_net - seg_total)}"
         )
     else:
         logger.info(
-            f"✓ 당일분석 교차검증 통과: 사업장별 NET={prop_net}, 채널별 NET={chan_net}, "
-            f"차이={actual_diff} (Inbound={ib}, 허용±{tolerance:.0f})"
+            f"✓ 당일분석 교차검증 통과: 사업장별 NET={prop_net}, 세그먼트합={seg_total} "
+            f"(OTA={ota_net}, G-OTA={gota_net}, IB={ib_net})"
+        )
+
+    # 채널별은 비례추정이므로 참고 로그만 출력
+    if chan_net > prop_net:
+        logger.info(
+            f"  ℹ 채널별 NET({chan_net}) > 사업장별 NET({prop_net}): "
+            f"차이 {chan_net - prop_net} (비례분배 추정 오차, 정상)"
         )
 
     return result
@@ -2800,16 +2804,31 @@ def main():
         try:
             docs_agg = load_json(docs_agg_path)
             synced_keys = []
+            _VISIBLE_SEGMENTS = {"OTA", "G-OTA", "Inbound"}
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
                          "by_segment", "by_region_segment", "by_property_segment", "meta",
                          "yoy_adjusted",
+                         "by_channel", "by_property", "by_region",
+                         "by_property_channel", "by_property_channel_segment",
                          "pickup_daily_by_channel", "cancel_daily_by_channel",
                          "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
                          "by_channel_segment",
+                         "pickup_daily_by_segment", "cancel_daily_by_segment",
+                         "pickup_daily_by_segment_month", "cancel_daily_by_segment_month",
+                         "pickup_daily_by_property", "cancel_daily_by_property",
+                         "pickup_daily_by_property_month", "cancel_daily_by_property_month",
+                         "pickup_daily_by_property_segment", "cancel_daily_by_property_segment",
+                         "pickup_daily_by_property_segment_month", "cancel_daily_by_property_segment_month",
+                         "stay_date_daily", "lead_time_distribution",
+                         "lead_time_by_property", "cancel_lead_time",
                          "net_daily_by_segment", "net_daily_by_month_seg",
                          "product_detail"):
                 if key in agg_data:
-                    docs_agg[key] = agg_data[key]
+                    val = agg_data[key]
+                    # by_segment 는 OTA/G-OTA/Inbound 만 프론트엔드에 노출
+                    if key == "by_segment" and isinstance(val, dict):
+                        val = {k: v for k, v in val.items() if k in _VISIBLE_SEGMENTS}
+                    docs_agg[key] = val
                     synced_keys.append(key)
             docs_agg["generated_at"] = agg_data.get("generated_at", "")
             docs_agg_path.write_text(

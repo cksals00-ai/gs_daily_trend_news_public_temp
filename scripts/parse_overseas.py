@@ -19,6 +19,8 @@ DATA_DIR = ROOT / "data"
 DOCS_DIR = ROOT / "docs"
 EXCEL_FILE = DATA_DIR / "overseas" / "overseas_2026.xlsx"
 WRH_FILE = DATA_DIR / "overseas" / "2026년 WRH 객실계획.xlsx"
+WRH_CLOSING_DIR = DATA_DIR / "overseas"
+WRH_CLOSING_GLOB = "*WRH Monthly Closing*.xlsx"
 
 
 def sv(v):
@@ -269,6 +271,113 @@ def parse_wrh_excel(filepath):
     }
 
 
+def parse_wrh_monthly_closing(filepath):
+    """WRH Monthly Closing 엑셀 → 월별 actual 객실/매출/IS 데이터.
+
+    sheet '1) Rooms' 기반:
+      Row 5 col5='Total' col6='Actual 2026'
+      Row 6 col6=YTD 마감월, col7..18 = 1..12월
+      Row 7 = OCC, R8 = Available Rooms, R9 = RN, R10 = ADR, R11 = RevPAR, R17 = Revenue
+    sheet '2) IS(Summary)' 기반:
+      Row 7 = Total Revenue, R21 = Departmental Profit, R33 = GOP,
+      R39 = Net Operating Income, R41 = Income before tax
+    """
+    try:
+        import openpyxl
+    except ImportError:
+        return None
+
+    wb = openpyxl.load_workbook(filepath, data_only=True, read_only=True)
+    ws = wb['1) Rooms']
+    logger.info(f"WRH Monthly Closing 로드: {filepath.name}")
+
+    def cell(sheet, r, c):
+        return sheet.cell(r, c).value
+
+    ytd_through = int(sv(cell(ws, 6, 6)))
+    rooms_total = {
+        'ytd_through': ytd_through,
+        'occ_pct': round(sv(cell(ws, 7, 6)) * 100, 2),
+        'rn': int(sv(cell(ws, 9, 6))),
+        'adr': round(sv(cell(ws, 10, 6)), 2),
+        'revpar': round(sv(cell(ws, 11, 6)), 2),
+        'rev': round(sv(cell(ws, 17, 6)), 2),
+        'avail_rooms': int(sv(cell(ws, 8, 6))),
+    }
+
+    rooms_monthly = []
+    for m in range(1, 13):
+        col = 6 + m
+        rn = int(sv(cell(ws, 9, col)))
+        rooms_monthly.append({
+            'month': m,
+            'occ_pct': round(sv(cell(ws, 7, col)) * 100, 2),
+            'rn': rn,
+            'adr': round(sv(cell(ws, 10, col)), 2),
+            'revpar': round(sv(cell(ws, 11, col)), 2),
+            'rev': round(sv(cell(ws, 17, col)), 2),
+            'has_actual': rn > 0,
+        })
+
+    income_statement = None
+    if '2) IS(Summary)' in wb.sheetnames:
+        ws2 = wb['2) IS(Summary)']
+        is_rows = [
+            (7, 'total_revenue'), (14, 'dept_expenses'), (21, 'dept_profit'),
+            (28, 'undist_expenses'), (33, 'gop'), (34, 'fixed_charges'),
+            (39, 'noi'), (40, 'd_and_a'), (41, 'income_before_tax'),
+        ]
+        income_statement = {'ytd': {}, 'monthly': {}}
+        for r, key in is_rows:
+            income_statement['ytd'][key] = round(sv(cell(ws2, r, 6)), 2)
+            income_statement['monthly'][key] = [round(sv(cell(ws2, r, 6 + m)), 2) for m in range(1, 13)]
+
+    return {
+        'rooms_total': rooms_total,
+        'rooms_monthly': rooms_monthly,
+        'income_statement': income_statement,
+        'source_file': filepath.name,
+    }
+
+
+def merge_wrh_actuals(hawaii, closing):
+    """parse_wrh_excel 결과에 Monthly Closing actuals를 병합."""
+    if not closing or not hawaii:
+        return hawaii
+
+    rt = closing['rooms_total']
+    hawaii['total']['actual_rn'] = rt['rn']
+    hawaii['total']['actual_rev'] = round(rt['rev'])
+    hawaii['total']['actual_adr'] = rt['adr']
+    hawaii['total']['actual_occ'] = rt['occ_pct']
+    hawaii['total']['actual_revpar'] = rt['revpar']
+    hawaii['total']['ytd_through'] = rt['ytd_through']
+
+    by_month = {m['month']: m for m in closing['rooms_monthly']}
+    for entry in hawaii['monthly']:
+        m = entry['month']
+        cm = by_month.get(m)
+        if cm and cm['has_actual']:
+            entry['actual_rn'] = cm['rn']
+            entry['actual_rev'] = round(cm['rev'])
+            entry['actual_adr'] = cm['adr']
+            entry['actual_occ'] = cm['occ_pct']
+            entry['actual_revpar'] = cm['revpar']
+        else:
+            entry['actual_occ'] = 0
+            entry['actual_revpar'] = 0
+
+    if closing.get('income_statement'):
+        hawaii['income_statement'] = closing['income_statement']
+    hawaii['actual_source'] = closing.get('source_file')
+    return hawaii
+
+
+def find_latest_closing_file():
+    candidates = sorted(WRH_CLOSING_DIR.glob(WRH_CLOSING_GLOB))
+    return candidates[-1] if candidates else None
+
+
 def main():
     if not EXCEL_FILE.exists():
         logger.warning(f"엑셀 파일 없음: {EXCEL_FILE} — 기존 JSON 유지")
@@ -279,14 +388,30 @@ def main():
         logger.error("파싱 실패")
         sys.exit(1)
 
-    # ── 하와이 WRH ──
+    # ── 하와이 WRH Budget ──
     if WRH_FILE.exists():
         hawaii = parse_wrh_excel(WRH_FILE)
         if hawaii:
             data['hawaii'] = hawaii
-            logger.info(f"✓ 하와이 WRH 데이터 추가 (월 {len(hawaii['monthly'])}개)")
+            logger.info(f"✓ 하와이 WRH Budget 데이터 추가 (월 {len(hawaii['monthly'])}개)")
     else:
-        logger.warning(f"WRH 파일 없음: {WRH_FILE} — 하와이 데이터 미포함")
+        logger.warning(f"WRH 파일 없음: {WRH_FILE} — 하와이 Budget 데이터 미포함")
+
+    # ── 하와이 WRH Monthly Closing Actuals ──
+    closing_file = find_latest_closing_file()
+    if closing_file and 'hawaii' in data:
+        try:
+            closing = parse_wrh_monthly_closing(closing_file)
+            if closing:
+                merge_wrh_actuals(data['hawaii'], closing)
+                logger.info(
+                    f"✓ 하와이 WRH Actual 병합 ({closing_file.name}, "
+                    f"YTD M{closing['rooms_total']['ytd_through']})"
+                )
+        except Exception as e:
+            logger.warning(f"✗ WRH Monthly Closing 파싱 실패: {e}")
+    elif not closing_file:
+        logger.info("WRH Monthly Closing 파일 없음 — Actual 병합 건너뜀")
 
     # Save to data/
     out_data = DATA_DIR / "overseas_data.json"
