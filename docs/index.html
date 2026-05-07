@@ -2054,7 +2054,7 @@ if ('serviceWorker' in navigator) {
                 <button class="da-view-btn" data-da-view="segment" onclick="switchDailyView('segment')" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border:none;background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-weight:600;">채널별</button>
               </div>
             </div>
-            <div id="da-inbound-note" style="display:none;font-family:var(--mono);font-size:8.5px;color:#a892c8;margin-bottom:2px;text-align:left;">※ OTA + G-OTA 채널만 (Inbound · 기타 세그먼트 제외)</div>
+            <div id="da-inbound-note" style="display:none;font-family:var(--mono);font-size:8.5px;color:#a892c8;margin-bottom:2px;text-align:left;">※ OTA + G-OTA + Inbound 세그먼트만 표시</div>
             <!-- 동기간(YoY) OTB 비교 스트립 -->
             <div id="da-yoy-strip" style="display:flex;gap:5px;margin-bottom:6px;font-family:var(--mono);font-size:9px;">
               <div style="flex:1;background:rgba(109,211,150,0.06);border:1px solid rgba(109,211,150,0.12);border-radius:4px;padding:4px 7px;">
@@ -2489,6 +2489,11 @@ if ('serviceWorker' in navigator) {
           </div>
         </div>
 
+      </div>
+
+      <!-- ROW 2.5: 상품 인사이트 카드 4개 (룸온니 실적 / 패키지 비중 / Top 카테고리 / YoY 최대 변동) -->
+      <div id="product-insight-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="grid-column:1/-1;padding:20px;text-align:center;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.03);border-radius:8px;">상품 인사이트 로딩…</div>
       </div>
 
       <!-- ROW 3: 주요 현황 요약 -->
@@ -12030,7 +12035,14 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
-  <div style="overflow-x:auto;background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;">
+  <!-- TOP 4 카드 (객실수/ADR/매출 + 동기간 YoY) — JS가 by_channel + pickup_daily_by_channel로 렌더 -->
+  <div id="major-ota-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px;">
+    <div style="grid-column:1/-1;padding:30px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-faint);">데이터 로딩…</div>
+  </div>
+
+  <details style="background:var(--bg-card);border:1px solid var(--rule);border-radius:4px;margin-bottom:0;">
+    <summary style="padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);cursor:pointer;">월별 RNS 상세 표 (참고용)</summary>
+  <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-family:var(--sans);font-size:13px;min-width:880px;" data-tpl-major-ota-table>
       <thead>
         <tr style="background:var(--bg-soft);border-bottom:2px solid var(--rule-strong);">
@@ -12109,12 +12121,12 @@ if ('serviceWorker' in navigator) {
         </tr></tbody>
     </table>
   </div>
-  
+  </details>
+
   <div style="margin-top:14px;padding:14px 18px;background:var(--bg-soft);border-radius:4px;font-family:var(--sans);font-size:12px;color:var(--ink-muted);line-height:1.5;">
-    <strong style="color:var(--ink);">💡 읽는 법:</strong> 
-    <strong style="color:var(--gold);">4월 실적</strong>은 당월 기준으로 진하게 표기. 
-    <span style="opacity:0.65;">5·6월은 전망치로 연하게 표기</span>. 
-    YoY는 전년 동월 대비 증감률. 
+    <strong style="color:var(--ink);">💡 읽는 법:</strong>
+    <strong style="color:var(--gold);">객실수/ADR/매출</strong>은 5월 stay 합계(by_channel · 사업장×채널 직접 합산),
+    <strong>YoY</strong>는 작년 동월 stay 동기간(같은 날짜 범위) 비교.
     <span style="color:var(--positive);">▲ 녹색</span>은 성장, <span style="color:var(--negative);">▼ 적색</span>은 감소.
   </div>
 </section>
@@ -14238,6 +14250,262 @@ function toggleNewsMore(btn, id) {
         return ndm['2026' + _pad2(+mk)] || {};
       }
 
+      // ── Top4 OTA 카드 (by_channel 기반, 동기간 YoY) ──
+      try {
+        var bc      = data.by_channel || {};
+        var bcs     = data.by_channel_segment || {};
+        var pdbc    = data.pickup_daily_by_channel || {};
+        var cdbc    = data.cancel_daily_by_channel || {};
+        var todayK  = _dateKey(_todayDt);                                  // YYYYMMDD
+        var curYear = _todayDt.getFullYear();
+        var curMon  = _todayDt.getMonth() + 1;
+        var curMK   = '' + curYear + _pad2(curMon);                        // 202605
+        var lyMK    = '' + (curYear - 1) + _pad2(curMon);                  // 202505
+        var monStartK = curMK + '01';
+        var monEndK   = todayK;                                            // MTD
+        var lyStartK  = lyMK + '01';
+        // LY 동기간 끝 = 1년 전 같은 일자 (오늘이 5/8 → 작년 5/8)
+        var lyEndDt = new Date(_todayDt); lyEndDt.setFullYear(curYear - 1);
+        var lyEndK  = _dateKey(lyEndDt);
+
+        // OTA + G-OTA 채널만 (by_channel_segment 키로 식별)
+        function _isOtaGota(ch) {
+          var segs = bcs[ch];
+          if (!segs) return false;
+          if (Array.isArray(segs)) return segs.indexOf('OTA') >= 0 || segs.indexOf('G-OTA') >= 0;
+          return ('OTA' in segs) || ('G-OTA' in segs);
+        }
+        function _tierOf(ch) {
+          var segs = bcs[ch];
+          if (!segs) return null;
+          if (Array.isArray(segs)) return segs.indexOf('G-OTA') >= 0 ? 'GOTA' : (segs.indexOf('OTA') >= 0 ? 'OTA' : null);
+          return ('G-OTA' in segs) ? 'GOTA' : (('OTA' in segs) ? 'OTA' : null);
+        }
+        // 날짜 범위 [s, e] (포함)에 대한 net pickup 합 (rn, rev)
+        function _netRange(ch, sK, eK) {
+          var p = pdbc[ch] || {}, c = cdbc[ch] || {};
+          var rn = 0, rev = 0;
+          Object.keys(p).forEach(function(k) {
+            if (k >= sK && k <= eK) { rn += (p[k].rn || 0); rev += (p[k].rev || 0); }
+          });
+          Object.keys(c).forEach(function(k) {
+            if (k >= sK && k <= eK) { rn -= (c[k].rn || 0); rev -= (c[k].rev || 0); }
+          });
+          return { rn: rn, rev: rev };
+        }
+
+        var rows = [];
+        Object.keys(bc).forEach(function(ch) {
+          if (!_isOtaGota(ch)) return;
+          // 객실수/ADR/매출 — by_channel[ch][curMK] (당월 stay-month 합계)
+          var cur = bc[ch][curMK] || {};
+          var ly  = bc[ch][lyMK]  || {};
+          // YoY 동기간 — pickup_daily_by_channel net 으로 같은 날짜 범위 비교
+          var curWin = _netRange(ch, monStartK, monEndK);
+          var lyWin  = _netRange(ch, lyStartK,  lyEndK);
+          var curRn = cur.net_rn || 0;
+          if (curRn <= 0) return;  // 당월 데이터 없는 채널은 제외
+          rows.push({
+            name: ch,
+            tier: _tierOf(ch),
+            rn:  curRn,
+            adr: cur.adr || 0,
+            rev: cur.net_rev || 0,
+            lyRn: ly.net_rn || 0,
+            lyAdr: ly.adr || 0,
+            lyRev: ly.net_rev || 0,
+            yoyRn: lyWin.rn > 0 ? Math.round((curWin.rn - lyWin.rn) / Math.abs(lyWin.rn) * 100) : null,
+            yoyRev: lyWin.rev > 0 ? Math.round((curWin.rev - lyWin.rev) / Math.abs(lyWin.rev) * 100) : null,
+          });
+        });
+        rows.sort(function(a, b) { return b.rn - a.rn; });
+        rows = rows.slice(0, 4);
+
+        var box = document.getElementById('major-ota-cards');
+        if (box) {
+          if (!rows.length) {
+            box.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-faint);">당월 OTA/G-OTA 채널 데이터 없음</div>';
+          } else {
+            var TIER_COLOR = { GOTA: '#6db58a', OTA: '#d97a7a' };
+            function _yoyHtml(p) {
+              if (p === null || p === undefined) return '<span style="color:#8a8a8a;">—</span>';
+              if (p > 0)  return '<span style="color:#2d7a3f;font-weight:700;">▲ ' + p + '%</span>';
+              if (p < 0)  return '<span style="color:#b8332c;font-weight:700;">▼ ' + Math.abs(p) + '%</span>';
+              return '<span style="color:#8a8a8a;">▬ 0%</span>';
+            }
+            box.innerHTML = rows.map(function(r, i) {
+              var c = TIER_COLOR[r.tier] || '#8a8a8a';
+              return '' +
+                '<div style="background:var(--bg-card);border:1px solid var(--rule);border-top:3px solid ' + c + ';border-radius:4px;padding:16px 18px;">' +
+                '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+                '    <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700;">#' + (i+1).toString().padStart(2,'0') + '</div>' +
+                '    <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:' + c + '20;color:' + c + ';border-radius:3px;font-weight:800;letter-spacing:0.08em;border:1px solid ' + c + '40;">' + r.tier + '</span>' +
+                '  </div>' +
+                '  <div style="font-family:var(--serif);font-size:17px;font-weight:800;color:var(--ink);margin-bottom:12px;line-height:1.2;">' + r.name + '</div>' +
+                '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-family:var(--mono);">' +
+                '    <div>' +
+                '      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:3px;">객실수</div>' +
+                '      <div style="font-size:15px;font-weight:800;color:var(--ink);">' + r.rn.toLocaleString() + '</div>' +
+                '      <div style="font-size:10px;margin-top:2px;">' + _yoyHtml(r.yoyRn) + '</div>' +
+                '    </div>' +
+                '    <div>' +
+                '      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:3px;">ADR</div>' +
+                '      <div style="font-size:15px;font-weight:800;color:var(--ink);">' + r.adr.toLocaleString() + '<span style="font-size:9px;color:var(--ink-faint);font-weight:500;"> 천원</span></div>' +
+                '      <div style="font-size:10px;margin-top:2px;color:var(--ink-faint);">LY ' + (r.lyAdr || 0).toLocaleString() + '</div>' +
+                '    </div>' +
+                '    <div>' +
+                '      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:3px;">매출</div>' +
+                '      <div style="font-size:15px;font-weight:800;color:var(--ink);">' + (r.rev || 0).toLocaleString() + '<span style="font-size:9px;color:var(--ink-faint);font-weight:500;">백만</span></div>' +
+                '      <div style="font-size:10px;margin-top:2px;">' + _yoyHtml(r.yoyRev) + '</div>' +
+                '    </div>' +
+                '  </div>' +
+                '</div>';
+            }).join('');
+          }
+        }
+      } catch (e) {
+        var ebox = document.getElementById('major-ota-cards');
+        if (ebox) ebox.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;font-family:var(--mono);font-size:11px;color:#b8332c;">Top4 OTA 렌더 오류: ' + (e && e.message || e) + '</div>';
+      }
+
+      // ── 상품 인사이트 4 카드 (룸온니 실적 / 패키지 비중 / Top 카테고리 / YoY 최대 변동) ──
+      try {
+        var pdEl = document.getElementById('product-insight-cards');
+        var pd = data.product_detail || {};
+        var byCat = pd.by_category || {};
+        var todayDt2 = _todayDt;
+        var curY  = todayDt2.getFullYear();
+        var curM  = todayDt2.getMonth() + 1;
+        var curMK2 = '' + curY + _pad2(curM);
+        var lyMK2  = '' + (curY - 1) + _pad2(curM);
+
+        function _curMonth(catData) {
+          var yr = catData[String(curY)] || {};
+          return yr[curMK2] || { rn: 0, rev: 0, adr: 0 };
+        }
+        function _lyMonth(catData) {
+          var yr = catData[String(curY - 1)] || {};
+          return yr[lyMK2] || { rn: 0, rev: 0, adr: 0 };
+        }
+
+        var catNames = Object.keys(byCat);
+        var pkgRn = 0, pkgRev = 0;     // 패키지 전체
+        var roRn = 0, roRev = 0, roAdr = 0;
+        var topCat = null, topRn = -1, topRev = 0, topAdr = 0;
+        var yoyMover = null, yoyMoverPct = 0, yoyMoverDelta = 0;
+
+        catNames.forEach(function(cat) {
+          var cur = _curMonth(byCat[cat]);
+          var ly  = _lyMonth(byCat[cat]);
+          pkgRn += cur.rn || 0;
+          pkgRev += cur.rev || 0;
+          if (cat === '룸온니/프로모션') {
+            roRn = cur.rn || 0; roRev = cur.rev || 0; roAdr = cur.adr || 0;
+          }
+          if ((cur.rn || 0) > topRn) {
+            topRn = cur.rn || 0; topCat = cat; topRev = cur.rev || 0; topAdr = cur.adr || 0;
+          }
+          if ((ly.rn || 0) > 0) {
+            var pct = ((cur.rn || 0) - ly.rn) / ly.rn * 100;
+            if (Math.abs(pct) > Math.abs(yoyMoverPct)) {
+              yoyMoverPct = Math.round(pct);
+              yoyMoverDelta = (cur.rn || 0) - ly.rn;
+              yoyMover = cat;
+            }
+          }
+        });
+
+        // 전체 monthly_total[curMK].net_rn → 패키지 비중 분모
+        var totRn = (data.monthly_total && data.monthly_total[curMK2] && data.monthly_total[curMK2].net_rn) || 0;
+        var pkgShare = totRn > 0 ? Math.round(pkgRn / totRn * 1000) / 10 : 0;
+
+        function _arrow(p) {
+          if (p === null || p === undefined || p === 0) return '<span style="color:#8a8a8a;">▬</span>';
+          return p > 0 ? '<span style="color:#2d7a3f;font-weight:700;">▲ ' + p + '%</span>'
+                       : '<span style="color:#b8332c;font-weight:700;">▼ ' + Math.abs(p) + '%</span>';
+        }
+
+        function _card(title, color, accent, bodyHtml, foot) {
+          return '' +
+            '<div style="background:rgba(255,255,255,0.04);border:1px solid ' + color + ';border-radius:8px;overflow:hidden;">' +
+            '  <div style="height:3px;background:' + accent + ';"></div>' +
+            '  <div style="padding:14px 16px;">' +
+            '    <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.15em;color:' + accent + ';font-weight:800;margin-bottom:8px;">' + title + '</div>' +
+            '    ' + bodyHtml +
+            (foot ? '<div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.35);margin-top:8px;letter-spacing:0.05em;">' + foot + '</div>' : '') +
+            '  </div>' +
+            '</div>';
+        }
+
+        var monLbl = curM + '월 stay (회원번호=86 패키지)';
+
+        var card1 = _card(
+          '◆ 룸온니/프로모션 실적',
+          'rgba(184,137,63,0.25)', 'var(--gold-bright)',
+          '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">' +
+          '  <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:var(--ink);">' + roRn.toLocaleString() + '</span>' +
+          '  <span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);">실</span>' +
+          '</div>' +
+          '<div style="display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);">' +
+          '  <span>ADR <strong style="color:var(--ink);">' + roAdr.toLocaleString() + '</strong>천</span>' +
+          '  <span>매출 <strong style="color:var(--ink);">' + roRev.toLocaleString() + '</strong>백만</span>' +
+          '</div>',
+          monLbl
+        );
+
+        var card2 = _card(
+          '◆ 패키지 비중',
+          'rgba(168,146,200,0.25)', '#a892c8',
+          '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">' +
+          '  <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:var(--ink);">' + pkgShare + '%</span>' +
+          '  <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);">전체 대비</span>' +
+          '</div>' +
+          '<div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);">' +
+          '  패키지 <strong style="color:var(--ink);">' + pkgRn.toLocaleString() + '</strong>실 / 전체 ' + totRn.toLocaleString() + '실' +
+          '</div>',
+          monLbl
+        );
+
+        var card3 = _card(
+          '◆ Top 카테고리',
+          'rgba(78,205,196,0.25)', '#4ecdc4',
+          (topCat ?
+            '<div style="font-family:var(--serif);font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px;line-height:1.2;">' + topCat + '</div>' +
+            '<div style="display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);">' +
+            '  <span>RN <strong style="color:var(--ink);">' + topRn.toLocaleString() + '</strong></span>' +
+            '  <span>ADR <strong style="color:var(--ink);">' + topAdr.toLocaleString() + '</strong></span>' +
+            '  <span>매출 <strong style="color:var(--ink);">' + topRev.toLocaleString() + '</strong></span>' +
+            '</div>'
+            : '<div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.35);">데이터 없음</div>'),
+          monLbl + ' · 최대 객실수'
+        );
+
+        var moverColor = yoyMoverPct >= 0 ? '#2d7a3f' : '#b8332c';
+        var card4 = _card(
+          '◆ YoY 최대 변동',
+          'rgba(217,122,122,0.25)', '#e57373',
+          (yoyMover ?
+            '<div style="font-family:var(--serif);font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px;line-height:1.2;">' + yoyMover + '</div>' +
+            '<div style="display:flex;align-items:baseline;gap:6px;">' +
+            '  <span style="font-family:var(--mono);font-size:22px;font-weight:900;color:' + moverColor + ';">' + (yoyMoverPct >= 0 ? '+' : '') + yoyMoverPct + '%</span>' +
+            '  <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);">' + (yoyMoverDelta >= 0 ? '+' : '') + yoyMoverDelta.toLocaleString() + '실</span>' +
+            '</div>'
+            : '<div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.35);">전년 데이터 없음</div>'),
+          curY + '/' + _pad2(curM) + ' vs ' + (curY-1) + '/' + _pad2(curM) + ' (stay-month)'
+        );
+
+        if (pdEl) {
+          if (catNames.length === 0) {
+            pdEl.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.03);border-radius:8px;">product_detail 데이터 없음 — 다음 빌드 후 표시됩니다.</div>';
+          } else {
+            pdEl.innerHTML = card1 + card2 + card3 + card4;
+          }
+        }
+      } catch (e2) {
+        var pde = document.getElementById('product-insight-cards');
+        if (pde) pde.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;font-family:var(--mono);font-size:11px;color:#b8332c;">상품 인사이트 렌더 오류: ' + (e2 && e2.message || e2) + '</div>';
+      }
+
       // ── 주간 OTB 차트 + WoW ──
       var _weeklyChart = null;
       var _activeChartMonth = 'all';
@@ -14388,8 +14656,8 @@ function toggleNewsMore(btn, id) {
         }
       };
 
-      // 초기 렌더링
-      _renderWeeklyOTB('all');
+      // 초기 렌더링: 디폴트 = 당월(stay-month)
+      _renderWeeklyOTB(String(_todayDt.getMonth() + 1));
 
       // ── 22~26년 동기간 OTB 추이 라인 차트 (누적 booking_rn 기준, 45일 전부터) ──
       var years = [2022, 2023, 2024, 2025, 2026];
@@ -14522,8 +14790,9 @@ function toggleNewsMore(btn, id) {
   var segColors = { 'OTA': '#4ecdc4', 'G-OTA': '#f0a500', 'Inbound': '#a892c8' };
   var segBars = document.getElementById('seg-bars');
   if (segBars && D.segToday) {
-    var maxNet = Math.max.apply(null, Object.values(D.segToday).map(function(s){ return Math.abs(s.net); })) || 1;
-    Object.keys(D.segToday).forEach(function(seg) {
+    var filteredSegKeys = Object.keys(D.segToday).filter(function(s){ return ALLOWED_SEGS[s]; });
+    var maxNet = Math.max.apply(null, filteredSegKeys.map(function(k){ return Math.abs(D.segToday[k].net); })) || 1;
+    filteredSegKeys.forEach(function(seg) {
       var s = D.segToday[seg];
       var pct = Math.min(Math.abs(s.net) / maxNet * 100, 100);
       var clr = segColors[seg] || '#999';
@@ -14545,7 +14814,7 @@ function toggleNewsMore(btn, id) {
   if (segTable && D.segToday) {
     var rows = '<div style="display:grid;grid-template-columns:60px 1fr 1fr 1fr;gap:2px 8px;">';
     rows += '<span style="color:rgba(255,255,255,0.25);font-size:8px;"></span><span style="color:rgba(255,255,255,0.25);font-size:8px;text-align:right;">Booking</span><span style="color:rgba(255,255,255,0.25);font-size:8px;text-align:right;">Cancel</span><span style="color:rgba(255,255,255,0.25);font-size:8px;text-align:right;">매출(억)</span>';
-    Object.keys(D.segToday).forEach(function(seg) {
+    filteredSegKeys.forEach(function(seg) {
       var s = D.segToday[seg];
       var clr = segColors[seg] || '#999';
       rows += '<span style="color:' + clr + ';font-weight:600;">' + seg + '</span>';
@@ -14555,7 +14824,7 @@ function toggleNewsMore(btn, id) {
     });
     // 합계
     var totBook = 0, totCancel = 0, totNet = 0, totRev = 0;
-    Object.values(D.segToday).forEach(function(s) { totBook += s.booking; totCancel += s.cancel; totNet += s.net; totRev += s.net_rev; });
+    filteredSegKeys.forEach(function(k) { var s = D.segToday[k]; totBook += s.booking; totCancel += s.cancel; totNet += s.net; totRev += s.net_rev; });
     rows += '<span style="color:#fff;font-weight:700;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">합계</span>';
     rows += '<span style="text-align:right;color:#fff;font-weight:700;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">+' + totBook.toLocaleString() + '</span>';
     rows += '<span style="text-align:right;color:#ff6b6b;font-weight:700;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">-' + totCancel.toLocaleString() + '</span>';
@@ -14983,7 +15252,10 @@ function toggleNewsMore(btn, id) {
     var yoyProp = (YOY_OTB[yoyMonth] || {}).byProperty || {};
     var showYoy = _daCurrentView === 'property' && Object.keys(yoyProp).length > 0;
 
-    var entries = Object.keys(data).map(function(k) {
+    var dataKeys = Object.keys(data);
+    // segment 뷰일 때 OTA/G-OTA/Inbound만 표시
+    if (_daCurrentView !== 'property') { dataKeys = dataKeys.filter(function(k){ return ALLOWED_SEGS[k]; }); }
+    var entries = dataKeys.map(function(k) {
       var d = data[k];
       // 사업장 하위에 OTA/G-OTA/Inbound 세그먼트가 있으면 그 합으로 재계산 (GS 채널만)
       var propSegs = segData[k];
@@ -15409,7 +15681,7 @@ function toggleNewsMore(btn, id) {
     yoyWel.style.color = yoyW.color;
 
     // 6줄 제한 + 더보기 토글
-    var SHOW_LIMIT = 6;
+    var SHOW_LIMIT = 10;
     function bindMore(tbodyId, moreId, totalRows, colspan, accentColor) {
       var tbody = document.getElementById(tbodyId);
       var more = document.getElementById(moreId);

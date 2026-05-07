@@ -96,6 +96,30 @@ def classify_segment(code_num, code_name, agent_name, file_type):
     return name if name else "기타"
 
 
+# ─── 상품카테고리 분류 ───
+# 회원번호 86 → 패키지 행. 회원명을 정규화 후 9개 카테고리로 분류.
+# 정규화/분류 로직은 scripts/parse_package_trend.py의 canonical 구현을 그대로 사용.
+try:
+    # 같은 디렉토리이므로 sys.path가 이미 잡혀 있음 (run_*.py에서 진입할 때).
+    from parse_package_trend import normalize_series as _normalize_series, classify_v4 as _classify_v4
+except ImportError:
+    # 직접 실행되는 경로(scripts/ 외부)에서는 명시적으로 추가
+    _scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    if _scripts_dir not in sys.path:
+        sys.path.insert(0, _scripts_dir)
+    from parse_package_trend import normalize_series as _normalize_series, classify_v4 as _classify_v4
+
+
+def classify_product_category(member_num, member_name):
+    """회원번호=86 패키지 행 → 9개 카테고리 (룸온니/프로모션, 연박/투나잇, …).
+    회원번호 86으로 시작하지 않으면 None (=집계 제외).
+    """
+    num = (member_num or "").strip()
+    if not num.startswith("86"):
+        return None
+    return _classify_v4(_normalize_series((member_name or "").strip()))
+
+
 def extract_channel(agent_name, segment_code=""):
     """AGENT명에서 OTA 채널 추출
 
@@ -217,7 +241,8 @@ def detect_file_type(filename):
 def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None,
                          cancel_daily_agg=None, pickup_daily_agg=None,
                          lead_time_agg=None, cancel_lead_agg=None,
-                         stay_date_agg=None, category_agg=None):
+                         stay_date_agg=None, category_agg=None,
+                         pickup_channel_agg=None, cancel_channel_agg=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
@@ -250,6 +275,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                 idx_1night = col_map.get('1박객실료', -1)    # REV 계산 기준
                 idx_cancel_date = col_map.get('취소일자', -1)      # col33: 28/44 파일
                 idx_pickup_date = col_map.get('최초입력일자', -1)  # col27: 27/43 파일
+                idx_member_num = col_map.get('회원번호', -1)      # 회원번호 (86xx = 패키지)
                 idx_member = col_map.get('회원명', -1)            # 거래처명
                 idx_user = col_map.get('이용자명', -1)            # 예약자명
                 idx_rsv_status = col_map.get('예약상태', -1)      # 노쇼 필터
@@ -347,14 +373,16 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         agg[key]['count'] += 1
                         ok_count += 1
 
-                        # 상품카테고리별 집계 (변경예약집계코드명 기준, 27번 파일만)
-                        if category_agg is not None and file_type == "27":
-                            cat_name = parts[idx_category_name].strip() if idx_category_name >= 0 and idx_category_name < plen else ''
-                            if not cat_name:
-                                cat_name = '미분류'
-                            cat_key = (cat_name, prop_name, stay_month, btype)
-                            category_agg[cat_key]['rn'] += rn
-                            category_agg[cat_key]['rev'] += rev
+                        # 상품카테고리별 집계: 회원번호 86xx(패키지) → 9개 카테고리
+                        # 27 예약 + 28 취소 둘 다 사용 — net = 예약 − 취소
+                        if category_agg is not None and file_type in ("27", "28"):
+                            mem_num = parts[idx_member_num].strip() if 0 <= idx_member_num < plen else ''
+                            mem_name = parts[idx_member].strip() if 0 <= idx_member < plen else ''
+                            cat_name = classify_product_category(mem_num, mem_name)
+                            if cat_name:  # 회원번호 86xx만 집계
+                                cat_key = (cat_name, prop_name, stay_month, btype)
+                                category_agg[cat_key]['rn'] += rn
+                                category_agg[cat_key]['rev'] += rev
 
                         # 투숙일별 집계 (sell_date YYYYMMDD 단위)
                         if stay_date_agg is not None and len(sell_date) >= 8:
@@ -369,6 +397,11 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 ckey = (cancel_date_str[:8], prop_name, region, segment, stay_month)
                                 cancel_daily_agg[ckey]['rn'] += rn
                                 cancel_daily_agg[ckey]['rev'] += rev
+                                # 채널×취소일별 직접 집계 (비례 배분 금지, 원본 합산)
+                                if cancel_channel_agg is not None:
+                                    cck = (cancel_date_str[:8], channel, stay_month)
+                                    cancel_channel_agg[cck]['rn'] += rn
+                                    cancel_channel_agg[cck]['rev'] += rev
 
                         # 최초입력일자 기반 픽업 집계 (27/43 + 28/44): 취소파일도 포함해야 today_booking 정확
                         if pickup_daily_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
@@ -377,6 +410,11 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                                 pkey = (pickup_date_str[:8], prop_name, region, segment, stay_month)
                                 pickup_daily_agg[pkey]['rn'] += rn
                                 pickup_daily_agg[pkey]['rev'] += rev
+                                # 채널×픽업일별 직접 집계 (비례 배분 금지, 원본 합산)
+                                if pickup_channel_agg is not None and not is_cancel:
+                                    pck = (pickup_date_str[:8], channel, stay_month)
+                                    pickup_channel_agg[pck]['rn'] += rn
+                                    pickup_channel_agg[pck]['rev'] += rev
 
                         # 리드타임 집계 (27/43): 판매일자 - 최초입력일자
                         if not is_cancel and lead_time_agg is not None and idx_pickup_date >= 0 and idx_pickup_date < plen:
@@ -643,7 +681,8 @@ def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg, orig_
 
 def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
                   lead_time_agg=None, cancel_lead_agg=None,
-                  stay_date_agg=None, category_agg=None):
+                  stay_date_agg=None, category_agg=None,
+                  pickup_channel_agg=None, cancel_channel_agg=None):
     """집계 → JSON-serializable 구조"""
 
     # 1) 월별 총괄 (전체 사업장)
@@ -984,6 +1023,47 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             for p, segs in sorted(_pd_prop_seg_month.items())
         }
 
+    # 4-b 단계: 채널별 픽업/취소 일별 (원본 합산, 비례 배분 금지)
+    # 키: (date, channel, stay_month) → {rn, rev}
+    if pickup_channel_agg is not None:
+        _pdc = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        _pdcm = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+        for (pday, ch, smonth), vals in pickup_channel_agg.items():
+            _pdc[ch][pday]['rn'] += vals['rn']
+            _pdc[ch][pday]['rev'] += vals['rev']
+            _pdcm[ch][smonth][pday]['rn'] += vals['rn']
+            _pdcm[ch][smonth][pday]['rev'] += vals['rev']
+        result['pickup_daily_by_channel'] = {
+            ch: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for ch, days in sorted(_pdc.items()) if ch not in ('기타', '미분류')
+        }
+        result['pickup_daily_by_channel_month'] = {
+            ch: {
+                m: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+                for m, days in sorted(months.items())
+            }
+            for ch, months in sorted(_pdcm.items()) if ch not in ('기타', '미분류')
+        }
+    if cancel_channel_agg is not None:
+        _cdc = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        _cdcm = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+        for (cday, ch, smonth), vals in cancel_channel_agg.items():
+            _cdc[ch][cday]['rn'] += vals['rn']
+            _cdc[ch][cday]['rev'] += vals['rev']
+            _cdcm[ch][smonth][cday]['rn'] += vals['rn']
+            _cdcm[ch][smonth][cday]['rev'] += vals['rev']
+        result['cancel_daily_by_channel'] = {
+            ch: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+            for ch, days in sorted(_cdc.items()) if ch not in ('기타', '미분류')
+        }
+        result['cancel_daily_by_channel_month'] = {
+            ch: {
+                m: {d: {'rn': v['rn'], 'rev': _to_m(v['rev'])} for d, v in sorted(days.items())}
+                for m, days in sorted(months.items())
+            }
+            for ch, months in sorted(_cdcm.items()) if ch not in ('기타', '미분류')
+        }
+
     # 5단계: 순예약 (Net Booking) 일별 — pickup - cancel
     if pickup_daily_agg or cancel_daily_agg:
         all_nd = sorted(set(_pd.keys()) | set(_cd.keys()))
@@ -1097,13 +1177,13 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
     #   by_property[prop].by_category[cat][year][YYYYMM] = {rn, rev}
     #   by_property[prop].by_year_ranking[year] = [...]
     if category_agg:
-        # 1단계: 중간 집계 — cat × prop × month
+        # 1단계: 중간 집계 — cat × prop × month  (booking − cancel = net)
+        # OTA + G-OTA 27/28 파일에서 예약/취소를 모두 받아 net으로 합산
         _cat_prop_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
         for (cat_name, prop_name, stay_month, btype), vals in category_agg.items():
-            if btype != 'booking':
-                continue  # 예약건만 (취소 제외)
-            _cat_prop_month[cat_name][prop_name][stay_month]['rn'] += vals['rn']
-            _cat_prop_month[cat_name][prop_name][stay_month]['rev'] += vals['rev']
+            sign = 1 if btype == 'booking' else -1
+            _cat_prop_month[cat_name][prop_name][stay_month]['rn'] += sign * vals['rn']
+            _cat_prop_month[cat_name][prop_name][stay_month]['rev'] += sign * vals['rev']
 
         # 2단계: by_category — 전체 사업장 합산
         by_category = {}
@@ -1182,7 +1262,7 @@ def build_summary(agg, cancel_daily_agg=None, pickup_daily_agg=None,
             'meta': {
                 'years': sorted(all_cat_years),
                 'categories': sorted(by_category.keys()),
-                'source': '온북 DB 27번 FIT예약 (변경예약집계코드명 기준)',
+                'source': '온북 DB 27/28 패키지(회원번호=86xx) → classify_v4 9개 카테고리, net = 예약 − 취소',
             }
         }
 
@@ -1202,6 +1282,8 @@ def _save_checkpoint(data, done_indices):
         'cancel_lead_agg': dict(data['cancel_lead_agg']),
         'stay_date_agg': dict(data['stay_date_agg']),
         'category_agg': dict(data.get('category_agg', {})),
+        'pickup_channel_agg': dict(data.get('pickup_channel_agg', {})),
+        'cancel_channel_agg': dict(data.get('cancel_channel_agg', {})),
         'file_stats': data['file_stats'],
         'total_rows': data['total_rows'],
         'done_indices': done_indices,
@@ -1236,6 +1318,10 @@ def _load_checkpoint():
     stay_date_agg.update(payload['stay_date_agg'])
     category_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
     category_agg.update(payload.get('category_agg', {}))
+    pickup_channel_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    pickup_channel_agg.update(payload.get('pickup_channel_agg', {}))
+    cancel_channel_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+    cancel_channel_agg.update(payload.get('cancel_channel_agg', {}))
     return {
         'agg': agg,
         'cancel_daily_agg': cancel_daily_agg,
@@ -1244,6 +1330,8 @@ def _load_checkpoint():
         'cancel_lead_agg': cancel_lead_agg,
         'stay_date_agg': stay_date_agg,
         'category_agg': category_agg,
+        'pickup_channel_agg': pickup_channel_agg,
+        'cancel_channel_agg': cancel_channel_agg,
         'file_stats': payload['file_stats'],
         'total_rows': payload['total_rows'],
         'done_indices': payload['done_indices'],
@@ -1322,6 +1410,8 @@ def main():
         cancel_lead_agg = checkpoint['cancel_lead_agg']
         stay_date_agg = checkpoint['stay_date_agg']
         category_agg = checkpoint.get('category_agg', defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        pickup_channel_agg = checkpoint.get('pickup_channel_agg', defaultdict(lambda: {'rn': 0, 'rev': 0}))
+        cancel_channel_agg = checkpoint.get('cancel_channel_agg', defaultdict(lambda: {'rn': 0, 'rev': 0}))
         file_stats = checkpoint['file_stats']
         total_rows = checkpoint['total_rows']
     else:
@@ -1332,6 +1422,8 @@ def main():
         cancel_lead_agg = defaultdict(lambda: {'rn': 0})
         stay_date_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
         category_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        pickup_channel_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
+        cancel_channel_agg = defaultdict(lambda: {'rn': 0, 'rev': 0})
         file_stats = {}
         total_rows = 0
 
@@ -1361,7 +1453,9 @@ def main():
         row_count = parse_and_aggregate(str(fpath), file_type, agg, min_month=min_m, max_month=max_m,
                                          cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
                                          lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
-                                         stay_date_agg=stay_date_agg, category_agg=category_agg)
+                                         stay_date_agg=stay_date_agg, category_agg=category_agg,
+                                         pickup_channel_agg=pickup_channel_agg,
+                                         cancel_channel_agg=cancel_channel_agg)
         total_rows += row_count
         done_indices.add(fi)
 
@@ -1378,6 +1472,8 @@ def main():
                 'pickup_daily_agg': pickup_daily_agg, 'lead_time_agg': lead_time_agg,
                 'cancel_lead_agg': cancel_lead_agg, 'stay_date_agg': stay_date_agg,
                 'category_agg': category_agg,
+                'pickup_channel_agg': pickup_channel_agg,
+                'cancel_channel_agg': cancel_channel_agg,
                 'file_stats': file_stats, 'total_rows': total_rows,
             }, done_indices)
 
@@ -1400,7 +1496,9 @@ def main():
     # 요약 생성
     summary = build_summary(agg, cancel_daily_agg=cancel_daily_agg, pickup_daily_agg=pickup_daily_agg,
                              lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
-                             stay_date_agg=stay_date_agg, category_agg=category_agg)
+                             stay_date_agg=stay_date_agg, category_agg=category_agg,
+                             pickup_channel_agg=pickup_channel_agg,
+                             cancel_channel_agg=cancel_channel_agg)
     summary['file_stats'] = file_stats
 
     # ─── YoY 동기간 계산 (27/43 예약 + 28/44 취소 기반) ───

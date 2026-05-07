@@ -1293,8 +1293,8 @@ def _validate_daily_analysis_consistency(da: dict) -> dict:
     ib_net = (seg.get("Inbound", {}) or {}).get("net", 0) or 0
     seg_total = ota_net + gota_net + ib_net
 
-    # 사업장별 vs 세그먼트별 교차검증 (동일 소스이므로 정확히 일치해야 함)
-    tolerance = max(50, abs(prop_net) * 0.02)
+    # 사업장별 vs 세그먼트별 교차검증 (허용오차 1실)
+    tolerance = 1
     seg_match = abs(prop_net - seg_total) <= tolerance
 
     result = {
@@ -2806,12 +2806,21 @@ def main():
             synced_keys = []
             _VISIBLE_SEGMENTS = {"OTA", "G-OTA", "Inbound"}
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
+                         "by_property", "by_channel", "by_region",
                          "by_segment", "by_region_segment", "by_property_segment", "meta",
+                         "by_property_channel", "by_property_channel_segment",
                          "yoy_adjusted",
                          "by_channel", "by_property", "by_region",
                          "by_property_channel", "by_property_channel_segment",
                          "pickup_daily_by_channel", "cancel_daily_by_channel",
                          "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
+                         "pickup_daily_by_property", "cancel_daily_by_property",
+                         "pickup_daily_by_property_month", "cancel_daily_by_property_month",
+                         "pickup_daily_by_segment", "cancel_daily_by_segment",
+                         "pickup_daily_by_segment_month", "cancel_daily_by_segment_month",
+                         "pickup_daily_by_property_segment", "cancel_daily_by_property_segment",
+                         "pickup_daily_by_property_segment_month",
+                         "cancel_daily_by_property_segment_month",
                          "by_channel_segment",
                          "pickup_daily_by_segment", "cancel_daily_by_segment",
                          "pickup_daily_by_segment_month", "cancel_daily_by_segment_month",
@@ -2822,6 +2831,9 @@ def main():
                          "stay_date_daily", "lead_time_distribution",
                          "lead_time_by_property", "cancel_lead_time",
                          "net_daily_by_segment", "net_daily_by_month_seg",
+                         "stay_date_daily",
+                         "lead_time_distribution", "lead_time_by_property",
+                         "cancel_lead_time",
                          "product_detail"):
                 if key in agg_data:
                     val = agg_data[key]
