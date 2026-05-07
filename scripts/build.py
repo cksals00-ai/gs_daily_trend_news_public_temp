@@ -1288,10 +1288,11 @@ def _validate_daily_analysis_consistency(da: dict) -> dict:
     seg = da.get("bySegment", {}) or {}
     ib = (seg.get("Inbound", {}) or {}).get("net", 0) or 0
 
-    # 채널 분배는 by_property_channel 비례 추정이라 정확히 일치하지 않음. 절대값 5% 또는 100실 둘 중 큰 값 허용.
+    # 비례 배분 폐기 후 OTA/G-OTA는 거래처 누락이 없으므로 정확히 일치해야 함.
+    # 사업장별(OTA+GOTA+Inbound) - 채널별(OTA+GOTA) = Inbound NET (반올림 외 차이 0)
     expected_diff = ib  # 사업장별 - 채널별 = Inbound (이상)
     actual_diff = prop_net - chan_net
-    tolerance = max(100, abs(prop_net) * 0.05)
+    tolerance = 1  # 정수 반올림 흡수용 1실만 허용
     diff_ok = abs(actual_diff - expected_diff) <= tolerance
     inequality_ok = prop_net >= chan_net  # 강한 룰
 
@@ -2801,12 +2802,24 @@ def main():
             docs_agg = load_json(docs_agg_path)
             synced_keys = []
             for key in ("net_daily", "monthly_total", "pickup_daily", "net_daily_by_month",
+                         "by_property", "by_channel", "by_region",
                          "by_segment", "by_region_segment", "by_property_segment", "meta",
+                         "by_property_channel", "by_property_channel_segment",
                          "yoy_adjusted",
                          "pickup_daily_by_channel", "cancel_daily_by_channel",
                          "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
+                         "pickup_daily_by_property", "cancel_daily_by_property",
+                         "pickup_daily_by_property_month", "cancel_daily_by_property_month",
+                         "pickup_daily_by_segment", "cancel_daily_by_segment",
+                         "pickup_daily_by_segment_month", "cancel_daily_by_segment_month",
+                         "pickup_daily_by_property_segment", "cancel_daily_by_property_segment",
+                         "pickup_daily_by_property_segment_month",
+                         "cancel_daily_by_property_segment_month",
                          "by_channel_segment",
                          "net_daily_by_segment", "net_daily_by_month_seg",
+                         "stay_date_daily",
+                         "lead_time_distribution", "lead_time_by_property",
+                         "cancel_lead_time",
                          "product_detail"):
                 if key in agg_data:
                     docs_agg[key] = agg_data[key]

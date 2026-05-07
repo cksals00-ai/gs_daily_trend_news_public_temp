@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Patch: by_property_channel 월별 비율로 pickup/cancel_daily_by_property(_month) 데이터를
-거래처(channel)별로 분배하여 pickup/cancel_daily_by_channel, pickup/cancel_daily_by_channel_month 생성.
+DEPRECATED — parse_raw_db.py now produces pickup/cancel_daily_by_channel(_month)
+directly from raw rows (channel-key 원본 합산). 비율 배분 금지 정책에 따라 이 스크립트는
+폴백 안전망으로만 동작하며, 키가 이미 존재하면 즉시 종료한다.
 """
 import json, sys
 from pathlib import Path
@@ -19,13 +20,17 @@ print("Loading db_aggregated.json ...")
 with open(AGG_FILE) as f:
     db = json.load(f)
 
-# Skip if already present
+# Skip if already present (parse_raw_db.py가 정상 작동했다면 항상 존재)
 if all(k in db and db[k] for k in [
     "pickup_daily_by_channel", "cancel_daily_by_channel",
     "pickup_daily_by_channel_month", "cancel_daily_by_channel_month",
 ]):
-    print("Channel daily data already exists. Skipping.")
+    print("Channel daily data already exists (from parse_raw_db). Skipping.")
     sys.exit(0)
+
+# 비례 배분은 비활성. 키 누락 시 즉시 실패해 사용자가 parse_raw_db.py 재실행하도록 유도.
+print("ERROR: pickup/cancel_daily_by_channel keys missing — re-run parse_raw_db.py to regenerate.")
+sys.exit(1)
 
 # Source data
 bpc = db.get("by_property_channel", {})
