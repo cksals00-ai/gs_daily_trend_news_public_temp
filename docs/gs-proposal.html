@@ -163,6 +163,29 @@ a{color:inherit;text-decoration:none}
 .seg-tag-label:has(input:checked){background:rgba(90,159,196,0.14);border-color:var(--info);color:var(--info)}
 .seg-tag-label input{display:none}
 
+
+/* Forecast Table (from pumui) */
+.forecast-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--bg-card)}
+.forecast-table th,.forecast-table td{padding:8px 14px;border:1px solid var(--rule-strong);text-align:right;font-family:var(--mono);font-size:12px}
+.forecast-table th{background:var(--bg-deep);color:var(--ink-muted);font-weight:700;letter-spacing:.06em;text-align:center;white-space:nowrap}
+.forecast-table td{color:var(--ink-soft)}
+.forecast-table .row-label{text-align:left;font-weight:600;color:var(--ink-muted);white-space:nowrap}
+.forecast-table .section-header{background:var(--bg-deep);color:var(--gold-bright);font-weight:800;text-align:left;font-size:12.5px;letter-spacing:.05em;border-bottom:2px solid var(--gold)}
+.forecast-table .section-header td{padding:10px 14px}
+.forecast-table .pct-cell{color:var(--ink-faint)}
+.forecast-table .pos{color:var(--positive)}
+.forecast-table .neg{color:var(--negative)}
+.table-block{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.table-block-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.table-block-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gold-bright);letter-spacing:.06em}
+.table-block-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Month chip picker */
+.month-chips{display:flex;flex-wrap:wrap;gap:6px}
+.month-chip{padding:6px 14px;border-radius:4px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.month-chip:hover{background:var(--bg-soft);color:var(--ink)}
+.month-chip.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright)}
+
 @media(max-width:900px){.form-row{flex-direction:column}.stepper{flex-wrap:wrap;gap:4px}.step-arrow{display:none}.summary-grid{grid-template-columns:1fr 1fr}.occ-grid{grid-template-columns:repeat(4,1fr)}}
 @keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:0.6}}
 </style>
@@ -237,9 +260,16 @@ a{color:inherit;text-decoration:none}
               </optgroup>
             </select>
           </div>
-          <div class="form-group" style="max-width:160px">
-            <label class="form-label">기준 투숙월</label>
-            <input type="month" class="form-date" id="promo-search-month" value="2026-07">
+          <div class="form-group" style="max-width:320px">
+            <label class="form-label">기준 투숙월 (복수선택)</label>
+            <div class="month-chips" id="promo-month-chips">
+              <div class="month-chip" data-month="4" onclick="togglePromoMonth(this)">4월</div>
+              <div class="month-chip" data-month="5" onclick="togglePromoMonth(this)">5월</div>
+              <div class="month-chip" data-month="6" onclick="togglePromoMonth(this)">6월</div>
+              <div class="month-chip active" data-month="7" onclick="togglePromoMonth(this)">7월</div>
+              <div class="month-chip" data-month="8" onclick="togglePromoMonth(this)">8월</div>
+              <div class="month-chip" data-month="9" onclick="togglePromoMonth(this)">9월</div>
+            </div>
           </div>
           <div class="form-group" style="max-width:160px">
             <label class="form-label">검색 범위</label>
@@ -263,34 +293,7 @@ a{color:inherit;text-decoration:none}
               <button type="button" class="prop-multi-btn" id="prop-multi-btn" onclick="togglePropDrop()">
                 <span id="prop-multi-text">사업장을 선택하세요</span><span class="arrow">▼</span>
               </button>
-              <div class="prop-multi-drop" id="prop-multi-drop">
-                <label class="prop-opt all-opt"><input type="checkbox" id="chk-all-props" onchange="toggleAllProps(this)"> 전체 사업장 (21개)</label>
-                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="vivaldi" onchange="toggleRegion(this)"> 비발디권역</div>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="vivaldi" value="sono-belle-vivaldi" onchange="updatePropSelection()"> 01. 소노벨 비발디파크</label>
-                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="central" onchange="toggleRegion(this)"> 중부권역</div>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-vivaldi" onchange="updatePropSelection()"> 02. 소노캄 비발디파크</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-vivaldi-pet" onchange="updatePropSelection()"> 03. 소노캄 비발디파크(펫)</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-belge-vivaldi" onchange="updatePropSelection()"> 04. 소노벨지 비발디파크</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="felice-vivaldi" onchange="updatePropSelection()"> 05. 펠리체 비발디파크</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-host-yangpyeong" onchange="updatePropSelection()"> 06. 소노호스 양평</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="delpino" onchange="updatePropSelection()"> 07. 델피노</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="ul-beach-yangyang" onchange="updatePropSelection()"> 08. 울비치 양양</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="ul-beach-samcheok" onchange="updatePropSelection()"> 09. 울비치 삼척</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-belle-danyang" onchange="updatePropSelection()"> 10. 소노벨 단양</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-gyeongju" onchange="updatePropSelection()"> 11. 소노캄 경주</label>
-                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="south" onchange="toggleRegion(this)"> 남부권역</div>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-cheongsong" onchange="updatePropSelection()"> 12. 소노벨 청송</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-cheonan" onchange="updatePropSelection()"> 13. 소노벨 천안</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-byeonsan" onchange="updatePropSelection()"> 14. 소노벨 변산</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-namhae" onchange="updatePropSelection()"> 15. 소노벨 남해</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-cam-geoje" onchange="updatePropSelection()"> 16. 소노캄 거제</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-geoje" onchange="updatePropSelection()"> 17. 울비치 거제</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-jindo" onchange="updatePropSelection()"> 18. 울비치 진도</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-yeosu" onchange="updatePropSelection()"> 19. 울비치 여수</label>
-                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="apac" onchange="toggleRegion(this)"> APAC권역</div>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="apac" value="sono-belle-jeju" onchange="updatePropSelection()"> 20. 소노벨 제주</label>
-                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="apac" value="sono-cam-jeju" onchange="updatePropSelection()"> 21. 소노캄 제주</label>
-              </div>
+              <div class="prop-multi-drop" id="prop-multi-drop"></div>
               <div class="selected-props" id="selected-props"></div>
             </div>
           </div>
@@ -343,6 +346,30 @@ a{color:inherit;text-decoration:none}
       <textarea class="form-textarea" id="txt-purpose" placeholder="품의 시행취지를 작성하세요...">성수기 객실 가동률 극대화 및 회원 만족도 제고를 위한 여름 시즌 패키지 상품 기획.
 전년 동기 대비 OCC 5%p 상승 목표 달성을 위해, 회원/FIT 채널별 차등 할인 전략을 적용한 프로모션 요금을 수립하여 판매 경쟁력을 확보하고자 함.</textarea>
     </div></div>
+
+
+    <!-- Forecast 표 (pumui.html에서 통합) -->
+    <div class="sec-card" id="sec-forecast-table">
+      <div class="sec-head">
+        <span class="sec-head-title">Booking Status · Forecast 표</span>
+        <span class="sec-head-meta">
+          <span class="tag tag-gold">Step 1 사업장/월 자동 반영</span>
+          <button class="btn btn-sm btn-primary" onclick="generateForecastTables()" style="margin-left:8px">표 생성/갱신</button>
+        </span>
+      </div>
+      <div class="sec-body">
+        <p style="color:var(--ink-muted);font-size:11px;margin-bottom:12px;font-family:var(--mono)">ℹ️ Step 1에서 선택한 사업장 + 투숙기간의 월을 기반으로 실제 JSON 데이터에서 표를 생성합니다.</p>
+        <div id="forecast-output">
+          <div style="text-align:center;padding:40px 20px;color:var(--ink-faint);font-family:var(--mono);font-size:12px">
+            <div style="font-size:32px;margin-bottom:10px;opacity:.3">📊</div>
+            Step 1에서 사업장과 투숙기간을 선택한 뒤<br>[표 생성/갱신] 버튼을 클릭하세요
+          </div>
+        </div>
+        <div id="forecast-download-area" style="display:none;margin-top:12px">
+          <button class="btn btn-info" onclick="downloadForecastExcel()">📥 Forecast 엑셀 다운로드</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 기획전 상세 (조건부 — 사업장 선택 시) -->
     <div class="sec-card" id="sec-campaign-detail">
@@ -548,6 +575,411 @@ a{color:inherit;text-decoration:none}
 <script>
 /* ══════════ STATE ══════════ */
 let currentStep=1, rateData=null, occData=null;
+
+/* ══════════ PUMUI INTEGRATION: PROPERTIES & DATA ══════════ */
+const PROPERTIES = [
+  {id:'01',otb:'01.벨비발디',db:'소노벨 비발디파크',occ:'01.벨비발디',label:'소노벨 비발디파크',region:'vivaldi'},
+  {id:'02',otb:'02.캄비발디',db:'소노캄 비발디파크',occ:'02.캄비발디',label:'소노캄 비발디파크',region:'central'},
+  {id:'03',otb:'03.펫비발디',db:'소노펫 비발디파크',occ:'03.펫비발디',label:'소노펫 비발디파크',region:'central'},
+  {id:'04',otb:'04.펠리체비발디',db:'소노펠리체 비발디파크',occ:'04.펠리체비발디',label:'소노펠리체 비발디파크',region:'central'},
+  {id:'05',otb:'05.빌리지비발디',db:'소노펠리체 빌리지 비발디파크',daily:'소노펠리체빌리지 비발디파크',occ:'05.빌리지비발디',label:'빌리지 비발디파크',region:'central'},
+  {id:'06',otb:'06.양평',db:'소노휴 양평',daily:'소노벨 양평',occ:'06.양평',label:'소노휴 양평',region:'central'},
+  {id:'07',otb:'07.델피노',db:'델피노',occ:'07.델피노',label:'델피노',region:'central'},
+  {id:'08',otb:'08.쏠비치양양',db:'쏠비치 양양',occ:'08.양양',label:'쏠비치 양양',region:'central'},
+  {id:'09',otb:'09.쏠비치삼척',db:'쏠비치 삼척',occ:'09.삼척',label:'쏠비치 삼척',region:'central'},
+  {id:'10',otb:'10.소노벨단양',db:'소노문 단양',daily:'소노벨 단양',occ:'10.단양',label:'소노벨 단양',region:'central'},
+  {id:'11',otb:'11.소노캄경주',db:'소노벨 경주',daily:'소노캄 경주',occ:'11.경주',label:'소노캄 경주',region:'central'},
+  {id:'12',otb:'12.소노벨청송',db:'소노벨 청송',occ:'12.청송',label:'소노벨 청송',region:'south'},
+  {id:'13',otb:'13.소노벨천안',db:'소노벨 천안',occ:'13.천안',label:'소노벨 천안',region:'south'},
+  {id:'14',otb:'14.소노벨변산',db:'소노벨 변산',occ:'14.변산',label:'소노벨 변산',region:'south'},
+  {id:'15',otb:'15.소노캄여수',db:'소노캄 여수',occ:'15.여수',label:'소노캄 여수',region:'south'},
+  {id:'16',otb:'16.소노캄거제',db:'소노캄 거제',occ:'16.거제',label:'소노캄 거제',region:'south'},
+  {id:'17',otb:'17.쏠비치진도',db:'쏠비치 진도',occ:'17.진도',label:'쏠비치 진도',region:'south'},
+  {id:'18',otb:'18.소노벨제주',db:'소노벨 제주',occ:'18.제주벨',label:'소노벨 제주',region:'apac'},
+  {id:'19',otb:'19.소노캄제주',db:'소노캄 제주',occ:'19.제주캄',label:'소노캄 제주',region:'apac'},
+  {id:'20',otb:'20.소노캄고양',db:'소노캄 고양',occ:'20.고양',label:'소노캄 고양',region:'south'},
+  {id:'21',otb:'21.소노문해운대',db:'소노문 해운대',occ:'21.소노문',label:'소노문 해운대',region:'south'},
+  {id:'22',otb:'22.쏠비치남해',db:'쏠비치 남해',occ:'22.남해',label:'쏠비치 남해',region:'south'},
+  {id:'23',otb:'23.르네블루',db:'르네블루',occ:'23.르네블루',label:'르네블루',region:'south'}
+];
+
+const GS_SEGMENTS = ['OTA','G-OTA','Inbound'];
+const AVAIL_MONTHS = [4,5,6,7,8];
+const REGION_MAP = {
+  'vivaldi':{label:'비발디권역'},
+  'central':{label:'중부권역'},
+  'south':{label:'남부권역'},
+  'apac':{label:'APAC권역'}
+};
+
+let FCST_DATA = {otb:null, db:null, occ:null, fcst:null, daily:null};
+let fcstDataLoaded = false;
+let lastFcstMonthData = [];
+
+/* ── Build property dropdown dynamically ── */
+function buildPropDropdown(){
+  const drop = document.getElementById('prop-multi-drop');
+  if(!drop) return;
+  let html = '<label class="prop-opt all-opt"><input type="checkbox" id="chk-all-props" onchange="toggleAllProps(this)"> 전체 사업장 ('+PROPERTIES.length+'개)</label>';
+  const regions = ['vivaldi','central','south','apac'];
+  regions.forEach(r=>{
+    const props = PROPERTIES.filter(p=>p.region===r);
+    if(!props.length) return;
+    html += '<div class="prop-group-label"><input type="checkbox" class="region-check" data-region="'+r+'" onchange="toggleRegion(this)"> '+REGION_MAP[r].label+'</div>';
+    props.forEach(p=>{
+      html += '<label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="'+r+'" value="'+p.id+'" data-prop-id="'+p.id+'" onchange="updatePropSelection()"> '+p.id+'. '+p.label+'</label>';
+    });
+  });
+  drop.innerHTML = html;
+}
+
+/* ── Also update promo-search property dropdown ── */
+function buildPromoSearchPropDropdown(){
+  const sel = document.getElementById('promo-search-prop');
+  if(!sel) return;
+  let html = '<option value="">전체</option>';
+  const regions = ['vivaldi','central','south','apac'];
+  regions.forEach(r=>{
+    const props = PROPERTIES.filter(p=>p.region===r);
+    if(!props.length) return;
+    html += '<optgroup label="'+REGION_MAP[r].label+'">';
+    props.forEach(p=>{
+      html += '<option value="'+p.id+'">'+p.id+'. '+p.label+'</option>';
+    });
+    html += '</optgroup>';
+  });
+  sel.innerHTML = html;
+}
+
+/* ── Load 5 JSON data files ── */
+async function loadForecastData(){
+  if(fcstDataLoaded) return;
+  const load = async(url)=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();}catch(e){console.warn('Load fail:',url,e);return null;}};
+  FCST_DATA.otb = await load('data/otb_data.json');
+  FCST_DATA.db = await load('data/db_aggregated.json');
+  FCST_DATA.occ = await load('data/occ_data.json');
+  FCST_DATA.fcst = await load('data/rm_fcst.json');
+  FCST_DATA.daily = await load('data/daily_booking.json');
+  fcstDataLoaded = true;
+  console.log('FCST_DATA loaded:', {otb:!!FCST_DATA.otb, db:!!FCST_DATA.db, occ:!!FCST_DATA.occ, fcst:!!FCST_DATA.fcst, daily:!!FCST_DATA.daily});
+}
+
+/* ── Data helpers (from pumui.html) ── */
+function getOtbYoy(otbName, month){
+  if(!FCST_DATA.otb) return null;
+  const row = FCST_DATA.otb.yoyTable.find(r=>r.name===otbName);
+  if(!row) return null;
+  return row.months[String(month)] || null;
+}
+function getOtbByProp(otbName){
+  if(!FCST_DATA.otb) return null;
+  return FCST_DATA.otb.byProperty.find(r=>r.name===otbName) || null;
+}
+function getOcc(occName, month){
+  if(!FCST_DATA.occ) return null;
+  const key = '2026-'+String(month).padStart(2,'0');
+  const props = FCST_DATA.occ.properties || {};
+  if(props[occName]) return props[occName][key] ?? null;
+  return null;
+}
+function getTotalMonthly(dbName, month){
+  if(!FCST_DATA.db) return null;
+  const bp = FCST_DATA.db.by_property;
+  if(!bp[dbName]) return null;
+  const mKey = '2026'+String(month).padStart(2,'0');
+  return bp[dbName][mKey] || null;
+}
+function getGsData(dbName, month, segs){
+  if(!FCST_DATA.db) return null;
+  const bps = FCST_DATA.db.by_property_segment;
+  if(!bps[dbName]) return null;
+  const mKey = '2026'+String(month).padStart(2,'0');
+  let totalRn=0, totalRev=0;
+  segs.forEach(seg=>{
+    if(bps[dbName][seg] && bps[dbName][seg][mKey]){
+      const d = bps[dbName][seg][mKey];
+      totalRn += d.net_rn||0;
+      totalRev += d.net_rev||0;
+    }
+  });
+  const adr = totalRn>0 ? totalRev/totalRn : 0;
+  return {rn:totalRn, rev:totalRev, adr:Math.round(adr*1000)};
+}
+function getRmFcst(otbName, month){
+  if(!FCST_DATA.fcst) return null;
+  const props = FCST_DATA.fcst.properties || {};
+  const key = '2026-'+String(month).padStart(2,'0');
+  if(props[otbName] && props[otbName][key]) return props[otbName][key];
+  return null;
+}
+function getRmTotal(month){
+  if(!FCST_DATA.fcst || !FCST_DATA.fcst.total) return null;
+  const key = '2026-'+String(month).padStart(2,'0');
+  return FCST_DATA.fcst.total[key] || null;
+}
+function getDailyBooking(prop, month){
+  if(!FCST_DATA.daily) return null;
+  const md = (FCST_DATA.daily.months_detail||[]).find(m=>m.month===month);
+  if(!md) return null;
+  const name = prop.daily || prop.db;
+  return (md.properties||[]).find(x=>x.name===name) || null;
+}
+
+/* ── Format helpers ── */
+const fmtN = (n,dec=0)=>{if(n==null||isNaN(n)) return '—';return n.toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec})};
+const fmtPct = (n,dec=1)=>{if(n==null||isNaN(n)) return '—';return n.toFixed(dec)+'%'};
+const fmtRev = (n)=>{if(n==null||isNaN(n)) return '—';return Math.round(n).toLocaleString('ko-KR')};
+const pctClass = (v)=> v==null?'':v>=100?'pos':'neg';
+
+/* ── Determine selected months from date range ── */
+function getSelectedMonths(){
+  const s = document.getElementById('date-start')?.value;
+  const e = document.getElementById('date-end')?.value;
+  if(!s||!e) return [];
+  const sm = parseInt(s.split('-')[1]);
+  const em = parseInt(e.split('-')[1]);
+  const months = [];
+  for(let m=sm; m<=em; m++) months.push(m);
+  return months;
+}
+
+/* ── Get selected property IDs mapped to PROPERTIES ── */
+function getSelectedPropObjects(){
+  const checked = [...document.querySelectorAll('.prop-chk:checked')];
+  return checked.map(c=>{
+    const pid = c.dataset.propId || c.value;
+    return PROPERTIES.find(p=>p.id===pid);
+  }).filter(Boolean);
+}
+
+/* ── Generate Forecast Tables (main function) ── */
+async function generateForecastTables(){
+  const output = document.getElementById('forecast-output');
+  const selProps = getSelectedPropObjects();
+  const selMonths = getSelectedMonths();
+
+  if(selProps.length===0 || selMonths.length===0){
+    output.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink-faint);font-family:var(--mono);font-size:12px"><div style="font-size:28px;margin-bottom:8px">⚠️</div>Step 1에서 사업장과 투숙기간을 먼저 선택해주세요</div>';
+    return;
+  }
+
+  output.innerHTML='<div style="text-align:center;padding:40px;color:var(--gold);font-family:var(--mono);font-size:12px">⏳ 데이터 로딩 중...</div>';
+  await loadForecastData();
+
+  const segsArr = [...GS_SEGMENTS];
+  const propLabel = selProps.length>3 ? selProps.slice(0,3).map(p=>p.label).join(', ')+' 외 '+(selProps.length-3)+'개' : selProps.map(p=>p.label).join(' + ');
+
+  // Build per-month aggregated data (same logic as pumui.html)
+  lastFcstMonthData = selMonths.map(month=>{
+    let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
+    let t_otb_rn=0, t_otb_occ=0;
+    let t_fcst_rn=0;
+    let rm_cnt=0;
+    let gs_bud_rn=0, gs_otb_rn=0, gs_fcst_rn=0;
+    let gs_otb_rev=0;
+    let gs_adr_bud_w=0, gs_bud_rn_bp=0;
+    let gs_seg_bud_rev_k=0, gs_seg_bud_rn=0;
+    let gs_seg_fcst_rev_k=0, gs_seg_fcst_rn=0;
+    let t_fcst_rev_k=0;
+    let t_bud_adr_rn=0;
+
+    selProps.forEach(p=>{
+      const db = getDailyBooking(p, month);
+      if(db){
+        t_bud_rn += db.budget_rns||0;
+        t_otb_rn += db.actual_rns||0;
+        t_bud_occ += db.occ_budget||0;
+        t_otb_occ += db.occ_actual||0;
+        rm_cnt++;
+      }
+      const rm = getRmFcst(p.otb, month);
+      if(rm){
+        t_bud_rev += (rm.rm_budget_rev_mil||0)*1000;
+        t_fcst_rn += rm.rm_fcst_rn||0;
+        t_fcst_rev_k += (rm.rm_fcst_rev_mil||0)*1000;
+        if(rm.rm_budget_rn>0){
+          const adr_won = (rm.rm_budget_rev_mil||0)*1000000/rm.rm_budget_rn;
+          t_bud_adr_w += adr_won*rm.rm_budget_rn;
+          t_bud_adr_rn += rm.rm_budget_rn;
+        }
+        if(rm.segments){
+          segsArr.forEach(seg=>{
+            const s = rm.segments[seg];
+            if(s){
+              gs_seg_bud_rn += s.rm_budget_rn||0;
+              gs_seg_bud_rev_k += (s.rm_budget_rev_mil||0)*1000;
+              gs_seg_fcst_rn += s.rm_fcst_rn||0;
+              gs_seg_fcst_rev_k += (s.rm_fcst_rev_mil||0)*1000;
+            }
+          });
+        }
+      }
+      const gs = getGsData(p.db, month, segsArr);
+      if(gs){
+        gs_otb_rn += gs.rn;
+        gs_otb_rev += gs.rev;
+      }
+      const yoy = getOtbYoy(p.otb, month);
+      if(yoy && gs){
+        const totalOtb = yoy.act_rn||1;
+        const segRatio = gs.rn / totalOtb;
+        gs_bud_rn += Math.round((yoy.bud_rn||0)*segRatio);
+        gs_fcst_rn += Math.round((yoy.rns_fcst||0)*segRatio);
+      } else if(yoy){
+        gs_bud_rn += yoy.bud_rn||0;
+        gs_fcst_rn += yoy.rns_fcst||0;
+      }
+      const bp = getOtbByProp(p.otb);
+      if(bp){
+        gs_adr_bud_w += (bp.adr_budget||0)*(bp.rns_budget||0);
+        gs_bud_rn_bp += bp.rns_budget||0;
+      }
+    });
+
+    // 전체 계산
+    const t_bud_occ_avg = rm_cnt>0 ? t_bud_occ/rm_cnt : null;
+    const t_otb_occ_avg = rm_cnt>0 ? t_otb_occ/rm_cnt : null;
+    const total_rooms = (t_bud_occ_avg&&t_bud_rn) ? Math.round(t_bud_rn/(t_bud_occ_avg/100)) : null;
+    const t_fcst_occ = (total_rooms&&t_fcst_rn) ? t_fcst_rn/total_rooms*100 : null;
+    const t_occ_ach = (t_bud_occ_avg&&t_otb_occ_avg) ? t_otb_occ_avg/t_bud_occ_avg*100 : null;
+    const t_occ_f_diff = (t_fcst_occ!=null&&t_bud_occ_avg!=null) ? t_fcst_occ-t_bud_occ_avg : null;
+    const t_occ_f_ach = (t_bud_occ_avg&&t_fcst_occ) ? t_fcst_occ/t_bud_occ_avg*100 : null;
+    const t_rn_ach = t_bud_rn>0 ? t_otb_rn/t_bud_rn*100 : null;
+    const t_fcst_ach_rn = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
+    const t_fcst_diff_rn = t_fcst_rn>0 ? t_fcst_rn - t_bud_rn : null;
+    const t_adr_bud = t_bud_adr_rn>0 ? Math.round(t_bud_adr_w/t_bud_adr_rn/1000) : null;
+    const t_adr_otb = t_adr_bud;
+    const t_adr_ach = t_adr_bud ? 100 : null;
+    const t_adr_fcst = (t_fcst_rn>0 && t_fcst_rev_k>0) ? Math.round(t_fcst_rev_k/t_fcst_rn) : t_adr_bud;
+    const t_adr_f_diff = (t_adr_fcst!=null&&t_adr_bud!=null) ? t_adr_fcst-t_adr_bud : null;
+    const t_adr_f_ach = (t_adr_bud&&t_adr_fcst) ? t_adr_fcst/t_adr_bud*100 : null;
+    const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null;
+    const t_rev_otb = (t_otb_rn>0&&t_adr_bud) ? Math.round(t_otb_rn*t_adr_bud/1000) : null;
+    const t_rev_ach = (t_rev_bud&&t_rev_otb) ? t_rev_otb/t_rev_bud*100 : null;
+    const t_rev_fcst = t_fcst_rev_k>0 ? Math.round(t_fcst_rev_k/1000) : null;
+    const t_rev_f_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
+    const t_rev_f_ach = (t_rev_bud&&t_rev_fcst) ? t_rev_fcst/t_rev_bud*100 : null;
+
+    // GS 계산
+    const gs_occ_bud = (total_rooms&&gs_bud_rn) ? gs_bud_rn/total_rooms*100 : null;
+    const gs_occ_otb = (total_rooms&&gs_otb_rn) ? gs_otb_rn/total_rooms*100 : null;
+    const gs_occ_ach = (gs_occ_bud&&gs_occ_otb) ? gs_occ_otb/gs_occ_bud*100 : null;
+    const gs_occ_fcst = (total_rooms&&gs_fcst_rn) ? gs_fcst_rn/total_rooms*100 : null;
+    const gs_occ_f_diff = (gs_occ_fcst!=null&&gs_occ_bud!=null) ? gs_occ_fcst-gs_occ_bud : null;
+    const gs_occ_f_ach = (gs_occ_bud&&gs_occ_fcst) ? gs_occ_fcst/gs_occ_bud*100 : null;
+    const gs_rn_ach = gs_bud_rn>0 ? gs_otb_rn/gs_bud_rn*100 : null;
+    const gs_fcst_ach_rn = gs_bud_rn>0 ? gs_fcst_rn/gs_bud_rn*100 : null;
+    const gs_fcst_diff_rn = gs_fcst_rn - gs_bud_rn;
+    const gs_adr_otb = gs_otb_rn>0 ? Math.round(gs_otb_rev/gs_otb_rn*1000) : null;
+    const gs_adr_bud = gs_seg_bud_rn>0 ? Math.round(gs_seg_bud_rev_k/gs_seg_bud_rn)
+                     : (gs_bud_rn_bp>0 ? Math.round(gs_adr_bud_w/gs_bud_rn_bp/1000) : null);
+    const gs_adr_fcst = gs_seg_fcst_rn>0 ? Math.round(gs_seg_fcst_rev_k/gs_seg_fcst_rn) : gs_adr_bud;
+    const gs_adr_ach = (gs_adr_bud&&gs_adr_otb) ? gs_adr_otb/gs_adr_bud*100 : null;
+    const gs_adr_f_diff = (gs_adr_fcst!=null&&gs_adr_bud!=null) ? gs_adr_fcst-gs_adr_bud : null;
+    const gs_adr_f_ach = (gs_adr_bud&&gs_adr_fcst) ? gs_adr_fcst/gs_adr_bud*100 : null;
+    const gs_rev_otb = gs_otb_rev;
+    const gs_rev_bud = (gs_bud_rn&&gs_adr_bud) ? Math.round(gs_bud_rn*gs_adr_bud/1000) : null;
+    const gs_rev_fcst = (gs_fcst_rn&&gs_adr_fcst) ? Math.round(gs_fcst_rn*gs_adr_fcst/1000) : null;
+    const gs_rev_ach = (gs_rev_bud&&gs_rev_otb) ? gs_rev_otb/gs_rev_bud*100 : null;
+    const gs_rev_f_diff = (gs_rev_fcst!=null&&gs_rev_bud!=null) ? gs_rev_fcst-gs_rev_bud : null;
+    const gs_rev_f_ach = (gs_rev_bud&&gs_rev_fcst) ? gs_rev_fcst/gs_rev_bud*100 : null;
+
+    return {month,
+      t_bud_occ_avg, t_otb_occ_avg, t_occ_ach, t_fcst_occ, t_occ_f_diff, t_occ_f_ach,
+      t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
+      t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
+      t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_f_diff, t_rev_f_ach,
+      gs_occ_bud, gs_occ_otb, gs_occ_ach, gs_occ_fcst, gs_occ_f_diff, gs_occ_f_ach,
+      gs_bud_rn, gs_otb_rn, gs_rn_ach, gs_fcst_rn, gs_fcst_diff_rn, gs_fcst_ach_rn,
+      gs_adr_bud, gs_adr_otb, gs_adr_ach, gs_adr_fcst, gs_adr_f_diff, gs_adr_f_ach,
+      gs_rev_bud, gs_rev_otb, gs_rev_ach, gs_rev_fcst, gs_rev_f_diff, gs_rev_f_ach};
+  });
+
+  // cell helpers
+  const cell=(v,f=fmtN)=>(v!=null&&!isNaN(v))?f(v):'—';
+  const diffCell=(v,f=fmtN)=>{
+    if(v==null||isNaN(v)) return '<td>—</td>';
+    const cls=v>=0?'pos':'neg'; const sign=v>=0?'+':'';
+    return '<td class="'+cls+'">'+sign+f(v)+'</td>';
+  };
+  const pctCell=(v)=>{
+    if(v==null||isNaN(v)) return '<td class="pct-cell">—</td>';
+    return '<td class="pct-cell '+pctClass(v)+'">'+fmtPct(v)+'</td>';
+  };
+
+  // Render
+  let rows = '';
+  lastFcstMonthData.forEach((d,idx)=>{
+    const border = idx>0 ? 'border-top:2px solid var(--rule-strong);' : '';
+    rows += '<tr style="'+border+'">'
+      +'<td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">'+d.month+'월</td>'
+      +'<td class="row-label">OCC</td>'
+      +'<td>'+fmtPct(d.t_bud_occ_avg)+'</td><td>'+fmtPct(d.t_otb_occ_avg)+'</td>'+pctCell(d.t_occ_ach)
+      +'<td>'+fmtPct(d.t_fcst_occ)+'</td>'+diffCell(d.t_occ_f_diff,v=>v.toFixed(1)+'%p')+pctCell(d.t_occ_f_ach)
+      +'<td>'+fmtPct(d.gs_occ_bud)+'</td><td>'+fmtPct(d.gs_occ_otb)+'</td>'+pctCell(d.gs_occ_ach)
+      +'<td>'+fmtPct(d.gs_occ_fcst)+'</td>'+diffCell(d.gs_occ_f_diff,v=>v.toFixed(1)+'%p')+pctCell(d.gs_occ_f_ach)
+      +'</tr>';
+    rows += '<tr><td class="row-label">RNs</td>'
+      +'<td>'+cell(d.t_bud_rn)+'</td><td>'+cell(d.t_otb_rn)+'</td>'+pctCell(d.t_rn_ach)
+      +'<td>'+cell(d.t_fcst_rn)+'</td>'+diffCell(d.t_fcst_diff_rn)+pctCell(d.t_fcst_ach_rn)
+      +'<td>'+cell(d.gs_bud_rn)+'</td><td>'+cell(d.gs_otb_rn)+'</td>'+pctCell(d.gs_rn_ach)
+      +'<td>'+cell(d.gs_fcst_rn)+'</td>'+diffCell(d.gs_fcst_diff_rn)+pctCell(d.gs_fcst_ach_rn)
+      +'</tr>';
+    rows += '<tr><td class="row-label">ADR</td>'
+      +'<td>'+cell(d.t_adr_bud)+'</td><td>'+cell(d.t_adr_otb)+'</td>'+pctCell(d.t_adr_ach)
+      +'<td>'+cell(d.t_adr_fcst)+'</td>'+diffCell(d.t_adr_f_diff)+pctCell(d.t_adr_f_ach)
+      +'<td>'+cell(d.gs_adr_bud)+'</td><td>'+cell(d.gs_adr_otb)+'</td>'+pctCell(d.gs_adr_ach)
+      +'<td>'+cell(d.gs_adr_fcst)+'</td>'+diffCell(d.gs_adr_f_diff)+pctCell(d.gs_adr_f_ach)
+      +'</tr>';
+    rows += '<tr><td class="row-label">REV<span style="font-size:9px;color:var(--ink-faint);margin-left:3px;">(백만)</span></td>'
+      +'<td>'+cell(d.t_rev_bud,fmtRev)+'</td><td>'+cell(d.t_rev_otb,fmtRev)+'</td>'+pctCell(d.t_rev_ach)
+      +'<td>'+cell(d.t_rev_fcst,fmtRev)+'</td>'+diffCell(d.t_rev_f_diff,fmtRev)+pctCell(d.t_rev_f_ach)
+      +'<td>'+cell(d.gs_rev_bud,fmtRev)+'</td><td>'+cell(d.gs_rev_otb,fmtRev)+'</td>'+pctCell(d.gs_rev_ach)
+      +'<td>'+cell(d.gs_rev_fcst,fmtRev)+'</td>'+diffCell(d.gs_rev_f_diff,fmtRev)+pctCell(d.gs_rev_f_ach)
+      +'</tr>';
+  });
+
+  const tblHtml = '<div class="table-block">'
+    +'<div class="table-block-header">'
+    +'<span class="table-block-title">Booking Status · Forecast — '+propLabel+'</span>'
+    +'<span class="table-block-sub">2026년 · 전체=Booking Status · GS='+segsArr.join('+')+'</span>'
+    +'</div>'
+    +'<div class="table-wrap">'
+    +'<table class="forecast-table" id="forecast-main-table"><thead>'
+    +'<tr><th rowspan="2" style="width:50px;text-align:center;">월</th><th rowspan="2" style="width:50px;text-align:left;">항목</th>'
+    +'<th colspan="6" style="border-bottom:2px solid var(--gold);color:var(--gold-bright);">전체 (RM)</th>'
+    +'<th colspan="6" style="border-bottom:2px solid var(--info);color:var(--info);">GS ('+segsArr.join('+')+')</th></tr>'
+    +'<tr><th>목표</th><th>현재OTB</th><th>진행률</th><th>FCST</th><th>증감</th><th>달성률</th>'
+    +'<th>목표</th><th>현재OTB</th><th>진행률</th><th>FCST</th><th>증감</th><th>달성률</th></tr>'
+    +'</thead><tbody>'+rows+'</tbody></table></div></div>';
+
+  output.innerHTML = tblHtml;
+  document.getElementById('forecast-download-area').style.display = '';
+  showToast('Forecast 표 생성 완료');
+}
+
+/* ── Forecast Excel download ── */
+function downloadForecastExcel(){
+  const tbl = document.getElementById('forecast-main-table');
+  if(!tbl) return;
+  const wb = XLSX.utils.book_new();
+  const selProps = getSelectedPropObjects();
+  const propLabel = selProps.length>3 ? selProps.slice(0,3).map(p=>p.label).join('+')+' 외' : selProps.map(p=>p.label).join('+');
+  const ws = XLSX.utils.table_to_sheet(tbl);
+  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
+  const fname = 'Forecast_'+propLabel+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  showToast('Forecast 엑셀 다운로드 완료');
+}
+
+/* ── Promo month chip toggle ── */
+function togglePromoMonth(el){
+  el.classList.toggle('active');
+}
+function getPromoSelectedMonths(){
+  return [...document.querySelectorAll('#promo-month-chips .month-chip.active')].map(c=>parseInt(c.dataset.month));
+}
+
 
 /* ══════════ proposalData — 구글시트 연동용 통합 데이터 구조 ══════════ */
 const proposalData = {
@@ -854,30 +1286,6 @@ function simulateGsheetWrite(){
 }
 
 /* ══════════ PROPERTY MULTI-SELECT ══════════ */
-const PROP_DATA = [
-  {value:'sono-belle-vivaldi',label:'01. 소노벨 비발디파크',region:'vivaldi'},
-  {value:'sono-cam-vivaldi',label:'02. 소노캄 비발디파크',region:'central'},
-  {value:'sono-cam-vivaldi-pet',label:'03. 소노캄 비발디파크(펫)',region:'central'},
-  {value:'sono-belge-vivaldi',label:'04. 소노벨지 비발디파크',region:'central'},
-  {value:'felice-vivaldi',label:'05. 펠리체 비발디파크',region:'central'},
-  {value:'sono-host-yangpyeong',label:'06. 소노호스 양평',region:'central'},
-  {value:'delpino',label:'07. 델피노',region:'central'},
-  {value:'ul-beach-yangyang',label:'08. 울비치 양양',region:'central'},
-  {value:'ul-beach-samcheok',label:'09. 울비치 삼척',region:'central'},
-  {value:'sono-belle-danyang',label:'10. 소노벨 단양',region:'central'},
-  {value:'sono-cam-gyeongju',label:'11. 소노캄 경주',region:'central'},
-  {value:'sono-belle-cheongsong',label:'12. 소노벨 청송',region:'south'},
-  {value:'sono-belle-cheonan',label:'13. 소노벨 천안',region:'south'},
-  {value:'sono-belle-byeonsan',label:'14. 소노벨 변산',region:'south'},
-  {value:'sono-belle-namhae',label:'15. 소노벨 남해',region:'south'},
-  {value:'sono-cam-geoje',label:'16. 소노캄 거제',region:'south'},
-  {value:'ul-beach-geoje',label:'17. 울비치 거제',region:'south'},
-  {value:'ul-beach-jindo',label:'18. 울비치 진도',region:'south'},
-  {value:'ul-beach-yeosu',label:'19. 울비치 여수',region:'south'},
-  {value:'sono-belle-jeju',label:'20. 소노벨 제주',region:'apac'},
-  {value:'sono-cam-jeju',label:'21. 소노캄 제주',region:'apac'}
-];
-
 function togglePropDrop(){
   const btn=document.getElementById('prop-multi-btn'),drop=document.getElementById('prop-multi-drop');
   btn.classList.toggle('open');drop.classList.toggle('open');
@@ -922,8 +1330,8 @@ function updatePropSelection(){
   const tags=document.getElementById('selected-props');
   if(checked.length===0){
     btn.textContent='사업장을 선택하세요';tags.innerHTML='';
-  } else if(checked.length===PROP_DATA.length){
-    btn.textContent='전체 사업장 ('+PROP_DATA.length+'개)';tags.innerHTML='<span class="selected-prop-tag">전체 사업장</span>';
+  } else if(checked.length===PROPERTIES.length){
+    btn.textContent='전체 사업장 ('+PROPERTIES.length+'개)';tags.innerHTML='<span class="selected-prop-tag">전체 사업장</span>';
   } else {
     btn.textContent=checked.length+'개 사업장 선택됨';
     tags.innerHTML=checked.map(c=>'<span class="selected-prop-tag">'+c.closest('.prop-opt').textContent.trim()+'</span>').join('');
@@ -931,13 +1339,17 @@ function updatePropSelection(){
   // Update campaign detail property field
   const cdProp=document.getElementById('cd-property');
   if(cdProp){
-    cdProp.value=checked.length===0?'(Step 1에서 선택)':checked.length===PROP_DATA.length?'전체 사업장':checked.map(c=>c.closest('.prop-opt').textContent.trim()).join(', ');
+    cdProp.value=checked.length===0?'(Step 1에서 선택)':checked.length===PROPERTIES.length?'전체 사업장':checked.map(c=>c.closest('.prop-opt').textContent.trim()).join(', ');
   }
   if(checked.length>0) loadOccData();
 }
 
 function getSelectedProperties(){
-  return [...document.querySelectorAll('.prop-chk:checked')].map(c=>({value:c.value, label:c.closest('.prop-opt').textContent.trim()}));
+  return [...document.querySelectorAll('.prop-chk:checked')].map(c=>{
+    const pid = c.dataset.propId || c.value;
+    const prop = PROPERTIES.find(p=>p.id===pid);
+    return {value:pid, label:c.closest('.prop-opt').textContent.trim(), prop:prop};
+  });
 }
 
 /* ══════════ HTML SOURCE CODE COPY ══════════ */
@@ -949,7 +1361,12 @@ function copyHtmlSourceCode(){
 }
 
 /* ══════════ INIT ══════════ */
-document.addEventListener('DOMContentLoaded',()=>{goStep(1)});
+document.addEventListener('DOMContentLoaded',()=>{
+  buildPropDropdown();
+  buildPromoSearchPropDropdown();
+  loadForecastData(); // preload
+  goStep(1);
+});
 </script>
 </body>
 </html>
