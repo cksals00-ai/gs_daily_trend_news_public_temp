@@ -14720,6 +14720,10 @@ function toggleNewsMore(btn, id) {
 </script>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 // ===== DAILY OTB 인사이트 차트 (Chart.js 사용) =====
 (function () {
   var BASE = location.pathname.endsWith('/') ? '.' : location.pathname.split('/').slice(0, -1).join('/');
@@ -14872,7 +14876,7 @@ function toggleNewsMore(btn, id) {
                 '    <div>' +
                 '      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:3px;">ADR</div>' +
                 '      <div style="font-size:15px;font-weight:800;color:var(--ink);">' + r.adr.toLocaleString() + '<span style="font-size:9px;color:var(--ink-faint);font-weight:500;"> 천원</span></div>' +
-                '      <div style="font-size:10px;margin-top:2px;color:var(--ink-faint);">LY ' + (r.lyAdr || 0).toLocaleString() + '</div>' +
+                '      <div style="font-size:10px;margin-top:2px;color:var(--ink-faint);">' + _LY + ' ' + (r.lyAdr || 0).toLocaleString() + '</div>' +
                 '    </div>' +
                 '    <div>' +
                 '      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:3px;">매출</div>' +
@@ -14894,7 +14898,7 @@ function toggleNewsMore(btn, id) {
         var pdEl = document.getElementById('product-insight-cards');
         var pd = data.product_detail || {};
         var byCat = pd.by_category || {};
-        var todayDt2 = _todayDt;
+        var todayDt2 = new Date();
         var curY  = todayDt2.getFullYear();
         var curM  = todayDt2.getMonth() + 1;
         var curMK2 = '' + curY + _pad2(curM);
@@ -15077,7 +15081,7 @@ function toggleNewsMore(btn, id) {
         if (noteEl) {
           noteEl.textContent = isAll
             ? '전체 stay · booking-week 기준 · 최근 완료 8주'
-            : monthKey + '월 stay 픽업 · booking-week · LY=2025년 ' + monthKey + '월 stay 동일 주';
+            : monthKey + '월 stay 픽업 · booking-week · LY=' + (new Date().getFullYear() - 1) + '년 ' + monthKey + '월 stay 동일 주';
         }
 
         // 364일 전 LY 주 데이터 — 사과 vs 사과 비교를 위해 같은 stay-month 의 LY 버전 사용
@@ -15158,14 +15162,14 @@ function toggleNewsMore(btn, id) {
               labels: labels,
               datasets: [
                 {
-                  label: 'CY',
+                  label: _TY,
                   data: vals,
                   backgroundColor: vals.map(function(v) { return v >= 0 ? 'rgba(78,205,196,0.75)' : 'rgba(255,107,107,0.75)'; }),
                   borderWidth: 0,
                   borderRadius: 2
                 },
                 {
-                  label: 'LY',
+                  label: _LY,
                   data: lyVals,
                   backgroundColor: 'rgba(255,255,255,0.18)',
                   borderWidth: 0,
@@ -15830,7 +15834,7 @@ function toggleNewsMore(btn, id) {
       var p = pd.pct;
       var c = p >= 0 ? '#6dd396' : '#e08580';
       var a = p >= 0 ? '▲' : '▼';
-      return '<td style="text-align:center;padding:' + (isSub ? '2' : '3') + 'px 4px;color:' + c + ';font-size:' + (isSub ? '8' : '9') + 'px;font-weight:700;border-left:1px solid rgba(240,165,0,0.08);white-space:nowrap;" class="da-yoy-col" title="CY ' + (pd.cy||0).toLocaleString() + ' vs LY ' + (pd.ly||0).toLocaleString() + '">' + a + ' ' + Math.abs(p).toFixed(1) + '%</td>';
+      return '<td style="text-align:center;padding:' + (isSub ? '2' : '3') + 'px 4px;color:' + c + ';font-size:' + (isSub ? '8' : '9') + 'px;font-weight:700;border-left:1px solid rgba(240,165,0,0.08);white-space:nowrap;" class="da-yoy-col" title="' + _TY + ' ' + (pd.cy||0).toLocaleString() + ' vs ' + _LY + ' ' + (pd.ly||0).toLocaleString() + '">' + a + ' ' + Math.abs(p).toFixed(1) + '%</td>';
     }
 
     var html = '';

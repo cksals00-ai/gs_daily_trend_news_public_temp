@@ -305,9 +305,9 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th colspan="3" class="border-left-group" style="text-align:center;">매출 (억)</th>
             </tr>
             <tr>
-              <th class="border-left-group">CY</th><th>LY</th><th>YoY</th>
-              <th class="border-left-group">CY</th><th>LY</th><th>YoY</th>
-              <th class="border-left-group">CY</th><th>LY</th><th>YoY</th>
+              <th class="border-left-group"><span class="dy-ty"></span></th><th><span class="dy-ly"></span></th><th>YoY</th>
+              <th class="border-left-group"><span class="dy-ty"></span></th><th><span class="dy-ly"></span></th><th>YoY</th>
+              <th class="border-left-group"><span class="dy-ty"></span></th><th><span class="dy-ly"></span></th><th>YoY</th>
             </tr>
           </thead>
           <tbody id="channel-tbody">
@@ -377,6 +377,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 </div>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 let db = null;
 let activeYear = new Date().getFullYear().toString();
 let activeMonth = String(new Date().getMonth() + 1); // 당월 기본
@@ -492,10 +496,10 @@ function aggregateChannels(months) {
 }
 
 function filterBySegment(channelData) {
-  if (activeSegment === 'ALL') return channelData;
   const filtered = {};
   for (const [ch, d] of Object.entries(channelData)) {
-    if (d.segment === activeSegment) filtered[ch] = d;
+    if (d.segment === 'Inbound') continue;
+    if (activeSegment === 'ALL' || d.segment === activeSegment) filtered[ch] = d;
   }
   return filtered;
 }
@@ -931,11 +935,10 @@ function buildYoYTrendChart() {
   const allChannelYearly = {};
   for (const ch of db.meta.channels) {
     if (ch === '기타') continue;
-    // 세그먼트 필터 적용
-    if (activeSegment !== 'ALL') {
-      const seg = getChannelSegment(ch);
-      if (seg !== activeSegment) continue;
-    }
+    // 세그먼트 필터 적용 (Inbound 제외)
+    const seg = getChannelSegment(ch);
+    if (seg === 'Inbound') continue;
+    if (activeSegment !== 'ALL' && seg !== activeSegment) continue;
     const chData = db.by_channel[ch];
     if (!chData) continue;
     allChannelYearly[ch] = {};
@@ -1174,6 +1177,10 @@ async function loadData() {
 }
 
 (function(){var h=location.href,m={otb:'otb.html',channel:'channel.html',ytd:'ytd.html',monthly:'monthly.html','stay-date':'stay-date.html','booking-trend':'booking-trend.html','ly-trend':'ly-trend.html','product-detail':'product-detail.html','ly-product':'ly-product.html',fcst:'fcst-admin.html',overseas:'overseas.html'};for(var k in m){if(h.includes(m[k])){document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(e){e.classList.remove('active');});var n=document.querySelector('.gsn-item[data-gsn="'+k+'"]');if(n)n.classList.add('active');break;}}})();
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ty').forEach(function(el) { el.textContent = _TY; });
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', loadData);
 </script>

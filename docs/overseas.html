@@ -657,8 +657,8 @@
                   <th>달성률</th>
                   <th>Budget ADR</th>
                   <th>Actual ADR</th>
-                  <th>LY RN</th>
-                  <th>LY REV</th>
+                  <th><span class="dy-ly"></span> RN</th>
+                  <th><span class="dy-ly"></span> REV</th>
                 </tr>
               </thead>
               <tbody id="hawaiiTableBody"></tbody>
@@ -706,6 +706,10 @@
   </div>
 
   <script>
+    // Dynamic year labels
+    var _TY = (new Date().getFullYear() % 100) + 'Y';
+    var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
     // ── Global state ──
     let DATA = null;
     let chartInstances = {};
@@ -1155,7 +1159,7 @@
           <div class="kpi-achievement">
             <span class="kpi-achievement-rate ${rateClass(rnRate)}">${fmtPct(rnRate)}</span>
           </div>
-          <div class="kpi-yoy">전년 대비: <span class="${lyRnRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRnRate)}</span> (LY ${fmt(t.ly_rn)} RN)</div>
+          <div class="kpi-yoy">전년 대비: <span class="${lyRnRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRnRate)}</span> (` + _LY + ` ${fmt(t.ly_rn)} RN)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">객실 매출 (Revenue, USD)</div>
@@ -1169,7 +1173,7 @@
           <div class="kpi-achievement">
             <span class="kpi-achievement-rate ${rateClass(revRate)}">${fmtPct(revRate)}</span>
           </div>
-          <div class="kpi-yoy">전년 대비: <span class="${lyRevRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRevRate)}</span> (LY $${fmt(t.ly_rev)})</div>
+          <div class="kpi-yoy">전년 대비: <span class="${lyRevRate >= 100 ? 'up' : 'down'}">${fmtPct(lyRevRate)}</span> (` + _LY + ` $${fmt(t.ly_rev)})</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">ADR (Average Daily Rate)</div>
@@ -1285,7 +1289,7 @@
               borderWidth: 1
             },
             {
-              label: '24Y (LY)',
+              label: _LY + ' (LY)',
               data: lyData,
               type: 'line',
               borderColor: 'rgba(229, 115, 115, 0.7)',
@@ -1466,6 +1470,9 @@
     }
 
     // ── Init ──
+    // Initialize dynamic year labels
+    document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
+
     document.addEventListener('DOMContentLoaded', () => {
       activateNavigator();
       initTabs();

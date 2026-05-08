@@ -369,7 +369,7 @@ input, button, select, table, th, td {
       <div class="card-title">📈 YoY 계산 정확성</div>
       <div id="data-yoy-check">
         <div class="check-item">
-          <span class="check-label">LY 데이터 존재 여부 확인 중...</span>
+          <span class="check-label"><span class="dy-ly"></span> 데이터 존재 여부 확인 중...</span>
           <span class="check-status"><span class="status-warn">⏳ 로딩</span></span>
         </div>
       </div>
@@ -820,6 +820,10 @@ input, button, select, table, th, td {
 </footer>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 /* ───── TAB SWITCHING ───── */
 function switchTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
@@ -1053,8 +1057,8 @@ function checkOtbData() {
       }
       document.getElementById('data-yoy-check').innerHTML =
         '<div class="check-item">' +
-        '<span class="check-label">LY 데이터 보유 날짜: <strong>' + lyDates.length + '</strong>개 / 전체 ' + dates.length + '개</span>' +
-        '<span class="check-status">' + (lyDates.length > 0 ? '<span class="status-pass">✅ LY 존재</span>' : '<span class="status-warn">⚠️ LY 미확인</span>') + '</span>' +
+        '<span class="check-label">' + _LY + ' 데이터 보유 날짜: <strong>' + lyDates.length + '</strong>개 / 전체 ' + dates.length + '개</span>' +
+        '<span class="check-status">' + (lyDates.length > 0 ? '<span class="status-pass">✅ ' + _LY + ' 존재</span>' : '<span class="status-warn">⚠️ ' + _LY + ' 미확인</span>') + '</span>' +
         '</div>';
     })
     .catch(function(e) {
@@ -1469,6 +1473,9 @@ function runConsistencyCheck() {
     tbody.appendChild(tr);
   });
 }
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', function() {
   loadAggregatedData();

@@ -293,7 +293,7 @@ table.bs .muted { color: var(--ink-faint); }
         <div class="kpi-sub" id="kpi-rev-sub">—</div>
       </div>
       <div class="kpi-card red">
-        <div class="kpi-label">LY REVENUE</div>
+        <div class="kpi-label"><span class="dy-ly"></span> REVENUE</div>
         <div class="kpi-value" id="kpi-ly-rev">—</div>
         <div class="kpi-sub" id="kpi-ly-sub">—</div>
       </div>
@@ -351,6 +351,10 @@ table.bs .muted { color: var(--ink-faint); }
 </div>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 // ─── CONSTANTS ───
 const REGION_DEFS = [
   { key: '전체', label: '전체' },
@@ -551,7 +555,7 @@ function render() {
   setText('kpi-rev-sub', 'Budget ' + fmt.won(overall.rev_budget) + ' · 달성 ' + fmt.pct(overall.rev_achievement));
   setText('kpi-ly-rev', fmt.won(overall.rev_last || 0));
   const revDiff = (overall.rev_actual || 0) - (overall.rev_last || 0);
-  setText('kpi-ly-sub', (revDiff >= 0 ? '+' : '') + fmt.won(revDiff) + ' vs LY');
+  setText('kpi-ly-sub', (revDiff >= 0 ? '+' : '') + fmt.won(revDiff) + ' vs ' + _LY);
 
   renderMonthlyTable();
   renderBudgetTable();
@@ -567,7 +571,7 @@ function renderMonthlyTable() {
   html += '<th class="row-label">구분</th>';
   months.forEach(m => {
     html += '<th colspan="3" class="sep" style="text-align:center;">2026 ' + m + '월 OTB</th>';
-    html += '<th colspan="3" class="grp-sep" style="text-align:center;">2025 ' + m + '월 (LY)</th>';
+    html += '<th colspan="3" class="grp-sep" style="text-align:center;">' + (new Date().getFullYear() - 1) + ' ' + m + '월 (' + _LY + ')</th>';
     html += '<th colspan="2" class="grp-sep" style="text-align:center;">YoY ±</th>';
   });
   html += '</tr><tr><th class="row-label"></th>';
@@ -633,7 +637,7 @@ function renderMonthlyTable() {
   const today = new Date();
   const cyDate = today.getFullYear() + '/' + (today.getMonth()+1) + '/' + today.getDate();
   const lyDate = (today.getFullYear()-1) + '/' + (today.getMonth()+1) + '/' + today.getDate();
-  const caption = '<div style="text-align:right;font-size:11px;color:#888;margin-top:4px;">동기간 기준: CY ' + cyDate + ' vs LY ' + lyDate + ' (월 누계 동일일자 기준)</div>';
+  const caption = '<div style="text-align:right;font-size:11px;color:#888;margin-top:4px;">동기간 기준: ' + _TY + ' ' + cyDate + ' vs ' + _LY + ' ' + lyDate + ' (월 누계 동일일자 기준)</div>';
 
   document.getElementById('tbl-monthly').innerHTML = html;
   let capEl = document.getElementById('monthly-caption');
@@ -1040,6 +1044,9 @@ async function loadData() {
     document.querySelector('.main-content').innerHTML = '<div style="padding:60px;text-align:center;font-family:var(--mono);color:var(--negative);">데이터 로드 실패: ' + e.message + '</div>';
   }
 }
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', loadData);
 </script>

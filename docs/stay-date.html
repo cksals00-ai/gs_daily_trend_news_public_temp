@@ -270,10 +270,10 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div class="insight-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title" id="insight-tyly-title">TY vs LY 일별 객실 비교</span>
+          <span class="chart-card-title" id="insight-tyly-title"><span class="dy-ty"></span> vs <span class="dy-ly"></span> 일별 객실 비교</span>
           <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>TY</div>
-            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div>LY</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div><span class="dy-ty"></span></div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.3);"></div><span class="dy-ly"></span></div>
           </div>
         </div>
         <div class="chart-canvas-wrap" style="height:280px;">
@@ -329,23 +329,23 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
               <th style="font-size:10px;">—</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
-              <th style="font-size:10px;">객실(LY)</th>
-              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">객실(<span class="dy-ly"></span>)</th>
+              <th style="font-size:10px;">매출(<span class="dy-ly"></span>)</th>
               <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
-              <th style="font-size:10px;">객실(LY)</th>
-              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">객실(<span class="dy-ly"></span>)</th>
+              <th style="font-size:10px;">매출(<span class="dy-ly"></span>)</th>
               <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
-              <th style="font-size:10px;">객실(LY)</th>
-              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">객실(<span class="dy-ly"></span>)</th>
+              <th style="font-size:10px;">매출(<span class="dy-ly"></span>)</th>
               <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">객실</th>
               <th style="font-size:10px;">매출</th>
-              <th style="font-size:10px;">객실(LY)</th>
-              <th style="font-size:10px;">매출(LY)</th>
+              <th style="font-size:10px;">객실(<span class="dy-ly"></span>)</th>
+              <th style="font-size:10px;">매출(<span class="dy-ly"></span>)</th>
               <th style="font-size:10px;">YoY%<br>(동기간)</th>
               <th class="border-left-group" style="font-size:10px;">%</th>
               <th style="font-size:10px;">%</th>
@@ -373,6 +373,10 @@ let activeYear = new Date().getFullYear().toString();
 let activeMonth = null; // 'YYYYMM' or null — will be set to current month in loadData
 let segChart = null, pieChart = null, dailyChart = null;
 let insightTylyChart = null, insightOccAdrChart = null, insightYoyChart = null;
+
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 
 let activeSegment = '전체'; // 전체/OTA/G-OTA/Inbound
 let activeRegion = '전체';
@@ -782,8 +786,8 @@ function renderInsightCharts() {
       data: {
         labels,
         datasets: [
-          { label:'TY', data:tyRn, backgroundColor:'#e6b970bb', borderColor:'#e6b970', borderWidth:1, borderRadius:2 },
-          { label:'LY', data:lyRn, backgroundColor:'rgba(255,255,255,0.15)', borderColor:'rgba(255,255,255,0.3)', borderWidth:1, borderRadius:2 }
+          { label:_TY, data:tyRn, backgroundColor:'#e6b970bb', borderColor:'#e6b970', borderWidth:1, borderRadius:2 },
+          { label:_LY, data:lyRn, backgroundColor:'rgba(255,255,255,0.15)', borderColor:'rgba(255,255,255,0.3)', borderWidth:1, borderRadius:2 }
         ]
       },
       options: {
@@ -1088,6 +1092,10 @@ async function loadData() {
 }
 
 (function(){var h=location.href,m={otb:'otb.html',channel:'channel.html',ytd:'ytd.html',monthly:'monthly.html','stay-date':'stay-date.html','booking-trend':'booking-trend.html','ly-trend':'ly-trend.html','product-detail':'product-detail.html','ly-product':'ly-product.html',fcst:'fcst-admin.html',overseas:'overseas.html'};for(var k in m){if(h.includes(m[k])){document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(e){e.classList.remove('active');});var n=document.querySelector('.gsn-item[data-gsn="'+k+'"]');if(n)n.classList.add('active');break;}}})();
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ty').forEach(function(el) { el.textContent = _TY; });
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', loadData);
 </script>

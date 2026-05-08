@@ -311,8 +311,8 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
           <thead style="position:sticky;top:0;background:var(--bg-deep);z-index:10;">
             <tr>
               <th style="text-align:left;">기간</th>
-              <th>TY 예약</th>
-              <th>LY 동기간</th>
+              <th><span class="dy-ty"></span> 예약</th>
+              <th><span class="dy-ly"></span> 동기간</th>
               <th>차이</th>
               <th>YoY%</th>
             </tr>
@@ -331,6 +331,10 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 </div>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 let db = null;
 let activeYear = new Date().getFullYear().toString();
 let trendChart = null;
@@ -892,6 +896,10 @@ async function loadData() {
 }
 
 (function(){var h=location.href,m={otb:'otb.html',channel:'channel.html',ytd:'ytd.html',monthly:'monthly.html','stay-date':'stay-date.html','booking-trend':'booking-trend.html','ly-trend':'ly-trend.html','product-detail':'product-detail.html','ly-product':'ly-product.html',fcst:'fcst-admin.html',overseas:'overseas.html'};for(var k in m){if(h.includes(m[k])){document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(e){e.classList.remove('active');});var n=document.querySelector('.gsn-item[data-gsn="'+k+'"]');if(n)n.classList.add('active');break;}}})();
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ty').forEach(function(el) { el.textContent = _TY; });
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', loadData);
 </script>

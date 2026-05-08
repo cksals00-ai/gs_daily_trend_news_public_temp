@@ -412,6 +412,10 @@ tr.seg-header-row td { background: var(--bg-surface); font-weight: 800; color: v
 </div>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 /* ══════════════════════════════════════
    DATA & CONFIG
    ══════════════════════════════════════ */
@@ -1535,8 +1539,8 @@ function renderCancellationTable(months, containerId) {
     <tr>
       <th rowspan="2" style="vertical-align:bottom">세그먼트</th>
       <th rowspan="2" style="vertical-align:bottom">거래처</th>
-      <th class="group-header" colspan="3">2026 (TY)</th>
-      <th class="group-header" colspan="3">2025 (LY)</th>
+      <th class="group-header" colspan="3">2026 (<span class="dy-ty"></span>)</th>
+      <th class="group-header" colspan="3">2025 (<span class="dy-ly"></span>)</th>
       <th class="group-header" colspan="1">취소율 변화</th>
     </tr>
     <tr>
@@ -2250,6 +2254,10 @@ Promise.all([
     console.error('Data load failed:', e);
     document.getElementById('tabContents').innerHTML = '<div style="padding:40px;text-align:center;color:var(--negative)"><h2>데이터 로드 실패</h2><p>data/otb_data.json을 확인해주세요.</p><pre style="color:var(--ink-muted);margin-top:12px">' + e.message + '</pre></div>';
   });
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ty').forEach(function(el) { el.textContent = _TY; });
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 </script>
 
 </body>

@@ -438,7 +438,7 @@
           <th>FCST</th>
           <th>실적 (Actual)</th>
           <th>달성률</th>
-          <th>전년 (LY)</th>
+          <th>전년 (<span class="dy-ly"></span>)</th>
           <th>전년비 (YoY)</th>
         </tr></thead>
         <tbody id="summary-tbody"></tbody>
@@ -532,6 +532,10 @@
 </script>
 
 <script>
+// Dynamic year labels
+var _TY = (new Date().getFullYear() % 100) + 'Y';
+var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
+
 const fmt = {
   num: v => v == null || isNaN(v) ? '—' : Math.round(v).toLocaleString('ko-KR'),
   pct: v => v == null || isNaN(v) ? '—' : v.toFixed(1) + '%',
@@ -2073,6 +2077,9 @@ function render(){
   // (c) 창 focus (보조)
   window.addEventListener('focus', () => render());
 })();
+
+// Initialize dynamic year labels
+document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 </script>
 
 <!-- ============ COPYRIGHT FOOTER ============ -->
