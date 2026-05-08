@@ -231,10 +231,26 @@ td,th{font-weight:600}th{font-weight:800}
 
   <!-- Detail Table -->
   <div class="card" style="margin-top:16px">
-    <div class="card-head">
+    <div class="card-head" style="flex-wrap:wrap;gap:8px">
       <span class="card-icon">📋</span>
       <span class="card-title" id="trend-table-title">사업장별 FCST 추이 테이블</span>
-      <span class="card-desc" id="tbl-desc">시점별 FCST 기록</span>
+      <span class="card-desc" id="tbl-desc" style="margin-left:auto">시점별 FCST 기록</span>
+      <div style="width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink-faint);letter-spacing:.1em;margin-right:2px">세그</span>
+          <button class="ftab tbl-seg-btn" data-seg="ALL" onclick="switchTblSeg('ALL',this)">전체 합계</button>
+          <button class="ftab tbl-seg-btn active" data-seg="GS" onclick="switchTblSeg('GS',this)">GS합계</button>
+          <button class="ftab tbl-seg-btn" data-seg="OTA" onclick="switchTblSeg('OTA',this)">OTA</button>
+          <button class="ftab tbl-seg-btn" data-seg="G-OTA" onclick="switchTblSeg('G-OTA',this)">G-OTA</button>
+          <button class="ftab tbl-seg-btn" data-seg="Inbound" onclick="switchTblSeg('Inbound',this)">Inbound</button>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink-faint);letter-spacing:.1em;margin-right:2px">지표</span>
+          <button class="ftab tbl-metric-btn active" data-metric="rn" onclick="switchTblMetric('rn',this)">RN</button>
+          <button class="ftab tbl-metric-btn" data-metric="rev" onclick="switchTblMetric('rev',this)">매출</button>
+          <button class="ftab tbl-metric-btn" data-metric="adr" onclick="switchTblMetric('adr',this)">ADR</button>
+        </div>
+      </div>
     </div>
     <div class="trend-tbl-wrap">
       <table class="trend-tbl" id="trend-table">
@@ -256,6 +272,24 @@ td,th{font-weight:600}th{font-weight:800}
 let trendData = null;
 let otbData = null;  // otb_data.json 로드용
 let currentStayMonth = null;  // e.g. "2026-04" (year-month of the STAY month)
+let tblSeg = 'GS'; // 카드 내 세그먼트 슬라이서 (ALL/GS/OTA/G-OTA/Inbound)
+let tblMetric = 'rn'; // 카드 내 지표 슬라이서 (rn/rev/adr)
+
+function switchTblSeg(seg, btn) {
+  tblSeg = seg;
+  document.querySelectorAll('.tbl-seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // 세그 테이블만 re-render (전체 renderAll 호출 불필요)
+  const lyMonth = getLastYearMonth(currentStayMonth);
+  renderTable(currentStayMonth, lyMonth);
+}
+function switchTblMetric(metric, btn) {
+  tblMetric = metric;
+  document.querySelectorAll('.tbl-metric-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const lyMonth = getLastYearMonth(currentStayMonth);
+  renderTable(currentStayMonth, lyMonth);
+}
 let charts = {};
 let selectedDivision = '전체';
 
@@ -429,6 +463,11 @@ function initUI() {
     btn.textContent = SEG_LABELS[s] || s;
     btn.onclick = () => {
       selectedSeg = s;
+      // 사이드바 세그 변경 시 카드 내 세그도 동기화 (GS/OTA/G-OTA/Inbound만)
+      if (['ALL','GS','OTA','G-OTA','Inbound'].includes(s)) {
+        tblSeg = s;
+        document.querySelectorAll('.tbl-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.seg === s));
+      }
       document.querySelectorAll('#seg-chips .ftab').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
       updateSegDependentUI();
@@ -607,11 +646,7 @@ function renderAll() {
   document.getElementById('data-info').textContent =
     `${series.length}개 스냅샷 · ${currentStayMonth}${selectedSeg !== 'ALL' ? ' · ' + (SEG_LABELS[selectedSeg]||selectedSeg) : ''}`;
 
-  // 카드 제목 (사업장별 vs 세그)
-  const titleEl = document.getElementById('trend-table-title');
-  if (titleEl) {
-    titleEl.textContent = selectedSeg === 'ALL' ? '사업장별 FCST 추이 테이블' : selectedSeg === 'GS' ? 'GS 합계 (OTA+G-OTA+Inbound) FCST 추이' : `${selectedSeg} 세그 FCST 추이`;
-  }
+  // 카드 제목은 renderSegTableV2에서 업데이트
 
   renderKPI(series, lySeries);
   renderTrendChart(series, lySeries, showYoY, monthLabel, yearLabel);
@@ -884,9 +919,9 @@ function renderRankCards(stayMonth, lyMonth) {
     const ach = budgetRn > 0 ? fcstRn / budgetRn * 100 : 0;
     const r = { name: prop, fcst: fcstRn, budget: budgetRn, ach: Math.round(ach * 10) / 10 };
 
-    // YoY: find LY latest snapshot
+    // YoY: find LY latest snapshot that has lyMonth data
     const lyYear = stayYear - 1;
-    const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+    const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear && Object.values(s.properties).some(p => p[lyMonth]?.rm_fcst_rn != null));
     if (lySnap) {
       const lyEntry = lySnap.properties[prop]?.[lyMonth];
       const lyFcstVal = _getSegFcstRank(lyEntry);
@@ -985,7 +1020,7 @@ function renderVolatility(stayMonth, lyMonth) {
   const earliestSnap = relevantSnaps[0];
   const prevSnap = relevantSnaps.length >= 2 ? relevantSnaps[relevantSnaps.length - 2] : null;
   const lyYear = stayYear - 1;
-  const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear);
+  const lySnap = [...trendData.snapshots].reverse().find(s => s._year === lyYear && Object.values(s.properties).some(p => p[lyMonth]?.rm_fcst_rn != null));
 
   // Collect per-property volatility data
   const volData = [];
@@ -1068,7 +1103,11 @@ function renderTable(stayMonth, lyMonth) {
   const [yr, mm] = stayMonth.split('-');
   const stayYear = parseInt(yr);
 
-  // 세그 모드: 사업장별 세그 FCST 표시 (ALL 이외)
+  // 카드 내부 슬라이서(tblSeg)를 사용하여 항상 세그 테이블 렌더 (GS/OTA/G-OTA/Inbound)
+  renderSegTableV2(stayMonth, lyMonth, stayYear);
+  return;
+
+  // 아래 기존 ALL 모드 코드는 더 이상 사용하지 않음 (tblSeg로 대체)
   if (selectedSeg !== 'ALL') {
     renderSegTable(stayMonth, lyMonth, stayYear);
     return;
@@ -1452,48 +1491,91 @@ function renderSegTableFallback(stayMonth, lyMonth, stayYear, relevantSnaps) {
 function generateAIFactorSeg(propName, stayMonth, firstFcst, lastFcst, budget, lyFcst) {
   const lines = [];
   if (firstFcst === null || lastFcst === null) return '<span class="ai-nt">데이터 부족</span>';
-  const delta = lastFcst - firstFcst;
-  if (firstFcst > 0) {
-    const pct = ((delta / firstFcst) * 100).toFixed(1);
-    if (Math.abs(parseFloat(pct)) >= 2) {
+  const stayYear = parseInt(stayMonth.split('-')[0]);
+  const isALL = tblSeg === 'ALL';
+  const isGS = tblSeg === 'GS';
+  const unit = tblMetric === 'rev' ? '백만' : tblMetric === 'adr' ? '천원' : '실';
+
+  // 1) 추세 분석: 전체 스냅샷 기반 흐름
+  const allSnaps = trendData.snapshots.filter(s => s._year === stayYear && s.properties[propName]?.[stayMonth]);
+  if (allSnaps.length >= 3) {
+    const getSnapVal = (snap) => {
+      const d = snap.properties[propName][stayMonth];
+      if (isALL) return d.rm_fcst_rn || 0;
+      if (isGS) return (GS_SUB_SEGS || ['OTA','G-OTA','Inbound']).reduce((s, seg) => s + (d.segments?.[seg]?.rm_fcst_rn || 0), 0);
+      return d.segments?.[tblSeg]?.rm_fcst_rn || 0;
+    };
+    const vals = allSnaps.map(getSnapVal);
+    const last3 = vals.slice(-3);
+    const d1 = last3[1] - last3[0], d2 = last3[2] - last3[1];
+    if (d1 !== 0 || d2 !== 0) {
+      let trend = '', emoji = '';
+      if (d2 > 0 && d1 > 0 && d2 > d1) { trend = '가속 상향'; emoji = '⬆'; }
+      else if (d2 > 0 && d1 > 0) { trend = '상향 둔화'; emoji = '↗'; }
+      else if (d2 < 0 && d1 < 0 && Math.abs(d2) > Math.abs(d1)) { trend = '가속 하향'; emoji = '⬇'; }
+      else if (d2 < 0 && d1 < 0) { trend = '하향 둔화'; emoji = '↘'; }
+      else if (d2 > 0 && d1 <= 0) { trend = '반등 전환'; emoji = '↩'; }
+      else if (d2 < 0 && d1 >= 0) { trend = '하락 전환'; emoji = '↪'; }
+      if (trend) {
+        const cls = d2 >= 0 ? 'ai-up' : 'ai-dn';
+        lines.push(`<span class="ai-line"><span class="ai-tag rev">추세</span><span class="${cls}">${trend} (최근 ${d2>=0?'+':''}${fmt(d2)}${unit})</span></span>`);
+      }
+    }
+    // 전체 변동 요약 (최초→최신)
+    const totalDelta = vals[vals.length-1] - vals[0];
+    if (vals[0] > 0 && Math.abs(totalDelta) > 0) {
+      const totalPct = ((totalDelta / vals[0]) * 100).toFixed(1);
+      const cls = totalDelta >= 0 ? 'ai-up' : 'ai-dn';
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">변동</span><span class="${cls}">${totalDelta>=0?'+':''}${fmt(totalDelta)}${unit} (${totalDelta>=0?'+':''}${totalPct}%, ${vals.length}주)</span></span>`);
+    }
+  } else {
+    // 스냅샷 부족 시 단순 변동
+    const delta = lastFcst - firstFcst;
+    if (firstFcst > 0 && Math.abs(delta) > 0) {
+      const pct = ((delta / firstFcst) * 100).toFixed(1);
       const cls = delta >= 0 ? 'ai-up' : 'ai-dn';
-      lines.push(`<span class="ai-line"><span class="ai-tag ch">변동</span><span class="${cls}">${delta>=0?'+':''}${fmt(delta)}실 (${delta>=0?'+':''}${pct}%)</span></span>`);
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">변동</span><span class="${cls}">${delta>=0?'+':''}${fmt(delta)}${unit} (${delta>=0?'+':''}${pct}%)</span></span>`);
     }
   }
+
+  // 2) 목표 갭 분석
   if (budget > 0) {
     const gap = lastFcst - budget;
     const achV = (lastFcst / budget * 100).toFixed(1);
     const cls = gap >= 0 ? 'ai-up' : 'ai-dn';
-    lines.push(`<span class="ai-line"><span class="ai-tag ach">Gap</span><span class="${cls}">목표대비 ${gap>=0?'+':''}${fmt(gap)}실 (${achV}%)</span></span>`);
+    const status = parseFloat(achV) >= 105 ? '초과달성' : parseFloat(achV) >= 95 ? '달성권' : parseFloat(achV) >= 80 ? '주의' : '미달';
+    lines.push(`<span class="ai-line"><span class="ai-tag ach">${status}</span><span class="${cls}">목표대비 ${gap>=0?'+':''}${fmt(gap)}${unit} (${achV}%)</span></span>`);
   }
+
+  // 3) YoY 비교
   if (lyFcst !== null && lyFcst > 0) {
     const yoyDiff = lastFcst - lyFcst;
     const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
     const cls = yoyDiff >= 0 ? 'ai-up' : 'ai-dn';
-    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">${yoyDiff>=0?'+':''}${fmt(yoyDiff)}실 (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">전년대비 ${yoyDiff>=0?'+':''}${fmt(yoyDiff)}${unit} (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
   }
-  // 추세: 최근 3개 스냅샷에서 해당 세그의 값 변동
-  const stayYear = parseInt(stayMonth.split('-')[0]);
-  const snaps = trendData.snapshots.filter(s => s._year === stayYear && s.properties[propName]?.[stayMonth]?.segments?.[selectedSeg]);
-  if (snaps.length >= 3) {
-    const vals = snaps.map(s => s.properties[propName][stayMonth].segments[selectedSeg].rm_fcst_rn || 0);
-    const last3 = vals.slice(-3);
-    const d1 = last3[1] - last3[0], d2 = last3[2] - last3[1];
-    if (d1 !== 0 || d2 !== 0) {
-      let trend = '';
-      if (d2 > 0 && d1 > 0 && d2 > d1) trend = `가속 상향`;
-      else if (d2 > 0 && d1 > 0) trend = `상향 둔화`;
-      else if (d2 < 0 && d1 < 0 && d2 < d1) trend = `가속 하향`;
-      else if (d2 < 0 && d1 < 0) trend = `하향 둔화`;
-      else if (d2 > 0 && d1 <= 0) trend = `반등 전환`;
-      else if (d2 < 0 && d1 >= 0) trend = `하락 전환`;
-      if (trend) {
-        const cls = d2 >= 0 ? 'ai-up' : 'ai-dn';
-        lines.push(`<span class="ai-line"><span class="ai-tag rev">추세</span><span class="${cls}">${trend}</span></span>`);
-      }
+
+  // 4) 세그별 드라이버 (GS/ALL 모드에서 어떤 세그가 변동 주도했는지)
+  if ((isGS || isALL) && allSnaps.length >= 2 && tblMetric === 'rn') {
+    const firstS = allSnaps[0], lastS = allSnaps[allSnaps.length - 1];
+    const segDeltas = [];
+    (GS_SUB_SEGS || ['OTA','G-OTA','Inbound']).forEach(seg => {
+      const fv = firstS.properties[propName]?.[stayMonth]?.segments?.[seg]?.rm_fcst_rn || 0;
+      const lv = lastS.properties[propName]?.[stayMonth]?.segments?.[seg]?.rm_fcst_rn || 0;
+      if (fv > 0 || lv > 0) segDeltas.push({ seg, delta: lv - fv, pct: fv > 0 ? ((lv/fv-1)*100).toFixed(0) : '∞' });
+    });
+    const sorted = segDeltas.filter(d => d.delta !== 0).sort((a,b) => Math.abs(b.delta) - Math.abs(a.delta));
+    if (sorted.length > 0) {
+      const top = sorted[0];
+      const cls = top.delta >= 0 ? 'ai-up' : 'ai-dn';
+      const others = sorted.slice(1).map(d => `${d.seg} ${d.delta>=0?'+':''}${d.delta}`).join(', ');
+      let driverText = `${top.seg} ${top.delta>=0?'+':''}${fmt(top.delta)}실 주도`;
+      if (others) driverText += ` (${others})`;
+      lines.push(`<span class="ai-line"><span class="ai-tag ch">세그</span><span class="${cls}">${driverText}</span></span>`);
     }
   }
-  return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">변동 없음</span>';
+
+  return lines.length > 0 ? lines.slice(0, 5).join('') : '<span class="ai-nt">변동 없음</span>';
 }
 
 /* ── AI Factor Generator (숫자 기반) ── */
@@ -1551,6 +1633,343 @@ function generateAIFactor(propName, stayMonth, firstFcst, lastFcst, budget, lyFc
   }
 
   return lines.length > 0 ? lines.slice(0, 4).join('') : '<span class="ai-nt">변동 없음</span>';
+}
+
+/* ═══════════════════════════════════════
+   V2: 카드 내 세그+지표 슬라이서 통합 테이블
+   - tblSeg: GS/OTA/G-OTA/Inbound
+   - tblMetric: rn/rev/adr
+   - 전체 합계 행 상단 배치
+   ═══════════════════════════════════════ */
+function renderSegTableV2(stayMonth, lyMonth, stayYear) {
+  const thead = document.getElementById('trend-thead');
+  const tbody = document.getElementById('trend-tbody');
+  const [yr, mm] = stayMonth.split('-');
+
+  const isALLMode = tblSeg === 'ALL'; // 전체 합계 = top-level rm_fcst_rn 사용
+  const isGSMode = tblSeg === 'GS';
+  const metric = tblMetric; // rn / rev / adr
+
+  const METRIC_LABELS = { rn: 'RN', rev: '매출(백만)', adr: 'ADR(천원)' };
+  const METRIC_SUFFIX = { rn: '실', rev: '백만', adr: '천원' };
+  const SEG_TITLE = { ALL: '전체 합계', GS: 'GS 합계 (OTA+G-OTA+Inbound)', OTA: 'OTA', 'G-OTA': 'G-OTA', Inbound: 'Inbound' };
+
+  // 값 추출 헬퍼
+  const getVal = (segEntry) => {
+    if (!segEntry) return null;
+    if (metric === 'rn') return segEntry.rm_fcst_rn ?? null;
+    if (metric === 'rev') return segEntry.rm_fcst_rev_mil ?? null;
+    return null; // adr는 별도 계산
+  };
+  const getBudget = (segEntry) => {
+    if (!segEntry) return 0;
+    if (metric === 'rn') return segEntry.rm_budget_rn || 0;
+    if (metric === 'rev') return segEntry.rm_budget_rev_mil || 0;
+    return 0;
+  };
+
+  // 사업장별 데이터에서 값 추출 (ALL=top-level, GS=3세그합산, 개별=해당세그)
+  const getPropVal = (propMonthData) => {
+    if (!propMonthData) return null;
+    // ALL 모드: top-level 값 사용 (RM PDF 원본 전체 합계)
+    if (isALLMode) {
+      if (metric === 'adr') {
+        const rn = propMonthData.rm_fcst_rn || 0;
+        const rev = propMonthData.rm_fcst_rev_mil || 0;
+        return rn > 0 ? Math.round(rev * 1000000 / rn / 1000) : null;
+      }
+      return getVal(propMonthData);
+    }
+    if (!propMonthData?.segments) return null;
+    const segsToSum = isGSMode ? GS_SUB_SEGS : [tblSeg];
+    if (metric === 'adr') {
+      let totalRn = 0, totalRev = 0;
+      segsToSum.forEach(seg => {
+        const e = propMonthData.segments[seg];
+        if (e) { totalRn += e.rm_fcst_rn || 0; totalRev += e.rm_fcst_rev_mil || 0; }
+      });
+      return totalRn > 0 ? Math.round(totalRev * 1000000 / totalRn / 1000) : null;
+    }
+    let sum = 0, found = false;
+    segsToSum.forEach(seg => {
+      const v = getVal(propMonthData.segments[seg]);
+      if (v !== null) { sum += v; found = true; }
+    });
+    return found ? sum : null;
+  };
+  const getPropBudget = (propMonthData) => {
+    if (!propMonthData) return 0;
+    // ALL 모드: top-level 예산 사용
+    if (isALLMode) {
+      if (metric === 'adr') {
+        const rn = propMonthData.rm_budget_rn || 0;
+        const rev = propMonthData.rm_budget_rev_mil || 0;
+        return rn > 0 ? Math.round(rev * 1000000 / rn / 1000) : 0;
+      }
+      return getBudget(propMonthData);
+    }
+    if (!propMonthData?.segments) return 0;
+    const segsToSum = isGSMode ? GS_SUB_SEGS : [tblSeg];
+    if (metric === 'adr') {
+      let totalRn = 0, totalRev = 0;
+      segsToSum.forEach(seg => {
+        const e = propMonthData.segments[seg];
+        if (e) { totalRn += e.rm_budget_rn || 0; totalRev += e.rm_budget_rev_mil || 0; }
+      });
+      return totalRn > 0 ? Math.round(totalRev * 1000000 / totalRn / 1000) : 0;
+    }
+    let sum = 0;
+    segsToSum.forEach(seg => { sum += getBudget(propMonthData.segments[seg]); });
+    return sum;
+  };
+
+  // 포매터
+  const fmtVal = (v) => {
+    if (v === null || v === undefined) return '—';
+    if (metric === 'adr') return v.toLocaleString('ko-KR');
+    return fmt(v);
+  };
+
+  // 해당 세그의 사업장별 데이터가 있는 스냅샷 필터
+  const segsToCheck = isGSMode ? GS_SUB_SEGS : (isALLMode ? null : [tblSeg]);
+  const relevantSnaps = trendData.snapshots.filter(s => {
+    if (s._year !== stayYear) return false;
+    if (isALLMode) {
+      return Object.values(s.properties).some(p => p[stayMonth]?.rm_fcst_rn != null);
+    }
+    return Object.values(s.properties).some(p =>
+      segsToCheck.some(seg => p[stayMonth]?.segments?.[seg])
+    );
+  });
+
+  if (!relevantSnaps.length) {
+    thead.innerHTML = '';
+    tbody.innerHTML = `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--ink-faint)">${SEG_TITLE[tblSeg] || tblSeg}의 ${parseInt(mm)}월 '${yr.slice(2)} 데이터가 없습니다.</td></tr>`;
+    return;
+  }
+
+  const divProps = getFilteredProps();
+  const allProps = new Set();
+  trendData.snapshots.forEach(s => Object.keys(s.properties).forEach(p => {
+    if (!divProps || divProps.includes(p)) allProps.add(p);
+  }));
+  const sortedProps = [...allProps].filter(p =>
+    relevantSnaps.some(s => {
+      if (isALLMode) return s.properties[p]?.[stayMonth]?.rm_fcst_rn != null;
+      return segsToCheck.some(seg => s.properties[p]?.[stayMonth]?.segments?.[seg]);
+    })
+  ).sort();
+
+  // 카드 제목 업데이트
+  const titleEl = document.getElementById('trend-table-title');
+  if (titleEl) titleEl.textContent = `${SEG_TITLE[tblSeg] || tblSeg} FCST 추이 · ${METRIC_LABELS[metric]}`;
+
+  // Header
+  let hdr = `<tr><th style="min-width:140px">사업장</th><th class="week-col" style="text-align:right;color:var(--ink-muted)">목표</th>`;
+  relevantSnaps.forEach((snap, i) => {
+    const [, sm, sd] = snap._snapshot_date.split('-');
+    const isLast = i === relevantSnaps.length - 1;
+    hdr += `<th class="week-col" style="text-align:right;color:${isLast ? 'var(--positive)' : 'var(--info)'}">${parseInt(sm)}/${parseInt(sd)}</th>`;
+  });
+  hdr += '<th class="week-col" style="text-align:right;color:var(--gold-bright)">달성률</th>';
+  hdr += '<th class="week-col" style="text-align:right;color:var(--apac)">YoY</th>';
+  hdr += '<th style="min-width:180px;color:var(--ink-faint)">AI 변동 요인</th></tr>';
+  thead.innerHTML = hdr;
+
+  const lyYear = stayYear - 1;
+  // LY: lyMonth 데이터가 실제 있는 가장 마지막 스냅샷 찾기
+  const lySnap = [...trendData.snapshots].reverse().find(s =>
+    s._year === lyYear && Object.values(s.properties).some(p => p[lyMonth]?.rm_fcst_rn != null)
+  );
+
+  // ── 먼저 전체 합계 계산 ──
+  let totBud = 0, totFcstArr = relevantSnaps.map(() => 0);
+  // ADR 합계용 (가중평균)
+  let totRnArr = relevantSnaps.map(() => 0), totRevArr = relevantSnaps.map(() => 0);
+  let totBudRn = 0, totBudRev = 0;
+
+  // 사업장별 스냅 찾기 헬퍼
+  const findFirstSnap = (propName) => {
+    if (isALLMode) return relevantSnaps.find(s => s.properties[propName]?.[stayMonth]?.rm_fcst_rn != null);
+    return relevantSnaps.find(s => segsToCheck.some(seg => s.properties[propName]?.[stayMonth]?.segments?.[seg]));
+  };
+
+  sortedProps.forEach(propName => {
+    const firstSnap = findFirstSnap(propName);
+    const budget = getPropBudget(firstSnap?.properties[propName]?.[stayMonth]);
+    totBud += budget;
+    if (metric === 'adr') {
+      const propData = firstSnap?.properties[propName]?.[stayMonth];
+      if (isALLMode) {
+        totBudRn += propData?.rm_budget_rn || 0;
+        totBudRev += propData?.rm_budget_rev_mil || 0;
+      } else if (propData?.segments) {
+        segsToCheck.forEach(seg => {
+          const e = propData.segments[seg];
+          if (e) { totBudRn += e.rm_budget_rn || 0; totBudRev += e.rm_budget_rev_mil || 0; }
+        });
+      }
+    }
+
+    relevantSnaps.forEach((snap, i) => {
+      const val = getPropVal(snap.properties[propName]?.[stayMonth]);
+      if (val !== null && metric !== 'adr') totFcstArr[i] += val;
+      if (metric === 'adr') {
+        const propData = snap.properties[propName]?.[stayMonth];
+        if (isALLMode) {
+          totRnArr[i] += propData?.rm_fcst_rn || 0;
+          totRevArr[i] += propData?.rm_fcst_rev_mil || 0;
+        } else if (propData?.segments) {
+          segsToCheck.forEach(seg => {
+            const e = propData.segments[seg];
+            if (e) { totRnArr[i] += e.rm_fcst_rn || 0; totRevArr[i] += e.rm_fcst_rev_mil || 0; }
+          });
+        }
+      }
+    });
+  });
+
+  // ADR일 때 가중평균 계산
+  if (metric === 'adr') {
+    totFcstArr = totRnArr.map((rn, i) => rn > 0 ? Math.round(totRevArr[i] * 1000000 / rn / 1000) : 0);
+    totBud = totBudRn > 0 ? Math.round(totBudRev * 1000000 / totBudRn / 1000) : 0;
+  }
+
+  let html = '';
+
+  // ── 전체 합계 행 (상단) ──
+  const segTotalLabel = SEG_TITLE[tblSeg] || tblSeg;
+  const totalRowLabel = isALLMode ? '전체 합계' : `${segTotalLabel} 합계`;
+  html += `<tr class="total-row"><td style="font-family:var(--sans)">${esc(totalRowLabel)}</td>`;
+  html += `<td class="week-col" style="color:var(--ink-muted)">${fmtVal(totBud)}</td>`;
+  totFcstArr.forEach((v, i) => {
+    const isLast = i === totFcstArr.length - 1;
+    html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:800">${fmtVal(v)}</td>`;
+  });
+  const totLast = totFcstArr[totFcstArr.length - 1] || 0;
+  let totAch = null;
+  if (metric !== 'adr' && totBud > 0) totAch = (totLast / totBud * 100).toFixed(1);
+  else if (metric === 'adr') totAch = null; // ADR에서 달성률은 의미 없음
+  const totAchCls = totAch !== null ? (parseFloat(totAch) >= 100 ? 'positive' : parseFloat(totAch) >= 80 ? 'warning' : 'negative') : '';
+  html += `<td class="week-col"><span class="tbadge ${totAchCls}" style="font-size:11px">${totAch !== null ? totAch + '%' : '—'}</span></td>`;
+
+  // Total YoY
+  let totLyVal = 0;
+  if (lySnap) {
+    let lyTotRn = 0, lyTotRev = 0;
+    Object.entries(lySnap.properties).forEach(([pName, months]) => {
+      if (divProps && !divProps.includes(pName)) return;
+      const propData = months[lyMonth];
+      if (!propData) return;
+      if (isALLMode) {
+        if (metric === 'adr') {
+          lyTotRn += propData.rm_fcst_rn || 0;
+          lyTotRev += propData.rm_fcst_rev_mil || 0;
+        } else {
+          totLyVal += (metric === 'rn' ? propData.rm_fcst_rn : propData.rm_fcst_rev_mil) || 0;
+        }
+      } else {
+        if (!propData.segments) return;
+        if (metric === 'adr') {
+          segsToCheck.forEach(seg => {
+            const e = propData.segments[seg];
+            if (e) { lyTotRn += e.rm_fcst_rn || 0; lyTotRev += e.rm_fcst_rev_mil || 0; }
+          });
+        } else {
+          segsToCheck.forEach(seg => {
+            const e = propData.segments[seg];
+            if (e) totLyVal += (metric === 'rn' ? e.rm_fcst_rn : e.rm_fcst_rev_mil) || 0;
+          });
+        }
+      }
+    });
+    if (metric === 'adr' && lyTotRn > 0) totLyVal = Math.round(lyTotRev * 1000000 / lyTotRn / 1000);
+  }
+  let totYoyHtml = '—';
+  if (totLyVal > 0 && totLast > 0) {
+    const yp = ((totLast / totLyVal - 1) * 100).toFixed(1);
+    totYoyHtml = `<span style="color:${parseFloat(yp)>=0?'var(--positive)':'var(--negative)'}">${parseFloat(yp)>=0?'+':''}${yp}%</span>`;
+  }
+  html += `<td class="week-col">${totYoyHtml}</td><td></td></tr>`;
+
+  // ── 사업장별 rows ──
+  sortedProps.forEach(propName => {
+    const firstSnap = findFirstSnap(propName);
+    const budget = getPropBudget(firstSnap?.properties[propName]?.[stayMonth]);
+
+    html += `<tr><td class="prop-name">${esc(propName)}</td>`;
+    html += `<td class="week-col" style="color:var(--ink-muted)">${fmtVal(budget)}</td>`;
+
+    let lastFcst = null, firstFcst = null;
+    relevantSnaps.forEach((snap, i) => {
+      const fcst = getPropVal(snap.properties[propName]?.[stayMonth]);
+      const isLast = i === relevantSnaps.length - 1;
+
+      if (fcst !== null) {
+        if (firstFcst === null) firstFcst = fcst;
+        lastFcst = fcst;
+      }
+
+      let delta = '';
+      if (i > 0) {
+        const prevFcst = getPropVal(relevantSnaps[i-1].properties[propName]?.[stayMonth]);
+        if (prevFcst !== null && fcst !== null) {
+          const d = fcst - prevFcst;
+          if (d !== 0) delta = `<span style="font-size:9px;color:${d>0?'var(--positive)':'var(--negative)'};display:block">${d>0?'+':''}${fmtVal(d)}</span>`;
+        }
+      }
+      html += `<td class="week-col" style="color:${isLast?'var(--positive)':'var(--ink-soft)'};font-weight:${isLast?'800':'400'}">${fcst !== null ? fmtVal(fcst) : '—'}${delta}</td>`;
+    });
+
+    // Achievement (ADR에서는 표시 안 함)
+    let achV = null;
+    if (metric !== 'adr' && budget > 0 && lastFcst !== null) achV = (lastFcst / budget * 100).toFixed(1);
+    const achCls = achV !== null ? (parseFloat(achV) >= 100 ? 'positive' : parseFloat(achV) >= 80 ? 'warning' : 'negative') : '';
+    html += `<td class="week-col"><span class="tbadge ${achCls}">${achV !== null ? achV + '%' : '—'}</span></td>`;
+
+    // YoY
+    const lyPropData = lySnap?.properties[propName]?.[lyMonth];
+    let lyVal = null;
+    if (lyPropData) {
+      if (isALLMode) {
+        if (metric === 'adr') {
+          const lyRn = lyPropData.rm_fcst_rn || 0;
+          const lyRev = lyPropData.rm_fcst_rev_mil || 0;
+          lyVal = lyRn > 0 ? Math.round(lyRev * 1000000 / lyRn / 1000) : null;
+        } else {
+          lyVal = (metric === 'rn' ? lyPropData.rm_fcst_rn : lyPropData.rm_fcst_rev_mil) ?? null;
+        }
+      } else if (lyPropData.segments) {
+        if (metric === 'adr') {
+          let lyRn = 0, lyRev = 0;
+          segsToCheck.forEach(seg => {
+            const e = lyPropData.segments[seg];
+            if (e) { lyRn += e.rm_fcst_rn || 0; lyRev += e.rm_fcst_rev_mil || 0; }
+          });
+          lyVal = lyRn > 0 ? Math.round(lyRev * 1000000 / lyRn / 1000) : null;
+        } else {
+          let sum = 0, found = false;
+          segsToCheck.forEach(seg => {
+            const e = lyPropData.segments[seg];
+            if (e) { sum += (metric === 'rn' ? e.rm_fcst_rn : e.rm_fcst_rev_mil) || 0; found = true; }
+          });
+          lyVal = found ? sum : null;
+        }
+      }
+    }
+    let yoyHtml = '—';
+    if (lyVal !== null && lastFcst !== null && lyVal > 0) {
+      const yoyPct = ((lastFcst / lyVal - 1) * 100).toFixed(1);
+      const yoyCls = parseFloat(yoyPct) >= 0 ? 'var(--positive)' : 'var(--negative)';
+      yoyHtml = `<span style="color:${yoyCls}">${parseFloat(yoyPct) >= 0 ? '+' : ''}${yoyPct}%</span>`;
+    }
+    html += `<td class="week-col">${yoyHtml}</td>`;
+    html += `<td class="reason-cell">${generateAIFactorSeg(propName, stayMonth, firstFcst, lastFcst, budget, lyVal)}</td>`;
+    html += '</tr>';
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById('tbl-desc').textContent = `${segTotalLabel} · ${METRIC_LABELS[metric]} · ${parseInt(mm)}월 '${yr.slice(2)} · ${sortedProps.length}개 사업장 · ${relevantSnaps.length}개 시점`;
 }
 </script>
 

@@ -430,9 +430,16 @@ const CHANNEL_SEGMENT_MAP = {
   '아고다': 'G-OTA',
   '트립닷컴': 'G-OTA',
   '익스피디아': 'G-OTA',
+  '트립어드바이저': 'G-OTA',
+  '부킹닷컴': 'G-OTA',
   '여기어때': 'OTA',
   '놀자': 'OTA',
   '야놀자': 'OTA',
+  '코이스토리': 'OTA',
+  '스마트인피니': 'OTA',
+  '타이드스퀘어': 'OTA',
+  '디디트래블': 'OTA',
+  'GOTA_컴바인': 'G-OTA',
   // Inbound channels
   '여행사': 'Inbound',
   // 기타는 제외 (코드에서 이미 필터링됨)
@@ -445,12 +452,17 @@ function getChannelSegment(chName) {
     return CHANNEL_SEGMENT_MAP[chName];
   }
   // 데이터에서 세그먼트 정보를 얻기 (fallback)
+  // RN이 가장 많은 세그먼트로 판단 (단순 존재여부가 아닌 실적 기준)
   if (DB_DATA && DB_DATA.by_channel_segment && DB_DATA.by_channel_segment[chName]) {
-    const segs = Object.keys(DB_DATA.by_channel_segment[chName]);
-    // G-OTA를 우선으로 확인
-    if (segs.includes('G-OTA')) return 'G-OTA';
-    if (segs.includes('OTA')) return 'OTA';
-    if (segs.includes('Inbound')) return 'Inbound';
+    const segs = DB_DATA.by_channel_segment[chName];
+    let bestSeg = null, bestRn = -1;
+    for (const [seg, months] of Object.entries(segs)) {
+      if (!['OTA','G-OTA','Inbound'].includes(seg)) continue;
+      let totalRn = 0;
+      for (const m of Object.values(months)) totalRn += (m.booking_rn || m.net_rn || 0);
+      if (totalRn > bestRn) { bestRn = totalRn; bestSeg = seg; }
+    }
+    if (bestSeg) return bestSeg;
   }
   return null;
 }
