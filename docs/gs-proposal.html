@@ -139,6 +139,30 @@ a{color:inherit;text-decoration:none}
 .gsheet-banner-icon{font-size:22px}
 .gsheet-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:rgba(66,133,244,0.2);color:#4285f4;border:1px solid rgba(66,133,244,0.4)}
 
+
+/* Multi-select property */
+.prop-multi-wrap{position:relative}
+.prop-multi-btn{width:100%;padding:9px 12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s;display:flex;justify-content:space-between;align-items:center}
+.prop-multi-btn:hover,.prop-multi-btn.open{border-color:var(--gold)}
+.prop-multi-btn .arrow{font-size:10px;color:var(--ink-faint);transition:transform .15s}
+.prop-multi-btn.open .arrow{transform:rotate(180deg)}
+.prop-multi-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg-card);border:1px solid var(--rule-strong);border-radius:6px;max-height:380px;overflow-y:auto;z-index:100;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.prop-multi-drop.open{display:block}
+.prop-group-label{padding:8px 12px 4px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;border-top:1px solid var(--rule);display:flex;align-items:center;gap:6px}
+.prop-group-label:first-child{border-top:none}
+.prop-group-label .region-check{cursor:pointer;accent-color:var(--gold)}
+.prop-opt{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 24px;font-size:12px;color:var(--ink-soft);cursor:pointer;transition:background .1s}
+.prop-opt:hover{background:var(--bg-hover)}
+.prop-opt input{accent-color:var(--gold);cursor:pointer}
+.prop-opt.all-opt{padding-left:12px;font-weight:700;color:var(--gold-bright);border-bottom:1px solid var(--rule)}
+.selected-props{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.selected-prop-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-family:var(--mono);font-size:10px;font-weight:600;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.3);color:var(--gold-bright)}
+/* Segment tag checkboxes */
+.seg-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.seg-tag-label{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--ink-soft);padding:4px 10px;border:1px solid var(--rule);border-radius:14px;transition:all .15s}
+.seg-tag-label:has(input:checked){background:rgba(90,159,196,0.14);border-color:var(--info);color:var(--info)}
+.seg-tag-label input{display:none}
+
 @media(max-width:900px){.form-row{flex-direction:column}.stepper{flex-wrap:wrap;gap:4px}.step-arrow{display:none}.summary-grid{grid-template-columns:1fr 1fr}.occ-grid{grid-template-columns:repeat(4,1fr)}}
 @keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:0.6}}
 </style>
@@ -175,14 +199,42 @@ a{color:inherit;text-decoration:none}
         <span class="sec-head-meta"><span class="tag tag-info">세일즈 리포트 연동</span></span>
       </div>
       <div class="sec-body">
-        <p style="color:var(--ink-muted);font-size:12px;margin-bottom:14px">동기간 전년/전전년 실적 좋았던 프로모션을 검색하여, 기획 참고 또는 바로 품의 반영할 수 있습니다.</p>
+        <p style="color:var(--ink-muted);font-size:12px;margin-bottom:8px">동기간 전년/전전년 실적 좋았던 프로모션을 검색하여, 기획 참고 또는 바로 품의 반영할 수 있습니다.</p>
+        <div style="background:var(--info-bg);border:1px solid rgba(90,159,196,0.3);border-radius:5px;padding:8px 12px;margin-bottom:14px;font-family:var(--mono);font-size:10.5px;color:var(--info)">ℹ️ 과거 프로모션 데이터는 관리자 키인 데이터 기반으로 표시됩니다 (향후 연동)</div>
         <div class="form-row" style="margin-bottom:10px">
           <div class="form-group" style="max-width:220px">
             <label class="form-label">사업장</label>
             <select class="form-select" id="promo-search-prop">
-              <option value="sono-calm-yg">소노캄 양양</option>
-              <option value="sono-calm-gj">소노캄 거제</option>
-              <option value="sono-belle-vivaldi">소노벨 비발디파크</option>
+              <option value="">전체</option>
+              <optgroup label="비발디권역">
+                <option value="sono-belle-vivaldi">01. 소노벨 비발디파크</option>
+              </optgroup>
+              <optgroup label="중부권역">
+                <option value="sono-cam-vivaldi">02. 소노캄 비발디파크</option>
+                <option value="sono-cam-vivaldi-pet">03. 소노캄 비발디파크(펫)</option>
+                <option value="sono-belge-vivaldi">04. 소노벨지 비발디파크</option>
+                <option value="felice-vivaldi">05. 펠리체 비발디파크</option>
+                <option value="sono-host-yangpyeong">06. 소노호스 양평</option>
+                <option value="delpino">07. 델피노</option>
+                <option value="ul-beach-yangyang">08. 울비치 양양</option>
+                <option value="ul-beach-samcheok">09. 울비치 삼척</option>
+                <option value="sono-belle-danyang">10. 소노벨 단양</option>
+                <option value="sono-cam-gyeongju">11. 소노캄 경주</option>
+              </optgroup>
+              <optgroup label="남부권역">
+                <option value="sono-belle-cheongsong">12. 소노벨 청송</option>
+                <option value="sono-belle-cheonan">13. 소노벨 천안</option>
+                <option value="sono-belle-byeonsan">14. 소노벨 변산</option>
+                <option value="sono-belle-namhae">15. 소노벨 남해</option>
+                <option value="sono-cam-geoje">16. 소노캄 거제</option>
+                <option value="ul-beach-geoje">17. 울비치 거제</option>
+                <option value="ul-beach-jindo">18. 울비치 진도</option>
+                <option value="ul-beach-yeosu">19. 울비치 여수</option>
+              </optgroup>
+              <optgroup label="APAC권역">
+                <option value="sono-belle-jeju">20. 소노벨 제주</option>
+                <option value="sono-cam-jeju">21. 소노캄 제주</option>
+              </optgroup>
             </select>
           </div>
           <div class="form-group" style="max-width:160px">
@@ -206,14 +258,41 @@ a{color:inherit;text-decoration:none}
       <div class="sec-head"><span class="sec-head-title">사업장 · 투숙기간 선택</span><span class="sec-head-meta">Booking Status 자동 연동</span></div>
       <div class="sec-body">
         <div class="form-row">
-          <div class="form-group" style="max-width:280px"><label class="form-label">사업장</label>
-            <select class="form-select" id="sel-property" onchange="loadOccData()">
-              <option value="">선택하세요</option>
-              <option value="sono-calm-yg">소노캄 양양</option><option value="sono-calm-gj">소노캄 거제</option>
-              <option value="sono-calm-cc">소노캄 춘천</option><option value="sono-calm-gs">소노캄 고성</option>
-              <option value="sono-belle-vivaldi">소노벨 비발디파크</option><option value="sono-belle-cc">소노벨 천안</option>
-              <option value="sono-moon-danyang">소노문 단양</option><option value="trinity-jeju">트리니티 제주</option>
-            </select>
+          <div class="form-group" style="max-width:380px"><label class="form-label">사업장 (복수선택 가능)</label>
+            <div class="prop-multi-wrap" id="prop-multi-wrap">
+              <button type="button" class="prop-multi-btn" id="prop-multi-btn" onclick="togglePropDrop()">
+                <span id="prop-multi-text">사업장을 선택하세요</span><span class="arrow">▼</span>
+              </button>
+              <div class="prop-multi-drop" id="prop-multi-drop">
+                <label class="prop-opt all-opt"><input type="checkbox" id="chk-all-props" onchange="toggleAllProps(this)"> 전체 사업장 (21개)</label>
+                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="vivaldi" onchange="toggleRegion(this)"> 비발디권역</div>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="vivaldi" value="sono-belle-vivaldi" onchange="updatePropSelection()"> 01. 소노벨 비발디파크</label>
+                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="central" onchange="toggleRegion(this)"> 중부권역</div>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-vivaldi" onchange="updatePropSelection()"> 02. 소노캄 비발디파크</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-vivaldi-pet" onchange="updatePropSelection()"> 03. 소노캄 비발디파크(펫)</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-belge-vivaldi" onchange="updatePropSelection()"> 04. 소노벨지 비발디파크</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="felice-vivaldi" onchange="updatePropSelection()"> 05. 펠리체 비발디파크</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-host-yangpyeong" onchange="updatePropSelection()"> 06. 소노호스 양평</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="delpino" onchange="updatePropSelection()"> 07. 델피노</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="ul-beach-yangyang" onchange="updatePropSelection()"> 08. 울비치 양양</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="ul-beach-samcheok" onchange="updatePropSelection()"> 09. 울비치 삼척</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-belle-danyang" onchange="updatePropSelection()"> 10. 소노벨 단양</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="central" value="sono-cam-gyeongju" onchange="updatePropSelection()"> 11. 소노캄 경주</label>
+                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="south" onchange="toggleRegion(this)"> 남부권역</div>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-cheongsong" onchange="updatePropSelection()"> 12. 소노벨 청송</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-cheonan" onchange="updatePropSelection()"> 13. 소노벨 천안</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-byeonsan" onchange="updatePropSelection()"> 14. 소노벨 변산</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-belle-namhae" onchange="updatePropSelection()"> 15. 소노벨 남해</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="sono-cam-geoje" onchange="updatePropSelection()"> 16. 소노캄 거제</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-geoje" onchange="updatePropSelection()"> 17. 울비치 거제</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-jindo" onchange="updatePropSelection()"> 18. 울비치 진도</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="south" value="ul-beach-yeosu" onchange="updatePropSelection()"> 19. 울비치 여수</label>
+                <div class="prop-group-label"><input type="checkbox" class="region-check" data-region="apac" onchange="toggleRegion(this)"> APAC권역</div>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="apac" value="sono-belle-jeju" onchange="updatePropSelection()"> 20. 소노벨 제주</label>
+                <label class="prop-opt"><input type="checkbox" class="prop-chk" data-region="apac" value="sono-cam-jeju" onchange="updatePropSelection()"> 21. 소노캄 제주</label>
+              </div>
+              <div class="selected-props" id="selected-props"></div>
+            </div>
           </div>
           <div class="form-group" style="max-width:200px"><label class="form-label">투숙기간 시작</label><input type="date" class="form-date" id="date-start" value="2026-07-01" onchange="loadOccData()"></div>
           <div class="form-group" style="max-width:200px"><label class="form-label">투숙기간 종료</label><input type="date" class="form-date" id="date-end" value="2026-07-31" onchange="loadOccData()"></div>
@@ -264,6 +343,50 @@ a{color:inherit;text-decoration:none}
       <textarea class="form-textarea" id="txt-purpose" placeholder="품의 시행취지를 작성하세요...">성수기 객실 가동률 극대화 및 회원 만족도 제고를 위한 여름 시즌 패키지 상품 기획.
 전년 동기 대비 OCC 5%p 상승 목표 달성을 위해, 회원/FIT 채널별 차등 할인 전략을 적용한 프로모션 요금을 수립하여 판매 경쟁력을 확보하고자 함.</textarea>
     </div></div>
+
+    <!-- 기획전 상세 (조건부 — 사업장 선택 시) -->
+    <div class="sec-card" id="sec-campaign-detail">
+      <div class="sec-head"><span class="sec-head-title">내용 — 기획전 상세</span><span class="sec-head-meta"><span class="tag tag-gold">Step 1 사업장 자동 반영</span></span></div>
+      <div class="sec-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">사업장</label>
+            <input class="form-input" id="cd-property" readonly style="background:var(--bg-deep);color:var(--gold-bright)" value="(Step 1에서 선택)">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">제목 (목표 / 인플루언서 등)</label>
+            <input class="form-input" id="cd-title" placeholder="예: 목표 / 인플루언서">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">판매일자</label>
+            <input class="form-input" id="cd-sale-date" placeholder="예: 1차 5/12~5/14, 2차 5/26~5/29">
+          </div>
+          <div class="form-group"><label class="form-label">투숙일자</label>
+            <input class="form-input" id="cd-stay-date" placeholder="예: 5월 12일 ~ 7월 마감">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">상품 (패키지 구성)</label>
+            <textarea class="form-textarea" id="cd-product" style="min-height:60px" placeholder="예: Ocean pkg → 객실+조식+인피니티풀+히어로즈+워터파크+레전드풀라온+할인권"></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">상품 비고</label>
+            <input class="form-input" id="cd-product-note" placeholder="예: 기준인원(3,4인), 열박행전 등">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">세그먼트 태그</label>
+            <div class="seg-tags">
+              <label class="seg-tag-label"><input type="checkbox" value="OTA" class="seg-chk"> OTA</label>
+              <label class="seg-tag-label"><input type="checkbox" value="G-OTA" class="seg-chk"> G-OTA</label>
+              <label class="seg-tag-label"><input type="checkbox" value="Inbound" class="seg-chk"> Inbound</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="sec-card"><div class="sec-head"><span class="sec-head-title">OCC · 현황</span><span class="sec-head-meta"><span class="tag tag-positive">Step 1에서 자동 로드</span></span></div>
       <div class="sec-body" id="step3-occ"><p style="color:var(--ink-faint);font-size:12px">Step 1에서 사업장/기간을 선택하면 자동으로 데이터가 표시됩니다.</p></div>
@@ -327,11 +450,11 @@ a{color:inherit;text-decoration:none}
         <p class="edit-hint" style="margin-bottom:10px">사업장/월을 추가하고 목표 객실수를 입력하세요. 품의 시트에는 합계가 자동 반영됩니다.</p>
         <div style="overflow-x:auto">
           <table class="data-table" id="tbl-kpi">
-            <thead><tr><th style="text-align:left">사업장</th><th>7월</th><th>8월</th><th>합계</th></tr></thead>
+            <thead><tr><th style="text-align:left">사업장</th><th>사업장 목표</th><th>RM FCST</th><th>전체 OCC</th><th>7월</th><th>8월</th><th>합계</th></tr></thead>
             <tbody>
-              <tr><td>소노캄 양양</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="7">400</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="8">350</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">750</td></tr>
-              <tr><td>소노캄 거제</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="7">250</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="8">200</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">450</td></tr>
-              <tr class="total-row"><td>합계</td><td class="kpi-col-sum">650</td><td class="kpi-col-sum">550</td><td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">1,200</td></tr>
+              <tr><td>소노캄 양양</td><td style="color:var(--ink-faint);font-size:10px">1,200실</td><td style="color:var(--info);font-size:10px">1,050실</td><td style="color:var(--positive);font-size:10px">72%</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="7">400</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="8">350</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">750</td></tr>
+              <tr><td>소노캄 거제</td><td style="color:var(--ink-faint);font-size:10px">900실</td><td style="color:var(--info);font-size:10px">780실</td><td style="color:var(--positive);font-size:10px">68%</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="7">250</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="8">200</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">450</td></tr>
+              <tr class="total-row"><td>합계</td><td style="color:var(--ink-faint);font-size:10px">2,100실</td><td style="color:var(--info);font-size:10px">1,830실</td><td style="color:var(--positive);font-size:10px">70%</td><td class="kpi-col-sum">650</td><td class="kpi-col-sum">550</td><td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">1,200</td></tr>
             </tbody>
           </table>
         </div>
@@ -381,7 +504,7 @@ a{color:inherit;text-decoration:none}
 
     <!-- HTML Export Preview -->
     <div class="sec-card" id="html-export-section" style="display:none">
-      <div class="sec-head"><span class="sec-head-title">그룹웨어 HTML 미리보기</span><span class="sec-head-meta"><button class="btn btn-primary btn-sm" onclick="copyHtmlToClipboard()">📋 HTML 복사</button></span></div>
+      <div class="sec-head"><span class="sec-head-title">그룹웨어 HTML 미리보기</span><span class="sec-head-meta"><button class="btn btn-primary btn-sm" onclick="copyHtmlToClipboard()">📋 HTML 복사</button> <button class="btn btn-sm btn-info" onclick="copyHtmlSourceCode()">📝 HTML 코드 복사</button></span></div>
       <div class="sec-body">
         <div class="html-preview" id="html-preview"></div>
         <div style="margin-top:12px"><button class="btn btn-sm" onclick="toggleHtmlSource()">소스 코드 보기/숨기기</button></div>
@@ -441,7 +564,7 @@ const proposalData = {
 
 function collectProposalData() {
   const p = proposalData;
-  p.property = document.getElementById('sel-property')?.selectedOptions[0]?.text || '';
+  p.property = getSelectedProperties().map(x=>x.label).join(', ') || '';
   p.stayStart = document.getElementById('date-start')?.value || '';
   p.stayEnd = document.getElementById('date-end')?.value || '';
   p.productName = document.getElementById('txt-prod-name')?.value || '';
@@ -452,6 +575,15 @@ function collectProposalData() {
   p.purpose = document.getElementById('txt-purpose')?.value || '';
   p.kpi.totalRevenue = document.getElementById('txt-kpi-revenue')?.value || '';
   p.kpi.occContribution = document.getElementById('txt-kpi-occ')?.value || '';
+  // Campaign detail
+  p.campaignDetail = {
+    title: document.getElementById('cd-title')?.value||'',
+    saleDate: document.getElementById('cd-sale-date')?.value||'',
+    stayDate: document.getElementById('cd-stay-date')?.value||'',
+    product: document.getElementById('cd-product')?.value||'',
+    productNote: document.getElementById('cd-product-note')?.value||'',
+    segments: [...document.querySelectorAll('.seg-chk:checked')].map(c=>c.value)
+  };
   p.cooperation = {
     salesPlanning: document.getElementById('coop-sales')?.value||'',
     marketing: document.getElementById('coop-mkt')?.value||'',
@@ -542,8 +674,11 @@ function viewPromoDetail(id){
 function applyPromoToProposal(id){
   const p=DUMMY_PROMOS.find(x=>x.id===id);if(!p)return;
   // Auto-fill Step 1 & 3
-  const propMap={'소노캄 양양':'sono-calm-yg','소노캄 거제':'sono-calm-gj','소노벨 비발디파크':'sono-belle-vivaldi'};
-  if(propMap[p.property]){document.getElementById('sel-property').value=propMap[p.property];loadOccData()}
+  const propMap={'소노캄 양양':'ul-beach-yangyang','소노캄 거제':'sono-cam-geoje','소노벨 비발디파크':'sono-belle-vivaldi'};
+  if(propMap[p.property]){
+    const chk=document.querySelector('.prop-chk[value="'+propMap[p.property]+'"]');
+    if(chk){chk.checked=true;updatePropSelection()}
+  }
   document.getElementById('txt-prod-name').value=p.name.replace(/\d{4}/,'2026')+' (리뉴얼)';
   document.getElementById('txt-appeal').value=p.composition;
   document.getElementById('txt-composition').value=p.composition;
@@ -555,7 +690,8 @@ function applyPromoToProposal(id){
 
 /* ══════════ OCC (DUMMY) ══════════ */
 function loadOccData(){
-  const prop=document.getElementById('sel-property').value;if(!prop)return;
+  const props=getSelectedProperties();if(!props.length)return;
+  const prop=props[0].value;
   const start=document.getElementById('date-start').value,end=document.getElementById('date-end').value;if(!start||!end)return;
   const d1=new Date(start),d2=new Date(end),days=[];
   for(let d=new Date(d1);d<=d2;d.setDate(d.getDate()+1)){
@@ -649,7 +785,20 @@ function generateProposalHtml(){
   let h=`<div style="font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:12px;color:#000;max-width:800px;">
 <h2 style="text-align:center;font-size:16px;margin-bottom:20px;">품 의 서</h2>
 <p style="${hdr}">1. 시행취지</p><p style="font-size:12px;line-height:1.7;margin-bottom:12px;white-space:pre-wrap;">${p.purpose}</p>
-<p style="${hdr}">2. 상품 운영안</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+<p style="${hdr}">2. 내용 — 기획전 상세</p>`;
+  // Campaign detail
+  const cd = p.campaignDetail || {};
+  if(cd.title || cd.product){
+    h+=\`<table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+    <tr><td style="\${th}width:120px;">사업장</td><td style="\${ts}">\${p.property}</td></tr>
+    <tr><td style="\${th}">제목</td><td style="\${ts}">\${cd.title||'-'}</td></tr>
+    <tr><td style="\${th}">판매일자</td><td style="\${ts}">\${cd.saleDate||'-'}</td></tr>
+    <tr><td style="\${th}">투숙일자</td><td style="\${ts}">\${cd.stayDate||'-'}</td></tr>
+    <tr><td style="\${th}">상품</td><td style="\${ts}">\${cd.product||'-'}</td></tr>
+    <tr><td style="\${th}">상품 비고</td><td style="\${ts}">\${cd.productNote||'-'}</td></tr>
+    <tr><td style="\${th}">세그먼트</td><td style="\${ts}">\${cd.segments?.join(', ')||'-'}</td></tr></table>\`;
+  }
+  h+=\`<p style="\${hdr}">3. 상품 운영안</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
 <tr><td style="${th}width:120px;">상품명</td><td style="${ts}">${p.productName}</td></tr>
 <tr><td style="${th}">소구점</td><td style="${ts}">${p.appeal}</td></tr>
 <tr><td style="${th}">사업장</td><td style="${ts}">${p.property}</td></tr>
@@ -659,17 +808,17 @@ function generateProposalHtml(){
 <tr><td style="${th}">기준인원</td><td style="${ts}">${p.pax}인</td></tr>
 <tr><td style="${th}">특이사항</td><td style="${ts}">${p.note}</td></tr></table>`;
   // 객실 배분가 from DOM
-  h+=`<p style="${hdr}">3. 객실 배분가 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
+  h+=`<p style="${hdr}">4. 객실 배분가 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
   document.querySelectorAll('#tbl-room-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
-  h+=`<p style="${hdr}">4. 부대업장 할인율</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">부대시설</th><th style="${th}">정상가</th><th style="${th}">배분가</th><th style="${th}">할인율</th></tr>`;
+  h+=`<p style="${hdr}">5. 부대업장 할인율</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">부대시설</th><th style="${th}">정상가</th><th style="${th}">배분가</th><th style="${th}">할인율</th></tr>`;
   document.querySelectorAll('#tbl-addon-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
-  h+=`<p style="${hdr}">5. 종합할인 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th></tr>`;
+  h+=`<p style="${hdr}">6. 종합할인 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th></tr>`;
   document.querySelectorAll('#tbl-total-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
   // KPI
-  h+=`<p style="${hdr}">6. KPI (사업장별 × 월별)</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">사업장</th><th style="${th}">7월</th><th style="${th}">8월</th><th style="${th}">합계</th></tr>`;
+  h+=`<p style="${hdr}">7. KPI (사업장별 × 월별)</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">사업장</th><th style="${th}">7월</th><th style="${th}">8월</th><th style="${th}">합계</th></tr>`;
   document.querySelectorAll('#tbl-kpi tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{const s=r.classList.contains('total-row')?th:i===0?tdL:ts;h+=`<td style="${s}">${c.textContent}</td>`});h+='</tr>'});
   h+=`</table><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><td style="${th}width:120px;">목표 매출</td><td style="${ts}">${p.kpi.totalRevenue} 원</td></tr><tr><td style="${th}">목표 OCC 기여</td><td style="${ts}">${p.kpi.occContribution}</td></tr></table></div>`;
   return h;
@@ -702,6 +851,101 @@ function simulateGsheetWrite(){
   // Show simulated success
   const badge=document.querySelector('#gsheet-section .gsheet-badge:last-of-type');
   if(badge){badge.textContent='✅ 작성 시뮬레이션 완료';badge.style.background='rgba(76,175,111,0.2)';badge.style.color='var(--positive)';badge.style.borderColor='rgba(76,175,111,0.4)'}
+}
+
+/* ══════════ PROPERTY MULTI-SELECT ══════════ */
+const PROP_DATA = [
+  {value:'sono-belle-vivaldi',label:'01. 소노벨 비발디파크',region:'vivaldi'},
+  {value:'sono-cam-vivaldi',label:'02. 소노캄 비발디파크',region:'central'},
+  {value:'sono-cam-vivaldi-pet',label:'03. 소노캄 비발디파크(펫)',region:'central'},
+  {value:'sono-belge-vivaldi',label:'04. 소노벨지 비발디파크',region:'central'},
+  {value:'felice-vivaldi',label:'05. 펠리체 비발디파크',region:'central'},
+  {value:'sono-host-yangpyeong',label:'06. 소노호스 양평',region:'central'},
+  {value:'delpino',label:'07. 델피노',region:'central'},
+  {value:'ul-beach-yangyang',label:'08. 울비치 양양',region:'central'},
+  {value:'ul-beach-samcheok',label:'09. 울비치 삼척',region:'central'},
+  {value:'sono-belle-danyang',label:'10. 소노벨 단양',region:'central'},
+  {value:'sono-cam-gyeongju',label:'11. 소노캄 경주',region:'central'},
+  {value:'sono-belle-cheongsong',label:'12. 소노벨 청송',region:'south'},
+  {value:'sono-belle-cheonan',label:'13. 소노벨 천안',region:'south'},
+  {value:'sono-belle-byeonsan',label:'14. 소노벨 변산',region:'south'},
+  {value:'sono-belle-namhae',label:'15. 소노벨 남해',region:'south'},
+  {value:'sono-cam-geoje',label:'16. 소노캄 거제',region:'south'},
+  {value:'ul-beach-geoje',label:'17. 울비치 거제',region:'south'},
+  {value:'ul-beach-jindo',label:'18. 울비치 진도',region:'south'},
+  {value:'ul-beach-yeosu',label:'19. 울비치 여수',region:'south'},
+  {value:'sono-belle-jeju',label:'20. 소노벨 제주',region:'apac'},
+  {value:'sono-cam-jeju',label:'21. 소노캄 제주',region:'apac'}
+];
+
+function togglePropDrop(){
+  const btn=document.getElementById('prop-multi-btn'),drop=document.getElementById('prop-multi-drop');
+  btn.classList.toggle('open');drop.classList.toggle('open');
+}
+// Close dropdown on outside click
+document.addEventListener('click',e=>{
+  const wrap=document.getElementById('prop-multi-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    document.getElementById('prop-multi-btn')?.classList.remove('open');
+    document.getElementById('prop-multi-drop')?.classList.remove('open');
+  }
+});
+
+function toggleAllProps(el){
+  document.querySelectorAll('.prop-chk').forEach(c=>{c.checked=el.checked});
+  document.querySelectorAll('.region-check').forEach(c=>{c.checked=el.checked});
+  updatePropSelection();
+}
+
+function toggleRegion(el){
+  const region=el.dataset.region;
+  document.querySelectorAll('.prop-chk[data-region="'+region+'"]').forEach(c=>{c.checked=el.checked});
+  syncAllCheck();updatePropSelection();
+}
+
+function syncAllCheck(){
+  const all=document.querySelectorAll('.prop-chk'),checked=document.querySelectorAll('.prop-chk:checked');
+  document.getElementById('chk-all-props').checked=all.length===checked.length;
+  // sync region checks
+  ['vivaldi','central','south','apac'].forEach(r=>{
+    const rAll=document.querySelectorAll('.prop-chk[data-region="'+r+'"]');
+    const rChk=document.querySelectorAll('.prop-chk[data-region="'+r+'"]:checked');
+    const rc=document.querySelector('.region-check[data-region="'+r+'"]');
+    if(rc) rc.checked=rAll.length===rChk.length;
+  });
+}
+
+function updatePropSelection(){
+  syncAllCheck();
+  const checked=[...document.querySelectorAll('.prop-chk:checked')];
+  const btn=document.getElementById('prop-multi-text');
+  const tags=document.getElementById('selected-props');
+  if(checked.length===0){
+    btn.textContent='사업장을 선택하세요';tags.innerHTML='';
+  } else if(checked.length===PROP_DATA.length){
+    btn.textContent='전체 사업장 ('+PROP_DATA.length+'개)';tags.innerHTML='<span class="selected-prop-tag">전체 사업장</span>';
+  } else {
+    btn.textContent=checked.length+'개 사업장 선택됨';
+    tags.innerHTML=checked.map(c=>'<span class="selected-prop-tag">'+c.closest('.prop-opt').textContent.trim()+'</span>').join('');
+  }
+  // Update campaign detail property field
+  const cdProp=document.getElementById('cd-property');
+  if(cdProp){
+    cdProp.value=checked.length===0?'(Step 1에서 선택)':checked.length===PROP_DATA.length?'전체 사업장':checked.map(c=>c.closest('.prop-opt').textContent.trim()).join(', ');
+  }
+  if(checked.length>0) loadOccData();
+}
+
+function getSelectedProperties(){
+  return [...document.querySelectorAll('.prop-chk:checked')].map(c=>({value:c.value, label:c.closest('.prop-opt').textContent.trim()}));
+}
+
+/* ══════════ HTML SOURCE CODE COPY ══════════ */
+function copyHtmlSourceCode(){
+  const h=generateProposalHtml();
+  navigator.clipboard.writeText(h).then(()=>showToast('HTML 소스코드 복사 완료! (text/plain)')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=h;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('HTML 소스코드 복사 완료');
+  });
 }
 
 /* ══════════ INIT ══════════ */
