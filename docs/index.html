@@ -2057,7 +2057,7 @@ if ('serviceWorker' in navigator) {
               <div style="width:1px;height:16px;background:rgba(255,255,255,0.1);"></div>
               <div id="da-view-toggle" style="display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);">
                 <button class="da-view-btn active" data-da-view="property" onclick="switchDailyView('property')" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border:none;background:rgba(240,165,0,0.2);color:#f0a500;cursor:pointer;font-weight:700;">사업장별</button>
-                <button class="da-view-btn" data-da-view="segment" onclick="switchDailyView('segment')" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border:none;background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-weight:600;">채널별</button>
+                <button class="da-view-btn" data-da-view="channel" onclick="switchDailyView('channel')" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border:none;background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-weight:600;">채널별</button>
               </div>
             </div>
             <div id="da-inbound-note" style="display:none;font-family:var(--mono);font-size:8.5px;color:#a892c8;margin-bottom:2px;text-align:left;">※ OTA + G-OTA + Inbound 세그먼트만 표시</div>
@@ -15765,15 +15765,19 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
   function _getDailyData(month, view) {
     if (month === 'all') {
       if (view === 'property') return DA.byProperty || {};
+      if (view === 'channel') return DA.byChannel || {};
       return _hasKeys(DA.bySegment) ? DA.bySegment : (DA.byChannel || {});
     } else {
       if (view === 'property') {
         return (DA.byPropertyMonth || {})[month] || {};
+      } else if (view === 'channel') {
+        var chMonth = (DA.byChannelMonth || {})[month];
+        return (chMonth && Object.keys(chMonth).length) ? chMonth : (DA.byChannel || {});
       } else {
         var segMonth = (DA.bySegmentMonth || {})[month];
         if (segMonth && Object.keys(segMonth).length) return segMonth;
-        var chMonth = (DA.byChannelMonth || {})[month];
-        if (chMonth && Object.keys(chMonth).length) return chMonth;
+        var chMonth2 = (DA.byChannelMonth || {})[month];
+        if (chMonth2 && Object.keys(chMonth2).length) return chMonth2;
         return _hasKeys(DA.bySegment) ? DA.bySegment : (DA.byChannel || {});
       }
     }
@@ -15797,8 +15801,8 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
     var showYoy = _daCurrentView === 'property' && Object.keys(yoyProp).length > 0;
 
     var dataKeys = Object.keys(data);
-    // segment 뷰일 때 OTA/G-OTA/Inbound만 표시
-    if (_daCurrentView !== 'property') { dataKeys = dataKeys.filter(function(k){ return ALLOWED_SEGS[k]; }); }
+    // segment 뷰일 때 OTA/G-OTA/Inbound만 표시 (channel 뷰는 전체 거래처 표시)
+    if (_daCurrentView === 'segment') { dataKeys = dataKeys.filter(function(k){ return ALLOWED_SEGS[k]; }); }
     var entries = dataKeys.map(function(k) {
       var d = data[k];
       // 사업장 하위에 OTA/G-OTA/Inbound 세그먼트가 있으면 그 합으로 재계산 (GS 채널만)
@@ -16005,7 +16009,7 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 
     try {
       var data = _getDailyData(month, _daCurrentView);
-      var showRev = _daCurrentView === 'property' || _daCurrentView === 'segment';
+      var showRev = _daCurrentView === 'property' || _daCurrentView === 'segment' || _daCurrentView === 'channel';
       _renderDailyTable(data, showRev, month);
     } catch(e) {
       console.warn('당일분석 테이블 렌더링 오류:', e);
@@ -16027,11 +16031,15 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
     });
     // INBOUND 제외 안내 표시
     var ibNote = document.getElementById('da-inbound-note');
-    if (ibNote) ibNote.style.display = (view === 'segment') ? 'block' : 'none';
+    if (ibNote) {
+      if (view === 'channel') { ibNote.textContent = '※ OTA + G-OTA 거래처별 표시 (Inbound 제외)'; ibNote.style.display = 'block'; }
+      else if (view === 'segment') { ibNote.textContent = '※ OTA + G-OTA + Inbound 세그먼트만 표시'; ibNote.style.display = 'block'; }
+      else { ibNote.style.display = 'none'; }
+    }
     _updateYoyStrip(_daCurrentMonth);
     try {
       var data = _getDailyData(_daCurrentMonth, view);
-      var showRev = view === 'property' || view === 'segment';
+      var showRev = view === 'property' || view === 'segment' || view === 'channel';
       _renderDailyTable(data, showRev, _daCurrentMonth);
     } catch(e) {
       console.warn('당일분석 뷰 전환 렌더링 오류:', e);
