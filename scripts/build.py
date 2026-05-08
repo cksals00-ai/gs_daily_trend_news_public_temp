@@ -2731,6 +2731,22 @@ def main():
 
     agg_data = load_json(DATA_DIR / "db_aggregated.json")
     admin_data = load_json(DATA_DIR / "admin_input.json")
+
+    # ── OTB 데이터 자동 재생성 (db_aggregated.json 기반) ──
+    otb_script = Path(__file__).resolve().parent / "generate_otb_data.py"
+    if otb_script.exists() and agg_data:
+        try:
+            result = subprocess.run(
+                [sys.executable, str(otb_script)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ generate_otb_data 완료")
+            else:
+                logger.warning(f"✗ generate_otb_data 실패: {result.stderr.strip()[-200:]}")
+        except Exception as e:
+            logger.warning(f"✗ generate_otb_data 실행 오류: {e}")
+
     otb_data = load_json(DOCS_DIR / "data" / "otb_data.json")
     rm_fcst = load_json(DOCS_DIR / "data" / "rm_fcst.json")
 

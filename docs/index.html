@@ -1326,6 +1326,12 @@ if ('serviceWorker' in navigator) {
       font-size: 24px !important;
     }
   }
+  /* ===== 타블렛 (860px 이하) ===== */
+  @media (max-width: 860px) {
+    .masthead-inner { flex-wrap: wrap; height: auto; padding: 8px 16px; gap: 6px; }
+    .masthead-right { order: 3; font-size: 10px; }
+    .page-badge { font-size: 10px; padding: 2px 8px; }
+  }
   /* ===== 모바일 (480px 이하) — 통합 블록 ===== */
   @media (max-width: 480px) {
     body { font-size: 13px; line-height: 1.55; -webkit-text-size-adjust: 100%; }
@@ -14678,26 +14684,37 @@ function toggleNewsMore(btn, id) {
         var catNames = Object.keys(byCat);
         var pkgRn = 0, pkgRev = 0;     // 패키지 전체
         var roRn = 0, roRev = 0, roAdr = 0;
+        // 패키지 중 Top 카테고리 (룸온니 제외)
         var topCat = null, topRn = -1, topRev = 0, topAdr = 0;
+        // 패키지 중 YoY 최대 변동 (룸온니 제외)
         var yoyMover = null, yoyMoverPct = 0, yoyMoverDelta = 0;
+        var yoyMoverRn = 0, yoyMoverRev = 0, yoyMoverAdr = 0;
 
         catNames.forEach(function(cat) {
           var cur = _curMonth(byCat[cat]);
           var ly  = _lyMonth(byCat[cat]);
-          pkgRn += cur.rn || 0;
-          pkgRev += cur.rev || 0;
-          if (cat === '룸온니/프로모션') {
-            roRn = cur.rn || 0; roRev = cur.rev || 0; roAdr = cur.adr || 0;
-          }
-          if ((cur.rn || 0) > topRn) {
-            topRn = cur.rn || 0; topCat = cat; topRev = cur.rev || 0; topAdr = cur.adr || 0;
-          }
-          if ((ly.rn || 0) > 0) {
-            var pct = ((cur.rn || 0) - ly.rn) / ly.rn * 100;
-            if (Math.abs(pct) > Math.abs(yoyMoverPct)) {
-              yoyMoverPct = Math.round(pct);
-              yoyMoverDelta = (cur.rn || 0) - ly.rn;
-              yoyMover = cat;
+          var isRoomOnly = (cat === '룸온니/프로모션' || cat === '룸온니' || cat === '프로모션');
+          if (isRoomOnly) {
+            roRn += cur.rn || 0; roRev += cur.rev || 0; roAdr = cur.adr || 0;
+          } else {
+            // 패키지 카테고리만 합산
+            pkgRn += cur.rn || 0;
+            pkgRev += cur.rev || 0;
+            // 패키지 중 Top 카테고리
+            if ((cur.rn || 0) > topRn) {
+              topRn = cur.rn || 0; topCat = cat; topRev = cur.rev || 0; topAdr = cur.adr || 0;
+            }
+            // 패키지 중 YoY 최대 변동
+            if ((ly.rn || 0) > 0) {
+              var pct = ((cur.rn || 0) - ly.rn) / ly.rn * 100;
+              if (Math.abs(pct) > Math.abs(yoyMoverPct)) {
+                yoyMoverPct = Math.round(pct);
+                yoyMoverDelta = (cur.rn || 0) - ly.rn;
+                yoyMover = cat;
+                yoyMoverRn = cur.rn || 0;
+                yoyMoverRev = cur.rev || 0;
+                yoyMoverAdr = cur.adr || 0;
+              }
             }
           }
         });
@@ -14754,7 +14771,7 @@ function toggleNewsMore(btn, id) {
         );
 
         var card3 = _card(
-          '◆ Top 카테고리',
+          '◆ 패키지 Top 카테고리',
           'rgba(78,205,196,0.25)', '#4ecdc4',
           (topCat ?
             '<div style="font-family:var(--serif);font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px;line-height:1.2;">' + topCat + '</div>' +
@@ -14764,21 +14781,26 @@ function toggleNewsMore(btn, id) {
             '  <span>매출 <strong style="color:var(--ink);">' + topRev.toLocaleString() + '</strong></span>' +
             '</div>'
             : '<div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.35);">데이터 없음</div>'),
-          monLbl + ' · 최대 객실수'
+          monLbl + ' · 패키지 중 최대 객실수'
         );
 
         var moverColor = yoyMoverPct >= 0 ? '#2d7a3f' : '#b8332c';
         var card4 = _card(
-          '◆ YoY 최대 변동',
+          '◆ 패키지 YoY 최대 변동',
           'rgba(217,122,122,0.25)', '#e57373',
           (yoyMover ?
             '<div style="font-family:var(--serif);font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px;line-height:1.2;">' + yoyMover + '</div>' +
-            '<div style="display:flex;align-items:baseline;gap:6px;">' +
+            '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px;">' +
             '  <span style="font-family:var(--mono);font-size:22px;font-weight:900;color:' + moverColor + ';">' + (yoyMoverPct >= 0 ? '+' : '') + yoyMoverPct + '%</span>' +
             '  <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);">' + (yoyMoverDelta >= 0 ? '+' : '') + yoyMoverDelta.toLocaleString() + '실</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.55);">' +
+            '  <span>객실 <strong style="color:var(--ink);">' + yoyMoverRn.toLocaleString() + '</strong></span>' +
+            '  <span>ADR <strong style="color:var(--ink);">' + yoyMoverAdr.toLocaleString() + '</strong>천</span>' +
+            '  <span>매출 <strong style="color:var(--ink);">' + yoyMoverRev.toLocaleString() + '</strong>백만</span>' +
             '</div>'
             : '<div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.35);">전년 데이터 없음</div>'),
-          curY + '/' + _pad2(curM) + ' vs ' + (curY-1) + '/' + _pad2(curM) + ' (stay-month)'
+          curY + '/' + _pad2(curM) + ' vs ' + (curY-1) + '/' + _pad2(curM) + ' (패키지 only)'
         );
 
         if (pdEl) {
