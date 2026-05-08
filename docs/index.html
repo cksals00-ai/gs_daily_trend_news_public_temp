@@ -15764,15 +15764,17 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
   function _hasKeys(obj) { return obj && Object.keys(obj).length > 0; }
   function _getDailyData(month, view) {
     if (month === 'all') {
-      return view === 'property' ? (DA.byProperty || {}) : (_hasKeys(DA.byChannel) ? DA.byChannel : DA.bySegment || {});
+      if (view === 'property') return DA.byProperty || {};
+      return _hasKeys(DA.bySegment) ? DA.bySegment : (DA.byChannel || {});
     } else {
       if (view === 'property') {
         return (DA.byPropertyMonth || {})[month] || {};
       } else {
+        var segMonth = (DA.bySegmentMonth || {})[month];
+        if (segMonth && Object.keys(segMonth).length) return segMonth;
         var chMonth = (DA.byChannelMonth || {})[month];
         if (chMonth && Object.keys(chMonth).length) return chMonth;
-        var segMonth = (DA.bySegmentMonth || {})[month];
-        return segMonth && Object.keys(segMonth).length ? segMonth : (_hasKeys(DA.byChannel) ? DA.byChannel : DA.bySegment || {});
+        return _hasKeys(DA.bySegment) ? DA.bySegment : (DA.byChannel || {});
       }
     }
   }
