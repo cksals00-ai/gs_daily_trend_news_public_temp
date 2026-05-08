@@ -313,6 +313,17 @@ a{color:inherit;text-decoration:none}
   <!-- ═══ STEP 2 ═══ -->
   <div class="step-panel" id="panel-2">
     <div class="sec-card">
+      <div class="sec-head"><span class="sec-head-title">샘플 다운로드</span><span class="sec-head-meta"><span class="tag tag-info">양식 참고용</span></span></div>
+      <div class="sec-body">
+        <p style="color:var(--ink-muted);font-size:12px;margin-bottom:12px">요금표 양식 및 실데이터 샘플입니다. 다운로드하여 참고하거나 직접 업로드할 수 있습니다.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <a href="품의기획_일별요금표양식.xlsx" download class="btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📥 일별요금표 양식</a>
+          <a href="품의기획_기획전요금표양식.xlsx" download class="btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📥 기획전요금표 양식</a>
+          <a href="품의기획_일별요금표_실데이터.xlsx" download class="btn btn-info" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📥 실데이터 (21개 사업장)</a>
+        </div>
+      </div>
+    </div>
+    <div class="sec-card">
       <div class="sec-head"><span class="sec-head-title">요금표 엑셀 업로드</span><span class="sec-head-meta">SheetJS 클라이언트 파싱</span></div>
       <div class="sec-body">
         <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
@@ -445,6 +456,22 @@ a{color:inherit;text-decoration:none}
         <div class="form-group"><label class="form-label">상품 특이사항</label><input class="form-input" id="txt-note" value="성수기 주말 적용 불가, 연박 시 추가 할인 5%"></div>
       </div>
     </div></div>
+
+    <!-- 품의서 작성 — 보고 실적 -->
+    <div class="sec-card">
+      <div class="sec-head"><span class="sec-head-title">품의서 작성 — 보고 실적</span><span class="sec-head-meta"><span class="tag tag-gold">전체(RM) vs GS실적</span></span></div>
+      <div class="sec-body" style="overflow-x:auto">
+        <table class="data-table" id="tbl-report-performance">
+          <thead><tr><th style="text-align:left">구분</th><th>전체(RM)</th><th>GS실적</th></tr></thead>
+          <tbody>
+            <tr><td>OCC (%)</td><td contenteditable="true">-</td><td contenteditable="true">-</td></tr>
+            <tr><td>RNs (실)</td><td contenteditable="true">-</td><td contenteditable="true">-</td></tr>
+            <tr><td>ADR (천원)</td><td contenteditable="true">-</td><td contenteditable="true">-</td></tr>
+            <tr><td>REV (백만원)</td><td contenteditable="true">-</td><td contenteditable="true">-</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- 객실 배분가 요약 -->
     <div class="sec-card"><div class="sec-head"><span class="sec-head-title">객실 배분가 요약표</span><span class="sec-head-meta"><span class="edit-hint">셀 클릭 수정 가능</span></span></div>
@@ -1239,6 +1266,10 @@ function generateProposalHtml(){
 <tr><td style="${th}">상품구성</td><td style="${ts}">${p.composition}</td></tr>
 <tr><td style="${th}">기준인원</td><td style="${ts}">${p.pax}인</td></tr>
 <tr><td style="${th}">특이사항</td><td style="${ts}">${p.note}</td></tr></table>`;
+  // 보고 실적
+  h+=`<p style="${hdr}">품의서 작성 — 보고 실적</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">전체(RM)</th><th style="${th}">GS실적</th></tr>`;
+  document.querySelectorAll('#tbl-report-performance tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
+  h+='</table>';
   // 객실 배분가 from DOM
   h+=`<p style="${hdr}">4. 객실 배분가 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
   document.querySelectorAll('#tbl-room-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});

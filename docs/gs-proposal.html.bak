@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>품의서 작성 · GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
+  --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+  --gold:#c9a063;--gold-bright:#e6b970;
+  --positive:#4caf6f;--positive-bg:#1f3a28;
+  --warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;
+  --info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,.10);--rule-strong:rgba(255,255,255,.20);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all}
+input,button,select,textarea,table,th,td{font-family:var(--sans)!important}
+a{color:inherit;text-decoration:none}
+.masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200}
+.masthead-inner{max-width:1440px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo-wrap{display:flex;align-items:baseline}.logo-mark{font-weight:800;font-size:18px;color:var(--gold-bright)}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px}
+.page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:.12em}
+.masthead-right{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6)}
+.back-btn{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:5px 10px;border-radius:3px;transition:color .15s}.back-btn:hover{color:var(--ink)}
+.main-wrap{max-width:1440px;margin:0 auto;padding:24px 24px 80px}
+
+/* STEPPER */
+.stepper{display:flex;align-items:center;gap:0;margin-bottom:28px;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;overflow:hidden}
+.step-item{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 16px;border-radius:6px;transition:all .15s;flex:1;min-width:0}
+.step-item:hover{background:var(--bg-soft)}
+.step-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:800;border:2px solid var(--rule);color:var(--ink-faint);background:transparent;flex-shrink:0;transition:all .2s}
+.step-item.active .step-num{background:var(--gold);border-color:var(--gold);color:#000}
+.step-item.done .step-num{background:var(--positive);border-color:var(--positive);color:#fff}
+.step-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.step-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-faint);font-weight:700;text-transform:uppercase}
+.step-item.active .step-label{color:var(--gold-bright)}
+.step-title{font-size:13px;font-weight:700;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step-item.active .step-title{color:var(--ink)}
+.step-arrow{color:var(--ink-faint);font-size:16px;margin:0 4px;flex-shrink:0}
+.sec-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-bottom:18px}
+.sec-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,rgba(201,160,99,0.08) 0%,transparent 50%)}
+.sec-head-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.sec-head-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--gold);border-radius:2px}
+.sec-head-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);display:flex;gap:10px;align-items:center}
+.sec-body{padding:18px}
+.form-row{display:flex;gap:16px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px}
+.form-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase}
+.form-select,.form-input,.form-date{width:100%;padding:9px 12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:13px;font-weight:600;outline:none;transition:border-color .15s}
+.form-select:focus,.form-input:focus,.form-date:focus{border-color:var(--gold)}
+.form-select option{background:var(--bg-card);color:var(--ink)}
+.form-textarea{width:100%;min-height:100px;padding:12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:13px;font-weight:500;outline:none;resize:vertical;line-height:1.6;transition:border-color .15s}
+.form-textarea:focus{border-color:var(--gold)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:5px;border:1px solid var(--rule);background:var(--bg-soft);color:var(--ink-soft);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.btn:hover{background:var(--bg-hover);color:var(--ink);border-color:var(--rule-strong)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#000}.btn-primary:hover{background:var(--gold-bright);border-color:var(--gold-bright)}
+.btn-positive{background:rgba(76,175,111,0.16);border-color:var(--positive);color:var(--positive)}.btn-positive:hover{background:rgba(76,175,111,0.26)}
+.btn-info{background:rgba(90,159,196,0.14);border-color:var(--info);color:var(--info)}.btn-info:hover{background:rgba(90,159,196,0.24)}
+.btn-sm{padding:5px 12px;font-size:10px}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.data-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.data-table th{font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;text-align:center;border-bottom:2px solid var(--rule-strong);background:var(--bg-deep);position:sticky;top:0;white-space:nowrap}
+.data-table td{padding:7px 10px;text-align:center;border-bottom:1px solid var(--rule);color:var(--ink-soft);font-weight:600;transition:background .1s}
+.data-table td:first-child{text-align:left;font-weight:700;color:var(--ink)}
+.data-table tr:hover td{background:rgba(201,160,99,0.05)}
+.data-table td[contenteditable="true"]{cursor:text;outline:none}
+.data-table td[contenteditable="true"]:focus{background:rgba(201,160,99,0.12);box-shadow:inset 0 0 0 1px var(--gold)}
+.data-table .total-row td{font-weight:800;color:var(--ink);border-top:2px solid var(--rule-strong)}
+.rate-high{color:var(--positive)!important}.rate-mid{color:var(--gold-bright)!important}.rate-low{color:var(--warning)!important}.rate-vlow{color:var(--negative)!important}
+.occ-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+.occ-cell{background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;padding:8px 10px;text-align:center;display:flex;flex-direction:column;gap:3px}
+.occ-date{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700}
+.occ-rate{font-family:var(--mono);font-size:16px;font-weight:800}
+.occ-detail{font-family:var(--mono);font-size:9px;color:var(--ink-faint)}
+.upload-zone{border:2px dashed var(--rule);border-radius:8px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--gold);background:rgba(201,160,99,0.06)}
+.upload-icon{font-size:36px;margin-bottom:10px}.upload-text{font-size:13px;color:var(--ink-muted);font-weight:600}
+.upload-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:6px}
+.upload-status{margin-top:14px;padding:10px 14px;background:var(--positive-bg);border:1px solid rgba(76,175,111,0.3);border-radius:5px;font-family:var(--mono);font-size:11px;color:var(--positive);display:none;font-weight:600}
+.upload-status.show{display:block}
+.step-panel{display:none}.step-panel.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.footer-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--rule)}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.summary-card{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.summary-card-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--ink-faint);font-weight:700;text-transform:uppercase}
+.summary-card-value{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--ink)}.summary-card-value.gold{color:var(--gold-bright)}
+.summary-card-sub{font-family:var(--mono);font-size:10px;color:var(--ink-muted)}
+.tab-bar{display:flex;border-bottom:1px solid var(--rule);gap:0;margin-bottom:16px}
+.tab-btn{padding:10px 18px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-faint);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn:hover{color:var(--ink-soft)}.tab-btn.active{color:var(--gold-bright);border-bottom-color:var(--gold)}
+.html-preview{background:#fff;color:#000;border-radius:6px;padding:20px;max-height:600px;overflow:auto;font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:12px}
+.html-preview table{border-collapse:collapse;width:100%}
+.html-preview th,.html-preview td{border:1px solid #999;padding:4px 8px;text-align:center;font-size:11px}
+.html-preview th{background:#e8e8e8;font-weight:700}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--positive);color:#fff;padding:12px 24px;border-radius:6px;font-family:var(--mono);font-size:12px;font-weight:700;z-index:9999;transition:transform .3s ease;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:10px;font-family:var(--mono);font-size:10px;font-weight:700;border:1px solid var(--rule);background:var(--bg-soft);color:var(--ink-muted)}
+.tag-gold{background:rgba(201,160,99,0.15);border-color:rgba(201,160,99,0.35);color:var(--gold-bright)}
+.tag-info{background:rgba(90,159,196,0.14);border-color:rgba(90,159,196,0.35);color:var(--info)}
+.tag-positive{background:rgba(76,175,111,0.14);border-color:rgba(76,175,111,0.35);color:var(--positive)}
+.tag-warning{background:rgba(232,162,86,0.14);border-color:rgba(232,162,86,0.35);color:var(--warning)}
+.edit-hint{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);display:flex;align-items:center;gap:5px}
+.edit-hint::before{content:'✏';font-size:11px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{background:var(--bg-card);border:1px solid var(--rule-strong);border-radius:10px;width:90%;max-width:900px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--bg-card);z-index:2}
+.modal-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gold-bright);letter-spacing:.05em}
+.modal-close{background:none;border:none;color:var(--ink-faint);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:4px}.modal-close:hover{color:var(--ink);background:var(--bg-soft)}
+.modal-body{padding:20px}
+
+/* Promo search result card */
+.promo-result{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.promo-result:hover{border-color:var(--gold);background:var(--bg-hover)}
+.promo-result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.promo-result-name{font-size:14px;font-weight:700;color:var(--ink)}
+.promo-result-perf{font-family:var(--mono);font-size:11px;font-weight:700}
+.promo-result-meta{display:flex;gap:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);flex-wrap:wrap}
+.promo-result-actions{margin-top:10px;display:flex;gap:8px}
+
+/* Google Sheet link banner */
+.gsheet-banner{background:linear-gradient(90deg,rgba(66,133,244,0.12),rgba(66,133,244,0.04));border:1px solid rgba(66,133,244,0.3);border-radius:6px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.gsheet-banner-text{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-soft)}
+.gsheet-banner-icon{font-size:22px}
+.gsheet-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:rgba(66,133,244,0.2);color:#4285f4;border:1px solid rgba(66,133,244,0.4)}
+
+@media(max-width:900px){.form-row{flex-direction:column}.stepper{flex-wrap:wrap;gap:4px}.step-arrow{display:none}.summary-grid{grid-template-columns:1fr 1fr}.occ-grid{grid-template-columns:repeat(4,1fr)}}
+@keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:0.6}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap"><span class="logo-mark">SONO &amp; TRINITY</span><span class="team-tag">GS TEAM</span></div>
+    <div class="masthead-right">
+      <span class="page-badge">📋 품의서 작성</span>
+      <span style="background:#f59e0b;color:#000;font-size:11px;font-weight:800;padding:3px 10px;border-radius:4px;margin-left:6px;letter-spacing:0.05em;animation:pulse-badge 2s ease-in-out infinite">🧪 테스트 버전</span>
+      <a class="back-btn" href="gs-sales-report.html">← 세일즈 리포트</a>
+    </div>
+  </div>
+</header>
+
+<div class="main-wrap">
+  <nav class="stepper" id="stepper">
+    <div class="step-item active" data-step="1" onclick="goStep(1)"><div class="step-num">1</div><div class="step-text"><span class="step-label">STEP 1</span><span class="step-title">기본 선택</span></div></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item" data-step="2" onclick="goStep(2)"><div class="step-num">2</div><div class="step-text"><span class="step-label">STEP 2</span><span class="step-title">요금표 업로드</span></div></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item" data-step="3" onclick="goStep(3)"><div class="step-num">3</div><div class="step-text"><span class="step-label">STEP 3</span><span class="step-title">품의 내용 편집</span></div></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item" data-step="4" onclick="goStep(4)"><div class="step-num">4</div><div class="step-text"><span class="step-label">STEP 4</span><span class="step-title">내보내기</span></div></div>
+  </nav>
+
+  <!-- ═══ STEP 1 ═══ -->
+  <div class="step-panel active" id="panel-1">
+    <!-- 과거 프로모션 검색 배너 -->
+    <div class="sec-card" style="border-color:rgba(90,159,196,0.3)">
+      <div class="sec-head" style="background:linear-gradient(90deg,rgba(90,159,196,0.12),transparent)">
+        <span class="sec-head-title" style="color:var(--info)">🔍 과거 프로모션 검색</span>
+        <span class="sec-head-meta"><span class="tag tag-info">세일즈 리포트 연동</span></span>
+      </div>
+      <div class="sec-body">
+        <p style="color:var(--ink-muted);font-size:12px;margin-bottom:14px">동기간 전년/전전년 실적 좋았던 프로모션을 검색하여, 기획 참고 또는 바로 품의 반영할 수 있습니다.</p>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="form-group" style="max-width:220px">
+            <label class="form-label">사업장</label>
+            <select class="form-select" id="promo-search-prop">
+              <option value="sono-calm-yg">소노캄 양양</option>
+              <option value="sono-calm-gj">소노캄 거제</option>
+              <option value="sono-belle-vivaldi">소노벨 비발디파크</option>
+            </select>
+          </div>
+          <div class="form-group" style="max-width:160px">
+            <label class="form-label">기준 투숙월</label>
+            <input type="month" class="form-date" id="promo-search-month" value="2026-07">
+          </div>
+          <div class="form-group" style="max-width:160px">
+            <label class="form-label">검색 범위</label>
+            <select class="form-select" id="promo-search-range">
+              <option value="2">최근 2년</option>
+              <option value="3">최근 3년</option>
+            </select>
+          </div>
+          <div style="padding-bottom:2px"><button class="btn btn-info" onclick="searchPastPromos()">🔍 프로모션 검색</button></div>
+        </div>
+        <div id="promo-search-results"></div>
+      </div>
+    </div>
+
+    <div class="sec-card">
+      <div class="sec-head"><span class="sec-head-title">사업장 · 투숙기간 선택</span><span class="sec-head-meta">Booking Status 자동 연동</span></div>
+      <div class="sec-body">
+        <div class="form-row">
+          <div class="form-group" style="max-width:280px"><label class="form-label">사업장</label>
+            <select class="form-select" id="sel-property" onchange="loadOccData()">
+              <option value="">선택하세요</option>
+              <option value="sono-calm-yg">소노캄 양양</option><option value="sono-calm-gj">소노캄 거제</option>
+              <option value="sono-calm-cc">소노캄 춘천</option><option value="sono-calm-gs">소노캄 고성</option>
+              <option value="sono-belle-vivaldi">소노벨 비발디파크</option><option value="sono-belle-cc">소노벨 천안</option>
+              <option value="sono-moon-danyang">소노문 단양</option><option value="trinity-jeju">트리니티 제주</option>
+            </select>
+          </div>
+          <div class="form-group" style="max-width:200px"><label class="form-label">투숙기간 시작</label><input type="date" class="form-date" id="date-start" value="2026-07-01" onchange="loadOccData()"></div>
+          <div class="form-group" style="max-width:200px"><label class="form-label">투숙기간 종료</label><input type="date" class="form-date" id="date-end" value="2026-07-31" onchange="loadOccData()"></div>
+          <div style="padding-bottom:2px"><button class="btn btn-primary" onclick="loadOccData()">조회</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-card" id="occ-section" style="display:none">
+      <div class="sec-head"><span class="sec-head-title">일자별 OCC · 세그먼트 현황</span><span class="sec-head-meta"><span class="tag tag-info">DUMMY DATA</span></span></div>
+      <div class="sec-body"><div class="summary-grid" id="occ-summary"></div><div class="occ-grid" id="occ-grid"></div></div>
+    </div>
+    <div class="footer-nav"><div></div><button class="btn btn-primary" onclick="goStep(2)">다음: 요금표 업로드 →</button></div>
+  </div>
+
+  <!-- ═══ STEP 2 ═══ -->
+  <div class="step-panel" id="panel-2">
+    <div class="sec-card">
+      <div class="sec-head"><span class="sec-head-title">요금표 엑셀 업로드</span><span class="sec-head-meta">SheetJS 클라이언트 파싱</span></div>
+      <div class="sec-body">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
+          <div class="upload-icon">📊</div><div class="upload-text">요금표 엑셀(.xlsx)을 드래그하거나 클릭하여 업로드</div>
+          <div class="upload-sub">정상가 / 스마트요금 / 프로모션요금 + 부대시설 포함</div>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+        <div class="upload-status" id="upload-status"></div>
+        <div style="margin-top:14px"><button class="btn" onclick="loadDummyRates()">🧪 더미 요금표 로드 (테스트용)</button></div>
+      </div>
+    </div>
+    <div class="sec-card" id="rate-section" style="display:none">
+      <div class="sec-head"><span class="sec-head-title">요금표 시각화</span><span class="sec-head-meta"><span class="edit-hint">셀 클릭으로 직접 수정 가능</span></span></div>
+      <div class="sec-body">
+        <div class="tab-bar" id="rate-tabs">
+          <button class="tab-btn active" onclick="showRateTab('normal',this)">정상가</button>
+          <button class="tab-btn" onclick="showRateTab('smart',this)">스마트요금</button>
+          <button class="tab-btn" onclick="showRateTab('promo',this)">프로모션요금</button>
+          <button class="tab-btn" onclick="showRateTab('addon',this)">부대시설</button>
+          <button class="tab-btn" onclick="showRateTab('analysis',this)">할인율 분석</button>
+        </div>
+        <div id="rate-table-container" style="overflow-x:auto"></div>
+      </div>
+    </div>
+    <div class="footer-nav"><button class="btn" onclick="goStep(1)">← 이전</button><button class="btn btn-primary" onclick="goStep(3)">다음: 품의 내용 편집 →</button></div>
+  </div>
+
+  <!-- ═══ STEP 3 ═══ -->
+  <div class="step-panel" id="panel-3">
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">시행취지</span></div><div class="sec-body">
+      <textarea class="form-textarea" id="txt-purpose" placeholder="품의 시행취지를 작성하세요...">성수기 객실 가동률 극대화 및 회원 만족도 제고를 위한 여름 시즌 패키지 상품 기획.
+전년 동기 대비 OCC 5%p 상승 목표 달성을 위해, 회원/FIT 채널별 차등 할인 전략을 적용한 프로모션 요금을 수립하여 판매 경쟁력을 확보하고자 함.</textarea>
+    </div></div>
+
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">OCC · 현황</span><span class="sec-head-meta"><span class="tag tag-positive">Step 1에서 자동 로드</span></span></div>
+      <div class="sec-body" id="step3-occ"><p style="color:var(--ink-faint);font-size:12px">Step 1에서 사업장/기간을 선택하면 자동으로 데이터가 표시됩니다.</p></div>
+    </div>
+
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">상품 운영안</span></div><div class="sec-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">상품명</label><input class="form-input" id="txt-prod-name" value="2026 Summer COOL 패키지"></div>
+        <div class="form-group"><label class="form-label">소구점</label><input class="form-input" id="txt-appeal" value="워터파크 무료 이용 + 조식 할인"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">판매채널</label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--ink-soft)"><input type="checkbox" checked> 리조트 회원 기명</label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--ink-soft)"><input type="checkbox" checked> 리조트 회원 무기명</label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--ink-soft)"><input type="checkbox" checked> D멤버스 / FIT</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="max-width:180px"><label class="form-label">판매기간 시작</label><input type="date" class="form-date" value="2026-06-15"></div>
+        <div class="form-group" style="max-width:180px"><label class="form-label">판매기간 종료</label><input type="date" class="form-date" value="2026-08-31"></div>
+        <div class="form-group" style="max-width:180px"><label class="form-label">투숙기간 시작</label><input type="date" class="form-date" value="2026-07-01"></div>
+        <div class="form-group" style="max-width:180px"><label class="form-label">투숙기간 종료</label><input type="date" class="form-date" value="2026-07-31"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label class="form-label">상품구성</label><textarea class="form-textarea" style="min-height:60px" id="txt-composition">객실 1박 + 워터파크 2회 이용권 + 조식뷔페 2인 (기준 2인, 최대 4인)</textarea></div></div>
+      <div class="form-row">
+        <div class="form-group" style="max-width:120px"><label class="form-label">기준인원</label><input class="form-input" type="number" id="txt-pax" value="2" min="1" max="10"></div>
+        <div class="form-group"><label class="form-label">상품 특이사항</label><input class="form-input" id="txt-note" value="성수기 주말 적용 불가, 연박 시 추가 할인 5%"></div>
+      </div>
+    </div></div>
+
+    <!-- 객실 배분가 요약 -->
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">객실 배분가 요약표</span><span class="sec-head-meta"><span class="edit-hint">셀 클릭 수정 가능</span></span></div>
+      <div class="sec-body" style="overflow-x:auto"><table class="data-table" id="tbl-room-summary"><thead><tr><th style="text-align:left">구분</th><th>회원 기명</th><th>회원 무기명</th><th>D멤버스·FIT</th><th>무기명↔FIT Gap</th></tr></thead>
+        <tbody><tr><td>배분가 범위</td><td contenteditable="true">89,000~149,000</td><td contenteditable="true">109,000~169,000</td><td contenteditable="true">129,000~189,000</td><td class="rate-mid">20,000~20,000</td></tr>
+        <tr><td>할인율 범위</td><td contenteditable="true" class="rate-high">40~55%</td><td contenteditable="true" class="rate-mid">30~45%</td><td contenteditable="true" class="rate-low">15~25%</td><td>—</td></tr></tbody></table></div>
+    </div>
+
+    <!-- 부대업장 할인율 -->
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">부대업장 할인율 표</span></div>
+      <div class="sec-body" style="overflow-x:auto"><table class="data-table" id="tbl-addon-summary"><thead><tr><th style="text-align:left">부대시설</th><th>정상가</th><th>배분가</th><th>할인율</th></tr></thead>
+        <tbody>
+          <tr><td>조식뷔페 (성인)</td><td contenteditable="true">42,000</td><td contenteditable="true">29,400</td><td class="rate-high">30%</td></tr>
+          <tr><td>워터파크 (성인)</td><td contenteditable="true">68,000</td><td contenteditable="true">0</td><td class="rate-high">무료</td></tr>
+          <tr><td>히어로즈 (성인)</td><td contenteditable="true">35,000</td><td contenteditable="true">24,500</td><td class="rate-mid">30%</td></tr>
+          <tr><td>웰컴드링크</td><td contenteditable="true">15,000</td><td contenteditable="true">0</td><td class="rate-high">무료</td></tr>
+        </tbody></table></div>
+    </div>
+
+    <!-- 종합할인 요약 -->
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">종합할인 요약표 (객실+부대)</span></div>
+      <div class="sec-body" style="overflow-x:auto"><table class="data-table" id="tbl-total-summary"><thead><tr><th style="text-align:left">구분</th><th>회원 기명</th><th>회원 무기명</th><th>D멤버스·FIT</th></tr></thead>
+        <tbody><tr><td>판매가 범위</td><td contenteditable="true">89,000~149,000</td><td contenteditable="true">109,000~169,000</td><td contenteditable="true">129,000~189,000</td></tr>
+        <tr><td>종합 할인율</td><td contenteditable="true" class="rate-high">45~60%</td><td contenteditable="true" class="rate-mid">35~50%</td><td contenteditable="true" class="rate-low">20~30%</td></tr></tbody></table></div>
+    </div>
+
+    <!-- KPI (사업장×월) -->
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">KPI — 사업장별 × 월별 목표</span><span class="sec-head-meta"><span class="tag tag-gold">갑지: 상세 / 품의: 합계</span></span></div>
+      <div class="sec-body">
+        <p class="edit-hint" style="margin-bottom:10px">사업장/월을 추가하고 목표 객실수를 입력하세요. 품의 시트에는 합계가 자동 반영됩니다.</p>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-kpi">
+            <thead><tr><th style="text-align:left">사업장</th><th>7월</th><th>8월</th><th>합계</th></tr></thead>
+            <tbody>
+              <tr><td>소노캄 양양</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="7">400</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="8">350</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">750</td></tr>
+              <tr><td>소노캄 거제</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="7">250</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="8">200</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">450</td></tr>
+              <tr class="total-row"><td>합계</td><td class="kpi-col-sum">650</td><td class="kpi-col-sum">550</td><td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">1,200</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-sm" onclick="addKpiRow()">+ 사업장 추가</button></div>
+        <div class="form-row" style="margin-top:16px">
+          <div class="form-group" style="max-width:200px"><label class="form-label">목표 매출 (합계)</label><input class="form-input" id="txt-kpi-revenue" value="180,000,000"></div>
+          <div class="form-group" style="max-width:200px"><label class="form-label">목표 OCC 기여</label><input class="form-input" id="txt-kpi-occ" value="+5%p"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 기타 협조사항 -->
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">기타 협조사항</span></div><div class="sec-body">
+      <div class="form-row"><div class="form-group"><label class="form-label">영업기획</label><textarea class="form-textarea" style="min-height:45px" id="coop-sales">패키지코드 생성 및 시스템 연동 요청</textarea></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">마케팅기획</label><textarea class="form-textarea" style="min-height:45px" id="coop-mkt">D멤버스 앱 배너 및 푸시 알림 집행 요청</textarea></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">GS (영업지원)</label><textarea class="form-textarea" style="min-height:45px" id="coop-gs">회원 안내 문자/메일 발송 협조</textarea></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">홍보</label><textarea class="form-textarea" style="min-height:45px" id="coop-pr">SNS 콘텐츠 제작 및 블로그 포스팅 요청</textarea></div></div>
+    </div></div>
+
+    <div class="footer-nav"><button class="btn" onclick="goStep(2)">← 이전</button><button class="btn btn-primary" onclick="goStep(4)">다음: 내보내기 →</button></div>
+  </div>
+
+  <!-- ═══ STEP 4 ═══ -->
+  <div class="step-panel" id="panel-4">
+    <div class="sec-card">
+      <div class="sec-head"><span class="sec-head-title">내보내기</span><span class="sec-head-meta">3종 출력</span></div>
+      <div class="sec-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <div class="summary-card" style="padding:24px;cursor:pointer;transition:all .15s" onclick="exportExcel()" onmouseenter="this.style.borderColor='var(--gold)'" onmouseleave="this.style.borderColor=''">
+            <div style="font-size:28px;margin-bottom:8px">📊</div><div class="summary-card-label">EXCEL EXPORT</div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin:6px 0">엑셀 내보내기</div>
+            <div class="summary-card-sub">품의 시트(합계) + 갑지(사업장×월 상세) 2시트</div>
+          </div>
+          <div class="summary-card" style="padding:24px;cursor:pointer;transition:all .15s" onclick="showHtmlExport()" onmouseenter="this.style.borderColor='var(--gold)'" onmouseleave="this.style.borderColor=''">
+            <div style="font-size:28px;margin-bottom:8px">📋</div><div class="summary-card-label">HTML EXPORT</div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin:6px 0">HTML 내보내기</div>
+            <div class="summary-card-sub">그룹웨어 에디터 복붙용 — inline 스타일</div>
+          </div>
+          <div class="summary-card" style="padding:24px;cursor:pointer;transition:all .15s" onclick="showGsheetExport()" onmouseenter="this.style.borderColor='rgba(66,133,244,0.6)'" onmouseleave="this.style.borderColor=''">
+            <div style="font-size:28px;margin-bottom:8px">📝</div><div class="summary-card-label">ACTION PLAN</div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin:6px 0">구글시트 연동</div>
+            <div class="summary-card-sub">Action Plan 시트에 자동 작성 (향후 연동)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HTML Export Preview -->
+    <div class="sec-card" id="html-export-section" style="display:none">
+      <div class="sec-head"><span class="sec-head-title">그룹웨어 HTML 미리보기</span><span class="sec-head-meta"><button class="btn btn-primary btn-sm" onclick="copyHtmlToClipboard()">📋 HTML 복사</button></span></div>
+      <div class="sec-body">
+        <div class="html-preview" id="html-preview"></div>
+        <div style="margin-top:12px"><button class="btn btn-sm" onclick="toggleHtmlSource()">소스 코드 보기/숨기기</button></div>
+        <pre id="html-source" style="display:none;background:var(--bg-deep);color:var(--ink-muted);padding:14px;border-radius:5px;font-family:var(--mono);font-size:10.5px;max-height:400px;overflow:auto;margin-top:10px;white-space:pre-wrap;word-break:break-all;border:1px solid var(--rule)"></pre>
+      </div>
+    </div>
+
+    <!-- Google Sheet 연동 UI -->
+    <div class="sec-card" id="gsheet-section" style="display:none">
+      <div class="sec-head" style="background:linear-gradient(90deg,rgba(66,133,244,0.10),transparent)">
+        <span class="sec-head-title" style="color:#4285f4">Action Plan 구글시트 연동</span>
+        <span class="sec-head-meta"><span class="gsheet-badge">향후 연동 예정</span></span>
+      </div>
+      <div class="sec-body">
+        <div class="gsheet-banner" style="margin-bottom:16px">
+          <div class="gsheet-banner-text"><span class="gsheet-banner-icon">📄</span><div><strong>Action Plan Google Sheet</strong><br><span style="font-size:11px;color:var(--ink-faint)">품의 승인 후 자동으로 Action Plan 시트에 기획전 정보가 작성됩니다</span></div></div>
+          <span class="gsheet-badge">API 연동 준비중</span>
+        </div>
+        <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.1em;font-weight:700;margin-bottom:10px">작성될 데이터 미리보기</p>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-gsheet-preview">
+            <thead><tr><th style="text-align:left">필드</th><th>값</th><th>시트 컬럼</th></tr></thead>
+            <tbody id="gsheet-preview-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-info" onclick="showToast('구글시트 API 연동은 향후 구현 예정입니다')">🔗 시트 연결 설정</button>
+          <button class="btn btn-positive" onclick="simulateGsheetWrite()">✅ 시트에 작성 (시뮬레이션)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-nav"><button class="btn" onclick="goStep(3)">← 이전</button><span class="tag tag-gold" style="font-size:12px;padding:6px 14px">✅ 품의서 작성 완료</span></div>
+  </div>
+</div>
+
+<!-- Past Promo Detail Modal -->
+<div class="modal-overlay" id="promo-modal"><div class="modal"><div class="modal-head"><span class="modal-title">프로모션 상세</span><button class="modal-close" onclick="closeModal('promo-modal')">✕</button></div><div class="modal-body" id="promo-modal-body"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════ STATE ══════════ */
+let currentStep=1, rateData=null, occData=null;
+
+/* ══════════ proposalData — 구글시트 연동용 통합 데이터 구조 ══════════ */
+const proposalData = {
+  meta: { id: 'PROP-'+Date.now(), createdAt: new Date().toISOString(), status: 'draft' },
+  property: '', stayStart: '', stayEnd: '', sellStart: '', sellEnd: '',
+  productName: '', appeal: '', channels: [], composition: '', pax: 2, note: '',
+  purpose: '',
+  kpi: { byPropertyMonth: [], totalRooms: 0, totalRevenue: '', occContribution: '' },
+  roomSummary: [], addonSummary: [], totalSummary: [],
+  cooperation: { salesPlanning:'', marketing:'', gs:'', pr:'' },
+  rateTable: null,
+  actionPlanRow: null  // 구글시트에 쓸 1행 요약
+};
+
+function collectProposalData() {
+  const p = proposalData;
+  p.property = document.getElementById('sel-property')?.selectedOptions[0]?.text || '';
+  p.stayStart = document.getElementById('date-start')?.value || '';
+  p.stayEnd = document.getElementById('date-end')?.value || '';
+  p.productName = document.getElementById('txt-prod-name')?.value || '';
+  p.appeal = document.getElementById('txt-appeal')?.value || '';
+  p.composition = document.getElementById('txt-composition')?.value || '';
+  p.pax = document.getElementById('txt-pax')?.value || 2;
+  p.note = document.getElementById('txt-note')?.value || '';
+  p.purpose = document.getElementById('txt-purpose')?.value || '';
+  p.kpi.totalRevenue = document.getElementById('txt-kpi-revenue')?.value || '';
+  p.kpi.occContribution = document.getElementById('txt-kpi-occ')?.value || '';
+  p.cooperation = {
+    salesPlanning: document.getElementById('coop-sales')?.value||'',
+    marketing: document.getElementById('coop-mkt')?.value||'',
+    gs: document.getElementById('coop-gs')?.value||'',
+    pr: document.getElementById('coop-pr')?.value||''
+  };
+  // KPI by property × month
+  const kpiRows = [];
+  let grandTotal = 0;
+  document.querySelectorAll('.kpi-cell').forEach(c => {
+    const v = parseInt(c.textContent)||0;
+    kpiRows.push({ property: c.dataset.prop, month: c.dataset.month, rooms: v });
+    grandTotal += v;
+  });
+  p.kpi.byPropertyMonth = kpiRows;
+  p.kpi.totalRooms = grandTotal;
+  // Action Plan row
+  p.actionPlanRow = {
+    id: p.meta.id, status: p.meta.status,
+    productName: p.productName, property: p.property,
+    stayPeriod: p.stayStart+'~'+p.stayEnd,
+    targetRooms: grandTotal, targetRevenue: p.kpi.totalRevenue,
+    channels: 'member/anonymous/FIT',
+    createdAt: p.meta.createdAt
+  };
+  return p;
+}
+
+/* ══════════ STEPPER ══════════ */
+function goStep(n){currentStep=n;
+  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.querySelectorAll('.step-item').forEach(si=>{const s=+si.dataset.step;si.classList.remove('active','done');if(s<n)si.classList.add('done');else if(s===n)si.classList.add('active')});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+/* ══════════ PAST PROMO SEARCH (DUMMY) ══════════ */
+const DUMMY_PROMOS = [
+  {id:'P2025-07-01',name:'2025 Summer Splash 패키지',property:'소노캄 양양',period:'2025.07.01~07.31',rooms:380,occ:'+4.2%p',revenue:'56,240,000',disc:'35~50%',composition:'객실1박+워터파크2회+조식2인',rating:'A',channels:'회원/FIT'},
+  {id:'P2025-07-02',name:'2025 여름바다 프로모션',property:'소노캄 거제',period:'2025.07.15~08.15',rooms:290,occ:'+3.1%p',revenue:'41,800,000',disc:'30~45%',composition:'객실1박+BBQ세트+카약체험',rating:'B+',channels:'회원'},
+  {id:'P2024-07-01',name:'2024 Cool Summer 기획전',property:'소노캄 양양',period:'2024.07.01~07.31',rooms:420,occ:'+5.5%p',revenue:'62,100,000',disc:'40~55%',composition:'객실1박+워터파크무제한+조식2인',rating:'S',channels:'회원/FIT'},
+  {id:'P2024-08-01',name:'2024 한여름밤 패키지',property:'소노벨 비발디파크',period:'2024.08.01~08.31',rooms:510,occ:'+6.1%p',revenue:'78,300,000',disc:'35~50%',composition:'객실1박+오션월드+BBQ',rating:'S',channels:'전채널'},
+];
+
+function searchPastPromos(){
+  const results=DUMMY_PROMOS;
+  let html='<p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-bottom:10px;font-weight:700">검색 결과: '+results.length+'건 (더미 데이터)</p>';
+  results.forEach(p=>{
+    const rColor = p.rating==='S'?'var(--gold-bright)':p.rating.startsWith('A')?'var(--positive)':'var(--info)';
+    html+=`<div class="promo-result">
+      <div class="promo-result-head">
+        <span class="promo-result-name">${p.name}</span>
+        <span class="promo-result-perf" style="color:${rColor}">등급 ${p.rating} · ${p.rooms}실 · OCC${p.occ}</span>
+      </div>
+      <div class="promo-result-meta">
+        <span>📍 ${p.property}</span><span>📅 ${p.period}</span><span>💰 ${p.revenue}원</span><span>📊 할인율 ${p.disc}</span>
+      </div>
+      <div class="promo-result-actions">
+        <button class="btn btn-sm btn-info" onclick="viewPromoDetail('${p.id}')">상세 보기</button>
+        <button class="btn btn-sm btn-primary" onclick="applyPromoToProposal('${p.id}')">🚀 이 프로모션으로 품의 시작</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('promo-search-results').innerHTML=html;
+}
+
+function viewPromoDetail(id){
+  const p=DUMMY_PROMOS.find(x=>x.id===id);if(!p)return;
+  document.getElementById('promo-modal-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div class="summary-card"><div class="summary-card-label">상품명</div><div style="font-size:14px;font-weight:700;color:var(--ink)">${p.name}</div></div>
+      <div class="summary-card"><div class="summary-card-label">등급</div><div class="summary-card-value gold">${p.rating}</div></div>
+      <div class="summary-card"><div class="summary-card-label">사업장</div><div style="font-size:13px;font-weight:600;color:var(--ink-soft)">${p.property}</div></div>
+      <div class="summary-card"><div class="summary-card-label">투숙기간</div><div style="font-size:13px;font-weight:600;color:var(--ink-soft)">${p.period}</div></div>
+      <div class="summary-card"><div class="summary-card-label">실적 객실수</div><div class="summary-card-value" style="color:var(--positive)">${p.rooms}<span style="font-size:11px;color:var(--ink-faint)"> 실</span></div></div>
+      <div class="summary-card"><div class="summary-card-label">OCC 기여</div><div class="summary-card-value" style="color:var(--positive)">${p.occ}</div></div>
+      <div class="summary-card"><div class="summary-card-label">매출</div><div style="font-size:13px;font-weight:600;color:var(--ink-soft)">${p.revenue}원</div></div>
+      <div class="summary-card"><div class="summary-card-label">할인율 범위</div><div style="font-size:13px;font-weight:600;color:var(--gold-bright)">${p.disc}</div></div>
+    </div>
+    <div class="summary-card" style="margin-bottom:16px"><div class="summary-card-label">상품구성</div><div style="font-size:13px;font-weight:600;color:var(--ink-soft);margin-top:4px">${p.composition}</div></div>
+    <button class="btn btn-primary" onclick="applyPromoToProposal('${p.id}');closeModal('promo-modal')">🚀 이 프로모션 기반으로 품의 시작</button>
+  `;
+  document.getElementById('promo-modal').classList.add('open');
+}
+
+function applyPromoToProposal(id){
+  const p=DUMMY_PROMOS.find(x=>x.id===id);if(!p)return;
+  // Auto-fill Step 1 & 3
+  const propMap={'소노캄 양양':'sono-calm-yg','소노캄 거제':'sono-calm-gj','소노벨 비발디파크':'sono-belle-vivaldi'};
+  if(propMap[p.property]){document.getElementById('sel-property').value=propMap[p.property];loadOccData()}
+  document.getElementById('txt-prod-name').value=p.name.replace(/\d{4}/,'2026')+' (리뉴얼)';
+  document.getElementById('txt-appeal').value=p.composition;
+  document.getElementById('txt-composition').value=p.composition;
+  document.getElementById('txt-purpose').value=`전년 "${p.name}" 기획전 성과(${p.rooms}실, OCC${p.occ}) 기반 리뉴얼 상품.\n전년 성공 요인을 계승하되 할인율 조정 및 부대시설 구성 개선을 통해 수익성 제고.`;
+  closeModal('promo-modal');
+  showToast(`"${p.name}" 정보가 품의에 반영되었습니다`);
+  goStep(1);
+}
+
+/* ══════════ OCC (DUMMY) ══════════ */
+function loadOccData(){
+  const prop=document.getElementById('sel-property').value;if(!prop)return;
+  const start=document.getElementById('date-start').value,end=document.getElementById('date-end').value;if(!start||!end)return;
+  const d1=new Date(start),d2=new Date(end),days=[];
+  for(let d=new Date(d1);d<=d2;d.setDate(d.getDate()+1)){
+    const dow=d.getDay(),isWk=dow===5||dow===6;
+    const base=isWk?82+Math.random()*15:55+Math.random()*25;
+    days.push({date:d.toISOString().slice(0,10),dow:['일','월','화','수','목','금','토'][dow],occ:Math.round(base),member:Math.round(base*0.4+Math.random()*10),anonymous:Math.round(base*0.25+Math.random()*8),fit:Math.round(base*0.35+Math.random()*6)});
+  }
+  occData=days;
+  const avg=Math.round(days.reduce((s,d)=>s+d.occ,0)/days.length),mx=Math.max(...days.map(d=>d.occ)),mn=Math.min(...days.map(d=>d.occ));
+  document.getElementById('occ-section').style.display='';
+  document.getElementById('occ-summary').innerHTML=`
+    <div class="summary-card"><div class="summary-card-label">기간</div><div class="summary-card-value">${days.length}<span style="font-size:11px;color:var(--ink-faint);margin-left:3px">일</span></div><div class="summary-card-sub">${start} ~ ${end}</div></div>
+    <div class="summary-card"><div class="summary-card-label">평균 OCC</div><div class="summary-card-value ${avg>=75?'gold':''}">${avg}%</div></div>
+    <div class="summary-card"><div class="summary-card-label">최고 OCC</div><div class="summary-card-value" style="color:var(--positive)">${mx}%</div></div>
+    <div class="summary-card"><div class="summary-card-label">최저 OCC</div><div class="summary-card-value" style="color:var(--negative)">${mn}%</div></div>`;
+  let g='';days.forEach(d=>{const rc=d.occ>=85?'rate-high':d.occ>=70?'rate-mid':d.occ>=55?'rate-low':'rate-vlow';g+=`<div class="occ-cell"><div class="occ-date">${d.date.slice(5)} (${d.dow})</div><div class="occ-rate ${rc}">${d.occ}%</div><div class="occ-detail">기명${d.member}/무기명${d.anonymous}/FIT${d.fit}</div></div>`});
+  document.getElementById('occ-grid').innerHTML=g;
+  document.getElementById('step3-occ').innerHTML=`<div class="summary-grid">${document.getElementById('occ-summary').innerHTML}</div><p style="color:var(--ink-faint);font-size:11px;margin-top:8px">상세 일자별 데이터는 Step 1에서 확인</p>`;
+  showToast('OCC 데이터 로드 완료');
+}
+
+/* ══════════ FILE UPLOAD ══════════ */
+function handleDrop(e){e.preventDefault();e.currentTarget.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])}
+function handleFile(file){if(!file)return;const r=new FileReader();r.onload=function(e){try{const wb=XLSX.read(e.target.result,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],json=XLSX.utils.sheet_to_json(ws,{header:1});processRateSheet(json,file.name)}catch(err){showToast('파싱 오류: '+err.message)}};r.readAsArrayBuffer(file)}
+function processRateSheet(rows,fn){const s=document.getElementById('upload-status');s.textContent='✅ '+fn+' — '+rows.length+'행 파싱 완료';s.classList.add('show');showRawTable(rows)}
+function showRawTable(rows){document.getElementById('rate-section').style.display='';let h='<table class="data-table"><thead><tr>';if(rows.length){rows[0].forEach(c=>{h+='<th>'+(c||'')+'</th>'});h+='</tr></thead><tbody>';rows.slice(1).forEach(r=>{h+='<tr>';r.forEach(c=>{h+='<td contenteditable="true">'+(c||'')+'</td>'});h+='</tr>'});h+='</tbody></table>'}document.getElementById('rate-table-container').innerHTML=h}
+
+function loadDummyRates(){
+  const roomTypes=['스탠다드','디럭스','스위트','패밀리'],dates=['07/01(수)','07/02(목)','07/03(금)','07/04(토)','07/05(일)'];
+  rateData={dates,roomTypes,normal:{},smart:{},promo:{},addon:[
+    {name:'조식뷔페(성인)',normal:42000,alloc:29400,rate:30},{name:'워터파크(성인)',normal:68000,alloc:0,rate:100},
+    {name:'인피니티풀(성인)',normal:25000,alloc:17500,rate:30},{name:'히어로즈(성인)',normal:35000,alloc:24500,rate:30},{name:'웰컴드링크',normal:15000,alloc:0,rate:100}
+  ]};
+  roomTypes.forEach(rt=>{rateData.normal[rt]={};rateData.smart[rt]={};rateData.promo[rt]={};
+    dates.forEach(dt=>{const isW=dt.includes('금')||dt.includes('토');const base=rt==='스탠다드'?200000:rt==='디럭스'?280000:rt==='스위트'?450000:320000;const w=isW?1.3:1;const n=Math.round(base*w/1000)*1000;
+      rateData.normal[rt][dt]={member:n,anonymous:n,fit:n};rateData.smart[rt][dt]={member:Math.round(n*.85/1000)*1000,anonymous:Math.round(n*.80/1000)*1000,fit:Math.round(n*.90/1000)*1000};rateData.promo[rt][dt]={member:Math.round(n*.55/1000)*1000,anonymous:Math.round(n*.65/1000)*1000,fit:Math.round(n*.78/1000)*1000}})});
+  document.getElementById('upload-status').textContent='✅ 더미 요금표 로드 — 4 객실타입 × 5일';document.getElementById('upload-status').classList.add('show');
+  document.getElementById('rate-section').style.display='';showRateTab('normal',document.querySelector('#rate-tabs .tab-btn'));showToast('더미 요금표 로드 완료');
+}
+
+function showRateTab(tab,btn){
+  document.querySelectorAll('#rate-tabs .tab-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');
+  if(!rateData){document.getElementById('rate-table-container').innerHTML='<p style="color:var(--ink-faint);padding:20px;text-align:center">요금표를 먼저 로드하세요.</p>';return}
+  const fmt=n=>n.toLocaleString(),{dates,roomTypes}=rateData;let h='';
+  if(tab==='addon'){h='<table class="data-table"><thead><tr><th style="text-align:left">부대시설</th><th>정상가</th><th>배분가</th><th>할인율</th></tr></thead><tbody>';rateData.addon.forEach(a=>{const rc=a.rate>=50?'rate-high':a.rate>=30?'rate-mid':'rate-low';h+=`<tr><td>${a.name}</td><td contenteditable="true">${fmt(a.normal)}</td><td contenteditable="true">${a.alloc===0?'무료':fmt(a.alloc)}</td><td class="${rc}">${a.rate===100?'무료':a.rate+'%'}</td></tr>`});h+='</tbody></table>'}
+  else if(tab==='analysis'){h='<table class="data-table"><thead><tr><th style="text-align:left">객실</th><th>일자</th><th>정상가</th><th>프로모션(기명)</th><th>할인율</th><th>프로모션(무기명)</th><th>프로모션(FIT)</th><th>무기명↔FIT Gap</th></tr></thead><tbody>';
+    roomTypes.forEach(rt=>{dates.forEach(dt=>{const n=rateData.normal[rt][dt].member,pm=rateData.promo[rt][dt].member,pa=rateData.promo[rt][dt].anonymous,pf=rateData.promo[rt][dt].fit,disc=Math.round((1-pm/n)*100),gap=pf-pa,drc=disc>=40?'rate-high':disc>=25?'rate-mid':'rate-low';h+=`<tr><td>${rt}</td><td>${dt}</td><td>${fmt(n)}</td><td>${fmt(pm)}</td><td class="${drc}">${disc}%</td><td>${fmt(pa)}</td><td>${fmt(pf)}</td><td style="color:var(--warning)">${fmt(gap)}</td></tr>`})});h+='</tbody></table>'}
+  else{const src=rateData[tab];if(!src)return;const segs=['member','anonymous','fit'],sl={member:'기명',anonymous:'무기명',fit:'FIT'};h='<table class="data-table"><thead><tr><th style="text-align:left">객실</th><th>일자</th>';segs.forEach(s=>{h+=`<th>${sl[s]}</th>`});h+='</tr></thead><tbody>';
+    roomTypes.forEach(rt=>{dates.forEach(dt=>{h+=`<tr><td>${rt}</td><td>${dt}</td>`;segs.forEach(s=>{h+=`<td contenteditable="true">${fmt(src[rt][dt][s])}</td>`});h+='</tr>'})});h+='</tbody></table>'}
+  document.getElementById('rate-table-container').innerHTML=h;
+}
+
+/* ══════════ KPI TABLE ══════════ */
+function recalcKpi(){
+  const tbl=document.getElementById('tbl-kpi');const rows=tbl.querySelectorAll('tbody tr:not(.total-row)');
+  const colSums={};let grand=0;
+  rows.forEach(r=>{const cells=r.querySelectorAll('.kpi-cell');let rowSum=0;cells.forEach(c=>{const v=parseInt(c.textContent)||0;rowSum+=v;const m=c.dataset.month;colSums[m]=(colSums[m]||0)+v});r.querySelector('.kpi-sum').textContent=rowSum.toLocaleString();grand+=rowSum});
+  const totalRow=tbl.querySelector('.total-row');if(totalRow){const cs=totalRow.querySelectorAll('.kpi-col-sum');cs.forEach(c=>{const idx=[...cs].indexOf(c);const months=['7','8'];c.textContent=(colSums[months[idx]]||0).toLocaleString()});document.getElementById('kpi-grand-total').textContent=grand.toLocaleString()}
+}
+document.addEventListener('input',e=>{if(e.target.classList.contains('kpi-cell'))recalcKpi()});
+
+function addKpiRow(){
+  const tbl=document.getElementById('tbl-kpi').querySelector('tbody');const totalRow=tbl.querySelector('.total-row');
+  const tr=document.createElement('tr');
+  tr.innerHTML='<td contenteditable="true" style="color:var(--ink)">새 사업장</td><td contenteditable="true" class="kpi-cell" data-prop="new" data-month="7">0</td><td contenteditable="true" class="kpi-cell" data-prop="new" data-month="8">0</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">0</td>';
+  tbl.insertBefore(tr,totalRow);recalcKpi();showToast('사업장 행 추가됨');
+}
+
+/* ══════════ EXCEL EXPORT ══════════ */
+function exportExcel(){
+  collectProposalData();const p=proposalData,wb=XLSX.utils.book_new();
+  const proposal=[['품의서'],[],['상품명',p.productName],['소구점',p.appeal],['사업장',p.property],['투숙기간',p.stayStart+' ~ '+p.stayEnd],['기준인원',p.pax+'인'],['상품구성',p.composition],[],['시행취지'],[p.purpose],[],
+    ['KPI (합계)'],['목표 객실수',p.kpi.totalRooms+' 실'],['목표 매출',p.kpi.totalRevenue+' 원'],['목표 OCC 기여',p.kpi.occContribution]];
+  const ws1=XLSX.utils.aoa_to_sheet(proposal);ws1['!cols']=[{wch:16},{wch:50}];XLSX.utils.book_append_sheet(wb,ws1,'품의');
+  // 갑지
+  const detail=[['갑지 — 사업장별 상세'],[],['■ KPI 사업장별 × 월별'],['사업장','월','목표 객실수']];
+  p.kpi.byPropertyMonth.forEach(k=>{detail.push([k.property,k.month+'월',k.rooms])});detail.push(['합계','',p.kpi.totalRooms]);
+  detail.push([],['■ 객실 요금'],['구분','','회원 기명','','','회원 무기명','','','D멤버스·FIT','','','무기명↔FIT Gap'],['','','정상가','배분가','할인율','정상가','배분가','할인율','정상가','배분가','할인율','']);
+  if(rateData){rateData.roomTypes.forEach(rt=>{rateData.dates.forEach(dt=>{const n=rateData.normal[rt][dt],pr=rateData.promo[rt][dt];detail.push([rt,dt,n.member,pr.member,Math.round((1-pr.member/n.member)*100)+'%',n.anonymous,pr.anonymous,Math.round((1-pr.anonymous/n.anonymous)*100)+'%',n.fit,pr.fit,Math.round((1-pr.fit/n.fit)*100)+'%',pr.fit-pr.anonymous])})})}
+  detail.push([],['■ 부대업장'],['구분','정상가','배분가','할인율']);
+  if(rateData){rateData.addon.forEach(a=>{detail.push([a.name,a.normal,a.alloc===0?'무료':a.alloc,a.rate===100?'무료':a.rate+'%'])})}
+  const ws2=XLSX.utils.aoa_to_sheet(detail);ws2['!cols']=[{wch:14},{wch:12},{wch:12},{wch:12},{wch:8},{wch:12},{wch:12},{wch:8},{wch:12},{wch:12},{wch:8},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,'갑지');
+  XLSX.writeFile(wb,'품의서_'+new Date().toISOString().slice(0,10)+'.xlsx');showToast('엑셀 다운로드 완료');
+}
+
+/* ══════════ HTML EXPORT ══════════ */
+function generateProposalHtml(){
+  collectProposalData();const p=proposalData;
+  const ts='border:1px solid #999;padding:5px 8px;text-align:center;font-size:11px;',th=ts+'background:#e8e8e8;font-weight:700;',tdL=ts+'text-align:left;font-weight:600;',hdr='font-size:13px;font-weight:700;margin:16px 0 8px;padding:4px 0;border-bottom:2px solid #333;';
+  let h=`<div style="font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:12px;color:#000;max-width:800px;">
+<h2 style="text-align:center;font-size:16px;margin-bottom:20px;">품 의 서</h2>
+<p style="${hdr}">1. 시행취지</p><p style="font-size:12px;line-height:1.7;margin-bottom:12px;white-space:pre-wrap;">${p.purpose}</p>
+<p style="${hdr}">2. 상품 운영안</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+<tr><td style="${th}width:120px;">상품명</td><td style="${ts}">${p.productName}</td></tr>
+<tr><td style="${th}">소구점</td><td style="${ts}">${p.appeal}</td></tr>
+<tr><td style="${th}">사업장</td><td style="${ts}">${p.property}</td></tr>
+<tr><td style="${th}">판매채널</td><td style="${ts}">리조트 회원(기명/무기명), D멤버스·FIT</td></tr>
+<tr><td style="${th}">투숙기간</td><td style="${ts}">${p.stayStart} ~ ${p.stayEnd}</td></tr>
+<tr><td style="${th}">상품구성</td><td style="${ts}">${p.composition}</td></tr>
+<tr><td style="${th}">기준인원</td><td style="${ts}">${p.pax}인</td></tr>
+<tr><td style="${th}">특이사항</td><td style="${ts}">${p.note}</td></tr></table>`;
+  // 객실 배분가 from DOM
+  h+=`<p style="${hdr}">3. 객실 배분가 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
+  document.querySelectorAll('#tbl-room-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
+  h+='</table>';
+  h+=`<p style="${hdr}">4. 부대업장 할인율</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">부대시설</th><th style="${th}">정상가</th><th style="${th}">배분가</th><th style="${th}">할인율</th></tr>`;
+  document.querySelectorAll('#tbl-addon-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
+  h+='</table>';
+  h+=`<p style="${hdr}">5. 종합할인 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th></tr>`;
+  document.querySelectorAll('#tbl-total-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
+  h+='</table>';
+  // KPI
+  h+=`<p style="${hdr}">6. KPI (사업장별 × 월별)</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">사업장</th><th style="${th}">7월</th><th style="${th}">8월</th><th style="${th}">합계</th></tr>`;
+  document.querySelectorAll('#tbl-kpi tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{const s=r.classList.contains('total-row')?th:i===0?tdL:ts;h+=`<td style="${s}">${c.textContent}</td>`});h+='</tr>'});
+  h+=`</table><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><td style="${th}width:120px;">목표 매출</td><td style="${ts}">${p.kpi.totalRevenue} 원</td></tr><tr><td style="${th}">목표 OCC 기여</td><td style="${ts}">${p.kpi.occContribution}</td></tr></table></div>`;
+  return h;
+}
+
+function showHtmlExport(){document.getElementById('html-export-section').style.display='';document.getElementById('gsheet-section').style.display='none';const h=generateProposalHtml();document.getElementById('html-preview').innerHTML=h;document.getElementById('html-source').textContent=h}
+function copyHtmlToClipboard(){const h=generateProposalHtml();navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([h],{type:'text/html'}),'text/plain':new Blob([h],{type:'text/plain'})})]).then(()=>showToast('HTML 복사 완료! 그룹웨어에 Ctrl+V')).catch(()=>{const ta=document.createElement('textarea');ta.value=h;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('HTML 소스 복사 완료')})}
+function toggleHtmlSource(){const s=document.getElementById('html-source');s.style.display=s.style.display==='none'?'block':'none'}
+
+/* ══════════ GOOGLE SHEET EXPORT ══════════ */
+function showGsheetExport(){
+  document.getElementById('gsheet-section').style.display='';document.getElementById('html-export-section').style.display='none';
+  collectProposalData();const p=proposalData;const row=p.actionPlanRow;
+  const fields=[
+    ['기획전 ID',row.id,'A (auto)'],['상태',row.status,'B'],['상품명',row.productName,'C'],['사업장',row.property,'D'],
+    ['투숙기간',row.stayPeriod,'E'],['목표 객실수',row.targetRooms+'실','F'],['목표 매출',row.targetRevenue+'원','G'],
+    ['판매채널',row.channels,'H'],['작성일',new Date(row.createdAt).toLocaleDateString('ko'),'I']
+  ];
+  let h='';fields.forEach(f=>{h+=`<tr><td style="text-align:left;font-weight:700;color:var(--ink)">${f[0]}</td><td style="color:var(--ink-soft)">${f[1]}</td><td><span class="tag tag-info">${f[2]}</span></td></tr>`});
+  // KPI breakdown
+  p.kpi.byPropertyMonth.forEach(k=>{h+=`<tr><td style="text-align:left;color:var(--ink-faint)">  KPI: ${k.property} ${k.month}월</td><td style="color:var(--ink-soft)">${k.rooms}실</td><td><span class="tag">J~</span></td></tr>`});
+  document.getElementById('gsheet-preview-body').innerHTML=h;
+}
+
+function simulateGsheetWrite(){
+  collectProposalData();
+  const data=JSON.stringify(proposalData.actionPlanRow,null,2);
+  console.log('[GSheet Simulation] Writing to Action Plan sheet:', data);
+  showToast('✅ 시뮬레이션 완료 — 콘솔에서 데이터 확인');
+  // Show simulated success
+  const badge=document.querySelector('#gsheet-section .gsheet-badge:last-of-type');
+  if(badge){badge.textContent='✅ 작성 시뮬레이션 완료';badge.style.background='rgba(76,175,111,0.2)';badge.style.color='var(--positive)';badge.style.borderColor='rgba(76,175,111,0.4)'}
+}
+
+/* ══════════ INIT ══════════ */
+document.addEventListener('DOMContentLoaded',()=>{goStep(1)});
+</script>
+</body>
+</html>
