@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root{
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
@@ -499,16 +500,14 @@ a{color:inherit;text-decoration:none}
     </div>
 
     <!-- KPI (사업장×월) -->
-    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">KPI — 사업장별 × 월별 목표</span><span class="sec-head-meta"><span class="tag tag-gold">갑지: 상세 / 품의: 합계</span></span></div>
+    <div class="sec-card"><div class="sec-head"><span class="sec-head-title">KPI — 사업장별 × 월별 목표</span><span class="sec-head-meta"><span class="tag tag-gold">Step 1 사업장 자동 반영</span></span></div>
       <div class="sec-body">
-        <p class="edit-hint" style="margin-bottom:10px">사업장/월을 추가하고 목표 객실수를 입력하세요. 품의 시트에는 합계가 자동 반영됩니다.</p>
+        <p class="edit-hint" style="margin-bottom:10px">Step 1에서 사업장과 투숙기간을 선택하면 자동으로 사업장이 채워집니다. 월별 목표 객실수를 입력하세요.</p>
         <div style="overflow-x:auto">
           <table class="data-table" id="tbl-kpi">
-            <thead><tr><th style="text-align:left">사업장</th><th>사업장 목표</th><th>RM FCST</th><th>전체 OCC</th><th>7월</th><th>8월</th><th>합계</th></tr></thead>
+            <thead id="kpi-thead"><tr><th style="text-align:left">사업장</th><th>사업장 목표</th><th>RM FCST</th><th>전체 OCC</th><th>합계</th></tr></thead>
             <tbody>
-              <tr><td>소노캄 양양</td><td style="color:var(--ink-faint);font-size:10px">1,200실</td><td style="color:var(--info);font-size:10px">1,050실</td><td style="color:var(--positive);font-size:10px">72%</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="7">400</td><td contenteditable="true" class="kpi-cell" data-prop="양양" data-month="8">350</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">750</td></tr>
-              <tr><td>소노캄 거제</td><td style="color:var(--ink-faint);font-size:10px">900실</td><td style="color:var(--info);font-size:10px">780실</td><td style="color:var(--positive);font-size:10px">68%</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="7">250</td><td contenteditable="true" class="kpi-cell" data-prop="거제" data-month="8">200</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">450</td></tr>
-              <tr class="total-row"><td>합계</td><td style="color:var(--ink-faint);font-size:10px">2,100실</td><td style="color:var(--info);font-size:10px">1,830실</td><td style="color:var(--positive);font-size:10px">70%</td><td class="kpi-col-sum">650</td><td class="kpi-col-sum">550</td><td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">1,200</td></tr>
+              <tr class="total-row"><td>합계</td><td style="color:var(--ink-faint);font-size:10px">0</td><td style="color:var(--info);font-size:10px">0</td><td style="color:var(--positive);font-size:10px">—</td><td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">0</td></tr>
             </tbody>
           </table>
         </div>
@@ -982,6 +981,8 @@ async function generateForecastTables(){
 
   output.innerHTML = tblHtml;
   document.getElementById('forecast-download-area').style.display = '';
+  populateKpiTable();
+  populateReportPerformance(lastFcstMonthData);
   showToast('Forecast 표 생성 완료');
 }
 
@@ -1203,48 +1204,336 @@ function showRateTab(tab,btn){
   document.getElementById('rate-table-container').innerHTML=h;
 }
 
+/* ══════════ 보고 실적 자동채움 ══════════ */
+function populateReportPerformance(monthData){
+  if(!monthData||!monthData.length) return;
+  // Aggregate across all months
+  let t_occ=0,t_occ_cnt=0, t_rn=0, t_adr_w=0, t_adr_rn=0, t_rev=0;
+  let gs_occ=0,gs_occ_cnt=0, gs_rn=0, gs_adr_w=0, gs_adr_rn=0, gs_rev=0;
+  monthData.forEach(d=>{
+    if(d.t_otb_occ_avg!=null){t_occ+=d.t_otb_occ_avg;t_occ_cnt++}
+    t_rn+=d.t_otb_rn||0;
+    if(d.t_adr_otb!=null&&d.t_otb_rn>0){t_adr_w+=d.t_adr_otb*d.t_otb_rn;t_adr_rn+=d.t_otb_rn}
+    if(d.t_rev_otb!=null) t_rev+=d.t_rev_otb;
+    if(d.gs_occ_otb!=null){gs_occ+=d.gs_occ_otb;gs_occ_cnt++}
+    gs_rn+=d.gs_otb_rn||0;
+    if(d.gs_adr_otb!=null&&d.gs_otb_rn>0){gs_adr_w+=d.gs_adr_otb*d.gs_otb_rn;gs_adr_rn+=d.gs_otb_rn}
+    if(d.gs_rev_otb!=null) gs_rev+=d.gs_rev_otb;
+  });
+  const fmt = v => v!=null&&!isNaN(v) ? v.toLocaleString('ko-KR') : '-';
+  const fP = v => v!=null&&!isNaN(v) ? v.toFixed(1)+'%' : '-';
+  const tbl = document.getElementById('tbl-report-performance');
+  if(!tbl) return;
+  const rows = tbl.querySelectorAll('tbody tr');
+  // OCC
+  if(rows[0]){rows[0].children[1].textContent=t_occ_cnt>0?fP(t_occ/t_occ_cnt):'-';rows[0].children[2].textContent=gs_occ_cnt>0?fP(gs_occ/gs_occ_cnt):'-'}
+  // RNs
+  if(rows[1]){rows[1].children[1].textContent=fmt(t_rn);rows[1].children[2].textContent=fmt(gs_rn)}
+  // ADR (천원)
+  if(rows[2]){rows[2].children[1].textContent=t_adr_rn>0?fmt(Math.round(t_adr_w/t_adr_rn)):'-';rows[2].children[2].textContent=gs_adr_rn>0?fmt(Math.round(gs_adr_w/gs_adr_rn)):'-'}
+  // REV (백만원)
+  if(rows[3]){rows[3].children[1].textContent=t_rev>0?fmt(Math.round(t_rev)):'-';rows[3].children[2].textContent=gs_rev>0?fmt(Math.round(gs_rev)):'-'}
+}
+
 /* ══════════ KPI TABLE ══════════ */
+let kpiMonths = [];
+
+function populateKpiTable(){
+  const selProps = getSelectedPropObjects();
+  const selMonths = getSelectedMonths();
+  if(!selProps.length || !selMonths.length) return;
+  kpiMonths = selMonths;
+
+  // Rebuild header
+  const thead = document.getElementById('kpi-thead');
+  let hdr = '<tr><th style="text-align:left">사업장</th><th>사업장 목표</th><th>RM FCST</th><th>전체 OCC</th>';
+  selMonths.forEach(m => { hdr += '<th>'+m+'월</th>'; });
+  hdr += '<th>합계</th></tr>';
+  thead.innerHTML = hdr;
+
+  // Rebuild body
+  const tbody = document.getElementById('tbl-kpi').querySelector('tbody');
+  tbody.innerHTML = '';
+
+  selProps.forEach(p => {
+    const tr = document.createElement('tr');
+    // Get RM data for budget/fcst/occ
+    let budRn = 0, fcstRn = 0, occSum = 0, occCnt = 0;
+    selMonths.forEach(m => {
+      const rm = getRmFcst(p.otb, m);
+      if(rm){ budRn += rm.rm_budget_rn||0; fcstRn += rm.rm_fcst_rn||0; }
+      const db = getDailyBooking(p, m);
+      if(db && db.occ_budget){ occSum += db.occ_budget; occCnt++; }
+    });
+    const occAvg = occCnt > 0 ? Math.round(occSum/occCnt) : null;
+
+    let html = '<td style="font-weight:600">'+p.label+'</td>';
+    html += '<td style="color:var(--ink-faint);font-size:10px">'+(budRn>0?budRn.toLocaleString()+'실':'—')+'</td>';
+    html += '<td style="color:var(--info);font-size:10px">'+(fcstRn>0?fcstRn.toLocaleString()+'실':'—')+'</td>';
+    html += '<td style="color:var(--positive);font-size:10px">'+(occAvg!=null?occAvg+'%':'—')+'</td>';
+    selMonths.forEach(m => {
+      html += '<td contenteditable="true" class="kpi-cell" data-prop="'+p.id+'" data-month="'+m+'">0</td>';
+    });
+    html += '<td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">0</td>';
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+
+  // Total row
+  const totalTr = document.createElement('tr');
+  totalTr.className = 'total-row';
+  let totalHtml = '<td>합계</td><td style="color:var(--ink-faint);font-size:10px"></td><td style="color:var(--info);font-size:10px"></td><td style="color:var(--positive);font-size:10px"></td>';
+  selMonths.forEach(() => { totalHtml += '<td class="kpi-col-sum">0</td>'; });
+  totalHtml += '<td id="kpi-grand-total" style="font-weight:800;color:var(--gold-bright)">0</td>';
+  totalTr.innerHTML = totalHtml;
+  tbody.appendChild(totalTr);
+
+  recalcKpi();
+  showToast('KPI 테이블: '+selProps.length+'개 사업장 반영');
+}
+
 function recalcKpi(){
   const tbl=document.getElementById('tbl-kpi');const rows=tbl.querySelectorAll('tbody tr:not(.total-row)');
   const colSums={};let grand=0;
-  rows.forEach(r=>{const cells=r.querySelectorAll('.kpi-cell');let rowSum=0;cells.forEach(c=>{const v=parseInt(c.textContent)||0;rowSum+=v;const m=c.dataset.month;colSums[m]=(colSums[m]||0)+v});r.querySelector('.kpi-sum').textContent=rowSum.toLocaleString();grand+=rowSum});
-  const totalRow=tbl.querySelector('.total-row');if(totalRow){const cs=totalRow.querySelectorAll('.kpi-col-sum');cs.forEach(c=>{const idx=[...cs].indexOf(c);const months=['7','8'];c.textContent=(colSums[months[idx]]||0).toLocaleString()});document.getElementById('kpi-grand-total').textContent=grand.toLocaleString()}
+  let budTotal=0, fcstTotal=0;
+  rows.forEach(r=>{
+    const cells=r.querySelectorAll('.kpi-cell');let rowSum=0;
+    cells.forEach(c=>{const v=parseInt(c.textContent)||0;rowSum+=v;const m=c.dataset.month;colSums[m]=(colSums[m]||0)+v});
+    const sumEl=r.querySelector('.kpi-sum'); if(sumEl) sumEl.textContent=rowSum.toLocaleString();
+    grand+=rowSum;
+    // Sum budget/fcst from info cells
+    const infoCells=r.querySelectorAll('td');
+    const budText=infoCells[1]?.textContent||''; const fcstText=infoCells[2]?.textContent||'';
+    budTotal+=parseInt(budText.replace(/[^0-9]/g,''))||0;
+    fcstTotal+=parseInt(fcstText.replace(/[^0-9]/g,''))||0;
+  });
+  const totalRow=tbl.querySelector('.total-row');
+  if(totalRow){
+    const cs=totalRow.querySelectorAll('.kpi-col-sum');
+    cs.forEach((c,idx)=>{c.textContent=(colSums[kpiMonths[idx]]||0).toLocaleString()});
+    const gt=document.getElementById('kpi-grand-total'); if(gt) gt.textContent=grand.toLocaleString();
+    const infoCells=totalRow.querySelectorAll('td');
+    if(infoCells[1]) infoCells[1].textContent=budTotal>0?budTotal.toLocaleString()+'실':'—';
+    if(infoCells[2]) infoCells[2].textContent=fcstTotal>0?fcstTotal.toLocaleString()+'실':'—';
+  }
 }
 document.addEventListener('input',e=>{if(e.target.classList.contains('kpi-cell'))recalcKpi()});
 
 function addKpiRow(){
   const tbl=document.getElementById('tbl-kpi').querySelector('tbody');const totalRow=tbl.querySelector('.total-row');
+  const months = kpiMonths.length ? kpiMonths : getSelectedMonths();
+  if(!months.length){ showToast('투숙기간을 먼저 선택하세요'); return; }
   const tr=document.createElement('tr');
-  tr.innerHTML='<td contenteditable="true" style="color:var(--ink)">새 사업장</td><td contenteditable="true" class="kpi-cell" data-prop="new" data-month="7">0</td><td contenteditable="true" class="kpi-cell" data-prop="new" data-month="8">0</td><td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">0</td>';
+  let html='<td contenteditable="true" style="color:var(--ink);font-weight:600">새 사업장</td><td style="color:var(--ink-faint);font-size:10px">—</td><td style="color:var(--info);font-size:10px">—</td><td style="color:var(--positive);font-size:10px">—</td>';
+  months.forEach(m=>{html+='<td contenteditable="true" class="kpi-cell" data-prop="new" data-month="'+m+'">0</td>'});
+  html+='<td class="kpi-sum" style="font-weight:800;color:var(--gold-bright)">0</td>';
+  tr.innerHTML=html;
   tbl.insertBefore(tr,totalRow);recalcKpi();showToast('사업장 행 추가됨');
 }
 
 /* ══════════ EXCEL EXPORT ══════════ */
-function exportExcel(){
-  collectProposalData();const p=proposalData,wb=XLSX.utils.book_new();
-  const proposal=[['품의서'],[],['상품명',p.productName],['소구점',p.appeal],['사업장',p.property],['투숙기간',p.stayStart+' ~ '+p.stayEnd],['기준인원',p.pax+'인'],['상품구성',p.composition],[],['시행취지'],[p.purpose],[],
-    ['KPI (합계)'],['목표 객실수',p.kpi.totalRooms+' 실'],['목표 매출',p.kpi.totalRevenue+' 원'],['목표 OCC 기여',p.kpi.occContribution]];
-  const ws1=XLSX.utils.aoa_to_sheet(proposal);ws1['!cols']=[{wch:16},{wch:50}];XLSX.utils.book_append_sheet(wb,ws1,'품의');
-  // 갑지
-  const detail=[['갑지 — 사업장별 상세'],[],['■ KPI 사업장별 × 월별'],['사업장','월','목표 객실수']];
-  p.kpi.byPropertyMonth.forEach(k=>{detail.push([k.property,k.month+'월',k.rooms])});detail.push(['합계','',p.kpi.totalRooms]);
-  detail.push([],['■ 객실 요금'],['구분','','회원 기명','','','회원 무기명','','','D멤버스·FIT','','','무기명↔FIT Gap'],['','','정상가','배분가','할인율','정상가','배분가','할인율','정상가','배분가','할인율','']);
-  if(rateData){rateData.roomTypes.forEach(rt=>{rateData.dates.forEach(dt=>{const n=rateData.normal[rt][dt],pr=rateData.promo[rt][dt];detail.push([rt,dt,n.member,pr.member,Math.round((1-pr.member/n.member)*100)+'%',n.anonymous,pr.anonymous,Math.round((1-pr.anonymous/n.anonymous)*100)+'%',n.fit,pr.fit,Math.round((1-pr.fit/n.fit)*100)+'%',pr.fit-pr.anonymous])})})}
-  detail.push([],['■ 부대업장'],['구분','정상가','배분가','할인율']);
-  if(rateData){rateData.addon.forEach(a=>{detail.push([a.name,a.normal,a.alloc===0?'무료':a.alloc,a.rate===100?'무료':a.rate+'%'])})}
-  const ws2=XLSX.utils.aoa_to_sheet(detail);ws2['!cols']=[{wch:14},{wch:12},{wch:12},{wch:12},{wch:8},{wch:12},{wch:12},{wch:8},{wch:12},{wch:12},{wch:8},{wch:12}];
-  XLSX.utils.book_append_sheet(wb,ws2,'갑지');
-  XLSX.writeFile(wb,'품의서_'+new Date().toISOString().slice(0,10)+'.xlsx');showToast('엑셀 다운로드 완료');
+async function exportExcel(){
+  collectProposalData();const p=proposalData;
+  const wb=new ExcelJS.Workbook();
+  const FONT='대명체', FONT_ALT='맑은 고딕';
+  const hdrFont={name:FONT,size:11,bold:true};
+  const bodyFont={name:FONT,size:10};
+  const titleFont={name:FONT,size:14,bold:true};
+  const border={top:{style:'thin'},left:{style:'thin'},right:{style:'thin'},bottom:{style:'thin'}};
+  const hdrFill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8E8E8'}};
+  const goldFill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}};
+  const centerAlign={vertical:'middle',horizontal:'center',wrapText:true};
+  const leftAlign={vertical:'middle',horizontal:'left',wrapText:true};
+
+  // Helper: styled row
+  function addRow(ws,vals,opts={}){
+    const r=ws.addRow(vals);
+    r.eachCell((c,ci)=>{
+      c.font=opts.font||bodyFont;
+      c.border=opts.border!==false?border:undefined;
+      c.alignment=opts.align||(ci===1?leftAlign:centerAlign);
+      if(opts.fill)c.fill=opts.fill;
+    });
+    if(opts.height)r.height=opts.height;
+    return r;
+  }
+  function addLabelRow(ws,label,value,cols=2){
+    const r=ws.addRow([label,value]);
+    r.getCell(1).font=hdrFont;r.getCell(1).fill=hdrFill;r.getCell(1).border=border;r.getCell(1).alignment=centerAlign;
+    r.getCell(2).font=bodyFont;r.getCell(2).border=border;r.getCell(2).alignment=leftAlign;
+    if(cols>2) ws.mergeCells(r.number,2,r.number,cols);
+    return r;
+  }
+  function addSection(ws,title,cols=2){
+    const r=ws.addRow([title]);
+    r.getCell(1).font={name:FONT,size:11,bold:true};
+    ws.mergeCells(r.number,1,r.number,cols);
+    r.height=22;
+    ws.addRow([]);
+  }
+
+  // ════════ 품의 시트 ════════
+  const ws1=wb.addWorksheet('품의서');
+  ws1.columns=[{width:16},{width:14},{width:14},{width:14},{width:14},{width:14}];
+
+  // Title
+  const titleRow=ws1.addRow(['품 의 서']);
+  ws1.mergeCells(1,1,1,6);
+  titleRow.getCell(1).font={name:FONT,size:16,bold:true};
+  titleRow.getCell(1).alignment={horizontal:'center',vertical:'middle'};
+  titleRow.height=30;
+  ws1.addRow([]);
+
+  // 시행취지
+  addSection(ws1,'1. 시행취지',6);
+  const purRow=ws1.addRow([p.purpose]);
+  purRow.getCell(1).font=bodyFont;purRow.getCell(1).alignment={wrapText:true,vertical:'top'};
+  ws1.mergeCells(purRow.number,1,purRow.number,6);
+  purRow.height=50;
+  ws1.addRow([]);
+
+  // 기획전 상세
+  addSection(ws1,'2. 내용 — 기획전 상세',6);
+  const cd=p.campaignDetail||{};
+  [['사업장',p.property],['제목',cd.title||'-'],['판매일자',cd.saleDate||'-'],['투숙일자',cd.stayDate||'-'],['상품',cd.product||'-'],['상품 비고',cd.productNote||'-'],['세그먼트',cd.segments?.join(', ')||'-']].forEach(([l,v])=>{
+    const r=addLabelRow(ws1,l,v,6);
+  });
+  ws1.addRow([]);
+
+  // 상품 운영안
+  addSection(ws1,'3. 상품 운영안',6);
+  [['상품명',p.productName],['소구점',p.appeal],['사업장',p.property],['판매채널','리조트 회원(기명/무기명), D멤버스·FIT'],['투숙기간',p.stayStart+' ~ '+p.stayEnd],['상품구성',p.composition],['기준인원',p.pax+'인'],['특이사항',p.note]].forEach(([l,v])=>{
+    addLabelRow(ws1,l,v,6);
+  });
+  ws1.addRow([]);
+
+  // 보고 실적
+  addSection(ws1,'품의서 작성 — 보고 실적',6);
+  const rpHdr=addRow(ws1,['구분','전체(RM)','GS실적'],{font:hdrFont,fill:hdrFill});
+  ws1.mergeCells(rpHdr.number,2,rpHdr.number,4);ws1.mergeCells(rpHdr.number,5,rpHdr.number,6);
+  const rpTbl=document.getElementById('tbl-report-performance');
+  if(rpTbl){rpTbl.querySelectorAll('tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    const r=addRow(ws1,[cells[0],cells[1],'','',cells[2],'']);
+    ws1.mergeCells(r.number,2,r.number,4);ws1.mergeCells(r.number,5,r.number,6);
+  })}
+  ws1.addRow([]);
+
+  // 객실 배분가
+  addSection(ws1,'4. 객실 배분가 요약',6);
+  const rmHdr=addRow(ws1,['구분','회원 기명','회원 무기명','D멤버스·FIT','무기명↔FIT Gap',''],{font:hdrFont,fill:hdrFill});
+  document.querySelectorAll('#tbl-room-summary tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    addRow(ws1,[cells[0],cells[1],cells[2],cells[3],cells[4]||'','']);
+  });
+  ws1.addRow([]);
+
+  // 부대업장
+  addSection(ws1,'5. 부대업장 할인율',6);
+  addRow(ws1,['부대시설','정상가','배분가','할인율','',''],{font:hdrFont,fill:hdrFill});
+  document.querySelectorAll('#tbl-addon-summary tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    addRow(ws1,[cells[0],cells[1],cells[2],cells[3]||'','','']);
+  });
+  ws1.addRow([]);
+
+  // 종합할인
+  addSection(ws1,'6. 종합할인 요약',6);
+  addRow(ws1,['구분','회원 기명','회원 무기명','D멤버스·FIT','',''],{font:hdrFont,fill:hdrFill});
+  document.querySelectorAll('#tbl-total-summary tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    addRow(ws1,[cells[0],cells[1],cells[2],cells[3],'','']);
+  });
+  ws1.addRow([]);
+
+  // KPI 요약
+  addSection(ws1,'7. KPI 요약',6);
+  addLabelRow(ws1,'목표 객실수',(p.kpi.totalRooms||'0')+' 실',6);
+  addLabelRow(ws1,'목표 매출',p.kpi.totalRevenue+' 원',6);
+  addLabelRow(ws1,'목표 OCC 기여',p.kpi.occContribution,6);
+  ws1.addRow([]);
+
+  // 기타 협조사항
+  addSection(ws1,'8. 기타 및 협조사항',6);
+  const coops=[['영업기획',document.getElementById('coop-sales')?.value||''],['마케팅기획',document.getElementById('coop-mkt')?.value||''],['GS (영업지원)',document.getElementById('coop-gs')?.value||''],['홍보',document.getElementById('coop-pr')?.value||'']];
+  coops.forEach(([l,v])=>addLabelRow(ws1,l,v,6));
+
+  // ════════ 갑지 시트 ════════
+  const ws2=wb.addWorksheet('갑지');
+  ws2.columns=[{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12},{width:12}];
+
+  const gTitle=ws2.addRow(['갑지 — 사업장별 상세']);
+  ws2.mergeCells(1,1,1,12);gTitle.getCell(1).font=titleFont;gTitle.getCell(1).alignment={horizontal:'center'};gTitle.height=28;
+  ws2.addRow([]);
+
+  // KPI 상세
+  addSection(ws2,'■ KPI 사업장별 × 월별',12);
+  const kpiHdrVals=['사업장','사업장 목표','RM FCST','전체 OCC'];
+  kpiMonths.forEach(m=>kpiHdrVals.push(m+'월'));
+  kpiHdrVals.push('합계');
+  while(kpiHdrVals.length<12)kpiHdrVals.push('');
+  addRow(ws2,kpiHdrVals,{font:hdrFont,fill:hdrFill});
+
+  document.querySelectorAll('#tbl-kpi tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    while(cells.length<12)cells.push('');
+    const isTot=tr.classList.contains('total-row');
+    addRow(ws2,cells,{font:isTot?hdrFont:bodyFont,fill:isTot?goldFill:undefined});
+  });
+  ws2.addRow([]);
+
+  // 객실 요금 요약 (범위)
+  addSection(ws2,'■ 객실 요금 요약',12);
+  const rmSumHdr=ws2.addRow(['구분','','기명','','','무기명','','','D멤버스·FIT','','','비고']);
+  rmSumHdr.eachCell(c=>{c.font=hdrFont;c.fill=hdrFill;c.border=border;c.alignment=centerAlign});
+  const rmSumHdr2=ws2.addRow(['','','정상가','배분가','할인율','정상가','배분가','할인율','정상가','배분가','할인율','']);
+  rmSumHdr2.eachCell(c=>{c.font=hdrFont;c.fill=hdrFill;c.border=border;c.alignment=centerAlign});
+  // Read room summary from DOM
+  const rmRows=document.querySelectorAll('#tbl-room-summary tbody tr');
+  rmRows.forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    const rowData=[cells[0],'',cells[1]||'','','',cells[2]||'','','',cells[3]||'','','',cells[4]||''];
+    addRow(ws2,rowData);
+  });
+  ws2.addRow([]);
+
+  // 부대업장
+  addSection(ws2,'■ 부대업장',12);
+  addRow(ws2,['구분','','정상가','배분가','할인율','','','','','','',''],{font:hdrFont,fill:hdrFill});
+  document.querySelectorAll('#tbl-addon-summary tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    addRow(ws2,[cells[0],'',cells[1],cells[2],cells[3]||'','','','','','','','']);
+  });
+  ws2.addRow([]);
+
+  // 종합 판매가
+  addSection(ws2,'■ 종합 판매가',12);
+  addRow(ws2,['구분','','기명','','','무기명','','','D멤버스·FIT','','','비고'],{font:hdrFont,fill:hdrFill});
+  document.querySelectorAll('#tbl-total-summary tbody tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent);
+    addRow(ws2,[cells[0],'',cells[1],'','',cells[2],'','',cells[3],'','','']);
+  });
+
+  // Download
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='품의서_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('엑셀 다운로드 완료');
 }
 
 /* ══════════ HTML EXPORT ══════════ */
 function generateProposalHtml(){
   collectProposalData();const p=proposalData;
-  const ts='border:1px solid #999;padding:5px 8px;text-align:center;font-size:11px;',th=ts+'background:#e8e8e8;font-weight:700;',tdL=ts+'text-align:left;font-weight:600;',hdr='font-size:13px;font-weight:700;margin:16px 0 8px;padding:4px 0;border-bottom:2px solid #333;';
-  let h=`<div style="font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:12px;color:#000;max-width:800px;">
-<h2 style="text-align:center;font-size:16px;margin-bottom:20px;">품 의 서</h2>
-<p style="${hdr}">1. 시행취지</p><p style="font-size:12px;line-height:1.7;margin-bottom:12px;white-space:pre-wrap;">${p.purpose}</p>
-<p style="${hdr}">2. 내용 — 기획전 상세</p>`;
+  const ts='border:1px solid #999;padding:6px 10px;text-align:center;font-size:11px;font-family:\'맑은 고딕\',sans-serif;',th=ts+'background:#e8e8e8;font-weight:700;',tdL=ts+'text-align:left;font-weight:600;',hdr='font-size:13px;font-weight:700;margin:18px 0 8px;padding:4px 0;border-bottom:2px solid #333;font-family:\'맑은 고딕\',sans-serif;';
+  const metaTxt='font-size:11px;color:#666;text-align:center;margin:4px 0 16px;font-family:\'맑은 고딕\',sans-serif;';
+  let h=`<div style="font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:12px;color:#000;max-width:800px;line-height:1.8;">
+<h2 style="text-align:center;font-size:18px;margin-bottom:4px;letter-spacing:8px;font-family:'맑은 고딕',sans-serif;">품 의 서</h2>
+<p style="${metaTxt}">내용 : ${p.productName} 시행하고자 보고드리오니 검토 후 재가하여 주시길 바랍니다.</p>
+<p style="text-align:center;font-size:12px;margin:12px 0 20px;color:#000;">- &nbsp; 아 &nbsp; 래 &nbsp; -</p>
+<p style="${hdr}">1. 시행 취지</p><p style="font-size:12px;line-height:1.8;margin-bottom:12px;white-space:pre-wrap;">${p.purpose}</p>
+<p style="${hdr}">2. 상품 운영안</p>`;
   // Campaign detail
   const cd = p.campaignDetail || {};
   if(cd.title || cd.product){
@@ -1280,10 +1569,13 @@ function generateProposalHtml(){
   h+=`<p style="${hdr}">6. 종합할인 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th></tr>`;
   document.querySelectorAll('#tbl-total-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
-  // KPI
-  h+=`<p style="${hdr}">7. KPI (사업장별 × 월별)</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">사업장</th><th style="${th}">7월</th><th style="${th}">8월</th><th style="${th}">합계</th></tr>`;
-  document.querySelectorAll('#tbl-kpi tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{const s=r.classList.contains('total-row')?th:i===0?tdL:ts;h+=`<td style="${s}">${c.textContent}</td>`});h+='</tr>'});
-  h+=`</table><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><td style="${th}width:120px;">목표 매출</td><td style="${ts}">${p.kpi.totalRevenue} 원</td></tr><tr><td style="${th}">목표 OCC 기여</td><td style="${ts}">${p.kpi.occContribution}</td></tr></table></div>`;
+  // KPI — 합계만 표시
+  const kpiTotal = document.getElementById('kpi-grand-total');
+  const kpiTotalRn = kpiTotal ? kpiTotal.textContent : '0';
+  h+=`<p style="${hdr}">7. KPI 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+<tr><td style="${th}width:120px;">목표 객실수</td><td style="${ts}">${kpiTotalRn} 실</td></tr>
+<tr><td style="${th}">목표 매출</td><td style="${ts}">${p.kpi.totalRevenue} 원</td></tr>
+<tr><td style="${th}">목표 OCC 기여</td><td style="${ts}">${p.kpi.occContribution}</td></tr></table></div>`;
   return h;
 }
 
