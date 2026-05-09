@@ -1257,13 +1257,19 @@ function populateKpiTable(){
 
   selProps.forEach(p => {
     const tr = document.createElement('tr');
-    // Get RM data for budget/fcst/occ
+    // Get RM data for budget/fcst/occ — fallback to daily booking
     let budRn = 0, fcstRn = 0, occSum = 0, occCnt = 0;
     selMonths.forEach(m => {
       const rm = getRmFcst(p.otb, m);
-      if(rm){ budRn += rm.rm_budget_rn||0; fcstRn += rm.rm_fcst_rn||0; }
       const db = getDailyBooking(p, m);
+      if(rm){ budRn += rm.rm_budget_rn||0; fcstRn += rm.rm_fcst_rn||0; }
+      else if(db){ budRn += db.budget_rns||0; }
       if(db && db.occ_budget){ occSum += db.occ_budget; occCnt++; }
+      // fallback fcst from OTB yoy
+      if(!rm){
+        const yoy = getOtbYoy(p.otb, m);
+        if(yoy){ fcstRn += yoy.rns_fcst||0; }
+      }
     });
     const occAvg = occCnt > 0 ? Math.round(occSum/occCnt) : null;
 
@@ -1534,33 +1540,23 @@ function generateProposalHtml(){
 <p style="text-align:center;font-size:12px;margin:12px 0 20px;color:#000;">- &nbsp; 아 &nbsp; 래 &nbsp; -</p>
 <p style="${hdr}">1. 시행 취지</p><p style="font-size:12px;line-height:1.8;margin-bottom:12px;white-space:pre-wrap;">${p.purpose}</p>
 <p style="${hdr}">2. 상품 운영안</p>`;
-  // Campaign detail
   const cd = p.campaignDetail || {};
-  if(cd.title || cd.product){
-    h+=`<table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
-    <tr><td style="${th}width:120px;">사업장</td><td style="${ts}">${p.property}</td></tr>
-    <tr><td style="${th}">제목</td><td style="${ts}">${cd.title||'-'}</td></tr>
-    <tr><td style="${th}">판매일자</td><td style="${ts}">${cd.saleDate||'-'}</td></tr>
-    <tr><td style="${th}">투숙일자</td><td style="${ts}">${cd.stayDate||'-'}</td></tr>
-    <tr><td style="${th}">상품</td><td style="${ts}">${cd.product||'-'}</td></tr>
-    <tr><td style="${th}">상품 비고</td><td style="${ts}">${cd.productNote||'-'}</td></tr>
-    <tr><td style="${th}">세그먼트</td><td style="${ts}">${cd.segments?.join(', ')||'-'}</td></tr></table>`;
-  }
-  h+=`<p style="${hdr}">3. 상품 운영안</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
-<tr><td style="${th}width:120px;">상품명</td><td style="${ts}">${p.productName}</td></tr>
-<tr><td style="${th}">소구점</td><td style="${ts}">${p.appeal}</td></tr>
-<tr><td style="${th}">사업장</td><td style="${ts}">${p.property}</td></tr>
-<tr><td style="${th}">판매채널</td><td style="${ts}">리조트 회원(기명/무기명), D멤버스·FIT</td></tr>
-<tr><td style="${th}">투숙기간</td><td style="${ts}">${p.stayStart} ~ ${p.stayEnd}</td></tr>
-<tr><td style="${th}">상품구성</td><td style="${ts}">${p.composition}</td></tr>
+  h+=`<table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+<tr><td style="${th}width:120px;">상품명</td><td style="${ts}">${p.productName||'-'}</td></tr>
+<tr><td style="${th}">소구점</td><td style="${ts}">${p.appeal||'-'}</td></tr>
+<tr><td style="${th}">사업장</td><td style="${ts}">${p.property||'-'}</td></tr>
+<tr><td style="${th}">판매채널</td><td style="${ts}">${cd.segments?.length?cd.segments.join(', '):'리조트 회원(기명/무기명), D멤버스·FIT'}</td></tr>
+<tr><td style="${th}">판매일자</td><td style="${ts}">${cd.saleDate||p.stayStart+' ~ '+p.stayEnd}</td></tr>
+<tr><td style="${th}">투숙기간</td><td style="${ts}">${cd.stayDate||p.stayStart+' ~ '+p.stayEnd}</td></tr>
+<tr><td style="${th}">상품구성</td><td style="${ts}">${cd.product||p.composition||'-'}</td></tr>
 <tr><td style="${th}">기준인원</td><td style="${ts}">${p.pax}인</td></tr>
-<tr><td style="${th}">특이사항</td><td style="${ts}">${p.note}</td></tr></table>`;
+<tr><td style="${th}">특이사항</td><td style="${ts}">${cd.productNote||p.note||'-'}</td></tr></table>`;
   // 보고 실적
-  h+=`<p style="${hdr}">품의서 작성 — 보고 실적</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">전체(RM)</th><th style="${th}">GS실적</th></tr>`;
+  h+=`<p style="${hdr}">3. 보고 실적</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">전체(RM)</th><th style="${th}">GS실적</th></tr>`;
   document.querySelectorAll('#tbl-report-performance tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
   // 객실 배분가 from DOM
-  h+=`<p style="${hdr}">4. 객실 배분가 요약</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
+  h+=`<p style="${hdr}">4. 객실 배분가</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">구분</th><th style="${th}">회원 기명</th><th style="${th}">회원 무기명</th><th style="${th}">D멤버스·FIT</th><th style="${th}">무기명↔FIT Gap</th></tr>`;
   document.querySelectorAll('#tbl-room-summary tbody tr').forEach(r=>{h+='<tr>';r.querySelectorAll('td').forEach((c,i)=>{h+=`<td style="${i===0?tdL:ts}">${c.textContent}</td>`});h+='</tr>'});
   h+='</table>';
   h+=`<p style="${hdr}">5. 부대업장 할인율</p><table style="border-collapse:collapse;width:100%;margin-bottom:14px;"><tr><th style="${th}">부대시설</th><th style="${th}">정상가</th><th style="${th}">배분가</th><th style="${th}">할인율</th></tr>`;
