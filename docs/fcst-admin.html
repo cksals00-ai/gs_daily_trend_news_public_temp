@@ -672,11 +672,11 @@ function renderFcstTable() {
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
       <td style="text-align:center;padding:3px 4px">${fcstSegFilter==='GS'
         ?'<span style="font-size:9.5px;color:var(--ink-faint)">세그 합산</span>'
-        :`<input type="number" class="fcst-keyin-input" data-key="${esca(segRows[0]?.kKey||'')}"
+        :`<input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(segRows[0]?.kKey||'')}"
                 value="${segRows[0]?.kVal!==null?segRows[0].kVal:''}" placeholder="${fmt(pAuto)}"
                 ${editable?'':'disabled'}
                 style="width:72px;background:var(--bg-soft);border:1px solid ${segRows[0]?.kVal!==null?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}"
-                onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)'">`
+                oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">`
       }</td>
       <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmt(pFinal)} ${dHtml}</td>
       <td style="text-align:right"><span class="tbadge ${pAchCls}" style="font-size:10px">${pAch}${pAch!=='—'?'%':''}</span></td>
@@ -700,11 +700,11 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(sr.autoF)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${segRmDisp}</td>
           <td style="text-align:center;padding:3px 4px">
-            <input type="number" class="fcst-keyin-input" data-key="${esca(sr.kKey)}"
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(sr.kKey)}"
                    value="${sr.kVal!==null?sr.kVal:''}" placeholder="${fmt(sr.autoF)}"
                    ${editable?'':'disabled'}
                    style="width:72px;background:var(--bg-soft);border:1px solid ${sr.kVal!==null?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}"
-                   onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)'">
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">
           </td>
           <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--positive);font-weight:700">${fmt(sr.finalV)}</td>
           <td style="text-align:right"><span class="tbadge ${achCls}" style="font-size:9.5px">${ach}${ach!=='—'?'%':''}</span></td>
@@ -739,7 +739,10 @@ window.toggleAllProps=function(){allCollapsed=!allCollapsed;if(allCollapsed){pro
 window.updateSegKeyin=function(input){
   if(!canEditNow())return;
   const key=input.getAttribute('data-key');
-  const val=input.value.trim();
+  // 숫자 이외 문자 제거 (한글 IME 대응)
+  const cleaned=input.value.replace(/[^0-9]/g,'');
+  if(cleaned!==input.value)input.value=cleaned;
+  const val=cleaned.trim();
   const keyin=getActiveKeyin();
   if(val==='')delete keyin[key];
   else keyin[key]=parseInt(val)||0;
