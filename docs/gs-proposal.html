@@ -828,16 +828,23 @@ async function generateForecastTables(){
           t_bud_adr_w += adr_won*rm.rm_budget_rn;
           t_bud_adr_rn += rm.rm_budget_rn;
         }
-        if(rm.segments){
-          segsArr.forEach(seg=>{
-            const s = rm.segments[seg];
-            if(s){
-              gs_seg_bud_rn += s.rm_budget_rn||0;
-              gs_seg_bud_rev_k += (s.rm_budget_rev_mil||0)*1000;
-              gs_seg_fcst_rn += s.rm_fcst_rn||0;
-              gs_seg_fcst_rev_k += (s.rm_fcst_rev_mil||0)*1000;
-            }
-          });
+      } else {
+        // fallback: 사업계획(byProperty 연간 + yoyTable 월별)으로 목표/온북 추정
+        const bp = getOtbByProp(p.otb);
+        const yoy = getOtbYoy(p.otb, month);
+        // 목표 RN: yoyTable bud_rn > daily_booking budget_rns
+        const monthBudRn = yoy ? (yoy.bud_rn||0) : (db ? (db.budget_rns||0) : 0);
+        // 목표 ADR/REV: byProperty 연간 adr_budget × 월별 RN
+        if(bp && bp.adr_budget>0 && monthBudRn>0){
+          t_bud_adr_w += bp.adr_budget * monthBudRn;
+          t_bud_adr_rn += monthBudRn;
+          t_bud_rev += Math.round(bp.adr_budget * monthBudRn / 1000);
+        }
+        // FCST RN: yoyTable rns_fcst
+        if(yoy){ t_fcst_rn += yoy.rns_fcst||0; }
+        // FCST REV: 사업계획 ADR × fcst RN
+        if(bp && bp.adr_budget>0 && yoy && (yoy.rns_fcst||0)>0){
+          t_fcst_rev_k += Math.round(bp.adr_budget * yoy.rns_fcst / 1000);
         }
       }
       const gs = getGsData(p.db, month, segsArr);
@@ -1401,7 +1408,7 @@ async function exportExcel(){
   // 기획전 상세
   addSection(ws1,'2. 내용 — 기획전 상세',6);
   const cd=p.campaignDetail||{};
-  [['사업장',p.property],['제목',cd.title||'-'],['판매일자',cd.saleDate||'-'],['투숙일자',cd.stayDate||'-'],['상품',cd.product||'-'],['상품 비고',cd.productNote||'-'],['세그먼트',cd.segments?.join(', ')||'-']].forEach(([l,v])=>{
+  [['사업장',p.property],['제목',cd.title||p.productName||'-'],['판매일자',cd.saleDate||(p.stayStart&&p.stayEnd?p.stayStart+' ~ '+p.stayEnd:'-')],['투숙일자',cd.stayDate||(p.stayStart&&p.stayEnd?p.stayStart+' ~ '+p.stayEnd:'-')],['상품',cd.product||p.composition||'-'],['상품 비고',cd.productNote||p.note||'-'],['세그먼트',cd.segments?.length?cd.segments.join(', '):'리조트 회원(기명/무기명), D멤버스·FIT']].forEach(([l,v])=>{
     const r=addLabelRow(ws1,l,v,6);
   });
   ws1.addRow([]);
@@ -1415,7 +1422,7 @@ async function exportExcel(){
 
   // 보고 실적
   addSection(ws1,'품의서 작성 — 보고 실적',6);
-  const rpHdr=addRow(ws1,['구분','전체(RM)','GS실적'],{font:hdrFont,fill:hdrFill});
+  const rpHdr=addRow(ws1,['구분','전체(RM)','','','GS실적',''],{font:hdrFont,fill:hdrFill});
   ws1.mergeCells(rpHdr.number,2,rpHdr.number,4);ws1.mergeCells(rpHdr.number,5,rpHdr.number,6);
   const rpTbl=document.getElementById('tbl-report-performance');
   if(rpTbl){rpTbl.querySelectorAll('tbody tr').forEach(tr=>{
