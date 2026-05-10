@@ -131,6 +131,15 @@ jobs:
           python scripts/gen_sdd_by_prop.py || echo "⚠ SDD by prop 생성 실패 - 기존 데이터 유지"
           echo "::endgroup::"
 
+      - name: 📦 [Step 3.7] 기획전 실적 집계
+        if: steps.mode.outputs.full == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          echo "::group::기획전 실적"
+          python scripts/generate_campaign_performance.py || echo "⚠ 기획전 실적 집계 실패 - 기존 데이터 유지"
+          echo "::endgroup::"
+
       - name: 🔨 [Step 4] HTML 빌드 (모든 데이터 주입)
         if: steps.mode.outputs.full == 'true'
         timeout-minutes: 10

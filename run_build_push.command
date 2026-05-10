@@ -4,6 +4,8 @@ echo "=== parse_raw_db.py ==="
 python3 scripts/parse_raw_db.py
 echo "=== generate_otb_data.py ==="
 python3 scripts/generate_otb_data.py
+echo "=== generate_campaign_performance.py ==="
+python3 scripts/generate_campaign_performance.py || echo "⚠ 기획전 실적 집계 실패"
 echo "=== build.py ==="
 python3 scripts/build.py
 echo "=== git add + commit + push ==="
