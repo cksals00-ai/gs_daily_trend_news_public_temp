@@ -103,6 +103,9 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .seg-tag.gota{background:rgba(90,159,196,0.15);color:#5a9fc4;}
 .seg-tag.inbound{background:rgba(76,175,111,0.15);color:#4caf6f;}
 .prop-chips .chip{font-size:9px;padding:3px 7px;}
+.date-input{background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;color:var(--ink-muted);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;width:100%;max-width:140px;color-scheme:dark;}
+.date-input:focus{border-color:var(--gold);color:var(--ink);}
+.date-input::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
 @media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.main-content{padding:16px 14px;}}
@@ -195,6 +198,14 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 </div>
 
 <div class="mobile-filter-bar">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">예약일:</span>
+  <input type="date" id="mobile-booking-date-from" class="date-input" style="max-width:120px;">
+  <span style="color:var(--ink-faint);font-size:10px;">~</span>
+  <input type="date" id="mobile-booking-date-to" class="date-input" style="max-width:120px;">
+  <button class="chip booking-date-preset" data-days="0" style="border-color:var(--negative);color:var(--negative);font-size:9px;padding:2px 6px;">초기화</button>
+</div>
+
+<div class="mobile-filter-bar">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">구분:</span>
   <div id="mobile-segment-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
@@ -229,6 +240,23 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     <div>
       <div class="filter-section-label">월</div>
       <div class="filter-chips" id="month-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">예약일자 <span id="booking-date-status" style="font-weight:400;opacity:0.6;font-size:9px;"></span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="date" id="booking-date-from" class="date-input" title="시작일">
+          <span style="color:var(--ink-faint);font-size:11px;">~</span>
+          <input type="date" id="booking-date-to" class="date-input" title="종료일">
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="chip booking-date-preset" data-days="7" title="최근 7일">7일</button>
+          <button class="chip booking-date-preset" data-days="14" title="최근 14일">14일</button>
+          <button class="chip booking-date-preset" data-days="30" title="최근 30일">30일</button>
+          <button class="chip booking-date-preset" data-days="0" title="전체 (필터 해제)" style="border-color:var(--negative);color:var(--negative);">초기화</button>
+        </div>
+      </div>
     </div>
     <div class="sidebar-divider"></div>
     <div>
@@ -389,6 +417,8 @@ let showAllChannels = true;
 
 let activeRegion = '전체';
 let activeProps = new Set();
+let bookingDateFrom = ''; // YYYYMMDD format
+let bookingDateTo = '';   // YYYYMMDD format
 
 const REGION_DEFS = [
   { key: '전체', label: '전체' },
@@ -431,9 +461,31 @@ function getMonthsForPeriod() {
   return allMonths.includes(key) ? [key] : [];
 }
 
+// 예약일자 필터가 활성화되어 있는지 체크
+function isBookingDateFilterActive() {
+  return bookingDateFrom !== '' || bookingDateTo !== '';
+}
+
+// pickup_daily_by_channel_month에서 예약일자 범위 내 데이터만 합산
+function aggregateByBookingDate(channelMonthData, months) {
+  let rn = 0, rev = 0;
+  for (const m of months) {
+    const dateEntries = channelMonthData[m];
+    if (!dateEntries) continue;
+    for (const [bdate, vals] of Object.entries(dateEntries)) {
+      if (bookingDateFrom && bdate < bookingDateFrom) continue;
+      if (bookingDateTo && bdate > bookingDateTo) continue;
+      rn += vals.rn || 0;
+      rev += vals.rev || 0;
+    }
+  }
+  return { rn, rev };
+}
+
 function aggregateChannels(months) {
   const result = {};
   const prm = db.meta.property_region_map || {};
+  const useBookingFilter = isBookingDateFilterActive();
 
   // Determine which properties to include
   let targetProps = null; // null = all
@@ -445,7 +497,23 @@ function aggregateChannels(months) {
     }
   }
 
-  if (targetProps && db.by_property_channel) {
+  if (useBookingFilter && db.pickup_daily_by_channel_month) {
+    // 예약일자 필터 모드: pickup_daily_by_channel_month 사용
+    // 참고: 권역 필터와 동시 사용 시 property-level 예약일별 데이터가 없으므로 전체 기준으로 표시
+    const pdcm = db.pickup_daily_by_channel_month;
+    for (const ch of Object.keys(pdcm)) {
+      if (ch === '기타' || ch === '미분류') continue;
+      const agg = aggregateByBookingDate(pdcm[ch], months);
+      if (agg.rn === 0 && agg.rev === 0) continue;
+      const seg = getChannelSegment(ch);
+      result[ch] = {
+        booking_rn: agg.rn, cancel_rn: 0, net_rn: agg.rn,
+        booking_rev: agg.rev, net_rev: agg.rev,
+        adr: agg.rn > 0 ? agg.rev * 1000 / agg.rn : 0,
+        segment: seg
+      };
+    }
+  } else if (targetProps && db.by_property_channel) {
     // Filter by property: aggregate from by_property_channel
     for (const prop of targetProps) {
       const propChannels = db.by_property_channel[prop];
@@ -585,8 +653,12 @@ function render() {
   const regionLabel = activeRegion !== '전체'
     ? ' · ' + (activeProps.size > 0 ? [...activeProps].join('+') : REGION_LABEL[activeRegion] + ' 전체')
     : '';
-  setText('period-display', periodLabel + segLabel + regionLabel);
-  setText('table-label', periodLabel + segLabel + regionLabel + ' · ' + months.length + '개월');
+  const bdLabel = isBookingDateFilterActive()
+    ? ' · 예약일 ' + (bookingDateFrom ? bookingDateFrom.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3') : '~')
+      + '~' + (bookingDateTo ? bookingDateTo.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3') : '')
+    : '';
+  setText('period-display', periodLabel + segLabel + regionLabel + bdLabel);
+  setText('table-label', periodLabel + segLabel + regionLabel + bdLabel + ' · ' + months.length + '개월');
   setText('kpi-rns-sub', months.length + '개월 누계');
   setText('kpi-rev-sub', months.length + '개월 누계');
 
@@ -1014,6 +1086,7 @@ function buildFilters() {
   buildMonthChips();
   buildSegmentChips();
   buildRegionChips();
+  initBookingDateFilter();
 }
 
 function buildMonthChips() {
@@ -1146,6 +1219,75 @@ function buildPropChips() {
         render();
       });
       c.appendChild(btn);
+    });
+  });
+}
+
+function initBookingDateFilter() {
+  const fromEl = document.getElementById('booking-date-from');
+  const toEl = document.getElementById('booking-date-to');
+  const mFromEl = document.getElementById('mobile-booking-date-from');
+  const mToEl = document.getElementById('mobile-booking-date-to');
+  const statusEl = document.getElementById('booking-date-status');
+
+  function toYMD(dateStr) {
+    return dateStr ? dateStr.replace(/-/g, '') : '';
+  }
+  function toISO(ymd) {
+    if (!ymd || ymd.length !== 8) return '';
+    return ymd.slice(0,4) + '-' + ymd.slice(4,6) + '-' + ymd.slice(6,8);
+  }
+
+  function syncAndRender(source) {
+    if (source === 'desktop') {
+      bookingDateFrom = toYMD(fromEl.value);
+      bookingDateTo = toYMD(toEl.value);
+      if (mFromEl) mFromEl.value = fromEl.value;
+      if (mToEl) mToEl.value = toEl.value;
+    } else {
+      bookingDateFrom = toYMD(mFromEl.value);
+      bookingDateTo = toYMD(mToEl.value);
+      if (fromEl) fromEl.value = mFromEl.value;
+      if (toEl) toEl.value = mToEl.value;
+    }
+    if (statusEl) {
+      statusEl.textContent = isBookingDateFilterActive() ? '(필터 적용중)' : '';
+      statusEl.style.color = isBookingDateFilterActive() ? 'var(--gold-bright)' : '';
+    }
+    render();
+  }
+
+  if (fromEl) fromEl.addEventListener('change', () => syncAndRender('desktop'));
+  if (toEl) toEl.addEventListener('change', () => syncAndRender('desktop'));
+  if (mFromEl) mFromEl.addEventListener('change', () => syncAndRender('mobile'));
+  if (mToEl) mToEl.addEventListener('change', () => syncAndRender('mobile'));
+
+  // 프리셋 버튼 이벤트
+  document.querySelectorAll('.booking-date-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const days = parseInt(btn.dataset.days);
+      if (days === 0) {
+        // 초기화
+        bookingDateFrom = '';
+        bookingDateTo = '';
+        [fromEl, mFromEl].forEach(el => { if (el) el.value = ''; });
+        [toEl, mToEl].forEach(el => { if (el) el.value = ''; });
+      } else {
+        const today = new Date();
+        const from = new Date(today);
+        from.setDate(from.getDate() - days);
+        const fISO = from.toISOString().slice(0,10);
+        const tISO = today.toISOString().slice(0,10);
+        bookingDateFrom = toYMD(fISO);
+        bookingDateTo = toYMD(tISO);
+        [fromEl, mFromEl].forEach(el => { if (el) el.value = fISO; });
+        [toEl, mToEl].forEach(el => { if (el) el.value = tISO; });
+      }
+      if (statusEl) {
+        statusEl.textContent = isBookingDateFilterActive() ? '(필터 적용중)' : '';
+        statusEl.style.color = isBookingDateFilterActive() ? 'var(--gold-bright)' : '';
+      }
+      render();
     });
   });
 }
