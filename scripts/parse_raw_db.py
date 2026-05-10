@@ -192,7 +192,7 @@ PROPERTY_REGION = {
     "펠리체": "vivaldi", "오션월드": "vivaldi",
     # Central (중부 권역)
     "델피노": "central", "양평": "central", "양양": "central",
-    "삼척": "central", "단양": "central", "청송": "central",
+    "삼척": "central", "단양": "central", "청송": "south",
     "천안": "central", "변산": "central", "오크밸리": "central",
     "르네블루": "central",
     # South (남부 권역)

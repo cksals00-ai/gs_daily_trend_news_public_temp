@@ -87,7 +87,7 @@ REGION_MAP = {
     "양양": "central",
     "삼척": "central",
     "단양": "central",
-    "청송": "central",
+    "청송": "south",
     "천안": "central",
     "변산": "central",
     "오크밸리": "central",
