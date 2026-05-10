@@ -378,7 +378,7 @@ async function loadFcstData() {
     const resp = await fetch('data/otb_data.json?t=' + Date.now());
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     otbRaw = await resp.json();
-    propertyList = (otbRaw.yoyTable || []).map(r => ({ name: r.name, region: r.region }));
+    propertyList = (otbRaw.yoyTable || []).filter(r => r.name && !/^(OTA|G-OTA|Inbound)$/i.test(r.name)).map(r => ({ name: r.name, region: r.region }));
 
     // Load RM FCST data (per-property forecast Room Nights from latest RM PDF)
     try {
