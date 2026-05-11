@@ -311,13 +311,43 @@ function getPrevWeekKeyin() {
 function isViewingCurrentWeek() { return activeWeekKey === CURRENT_WEEK_KEY; }
 function canEditNow() { return CAN_EDIT && isViewingCurrentWeek(); }
 
+/* ═══ MIGRATE OLD KEYIN KEYS ═══ */
+function migrateKeyinKeys(history) {
+  // 구 포맷 "사업장|세그" → 신 포맷 "사업장|세그|월"
+  // 구 ADR 포맷 "사업장|세그|ADR" → "사업장|세그|ADR|월"
+  Object.keys(history).forEach(wk => {
+    const wd = history[wk];
+    if (!wd?.keyin) return;
+    const month = wd.month || fcstCurrentMonth;
+    const newKeyin = {};
+    let migrated = false;
+    Object.entries(wd.keyin).forEach(([k, v]) => {
+      const parts = k.split('|');
+      if (parts.length === 2) {
+        // "사업장|세그" → "사업장|세그|월"
+        newKeyin[`${k}|${month}`] = v;
+        migrated = true;
+      } else if (parts.length === 3 && parts[2] === 'ADR') {
+        // "사업장|세그|ADR" → "사업장|세그|ADR|월"
+        newKeyin[`${k}|${month}`] = v;
+        migrated = true;
+      } else {
+        // 이미 신 포맷
+        newKeyin[k] = v;
+      }
+    });
+    if (migrated) wd.keyin = newKeyin;
+  });
+  return history;
+}
+
 /* ═══ INIT ═══ */
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('reportDate').value = TODAY.toISOString().slice(0,10);
 
   // Restore
   const saved = loadStorage();
-  if (saved?.fcst_history) fcstHistory = saved.fcst_history;
+  if (saved?.fcst_history) fcstHistory = migrateKeyinKeys(saved.fcst_history);
   if (saved?._updated_by) setVal('updatedBy', saved._updated_by);
 
   renderWeekBanner();
@@ -429,7 +459,7 @@ async function loadFcstData() {
         baseAdminData = await adResp.json();
         // 키인이 admin_input.json에 이미 있다면 history 비어있을 때 복원
         if (baseAdminData.fcst_history && Object.keys(fcstHistory).length === 0) {
-          fcstHistory = baseAdminData.fcst_history;
+          fcstHistory = migrateKeyinKeys(baseAdminData.fcst_history);
           renderWeekTabs();
         }
       }
@@ -887,7 +917,7 @@ function applyFormData(d){
   if(!d)return;
   setVal('updatedBy',d._updated_by);
   setVal('reportDate',d.report_date);
-  if(d.fcst_history&&typeof d.fcst_history==='object')fcstHistory=d.fcst_history;
+  if(d.fcst_history&&typeof d.fcst_history==='object')fcstHistory=migrateKeyinKeys(d.fcst_history);
   // 가져온 데이터를 베이스로 머지(다음 export 시 보존)
   baseAdminData=d;
   renderWeekTabs();renderFcstTable();updateEditableState();
