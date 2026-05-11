@@ -359,13 +359,6 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
-    <!-- 인사이트 차트 더보기 토글 -->
-    <div id="chart-toggle-wrap" style="text-align:center;margin:8px 0;">
-      <button id="chart-toggle-btn" onclick="toggleCharts()" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">
-        차트 더보기 (YoY · ADR · 연도추이)
-      </button>
-    </div>
-    <div id="chart-section" style="display:none;">
     <!-- 인사이트 차트: YoY 변화율 + ADR 비교 -->
     <div class="mid-row">
       <div class="chart-card">
@@ -404,7 +397,6 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
         <canvas id="channel-yoy-chart"></canvas>
       </div>
     </div>
-    </div>
 
     <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
       DATA: 온북 DB 파싱 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
@@ -422,14 +414,7 @@ let activeYear = new Date().getFullYear().toString();
 let activeMonth = String(new Date().getMonth() + 1); // 당월 기본
 let activeSegment = 'ALL'; // ALL / OTA / G-OTA
 let showAllChannels = false;
-let showCharts = false;
-
-function toggleCharts() {
-  showCharts = !showCharts;
-  document.getElementById('chart-section').style.display = showCharts ? '' : 'none';
-  document.getElementById('chart-toggle-btn').textContent = showCharts ? '차트 접기' : '차트 더보기 (YoY · ADR · 연도추이)';
-  if (showCharts && db) render();
-}
+let showAllChartChannels = false;
 
 let activeRegion = '전체';
 let activeProps = new Set();
@@ -796,10 +781,28 @@ function buildUnifiedChart(sorted, avgADR) {
   if (!ctx) return;
   if (unifiedChart) unifiedChart.destroy();
 
-  // 전체 채널 표시
-  const all = sorted;
+  // 10개까지만 표시, 더보기로 전체 펼침
+  const maxVisible = 10;
+  const all = showAllChartChannels ? sorted : sorted.slice(0, maxVisible);
   const chartHeight = Math.max(260, all.length * 28 + 60);
   document.getElementById('unified-chart-wrap').style.height = chartHeight + 'px';
+
+  // 더보기/접기 버튼
+  let toggleWrap = document.getElementById('chart-channel-toggle');
+  if (!toggleWrap) {
+    toggleWrap = document.createElement('div');
+    toggleWrap.id = 'chart-channel-toggle';
+    toggleWrap.style.cssText = 'text-align:center;margin:6px 0 2px;';
+    document.getElementById('unified-chart-wrap').parentElement.appendChild(toggleWrap);
+  }
+  if (sorted.length > maxVisible) {
+    const hidden = sorted.length - maxVisible;
+    toggleWrap.innerHTML = showAllChartChannels
+      ? `<button onclick="showAllChartChannels=false;render();" style="font-family:var(--mono);font-size:11px;padding:4px 14px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">접기</button>`
+      : `<button onclick="showAllChartChannels=true;render();" style="font-family:var(--mono);font-size:11px;padding:4px 14px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">더보기 (${hidden}개 채널 더 보기)</button>`;
+  } else {
+    toggleWrap.innerHTML = '';
+  }
 
   const labels = all.map(([ch]) => ch);
   const rnsData = all.map(([,d]) => d.net_rn);
