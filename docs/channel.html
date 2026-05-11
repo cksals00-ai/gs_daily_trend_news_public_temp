@@ -467,15 +467,18 @@ function isBookingDateFilterActive() {
 }
 
 // pickup_daily_by_channel_month에서 예약일자 범위 내 데이터만 합산 (28번 취소 차감)
-function aggregateByBookingDate(pickupMonthData, cancelMonthData, months) {
+// dateFrom/dateTo: 오버라이드 가능 (LY 동기간 비교 시 -1년 shift)
+function aggregateByBookingDate(pickupMonthData, cancelMonthData, months, dateFrom, dateTo) {
+  const df = dateFrom !== undefined ? dateFrom : bookingDateFrom;
+  const dt = dateTo !== undefined ? dateTo : bookingDateTo;
   let bk_rn = 0, bk_rev = 0, cx_rn = 0, cx_rev = 0;
   for (const m of months) {
     // 27번 예약
     const pickupEntries = pickupMonthData?.[m];
     if (pickupEntries) {
       for (const [bdate, vals] of Object.entries(pickupEntries)) {
-        if (bookingDateFrom && bdate < bookingDateFrom) continue;
-        if (bookingDateTo && bdate > bookingDateTo) continue;
+        if (df && bdate < df) continue;
+        if (dt && bdate > dt) continue;
         bk_rn += vals.rn || 0;
         bk_rev += vals.rev || 0;
       }
@@ -484,8 +487,8 @@ function aggregateByBookingDate(pickupMonthData, cancelMonthData, months) {
     const cancelEntries = cancelMonthData?.[m];
     if (cancelEntries) {
       for (const [cdate, vals] of Object.entries(cancelEntries)) {
-        if (bookingDateFrom && cdate < bookingDateFrom) continue;
-        if (bookingDateTo && cdate > bookingDateTo) continue;
+        if (df && cdate < df) continue;
+        if (dt && cdate > dt) continue;
         cx_rn += vals.rn || 0;
         cx_rev += vals.rev || 0;
       }
@@ -493,11 +496,20 @@ function aggregateByBookingDate(pickupMonthData, cancelMonthData, months) {
   }
   return { rn: bk_rn - cx_rn, rev: bk_rev - cx_rev, booking_rn: bk_rn, cancel_rn: cx_rn };
 }
+// 날짜를 -1년 shift (YYYY-MM-DD → (YYYY-1)-MM-DD)
+function shiftDateMinusYear(dateStr) {
+  if (!dateStr) return '';
+  const yr = parseInt(dateStr.substring(0, 4));
+  return (yr - 1) + dateStr.substring(4);
+}
 
-function aggregateChannels(months) {
+function aggregateChannels(months, opts) {
   const result = {};
   const prm = db.meta.property_region_map || {};
   const useBookingFilter = isBookingDateFilterActive();
+  // opts.dateFrom / opts.dateTo: LY 동기간용 예약일자 오버라이드
+  const bdFrom = opts?.dateFrom;
+  const bdTo = opts?.dateTo;
 
   // Determine which properties to include
   let targetProps = null; // null = all
@@ -516,7 +528,7 @@ function aggregateChannels(months) {
     const allChs = new Set([...Object.keys(pdcm), ...Object.keys(cdcm)]);
     for (const ch of allChs) {
       if (ch === '기타' || ch === '미분류') continue;
-      const agg = aggregateByBookingDate(pdcm[ch], cdcm[ch], months);
+      const agg = aggregateByBookingDate(pdcm[ch], cdcm[ch], months, bdFrom, bdTo);
       if (agg.rn === 0 && agg.rev === 0 && agg.booking_rn === 0) continue;
       const seg = getChannelSegment(ch);
       const netRn = agg.rn;
@@ -601,7 +613,12 @@ function render() {
     const yr = parseInt(m.substring(0,4));
     return (yr - 1) + m.substring(4);
   });
-  const allChannelDataLY_raw = aggregateChannels(lyMonths);
+  // LY 동기간: 예약일자 필터 활성 시 날짜도 -1년 shift
+  const lyOpts = isBookingDateFilterActive() ? {
+    dateFrom: shiftDateMinusYear(bookingDateFrom),
+    dateTo: shiftDateMinusYear(bookingDateTo)
+  } : undefined;
+  const allChannelDataLY_raw = aggregateChannels(lyMonths, lyOpts);
 
   // 동기간 비율 보정: yoy_adjusted 데이터 활용
   const lyYear = String(parseInt(activeYear) - 1);
