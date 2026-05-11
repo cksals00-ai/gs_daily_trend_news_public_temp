@@ -154,7 +154,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
     </div>
 
     <div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:12px;line-height:1.7;">
-      키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다. <strong style="color:var(--ink-muted)">기존 FCST</strong> = 직전 주차에 작성한 값.
+      키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다. <strong style="color:var(--ink-muted)">기존 FCST</strong> = 직전 주차에 작성한 값 (없으면 자동 FCST로 폴백, 회색·이탤릭 표시).
       <strong style="color:var(--warning)">RM FCST</strong> = 최신 Revenue Meeting PDF의 사업장별 전망 RN (단위: 실, <span id="rm-fcst-source">data/rm_fcst.json</span> 기반).
       <strong style="color:var(--info)">자동 FCST</strong> 아래 회색 텍스트는 4개년 분산 기반 신뢰구간(CI).
     </div>
@@ -672,7 +672,7 @@ function renderFcstTable() {
         const rnKVal=keyin[rnKey]??null;
         const rnPrev=prevKeyin[rnKey]??null;
         const rnFinal=rnKVal!==null?rnKVal:rnAuto;
-        const rnPrevDisp=rnPrev!==null?fmt(rnPrev):'—';
+        const rnPrevDisp=rnPrev!==null?fmt(rnPrev):(rnAuto>0?`<span style="opacity:.55;font-style:italic">${fmt(rnAuto)}</span>`:'—');
         const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??null;
         const rnAch=rnBud>0?(rnFinal/rnBud*100).toFixed(1):'—';
         const rnAchN=rnBud>0?rnFinal/rnBud*100:0;
@@ -697,22 +697,25 @@ function renderFcstTable() {
           <td style="text-align:right"><span class="tbadge ${rnAchCls}" style="font-size:9.5px">${rnAch}${rnAch!=='—'?'%':''}</span></td>
         </tr>`;
 
-        // --- ADR 행 (천원 단위: 데이터는 원 → /1000 변환) ---
-        const adrBudRaw=sd?.adr_budget||0, adrActRaw=sd?.adr_actual||0, adrAutoRaw=sd?.adr_fcst||0;
-        const adrBud=Math.round(adrBudRaw/1000), adrAct=Math.round(adrActRaw/1000), adrAuto=Math.round(adrAutoRaw/1000);
+        // --- ADR 행 (천원 단위) ---
+        // segment-level adr_budget는 단위 버그(이미 천원)가 있어 rev/rns에서 재계산
+        const adrBud  = (sd?.rev_budget>0 && sd?.rns_budget>0) ? Math.round(sd.rev_budget/sd.rns_budget/1000) : 0;
+        const adrAct  = (sd?.rev_actual>0 && sd?.rns_actual>0) ? Math.round(sd.rev_actual/sd.rns_actual/1000) : 0;
+        const adrAuto = (sd?.rev_fcst>0   && sd?.rns_fcst>0)   ? Math.round(sd.rev_fcst/sd.rns_fcst/1000)     : (sd?.adr_fcst ? Math.round(sd.adr_fcst/1000) : 0);
+        const adrLast = (sd?.rev_last>0   && sd?.rns_last>0)   ? Math.round(sd.rev_last/sd.rns_last/1000)     : 0;
         const adrKey=`${prop.name}|${seg}|ADR|${M}`;
         const adrKVal=keyin[adrKey]??null;  // 천원 단위로 저장
         const adrPrev=prevKeyin[adrKey]??null;
         const adrFinal=adrKVal!==null?adrKVal:adrAuto;
-        const adrPrevDisp=adrPrev!==null?fmt(adrPrev):'—';
+        const adrPrevDisp=adrPrev!==null?fmt(adrPrev):(adrAuto>0?`<span style="opacity:.55;font-style:italic">${fmt(adrAuto)}</span>`:'—');
 
         html+=`<tr class="seg-row" style="border-bottom:none;">
           <td style="font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);font-weight:700;padding:3px 6px;">ADR<span style="font-size:8px;color:var(--ink-faint);margin-left:2px">천원</span></td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrBud)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(adrAct)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">—</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrBud>0?fmt(adrBud):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${adrAct>0?fmt(adrAct):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrLast>0?fmt(adrLast):'—'}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrPrevDisp}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(adrAuto)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${adrAuto>0?fmt(adrAuto):'—'}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">—</td>
           <td style="text-align:center;padding:3px 4px">
             <input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(adrKey)}"
@@ -731,15 +734,17 @@ function renderFcstTable() {
         const revPrevRn = rnPrev!==null?rnPrev:rnAuto;
         const revPrevAdr = adrPrev!==null?adrPrev:adrAuto;
         const revPrev = Math.round(revPrevRn * revPrevAdr / 1000);
+        // 매출 RM FCST = RM RN × 자동 ADR / 1000 (백만원)
+        const revRm = (segRm!==null && adrAuto>0) ? Math.round(segRm * adrAuto / 1000) : null;
 
         html+=`<tr class="seg-row">
           <td style="font-family:var(--mono);font-size:9.5px;color:var(--gold);font-weight:700;padding:3px 6px;">매출<span style="font-size:8px;color:var(--ink-faint);margin-left:2px">백만</span></td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(Math.round(revBud/1000000))}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(Math.round(revAct/1000000))}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revBud>0?fmt(Math.round(revBud/1000000)):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${revAct>0?fmt(Math.round(revAct/1000000)):'—'}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revLast>0?fmt(Math.round(revLast/1000000)):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revPrev)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(revAuto)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">—</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revPrev>0?fmt(revPrev):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${revAuto>0?fmt(revAuto):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${revRm!==null?fmt(revRm):'—'}</td>
           <td style="text-align:center;font-size:9px;color:var(--ink-faint)">자동</td>
           <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--gold);font-weight:700">${fmt(revFinal)}</td>
           <td></td>
