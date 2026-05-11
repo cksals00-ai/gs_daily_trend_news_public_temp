@@ -140,9 +140,13 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
   <div class="card" id="fcst-card">
     <div class="card-head"><span class="card-icon">📈</span><span class="card-title">FCST 키인 수정</span><span class="card-desc">세그먼트별 키인 → 사업장 합산</span></div>
 
-    <!-- 투숙월 탭 + 세그먼트 필터 -->
+    <!-- 투숙월 탭 + 지표 토글 + 세그먼트 필터 -->
     <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
       <div style="display:flex;gap:6px;flex-wrap:wrap;" id="fcst-tabs"></div>
+      <span style="width:1px;height:20px;background:var(--rule);flex-shrink:0;"></span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;" id="metric-toggle">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px;">지표:</span>
+      </div>
       <span style="width:1px;height:20px;background:var(--rule);flex-shrink:0;"></span>
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;" id="seg-filter">
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px;">세그:</span>
@@ -280,6 +284,7 @@ let fcstCurrentMonth = '4';
 let collapsedProps = new Set();
 let allCollapsed = false;
 let fcstSegFilter = 'GS'; // 'GS'=OTA+GOTA+IB 합산, 'OTA','G-OTA','Inbound'=개별 세그
+let fcstMetric = 'RN'; // 'RN'=객실수, 'ADR'=평균객단가(천원)
 
 /* Computed: current week's keyin values */
 function getActiveKeyin() {
@@ -447,6 +452,27 @@ async function loadFcstData() {
       tabC.appendChild(btn);
     });
 
+    // Build metric toggle (객실 RN / ADR)
+    const metricEl = document.getElementById('metric-toggle');
+    if (metricEl) {
+      metricEl.innerHTML = '<span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em;margin-right:2px;">지표:</span>';
+      [{key:'RN',label:'객실(RN)'},{key:'ADR',label:'ADR'}].forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'ftab' + (fcstMetric === opt.key ? ' active' : '');
+        btn.setAttribute('data-metric', opt.key);
+        btn.textContent = opt.label;
+        btn.style.cssText = 'font-size:11px;padding:4px 9px;';
+        btn.onclick = () => {
+          fcstMetric = opt.key;
+          document.querySelectorAll('#metric-toggle .ftab').forEach(t =>
+            t.classList.toggle('active', t.getAttribute('data-metric') === opt.key));
+          updateMetricLabels();
+          renderFcstTable(); updateEditableState();
+        };
+        metricEl.appendChild(btn);
+      });
+    }
+
     // Build segment filter chips (GS 합계 + 하위 뎁스: OTA, G-OTA, Inbound)
     const segFilterEl = document.getElementById('seg-filter');
     if (segFilterEl) {
@@ -604,6 +630,13 @@ function renderFactorHtml(factors) {
 }
 function factorText(factors){return(factors||[]).map(f=>`[${f.type==='int'?'내부':'외부'}] ${f.text}`).join(' / ');}
 
+/* ═══ METRIC LABELS ═══ */
+function updateMetricLabels() {
+  const unit = fcstMetric === 'ADR' ? 'ADR(천원)' : 'RN';
+  const boxes = document.querySelectorAll('.summary-box .summary-lbl');
+  if (boxes.length >= 2) { boxes[0].textContent = '목표 ' + unit; boxes[1].textContent = '실적 ' + unit; }
+}
+
 /* ═══ RENDER TABLE ═══ */
 function renderFcstTable() {
   const tbody = document.getElementById('fcst-tbody');
@@ -613,6 +646,9 @@ function renderFcstTable() {
   const prevKeyin = getPrevWeekKeyin();
   const editable = canEditNow();
 
+  const isADR = fcstMetric === 'ADR';
+  const fmtV = isADR ? fmtK : fmt;
+  updateMetricLabels();
   let html='';
   let totBud=0,totAct=0,totPrev=0,totAuto=0,totFinal=0,totRm=0;
 
@@ -631,28 +667,58 @@ function renderFcstTable() {
 
     displaySegs.forEach(seg=>{
       const sd=getSegData(prop.name,seg,fcstCurrentMonth);
-      const bud=sd?.rns_budget||0,act=sd?.rns_actual||0,autoF=sd?.rns_fcst||0;
-      const kKey=`${prop.name}|${seg}`;
-      const kVal=keyin[kKey]??null;
-      const prevVal=prevKeyin[kKey]??null;
-      const finalV=kVal!==null?kVal:autoF;
-      const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??sd?.rm_fcst_rn??null;
-      if(segRm!==null){pRm+=segRm;hasRm=true;}
-
-      pBud+=bud;pAct+=act;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
-      segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey,rmVal:segRm});
+      if (isADR) {
+        const bud=sd?.adr_budget||0,act=sd?.adr_actual||0,autoF=sd?.adr_fcst||0;
+        const kKeySuffix = '|ADR';
+        const kKey=`${prop.name}|${seg}${kKeySuffix}`;
+        const kVal=keyin[kKey]??null;
+        const prevVal=prevKeyin[kKey]??null;
+        const finalV=kVal!==null?kVal:autoF;
+        // ADR은 가중평균이므로 RN 가중치 필요
+        const segRn = sd?.rns_actual || sd?.rns_fcst || 0;
+        pBud+=bud; pAct+=act; pAuto+=autoF; pFinal+=finalV; pPrev+=(prevVal!==null?prevVal:autoF);
+        segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey,rmVal:null,segRn});
+      } else {
+        const bud=sd?.rns_budget||0,act=sd?.rns_actual||0,autoF=sd?.rns_fcst||0;
+        const kKey=`${prop.name}|${seg}`;
+        const kVal=keyin[kKey]??null;
+        const prevVal=prevKeyin[kKey]??null;
+        const finalV=kVal!==null?kVal:autoF;
+        const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??sd?.rm_fcst_rn??null;
+        if(segRm!==null){pRm+=segRm;hasRm=true;}
+        pBud+=bud;pAct+=act;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
+        segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey,rmVal:segRm,segRn:0});
+      }
     });
 
-    const pAch=pBud>0?(pFinal/pBud*100).toFixed(1):'—';
-    const pAchN=pBud>0?pFinal/pBud*100:0;
+    // ADR: property level = weighted average across segments
+    let dispBud=pBud, dispAct=pAct, dispAuto=pAuto, dispFinal=pFinal, dispPrev=pPrev;
+    if (isADR && fcstSegFilter==='GS' && segRows.length>1) {
+      // 가중평균: 각 세그 ADR × 세그 RN / 총 RN
+      const totSegRn = segRows.reduce((s,r)=>s+(r.segRn||0),0);
+      if (totSegRn>0) {
+        dispBud = Math.round(segRows.reduce((s,r)=>s+r.bud*(r.segRn||0),0)/totSegRn);
+        dispAct = Math.round(segRows.reduce((s,r)=>s+r.act*(r.segRn||0),0)/totSegRn);
+        dispAuto = Math.round(segRows.reduce((s,r)=>s+r.autoF*(r.segRn||0),0)/totSegRn);
+        dispFinal = Math.round(segRows.reduce((s,r)=>s+r.finalV*(r.segRn||0),0)/totSegRn);
+        dispPrev = Math.round(segRows.reduce((s,r)=>s+(r.prevVal!==null?r.prevVal:r.autoF)*(r.segRn||0),0)/totSegRn);
+      }
+    }
+    const pAch=dispBud>0?(dispFinal/dispBud*100).toFixed(1):'—';
+    const pAchN=dispBud>0?dispFinal/dispBud*100:0;
     const pAchCls=pAchN>=100?'positive':pAchN>=80?'warning':pAchN>0?'negative':'';
-    const delta=pFinal-pPrev;
-    const dHtml=pPrev>0?`<span class="delta ${delta>0?'up':delta<0?'down':'flat'}">${delta>0?'+':''}${fmt(delta)}</span>`:'';
+    const delta=dispFinal-dispPrev;
+    const dHtml=dispPrev>0?`<span class="delta ${delta>0?'up':delta<0?'down':'flat'}">${delta>0?'+':''}${isADR?fmtK(delta):fmt(delta)}</span>`:'';
 
-    totBud+=pBud;totAct+=pAct;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
+    if (isADR) {
+      // ADR 합계: 단순 합산 (가중평균은 footer에서 별도 처리)
+      totBud+=dispBud; totAct+=dispAct; totPrev+=dispPrev; totAuto+=dispAuto; totFinal+=dispFinal;
+    } else {
+      totBud+=pBud;totAct+=pAct;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
+    }
 
     // RM FCST: 세그 필터에 따라 해당 세그먼트(들) 합산
-    const rmVal = hasRm ? pRm : null;
+    const rmVal = (!isADR && hasRm) ? pRm : null;
     const rmDisplay = rmVal !== null ? fmt(rmVal) : '—';
     if (rmVal !== null) totRm += rmVal;
 
@@ -665,20 +731,20 @@ function renderFcstTable() {
     const accHtml = acc ? `<span style="font-size:9px;font-family:var(--mono);color:${acc.mape<=5?'var(--positive)':acc.mape<=10?'var(--warning)':'var(--negative)'};margin-left:6px;padding:1px 4px;border:1px solid ${acc.mape<=5?'var(--positive)':acc.mape<=10?'var(--warning)':'var(--negative)'};border-radius:3px;opacity:.85" title="과거 ${acc.samples}개월 평균">MAPE ${acc.mape}%</span>` : '';
 
     html+=`<tr class="prop-row"><td><span class="prop-toggle ${isColl?'collapsed':''}" onclick="toggleProp('${esca(prop.name)}')"><span class="arrow">▼</span><span class="rbadge ${rbCls}" style="font-size:9px;padding:1px 4px;margin-right:3px">${region.charAt(0).toUpperCase()}</span>${esc(prop.name)}</span>${accHtml}</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pBud)}</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink)">${fmt(pAct)}</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pPrev)}</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmt(pAuto)}${ciHtml}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmtV(dispBud)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink)">${fmtV(dispAct)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmtV(dispPrev)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmtV(dispAuto)}${isADR?'':ciHtml}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
       <td style="text-align:center;padding:3px 4px">${fcstSegFilter==='GS'
         ?'<span style="font-size:9.5px;color:var(--ink-faint)">세그 합산</span>'
         :`<input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(segRows[0]?.kKey||'')}"
-                value="${segRows[0]?.kVal!==null?segRows[0].kVal:''}" placeholder="${fmt(pAuto)}"
+                value="${segRows[0]?.kVal!==null?segRows[0].kVal:''}" placeholder="${fmtV(segRows[0]?.autoF||0).replace(/[^0-9]/g,'')}"
                 ${editable?'':'disabled'}
                 style="width:72px;background:var(--bg-soft);border:1px solid ${segRows[0]?.kVal!==null?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}"
                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">`
       }</td>
-      <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmt(pFinal)} ${dHtml}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmtV(dispFinal)} ${dHtml}</td>
       <td style="text-align:right"><span class="tbadge ${pAchCls}" style="font-size:10px">${pAch}${pAch!=='—'?'%':''}</span></td>
       <td>${fcstSegFilter!=='GS'?'<span class="ai-factor">'+renderFactorHtml(generateAiFactor(prop.name,fcstSegFilter,fcstCurrentMonth))+'</span>':''}</td></tr>`;
 
@@ -689,15 +755,15 @@ function renderFcstTable() {
         const achCls=achN>=100?'positive':achN>=80?'warning':achN>0?'negative':'';
         const segCls=sr.seg==='OTA'?'ota':sr.seg==='G-OTA'?'gota':'inbound';
         const factors=generateAiFactor(prop.name,sr.seg,fcstCurrentMonth);
-        const prevDisp=sr.prevVal!==null?fmt(sr.prevVal):'—';
-        const segRmDisp=sr.rmVal!==null?fmt(sr.rmVal):'—';
+        const prevDisp=sr.prevVal!==null?fmtV(sr.prevVal):'—';
+        const segRmDisp=(!isADR && sr.rmVal!==null)?fmt(sr.rmVal):'—';
 
         html+=`<tr class="seg-row">
           <td><span class="seg-badge ${segCls}">${esc(sr.seg)}</span></td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(sr.bud)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(sr.act)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmtV(sr.bud)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmtV(sr.act)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${prevDisp}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(sr.autoF)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmtV(sr.autoF)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${segRmDisp}</td>
           <td style="text-align:center;padding:3px 4px">
             <input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(sr.kKey)}"
@@ -706,29 +772,38 @@ function renderFcstTable() {
                    style="width:72px;background:var(--bg-soft);border:1px solid ${sr.kVal!==null?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}"
                    oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">
           </td>
-          <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--positive);font-weight:700">${fmt(sr.finalV)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--positive);font-weight:700">${fmtV(sr.finalV)}</td>
           <td style="text-align:right"><span class="tbadge ${achCls}" style="font-size:9.5px">${ach}${ach!=='—'?'%':''}</span></td>
-          <td class="ai-factor">${renderFactorHtml(factors)}</td></tr>`;
+          <td class="ai-factor">${isADR?'':renderFactorHtml(factors)}</td></tr>`;
       });
     }
   });
 
   tbody.innerHTML=html;
 
+  // ADR 합계: 사업장별 가중평균의 단순평균 (근사치) — 정확한 가중평균은 개별 RN 필요
+  // fmtV already defined at function scope
   const totAch=totBud>0?(totFinal/totBud*100).toFixed(1):'—';
   const tc=totBud>0&&totFinal/totBud>=1?'color:var(--positive)':'color:var(--warning)';
-  document.getElementById('ft-bud').textContent=fmt(totBud);
-  document.getElementById('ft-act').textContent=fmt(totAct);
-  document.getElementById('ft-prev').textContent=fmt(totPrev);
-  document.getElementById('ft-auto').textContent=fmt(totAuto);
-  document.getElementById('ft-rm').textContent=totRm>0?fmt(totRm):'—';
-  document.getElementById('ft-final').textContent=fmt(totFinal);
-  const ae=document.getElementById('ft-ach');ae.textContent=totAch+(totAch!=='—'?'%':'');ae.style.cssText='text-align:right;padding:8px;font-family:var(--mono);font-weight:700;'+tc;
+  const propCnt = propertyList.length || 1;
+  const footBud = isADR ? Math.round(totBud/propCnt) : totBud;
+  const footAct = isADR ? Math.round(totAct/propCnt) : totAct;
+  const footPrev = isADR ? Math.round(totPrev/propCnt) : totPrev;
+  const footAuto = isADR ? Math.round(totAuto/propCnt) : totAuto;
+  const footFinal = isADR ? Math.round(totFinal/propCnt) : totFinal;
+  const footAch = isADR && footBud>0 ? (footFinal/footBud*100).toFixed(1) : totAch;
+  document.getElementById('ft-bud').textContent=fmtV(footBud);
+  document.getElementById('ft-act').textContent=fmtV(footAct);
+  document.getElementById('ft-prev').textContent=fmtV(footPrev);
+  document.getElementById('ft-auto').textContent=fmtV(footAuto);
+  document.getElementById('ft-rm').textContent=(!isADR&&totRm>0)?fmt(totRm):'—';
+  document.getElementById('ft-final').textContent=fmtV(footFinal);
+  const ae=document.getElementById('ft-ach');ae.textContent=footAch+(footAch!=='—'?'%':'');ae.style.cssText='text-align:right;padding:8px;font-family:var(--mono);font-weight:700;'+tc;
 
-  document.getElementById('sum-budget').textContent=fmt(totBud);
-  document.getElementById('sum-actual').textContent=fmt(totAct);
-  document.getElementById('sum-fcst').textContent=fmt(totFinal);
-  document.getElementById('sum-ach').textContent=totBud>0?totAch+'%':'—';
+  document.getElementById('sum-budget').textContent=fmtV(footBud);
+  document.getElementById('sum-actual').textContent=fmtV(footAct);
+  document.getElementById('sum-fcst').textContent=fmtV(footFinal);
+  document.getElementById('sum-ach').textContent=footBud>0?footAch+'%':'—';
 }
 
 /* ═══ EXPAND/COLLAPSE ═══ */
@@ -767,12 +842,13 @@ function buildFcstKeyinAgg(){
     if(!wd?.keyin)return;
     const month=wd.month||fcstCurrentMonth;
     Object.entries(wd.keyin).forEach(([k,v])=>{
-      const[prop,seg]=k.split('|');
-      const aggK=`${prop}|${month}`;
-      if(!agg[aggK])agg[aggK]={value:0,_segments:{},updated_at:nowIso,updated_by:updatedBy,_source_week:wk};
-      // 같은 (사업장,월,세그) 키 — 최신 주차로 덮어쓰기 (sort 순서 보장)
-      const prev=agg[aggK]._segments[seg]||0;
-      agg[aggK]._segments[seg]=v;
+      const parts=k.split('|');
+      const prop=parts[0], seg=parts[1], metric=parts[2]||'RN';
+      const aggK=metric==='ADR'?`${prop}|${month}|ADR`:`${prop}|${month}`;
+      const segKey=metric==='ADR'?`${seg}|ADR`:seg;
+      if(!agg[aggK])agg[aggK]={value:0,_segments:{},updated_at:nowIso,updated_by:updatedBy,_source_week:wk,_metric:metric};
+      const prev=agg[aggK]._segments[segKey]||0;
+      agg[aggK]._segments[segKey]=v;
       agg[aggK].value=agg[aggK].value-prev+v;
       agg[aggK]._source_week=wk;
       agg[aggK].updated_at=nowIso;
@@ -864,6 +940,7 @@ function importJSON(e){
 
 /* ═══ UTILS ═══ */
 function fmt(n){return Number(n).toLocaleString();}
+function fmtK(n){return Number(n).toLocaleString()+'천';}
 function p2(n){return String(n).padStart(2,'0');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function esca(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
