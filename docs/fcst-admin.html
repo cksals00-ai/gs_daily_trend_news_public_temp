@@ -154,7 +154,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
     </div>
 
     <div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:12px;line-height:1.7;">
-      키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다. <strong style="color:var(--ink-muted)">기존 FCST</strong> = 직전 주차에 작성한 값 (없으면 자동 FCST로 폴백, 회색·이탤릭 표시).
+      키인값이 비어 있으면 자동 FCST가 최종값으로 사용됩니다. <strong style="color:var(--ink-muted)">기존 FCST</strong> = 직전 주차에 작성한 값 (없으면 자동 FCST로 폴백, <em style="opacity:.55;font-style:italic">회색 이탤릭</em> = 폴백값).
       <strong style="color:var(--warning)">RM FCST</strong> = 최신 Revenue Meeting PDF의 사업장별 전망 RN (단위: 실, <span id="rm-fcst-source">data/rm_fcst.json</span> 기반).
       <strong style="color:var(--info)">자동 FCST</strong> 아래 회색 텍스트는 4개년 분산 기반 신뢰구간(CI).
     </div>
@@ -636,12 +636,13 @@ function renderFcstTable() {
       if(segRm!==null){pRm+=segRm;hasRm=true;}
       pBud+=bud;pAct+=act;pLast+=last;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
     });
-    const pAch=pBud>0?(pFinal/pBud*100).toFixed(1):'—';
+    const pAch=pBud>0?(pFinal/pBud*100).toFixed(1):'0.0';
     const pAchN=pBud>0?pFinal/pBud*100:0;
     const pAchCls=pAchN>=100?'positive':pAchN>=80?'warning':pAchN>0?'negative':'';
-    const rmDisplay=hasRm?fmt(pRm):'—';
+    // RM 데이터 없으면 자동 FCST로 폴백 (회색 이탤릭)
+    const rmDisplay=hasRm?fmt(pRm):`<span style="opacity:.55;font-style:italic">${fmt(pAuto)}</span>`;
     totBud+=pBud;totAct+=pAct;totLast+=pLast;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
-    if(hasRm)totRm+=pRm;
+    if(hasRm)totRm+=pRm; else totRm+=pAuto;
 
     // 사업장 헤더 행
     const acc = getAccuracy(prop.name);
@@ -657,7 +658,7 @@ function renderFcstTable() {
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
       <td style="text-align:center;font-size:9.5px;color:var(--ink-faint)">합산</td>
       <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--positive);font-weight:800">${fmt(pFinal)}</td>
-      <td style="text-align:right"><span class="tbadge ${pAchCls}" style="font-size:10px">${pAch}${pAch!=='—'?'%':''}</span></td>
+      <td style="text-align:right"><span class="tbadge ${pAchCls}" style="font-size:10px">${pAch}%</span></td>
     </tr>`;
 
     // 세그먼트 하위 행 (펼친 상태일 때)
@@ -672,9 +673,10 @@ function renderFcstTable() {
         const rnKVal=keyin[rnKey]??null;
         const rnPrev=prevKeyin[rnKey]??null;
         const rnFinal=rnKVal!==null?rnKVal:rnAuto;
-        const rnPrevDisp=rnPrev!==null?fmt(rnPrev):(rnAuto>0?`<span style="opacity:.55;font-style:italic">${fmt(rnAuto)}</span>`:'—');
+        const rnPrevDisp=rnPrev!==null?fmt(rnPrev):`<span style="opacity:.55;font-style:italic">${fmt(rnAuto)}</span>`;
         const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??null;
-        const rnAch=rnBud>0?(rnFinal/rnBud*100).toFixed(1):'—';
+        const rnRmDisp=segRm!==null?fmt(segRm):`<span style="opacity:.55;font-style:italic">${fmt(rnAuto)}</span>`;
+        const rnAch=rnBud>0?(rnFinal/rnBud*100).toFixed(1):'0.0';
         const rnAchN=rnBud>0?rnFinal/rnBud*100:0;
         const rnAchCls=rnAchN>=100?'positive':rnAchN>=80?'warning':rnAchN>0?'negative':'';
 
@@ -686,7 +688,7 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(rnLast)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${rnPrevDisp}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(rnAuto)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${segRm!==null?fmt(segRm):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${rnRmDisp}</td>
           <td style="text-align:center;padding:3px 4px">
             <input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(rnKey)}"
                    value="${rnKVal!==null?rnKVal:''}" placeholder="${fmt(rnAuto).replace(/,/g,'')}"
@@ -694,7 +696,7 @@ function renderFcstTable() {
                    oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">
           </td>
           <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--positive);font-weight:700">${fmt(rnFinal)}</td>
-          <td style="text-align:right"><span class="tbadge ${rnAchCls}" style="font-size:9.5px">${rnAch}${rnAch!=='—'?'%':''}</span></td>
+          <td style="text-align:right"><span class="tbadge ${rnAchCls}" style="font-size:9.5px">${rnAch}%</span></td>
         </tr>`;
 
         // --- ADR 행 (천원 단위) ---
@@ -707,16 +709,22 @@ function renderFcstTable() {
         const adrKVal=keyin[adrKey]??null;  // 천원 단위로 저장
         const adrPrev=prevKeyin[adrKey]??null;
         const adrFinal=adrKVal!==null?adrKVal:adrAuto;
-        const adrPrevDisp=adrPrev!==null?fmt(adrPrev):(adrAuto>0?`<span style="opacity:.55;font-style:italic">${fmt(adrAuto)}</span>`:'—');
+        // 기존 FCST: 직전 주차 키인 없으면 자동 ADR로 폴백 (회색 이탤릭)
+        const adrPrevDisp=adrPrev!==null?fmt(adrPrev):`<span style="opacity:.55;font-style:italic">${fmt(adrAuto)}</span>`;
+        // RM ADR: 실제 데이터 없음 → 자동 ADR로 폴백 (회색 이탤릭)
+        const adrRmDisp=`<span style="opacity:.55;font-style:italic">${fmt(adrAuto)}</span>`;
+        const adrAch=adrBud>0?(adrFinal/adrBud*100).toFixed(1):'0.0';
+        const adrAchN=adrBud>0?adrFinal/adrBud*100:0;
+        const adrAchCls=adrAchN>=100?'positive':adrAchN>=80?'warning':adrAchN>0?'negative':'';
 
         html+=`<tr class="seg-row" style="border-bottom:none;">
           <td style="font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);font-weight:700;padding:3px 6px;">ADR<span style="font-size:8px;color:var(--ink-faint);margin-left:2px">천원</span></td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrBud>0?fmt(adrBud):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${adrAct>0?fmt(adrAct):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrLast>0?fmt(adrLast):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrBud)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(adrAct)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrLast)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrPrevDisp}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${adrAuto>0?fmt(adrAuto):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">—</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(adrAuto)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${adrRmDisp}</td>
           <td style="text-align:center;padding:3px 4px">
             <input type="text" inputmode="numeric" pattern="[0-9]*" class="fcst-keyin-input" data-key="${esca(adrKey)}"
                    value="${adrKVal!==null?adrKVal:''}" placeholder="${String(adrAuto)}"
@@ -724,30 +732,36 @@ function renderFcstTable() {
                    oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateSegKeyin(this)" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=this.value?'var(--gold)':'var(--rule)';updateSegKeyin(this)">
           </td>
           <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--positive);font-weight:700">${fmt(adrFinal)}</td>
-          <td></td>
+          <td style="text-align:right"><span class="tbadge ${adrAchCls}" style="font-size:9.5px">${adrAch}%</span></td>
         </tr>`;
 
         // --- 매출 행 (자동계산: RNS × ADR(천원) / 1000 = 백만원) ---
         const revBud=sd?.rev_budget||0, revAct=sd?.rev_actual||0, revLast=sd?.rev_last||0;
+        const revBudM=Math.round(revBud/1000000), revActM=Math.round(revAct/1000000), revLastM=Math.round(revLast/1000000);
         const revAuto = Math.round(rnAuto * adrAuto / 1000);
         const revFinal = Math.round(rnFinal * adrFinal / 1000);
         const revPrevRn = rnPrev!==null?rnPrev:rnAuto;
         const revPrevAdr = adrPrev!==null?adrPrev:adrAuto;
         const revPrev = Math.round(revPrevRn * revPrevAdr / 1000);
-        // 매출 RM FCST = RM RN × 자동 ADR / 1000 (백만원)
-        const revRm = (segRm!==null && adrAuto>0) ? Math.round(segRm * adrAuto / 1000) : null;
+        // 매출 RM FCST = RM RN × 자동 ADR / 1000 (백만원). segRm 없으면 자동 매출로 폴백
+        const revRmDisp = (segRm!==null && adrAuto>0)
+          ? fmt(Math.round(segRm * adrAuto / 1000))
+          : `<span style="opacity:.55;font-style:italic">${fmt(revAuto)}</span>`;
+        const revAch=revBudM>0?(revFinal/revBudM*100).toFixed(1):'0.0';
+        const revAchN=revBudM>0?revFinal/revBudM*100:0;
+        const revAchCls=revAchN>=100?'positive':revAchN>=80?'warning':revAchN>0?'negative':'';
 
         html+=`<tr class="seg-row">
           <td style="font-family:var(--mono);font-size:9.5px;color:var(--gold);font-weight:700;padding:3px 6px;">매출<span style="font-size:8px;color:var(--ink-faint);margin-left:2px">백만</span></td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revBud>0?fmt(Math.round(revBud/1000000)):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${revAct>0?fmt(Math.round(revAct/1000000)):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revLast>0?fmt(Math.round(revLast/1000000)):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${revPrev>0?fmt(revPrev):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${revAuto>0?fmt(revAuto):'—'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${revRm!==null?fmt(revRm):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revBudM)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(revActM)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revLastM)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revPrev)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(revAuto)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${revRmDisp}</td>
           <td style="text-align:center;font-size:9px;color:var(--ink-faint)">자동</td>
           <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--gold);font-weight:700">${fmt(revFinal)}</td>
-          <td></td>
+          <td style="text-align:right"><span class="tbadge ${revAchCls}" style="font-size:9.5px">${revAch}%</span></td>
         </tr>`;
       });
     }
@@ -756,21 +770,22 @@ function renderFcstTable() {
   tbody.innerHTML=html;
 
   // Footer (RN 기준 합계)
-  const totAch=totBud>0?(totFinal/totBud*100).toFixed(1):'—';
+  const totAch=totBud>0?(totFinal/totBud*100).toFixed(1):'0.0';
   const tc=totBud>0&&totFinal/totBud>=1?'color:var(--positive)':'color:var(--warning)';
   document.getElementById('ft-bud').textContent=fmt(totBud);
   document.getElementById('ft-act').textContent=fmt(totAct);
   document.getElementById('ft-last').textContent=fmt(totLast);
   document.getElementById('ft-prev').textContent=fmt(totPrev);
   document.getElementById('ft-auto').textContent=fmt(totAuto);
-  document.getElementById('ft-rm').textContent=totRm>0?fmt(totRm):'—';
+  // RM 합계: 데이터 있으면 실제 합, 없으면 자동 FCST로 폴백 (위 루프에서 누적됨)
+  document.getElementById('ft-rm').textContent=fmt(totRm);
   document.getElementById('ft-final').textContent=fmt(totFinal);
-  const ae=document.getElementById('ft-ach');ae.textContent=totAch+(totAch!=='—'?'%':'');ae.style.cssText='text-align:right;padding:8px;font-family:var(--mono);font-weight:700;'+tc;
+  const ae=document.getElementById('ft-ach');ae.textContent=totAch+'%';ae.style.cssText='text-align:right;padding:8px;font-family:var(--mono);font-weight:700;'+tc;
 
   document.getElementById('sum-budget').textContent=fmt(totBud);
   document.getElementById('sum-actual').textContent=fmt(totAct);
   document.getElementById('sum-fcst').textContent=fmt(totFinal);
-  document.getElementById('sum-ach').textContent=totBud>0?totAch+'%':'—';
+  document.getElementById('sum-ach').textContent=totAch+'%';
 }
 
 /* ═══ EXPAND/COLLAPSE ═══ */
