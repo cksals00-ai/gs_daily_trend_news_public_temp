@@ -669,8 +669,7 @@ function renderFcstTable() {
       const sd=getSegData(prop.name,seg,fcstCurrentMonth);
       if (isADR) {
         const bud=sd?.adr_budget||0,act=sd?.adr_actual||0,autoF=sd?.adr_fcst||0;
-        const kKeySuffix = '|ADR';
-        const kKey=`${prop.name}|${seg}${kKeySuffix}`;
+        const kKey=`${prop.name}|${seg}|ADR|${fcstCurrentMonth}`;
         const kVal=keyin[kKey]??null;
         const prevVal=prevKeyin[kKey]??null;
         const finalV=kVal!==null?kVal:autoF;
@@ -680,7 +679,7 @@ function renderFcstTable() {
         segRows.push({seg,bud,act,autoF,kVal,prevVal,finalV,kKey,rmVal:null,segRn});
       } else {
         const bud=sd?.rns_budget||0,act=sd?.rns_actual||0,autoF=sd?.rns_fcst||0;
-        const kKey=`${prop.name}|${seg}`;
+        const kKey=`${prop.name}|${seg}|${fcstCurrentMonth}`;
         const kVal=keyin[kKey]??null;
         const prevVal=prevKeyin[kKey]??null;
         const finalV=kVal!==null?kVal:autoF;
@@ -843,8 +842,15 @@ function buildFcstKeyinAgg(){
     const month=wd.month||fcstCurrentMonth;
     Object.entries(wd.keyin).forEach(([k,v])=>{
       const parts=k.split('|');
-      const prop=parts[0], seg=parts[1], metric=parts[2]||'RN';
-      const aggK=metric==='ADR'?`${prop}|${month}|ADR`:`${prop}|${month}`;
+      const prop=parts[0], seg=parts[1];
+      let metric='RN', keyMonth;
+      if(parts.length===4){metric='ADR';keyMonth=parts[3];}
+      else if(parts.length===3){keyMonth=parts[2];}
+      else{keyMonth=month;}
+      // Legacy: parts[2]==='ADR' (old 3-part ADR key without month)
+      if(parts.length===3&&parts[2]==='ADR'){metric='ADR';keyMonth=month;}
+      const effMonth=keyMonth||month;
+      const aggK=metric==='ADR'?`${prop}|${effMonth}|ADR`:`${prop}|${effMonth}`;
       const segKey=metric==='ADR'?`${seg}|ADR`:seg;
       if(!agg[aggK])agg[aggK]={value:0,_segments:{},updated_at:nowIso,updated_by:updatedBy,_source_week:wk,_metric:metric};
       const prev=agg[aggK]._segments[segKey]||0;
@@ -914,7 +920,7 @@ function exportExcel(){
     SEGMENTS.forEach(seg=>{
       const sd=getSegData(prop.name,seg,fcstCurrentMonth);
       const bud=sd?.rns_budget||0,act=sd?.rns_actual||0,autoF=sd?.rns_fcst||0;
-      const kVal=keyin[`${prop.name}|${seg}`]??null;
+      const kVal=keyin[`${prop.name}|${seg}|${fcstCurrentMonth}`]??null;
       const fin=kVal!==null?kVal:autoF;
       const ach=bud>0?Math.round(fin/bud*1000)/10:'';
       tB+=bud;tA+=act;tF+=fin;
