@@ -466,20 +466,32 @@ function isBookingDateFilterActive() {
   return bookingDateFrom !== '' || bookingDateTo !== '';
 }
 
-// pickup_daily_by_channel_month에서 예약일자 범위 내 데이터만 합산
-function aggregateByBookingDate(channelMonthData, months) {
-  let rn = 0, rev = 0;
+// pickup_daily_by_channel_month에서 예약일자 범위 내 데이터만 합산 (28번 취소 차감)
+function aggregateByBookingDate(pickupMonthData, cancelMonthData, months) {
+  let bk_rn = 0, bk_rev = 0, cx_rn = 0, cx_rev = 0;
   for (const m of months) {
-    const dateEntries = channelMonthData[m];
-    if (!dateEntries) continue;
-    for (const [bdate, vals] of Object.entries(dateEntries)) {
-      if (bookingDateFrom && bdate < bookingDateFrom) continue;
-      if (bookingDateTo && bdate > bookingDateTo) continue;
-      rn += vals.rn || 0;
-      rev += vals.rev || 0;
+    // 27번 예약
+    const pickupEntries = pickupMonthData?.[m];
+    if (pickupEntries) {
+      for (const [bdate, vals] of Object.entries(pickupEntries)) {
+        if (bookingDateFrom && bdate < bookingDateFrom) continue;
+        if (bookingDateTo && bdate > bookingDateTo) continue;
+        bk_rn += vals.rn || 0;
+        bk_rev += vals.rev || 0;
+      }
+    }
+    // 28번 취소 차감
+    const cancelEntries = cancelMonthData?.[m];
+    if (cancelEntries) {
+      for (const [cdate, vals] of Object.entries(cancelEntries)) {
+        if (bookingDateFrom && cdate < bookingDateFrom) continue;
+        if (bookingDateTo && cdate > bookingDateTo) continue;
+        cx_rn += vals.rn || 0;
+        cx_rev += vals.rev || 0;
+      }
     }
   }
-  return { rn, rev };
+  return { rn: bk_rn - cx_rn, rev: bk_rev - cx_rev, booking_rn: bk_rn, cancel_rn: cx_rn };
 }
 
 function aggregateChannels(months) {
@@ -498,18 +510,20 @@ function aggregateChannels(months) {
   }
 
   if (useBookingFilter && db.pickup_daily_by_channel_month) {
-    // 예약일자 필터 모드: pickup_daily_by_channel_month 사용
-    // 참고: 권역 필터와 동시 사용 시 property-level 예약일별 데이터가 없으므로 전체 기준으로 표시
+    // 예약일자 필터 모드: pickup(27번) - cancel(28번) 동기간 반영
     const pdcm = db.pickup_daily_by_channel_month;
-    for (const ch of Object.keys(pdcm)) {
+    const cdcm = db.cancel_daily_by_channel_month || {};
+    const allChs = new Set([...Object.keys(pdcm), ...Object.keys(cdcm)]);
+    for (const ch of allChs) {
       if (ch === '기타' || ch === '미분류') continue;
-      const agg = aggregateByBookingDate(pdcm[ch], months);
-      if (agg.rn === 0 && agg.rev === 0) continue;
+      const agg = aggregateByBookingDate(pdcm[ch], cdcm[ch], months);
+      if (agg.rn === 0 && agg.rev === 0 && agg.booking_rn === 0) continue;
       const seg = getChannelSegment(ch);
+      const netRn = agg.rn;
       result[ch] = {
-        booking_rn: agg.rn, cancel_rn: 0, net_rn: agg.rn,
+        booking_rn: agg.booking_rn, cancel_rn: agg.cancel_rn, net_rn: netRn,
         booking_rev: agg.rev, net_rev: agg.rev,
-        adr: agg.rn > 0 ? agg.rev * 1000 / agg.rn : 0,
+        adr: netRn > 0 ? agg.rev * 1000 / netRn : 0,
         segment: seg
       };
     }
