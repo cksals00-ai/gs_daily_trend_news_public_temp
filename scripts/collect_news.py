@@ -164,8 +164,8 @@ REGION_MAP = {
 
 
 def fetch_google_news(query: str, limit: int = 5) -> list[dict]:
-    """Google News RSS에서 뉴스 가져오기"""
-    encoded = urllib.parse.quote(query)
+    """Google News RSS에서 뉴스 가져오기 (최근 7일 내 기사만)"""
+    encoded = urllib.parse.quote(query + " when:7d")
     url = f"https://news.google.com/rss/search?q={encoded}&hl=ko&gl=KR&ceid=KR:ko"
     
     try:
@@ -226,6 +226,34 @@ def is_stale_by_pub_date(pub_date_str: str, ref: datetime | None = None) -> bool
         return False
     except (ValueError, TypeError):
         return False  # 파싱 실패 시 통과
+
+
+def is_old_article_by_url(link: str) -> bool:
+    """기사 URL에 포함된 연도 패턴으로 오래된 기사 감지.
+    Google News redirect URL을 따라가지 않고, 원본 URL이 노출되는 경우만 체크.
+    또한 제목이나 기사 본문에서 오래된 연도를 감지하기 위한 보조 필터.
+    """
+    now_year = datetime.now(KST).year
+    # URL 경로에 연도가 포함된 경우 (예: /2017/06/...)
+    year_match = re.search(r'/(\d{4})/', link)
+    if year_match:
+        url_year = int(year_match.group(1))
+        if 2000 <= url_year < now_year - 1:
+            return True
+    return False
+
+
+def is_old_article_by_title(title: str) -> bool:
+    """기사 제목에 오래된 연도가 명시된 경우 필터링.
+    예: '2017년 대명리조트 단양...' → True
+    """
+    now_year = datetime.now(KST).year
+    matches = re.findall(r'(20\d{2})년', title)
+    for m in matches:
+        yr = int(m)
+        if yr < now_year - 1:
+            return True
+    return False
 
 
 def is_excluded(title: str) -> bool:
@@ -429,10 +457,13 @@ def main():
     existing_articles = purge_old_articles(existing_articles, max_hours=48)
     # 기존 기사 중 pub_date 기준 오래된 기사도 제거
     before_stale = len(existing_articles)
-    existing_articles = [a for a in existing_articles if not is_stale_by_pub_date(a.get("pub_date", ""), now)]
+    existing_articles = [a for a in existing_articles
+                         if not is_stale_by_pub_date(a.get("pub_date", ""), now)
+                         and not is_old_article_by_title(a.get("title", ""))
+                         and not is_old_article_by_url(a.get("link", ""))]
     stale_removed = before_stale - len(existing_articles)
     if stale_removed:
-        logger.info(f"  ⏳ 기존 기사 중 {stale_removed}건 제거 (pub_date 오래됨)")
+        logger.info(f"  ⏳ 기존 기사 중 {stale_removed}건 제거 (오래된 기사)")
     seen_titles: set[str] = {_norm_title_key(art.get("title", "")) for art in existing_articles}
     seen_titles.discard("")
     seen_links: set[str] = {(art.get("link") or "").strip() for art in existing_articles}
@@ -453,6 +484,12 @@ def main():
             return False
         if is_stale_by_pub_date(item.get("pub_date", ""), now):
             logger.info(f"  ⏳ 제외 (오래된 기사): {title[:50]} | pub_date={item.get('pub_date','')}")
+            return False
+        if is_old_article_by_title(title):
+            logger.info(f"  ⏳ 제외 (제목에 오래된 연도): {title[:50]}")
+            return False
+        if is_old_article_by_url(item.get("link", "")):
+            logger.info(f"  ⏳ 제외 (URL에 오래된 연도): {title[:50]}")
             return False
         if tkey:
             seen_titles.add(tkey)
