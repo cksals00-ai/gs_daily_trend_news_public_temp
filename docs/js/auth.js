@@ -34,8 +34,8 @@
   // localStorage('gsn_auth_api_url') / localStorage('gsn_google_client_id') 로 덮어쓸 수 있음
   // (로그인 페이지 하단의 설정 버튼에서 변경 가능)
   // ──────────────────────────────────────────────────────────────────────────
-  var DEFAULT_AUTH_API_URL    = 'PASTE_APPS_SCRIPT_WEBAPP_URL_HERE';
-  var DEFAULT_GOOGLE_CLIENT_ID = 'PASTE_GOOGLE_OAUTH_CLIENT_ID_HERE.apps.googleusercontent.com';
+  var DEFAULT_AUTH_API_URL    = 'https://script.google.com/macros/s/AKfycbz9JwH0BJfcH-AVo9Vy1EYasER5jAz_5ZL9e2v22PtrGZ7Yb5ATbJLuUJ9UvGDjv07MJA/exec';
+  var DEFAULT_GOOGLE_CLIENT_ID = '139205036006-gnsq7iveu3tp85tlumkeqnrujvc7094t.apps.googleusercontent.com';
 
   var LS_TOKEN     = 'gsn_auth_token';
   var LS_USER      = 'gsn_auth_user';
