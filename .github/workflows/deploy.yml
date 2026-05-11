@@ -137,7 +137,11 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "::group::기획전 실적"
-          python scripts/generate_campaign_performance.py || echo "⚠ 기획전 실적 집계 실패 - 기존 데이터 유지"
+          if [ -d "data/raw_db" ] && [ "$(ls -A data/raw_db 2>/dev/null)" ]; then
+            python scripts/generate_campaign_performance.py || echo "⚠ 기획전 실적 집계 실패 - 기존 데이터 유지"
+          else
+            echo "⚠ raw_db 디렉토리 없음 - 기획전 실적 스킵 (기존 데이터 유지)"
+          fi
           echo "::endgroup::"
 
       - name: 🔨 [Step 4] HTML 빌드 (모든 데이터 주입)
