@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회원 관리 · GS팀 트렌드 리포트</title>
+<meta name="theme-color" content="#1a1d23">
+<meta name="auth-required" content="admin">
+<script src="./js/auth.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:14.5px;font-weight:500;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;padding-bottom:60px}
+*,*::before,*::after{font-family:inherit}input,button,select,textarea{font-family:var(--sans)!important}
+
+.mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.mast-logo{display:flex;align-items:baseline;gap:10px}
+.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}
+.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600}
+.mast-nav{display:flex;align-items:center;gap:8px}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:26px 18px 40px}
+.page-title{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
+.page-title h1{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.7}
+
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:20px 22px;margin-bottom:14px}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+.card-icon{font-size:14px;line-height:1}
+.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright)}
+.card-desc{font-size:11px;color:var(--ink-faint);margin-left:auto}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:200px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;color:var(--ink);padding:9px 12px;font-size:13px;outline:none}
+.search:focus{border-color:var(--gold);background:var(--bg-hover)}
+.role-filter{display:flex;gap:4px;flex-wrap:wrap}
+.ftab{padding:5px 10px;border-radius:4px;border:1px solid var(--rule);background:transparent;color:var(--ink-faint);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--mono);letter-spacing:.06em}
+.ftab.active{background:rgba(201,160,99,.15);border-color:var(--gold);color:var(--gold-bright)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:5px;font-size:12.5px;font-weight:700;cursor:pointer;border:none;transition:all .18s;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,#e6b970,#c9a063);color:#0a0a0a}.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-secondary{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule)}.btn-secondary:hover{background:var(--bg-hover);border-color:var(--rule-strong)}
+.btn-ghost{background:transparent;color:var(--ink-faint);border:1px solid var(--rule)}.btn-ghost:hover{color:var(--ink-muted)}
+.btn-danger{background:var(--negative-bg);color:var(--negative);border:1px solid rgba(229,115,115,.3)}.btn-danger:hover{background:rgba(229,115,115,.18)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none!important;transform:none!important}
+.btn-sm{padding:5px 10px;font-size:11px;font-weight:700;border-radius:4px}
+
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.summary-box{background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:11px 14px;text-align:center}
+.summary-val{font-family:var(--mono);font-size:20px;font-weight:800;margin-bottom:2px}
+.summary-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--ink-faint);font-weight:700;text-transform:uppercase}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:7px}
+table.users{width:100%;border-collapse:collapse;font-size:13px;min-width:780px}
+table.users th{text-align:left;padding:10px 12px;font-weight:700;font-size:10.5px;letter-spacing:.08em;color:var(--ink-faint);background:var(--bg-soft);border-bottom:1px solid var(--rule-strong);white-space:nowrap;text-transform:uppercase}
+table.users td{padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+table.users tr:last-child td{border-bottom:0}
+table.users tr.inactive td{opacity:.5}
+table.users tr:hover td{background:var(--bg-soft)}
+
+.role-pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.1em;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+.role-pill.admin{background:var(--negative-bg);color:var(--negative)}
+.role-pill.sales{background:var(--warning-bg);color:var(--warning)}
+.role-pill.executive{background:var(--info-bg);color:var(--info)}
+.role-pill.external{background:rgba(168,146,200,.18);color:#a892c8}
+
+.status-pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 8px;border-radius:3px;text-transform:uppercase}
+.status-pill.active{background:var(--positive-bg);color:var(--positive)}
+.status-pill.inactive{background:rgba(122,126,133,.15);color:var(--ink-faint)}
+
+select.role-sel{background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-size:12px;font-weight:600;padding:5px 7px;outline:none;cursor:pointer}
+select.role-sel:focus{border-color:var(--gold)}
+
+.email{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);font-weight:600}
+.name{font-weight:700;color:var(--ink)}
+.dt{font-family:var(--mono);font-size:11px;color:var(--ink-faint);white-space:nowrap}
+
+.toast{position:fixed;top:64px;right:16px;background:var(--bg-card);border:1px solid var(--rule-strong);border-left:3px solid var(--positive);padding:11px 15px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--ink);box-shadow:0 8px 28px rgba(0,0,0,.45);opacity:0;transform:translateX(14px);transition:all .26s;pointer-events:none;z-index:300;max-width:300px}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast.err{border-left-color:var(--negative)}
+
+/* 모달 */
+.modal-bg{position:fixed;inset:0;background:rgba(10,12,16,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:400;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--rule-strong);border-radius:10px;padding:24px 22px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.modal h2{font-size:15px;font-weight:800;margin-bottom:14px;color:var(--ink)}
+.modal .fg{margin-bottom:12px}
+.modal label{display:block;font-size:11px;font-weight:700;color:var(--ink-muted);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase}
+.modal input,.modal select{width:100%;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:13px;padding:9px 11px;outline:none}
+.modal input:focus,.modal select:focus{border-color:var(--gold);background:var(--bg-hover)}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+.empty{text-align:center;padding:36px 16px;color:var(--ink-faint);font-size:13px}
+
+@media(max-width:768px){
+  .mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:14px 12px 36px}
+  .summary-row{grid-template-columns:1fr 1fr}
+  table.users{font-size:12px}table.users th,table.users td{padding:8px 9px}
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-logo"><span class="mast-name">SONO &amp; TRINITY</span><span class="mast-sub">회원 관리</span></div>
+  <nav class="mast-nav">
+    <a href="admin.html" class="nav-btn">↗ 관리자 패널</a>
+    <a href="fcst-admin.html" class="nav-btn">↗ FCST 키인</a>
+    <a href="index.html" class="nav-btn">↗ 트렌드 리포트</a>
+  </nav>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main class="wrap">
+  <div class="page-title">
+    <div class="eyebrow">ADMIN · USER MANAGEMENT</div>
+    <h1>회원 관리</h1>
+    <p>접근 권한이 있는 사용자를 관리합니다. 권한 4단계: <b>admin</b> · <b>sales</b> · <b>executive</b> · <b>external</b>.
+      구글 로그인 사용자는 비밀번호 없이도 등록 가능합니다(이메일 기준 매칭).</p>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-box"><div class="summary-val" id="cnt-total">—</div><div class="summary-lbl">TOTAL</div></div>
+    <div class="summary-box"><div class="summary-val" id="cnt-admin" style="color:var(--negative)">—</div><div class="summary-lbl">ADMIN</div></div>
+    <div class="summary-box"><div class="summary-val" id="cnt-active" style="color:var(--positive)">—</div><div class="summary-lbl">ACTIVE</div></div>
+    <div class="summary-box"><div class="summary-val" id="cnt-inactive" style="color:var(--ink-faint)">—</div><div class="summary-lbl">INACTIVE</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-icon">👥</span>
+      <span class="card-title">USER LIST</span>
+      <span class="card-desc" id="last-sync">—</span>
+    </div>
+
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="🔍 이메일 / 이름 검색">
+      <div class="role-filter">
+        <button class="ftab active" data-role="all">전체</button>
+        <button class="ftab" data-role="admin">ADMIN</button>
+        <button class="ftab" data-role="sales">SALES</button>
+        <button class="ftab" data-role="executive">EXECUTIVE</button>
+        <button class="ftab" data-role="external">EXTERNAL</button>
+      </div>
+      <button class="btn btn-ghost" id="btn-refresh" type="button">↻ 새로고침</button>
+      <button class="btn btn-primary" id="btn-add" type="button">+ 회원 추가</button>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="users">
+        <thead>
+          <tr>
+            <th style="width:22%">이메일</th>
+            <th style="width:14%">이름</th>
+            <th style="width:13%">권한</th>
+            <th style="width:10%">상태</th>
+            <th style="width:15%">생성일</th>
+            <th style="width:15%">최근 로그인</th>
+            <th style="width:11%">동작</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="empty">불러오는 중…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- 회원 추가/수정 모달 -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="modal-title">회원 추가</h2>
+    <div class="fg">
+      <label>이메일 *</label>
+      <input type="email" id="m-email" placeholder="user@example.com">
+    </div>
+    <div class="fg">
+      <label>이름</label>
+      <input type="text" id="m-name" placeholder="홍길동">
+    </div>
+    <div class="fg">
+      <label>권한 *</label>
+      <select id="m-role">
+        <option value="executive">executive (리포트 열람)</option>
+        <option value="sales">sales (세일즈 + FCST 키인)</option>
+        <option value="admin">admin (관리자 · 전체)</option>
+        <option value="external">external (외부 · 팔라티움)</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>상태</label>
+      <select id="m-status">
+        <option value="active">active</option>
+        <option value="inactive">inactive</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>비밀번호 <span style="color:var(--ink-faint);font-weight:500;text-transform:none;letter-spacing:0">(선택 · 외부 사용자만 입력. 비워두면 구글 로그인 전용)</span></label>
+      <input type="password" id="m-password" placeholder="비밀번호 (선택)" autocomplete="new-password">
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" type="button" id="m-cancel">취소</button>
+      <button class="btn btn-primary" type="button" id="m-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var $tbody = document.getElementById('tbody');
+  var $toast = document.getElementById('toast');
+  var $search = document.getElementById('search');
+  var $modal = document.getElementById('modal');
+  var users = [];
+  var filterRole = 'all';
+  var editingEmail = null; // null = 추가, string = 수정
+
+  function toast(msg, isErr){
+    $toast.className = 'toast ' + (isErr ? 'err show' : 'show');
+    $toast.textContent = msg;
+    setTimeout(function(){ $toast.className = 'toast'; }, 2800);
+  }
+
+  function fmtDate(iso){
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso.substring(0,10);
+    var pad = function(n){return n<10?'0'+n:n;};
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function renderSummary(){
+    var n = users.length;
+    var nAdmin = users.filter(function(u){return u.role==='admin';}).length;
+    var nActive = users.filter(function(u){return u.status==='active';}).length;
+    var nInactive = users.filter(function(u){return u.status==='inactive';}).length;
+    document.getElementById('cnt-total').textContent = n;
+    document.getElementById('cnt-admin').textContent = nAdmin;
+    document.getElementById('cnt-active').textContent = nActive;
+    document.getElementById('cnt-inactive').textContent = nInactive;
+  }
+
+  function renderTable(){
+    var q = ($search.value || '').trim().toLowerCase();
+    var list = users.filter(function(u){
+      if (filterRole !== 'all' && u.role !== filterRole) return false;
+      if (q){
+        var hay = (u.email + ' ' + (u.name||'')).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    if (!list.length){
+      $tbody.innerHTML = '<tr><td colspan="7" class="empty">검색 결과 없음</td></tr>';
+      return;
+    }
+    var rows = list.map(function(u){
+      var inactiveClass = u.status === 'inactive' ? ' class="inactive"' : '';
+      return '<tr'+inactiveClass+'>'
+        + '<td><span class="email">'+escapeHtml(u.email)+'</span></td>'
+        + '<td><span class="name">'+escapeHtml(u.name||'—')+'</span></td>'
+        + '<td>'
+        +   '<select class="role-sel" data-email="'+escapeHtml(u.email)+'">'
+        +     ['admin','sales','executive','external'].map(function(r){
+                return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+r+'</option>';
+              }).join('')
+        +   '</select>'
+        + '</td>'
+        + '<td><span class="status-pill '+escapeHtml(u.status)+'">'+escapeHtml(u.status)+'</span></td>'
+        + '<td><span class="dt">'+escapeHtml(fmtDate(u.created_at))+'</span></td>'
+        + '<td><span class="dt">'+escapeHtml(fmtDate(u.last_login))+'</span></td>'
+        + '<td>'
+        +   '<button class="btn btn-secondary btn-sm" data-act="edit" data-email="'+escapeHtml(u.email)+'">수정</button> '
+        +   (u.status==='active'
+              ? '<button class="btn btn-danger btn-sm" data-act="deactivate" data-email="'+escapeHtml(u.email)+'">비활성</button>'
+              : '<button class="btn btn-secondary btn-sm" data-act="reactivate" data-email="'+escapeHtml(u.email)+'">활성화</button>')
+        + '</td>'
+        + '</tr>';
+    });
+    $tbody.innerHTML = rows.join('');
+  }
+
+  function load(){
+    $tbody.innerHTML = '<tr><td colspan="7" class="empty">불러오는 중…</td></tr>';
+    GSNAuth.listUsers().then(function(j){
+      if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '목록 조회 실패');
+      users = j.users || [];
+      // admin 먼저, 그다음 sales, executive, external
+      var order = {admin:0, sales:1, executive:2, external:3};
+      users.sort(function(a,b){
+        var d = (order[a.role]||9) - (order[b.role]||9);
+        if (d !== 0) return d;
+        return (a.email||'').localeCompare(b.email||'');
+      });
+      renderSummary();
+      renderTable();
+      document.getElementById('last-sync').textContent = '동기화: ' + fmtDate(new Date().toISOString());
+    }).catch(function(e){
+      $tbody.innerHTML = '<tr><td colspan="7" class="empty" style="color:var(--negative)">⚠ '+escapeHtml(e.message||'오류')+'</td></tr>';
+      toast(e.message || '오류', true);
+    });
+  }
+
+  // 필터/검색
+  document.querySelectorAll('.ftab').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.ftab').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      filterRole = b.getAttribute('data-role');
+      renderTable();
+    });
+  });
+  $search.addEventListener('input', renderTable);
+  document.getElementById('btn-refresh').addEventListener('click', load);
+
+  // 모달
+  function openModal(user){
+    editingEmail = user ? user.email : null;
+    document.getElementById('modal-title').textContent = user ? '회원 수정 — ' + user.email : '회원 추가';
+    document.getElementById('m-email').value = user ? user.email : '';
+    document.getElementById('m-email').disabled = !!user;
+    document.getElementById('m-name').value = user ? (user.name||'') : '';
+    document.getElementById('m-role').value = user ? user.role : 'executive';
+    document.getElementById('m-status').value = user ? user.status : 'active';
+    document.getElementById('m-password').value = '';
+    $modal.classList.add('show');
+  }
+  function closeModal(){ $modal.classList.remove('show'); editingEmail = null; }
+  document.getElementById('btn-add').addEventListener('click', function(){ openModal(null); });
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+  $modal.addEventListener('click', function(e){ if (e.target === $modal) closeModal(); });
+
+  document.getElementById('m-save').addEventListener('click', function(){
+    var email = document.getElementById('m-email').value.trim().toLowerCase();
+    if (!email){ toast('이메일을 입력하세요.', true); return; }
+    var payload = {
+      email: email,
+      name: document.getElementById('m-name').value.trim(),
+      role: document.getElementById('m-role').value,
+      status: document.getElementById('m-status').value
+    };
+    var pwd = document.getElementById('m-password').value;
+    if (pwd) payload.password = pwd;
+    GSNAuth.upsertUser(payload).then(function(j){
+      if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '저장 실패');
+      toast(j.inserted ? '추가됨: ' + email : '수정됨: ' + email);
+      closeModal();
+      load();
+    }).catch(function(e){ toast(e.message || '저장 실패', true); });
+  });
+
+  // 행 동작 (수정 / 비활성 / 활성화 / role 변경)
+  $tbody.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    var email = btn.getAttribute('data-email');
+    var act = btn.getAttribute('data-act');
+    var u = users.find(function(x){return x.email===email;});
+    if (act === 'edit'){
+      openModal(u);
+    } else if (act === 'deactivate'){
+      if (!confirm(email + ' 계정을 비활성화하시겠습니까?')) return;
+      GSNAuth.deactivateUser(email).then(function(j){
+        if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '비활성화 실패');
+        toast('비활성화됨: ' + email);
+        load();
+      }).catch(function(err){ toast(err.message || '실패', true); });
+    } else if (act === 'reactivate'){
+      GSNAuth.upsertUser({ email: email, status: 'active' }).then(function(j){
+        if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '활성화 실패');
+        toast('활성화됨: ' + email);
+        load();
+      }).catch(function(err){ toast(err.message || '실패', true); });
+    }
+  });
+  $tbody.addEventListener('change', function(e){
+    var sel = e.target.closest('select.role-sel');
+    if (!sel) return;
+    var email = sel.getAttribute('data-email');
+    var newRole = sel.value;
+    var u = users.find(function(x){return x.email===email;});
+    if (!u || u.role === newRole) return;
+    GSNAuth.upsertUser({ email: email, role: newRole }).then(function(j){
+      if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '권한 변경 실패');
+      toast('권한 변경: ' + email + ' → ' + newRole);
+      load();
+    }).catch(function(err){
+      toast(err.message || '실패', true);
+      sel.value = u.role; // rollback
+    });
+  });
+
+  // 초기 로드 (가드 통과 후 user 정보가 이미 있음)
+  load();
+})();
+</script>
+
+</body>
+</html>

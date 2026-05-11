@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>로그인 · SONO & TRINITY GS팀</title>
+<meta name="theme-color" content="#1a1d23">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="./js/auth.js"></script>
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:radial-gradient(circle at 30% 10%,#23272f 0%,var(--bg) 60%);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px;font-weight:500;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+*,*::before,*::after{font-family:inherit}input,button,textarea,select{font-family:var(--sans)!important}
+
+.shell{width:100%;max-width:440px}
+.brand{text-align:center;margin-bottom:24px}
+.brand-mark{font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.28em;color:var(--gold-bright);margin-bottom:6px}
+.brand-name{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.brand-sub{font-size:12.5px;color:var(--ink-muted);margin-top:6px;letter-spacing:.01em}
+
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:12px;padding:30px 28px;box-shadow:0 24px 64px rgba(0,0,0,.45)}
+.card-title{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--gold-bright);margin-bottom:18px;text-align:center}
+
+.tabs{display:flex;background:var(--bg-soft);border:1px solid var(--rule);border-radius:8px;padding:3px;margin-bottom:22px}
+.tab{flex:1;padding:8px 0;background:transparent;border:0;color:var(--ink-muted);font-size:12.5px;font-weight:700;letter-spacing:.04em;cursor:pointer;border-radius:6px;transition:all .15s}
+.tab.active{background:var(--bg-hover);color:var(--gold-bright)}
+
+.alert{padding:10px 14px;border-radius:6px;font-size:12.5px;line-height:1.5;margin-bottom:16px;display:none}
+.alert.show{display:block}
+.alert.err{background:var(--negative-bg);color:var(--negative);border:1px solid rgba(229,115,115,.3)}
+.alert.warn{background:rgba(232,162,86,.15);color:#e8a256;border:1px solid rgba(232,162,86,.3)}
+.alert.info{background:var(--info-bg);color:var(--info);border:1px solid rgba(90,159,196,.3)}
+
+.fg{margin-bottom:14px}
+label.lbl{display:block;font-size:11.5px;font-weight:700;color:var(--ink-muted);margin-bottom:6px;letter-spacing:.02em}
+input[type=email],input[type=password],input[type=text]{width:100%;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;color:var(--ink);font-size:14px;font-weight:500;padding:11px 13px;outline:none;transition:border-color .18s,background .18s}
+input[type=email]:focus,input[type=password]:focus,input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:7px;font-size:13.5px;font-weight:700;cursor:pointer;border:none;transition:all .18s;width:100%}
+.btn-primary{background:linear-gradient(135deg,#e6b970,#c9a063);color:#0a0a0a;letter-spacing:.02em}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important}
+.btn-google{background:#fff;color:#1f1f1f;border:1px solid var(--rule)}
+.btn-google:hover{background:#f5f5f5;transform:translateY(-1px)}
+.btn-google .g-mark{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;font-weight:900;color:#4285f4;background:#fff;border-radius:2px;font-size:13px}
+
+.divider{display:flex;align-items:center;gap:10px;margin:18px 0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--ink-faint)}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+.hint{font-size:11.5px;color:var(--ink-faint);text-align:center;margin-top:14px;line-height:1.65}
+.hint a{color:var(--gold);text-decoration:none}
+.hint a:hover{color:var(--gold-bright);text-decoration:underline}
+
+.foot{text-align:center;margin-top:18px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.12em}
+
+.config-toggle{display:block;text-align:center;margin-top:18px;background:transparent;border:0;color:var(--ink-faint);font-size:11px;cursor:pointer;text-decoration:underline;font-family:var(--mono);letter-spacing:.1em}
+.config-toggle:hover{color:var(--ink-muted)}
+.config-panel{display:none;margin-top:14px;padding:14px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px}
+.config-panel.show{display:block}
+.config-panel label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-faint);margin:8px 0 4px;letter-spacing:.08em;text-transform:uppercase}
+.config-panel input{font-family:var(--mono);font-size:11px;padding:7px 9px}
+.config-panel .row{margin-bottom:10px}
+.config-panel .save{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);padding:7px 14px;font-size:11.5px;font-weight:700;border-radius:5px;cursor:pointer;margin-top:6px}
+.config-panel .save:hover{background:var(--bg-hover);border-color:var(--gold)}
+
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#0a0a0a;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:480px){.card{padding:22px 18px}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="brand">
+    <div class="brand-mark">SONO &amp; TRINITY · GS</div>
+    <div class="brand-name">GSN 리포트</div>
+    <div class="brand-sub">호텔 영업기획 통합 대시보드</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">SIGN IN</div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" id="tab-google" type="button">구글 로그인</button>
+      <button class="tab" id="tab-pwd" type="button">이메일 / 비밀번호</button>
+    </div>
+
+    <!-- 구글 로그인 -->
+    <div id="pane-google">
+      <div id="gis-button" style="display:flex;justify-content:center;margin-bottom:6px"></div>
+      <button class="btn btn-google" id="google-fallback" type="button" style="margin-top:8px">
+        <span class="g-mark">G</span> Google 계정으로 로그인
+      </button>
+      <div class="hint">
+        등록된 회사 구글 계정으로 로그인합니다.<br>계정이 없다면 <a href="#" id="ask-admin">관리자에게 문의</a>하세요.
+      </div>
+    </div>
+
+    <!-- 이메일+비밀번호 (외부 사용자용) -->
+    <div id="pane-pwd" style="display:none">
+      <form id="pwd-form" autocomplete="on">
+        <div class="fg">
+          <label class="lbl" for="email">이메일</label>
+          <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com">
+        </div>
+        <div class="fg">
+          <label class="lbl" for="password">비밀번호</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" id="pwd-submit" type="submit">로그인</button>
+      </form>
+      <div class="hint">
+        외부 파트너 전용 로그인입니다. 회사 직원은 <b>구글 로그인</b>을 사용하세요.
+      </div>
+    </div>
+
+    <button class="config-toggle" id="cfg-toggle" type="button">⚙ 백엔드 설정</button>
+    <div class="config-panel" id="cfg-panel">
+      <div class="row">
+        <label>AUTH_API_URL <span style="color:var(--ink-muted);text-transform:none;letter-spacing:0">(Apps Script 웹앱 URL)</span></label>
+        <input type="text" id="cfg-api" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <div class="row">
+        <label>GOOGLE_CLIENT_ID</label>
+        <input type="text" id="cfg-gid" placeholder="xxxxx.apps.googleusercontent.com">
+      </div>
+      <button class="save" id="cfg-save" type="button">저장</button>
+      <div style="font-size:10.5px;color:var(--ink-faint);margin-top:8px;line-height:1.6">
+        ※ 이 설정은 이 브라우저에만 저장됩니다. 운영 시에는 <code style="font-family:var(--mono);background:var(--bg-soft);padding:1px 4px;border-radius:3px">js/auth.js</code> 의 DEFAULT_* 상수에 직접 박아두는 것을 권장합니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">© SONO & TRINITY · INTERNAL</div>
+</div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+(function(){
+  'use strict';
+
+  // ── 이미 로그인되어 있으면 return 으로 즉시 이동 ────────────────────────
+  var qs = new URLSearchParams(location.search);
+  var ret = qs.get('return') || './index.html';
+  var reason = qs.get('reason');
+  var need = qs.get('need');
+
+  function safeReturn(){
+    // open redirect 방어: 같은 origin 의 경로만 허용
+    try {
+      var u = new URL(ret, location.origin);
+      if (u.origin !== location.origin) return './index.html';
+      return u.pathname + u.search + u.hash;
+    } catch(e){ return './index.html'; }
+  }
+
+  if (GSNAuth.getToken() && GSNAuth.tokenIsValid(GSNAuth.getToken()) && GSNAuth.getUser() && !reason){
+    location.replace(safeReturn());
+    return;
+  }
+
+  // ── 알림 ─────────────────────────────────────────────────────────────
+  var $alert = document.getElementById('alert');
+  function showAlert(kind, msg){
+    $alert.className = 'alert show ' + kind;
+    $alert.textContent = msg;
+  }
+  function hideAlert(){ $alert.className = 'alert'; $alert.textContent = ''; }
+
+  if (reason === 'forbidden'){
+    showAlert('warn', '이 페이지에 접근하려면 "' + (need || '?') + '" 이상의 권한이 필요합니다. 다른 계정으로 로그인하세요.');
+  } else if (reason === 'expired'){
+    showAlert('info', '세션이 만료되었습니다. 다시 로그인하세요.');
+  }
+
+  // ── 탭 전환 ──────────────────────────────────────────────────────────
+  var $tabG = document.getElementById('tab-google');
+  var $tabP = document.getElementById('tab-pwd');
+  var $paneG = document.getElementById('pane-google');
+  var $paneP = document.getElementById('pane-pwd');
+  function setTab(which){
+    $tabG.classList.toggle('active', which==='g');
+    $tabP.classList.toggle('active', which==='p');
+    $paneG.style.display = which==='g' ? '' : 'none';
+    $paneP.style.display = which==='p' ? '' : 'none';
+  }
+  $tabG.addEventListener('click', function(){ setTab('g'); });
+  $tabP.addEventListener('click', function(){ setTab('p'); });
+
+  // ── 비밀번호 로그인 ──────────────────────────────────────────────────
+  var $form = document.getElementById('pwd-form');
+  var $submit = document.getElementById('pwd-submit');
+  $form.addEventListener('submit', function(e){
+    e.preventDefault();
+    hideAlert();
+    var email = document.getElementById('email').value.trim();
+    var pwd = document.getElementById('password').value;
+    if (!email || !pwd){ showAlert('err','이메일과 비밀번호를 입력하세요.'); return; }
+    $submit.disabled = true;
+    $submit.innerHTML = '<span class="spin"></span> 로그인 중...';
+    GSNAuth.login({ email: email, password: pwd })
+      .then(function(){ location.replace(safeReturn()); })
+      .catch(function(err){
+        showAlert('err', err.message || '로그인 실패');
+        $submit.disabled = false;
+        $submit.textContent = '로그인';
+      });
+  });
+
+  // ── 구글 로그인 ──────────────────────────────────────────────────────
+  function doGoogleLogin(idToken){
+    hideAlert();
+    showAlert('info', '구글 계정 확인 중...');
+    GSNAuth.login({ google_id_token: idToken })
+      .then(function(){ location.replace(safeReturn()); })
+      .catch(function(err){ showAlert('err', err.message || '로그인 실패'); });
+  }
+
+  function initGis(){
+    if (!window.google || !google.accounts || !google.accounts.id) return false;
+    var cid = GSNAuth.getGoogleClientId();
+    if (!cid || cid.indexOf('PASTE_') === 0){
+      // 클라이언트 ID 미설정: 안내만 표시
+      document.getElementById('gis-button').innerHTML =
+        '<div style="font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.6">GOOGLE_CLIENT_ID 미설정<br>⚙ 백엔드 설정에서 입력하거나<br>js/auth.js 의 DEFAULT_GOOGLE_CLIENT_ID 를 수정하세요.</div>';
+      return false;
+    }
+    google.accounts.id.initialize({
+      client_id: cid,
+      callback: function(resp){ doGoogleLogin(resp.credential); },
+      ux_mode: 'popup',
+      auto_select: false
+    });
+    google.accounts.id.renderButton(document.getElementById('gis-button'), {
+      theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', logo_alignment: 'left'
+    });
+    document.getElementById('google-fallback').style.display = 'none';
+    return true;
+  }
+
+  // Google Identity Services 가 로드되길 잠깐 기다림
+  var tries = 0;
+  var iv = setInterval(function(){
+    tries++;
+    if (initGis() || tries > 40){ clearInterval(iv); }
+  }, 150);
+
+  document.getElementById('google-fallback').addEventListener('click', function(){
+    if (!initGis()){
+      showAlert('warn', 'Google Identity Services 가 로드되지 않았습니다. GOOGLE_CLIENT_ID 설정을 확인하세요.');
+    } else {
+      google.accounts.id.prompt();
+    }
+  });
+
+  document.getElementById('ask-admin').addEventListener('click', function(e){
+    e.preventDefault();
+    showAlert('info', '관리자에게 가입을 요청하세요. (cksals00@gmail.com)');
+  });
+
+  // ── 설정 패널 ────────────────────────────────────────────────────────
+  var $cfgT = document.getElementById('cfg-toggle');
+  var $cfgP = document.getElementById('cfg-panel');
+  var $cfgApi = document.getElementById('cfg-api');
+  var $cfgGid = document.getElementById('cfg-gid');
+  $cfgT.addEventListener('click', function(){
+    $cfgP.classList.toggle('show');
+    if ($cfgP.classList.contains('show')){
+      var a = GSNAuth.getApiUrl();
+      var g = GSNAuth.getGoogleClientId();
+      if (a && a.indexOf('PASTE_') !== 0) $cfgApi.value = a;
+      if (g && g.indexOf('PASTE_') !== 0) $cfgGid.value = g;
+    }
+  });
+  document.getElementById('cfg-save').addEventListener('click', function(){
+    GSNAuth.setApiUrl($cfgApi.value.trim());
+    GSNAuth.setGoogleClientId($cfgGid.value.trim());
+    showAlert('info', '저장됨. 페이지를 새로고침합니다.');
+    setTimeout(function(){ location.reload(); }, 600);
+  });
+})();
+</script>
+
+</body>
+</html>
