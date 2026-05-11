@@ -14755,10 +14755,11 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
           var cur = _curMonth(byCat[cat]);
           var ly  = _lyMonth(byCat[cat]);
           var isRoomOnly = (cat === '룸온니/프로모션' || cat === '룸온니' || cat === '프로모션');
+          var isEtc = (cat === '기타');
           if (isRoomOnly) {
             roRn += cur.rn || 0; roRev += cur.rev || 0; roAdr = cur.adr || 0;
-          } else {
-            // 패키지 카테고리만 합산
+          } else if (!isEtc) {
+            // 패키지 카테고리만 합산 (기타 제외)
             pkgRn += cur.rn || 0;
             pkgRev += cur.rev || 0;
             // 패키지 중 Top 카테고리
