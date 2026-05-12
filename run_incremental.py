@@ -281,7 +281,8 @@ def merge_and_build():
 def run_post_steps():
     """Run steps 2-7."""
     import subprocess
-    for script in ["compare_and_update.py", "generate_otb_data.py", "generate_fcst.py", "generate_campaign_data.py", "generate_insights.py", "build.py"]:
+    optional_scripts = {"parse_campaign86.py"}
+    for script in ["compare_and_update.py", "generate_otb_data.py", "generate_fcst.py", "generate_campaign_data.py", "parse_campaign86.py", "generate_insights.py", "build.py"]:
         logger.info(f"=== {script} ===")
         result = subprocess.run(
             [sys.executable, str(SCRIPTS_DIR / script)],
@@ -289,6 +290,9 @@ def run_post_steps():
             capture_output=False
         )
         if result.returncode != 0:
+            if script in optional_scripts:
+                logger.warning(f"{script} failed (optional, exit code {result.returncode}) — skipping")
+                continue
             logger.error(f"{script} failed with exit code {result.returncode}")
             sys.exit(1)
         logger.info(f"{script} 완료")

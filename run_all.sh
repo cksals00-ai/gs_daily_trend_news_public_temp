@@ -17,6 +17,9 @@ echo "=== Step 4: generate_campaign_data.py ===" >> /tmp/run_all.log
 python3 scripts/generate_campaign_data.py >> /tmp/run_all.log 2>&1
 echo "STEP4_EXIT: $?" >> /tmp/run_all.log
 
+echo "=== Step 4b: parse_campaign86.py (optional) ===" >> /tmp/run_all.log
+python3 scripts/parse_campaign86.py >> /tmp/run_all.log 2>&1 || echo "STEP4b_SKIPPED (optional, exit $?)" >> /tmp/run_all.log
+
 echo "=== Step 5: build_validation.py ===" >> /tmp/run_all.log
 python3 scripts/build_validation.py >> /tmp/run_all.log 2>&1
 echo "STEP5_EXIT: $?" >> /tmp/run_all.log
