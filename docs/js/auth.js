@@ -274,7 +274,16 @@
   // 즉시 실행 가드
   // ──────────────────────────────────────────────────────────────────────────
   var requirement = readRequirement();
-  if (!requirement) return; // 가드 메타가 없으면 아무것도 안함 (예: login.html)
+  if (!requirement) {
+    // 가드 메타가 없어도 로그인되어 있으면 뱃지만 표시 (경쟁사모니터링, 팔라티움 등)
+    var _t = readToken(), _u = readUser();
+    if (_t && tokenIsValid(_t) && _u) {
+      var _show = function(){ renderBadge(_u); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _show);
+      else _show();
+    }
+    return;
+  }
 
   hideBody();
 
