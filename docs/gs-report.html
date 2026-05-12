@@ -1320,6 +1320,46 @@
           채널별 실적, 투숙일기준 실적, 상품카테고리별 실적 3개 뷰의 합계 RN이 동일한지 실시간으로 크로스체크하는 동적 검증 도구. 사업장/연도/월 필터, 일치/불일치 시각적 표시, 차이값 표시. gs-verify.html (뷰 정합성 탭) / gs-strategy.html (관리자 전용).
         </div>
       </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">품의기획 작성 도구 (gs-proposal)</div>
+        <div class="status-card-desc">
+          복수사업장 선택 + 기획전 상세 입력 + 동적 KPI 테이블 + ExcelJS 포맷팅 export + HTML 복사 + 보고실적 자동채움. 세일즈·영업기획 도구 섹션 연동.
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">로그인/회원관리/권한제어</div>
+        <div class="status-card-desc">
+          4단계 role(viewer·editor·manager·admin) 체계 + Apps Script 백엔드 + OAuth 인증 + 페이지별 접근 제어 + 사용자 뱃지 전역 표시.
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">FCST 키인 3행 구조 + 구글시트 연동</div>
+        <div class="status-card-desc">
+          RNS/ADR/매출 3행 구조 + 전년동기간 비교 + 스티키헤더 + 월별 분리 + ADR 토글 + 구글시트 중앙저장(Apps Script 웹앱 + sync).
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-badge complete">
+          완료
+        </div>
+        <div class="status-card-title">브랜드명 통일 (SONO GS 리포트)</div>
+        <div class="status-card-desc">
+          "GSN 리포트" → "SONO GS 리포트" 전체 페이지 일괄 변경. 공식 브랜드명 통일.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1345,7 +1385,7 @@
         </div>
         <div class="status-card-title">관리자 페이지 고도화</div>
         <div class="status-card-desc">
-          취소율 기준 키인 추가 완료. FCST 키인 운영 중. 키인 페이지 통합, 권한 관리, 감사 로그 예정.
+          FCST 키인 3행 구조 + 구글시트 연동 완료. 4단계 role 권한제어 완료. 감사 로그, 키인 이력 추적, 운영 모니터링 대시보드 예정.
         </div>
       </div>
     </div>
@@ -1453,6 +1493,62 @@
           트렌드 리포트 모바일 사이드바 레이아웃 최적화
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 리스크 분석 & 향후 과제 -->
+  <div class="report-section">
+    <h2 class="section-title">⚠️ SIS 리스크 분석 & 향후 과제 <span style="font-size:12px;font-weight:400;color:var(--ink-faint);">(2026-05-12 기준)</span></h2>
+    <div class="status-grid">
+
+      <div class="status-card" style="border-left:3px solid var(--negative);">
+        <div class="status-badge" style="background:var(--negative-bg);color:var(--negative);">높음</div>
+        <div class="status-card-title">데이터 원천 단일 의존 (온북 txt)</div>
+        <div class="status-card-desc">
+          모든 실적 데이터가 온북 DB txt 파일 단일 소스에 의존. 포맷 변경·경로 이동·서버 장애 시 전체 파이프라인 중단 위험. → 이중 소스(API or 직접 DB 연결) 확보 필요.
+        </div>
+      </div>
+
+      <div class="status-card" style="border-left:3px solid var(--negative);">
+        <div class="status-badge" style="background:var(--negative-bg);color:var(--negative);">높음</div>
+        <div class="status-card-title">인증/권한 체계 초기 단계</div>
+        <div class="status-card-desc">
+          OAuth + Apps Script 백엔드 구축 완료했으나, 세션 만료 처리 · 비밀번호 변경 · 감사 로그 · 2FA 미구현. 운영 확대 시 보안 리스크. → 감사 로그 + 세션 관리 우선 구현.
+        </div>
+      </div>
+
+      <div class="status-card" style="border-left:3px solid var(--warning);">
+        <div class="status-badge" style="background:var(--warning-bg);color:var(--warning);">중간</div>
+        <div class="status-card-title">FCST 키인 데이터 정합성</div>
+        <div class="status-card-desc">
+          구글시트 중앙저장 구축했으나, 다수 사용자 동시 키인 시 충돌 가능. 키인 이력 추적 · 버전 관리 · 롤백 기능 부재. → 키인 이력 로그 + 충돌 감지 로직 추가.
+        </div>
+      </div>
+
+      <div class="status-card" style="border-left:3px solid var(--warning);">
+        <div class="status-badge" style="background:var(--warning-bg);color:var(--warning);">중간</div>
+        <div class="status-card-title">정적 HTML 기반 한계</div>
+        <div class="status-card-desc">
+          GitHub Pages 정적 배포로 서버 비용 0원이나, 실시간 데이터 반영 불가 + 빌드 시점 스냅샷 의존. 사용자 수 증가 시 개인화 · 알림 등 동적 기능 제약. → 장기적으로 경량 백엔드(Cloudflare Workers 등) 도입 검토.
+        </div>
+      </div>
+
+      <div class="status-card" style="border-left:3px solid var(--warning);">
+        <div class="status-badge" style="background:var(--warning-bg);color:var(--warning);">중간</div>
+        <div class="status-card-title">경쟁사 크롤링 안정성</div>
+        <div class="status-card-desc">
+          OTA 사이트 UI 변경 시 크롤러 즉시 실패. 현재 수동 감지 → 수동 수정 사이클. → 크롤링 실패 자동 알림 + 셀렉터 자동복구 로직 추가.
+        </div>
+      </div>
+
+      <div class="status-card" style="border-left:3px solid var(--info);">
+        <div class="status-badge" style="background:var(--info-bg);color:var(--info);">개선</div>
+        <div class="status-card-title">향후 추가 과제</div>
+        <div class="status-card-desc">
+          ① AI FCST 자동화(4개년 패턴 + 휴일 로직) ② 품의 → 구글시트 자동 업로드 ③ GSA 키인 페이지 ④ 크롤링 실패 알림 자동화 ⑤ 감사 로그 + 운영 모니터링 대시보드 ⑥ 아웃바운드 분석 고도화
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2193,6 +2289,211 @@
     </div>
 
     <div class="timeline">
+      <!-- 2026-05-12 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/12</div>
+        <div class="timeline-day-date">2026.05.12 <span class="weekday">월요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">17:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>KPI 바 0% 트랙 배경 수정:</strong> 달성률 0%일 때 트랙 배경이 렌더링되지 않는 버그 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>기획전 86 파이프라인 추가:</strong> parse_campaign86.py (STEP5d) 파이프라인 등록 + 기획전 196 실적 갱신 (332→1,460실)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">13:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>auth.js 뱃지 전역 적용:</strong> 가드 메타 없는 페이지에서도 로그인 시 사용자 뱃지 표시 + 잔여 빌드 정리</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">12:30</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>온북 0512 파싱+빌드:</strong> 5/12 온북 데이터 파싱 및 전체 빌드 재생성, data/ JSON 충돌 마커 정리</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">08:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>OAuth 인증 하드코딩:</strong> auth API URL + OAuth Client ID를 환경 독립적으로 하드코딩 처리</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">06:00</div>
+            <div class="timeline-event-tag tag-rename">RENAME</div>
+            <div class="timeline-event-text"><strong>브랜드명 일괄 변경:</strong> "GSN 리포트" → "SONO GS 리포트" 전체 페이지 일괄 적용</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-11 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/11</div>
+        <div class="timeline-day-date">2026.05.11 <span class="weekday">일요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">19:30</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>로그인/회원관리/권한제어:</strong> 4단계 role(viewer→admin) 체계 · Apps Script 백엔드 · 페이지별 접근 제어 구현</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>FCST 키인 구글시트 중앙저장:</strong> Apps Script 웹앱 + sync 스크립트로 키인 데이터를 구글시트에 자동 동기화</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">15:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>FCST 키인 3행 구조 리뉴얼:</strong> RNS/ADR/매출 3행 구조 + 전년동기간 비교 + 스티키헤더 + 월별 분리(5월↔6월 연동 버그 수정)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">13:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>FCST 키인 빈칸 전수 제거:</strong> 테이블 모든 빈칸(—) 제거 — ADR 목표/전년, 매출 RM, 기존 FCST를 0/계산값/폴백으로 채움</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">11:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>채널별 실적 예약일자 슬라이서:</strong> 최초예약일시 기준 슬라이서 추가 + 예약일자 필터 LY 동기간 비교(날짜 -1년 shift + 28번 차감)</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">10:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>기획전 실적 갱신:</strong> 기획전 실적 재생성(473 RN) + 통합차트 10개 채널만 표시 + 더보기 토글 + 패키지 Top 카테고리 기타 제외</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">09:30</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>뉴스 수집 품질 개선:</strong> when:7d 제한 + 오래된 기사 자동 필터 + 단양 기사 제거</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">09:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>ADR 키인 토글:</strong> 객실(RN)/ADR 전환 토글 + 천원 단위 표시 + 가중평균 합계</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">08:30</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>청송 권역 수정:</strong> 청송 사업장 권역 중부(central) → 남부(south) 전체 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">08:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>FCST 키인 IME 호환:</strong> input type=number → text+inputmode=numeric 변경 (한글 IME 환경 호환) + FCST 링크·propertyList 수정</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-09 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/9</div>
+        <div class="timeline-day-date">2026.05.09 <span class="weekday">금요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">22:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>품의서 최종 보정:</strong> HTML/KPI/엑셀 출력 수정 + 비발디파크 벨/캄/펫 객실타입 매칭 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>품의서 ExcelJS export:</strong> 포맷팅 export + 동적 KPI 테이블 + 보고실적 자동채움 + HTML 출력 스타일 개선</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">18:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>품의 샘플다운로드 + 실적테이블:</strong> 샘플 다운로드 기능 + 실적 테이블 자동 채움 + 세일즈 리포트 링크</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>품의 페이지 고도화:</strong> 복수사업장 선택 + 기획전 상세 + KPI 강화 + HTML 복사 + 세일즈·영업기획 도구 섹션 추가</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">14:00</div>
+            <div class="timeline-event-tag tag-page">PAGE</div>
+            <div class="timeline-event-text"><strong>품의기획 페이지 신설 (gs-proposal):</strong> 기획전 품의서 작성 프로토타입 + 전략/세일즈 대시보드 링크 + 관리도구·세일즈도구 카드 연동</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-08 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/8</div>
+        <div class="timeline-day-date">2026.05.08 <span class="weekday">목요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">22:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>한글 엔티티 깨짐 복구:</strong> 전체 페이지 corrupted Korean HTML entities 디코딩 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>당일분석 채널별 탭 수정:</strong> segment→channel view 분리로 거래처 데이터 정상 표시 + bySegment 우선 로직</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">18:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>OTB 자동생성 + FCST 합계 델타:</strong> OTB 데이터 자동 생성 + 상품카드 수정 + FCST 합계 델타 표시 + 모바일 UI 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:00</div>
+            <div class="timeline-event-tag tag-refactor">REFAC</div>
+            <div class="timeline-event-text"><strong>FCST 추이 고도화:</strong> 전체합계 top-level값 사용 + YoY 수정 + AI변동요인 고도화 + 마감리포트 G-OTA 매핑 수정</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">14:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>채널별 집계 정합성:</strong> parse_raw_db에서 43/44 제외 재적용 + category_agg 27번만 사용 + 비례배분 폐기 → Top4·상품 카드 직접 매핑</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">12:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>sync 키 대규모 확장:</strong> by_channel 123개 키 동기화 + 세그 필터(OTA/G-OTA/IB만) + RM ADR 추가 + overseas UI 리뉴얼</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">10:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>상품인사이트 버그 수정:</strong> todayDt2 호이스팅 + 채널 Inbound 제외 + TY/LY 동적 라벨</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2026-05-07 -->
+      <div class="timeline-day">
+        <div class="timeline-day-marker">5/7</div>
+        <div class="timeline-day-date">2026.05.07 <span class="weekday">수요일</span></div>
+        <div class="timeline-events">
+          <div class="timeline-event">
+            <div class="timeline-event-time">22:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>fcst-status RM FCST 수정:</strong> RM FCST 버그수정 + 세그별 컬럼 추가 + 사업장 필터 개선</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">20:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>RM FCST GS합계 표시:</strong> GS합계만 표시하도록 수정 + fcst-trend Budget 수정 + 전략앱 맵 전환</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">18:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>채널실적 KPI 순증 기준:</strong> 채널실적 KPI를 순증(net) 기준으로 수정 + 거래처 개별매핑 + 월 슬라이서 + safe-area</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">16:00</div>
+            <div class="timeline-event-tag tag-feat">FEAT</div>
+            <div class="timeline-event-text"><strong>채널세그 코드분류 + 매핑관리:</strong> 채널 세그먼트 코드 분류 체계화 + 세그 필터 + 상품카테고리 + sales-guide 2앱 연동 + 매핑관리 페이지</div>
+          </div>
+          <div class="timeline-event">
+            <div class="timeline-event-time">14:00</div>
+            <div class="timeline-event-tag tag-fix">FIX</div>
+            <div class="timeline-event-text"><strong>데이터 동기화 키 보강:</strong> sync by_channel · by_property · product_detail · net_daily_by_segment 등 누락 키 일괄 추가</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 2026-05-06 -->
       <div class="timeline-day">
         <div class="timeline-day-marker">5/6</div>

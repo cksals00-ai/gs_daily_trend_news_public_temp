@@ -934,6 +934,220 @@
     body { margin-left:0 !important; }
     .nav-l1, .nav-l2 { font-size: 11px !important; }
   }
+
+  /* ============= STRATEGY SUMMARY BOARD ============= */
+  .strategy-summary-board {
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg) 100%);
+    padding: 36px 28px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .strategy-summary-board::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .ssb-inner {
+    max-width: 1640px;
+    margin: 0 auto;
+  }
+  .ssb-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .ssb-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .ssb-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 16px rgba(201,160,99,0.25);
+  }
+  .ssb-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .ssb-subtitle {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+  .ssb-refresh-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .ssb-refresh-dot {
+    width: 6px; height: 6px;
+    background: var(--positive);
+    border-radius: 50%;
+    animation: ssb-pulse 2s infinite;
+  }
+  @keyframes ssb-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Board Cards Grid */
+  .ssb-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .ssb-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+  .ssb-card:hover {
+    border-color: rgba(201,160,99,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  .ssb-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 10px 0 0 10px;
+  }
+  .ssb-card[data-priority="S"]::before { background: linear-gradient(180deg, #e57373, #ef5350); }
+  .ssb-card[data-priority="A"]::before { background: linear-gradient(180deg, var(--gold), var(--gold-bright)); }
+  .ssb-card[data-priority="B"]::before { background: linear-gradient(180deg, var(--info), #4da8da); }
+  .ssb-card[data-priority="C"]::before { background: linear-gradient(180deg, var(--ink-faint), var(--ink-muted)); }
+
+  .ssb-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .ssb-keyword {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    line-height: 1.3;
+    flex: 1;
+  }
+  .ssb-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .ssb-badge.priority-S { background: rgba(229,115,115,0.15); color: var(--negative); border: 1px solid rgba(229,115,115,0.3); }
+  .ssb-badge.priority-A { background: rgba(201,160,99,0.15); color: var(--gold-bright); border: 1px solid rgba(201,160,99,0.3); }
+  .ssb-badge.priority-B { background: rgba(90,159,196,0.15); color: var(--info); border: 1px solid rgba(90,159,196,0.3); }
+  .ssb-badge.priority-C { background: rgba(122,126,133,0.15); color: var(--ink-muted); border: 1px solid rgba(122,126,133,0.3); }
+
+  .ssb-story {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    margin-bottom: 12px;
+    word-break: keep-all;
+  }
+  .ssb-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ssb-tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .ssb-tag.up { color: var(--positive); border-color: rgba(76,175,111,0.2); }
+  .ssb-tag.down { color: var(--negative); border-color: rgba(229,115,115,0.2); }
+  .ssb-tag.neutral { color: var(--warning); border-color: rgba(232,162,86,0.2); }
+
+  /* Headline Card (wider, first card) */
+  .ssb-card.headline {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(201,160,99,0.06) 0%, var(--bg-card) 100%);
+    border: 1px solid rgba(201,160,99,0.25);
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+  .ssb-card.headline::before { display: none; }
+  .ssb-headline-accent {
+    width: 6px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-bright), var(--gold));
+    border-radius: 10px 0 0 10px;
+    flex-shrink: 0;
+  }
+  .ssb-headline-body {
+    padding: 20px 24px;
+    flex: 1;
+  }
+  .ssb-headline-month {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .ssb-headline-text {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+  .ssb-headline-detail {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .strategy-summary-board { padding: 24px 16px 20px; }
+    .ssb-cards { grid-template-columns: 1fr; }
+    .ssb-card.headline { flex-direction: column; }
+    .ssb-headline-accent { width: 100%; height: 4px; border-radius: 10px 10px 0 0; }
+    .ssb-header { flex-direction: column; align-items: flex-start; }
+  }
 </style>
 <!-- GSN CSS 제거됨 -->
 
@@ -975,11 +1189,978 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- ============================================================== -->
+<!-- 🏨 숙박세일페스타 전략 섹션 (2026 여름)                          -->
+<!-- 국가 지원 숙박세일페스타 대응 — 연박패키지 중심 전략               -->
+<!-- ============================================================== -->
+<section id="saleFesta" style="max-width:1640px; margin:0 auto; padding:28px 28px 0;">
+
+  <!-- ── HERO BANNER ── -->
+  <div style="background:linear-gradient(135deg, #1a3a5c 0%, #0d2240 40%, #142338 100%); border:2px solid #2a6496; border-radius:12px; padding:0; overflow:hidden; margin-bottom:24px; position:relative;">
+    <!-- 상단 리본 -->
+    <div style="background:linear-gradient(90deg, #c9a063, #e6b970, #c9a063); padding:6px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:20px;">🏨</span>
+        <span style="font-family:var(--serif); font-weight:800; font-size:15px; color:#1a1d23; letter-spacing:0.02em;">2026 숙박세일페스타 전략</span>
+        <span style="background:#1a1d23; color:#e6b970; font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; letter-spacing:0.05em;">국가지원</span>
+      </div>
+      <div style="font-size:11px; color:#1a1d23; font-weight:600; opacity:0.7;">관리자 전용 · 대외비</div>
+    </div>
+
+    <div style="padding:28px 32px 24px; display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;">
+      <!-- 좌측: 이벤트 개요 -->
+      <div style="flex:1; min-width:320px;">
+        <h2 style="font-family:var(--serif); font-weight:800; font-size:26px; color:#fff; margin-bottom:6px; line-height:1.3;">
+          연박패키지 + 소노스카이거너스 키캡
+        </h2>
+        <p style="color:rgba(255,255,255,0.6); font-size:14px; margin-bottom:20px; line-height:1.6;">
+          국가 지원 숙박세일페스타 대응 전략 — 지방 소재 12개 사업장 대상<br>
+          연박패키지에 사업장별 할인권(F&B/부대시설) + 키캡 무료 증정
+        </p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:16px;">
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:14px 16px;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.45); font-weight:600; letter-spacing:0.05em; margin-bottom:4px;">예약일</div>
+            <div style="font-size:17px; font-weight:700; color:#e6b970;">6.11 ~ 7.31</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:14px 16px;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.45); font-weight:600; letter-spacing:0.05em; margin-bottom:4px;">투숙일</div>
+            <div style="font-size:17px; font-weight:700; color:#e6b970;">6.11 ~ 8.31</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:14px 16px;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.45); font-weight:600; letter-spacing:0.05em; margin-bottom:4px;">대상</div>
+            <div style="font-size:17px; font-weight:700; color:#fff;">지방 12개 사업장</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:14px 16px;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.45); font-weight:600; letter-spacing:0.05em; margin-bottom:4px;">핵심 전략</div>
+            <div style="font-size:17px; font-weight:700; color:#4caf6f;">연박 + 할인권 + 키캡</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측: 핵심 KPI 목표 -->
+      <div style="min-width:260px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:20px 24px;">
+        <div style="font-size:12px; color:var(--gold-bright); font-weight:700; letter-spacing:0.08em; margin-bottom:14px;">📊 예상 효과 (12개 사업장 합산)</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.5);">추가 확보 RN (6~8월)</div>
+            <div style="font-size:22px; font-weight:800; color:#4caf6f;">+8,400 ~ 12,600실</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.5);">추가 매출</div>
+            <div style="font-size:22px; font-weight:800; color:#5a9fc4;">+14.7 ~ 22.1억원</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.5);">평균 OCC 개선</div>
+            <div style="font-size:22px; font-weight:800; color:#e8a256;">+3.2 ~ 4.8%p</div>
+          </div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.35); margin-top:4px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
+            * 2025 실적 기반 보수적 추정 (연박전환율 15~22%)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 접기/펼치기 토글 ── -->
+  <div style="margin-bottom:8px;">
+    <button onclick="document.getElementById('saleFestaDetail').style.display = document.getElementById('saleFestaDetail').style.display === 'none' ? 'block' : 'none'; this.querySelector('.sf-arrow').style.transform = document.getElementById('saleFestaDetail').style.display === 'none' ? '' : 'rotate(180deg)';"
+      style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:12px 20px; color:var(--ink); font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px; width:100%; text-align:left; transition:.2s;">
+      <span style="font-size:16px;">📋</span>
+      <span>숙박세일페스타 심층 분석 보기</span>
+      <span class="sf-arrow" style="margin-left:auto; font-size:12px; transition:.3s;">▼</span>
+    </button>
+  </div>
+
+  <div id="saleFestaDetail" style="display:none;">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 1: 대상 사업장 선정 근거                 -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">1</span>
+      대상 사업장 선정 및 4개년 실적 분석
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">숙박세일페스타 사용지역(지방) 소재 12개 사업장 — 2022~2025 6~8월 실적 기반</p>
+
+    <!-- 사업장 테이블 -->
+    <div style="overflow-x:auto; margin-bottom:20px;">
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--gold); text-align:right;">
+            <th style="text-align:left; padding:8px 12px; color:var(--ink-muted); font-weight:600;">사업장</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">객실</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">권역</th>
+            <th style="padding:8px 8px; color:rgba(90,159,196,0.9); font-weight:600;">25 RN</th>
+            <th style="padding:8px 8px; color:rgba(90,159,196,0.9); font-weight:600;">25 ADR</th>
+            <th style="padding:8px 8px; color:rgba(90,159,196,0.9); font-weight:600;">25 Rev</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">24 RN</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">YoY</th>
+            <th style="padding:8px 8px; color:var(--negative); font-weight:600;">25 취소율</th>
+            <th style="padding:8px 8px; color:var(--warning); font-weight:600;">6월OCC</th>
+            <th style="padding:8px 8px; color:var(--warning); font-weight:600;">7월OCC</th>
+            <th style="padding:8px 8px; color:var(--warning); font-weight:600;">8월OCC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">델피노</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">1,192</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">28,388</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">236천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">66.9억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">21,502</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+32.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">53.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">20.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">25.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">31.3%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노문 단양</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">821</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">22,181</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">158천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">35.0억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">18,285</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+21.3%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">47.5%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">22.7%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">28.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">36.8%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">쏠비치 삼척</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">707</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">20,709</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">231천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">47.9억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">18,487</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+12.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">55.2%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">35.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">34.1%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">26.1%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">쏠비치 진도</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">561</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">19,107</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">224천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">42.8억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">16,819</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+13.6%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">54.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">32.7%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">40.2%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">38.0%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노캄 거제</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">478</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">13,962</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">235천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">32.7억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">11,190</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+24.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">56.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">27.6%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">33.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">33.7%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노벨 천안</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">426</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">13,535</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">187천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">25.4억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">12,903</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+4.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">51.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">26.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">35.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">41.5%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노벨 변산</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">502</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">12,215</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">178천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">21.8억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">9,117</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+34.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">50.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">22.2%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">27.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">29.2%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">쏠비치 양양</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">501</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2c5f7c; font-size:11px;">중부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">12,314</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">210천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">25.8억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">10,762</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+14.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">55.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">26.6%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">29.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">23.7%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노문 해운대</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">235</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">6,949</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">102천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">7.1억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">2,394</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+190.3%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">45.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">28.7%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">29.5%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">38.1%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노벨 청송</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">314</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">6,307</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">174천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">11.0억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">4,099</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+53.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">49.5%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">18.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">22.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">25.0%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노캄 여수</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">309</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">6,296</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">274천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">17.2억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">5,310</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">+18.6%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">59.0%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">20.8%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">19.9%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">25.7%</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">소노벨 경주</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">412</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">7,723</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="text-align:left; padding:7px 12px; font-weight:600; color:var(--ink);">쏠비치 남해</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-soft);">451</td>
+            <td style="padding:7px 8px; text-align:right;"><span style="color:#2d7a3f; font-size:11px;">남부</span></td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600; color:var(--info);">3,567</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">379천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">13.5억</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">신규</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--negative);">44.2%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--ink-muted);">—</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">11.4%</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--warning);">14.1%</td>
+          </tr>
+          <tr style="border-bottom:2px solid var(--gold); font-weight:700; background:rgba(201,160,99,0.06);">
+            <td style="text-align:left; padding:8px 12px; color:var(--gold-bright);">12개 합산</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">6,459</td>
+            <td style="padding:8px 8px; text-align:right;"></td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">165,530</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">207천</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">346.9억</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--ink-muted);">117,591</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--positive);">+40.8%</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--negative);">52.4%</td>
+            <td colspan="3" style="padding:8px 8px; text-align:center; color:var(--warning); font-size:11px;">OCC 평균 25.6%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px; background:rgba(76,175,111,0.08); border:1px solid rgba(76,175,111,0.3); border-radius:6px; padding:12px 16px;">
+        <div style="font-size:11px; color:var(--positive); font-weight:700; margin-bottom:4px;">핵심 인사이트</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">12개 사업장 평균 OCC 25.6%로 <strong style="color:var(--negative);">가용 객실 74.4% 미판매</strong>. 6월 비수기 OCC 최저 22~28% 수준. 연박패키지로 체류일수 확대 시 OCC 3~5%p 개선 가능.</div>
+      </div>
+      <div style="flex:1; min-width:200px; background:rgba(229,115,115,0.06); border:1px solid rgba(229,115,115,0.3); border-radius:6px; padding:12px 16px;">
+        <div style="font-size:11px; color:var(--negative); font-weight:700; margin-bottom:4px;">리스크 포인트</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">평균 취소율 52.4%로 높은 편. 특히 <strong>소노캄 여수(59.0%)</strong>, <strong>소노캄 거제(56.8%)</strong>는 NR(환불불가) 요금 적용으로 실 판매 안정화 필요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 2: 패키지 유형 비교 분석                 -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">2</span>
+      패키지 유형 비교: 연박 vs 조식 vs 오션
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">왜 연박패키지인가? — 3개 패키지 유형의 4개년 실적과 가격저항 분석</p>
+
+    <!-- 전체 패키지 카테고리 비교 -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:16px; margin-bottom:24px;">
+
+      <!-- 연박/투나잇 카드 -->
+      <div style="background:linear-gradient(135deg, rgba(76,175,111,0.08) 0%, var(--bg-soft) 100%); border:2px solid var(--positive); border-radius:10px; padding:20px; position:relative;">
+        <div style="position:absolute; top:12px; right:14px; background:var(--positive); color:#fff; font-size:10px; font-weight:800; padding:3px 10px; border-radius:12px;">추천</div>
+        <div style="font-size:15px; font-weight:700; color:var(--positive); margin-bottom:12px;">연박/투나잇</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">2025 6~8월 RN</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">23,740</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">ADR</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">205천</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">매출</div>
+            <div style="font-size:15px; font-weight:700; color:var(--info);">48.8억</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">4년 CAGR</div>
+            <div style="font-size:15px; font-weight:700; color:var(--positive);">+53.2%</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.55; border-top:1px solid var(--rule); padding-top:10px;">
+          <strong style="color:var(--positive);">가격저항 최소:</strong> ADR 205천원은 룸온리(211천) 대비 -2.8%. 추가 비용 없이 박수만 늘리는 구조라 고객 체감 가격 하락. 22→25년 RN <strong>3.6배 성장</strong>으로 수요 검증 완료.
+        </div>
+      </div>
+
+      <!-- 조식패키지 카드 -->
+      <div style="background:var(--bg-soft); border:1px solid var(--rule); border-radius:10px; padding:20px;">
+        <div style="font-size:15px; font-weight:700; color:var(--warning); margin-bottom:12px;">조식패키지</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">2025 6~8월 RN</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">16,693</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">ADR</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">185천</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">매출</div>
+            <div style="font-size:15px; font-weight:700; color:var(--info);">30.9억</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">4년 CAGR</div>
+            <div style="font-size:15px; font-weight:700; color:var(--positive);">+13.3%</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.55; border-top:1px solid var(--rule); padding-top:10px;">
+          <strong style="color:var(--warning);">가격 상방 압력:</strong> 조식 포함 시 패키지가 +15~25천원 상승. 숙박세일페스타 할인 적용해도 객단가가 연박 대비 높아 <strong>전환율 저하</strong> 우려. 다만, 쏠비치 삼척(ADR 244천)처럼 F&B 인프라 강한 사업장에서는 유효.
+        </div>
+      </div>
+
+      <!-- 워터풀/오션 카드 -->
+      <div style="background:var(--bg-soft); border:1px solid var(--rule); border-radius:10px; padding:20px;">
+        <div style="font-size:15px; font-weight:700; color:var(--info); margin-bottom:12px;">워터풀/오션</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">2025 6~8월 RN</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">9,364</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">ADR</div>
+            <div style="font-size:18px; font-weight:800; color:var(--ink);">229천</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">매출</div>
+            <div style="font-size:15px; font-weight:700; color:var(--info);">21.5억</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--ink-faint);">4년 CAGR</div>
+            <div style="font-size:15px; font-weight:700; color:var(--negative);">-6.5%</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.55; border-top:1px solid var(--rule); padding-top:10px;">
+          <strong style="color:var(--negative);">역성장 + 최고 가격저항:</strong> ADR 229천원은 3개 유형 중 최고. 오션뷰/워터풀 이용권 포함으로 +30~50천원 프리미엄. 22→25년 RN -18.3% 감소. <strong>비수기 사업장에서 가격 저항이 가장 큼.</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사업장별 패키지 비교 테이블 -->
+    <div style="margin-bottom:16px;">
+      <h4 style="font-size:14px; font-weight:700; color:var(--ink); margin-bottom:12px;">사업장별 3대 패키지 ADR 비교 (2025 6~8월)</h4>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--rule); text-align:right;">
+              <th style="text-align:left; padding:6px 10px; color:var(--ink-muted);">사업장</th>
+              <th style="padding:6px 8px; color:var(--ink-muted);">룸온리 ADR</th>
+              <th style="padding:6px 8px; color:var(--positive);">연박 ADR</th>
+              <th style="padding:6px 8px; color:var(--positive);">연박 RN</th>
+              <th style="padding:6px 8px; color:var(--warning);">조식 ADR</th>
+              <th style="padding:6px 8px; color:var(--warning);">조식 RN</th>
+              <th style="padding:6px 8px; color:var(--info);">오션 ADR</th>
+              <th style="padding:6px 8px; color:var(--info);">오션 RN</th>
+              <th style="padding:6px 8px; color:var(--ink-muted);">연박 vs 룸온리</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">델피노</td>
+              <td style="padding:6px 8px; text-align:right;">232천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">250천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">2,820</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">189천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">426</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">192천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">1,053</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">+7.8%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">소노문 단양</td>
+              <td style="padding:6px 8px; text-align:right;">155천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">168천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">2,646</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">163천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">460</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">148천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">942</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">+8.4%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">쏠비치 삼척</td>
+              <td style="padding:6px 8px; text-align:right;">236천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">215천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">2,814</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">244천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">1,341</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">235천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">1,667</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--negative);">-8.9%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">쏠비치 진도</td>
+              <td style="padding:6px 8px; text-align:right;">208천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">224천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">2,406</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">223천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">1,514</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">220천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">1,119</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">+7.7%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">소노벨 변산</td>
+              <td style="padding:6px 8px; text-align:right;">172천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">180천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">1,644</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">173천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">253</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">173천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">859</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">+4.7%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">쏠비치 양양</td>
+              <td style="padding:6px 8px; text-align:right;">192천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">183천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">1,597</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">198천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">828</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">230천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">192</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--negative);">-4.7%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">소노벨 천안</td>
+              <td style="padding:6px 8px; text-align:right;">180천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">186천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">846</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">183천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">810</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">187천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">1,164</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">+3.3%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="text-align:left; padding:6px 10px; font-weight:600;">소노캄 거제</td>
+              <td style="padding:6px 8px; text-align:right;">229천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive); font-weight:600;">172천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--positive);">71</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">239천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--warning);">285</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">241천</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--info);">255</td>
+              <td style="padding:6px 8px; text-align:right; color:var(--negative);">-24.9%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 결론 박스 -->
+    <div style="background:linear-gradient(135deg, rgba(76,175,111,0.1) 0%, rgba(76,175,111,0.03) 100%); border:1px solid var(--positive); border-radius:8px; padding:18px 20px;">
+      <div style="font-size:13px; font-weight:700; color:var(--positive); margin-bottom:8px;">결론: 연박패키지가 숙박세일페스타에 최적인 이유</div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.65;">
+        <strong>1)</strong> ADR이 룸온리 대비 동등~소폭 상승(평균 ±5% 내) — 고객 가격저항 최소화.<br>
+        <strong>2)</strong> 4개년 CAGR +53.2%로 압도적 성장세 (조식 +13.3%, 오션 -6.5%).<br>
+        <strong>3)</strong> 국가지원 취지(지역경제 활성화)에 부합 — 체류일수 증가 → 지역 F&B/관광 소비 파급 효과.<br>
+        <strong>4)</strong> 조식 패키지가 더 유리한 예외: <span style="color:var(--warning);">쏠비치 삼척</span>(조식 ADR 244천, 1,341실 — F&B 인프라 우수)은 조식을 병행 추천.<br>
+        <strong>5)</strong> 오션 패키지는 ADR 229천으로 가격저항이 가장 크고 RN도 역성장 중 — 세일페스타 주력 상품으로 부적합.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 3: 채널 전략                            -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">3</span>
+      채널별 판매 전략
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">2025 6~8월 채널별 실적 기반 — 숙박세일페스타 최적 채널 믹스</p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:16px; margin-bottom:20px;">
+      <!-- OTA 채널 -->
+      <div style="background:var(--bg-soft); border:1px solid var(--rule); border-radius:8px; padding:18px;">
+        <div style="font-size:14px; font-weight:700; color:var(--positive); margin-bottom:14px; display:flex; align-items:center; gap:6px;">
+          <span style="width:8px; height:8px; background:var(--positive); border-radius:50%;"></span> OTA — 주력 채널
+        </div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.7;">
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>야놀자</strong></span>
+            <span>42,451실 · ADR 229천 · <span style="color:var(--negative);">-4.2%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>여기어때</strong></span>
+            <span>38,783실 · ADR 228천 · <span style="color:var(--positive);">+23.7%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>네이버</strong></span>
+            <span>11,269실 · ADR 250천 · <span style="color:var(--negative);">-11.1%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0;">
+            <span><strong>쿠팡</strong> <span style="font-size:10px; color:var(--positive);">NEW</span></span>
+            <span>4,325실 · ADR 200천 · <span style="color:var(--positive);">신규</span></span>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-size:11px; color:var(--ink-faint); background:rgba(76,175,111,0.06); padding:8px 10px; border-radius:4px;">
+          전략: 여기어때 슈퍼세일 + 쿠팡 라이브커머스 연계. 야놀자는 ADR 유지하면서 노출 부스팅.
+        </div>
+      </div>
+
+      <!-- G-OTA 채널 -->
+      <div style="background:var(--bg-soft); border:1px solid var(--rule); border-radius:8px; padding:18px;">
+        <div style="font-size:14px; font-weight:700; color:var(--info); margin-bottom:14px; display:flex; align-items:center; gap:6px;">
+          <span style="width:8px; height:8px; background:var(--info); border-radius:50%;"></span> G-OTA — 보조 채널
+        </div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.7;">
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>아고다</strong></span>
+            <span>40,248실 · ADR 229천 · <span style="color:var(--positive);">+17.1%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>트립닷컴</strong></span>
+            <span>13,661실 · ADR 211천 · <span style="color:var(--positive);">+126.1%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>익스피디아</strong></span>
+            <span>13,106실 · ADR 221천 · <span style="color:var(--positive);">+20.6%</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0;">
+            <span><strong>부킹닷컴</strong></span>
+            <span>6,386실 · ADR 225천 · <span style="color:var(--negative);">-23.9%</span></span>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-size:11px; color:var(--ink-faint); background:rgba(90,159,196,0.06); padding:8px 10px; border-radius:4px;">
+          전략: G-OTA는 수수료율(15~25%)이 높으므로 세일페스타 전용 NR 요금으로 순매출 방어. 아고다/트립닷컴 집중.
+        </div>
+      </div>
+    </div>
+
+    <!-- 채널 수수료 시뮬레이션 -->
+    <div style="background:rgba(232,162,86,0.06); border:1px solid rgba(232,162,86,0.3); border-radius:8px; padding:16px 20px;">
+      <div style="font-size:13px; font-weight:700; color:var(--warning); margin-bottom:8px;">채널별 순매출 시뮬레이션 (ADR 200천원 기준, 1,000실 판매 시)</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:10px; font-size:12px;">
+        <div style="background:var(--bg-card); border-radius:6px; padding:10px 14px; text-align:center;">
+          <div style="color:var(--ink-muted); font-size:11px;">자사몰</div>
+          <div style="font-size:16px; font-weight:800; color:var(--positive);">1.94억</div>
+          <div style="font-size:10px; color:var(--ink-faint);">수수료 3%</div>
+        </div>
+        <div style="background:var(--bg-card); border-radius:6px; padding:10px 14px; text-align:center;">
+          <div style="color:var(--ink-muted); font-size:11px;">야놀자/여기어때</div>
+          <div style="font-size:16px; font-weight:800; color:var(--info);">1.76억</div>
+          <div style="font-size:10px; color:var(--ink-faint);">수수료 12%</div>
+        </div>
+        <div style="background:var(--bg-card); border-radius:6px; padding:10px 14px; text-align:center;">
+          <div style="color:var(--ink-muted); font-size:11px;">쿠팡</div>
+          <div style="font-size:16px; font-weight:800; color:var(--info);">1.70억</div>
+          <div style="font-size:10px; color:var(--ink-faint);">수수료 15%</div>
+        </div>
+        <div style="background:var(--bg-card); border-radius:6px; padding:10px 14px; text-align:center;">
+          <div style="color:var(--ink-muted); font-size:11px;">아고다/트립닷컴</div>
+          <div style="font-size:16px; font-weight:800; color:var(--warning);">1.56억</div>
+          <div style="font-size:10px; color:var(--ink-faint);">수수료 22%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 4: 사업장별 추천 패키지 구성              -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">4</span>
+      사업장별 추천 패키지 구성 및 목표
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">연박패키지 + 할인권 + 키캡 증정 — 사업장별 맞춤 전략</p>
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--gold); text-align:left;">
+            <th style="padding:8px 10px; color:var(--ink-muted); font-weight:600;">사업장</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">패키지 구성</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">할인권</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600; text-align:right;">연박 ADR</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600; text-align:right;">목표 RN</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600; text-align:right;">예상 매출</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">주력 채널</th>
+            <th style="padding:8px 8px; color:var(--ink-muted); font-weight:600;">키캡 조건</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">델피노</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 오션월드 1회</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 2만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">225천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">1,500</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">3.4억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 아고다</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노문 단양</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 액티비티 1종</td>
+            <td style="padding:7px 8px; color:var(--warning);">부대시설 1.5만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">155천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">1,400</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">2.2억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">야놀자 · 여기어때</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">쏠비치 삼척</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 <span style="color:var(--warning);">조식 포함</span> + 워터파크</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 2만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">220천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">1,500</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">3.3억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">아고다 · 여기어때</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">쏠비치 진도</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 해양레저 1종</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 1.5만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">210천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">1,300</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">2.7억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 야놀자</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노캄 거제</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 씨월드 1회</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 2만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">215천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">800</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.7억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 아고다</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노벨 천안</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 스파 1회</td>
+            <td style="padding:7px 8px; color:var(--warning);">부대시설 1.5만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">175천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">600</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.1억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 쿠팡</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노벨 변산</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 해수풀 1회</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 1.5만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">168천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">600</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.0억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 야놀자</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">쏠비치 양양</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 서핑레슨 1회</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 1.5만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">180천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">600</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.1억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">야놀자 · 네이버</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노문 해운대</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 해운대 할인팩</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 1만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">95천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">400</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">0.4억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">아고다 · 인바운드</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노벨 청송</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 숲체험 프로그램</td>
+            <td style="padding:7px 8px; color:var(--warning);">부대시설 1만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">160천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">400</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">0.6억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">여기어때 · 야놀자</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">소노캄 여수</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 여수 야경투어</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 2만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">260천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">400</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.0억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">아고다 · 익스피디아</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--rule);">
+            <td style="padding:7px 10px; font-weight:700; color:var(--ink);">쏠비치 남해</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">2박3일 연박 + 남해 관광팩</td>
+            <td style="padding:7px 8px; color:var(--warning);">F&B 2만원권</td>
+            <td style="padding:7px 8px; text-align:right; font-weight:600;">350천</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--positive); font-weight:600;">400</td>
+            <td style="padding:7px 8px; text-align:right; color:var(--info);">1.4억</td>
+            <td style="padding:7px 8px; color:var(--ink-soft);">야놀자 · 네이버</td>
+            <td style="padding:7px 8px; font-size:11px; color:var(--ink-muted);">2박 이상 시 증정</td>
+          </tr>
+          <tr style="font-weight:700; background:rgba(201,160,99,0.06); border-top:2px solid var(--gold);">
+            <td style="padding:8px 10px; color:var(--gold-bright);">12개 합산</td>
+            <td colspan="2" style="padding:8px 8px;"></td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">평균 201천</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">9,900</td>
+            <td style="padding:8px 8px; text-align:right; color:var(--gold-bright);">19.9억</td>
+            <td colspan="2" style="padding:8px 8px;"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 5: 키캡 + 할인권 ROI 시뮬레이션          -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">5</span>
+      키캡 + 할인권 ROI 시뮬레이션
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">소노스카이거너스 키캡 제작비 + 할인권 비용 vs 추가 매출 효과</p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px; margin-bottom:20px;">
+      <!-- 비용 -->
+      <div style="background:rgba(229,115,115,0.06); border:1px solid rgba(229,115,115,0.2); border-radius:8px; padding:18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--negative); margin-bottom:12px;">비용 항목</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:2;">
+          키캡 제작 단가: <strong>3,000~5,000원/개</strong> (PBT 재질 기준)<br>
+          키캡 수량 (목표 9,900실): <strong>~5,000개</strong> (2박 기준 객실당 1개)<br>
+          키캡 총비용: <strong>1,500~2,500만원</strong><br>
+          할인권 평균 단가: <strong>15,000원/매</strong><br>
+          할인권 예상 이용률: <strong>65~75%</strong><br>
+          할인권 총비용: <strong>4,800~5,600만원</strong><br>
+          <span style="border-top:1px solid var(--rule); padding-top:6px; display:inline-block; margin-top:4px;">
+            <strong style="color:var(--negative);">총 프로모션 비용: 6,300~8,100만원</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- 수익 -->
+      <div style="background:rgba(76,175,111,0.06); border:1px solid rgba(76,175,111,0.2); border-radius:8px; padding:18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--positive); margin-bottom:12px;">수익 효과</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:2;">
+          추가 확보 RN: <strong>8,400~12,600실</strong><br>
+          추가 객실 매출: <strong>14.7~22.1억원</strong><br>
+          부대매출 기대 (연박 체류 증가): <strong>+2.1~3.2억원</strong><br>
+          <span style="font-size:11px; color:var(--ink-faint);">(인당 F&B/부대시설 평균 2.5만원 × 체류일수 증가분)</span><br>
+          할인권 환수 매출 (미사용분): <strong>+1,200~1,900만원</strong><br>
+          <span style="border-top:1px solid var(--rule); padding-top:6px; display:inline-block; margin-top:4px;">
+            <strong style="color:var(--positive);">총 추가 매출: 17.0~25.5억원</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- ROI -->
+      <div style="background:linear-gradient(135deg, rgba(201,160,99,0.1) 0%, rgba(201,160,99,0.03) 100%); border:2px solid var(--gold); border-radius:8px; padding:18px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <div style="font-size:13px; font-weight:700; color:var(--gold-bright); margin-bottom:8px;">ROI</div>
+        <div style="font-size:42px; font-weight:900; color:var(--gold-bright); line-height:1;">27~31x</div>
+        <div style="font-size:12px; color:var(--ink-muted); margin-top:8px;">투입 대비 매출 배수</div>
+        <div style="margin-top:14px; font-size:11px; color:var(--ink-faint); line-height:1.5;">
+          키캡 1개(4천원) → 추가 RN 1.7~2.5실<br>
+          객실 매출 기여: 개당 34~50만원
+        </div>
+      </div>
+    </div>
+
+    <!-- 연박 트레이드오프 분석 -->
+    <div style="background:var(--bg-soft); border:1px solid var(--rule); border-radius:8px; padding:16px 20px;">
+      <div style="font-size:13px; font-weight:700; color:var(--ink); margin-bottom:8px;">연박 유도 시 ADR 하락 vs 총매출 증가 트레이드오프</div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.65;">
+        연박 ADR은 룸온리 대비 평균 <strong>-8.9%</strong> 할인 적용(쏠비치 삼척 기준). 그러나 1박→2박 전환 시 <strong>총 매출은 +82.2% 증가</strong> (ADR 215천 × 2박 = 430천 vs 단박 236천).
+        OCC 25.6%의 비수기 사업장에서는 ADR 하락분보다 가동률 상승 효과가 압도적이며, 부대매출(인당 2.5만원/일)까지 고려하면 연박 1건당 순익 기여는 <strong>+17.5만원</strong> 수준.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 6: 리스크 분석                          -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:20px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">6</span>
+      리스크 분석 및 대응 방안
+    </h3>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:20px;">예상 리스크와 선제 대응 전략</p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:14px;">
+      <div style="background:rgba(229,115,115,0.06); border-left:3px solid var(--negative); border-radius:0 6px 6px 0; padding:16px 18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--negative); margin-bottom:6px;">Cannibalization 리스크</div>
+        <div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:8px;">기존 정가 예약 고객이 세일페스타 가격으로 재예약하여 기존 매출 잠식</div>
+        <div style="font-size:11.5px; color:var(--positive); background:rgba(76,175,111,0.08); padding:8px 10px; border-radius:4px;">
+          <strong>대응:</strong> NR(환불불가) 전용 요금으로 분리. 기존 정가 상품은 유연한 취소정책 유지하여 차별화. 세일페스타 상품은 D-14 이전 예약에만 적용.
+        </div>
+      </div>
+
+      <div style="background:rgba(229,115,115,0.06); border-left:3px solid var(--negative); border-radius:0 6px 6px 0; padding:16px 18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--negative); margin-bottom:6px;">경쟁사 대응 리스크</div>
+        <div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:8px;">한화리조트, 대명소노 외 지역 호텔도 동일 프로그램 참여 시 가격경쟁 심화</div>
+        <div style="font-size:11.5px; color:var(--positive); background:rgba(76,175,111,0.08); padding:8px 10px; border-radius:4px;">
+          <strong>대응:</strong> 소노스카이거너스 키캡은 소노 그룹만의 독점 굿즈로 차별화. 할인보다 부가가치(키캡+액티비티) 중심 구성으로 단순 가격경쟁 회피.
+        </div>
+      </div>
+
+      <div style="background:rgba(229,115,115,0.06); border-left:3px solid var(--negative); border-radius:0 6px 6px 0; padding:16px 18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--negative); margin-bottom:6px;">국가지원금 조건/규정 리스크</div>
+        <div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:8px;">지원금 사용 조건 미충족 시 환수, 지역 제한 변경, 정산 지연 등</div>
+        <div style="font-size:11.5px; color:var(--positive); background:rgba(76,175,111,0.08); padding:8px 10px; border-radius:4px;">
+          <strong>대응:</strong> 사전 지자체 협의 완료 필수. 대상 지역 리스트 확정 후 해당 사업장만 참여. 정산 프로세스 D+30 기준 별도 관리.
+        </div>
+      </div>
+
+      <div style="background:rgba(232,162,86,0.06); border-left:3px solid var(--warning); border-radius:0 6px 6px 0; padding:16px 18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--warning); margin-bottom:6px;">취소율 상승 리스크</div>
+        <div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:8px;">세일 가격 유인으로 '일단 예약' 후 취소하는 패턴 증가 (현재 평균 52.4%)</div>
+        <div style="font-size:11.5px; color:var(--positive); background:rgba(76,175,111,0.08); padding:8px 10px; border-radius:4px;">
+          <strong>대응:</strong> NR 전용 요금 + 키캡은 체크인 시 증정(사전 발송 금지)으로 실 투숙 유도. 취소 시 키캡 증정 불가 명시.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PART 7: 실행 타임라인                        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div style="background:var(--bg-card); border:1px solid var(--rule); border-radius:8px; padding:28px; margin-bottom:4px;">
+    <h3 style="font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold-bright); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+      <span style="background:var(--gold); color:#1a1d23; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">7</span>
+      실행 타임라인
+    </h3>
+
+    <div style="display:flex; gap:0; flex-wrap:wrap;">
+      <div style="flex:1; min-width:180px; background:rgba(90,159,196,0.08); border:1px solid rgba(90,159,196,0.3); border-radius:8px 0 0 8px; padding:16px; text-align:center;">
+        <div style="font-size:11px; color:var(--info); font-weight:700; letter-spacing:0.05em;">PHASE 1</div>
+        <div style="font-size:15px; font-weight:700; color:var(--ink); margin:4px 0;">5/15 ~ 5/31</div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5;">지자체 협의 · 키캡 디자인/발주 · 상품 기획 확정 · OTA 입점 협의</div>
+      </div>
+      <div style="flex:1; min-width:180px; background:rgba(232,162,86,0.08); border:1px solid rgba(232,162,86,0.3); padding:16px; text-align:center;">
+        <div style="font-size:11px; color:var(--warning); font-weight:700; letter-spacing:0.05em;">PHASE 2</div>
+        <div style="font-size:15px; font-weight:700; color:var(--ink); margin:4px 0;">6/1 ~ 6/10</div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5;">채널 상품 등록 · 사전 마케팅(SNS/인플루언서) · 키캡 입고 확인</div>
+      </div>
+      <div style="flex:1; min-width:180px; background:rgba(76,175,111,0.08); border:1px solid rgba(76,175,111,0.3); padding:16px; text-align:center;">
+        <div style="font-size:11px; color:var(--positive); font-weight:700; letter-spacing:0.05em;">PHASE 3</div>
+        <div style="font-size:15px; font-weight:700; color:var(--ink); margin:4px 0;">6/11 ~ 7/31</div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5;">예약 접수 시작 · 주간 실적 모니터링 · 사업장별 재고 관리</div>
+      </div>
+      <div style="flex:1; min-width:180px; background:rgba(201,160,99,0.08); border:1px solid rgba(201,160,99,0.3); border-radius:0 8px 8px 0; padding:16px; text-align:center;">
+        <div style="font-size:11px; color:var(--gold); font-weight:700; letter-spacing:0.05em;">PHASE 4</div>
+        <div style="font-size:15px; font-weight:700; color:var(--ink); margin:4px 0;">8/1 ~ 9/15</div>
+        <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5;">투숙 완료 · 정산 · 성과 리포트 · 키캡 잔여분 관리</div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /saleFestaDetail -->
+</section>
+
+<!-- ============= STRATEGY SUMMARY BOARD (키워드 요약 카드) ============= -->
+<section class="strategy-summary-board" id="strategySummaryBoard">
+  <div class="ssb-inner">
+    <div class="ssb-header">
+      <div class="ssb-title-group">
+        <div class="ssb-icon">📌</div>
+        <div>
+          <div class="ssb-title">이번 시즌 전략 키워드</div>
+          <div class="ssb-subtitle">영업기획팀 핵심 전략 요약 — 발췌하여 활용하세요</div>
+        </div>
+      </div>
+      <div class="ssb-refresh-info">
+        <span class="ssb-refresh-dot"></span>
+        <span id="ssbRefreshTime">Loading...</span>
+      </div>
+    </div>
+
+    <!-- Headline Card: 현재 월 우선순위 메시지 -->
+    <div id="ssbHeadlineCard" class="ssb-cards" style="margin-bottom:12px;"></div>
+
+    <!-- Keyword Story Cards -->
+    <div id="ssbKeywordCards" class="ssb-cards"></div>
+  </div>
+</section>
+
 <!-- SECTION NAVIGATOR (2-depth) -->
 <nav id="sectionNav">
   <div>
     <!-- Level 1: 깊이별 탭 -->
     <div id="navLevel1">
+      <a href="#saleFesta" class="nav-l1" data-section="festa" style="color:#e6b970; border:1px solid rgba(201,160,99,0.4); background:rgba(201,160,99,0.08);" onclick="document.getElementById('saleFestaDetail').style.display='block';">숙박세일페스타</a>
       <a href="#deep-ch10" class="nav-l1 active" data-section="exec">★ 보고용</a>
       <a href="#summerDeepDive" class="nav-l1" data-section="summer">심층분석</a>
       <a href="#deep-ch6" class="nav-l1" data-section="ultra">초심층</a>
@@ -5785,6 +6966,170 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </footer>
+
+<!-- ============= STRATEGY SUMMARY BOARD LOGIC ============= -->
+<script>
+(function initStrategySummaryBoard() {
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const resp = await fetch('data/strategy_targets.json?t=' + Date.now());
+      if (!resp.ok) throw new Error('strategy_targets.json not found');
+      const stData = await resp.json();
+
+      // 현재 월 판별 (strategy_targets의 months 중 현재 또는 가장 가까운 미래 월)
+      const now = new Date();
+      const curMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      const months = stData.months || [];
+      let activeMonth = months.find(m => m >= curMonth) || months[months.length - 1] || curMonth;
+
+      // ── 1. Headline Card (이번 달 우선순위 메시지) ──
+      const pm = stData.priorityMessage || {};
+      const headlineContainer = document.getElementById('ssbHeadlineCard');
+      if (headlineContainer && pm[activeMonth]) {
+        const msg = pm[activeMonth];
+        const monthLabel = activeMonth.replace('-', '년 ') + '월';
+        const priorityMap = { S: '최우선', A: '우선', B: '유지', C: '축소' };
+        headlineContainer.innerHTML = `
+          <div class="ssb-card headline">
+            <div class="ssb-headline-accent"></div>
+            <div class="ssb-headline-body">
+              <div class="ssb-headline-month">${monthLabel.toUpperCase()} PRIORITY — ${priorityMap[msg.priority] || msg.priority}</div>
+              <div class="ssb-headline-text">${msg.headline}</div>
+              <div class="ssb-headline-detail">${msg.detail}</div>
+            </div>
+          </div>`;
+      }
+
+      // ── 2. 키워드 + 스토리 카드 생성 ──
+      const cg = stData.channelGuide || {};
+      const targets = stData.targets || {};
+      const monthGuide = cg[activeMonth] || {};
+      const monthTargets = targets[activeMonth] || {};
+
+      // 키워드 카드 데이터 추출
+      const cards = [];
+
+      // (A) 집중 채널 카드
+      const focusChannels = Object.entries(monthGuide)
+        .filter(([, v]) => v.direction === 'focus')
+        .sort((a, b) => {
+          const pOrder = { S: 0, A: 1, B: 2, C: 3 };
+          return (pOrder[a[1].priority] || 9) - (pOrder[b[1].priority] || 9);
+        });
+
+      if (focusChannels.length > 0) {
+        // Top growth channel
+        const topGrowth = focusChannels[0];
+        cards.push({
+          keyword: '성장 엔진: ' + topGrowth[0],
+          priority: topGrowth[1].priority,
+          story: topGrowth[1].note + (topGrowth[1].yoyPct > 0 ? ' 전년 대비 +' + topGrowth[1].yoyPct + '% 성장으로 물량 확대가 핵심입니다.' : ''),
+          tags: [
+            { text: 'YoY ' + (topGrowth[1].yoyPct > 0 ? '+' : '') + topGrowth[1].yoyPct + '%', cls: topGrowth[1].yoyPct > 0 ? 'up' : 'down' },
+            { text: topGrowth[1].direction === 'focus' ? '집중' : '유지', cls: 'neutral' }
+          ]
+        });
+
+        // Other focus channels
+        if (focusChannels.length > 1) {
+          const others = focusChannels.slice(1);
+          const names = others.map(([n]) => n).join(', ');
+          cards.push({
+            keyword: '추가 집중 채널',
+            priority: 'A',
+            story: names + ' — 각 채널별 성장세를 활용한 적극 대응이 필요합니다. ' + others.map(([n, v]) => n + '(' + (v.yoyPct > 0 ? '+' : '') + v.yoyPct + '%)').join(', '),
+            tags: others.map(([n, v]) => ({ text: n + ' ' + (v.yoyPct > 0 ? '+' : '') + v.yoyPct + '%', cls: v.yoyPct > 0 ? 'up' : 'down' }))
+          });
+        }
+      }
+
+      // (B) 세그먼트별 목표 카드
+      Object.entries(monthTargets).forEach(([seg, data]) => {
+        const achRate = data.budget && data.budget.rn > 0 ? ((data.totals.rn / data.budget.rn) * 100).toFixed(1) : '-';
+        const achCls = achRate >= 80 ? 'up' : achRate >= 50 ? 'neutral' : 'down';
+        const segName = { OTA: '국내 OTA', 'G-OTA': '글로벌 OTA', Inbound: '인바운드' };
+        let story = (segName[seg] || seg) + ' 목표 ' + (data.budget.rn ? data.budget.rn.toLocaleString() + '실' : '-') +
+          ', 현재 ' + (data.totals.rn ? data.totals.rn.toLocaleString() + '실' : '-') +
+          ' (달성률 ' + achRate + '%).';
+        if (seg === 'G-OTA') story += ' 의존도 축소 기조 속 마진 채널 전환이 핵심.';
+        if (seg === 'OTA') story += ' ADR ' + (data.totals.adr || '-') + '천원 수준 유지가 관건.';
+        if (seg === 'Inbound') story += ' 인바운드 회복 추세를 활용한 거래처 확대 추진.';
+
+        cards.push({
+          keyword: (segName[seg] || seg) + ' 실적 현황',
+          priority: data.priority || 'B',
+          story: story,
+          tags: [
+            { text: '달성률 ' + achRate + '%', cls: achCls },
+            { text: 'ADR ' + (data.totals.adr || '-'), cls: 'neutral' },
+            { text: data.priority + '등급', cls: data.priority === 'S' || data.priority === 'A' ? 'up' : 'neutral' }
+          ]
+        });
+      });
+
+      // (C) 축소/리스크 채널 카드
+      const reduceChannels = Object.entries(monthGuide)
+        .filter(([, v]) => v.direction === 'reduce')
+        .sort((a, b) => a[1].yoyPct - b[1].yoyPct);
+
+      if (reduceChannels.length > 0) {
+        const names = reduceChannels.map(([n, v]) => n + '(' + v.yoyPct + '%)').join(', ');
+        cards.push({
+          keyword: '리스크 관리: 축소 채널',
+          priority: 'C',
+          story: '급감 추세 채널 보수적 운영 — ' + names + '. 마진 위주 전환 및 의존도 축소 필요.',
+          tags: reduceChannels.map(([n, v]) => ({ text: n + ' ' + v.yoyPct + '%', cls: 'down' }))
+        });
+      }
+
+      // (D) 시즌 전략 카드
+      cards.push({
+        keyword: '시즌 전략: ' + (stData.season || ''),
+        priority: 'A',
+        story: '대상 기간 ' + months.map(m => m.replace('-', '.')).join(' → ') + '. ' +
+          '월별 우선순위 메시지를 확인하고 채널 가이드에 따라 물량 배분을 조정하세요. ' +
+          '주요 이벤트와 연휴 시즌에 맞춘 기획전 편성이 매출 극대화의 핵심입니다.',
+        tags: months.map(m => ({ text: m.split('-')[1] + '월', cls: 'neutral' }))
+      });
+
+      // ── 3. 카드 렌더링 ──
+      const cardsContainer = document.getElementById('ssbKeywordCards');
+      if (cardsContainer) {
+        cardsContainer.innerHTML = cards.map(c => `
+          <div class="ssb-card" data-priority="${c.priority}">
+            <div class="ssb-card-top">
+              <div class="ssb-keyword">${c.keyword}</div>
+              <span class="ssb-badge priority-${c.priority}">${c.priority}</span>
+            </div>
+            <div class="ssb-story">${c.story}</div>
+            <div class="ssb-tags">
+              ${(c.tags || []).map(t => `<span class="ssb-tag ${t.cls || ''}">${t.text}</span>`).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // ── 4. 리프레시 기록 ──
+      const refreshEl = document.getElementById('ssbRefreshTime');
+      if (refreshEl) {
+        const refreshKey = 'ssb_last_refresh';
+        const nowStr = new Date().toLocaleString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        try { localStorage.setItem(refreshKey, nowStr); } catch(e) {}
+        let lastRefresh = nowStr;
+        try { lastRefresh = localStorage.getItem(refreshKey) || nowStr; } catch(e) {}
+        refreshEl.textContent = 'Last refresh: ' + lastRefresh;
+      }
+
+    } catch (err) {
+      console.warn('[StrategySummaryBoard]', err);
+      const container = document.getElementById('ssbKeywordCards');
+      if (container) {
+        container.innerHTML = '<div style="text-align:center; color:var(--ink-faint); padding:20px; font-size:13px;">전략 데이터를 불러올 수 없습니다.</div>';
+      }
+    }
+  });
+})();
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
