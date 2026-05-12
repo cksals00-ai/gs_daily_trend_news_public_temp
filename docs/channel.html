@@ -538,7 +538,7 @@ function aggregateChannels(months, opts) {
       result[ch] = {
         booking_rn: agg.booking_rn, cancel_rn: agg.cancel_rn, net_rn: netRn,
         booking_rev: agg.rev, net_rev: agg.rev,
-        adr: netRn > 0 ? agg.rev * 1000 / netRn : 0,
+        adr: netRn !== 0 ? agg.rev * 1000 / netRn : 0,
         segment: seg
       };
     }
@@ -564,7 +564,7 @@ function aggregateChannels(months, opts) {
     }
     // Compute ADR and segment
     for (const [ch, d] of Object.entries(result)) {
-      d.adr = d.net_rn > 0 ? d.net_rev * 1000 / d.net_rn : 0;
+      d.adr = d.net_rn !== 0 ? d.net_rev * 1000 / d.net_rn : 0;
       d.segment = getChannelSegment(ch);
     }
   } else {
@@ -585,7 +585,7 @@ function aggregateChannels(months, opts) {
       }
       const seg = getChannelSegment(ch);
       result[ch] = { booking_rn, cancel_rn, net_rn, booking_rev, net_rev,
-        adr: net_rn > 0 ? net_rev * 1000 / net_rn : 0,
+        adr: net_rn !== 0 ? net_rev * 1000 / net_rn : 0,
         segment: seg };
     }
   }
@@ -663,7 +663,7 @@ function render() {
         booking_rev: adj_booking_rev,
         net_rn: adj_net_rn,
         net_rev: adj_net_rev,
-        adr: adj_net_rn > 0 ? adj_net_rev * 1000 / adj_net_rn : 0,
+        adr: adj_net_rn !== 0 ? adj_net_rev * 1000 / adj_net_rn : 0,
       };
     }
   }
@@ -712,7 +712,7 @@ function render() {
 
   // ─── 테이블 (전체 채널, 더보기/접기) ───
   function yoyBadge(cy, ly) {
-    if (!ly || ly === 0) return '<span style="color:var(--ink-faint);">—</span>';
+    if (!ly || ly === 0 || ly < 0) return '<span style="color:var(--ink-faint);">—</span>';
     const pct = ((cy / ly) - 1) * 100;
     const c = pct >= 0 ? 'var(--positive)' : 'var(--negative)';
     const a = pct >= 0 ? '▲' : '▼';
@@ -723,23 +723,25 @@ function render() {
   for (let i = 0; i < displayCount; i++) {
     const [ch, d] = sorted[i];
     const ly = channelDataLY[ch] || {};
-    const lyRn = ly.booking_rn || 0;
-    const lyAdr = lyRn > 0 ? ly.booking_rev * 1000 / lyRn : 0;
-    const lyRev = ly.booking_rev || 0;
-    const cyAdr = d.booking_rn > 0 ? d.booking_rev * 1000 / d.booking_rn : 0;
+    const cyRn = d.net_rn || 0;
+    const cyRev = d.net_rev || 0;
+    const cyAdr = cyRn !== 0 ? cyRev * 1000 / cyRn : 0;
+    const lyRn = ly.net_rn || 0;
+    const lyRev = ly.net_rev || 0;
+    const lyAdr = lyRn !== 0 ? lyRev * 1000 / lyRn : 0;
     const segTag = d.segment ? `<span class="seg-tag ${d.segment === 'OTA' ? 'ota' : d.segment === 'G-OTA' ? 'gota' : 'inbound'}">${d.segment}</span>` : '';
     rows += `<tr>
       <td><span class="rank-num">${i+1}</span>${ch}${segTag}</td>
       <td>${i+1}</td>
-      <td class="border-left-group">${fmt.num(d.booking_rn)}</td>
+      <td class="border-left-group">${fmt.num(cyRn)}</td>
       <td>${fmt.num(lyRn)}</td>
-      <td>${yoyBadge(d.booking_rn, lyRn)}</td>
+      <td>${yoyBadge(cyRn, lyRn)}</td>
       <td class="border-left-group">${fmt.adr(Math.round(cyAdr))}</td>
       <td>${fmt.adr(Math.round(lyAdr))}</td>
       <td>${yoyBadge(cyAdr, lyAdr)}</td>
-      <td class="border-left-group">${fmt.rev(d.booking_rev)}</td>
+      <td class="border-left-group">${fmt.rev(cyRev)}</td>
       <td>${fmt.rev(lyRev)}</td>
-      <td>${yoyBadge(d.booking_rev, lyRev)}</td>
+      <td>${yoyBadge(cyRev, lyRev)}</td>
     </tr>`;
   }
 
@@ -762,9 +764,9 @@ function render() {
   rows += `<tr class="total-row">
     <td>합계</td>
     <td>—</td>
-    <td class="border-left-group">${fmt.num(totalBookRNS)}</td>
+    <td class="border-left-group">${fmt.num(totalRNS)}</td>
     <td>${fmt.num(totalLyRNS)}</td>
-    <td>${yoyBadge(totalBookRNS, totalLyRNS)}</td>
+    <td>${yoyBadge(totalRNS, totalLyRNS)}</td>
     <td class="border-left-group">${fmt.adr(Math.round(avgADR))}</td>
     <td>${fmt.adr(Math.round(avgLyADR))}</td>
     <td>${yoyBadge(avgADR, avgLyADR)}</td>

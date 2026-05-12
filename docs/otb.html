@@ -1127,7 +1127,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 <script>
 // ─── STATE ───
 let rawData = null;
-let activeMonth = new Date().getMonth() + 1;
+let activeMonths = new Set([new Date().getMonth() + 1]);
 let activeSegs = new Set(['전체']);
 let activeRegion = '전체';
 let activeProps = new Set();  // empty = 전체 (no filter)
@@ -1178,6 +1178,10 @@ function mergeSegSummaries(arr) {
   if (out.rns_budget > 0) out.rns_achievement = +(out.rns_actual / out.rns_budget * 100).toFixed(1);
   if (out.rev_budget > 0) out.rev_achievement = +(out.rev_actual / out.rev_budget * 100).toFixed(1);
   if (out.adr_budget > 0 && out.adr_actual > 0) out.adr_vs_budget = +((out.adr_actual / out.adr_budget - 1) * 100).toFixed(1);
+  // YoY 재계산 (세그먼트 병합 시 전년비 반영)
+  out.rns_yoy = out.rns_last > 0 ? +((out.rns_actual / out.rns_last - 1) * 100).toFixed(1) : null;
+  out.rev_yoy = out.rev_last > 0 ? +((out.rev_actual / out.rev_last - 1) * 100).toFixed(1) : null;
+  out.adr_yoy = (out.adr_actual > 0 && out.adr_last > 0) ? +((out.adr_actual / out.adr_last - 1) * 100).toFixed(1) : null;
   return out;
 }
 
@@ -1206,6 +1210,10 @@ function mergeSegByProp(arrays) {
     if (m.rns_last > 0 && m.rev_last != null) m.adr_last = Math.round(m.rev_last / m.rns_last);
     if (m.rns_budget > 0) m.rns_achievement = +(m.rns_actual / m.rns_budget * 100).toFixed(1);
     if (m.rev_budget > 0) m.rev_achievement = +(m.rev_actual / m.rev_budget * 100).toFixed(1);
+    // YoY 재계산 (세그먼트 병합 시 전년비 반영)
+    m.rns_yoy = m.rns_last > 0 ? +((m.rns_actual / m.rns_last - 1) * 100).toFixed(1) : null;
+    m.rev_yoy = m.rev_last > 0 ? +((m.rev_actual / m.rev_last - 1) * 100).toFixed(1) : null;
+    m.adr_yoy = (m.adr_actual > 0 && m.adr_last > 0) ? +((m.adr_actual / m.adr_last - 1) * 100).toFixed(1) : null;
     return m;
   });
 }
@@ -1371,7 +1379,7 @@ function buildMonthlyChart(data, filterRegion, filterProps, filterSegs) {
 
 // ─── RM FCST 추이 (Revenue Meeting forecast snapshot) ───
 // docs/data/rm_fcst_trend.json의 최신 스냅샷 properties를 사업장×월 lookup으로 보관
-// 활성월 필터(activeMonth)에 따라 해당 월(YYYY-MM) 또는 전체 합산 RN을 반환한다.
+// 활성월 필터(activeMonths)에 따라 해당 월(YYYY-MM) 또는 전체 합산 RN을 반환한다.
 let rmFcstSnapshot = null;  // { propName: { 'YYYY-MM': rm_fcst_rn } }
 let rmFcstSnapshotYear = null;
 
@@ -1399,15 +1407,20 @@ async function loadRmFcstTrend() {
 function rmFcstLookup(propName) {
   if (!rmFcstSnapshot || !rmFcstSnapshot[propName]) return null;
   const months = rmFcstSnapshot[propName];
-  // activeMonth=0(전체) → 스냅샷에 있는 모든 월 합산
-  if (typeof activeMonth === 'undefined' || activeMonth === 0) {
+  // activeMonths에 0(전체)이 포함되면 → 스냅샷에 있는 모든 월 합산
+  if (activeMonths.has(0)) {
     let sum = 0, has = false;
     for (const v of Object.values(months)) { sum += v; has = true; }
     return has ? sum : null;
   }
-  const mm = String(activeMonth).padStart(2, '0');
-  const key = `${rmFcstSnapshotYear}-${mm}`;
-  return months[key] != null ? months[key] : null;
+  // 복수 월 합산
+  let sum = 0, has = false;
+  for (const m of activeMonths) {
+    const mm = String(m).padStart(2, '0');
+    const key = `${rmFcstSnapshotYear}-${mm}`;
+    if (months[key] != null) { sum += months[key]; has = true; }
+  }
+  return has ? sum : null;
 }
 
 
@@ -1675,13 +1688,25 @@ function buildFilterChips(data) {
     c.innerHTML = '';
     data.filters.months.forEach(m => {
       const btn = document.createElement('button');
-      btn.className = 'chip' + (m.value === activeMonth ? ' active' : '');
+      btn.className = 'chip' + (activeMonths.has(m.value) ? ' active' : '');
       btn.textContent = m.label;
       btn.dataset.value = m.value;
       btn.addEventListener('click', () => {
-        activeMonth = parseInt(btn.dataset.value);
+        const v = parseInt(btn.dataset.value);
+        if (v === 0) {
+          // "전체" 클릭 → 전체만 선택
+          activeMonths = new Set([0]);
+        } else {
+          activeMonths.delete(0);
+          if (activeMonths.has(v)) {
+            activeMonths.delete(v);
+            if (activeMonths.size === 0) activeMonths.add(0);
+          } else {
+            activeMonths.add(v);
+          }
+        }
         document.querySelectorAll('#month-chips .chip, #mobile-month-chips .chip').forEach(b => {
-          b.classList.toggle('active', parseInt(b.dataset.value) === activeMonth);
+          b.classList.toggle('active', activeMonths.has(parseInt(b.dataset.value)));
         });
         applyFilters();
       });
@@ -1848,7 +1873,7 @@ function summaryFromProps(props) {
 }
 
 function applyFilters() {
-  const monthLabel = activeMonth === 0 ? '전체 월' : activeMonth + '월';
+  const monthLabel = activeMonths.has(0) ? '전체 월' : [...activeMonths].sort((a,b)=>a-b).map(m=>m+'월').join('+');
   const segLabel   = activeSegs.has('전체') ? '전체 세그' : [...activeSegs].join('+');
   let propLabel = '';
   if (activeRegion !== '전체') {
@@ -1864,9 +1889,35 @@ function applyFilters() {
   if (!rawData) return;
 
   // allMonths 구조가 있으면 월별 필터링, 없으면 전체 데이터 사용
-  const snap = rawData.allMonths
-    ? rawData.allMonths[String(activeMonth)]
-    : rawData;
+  let snap = null;
+  if (rawData.allMonths) {
+    const monthKeys = activeMonths.has(0) ? [0] : [...activeMonths];
+    if (monthKeys.length === 1) {
+      snap = rawData.allMonths[String(monthKeys[0])];
+    } else {
+      // 복수 월 합산: 각 월 snap의 summary와 byProperty를 머지
+      const snaps = monthKeys.map(k => rawData.allMonths[String(k)]).filter(Boolean);
+      if (snaps.length > 0) {
+        snap = {
+          summary: mergeSegSummaries(snaps.map(s => s.summary).filter(Boolean)),
+          byProperty: mergeSegByProp(snaps.map(s => s.byProperty).filter(Boolean)),
+          segmentData: {},
+          byPropertySegment: {}
+        };
+        // 세그먼트별 데이터도 월 합산
+        const allSegKeys = new Set();
+        snaps.forEach(s => { if (s.segmentData) Object.keys(s.segmentData).forEach(k => allSegKeys.add(k)); });
+        allSegKeys.forEach(seg => {
+          const segSums = snaps.map(s => s.segmentData && s.segmentData[seg]).filter(Boolean);
+          if (segSums.length) snap.segmentData[seg] = mergeSegSummaries(segSums);
+          const segProps = snaps.map(s => s.byPropertySegment && s.byPropertySegment[seg]).filter(Boolean);
+          if (segProps.length) snap.byPropertySegment[seg] = mergeSegByProp(segProps);
+        });
+      }
+    }
+  } else {
+    snap = rawData;
+  }
 
   if (snap) {
     let summary = snap.summary;
