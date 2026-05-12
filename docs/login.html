@@ -156,11 +156,13 @@ input[type=email]:focus,input[type=password]:focus,input[type=text]:focus{border
 
   function safeReturn(){
     // open redirect 방어: 같은 origin 의 경로만 허용
+    // base 를 location.href 로 잡아야 GitHub Pages 서브패스(/gs_daily_trend_news_public_temp/) 에서도
+    // './index.html' 이 사이트 루트가 아닌 현재 디렉터리로 풀린다.
     try {
-      var u = new URL(ret, location.origin);
-      if (u.origin !== location.origin) return './index.html';
+      var u = new URL(ret, location.href);
+      if (u.origin !== location.origin) return new URL('./index.html', location.href).pathname;
       return u.pathname + u.search + u.hash;
-    } catch(e){ return './index.html'; }
+    } catch(e){ return new URL('./index.html', location.href).pathname; }
   }
 
   if (GSNAuth.getToken() && GSNAuth.tokenIsValid(GSNAuth.getToken()) && GSNAuth.getUser() && !reason){

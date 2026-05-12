@@ -220,7 +220,8 @@
 
     logout: function () {
       clearSession();
-      location.replace('./login.html');
+      var ret = encodeURIComponent(currentPath());
+      location.replace('./login.html?return=' + ret);
     },
 
     // 로그인 API 호출 (login.html 에서 사용)
