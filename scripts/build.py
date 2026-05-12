@@ -828,7 +828,7 @@ def _is_stale_by_pub_date(pub_date_str: str) -> bool:
 
     제외 조건:
       1. 발행 연도가 현재 연도와 다름
-      2. 발행일이 현재 날짜 기준 3개월(90일) 이전
+      2. 발행일이 현재 날짜 기준 1개월(30일) 이전
     """
     if not pub_date_str:
         return False
@@ -838,11 +838,23 @@ def _is_stale_by_pub_date(pub_date_str: str) -> bool:
         now = datetime.now(KST)
         if pub_dt.year != now.year:
             return True
-        if (now - pub_dt).days > 90:
+        if (now - pub_dt).days > 30:
             return True
         return False
     except (ValueError, TypeError):
         return False
+
+
+def _pub_date_ts(pub_date_str: str) -> float:
+    """pub_date를 정렬용 timestamp로 변환. 실패/없음 → 0(오래됨 취급)."""
+    if not pub_date_str:
+        return 0.0
+    from email.utils import parsedate_to_datetime
+    try:
+        dt = parsedate_to_datetime(pub_date_str)
+        return dt.timestamp() if dt else 0.0
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def build_news_html(news_data: dict) -> str:
@@ -870,12 +882,17 @@ def build_news_html(news_data: dict) -> str:
             key = a.get("title", "")[:50]
             if key and key not in seen_titles:
                 seen_titles.add(key)
-                # 오래된 기사 제외 (연도 불일치 또는 3개월 이전)
+                # 오래된 기사 제외 (연도 불일치 또는 1개월 이전)
                 if _is_stale_by_pub_date(a.get("pub_date", "")):
                     continue
                 articles.append(a)
         if not articles:
             continue
+        # 최신 기사가 위로 오도록 pub_date 내림차순 정렬 (NEW 우선 → 발행일 desc)
+        articles.sort(key=lambda a: (
+            0 if a.get("is_new") else 1,
+            -_pub_date_ts(a.get("pub_date", "")),
+        ))
 
         # 카테고리 헤더 (id는 클라이언트 JS 더보기 토글에 사용)
         cat_id = "cat-" + cat_name.replace("/", "-").replace(" ", "-")
@@ -933,6 +950,11 @@ def render_featured_news(featured_list: list) -> str:
     """오늘의 주요기사 - 큰 카드 2개"""
     # 오래된 기사 필터링
     featured_list = [f for f in featured_list if not _is_stale_by_pub_date(f.get("pub_date", ""))]
+    # 최신 기사가 위로 오도록 정렬 (NEW 우선 → pub_date desc)
+    featured_list = sorted(featured_list, key=lambda f: (
+        0 if f.get("is_new") else 1,
+        -_pub_date_ts(f.get("pub_date", "")),
+    ))
     if not featured_list:
         return '<div style="padding:30px;text-align:center;color:var(--ink-faint);grid-column:1/-1;">Featured 뉴스 없음</div>'
     

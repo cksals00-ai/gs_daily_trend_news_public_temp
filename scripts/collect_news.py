@@ -209,7 +209,7 @@ def is_stale_by_pub_date(pub_date_str: str, ref: datetime | None = None) -> bool
 
     제외 조건 (하나라도 해당되면 True):
       1. 발행 연도가 현재 연도와 다름
-      2. 발행일이 현재 날짜 기준 3개월(90일) 이전
+      2. 발행일이 현재 날짜 기준 1개월(30일) 이전
     """
     if not pub_date_str:
         return False  # 날짜 없으면 일단 통과
@@ -220,8 +220,8 @@ def is_stale_by_pub_date(pub_date_str: str, ref: datetime | None = None) -> bool
         # 조건 1: 연도 불일치
         if pub_dt.year != now.year:
             return True
-        # 조건 2: 3개월(90일) 이전
-        if (now - pub_dt).days > 90:
+        # 조건 2: 1개월(30일) 이전
+        if (now - pub_dt).days > 30:
             return True
         return False
     except (ValueError, TypeError):
@@ -564,9 +564,28 @@ def main():
     all_news = new_news + existing_articles
     logger.info(f"전체 기사: {len(all_news)}건 (신규 {len(new_news)} + 기존 {len(existing_articles)})")
 
-    # 권역별 정렬 (신규 먼저, 그 다음 권역순)
+    # 정렬: 신규 먼저 → pub_date 최신순 → 권역순 → 카테고리
+    from email.utils import parsedate_to_datetime as _pdt
     region_order = {"vivaldi": 1, "central": 2, "south": 3, "apac": 4, "general": 5}
-    all_news.sort(key=lambda x: (0 if x.get("is_new") else 1, region_order.get(x["region"], 9), x["category"]))
+
+    def _pub_ts(art: dict) -> float:
+        """pub_date를 정렬용 timestamp로 변환. 실패/없음 → 0(오래됨 취급)."""
+        s = art.get("pub_date", "")
+        if not s:
+            return 0.0
+        try:
+            dt = _pdt(s)
+            return dt.timestamp() if dt else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    # 최신 기사가 위로 오도록 pub_date desc
+    all_news.sort(key=lambda x: (
+        0 if x.get("is_new") else 1,
+        -_pub_ts(x),
+        region_order.get(x["region"], 9),
+        x["category"],
+    ))
 
     # 권역별 그룹화 (각 권역 최대 8건)
     by_region = {"vivaldi": [], "central": [], "south": [], "apac": [], "general": []}
