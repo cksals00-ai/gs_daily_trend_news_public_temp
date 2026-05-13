@@ -5,7 +5,7 @@
 <script src="./js/auth.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>상품비교 · SONO & TRINITY GS팀</title>
+<title>GS 상품 카테고리 실적 분석 · SONO & TRINITY GS팀</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -106,6 +106,61 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
 @media(max-width:860px){.mobile-filter-bar{display:flex;}}
 .prop-chips .chip{font-size:9px;padding:3px 7px;}
+/* === SEC 0-7 layout === */
+.prod-section{display:flex;flex-direction:column;gap:12px;}
+.section-header{display:flex;align-items:baseline;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-strong);}
+.section-num{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;background:rgba(201,160,99,0.18);border:1px solid var(--gold);border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;flex-shrink:0;}
+.section-title{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;}
+.section-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:0.05em;margin-left:auto;}
+.info-callout{background:var(--bg-card);border:1px solid var(--rule);border-left:3px solid var(--info);border-radius:4px;padding:14px 18px;font-size:13px;line-height:1.7;color:var(--ink-soft);}
+.info-callout .lead{color:var(--ink);font-weight:600;margin-bottom:8px;}
+.info-callout ul{list-style:none;padding:0;margin:0;}
+.info-callout li{padding:3px 0;color:var(--ink-muted);font-size:12.5px;}
+.info-callout li strong{color:var(--gold-bright);font-weight:600;margin-right:6px;}
+.summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+@media(max-width:900px){.summary-grid{grid-template-columns:1fr;}}
+.summary-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:14px 18px;}
+.summary-card .label{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.summary-card .label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);}
+.summary-card.positive .label::before{background:var(--positive);}
+.summary-card.negative .label::before{background:var(--negative);}
+.summary-card.warning .label::before{background:var(--warning);}
+.summary-card.info .label::before{background:var(--info);}
+.summary-card .body{font-size:13px;color:var(--ink-soft);line-height:1.6;}
+.summary-card .body strong{color:var(--ink);font-weight:600;}
+.summary-card .empty{color:var(--ink-faint);font-style:italic;font-size:12px;}
+.kpi-strip-2{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+@media(max-width:1300px){.kpi-strip-2{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.kpi-strip-2{grid-template-columns:repeat(2,1fr);}}
+.kpi-tile{background:var(--bg-card);border:1px solid var(--rule);border-radius:5px;padding:12px 14px;position:relative;}
+.kpi-tile-label{font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:6px;}
+.kpi-tile-value{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--ink);line-height:1;}
+.kpi-tile-value .unit{font-size:0.55em;color:var(--ink-faint);font-weight:500;margin-left:3px;}
+.kpi-tile-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:5px;}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:0.04em;line-height:1.5;}
+.status-pill.core{background:rgba(201,160,99,0.22);color:var(--gold-bright);border:1px solid rgba(201,160,99,0.4);}
+.status-pill.grow{background:rgba(76,175,111,0.18);color:var(--positive);border:1px solid rgba(76,175,111,0.35);}
+.status-pill.drop{background:rgba(229,115,115,0.18);color:var(--negative);border:1px solid rgba(229,115,115,0.35);}
+.status-pill.premium{background:rgba(230,185,112,0.15);color:#e6b970;border:1px solid rgba(230,185,112,0.3);}
+.status-pill.low-adr{background:rgba(232,162,86,0.16);color:var(--warning);border:1px solid rgba(232,162,86,0.32);}
+.status-pill.review{background:rgba(122,126,133,0.18);color:var(--ink-muted);border:1px solid rgba(122,126,133,0.32);}
+.status-pill.new{background:rgba(90,159,196,0.18);color:var(--info);border:1px solid rgba(90,159,196,0.35);}
+.action-list{display:flex;flex-direction:column;gap:10px;}
+.action-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:5px;padding:14px 18px;display:grid;grid-template-columns:140px 1fr;gap:18px;align-items:start;}
+@media(max-width:760px){.action-card{grid-template-columns:1fr;gap:8px;}}
+.action-card .a-label{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.06em;}
+.action-card .a-body{font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+.action-card .a-body .target{display:inline-flex;align-items:center;gap:4px;margin:3px 4px 0 0;padding:2px 7px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:3px;font-family:var(--mono);font-size:10px;color:var(--ink-muted);}
+.action-card.core .a-label{color:var(--gold-bright);}
+.action-card.volume .a-label{color:var(--positive);}
+.action-card.premium .a-label{color:#e6b970;}
+.action-card.review .a-label{color:var(--negative);}
+.action-card.fixed .a-label{color:var(--info);}
+.quad-wrap{position:relative;height:420px;}
+.quad-legend{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;font-family:var(--mono);font-size:10.5px;}
+.quad-legend-item{padding:6px 10px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:3px;color:var(--ink-muted);}
+.quad-legend-item strong{color:var(--gold-bright);display:block;margin-bottom:2px;font-size:10px;letter-spacing:0.08em;}
+@media(max-width:760px){.quad-legend{grid-template-columns:1fr;}}
 </style>
 <style>
 .gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200;padding-top:env(safe-area-inset-top,0px)}
@@ -150,7 +205,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div class="logo-mark">SONO &amp; TRINITY</div>
       <div class="team-tag">GS팀 · GS 실적 리포트</div>
     </div>
-    <span class="page-badge">📦 상품상세</span>
+    <span class="page-badge">📦 상품 카테고리 실적 분석</span>
     <div class="masthead-right">
       <span><span class="live-dot"></span>LIVE</span>
       <a href="otb.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">&larr; 당일현황</a>
@@ -222,159 +277,222 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
   <main class="main-content">
     <div class="page-header">
-      <div class="page-title">상품상세 <span class="sub">PACKAGE SERIES RANKING</span></div>
+      <div class="page-title">GS 상품 카테고리 실적 분석 <span class="sub">PRODUCT CATEGORY PERFORMANCE</span></div>
       <div class="base-date-tag">기준 <strong id="period-display">&mdash;</strong></div>
     </div>
 
-    <div class="kpi-strip">
-      <div class="kpi-card achievement">
-        <div class="kpi-card-label">순예약 RN</div>
-        <div class="kpi-card-value" id="kpi-rn">&mdash;<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-rn-sub">&mdash;</div>
+    <!-- ===== SEC 0. Data Status & 기준 안내 ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 0</span>
+        <h2 class="section-title">Data Status &amp; 기준 안내</h2>
+        <span class="section-sub" id="sec0-sub">&mdash;</span>
       </div>
-      <div class="kpi-card info">
-        <div class="kpi-card-label">평균 ADR</div>
-        <div class="kpi-card-value" id="kpi-adr">&mdash;<span class="unit">천원</span></div>
-        <div class="kpi-card-sub">1박 평균 객실료</div>
+      <div class="info-callout">
+        <div class="lead">본 페이지는 온북 DB 27번 FIT예약 데이터를 기준으로, 변경예약집계코드명별 상품 카테고리 실적을 분석합니다.</div>
+        <ul>
+          <li><strong>데이터 기준일</strong><span id="sec0-asof">&mdash;</span></li>
+          <li><strong>소스</strong>온북 DB 27번 FIT예약 (예약 − 취소 = 순예약 RN)</li>
+          <li><strong>상품 분류 기준</strong>변경예약집계코드명 → classify_v4 카테고리 (현재 카테고리 9종, '기타' 제외 8종 분석)</li>
+          <li><strong>비교 기준</strong>상품 실적은 순예약 RN, 평균 ADR, 매출, 전년 대비 증감률을 기준으로 비교. 전년 비교는 동일 카테고리명이 양년도에 존재하는 경우에 한해 산정합니다.</li>
+        </ul>
       </div>
-      <div class="kpi-card booking">
-        <div class="kpi-card-label">매출 합계</div>
-        <div class="kpi-card-value" id="kpi-rev">&mdash;<span class="unit">백만</span></div>
-        <div class="kpi-card-sub" id="kpi-rev-sub">&mdash;</div>
-      </div>
-      <div class="kpi-card warning">
-        <div class="kpi-card-label">카테고리 / 상품 수</div>
-        <div class="kpi-card-value" id="kpi-count">&mdash;</div>
-        <div class="kpi-card-sub" id="kpi-count-sub">&mdash;</div>
-      </div>
-    </div>
+    </section>
 
-    <div class="table-card">
-      <div class="table-card-header">
-        <span class="table-card-title" id="cat-table-title">카테고리별 실적</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="cat-table-sub">&mdash;</span>
+    <!-- ===== SEC 1. Product Executive Summary ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 1</span>
+        <h2 class="section-title">Product Executive Summary</h2>
+        <span class="section-sub">자동 생성 · 룰 기반</span>
       </div>
-      <div class="table-wrap">
-        <table class="pivot">
-          <thead>
-            <tr>
-              <th style="text-align:left;">카테고리</th>
-              <th>RN</th>
-              <th>RN 비중</th>
-              <th>ADR(천원)</th>
-              <th>매출(백만)</th>
-              <th class="border-left-group">전년 RN</th>
-              <th>YoY RN%</th>
-            </tr>
-          </thead>
-          <tbody id="cat-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
-        </table>
+      <div class="summary-grid">
+        <div class="summary-card" id="sum-overall"><div class="label">종합 판단</div><div class="body" id="sum-overall-body">&mdash;</div></div>
+        <div class="summary-card warning" id="sum-issue"><div class="label">핵심 이슈</div><div class="body" id="sum-issue-body">&mdash;</div></div>
+        <div class="summary-card positive" id="sum-grow"><div class="label">성장 상품</div><div class="body" id="sum-grow-body">&mdash;</div></div>
+        <div class="summary-card negative" id="sum-drop"><div class="label">하락 상품</div><div class="body" id="sum-drop-body">&mdash;</div></div>
+        <div class="summary-card info" id="sum-low"><div class="label">저성과 상품</div><div class="body" id="sum-low-body">&mdash;</div></div>
+        <div class="summary-card warning" id="sum-action"><div class="label">즉시 확인 필요</div><div class="body" id="sum-action-body">&mdash;</div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="two-col">
+    <!-- ===== SEC 2. Product KPI Snapshot ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 2</span>
+        <h2 class="section-title">Product KPI Snapshot</h2>
+        <span class="section-sub" id="sec2-sub">&mdash;</span>
+      </div>
+      <div class="kpi-strip-2">
+        <div class="kpi-tile"><div class="kpi-tile-label">순예약 RN</div><div class="kpi-tile-value" id="k2-rn">&mdash;<span class="unit">실</span></div><div class="kpi-tile-sub" id="k2-rn-sub">&mdash;</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">평균 ADR</div><div class="kpi-tile-value" id="k2-adr">&mdash;<span class="unit">천원</span></div><div class="kpi-tile-sub">1박 평균</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">매출 합계</div><div class="kpi-tile-value" id="k2-rev">&mdash;<span class="unit">백만</span></div><div class="kpi-tile-sub" id="k2-rev-sub">&mdash;</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">카테고리 수</div><div class="kpi-tile-value" id="k2-cats">&mdash;</div><div class="kpi-tile-sub" id="k2-cats-sub">전체 / 실적 발생</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">실적 발생 상품 수</div><div class="kpi-tile-value" id="k2-prods">&mdash;</div><div class="kpi-tile-sub" id="k2-prods-sub">변경예약집계코드</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">Top 10 상품 RN 비중</div><div class="kpi-tile-value" id="k2-top10">&mdash;<span class="unit">%</span></div><div class="kpi-tile-sub" id="k2-top10-sub">&mdash;</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">YoY 성장 상품</div><div class="kpi-tile-value" id="k2-grow">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">YoY +20% 이상</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">YoY 하락 상품</div><div class="kpi-tile-value" id="k2-drop">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">YoY −20% 이하</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">저성과 상품</div><div class="kpi-tile-value" id="k2-low">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">RN·ADR 모두 하위</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">신규 상품</div><div class="kpi-tile-value" id="k2-new">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">전년 미존재</div></div>
+      </div>
+    </section>
+
+    <!-- ===== SEC 3. 상품 카테고리별 실적 테이블 ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 3</span>
+        <h2 class="section-title">상품 카테고리별 실적</h2>
+        <span class="section-sub" id="sec3-sub">&mdash;</span>
+      </div>
+      <div class="table-card">
+        <div class="table-wrap">
+          <table class="pivot">
+            <thead>
+              <tr>
+                <th style="text-align:left;min-width:46px;">순위</th>
+                <th style="text-align:left;min-width:160px;">카테고리</th>
+                <th>RN</th>
+                <th>RN 비중</th>
+                <th>ADR(천원)</th>
+                <th>매출(백만)</th>
+                <th class="border-left-group">전년 RN</th>
+                <th>YoY RN%</th>
+                <th style="text-align:center;">상태</th>
+              </tr>
+            </thead>
+            <tbody id="cat-tbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SEC 4. RN × ADR 상품 매트릭스 ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 4</span>
+        <h2 class="section-title">RN × ADR 상품 매트릭스</h2>
+        <span class="section-sub">4사분면 분류 · 버블=매출</span>
+      </div>
+      <div class="info-callout" style="border-left-color:var(--gold);">
+        상품 성과는 판매량(RN)과 단가(ADR)를 함께 기준으로 판단합니다. 각 카테고리를 RN(가로축) × ADR(세로축) 평면에 배치하여, 핵심 확대·볼륨·프리미엄·정리 검토 상품을 한눈에 구분합니다. 점선은 전체 카테고리의 중앙값(median)입니다.
+      </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title" id="chart-title">Top 10 &middot; RN 순위</span>
-          <div class="chart-legend" id="chart-legend"></div>
+          <span class="chart-card-title">카테고리별 RN × ADR 분포</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="quad-sub">&mdash;</span>
         </div>
-        <div class="chart-canvas-wrap"><canvas id="prod-chart"></canvas></div>
-      </div>
-      <div class="table-card">
-        <div class="table-card-header">
-          <span class="table-card-title" id="series-table-title">카테고리 랭크스</span>
-        </div>
-        <div class="table-wrap">
-          <table class="pivot">
-            <thead>
-              <tr>
-                <th style="text-align:left;min-width:180px;">카테고리</th>
-                <th>RN</th>
-                <th>ADR(천)</th>
-                <th>매출(백만)</th>
-              </tr>
-            </thead>
-            <tbody id="series-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
-          </table>
+        <div class="quad-wrap"><canvas id="quad-chart"></canvas></div>
+        <div class="quad-legend">
+          <div class="quad-legend-item"><strong>HIGH RN · HIGH ADR</strong>핵심 확대 상품 — 주요 채널 고정 노출 검토</div>
+          <div class="quad-legend-item"><strong>HIGH RN · LOW ADR</strong>볼륨 상품 — 단가 방어 필요</div>
+          <div class="quad-legend-item"><strong>LOW RN · HIGH ADR</strong>프리미엄/특화 — 타겟 확대 검토</div>
+          <div class="quad-legend-item"><strong>LOW RN · LOW ADR</strong>정리 또는 구조 변경 검토</div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ======== 전년 상품 비교 섹션 (ly-product 통합) ======== -->
-    <div style="margin-top:12px;border-top:2px solid var(--gold);padding-top:18px;">
-      <div class="page-header" style="margin-bottom:14px;">
-        <div class="page-title" style="font-size:clamp(17px,1.8vw,22px);">전년 카테고리 비교 <span class="sub">YEAR-OVER-YEAR · CATEGORY</span></div>
+    <!-- ===== SEC 5. YoY 성장/하락 상품 ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 5</span>
+        <h2 class="section-title">YoY 성장 / 하락 상품</h2>
+        <span class="section-sub" id="sec5-sub">&mdash;</span>
       </div>
-
-      <div class="kpi-strip" style="margin-bottom:16px;">
-        <div class="kpi-card achievement">
-          <div class="kpi-card-label" id="lyp-kpi-cy-label">금년 RNS</div>
-          <div class="kpi-card-value" id="lyp-kpi-cy-rns">&mdash;<span class="unit">실</span></div>
-          <div class="kpi-card-sub" id="lyp-kpi-cy-sub">&mdash;</div>
-        </div>
-        <div class="kpi-card booking">
-          <div class="kpi-card-label" id="lyp-kpi-ly-label">전년 RNS</div>
-          <div class="kpi-card-value" id="lyp-kpi-ly-rns">&mdash;<span class="unit">실</span></div>
-          <div class="kpi-card-sub" id="lyp-kpi-ly-sub">&mdash;</div>
-        </div>
-        <div class="kpi-card info">
-          <div class="kpi-card-label">YoY 증감률</div>
-          <div class="kpi-card-value" id="lyp-kpi-yoy">&mdash;<span class="unit">%</span></div>
-          <div class="kpi-card-sub">전년 대비</div>
-        </div>
-        <div class="kpi-card warning">
-          <div class="kpi-card-label">공통 카테고리 수</div>
-          <div class="kpi-card-value" id="lyp-kpi-common">&mdash;<span class="unit">종</span></div>
-          <div class="kpi-card-sub">양년도 모두 존재</div>
-        </div>
+      <div class="info-callout" style="border-left-color:var(--positive);">
+        YoY 변화율은 상품 수요 변화와 판매 구조 변화를 확인하는 핵심 지표입니다. 성장 상품은 노출·판매 확대 검토 대상이며, 하락 상품은 원인 점검 및 대응이 필요합니다. (동일 카테고리명이 양년도 존재 시 산정)
       </div>
-
-      <div class="chart-card" style="margin-bottom:16px;">
-        <div class="chart-card-header">
-          <span class="chart-card-title" id="lyp-chart-title">카테고리별 RNS &mdash; 금년 vs 전년 (Top 15)</span>
-          <div class="chart-legend">
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div><span id="lyp-legend-cy">금년</span></div>
-            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;opacity:0.7;"></div><span id="lyp-legend-ly">전년</span></div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title" id="grow-title">성장 상품 TOP 5</span>
+          </div>
+          <div class="table-wrap">
+            <table class="pivot">
+              <thead><tr><th style="text-align:left;min-width:160px;">카테고리</th><th>금년 RN</th><th>전년 RN</th><th>YoY%</th></tr></thead>
+              <tbody id="grow-tbody"><tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
+            </table>
           </div>
         </div>
-        <div class="chart-canvas-wrap" style="height:400px;"><canvas id="lyp-chart"></canvas></div>
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title" id="drop-title">하락 상품 TOP 5</span>
+          </div>
+          <div class="table-wrap">
+            <table class="pivot">
+              <thead><tr><th style="text-align:left;min-width:160px;">카테고리</th><th>금년 RN</th><th>전년 RN</th><th>YoY%</th></tr></thead>
+              <tbody id="drop-tbody"><tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="table-card">
-        <div class="table-card-header">
-          <span class="table-card-title">카테고리별 전년 대비 상세</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="lyp-table-label">&mdash;</span>
+    <!-- ===== SEC 6. 상품 집중도 및 Long-tail 분석 ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 6</span>
+        <h2 class="section-title">상품 집중도 &amp; Long-tail 분석</h2>
+        <span class="section-sub" id="sec6-sub">&mdash;</span>
+      </div>
+      <div class="info-callout" style="border-left-color:var(--warning);">
+        상위 상품 집중도는 상품 고정화 가능성을 판단하는 핵심 지표입니다. 집중도가 높을수록 소수 상품에 의존하는 구조이며, Long-tail 비중이 클수록 운영 효율 개선 여지가 있습니다.
+      </div>
+      <div class="kpi-strip-2">
+        <div class="kpi-tile"><div class="kpi-tile-label">Top 5 카테고리 RN 비중</div><div class="kpi-tile-value" id="c-top5cat">&mdash;<span class="unit">%</span></div><div class="kpi-tile-sub" id="c-top5cat-sub">&mdash;</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">Top 5 상품 RN 비중</div><div class="kpi-tile-value" id="c-top5p">&mdash;<span class="unit">%</span></div><div class="kpi-tile-sub">변경예약집계코드</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">Top 10 상품 RN 비중</div><div class="kpi-tile-value" id="c-top10p">&mdash;<span class="unit">%</span></div><div class="kpi-tile-sub">변경예약집계코드</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">RN 100실 이상 상품</div><div class="kpi-tile-value" id="c-rn100">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">Top 100 기준</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">RN 10실 미만 상품</div><div class="kpi-tile-value" id="c-rn10">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">Top 100 + Long-tail 추정</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">매출 발생 없는 상품</div><div class="kpi-tile-value" id="c-nrev">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">금년 RN=0</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">신규 상품 (금년)</div><div class="kpi-tile-value" id="c-new">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">전년 미존재</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">사라진 상품 (전년)</div><div class="kpi-tile-value" id="c-gone">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">금년 미존재</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">전체 변경예약집계코드 수</div><div class="kpi-tile-value" id="c-total">&mdash;<span class="unit">종</span></div><div class="kpi-tile-sub">누적 (2022–)</div></div>
+        <div class="kpi-tile"><div class="kpi-tile-label">Long-tail 추정 비중</div><div class="kpi-tile-value" id="c-longtail">&mdash;<span class="unit">%</span></div><div class="kpi-tile-sub">Top 100 외 비중</div></div>
+      </div>
+    </section>
+
+    <!-- ===== SEC 7. 상품 운영 Action Insight ===== -->
+    <section class="prod-section">
+      <div class="section-header">
+        <span class="section-num">SEC 7</span>
+        <h2 class="section-title">상품 운영 Action Insight</h2>
+        <span class="section-sub">사분면 + YoY 기반 자동 매핑</span>
+      </div>
+      <div class="action-list">
+        <div class="action-card core">
+          <div class="a-label">핵심 확대 상품<br><span style="font-weight:500;color:var(--ink-faint);font-size:9.5px;">CORE EXPAND</span></div>
+          <div class="a-body">RN·ADR 모두 우수. <strong>주요 채널 고정 노출 검토</strong>, 회원 캠페인 우선 편성, OTA·자사 동시 노출 유지.<div id="act-core" style="margin-top:6px;"></div></div>
         </div>
-        <div class="table-wrap">
-          <table class="pivot">
-            <thead>
-              <tr>
-                <th style="text-align:left;min-width:180px;">카테고리</th>
-                <th>금년 순위</th>
-                <th class="border-left-group" id="lyp-th-cy-rns">금년 RNS</th>
-                <th id="lyp-th-cy-rev">금년 매출(억)</th>
-                <th class="border-left-group" id="lyp-th-ly-rns">전년 RNS</th>
-                <th>YoY%</th>
-                <th class="border-left-group">순위 변동</th>
-              </tr>
-            </thead>
-            <tbody id="lyp-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-faint);">로딩 중...</td></tr></tbody>
-          </table>
+        <div class="action-card volume">
+          <div class="a-label">볼륨 확보 상품<br><span style="font-weight:500;color:var(--ink-faint);font-size:9.5px;">VOLUME · DEFEND ADR</span></div>
+          <div class="a-body">RN 높으나 ADR 낮음. <strong>목표 Gap 사업장에 우선 활용</strong>하되, 할인 폭 모니터링 및 단가 방어 조건 명시.<div id="act-volume" style="margin-top:6px;"></div></div>
+        </div>
+        <div class="action-card premium">
+          <div class="a-label">프리미엄/특화<br><span style="font-weight:500;color:var(--ink-faint);font-size:9.5px;">PREMIUM TARGET</span></div>
+          <div class="a-body">RN 낮지만 ADR 높음. <strong>고단가 타겟·회원 중심 운영</strong>, 시즌·이벤트 활용한 노출 타겟팅 검토.<div id="act-premium" style="margin-top:6px;"></div></div>
+        </div>
+        <div class="action-card review">
+          <div class="a-label">정리 검토 상품<br><span style="font-weight:500;color:var(--ink-faint);font-size:9.5px;">REVIEW · CONSOLIDATE</span></div>
+          <div class="a-body">RN·ADR 모두 낮거나 YoY 큰 하락. <strong>통합·판매 중단 검토</strong>, 코드 정리로 운영 비용 절감.<div id="act-review" style="margin-top:6px;"></div></div>
+        </div>
+        <div class="action-card fixed">
+          <div class="a-label">고정화 후보<br><span style="font-weight:500;color:var(--ink-faint);font-size:9.5px;">FIXED CANDIDATE</span></div>
+          <div class="a-body">매년 반복 성과, 안정적 RN. <strong>채널별 운영 조건 표준화 가능</strong>, 연 단위 캘린더 운영안 수립.<div id="act-fixed" style="margin-top:6px;"></div></div>
         </div>
       </div>
-    </div>
+    </section>
 
     <div style="padding:10px 0 2px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-align:center;border-top:1px solid var(--rule);">
-      DATA: db_aggregated.json &middot; 온북 DB 27번 FIT예약 · 변경예약집계코드명 기준 (2022&ndash;2026)
+      DATA: db_aggregated.json + package_series_trend.json &middot; 온북 DB 27번 FIT예약 · 변경예약집계코드명 기준 (2022&ndash;2026)
     </div>
   </main>
 </div>
 
 <script>
 (function () {
-  var CAT_ORDER = ['GOTA PKG','온라인 패키지','회원PKG','자사 패키지','D멤버스','사업장 대매점'];
+  var CAT_ORDER = ['룸온니/프로모션','조식패키지','연박/투나잇','올인클루시브','시즌패키지','액티비티/레저','워터풀/오션','세일/기획전'];
   var YEAR_COLORS = {'2022':'#9e9e9e','2023':'#6ba3c4','2024':'#e6b970','2025':'#d97a7a','2026':'#6db58a'};
-  var pkg = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', chart = null;
+  var pkg = null, series = null, selYear = new Date().getFullYear().toString(), selCat = 'ALL', quadChart = null;
   var catMonthFilter = 'ALL'; // 연합계 또는 월번호 (01-12)
   var activeRegion = '전체';
   var activePropsSet = new Set();
@@ -456,10 +574,12 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     var monthFilter = catMonthFilter === 'ALL' ? null : catMonthFilter;
 
     if (cat === 'ALL') {
-      Object.values(source).forEach(function(byYr) {
+      // '기타' 카테고리는 합산에서 제외 (분석 대상에서 제외하는 정책)
+      Object.keys(source).forEach(function(catKey) {
+        if (catKey === '기타') return;
+        var byYr = source[catKey];
         var yrData = byYr[year] || {};
         Object.keys(yrData).forEach(function(ym) {
-          // monthFilter가 설정되었으면 해당 월만 포함
           if (monthFilter && !ym.endsWith(monthFilter)) return;
           var v = yrData[ym];
           if (!data[ym]) data[ym] = {rn:0, rev_won:0};
@@ -514,90 +634,359 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     return aggByCategory(r);
   }
 
+  // 카테고리별 실적 행 데이터 빌드 ('기타' 제외)
+  function buildCatRows(yr) {
+    var lyYear = String(parseInt(yr) - 1);
+    var rows = [];
+    Object.keys(pkg.by_category).forEach(function(cat) {
+      if (cat === '기타') return; // '기타' 제외
+      var cur = sumCat(cat, yr);
+      var ly = sumCat(cat, lyYear);
+      if (cur.rn <= 0 && ly.rn <= 0) return;
+      var yoy = ly.rn > 0 ? ((cur.rn - ly.rn) / ly.rn * 100) : null;
+      var isNew = (ly.rn === 0 && cur.rn > 0);
+      rows.push({cat:cat, rn:cur.rn, adr:cur.adr, rev_m:cur.rev_m, ly_rn:ly.rn, ly_adr:ly.adr, yoy:yoy, isNew:isNew});
+    });
+    rows.sort(function(a,b){return b.rn - a.rn;});
+    return rows;
+  }
+
+  // 분위수
+  function quantile(arr, p) {
+    if (!arr || !arr.length) return 0;
+    var s = arr.slice().sort(function(a,b){return a-b;});
+    var idx = (s.length - 1) * p;
+    var lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return s[lo];
+    return s[lo] + (s[hi]-s[lo]) * (idx - lo);
+  }
+
+  // 상태 분류
+  function classifyStatus(row, medRn, medAdr, p25Rn, p75Adr, p25Adr) {
+    if (row.isNew) return {key:'new', label:'신규'};
+    if (row.yoy !== null && row.yoy <= -20) return {key:'drop', label:'하락'};
+    if (row.yoy !== null && row.yoy >= 20) return {key:'grow', label:'성장'};
+    if (row.rn >= medRn && row.adr >= medAdr) return {key:'core', label:'핵심'};
+    if (row.rn < p25Rn && row.adr < medAdr) return {key:'review', label:'정리검토'};
+    if (row.adr >= p75Adr) return {key:'premium', label:'고단가'};
+    if (row.adr < p25Adr) return {key:'low-adr', label:'저단가'};
+    return {key:'', label:'—'};
+  }
+
   function render() {
     if (!pkg) return;
     var lyYear = String(parseInt(selYear) - 1);
-    var cur = sumCat(selCat, selYear);
-    var ly = sumCat(selCat, lyYear);
-    var rank = filteredRanking();
+    var totals = sumCat('ALL', selYear);
+    var lyTotals = sumCat('ALL', lyYear);
+    var catRows = buildCatRows(selYear);
 
     var periodSuffix = catMonthFilter === 'ALL' ? '' : ' ' + parseInt(catMonthFilter) + '월';
     set('period-display', selYear + '년' + periodSuffix);
-    set('kpi-rn', fmtN(cur.rn));
-    var yoyRn = ly.rn > 0 ? ((cur.rn - ly.rn) / ly.rn * 100).toFixed(1) : null;
-    set('kpi-rn-sub', '전년 ' + fmtN(ly.rn) + ' · YoY <span style="color:' + (yoyRn !== null && parseFloat(yoyRn) >= 0 ? 'var(--positive)' : 'var(--negative)') + '">' + (yoyRn !== null ? (parseFloat(yoyRn) >= 0 ? '+' : '') + yoyRn + '%' : '-') + '</span>');
-    set('kpi-rev', fmtR(cur.rev_m));
-    var yoyRev = ly.rev_m > 0 ? ((cur.rev_m - ly.rev_m) / ly.rev_m * 100).toFixed(1) : null;
-    set('kpi-rev-sub', '전년 ' + fmtR(ly.rev_m) + 'M · YoY <span style="color:' + (yoyRev !== null && parseFloat(yoyRev) >= 0 ? 'var(--positive)' : 'var(--negative)') + '">' + (yoyRev !== null ? (parseFloat(yoyRev) >= 0 ? '+' : '') + yoyRev + '%' : '-') + '</span>');
-    set('kpi-adr', fmtN(cur.adr));
-    set('kpi-count', selCat === 'ALL' ? Object.keys(pkg.by_category).length + ' / ' + rank.length : String(rank.length));
-    set('kpi-count-sub', selCat === 'ALL' ? '카테고리 / 항목수' : selCat);
 
-    renderCatTable(lyYear, cur.rn);
-    renderChart(rank);
-    renderSeriesTable(rank);
-  }
+    var monthLabel = catMonthFilter === 'ALL' ? '연합계' : parseInt(catMonthFilter) + '월';
 
-  function renderCatTable(lyYear, totalRn) {
-    var monthLabel = catMonthFilter === 'ALL' ? '(연합계)' : '(' + parseInt(catMonthFilter) + '월)';
-    set('cat-table-title', selYear + '년 카테고리별 실적 ' + monthLabel);
-    set('cat-table-sub', selYear + ' vs ' + lyYear);
-    var rows = '', totRn=0, totLy=0, totRev=0;
-    CAT_ORDER.forEach(function(cat) {
-      if (!pkg.by_category[cat]) return;
-      var cur = sumCat(cat, selYear);
-      var ly = sumCat(cat, lyYear);
-      var pct = totalRn > 0 ? (cur.rn / totalRn * 100).toFixed(1) : '0.0';
-      var yoy = ly.rn > 0 ? ((cur.rn - ly.rn) / ly.rn * 100).toFixed(1) : null;
-      var yoyCol = yoy !== null ? (parseFloat(yoy) >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-faint)';
-      var bg = selCat === cat ? ' style="background:rgba(201,160,99,0.06);"' : '';
-      rows += '<tr' + bg + ' onclick="window._pd_selCat(\'' + cat.replace(/'/g, "\\'") + '\')" style="cursor:pointer;">' +
-        '<td>' + cat + '</td>' +
-        '<td>' + fmtN(cur.rn) + '</td>' +
-        '<td>' + pct + '%</td>' +
-        '<td>' + fmtN(cur.adr) + '</td>' +
-        '<td>' + fmtR(cur.rev_m) + '</td>' +
-        '<td class="border-left-group">' + fmtN(ly.rn) + '</td>' +
-        '<td><span style="color:' + yoyCol + '">' + (yoy !== null ? (parseFloat(yoy) >= 0 ? '+' : '') + yoy + '%' : '—') + '</span></td>' +
-        '</tr>';
-      totRn += cur.rn; totLy += ly.rn; totRev += cur.rev_m;
+    // SEC 0
+    var asof = (pkg.meta && pkg.meta.as_of) || (series && series.meta && series.meta.as_of) || '';
+    set('sec0-asof', asof || (selYear + '년 ' + monthLabel + ' 기준'));
+    set('sec0-sub', selYear + '년 · ' + monthLabel);
+
+    // SEC 2
+    set('sec2-sub', selYear + '년 ' + monthLabel + ' · ' + (selCat==='ALL'?'전체':selCat));
+    set('k2-rn', fmtN(totals.rn));
+    var yoyRn = lyTotals.rn > 0 ? ((totals.rn - lyTotals.rn) / lyTotals.rn * 100) : null;
+    set('k2-rn-sub', '전년 ' + fmtN(lyTotals.rn) + ' · YoY ' + yoyColored(yoyRn));
+    set('k2-adr', fmtN(totals.adr));
+    set('k2-rev', fmtR(totals.rev_m));
+    var yoyRev = lyTotals.rev_m > 0 ? ((totals.rev_m - lyTotals.rev_m) / lyTotals.rev_m * 100) : null;
+    set('k2-rev-sub', '전년 ' + fmtR(lyTotals.rev_m) + ' · YoY ' + yoyColored(yoyRev));
+
+    var totalCats = Object.keys(pkg.by_category).filter(function(c){return c!=='기타';}).length;
+    var activeCats = catRows.filter(function(r){return r.rn>0;}).length;
+    set('k2-cats', totalCats + ' / ' + activeCats);
+    set('k2-cats-sub', '전체 카테고리 / 실적 발생');
+
+    // 상품 수 (top_series) — 금년 RN>0 카운트
+    var prodStats = computeProductStats(selYear, lyYear);
+    set('k2-prods', fmtN(prodStats.activeCount));
+    set('k2-prods-sub', '금년 RN 발생 · Top ' + prodStats.topN + ' 기준');
+    set('k2-top10', prodStats.top10Share != null ? prodStats.top10Share.toFixed(1) : '—');
+    set('k2-top10-sub', 'Top 10 상품 RN / 카테고리 합');
+    set('k2-grow', String(catRows.filter(function(r){return r.yoy!==null && r.yoy>=20;}).length));
+    set('k2-drop', String(catRows.filter(function(r){return r.yoy!==null && r.yoy<=-20;}).length));
+
+    // 저성과: RN<P25 & ADR<median
+    var rnArr = catRows.map(function(r){return r.rn;});
+    var adrArr = catRows.map(function(r){return r.adr;});
+    var medRn = quantile(rnArr, 0.5), medAdr = quantile(adrArr, 0.5);
+    var p25Rn = quantile(rnArr, 0.25), p75Adr = quantile(adrArr, 0.75), p25Adr = quantile(adrArr, 0.25);
+    var lowCount = catRows.filter(function(r){return r.rn<p25Rn && r.adr<medAdr;}).length;
+    set('k2-low', String(lowCount));
+    set('k2-new', String(catRows.filter(function(r){return r.isNew;}).length));
+
+    // SEC 3
+    set('sec3-sub', selYear + '년 ' + monthLabel + ' · ' + lyYear + '년 비교 · ' + catRows.length + '개 카테고리');
+    renderCatTable(catRows, totals.rn, medRn, medAdr, p25Rn, p75Adr, p25Adr);
+
+    // SEC 4
+    set('quad-sub', selYear + '년 · ' + catRows.length + '개 카테고리 (median RN=' + fmtN(medRn) + ', ADR=' + fmtN(medAdr) + ')');
+    renderQuadrant(catRows, medRn, medAdr);
+
+    // SEC 5
+    set('sec5-sub', selYear + '년 vs ' + lyYear + '년');
+    renderYoyTables(catRows);
+
+    // SEC 6
+    set('sec6-sub', selYear + '년 ' + monthLabel + ' 기준');
+    renderConcentration(catRows, prodStats);
+
+    // SEC 7 + SEC 1
+    var classified = {core:[], volume:[], premium:[], review:[], fixed:[]};
+    catRows.forEach(function(r) {
+      if (r.rn >= medRn && r.adr >= medAdr) classified.core.push(r);
+      if (r.rn >= medRn && r.adr < medAdr) classified.volume.push(r);
+      if (r.rn < medRn && r.adr >= medAdr) classified.premium.push(r);
+      if (r.rn < p25Rn && r.adr < medAdr) classified.review.push(r);
+      else if (r.yoy !== null && r.yoy <= -20) classified.review.push(r);
+      // 고정화 후보: 매년 RN 안정 (전년 대비 ±20% 이내, RN ≥ median)
+      if (r.rn >= medRn && r.yoy !== null && r.yoy >= -20 && r.yoy <= 20) classified.fixed.push(r);
     });
-    var totYoy = totLy > 0 ? ((totRn - totLy) / totLy * 100).toFixed(1) : null;
-    var totCol = totYoy !== null ? (parseFloat(totYoy) >= 0 ? 'var(--positive)' : 'var(--negative)') : 'var(--ink-faint)';
-    rows += '<tr class="total-row"><td>합계</td><td>' + fmtN(totRn) + '</td><td>100.0%</td><td>—</td><td>' + fmtR(totRev) + '</td><td class="border-left-group">' + fmtN(totLy) + '</td><td><span style="color:' + totCol + '">' + (totYoy !== null ? (parseFloat(totYoy) >= 0 ? '+' : '') + totYoy + '%' : '—') + '</span></td></tr>';
-    el('cat-tbody').innerHTML = rows;
+    renderActions(classified);
+    renderExecSummary(catRows, totals, lyTotals, classified);
   }
 
-  function renderChart(rank) {
-    var top10 = rank.slice(0, 10);
-    var color = YEAR_COLORS[selYear] || '#6db58a';
-    set('chart-title', selYear + '년 · ' + (selCat === 'ALL' ? '전체' : selCat) + ' Top 10 RN');
-    el('chart-legend').innerHTML = '<span class="chart-legend-item"><span class="legend-dot" style="background:' + color + '"></span>' + selYear + '년 RN</span>';
-    var ctx = el('prod-chart');
-    if (!ctx) return;
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: top10.map(function(d){return d.category.length>18?d.category.slice(0,17)+'…':d.category;}),
-              datasets: [{data: top10.map(function(d){return d.rn;}), backgroundColor: color+'bb', borderColor: color, borderWidth:1, borderRadius:3}] },
-      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#1a1d23',borderColor:'rgba(255,255,255,0.15)',borderWidth:1,titleColor:'#e6b970',bodyColor:'#e0e0e3',padding:10,
-          callbacks:{label:function(c){return ' '+c.parsed.x.toLocaleString('ko-KR')+' RN';}}} },
-        scales:{
-          x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7e85',font:{size:9}},border:{display:false}},
-          y:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.5)',font:{size:9}},border:{color:'rgba(255,255,255,0.1)'}}
-        }
-      }
-    });
+  function yoyColored(v) {
+    if (v == null) return '<span style="color:var(--ink-faint)">—</span>';
+    var c = v >= 0 ? 'var(--positive)' : 'var(--negative)';
+    return '<span style="color:' + c + '">' + (v>=0?'+':'') + v.toFixed(1) + '%</span>';
   }
 
-  function renderSeriesTable(rank) {
-    set('series-table-title', selYear + '년 · ' + (selCat === 'ALL' ? '전체' : selCat) + ' 카테고리 TOP ' + Math.min(20, rank.length));
-    if (!rank.length) { el('series-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--ink-faint);">데이터 없음</td></tr>'; return; }
-    el('series-tbody').innerHTML = rank.slice(0, 20).map(function(r, i) {
+  function pillFor(s) {
+    return '<span class="status-pill ' + s.key + '">' + s.label + '</span>';
+  }
+
+  function renderCatTable(rows, totalRn, medRn, medAdr, p25Rn, p75Adr, p25Adr) {
+    if (!rows.length) {
+      el('cat-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--ink-faint);">데이터 없음</td></tr>';
+      return;
+    }
+    var totRn=0, totLy=0, totRev=0;
+    var html = rows.map(function(r, i) {
+      var pct = totalRn > 0 ? (r.rn / totalRn * 100).toFixed(1) : '0.0';
+      var stat = classifyStatus(r, medRn, medAdr, p25Rn, p75Adr, p25Adr);
       var cls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
-      return '<tr><td><span class="rank-num ' + cls + '">' + (i+1) + '</span>' + r.category + '</td><td>' + fmtN(r.rn) + '</td><td>' + fmtN(r.adr) + '</td><td>' + fmtR(r.rev) + '</td></tr>';
+      totRn += r.rn; totLy += r.ly_rn; totRev += r.rev_m;
+      return '<tr>' +
+        '<td><span class="rank-num ' + cls + '">' + (i+1) + '</span></td>' +
+        '<td>' + r.cat + '</td>' +
+        '<td>' + fmtN(r.rn) + '</td>' +
+        '<td>' + pct + '%</td>' +
+        '<td>' + fmtN(r.adr) + '</td>' +
+        '<td>' + fmtR(r.rev_m) + '</td>' +
+        '<td class="border-left-group">' + (r.ly_rn>0 ? fmtN(r.ly_rn) : '<span style="color:var(--ink-faint)">—</span>') + '</td>' +
+        '<td>' + yoyColored(r.yoy) + '</td>' +
+        '<td style="text-align:center;">' + pillFor(stat) + '</td>' +
+        '</tr>';
     }).join('');
+    var totYoy = totLy > 0 ? ((totRn - totLy) / totLy * 100) : null;
+    html += '<tr class="total-row"><td>—</td><td>합계</td><td>' + fmtN(totRn) + '</td><td>100.0%</td><td>—</td><td>' + fmtR(totRev) + '</td><td class="border-left-group">' + fmtN(totLy) + '</td><td>' + yoyColored(totYoy) + '</td><td style="text-align:center;">—</td></tr>';
+    el('cat-tbody').innerHTML = html;
+  }
+
+  function renderQuadrant(rows, medRn, medAdr) {
+    var ctx = el('quad-chart');
+    if (!ctx) return;
+    if (quadChart) quadChart.destroy();
+    var palette = ['#e6b970','#6db58a','#5a9fc4','#d97a7a','#c9a063','#e8a256','#9e9e9e','#b48ee4'];
+    var maxRev = Math.max.apply(null, rows.map(function(r){return r.rev_m||0;})) || 1;
+    var pts = rows.map(function(r, i) {
+      var bubbleR = 6 + Math.sqrt((r.rev_m||0)/maxRev) * 22;
+      return {x:r.rn, y:r.adr, r:bubbleR, label:r.cat, rev:r.rev_m, yoy:r.yoy, color:palette[i%palette.length]};
+    });
+    quadChart = new Chart(ctx, {
+      type:'bubble',
+      data:{datasets:pts.map(function(p){
+        return {label:p.label, data:[{x:p.x, y:p.y, r:p.r, rev:p.rev, yoy:p.yoy}], backgroundColor:p.color+'cc', borderColor:p.color, borderWidth:1.5};
+      })},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom',labels:{color:'#a8acb3',font:{size:10,family:"'JetBrains Mono',monospace"},boxWidth:8,boxHeight:8,padding:8,usePointStyle:true}},
+          tooltip:{backgroundColor:'#1a1d23',borderColor:'rgba(255,255,255,0.15)',borderWidth:1,titleColor:'#e6b970',bodyColor:'#e0e0e3',padding:10,
+            callbacks:{
+              title:function(items){return items[0].dataset.label;},
+              label:function(c){
+                var d=c.raw;
+                var yoyStr = d.yoy==null?'—':(d.yoy>=0?'+':'')+d.yoy.toFixed(1)+'%';
+                return [' RN: '+d.x.toLocaleString('ko-KR'),' ADR: '+d.y.toLocaleString('ko-KR')+'천원',' 매출: '+d.rev.toFixed(1)+'백만',' YoY: '+yoyStr];
+              }
+            }
+          },
+          annotation:{}
+        },
+        scales:{
+          x:{title:{display:true,text:'순예약 RN (실)',color:'#a8acb3',font:{size:11,family:"'JetBrains Mono',monospace"}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7e85',font:{size:10},callback:function(v){return v.toLocaleString('ko-KR');}},border:{display:false}},
+          y:{title:{display:true,text:'평균 ADR (천원)',color:'#a8acb3',font:{size:11,family:"'JetBrains Mono',monospace"}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#7a7e85',font:{size:10},callback:function(v){return v.toLocaleString('ko-KR');}},border:{display:false}}
+        }
+      },
+      plugins:[{
+        id:'medianLines',
+        afterDraw:function(chart){
+          var ctx=chart.ctx, xs=chart.scales.x, ys=chart.scales.y;
+          var xMed=xs.getPixelForValue(medRn), yMed=ys.getPixelForValue(medAdr);
+          ctx.save();
+          ctx.strokeStyle='rgba(201,160,99,0.45)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+          ctx.beginPath(); ctx.moveTo(xMed,ys.top); ctx.lineTo(xMed,ys.bottom); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(xs.left,yMed); ctx.lineTo(xs.right,yMed); ctx.stroke();
+          ctx.setLineDash([]);
+          // 사분면 라벨
+          ctx.fillStyle='rgba(230,185,112,0.55)'; ctx.font='10px JetBrains Mono';
+          ctx.fillText('HIGH RN · HIGH ADR', xMed+8, ys.top+14);
+          ctx.fillText('LOW RN · HIGH ADR', xs.left+8, ys.top+14);
+          ctx.fillText('HIGH RN · LOW ADR', xMed+8, ys.bottom-8);
+          ctx.fillText('LOW RN · LOW ADR', xs.left+8, ys.bottom-8);
+          ctx.restore();
+        }
+      }]
+    });
+  }
+
+  function renderYoyTables(rows) {
+    var comparable = rows.filter(function(r){return r.yoy !== null;});
+    var growers = comparable.slice().sort(function(a,b){return b.yoy - a.yoy;}).slice(0,5);
+    var droppers = comparable.slice().sort(function(a,b){return a.yoy - b.yoy;}).slice(0,5);
+    set('grow-title','성장 상품 TOP ' + growers.length);
+    set('drop-title','하락 상품 TOP ' + droppers.length);
+    var rowHtml = function(r) {
+      return '<tr><td>' + r.cat + '</td><td>' + fmtN(r.rn) + '</td><td>' + fmtN(r.ly_rn) + '</td><td>' + yoyColored(r.yoy) + '</td></tr>';
+    };
+    el('grow-tbody').innerHTML = growers.length ? growers.map(rowHtml).join('') : '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink-faint);">해당 없음</td></tr>';
+    el('drop-tbody').innerHTML = droppers.length ? droppers.map(rowHtml).join('') : '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--ink-faint);">해당 없음</td></tr>';
+  }
+
+  function computeProductStats(yr, lyYr) {
+    var res = {topN:0, total:0, activeCount:0, top5Share:null, top10Share:null, rn100plus:0, rn10minus:0, noRev:0, newCount:0, goneCount:0, longtailPct:null};
+    if (!series || !series.by_series) return res;
+    var by = series.by_series;
+    var totalRnYr = 0;
+    var prodRns = [];
+    Object.keys(by).forEach(function(name) {
+      if (name === '기타') return;
+      var sumRn = 0, sumRev = 0;
+      var yrData = by[name][yr] || {};
+      Object.keys(yrData).forEach(function(ym) {
+        if (catMonthFilter !== 'ALL' && !ym.endsWith(catMonthFilter)) return;
+        sumRn += yrData[ym].rn || 0;
+        sumRev += yrData[ym].rev || 0;
+      });
+      var lySumRn = 0;
+      var lyData = by[name][lyYr] || {};
+      Object.keys(lyData).forEach(function(ym) {
+        if (catMonthFilter !== 'ALL' && !ym.endsWith(catMonthFilter)) return;
+        lySumRn += lyData[ym].rn || 0;
+      });
+      prodRns.push({name:name, rn:sumRn, rev:sumRev, ly_rn:lySumRn});
+      if (sumRn > 0) {
+        res.activeCount++;
+        totalRnYr += sumRn;
+        if (sumRn >= 100) res.rn100plus++;
+        if (sumRn < 10) res.rn10minus++;
+        if (sumRev === 0) res.noRev++;
+      }
+      if (sumRn > 0 && lySumRn === 0) res.newCount++;
+      if (sumRn === 0 && lySumRn > 0) res.goneCount++;
+    });
+    res.topN = Object.keys(by).filter(function(n){return n!=='기타';}).length;
+    res.total = (series.meta && series.meta.total_series) ? series.meta.total_series : res.topN;
+    prodRns.sort(function(a,b){return b.rn - a.rn;});
+    if (totalRnYr > 0) {
+      var top5 = prodRns.slice(0,5).reduce(function(s,x){return s+x.rn;},0);
+      var top10 = prodRns.slice(0,10).reduce(function(s,x){return s+x.rn;},0);
+      res.top5Share = top5/totalRnYr*100;
+      res.top10Share = top10/totalRnYr*100;
+    }
+    res.longtailPct = res.total>0 ? ((res.total - res.topN) / res.total * 100) : null;
+    return res;
+  }
+
+  function renderConcentration(catRows, ps) {
+    var rnTotal = catRows.reduce(function(s,r){return s+r.rn;},0);
+    var top5Cat = catRows.slice(0,5).reduce(function(s,r){return s+r.rn;},0);
+    var top5CatPct = rnTotal>0 ? (top5Cat/rnTotal*100) : null;
+    set('c-top5cat', top5CatPct!=null ? top5CatPct.toFixed(1) : '—');
+    set('c-top5cat-sub', catRows.slice(0,5).map(function(r){return r.cat.slice(0,4);}).join('·') || '—');
+    set('c-top5p', ps.top5Share!=null ? ps.top5Share.toFixed(1) : '—');
+    set('c-top10p', ps.top10Share!=null ? ps.top10Share.toFixed(1) : '—');
+    set('c-rn100', fmtN(ps.rn100plus));
+    set('c-rn10', fmtN(ps.rn10minus));
+    set('c-nrev', fmtN(ps.noRev));
+    set('c-new', fmtN(ps.newCount));
+    set('c-gone', fmtN(ps.goneCount));
+    set('c-total', fmtN(ps.total));
+    set('c-longtail', ps.longtailPct!=null ? ps.longtailPct.toFixed(1) : '—');
+  }
+
+  function renderActions(cls) {
+    var fmt = function(arr) {
+      if (!arr.length) return '<span style="color:var(--ink-faint);font-size:11px;">해당 카테고리 없음</span>';
+      return arr.slice(0,5).map(function(r){return '<span class="target">'+r.cat+' · '+fmtN(r.rn)+'실</span>';}).join('');
+    };
+    el('act-core').innerHTML = fmt(cls.core);
+    el('act-volume').innerHTML = fmt(cls.volume);
+    el('act-premium').innerHTML = fmt(cls.premium);
+    el('act-review').innerHTML = fmt(cls.review);
+    el('act-fixed').innerHTML = fmt(cls.fixed);
+  }
+
+  function renderExecSummary(rows, tot, lyTot, cls) {
+    var yoy = lyTot.rn > 0 ? ((tot.rn - lyTot.rn) / lyTot.rn * 100) : null;
+    // 종합 판단
+    var verdict;
+    if (yoy == null) verdict = '전년 비교 가능 데이터가 부족합니다.';
+    else if (yoy >= 10) verdict = '<strong>RN '+yoy.toFixed(1)+'% 성장</strong>으로 양호한 흐름입니다. 핵심 카테고리 확대와 단가 방어를 병행하세요.';
+    else if (yoy >= 0) verdict = '<strong>RN '+yoy.toFixed(1)+'% 소폭 성장</strong>. 상위 카테고리 집중과 신규 상품 발굴이 필요합니다.';
+    else if (yoy >= -10) verdict = '<strong>RN '+yoy.toFixed(1)+'% 소폭 하락</strong>. 하락 상품 원인 점검과 핵심 상품 확대가 시급합니다.';
+    else verdict = '<strong>RN '+yoy.toFixed(1)+'% 하락</strong>. 상품 구조 재검토와 즉시 대응이 필요합니다.';
+    set('sum-overall-body', verdict);
+
+    // 핵심 이슈
+    var issues = [];
+    var droppers = rows.filter(function(r){return r.yoy!==null && r.yoy<=-20;}).sort(function(a,b){return a.yoy-b.yoy;});
+    var growers = rows.filter(function(r){return r.yoy!==null && r.yoy>=20;}).sort(function(a,b){return b.yoy-a.yoy;});
+    if (droppers.length) issues.push('하락 카테고리 <strong>'+droppers.length+'종</strong>');
+    if (growers.length) issues.push('성장 카테고리 <strong>'+growers.length+'종</strong>');
+    if (cls.review.length) issues.push('정리 검토 후보 <strong>'+cls.review.length+'종</strong>');
+    set('sum-issue-body', issues.length ? issues.join(' · ') : '특이 사항 없음');
+
+    // 성장 상품
+    if (growers.length) {
+      set('sum-grow-body', growers.slice(0,3).map(function(r){return '<strong>'+r.cat+'</strong> '+yoyColored(r.yoy);}).join('<br>'));
+    } else {
+      set('sum-grow-body', '<span class="empty">YoY +20% 이상 카테고리 없음</span>');
+    }
+
+    // 하락 상품
+    if (droppers.length) {
+      set('sum-drop-body', droppers.slice(0,3).map(function(r){return '<strong>'+r.cat+'</strong> '+yoyColored(r.yoy);}).join('<br>'));
+    } else {
+      set('sum-drop-body', '<span class="empty">YoY −20% 이하 카테고리 없음</span>');
+    }
+
+    // 저성과 상품
+    if (cls.review.length) {
+      var seen = {};
+      var uniq = cls.review.filter(function(r){if(seen[r.cat])return false; seen[r.cat]=true; return true;});
+      set('sum-low-body', uniq.slice(0,3).map(function(r){return '<strong>'+r.cat+'</strong> · RN '+fmtN(r.rn)+'실 · ADR '+fmtN(r.adr)+'천원';}).join('<br>'));
+    } else {
+      set('sum-low-body', '<span class="empty">저성과 카테고리 없음</span>');
+    }
+
+    // 즉시 확인 필요
+    var actions = [];
+    if (droppers.length) actions.push('하락 카테고리 <strong>'+droppers[0].cat+'</strong> 원인 분석');
+    if (cls.review.length) actions.push('정리 검토 카테고리 코드 통합·중단 여부 검토');
+    if (cls.volume.length) actions.push('볼륨 상품 단가 방어 조건 점검');
+    if (!actions.length) actions.push('현 시점 즉시 액션 사항 없음');
+    set('sum-action-body', actions.join('<br>'));
   }
 
   function buildRegionChips() {
@@ -749,31 +1138,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 
   (function(){var h=location.href,m={otb:'otb.html',channel:'channel.html',ytd:'ytd.html',monthly:'monthly.html','stay-date':'stay-date.html','booking-trend':'booking-trend.html','ly-trend':'ly-trend.html','product-detail':'product-detail.html','ly-product':'ly-product.html',fcst:'fcst-admin.html',overseas:'overseas.html'};for(var k in m){if(h.includes(m[k])){document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(e){e.classList.remove('active');});var n=document.querySelector('.gsn-item[data-gsn="'+k+'"]');if(n)n.classList.add('active');break;}}})();
 
-  fetch('data/db_aggregated.json?t=' + Date.now())
-    .then(function(r){return r.json();})
-    .then(function(d){
-      // db_aggregated.json의 product_detail 섹션 사용
-      if (d.product_detail) {
-        pkg = d.product_detail;
-        // CAT_ORDER를 실제 카테고리 목록으로 갱신 (데이터에 있는 것만)
-        if (pkg.meta && pkg.meta.categories) {
-          var dataCategories = pkg.meta.categories;
-          // CAT_ORDER에 없는 카테고리 추가
-          dataCategories.forEach(function(c) {
-            if (CAT_ORDER.indexOf(c) < 0) CAT_ORDER.push(c);
-          });
-        }
-      } else {
-        pkg = d;
-      }
-      buildFilters(); render();
-    })
-    .catch(function(e){ console.error(e); el('cat-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--negative);">데이터 로드 실패</td></tr>'; });
-  // ── 전년 비교 (ly-product) 섹션 렌더링 ──
-  var lypChart = null, lypShowAll = false, LYP_ROWS = 20;
-  function lypSet(id,v){var e=document.getElementById(id);if(!e)return;var u=e.querySelector('.unit');if(u){e.childNodes.forEach(function(n){if(n!==u)n.remove();});e.insertBefore(document.createTextNode(v),u);}else{e.innerHTML=v;}}
-
-  // 카테고리별 합산 유틸
+  // 카테고리별 합산 유틸 (호환용)
   function aggByCategory(arr) {
     var m = {};
     (arr||[]).forEach(function(x) {
@@ -789,109 +1154,24 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     return out;
   }
 
-  function getCategoryRanking(year) {
-    if (catMonthFilter !== 'ALL') {
-      var result = [];
-      CAT_ORDER.forEach(function(cat) {
-        if (!pkg.by_category[cat]) return;
-        var s = sumCat(cat, year);
-        if (s.rn > 0) result.push({name: cat, category: cat, rn: s.rn, rev: s.rev_m, rev_won: s.rev_m * 1000000, adr: s.adr});
-      });
-      // 기타 포함
-      Object.keys(pkg.by_category).forEach(function(cat) {
-        if (CAT_ORDER.indexOf(cat) >= 0) return;
-        var s = sumCat(cat, year);
-        if (s.rn > 0) result.push({name: cat, category: cat, rn: s.rn, rev: s.rev_m, rev_won: s.rev_m * 1000000, adr: s.adr});
-      });
-      result.sort(function(a,b){ return b.rn - a.rn; });
-      return result;
+  // 데이터 로딩: db_aggregated.json + package_series_trend.json 병렬 fetch
+  Promise.all([
+    fetch('data/db_aggregated.json?t=' + Date.now()).then(function(r){return r.json();}),
+    fetch('data/package_series_trend.json?t=' + Date.now()).then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(arr) {
+    var d = arr[0], s = arr[1];
+    if (d.product_detail) {
+      pkg = d.product_detail;
+    } else {
+      pkg = d;
     }
-    return aggByCategory(pkg.by_year_ranking[year]||[]);
-  }
-
-  function renderLyp() {
-    if (!pkg) return;
-    var cy = selYear, ly = String(parseInt(cy)-1);
-    var cyData = getCategoryRanking(cy);
-    var lyData = getCategoryRanking(ly);
-    var cyTotal = cyData.reduce(function(s,d){return s+(d.rn||0);},0);
-    var lyTotal = lyData.reduce(function(s,d){return s+(d.rn||0);},0);
-    var yoy = lyTotal>0?((cyTotal-lyTotal)/lyTotal*100):null;
-
-    var lyRankMap = {};
-    lyData.forEach(function(d,i){lyRankMap[d.name]={rank:i+1,rn:d.rn||0,rev:d.rev||0};});
-    var common = cyData.filter(function(d){return lyRankMap[d.name];}).length;
-
-    var monthSuffix = catMonthFilter === 'ALL' ? '' : ' '+parseInt(catMonthFilter)+'월';
-    lypSet('lyp-kpi-cy-label', cy+'년'+monthSuffix+' RNS');
-    lypSet('lyp-kpi-cy-rns', fmtN(cyTotal));
-    lypSet('lyp-kpi-cy-sub', cy+'년'+monthSuffix+' · '+cyData.length+'개 카테고리');
-    lypSet('lyp-kpi-ly-label', ly+'년'+monthSuffix+' RNS');
-    lypSet('lyp-kpi-ly-rns', fmtN(lyTotal));
-    lypSet('lyp-kpi-ly-sub', ly+'년 · '+lyData.length+'개 카테고리');
-    lypSet('lyp-kpi-yoy', yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1));
-    var yoyEl = document.getElementById('lyp-kpi-yoy');
-    if(yoyEl) yoyEl.style.color = yoy==null?'':(yoy>=0?'var(--positive)':'var(--negative)');
-    lypSet('lyp-kpi-common', String(common));
-    lypSet('lyp-legend-cy', cy+'년');
-    lypSet('lyp-legend-ly', ly+'년');
-    lypSet('lyp-chart-title', '카테고리별 RNS — '+cy+'년 vs '+ly+'년 (Top 15)');
-    lypSet('lyp-table-label', cy+'년 기준 '+cyData.length+'개');
-    lypSet('lyp-th-cy-rns', cy+'년 RNS');
-    lypSet('lyp-th-cy-rev', cy+'년 매출(억)');
-    lypSet('lyp-th-ly-rns', ly+'년 RNS');
-
-    // Chart
-    var top15 = cyData.slice(0,15);
-    var labels = top15.map(function(d){return d.category.length>18?d.category.slice(0,17)+'…':d.category;});
-    var cyRns = top15.map(function(d){return d.rn||0;});
-    var lyRns = top15.map(function(d){return lyRankMap[d.name]?lyRankMap[d.name].rn:0;});
-
-    if(lypChart) lypChart.destroy();
-    var ctx = document.getElementById('lyp-chart');
-    if(ctx) {
-      lypChart = new Chart(ctx, {
-        type:'bar', data:{labels:labels, datasets:[
-          {label:cy+'년',data:cyRns,backgroundColor:'#e6b970bb',borderColor:'#e6b970',borderWidth:1,borderRadius:3},
-          {label:ly+'년',data:lyRns,backgroundColor:'#5a9fc466',borderColor:'#5a9fc4',borderWidth:1,borderRadius:3}
-        ]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1d23',borderColor:'rgba(255,255,255,0.15)',borderWidth:1,titleColor:'#e6b970',bodyColor:'#e0e0e3',padding:10,
-            callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x.toLocaleString('ko-KR')+'실';}}}},
-          scales:{
-            x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},callback:function(v){return v.toLocaleString('ko-KR');}},border:{display:false}},
-            y:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.5)',font:{size:9}},border:{color:'rgba(255,255,255,0.1)'}}
-          }
-        }
-      });
-    }
-
-    // Table
-    var cnt = lypShowAll?cyData.length:Math.min(LYP_ROWS,cyData.length);
-    var rows = '';
-    for(var i=0;i<cnt;i++){
-      var d=cyData[i], lyInfo=lyRankMap[d.name], lyRn=lyInfo?lyInfo.rn:null;
-      var yoyV=lyRn!=null&&lyRn>0?((d.rn-lyRn)/lyRn*100):null;
-      var rc='';
-      if(!lyInfo){rc='<span style="color:var(--positive);font-weight:700;">NEW</span>';}
-      else{var diff=lyInfo.rank-(i+1);if(diff>0)rc='<span style="color:var(--positive);">▲'+diff+'</span>';else if(diff<0)rc='<span style="color:var(--negative);">▼'+Math.abs(diff)+'</span>';else rc='<span style="color:var(--ink-faint);">—</span>';}
-      var cls=i===0?'gold':i===1?'silver':i===2?'bronze':'';
-      rows+='<tr><td><span class="rank-num '+cls+'">'+(i+1)+'</span>'+d.category+'</td><td>'+(i+1)+'</td>'+
-        '<td class="border-left-group">'+fmtN(d.rn)+'</td><td>'+fmtR(d.rev/100)+'</td>'+
-        '<td class="border-left-group">'+(lyRn!=null?fmtN(lyRn):'<span style="color:var(--ink-faint)">—</span>')+'</td>'+
-        '<td>'+(yoyV==null?'—':'<span style="color:'+(yoyV>=0?'var(--positive)':'var(--negative)')+';">'+(yoyV>=0?'+':'')+yoyV.toFixed(1)+'%</span>')+'</td>'+
-        '<td class="border-left-group">'+rc+'</td></tr>';
-    }
-    if(cyData.length>LYP_ROWS){
-      rows+='<tr><td colspan="7" style="text-align:center;padding:10px;"><button onclick="window._lypToggle()" style="font-family:var(--mono);font-size:12px;padding:5px 18px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink-muted);cursor:pointer;">'+(lypShowAll?'접기':'더보기 ('+(cyData.length-LYP_ROWS)+'개)')+'</button></td></tr>';
-    }
-    document.getElementById('lyp-tbody').innerHTML = rows;
-  }
-  window._lypToggle = function(){lypShowAll=!lypShowAll;renderLyp();};
-
-  // 기존 render에 renderLyp 연결
-  var _origRender = render;
-  render = function(){ _origRender(); renderLyp(); };
+    series = s;
+    buildFilters();
+    render();
+  }).catch(function(e) {
+    console.error(e);
+    el('cat-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--negative);">데이터 로드 실패</td></tr>';
+  });
 })();
 </script>
 
