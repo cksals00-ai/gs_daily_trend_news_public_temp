@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>주간회의자료 · SONO GS팀</title>
+<meta name="theme-color" content="#1a1d23">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a1d23' width='192' height='192'/><circle cx='96' cy='96' r='85' fill='%23252932'/><text x='96' y='100' font-size='96' font-weight='700' fill='%23c9a063' text-anchor='middle' font-family='sans-serif'>GS</text></svg>">
+<style>
+:root {
+  --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
+  --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+  --gold:#c9a063;--gold-bright:#e6b970;
+  --positive:#4caf6f;--positive-bg:#1f3a28;
+  --warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;
+  --info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
+  --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --sidebar-w:220px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
+
+/* MASTHEAD */
+.masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
+.masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.logo-wrap{display:flex;align-items:baseline;gap:0;flex-wrap:nowrap;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;text-decoration:none;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
+.page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--gold-bright);letter-spacing:0.05em;}
+
+/* SIDEBAR */
+.app-shell{display:flex;min-height:calc(100vh - 52px);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.sidebar-divider{height:1px;background:var(--rule);}
+.filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:8px;}
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
+.otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
+.refresh-info{margin-top:auto;padding-top:12px;}
+.refresh-label{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--ink-faint);}
+.refresh-time{font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-top:2px;}
+
+/* MAIN */
+.main-content{flex:1;min-width:0;padding:24px 28px 60px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.page-title{font-size:20px;font-weight:700;color:var(--ink);}
+.page-title .sub{font-size:11px;font-weight:400;color:var(--ink-faint);margin-left:10px;}
+.base-date-tag{font-family:var(--mono);font-size:11px;color:var(--ink-muted);background:var(--bg-card);padding:4px 10px;border-radius:4px;}
+
+/* WEEK SLICER */
+.week-slicer{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.week-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--rule-strong);background:var(--bg-card);color:var(--ink-muted);transition:all 0.2s;white-space:nowrap;}
+.week-chip:hover{background:var(--bg-hover);color:var(--ink);}
+.week-chip.active{background:rgba(201,160,99,0.22);border-color:var(--gold);color:var(--gold-bright);}
+.week-slicer-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--ink-faint);margin-right:4px;}
+
+/* SECTION */
+.section-card{background:var(--bg-card);border-radius:10px;padding:20px;margin-bottom:20px;border:1px solid var(--rule);}
+.section-title{font-size:14px;font-weight:700;color:var(--gold-bright);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title .num{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.section-subtitle{font-size:12px;color:var(--ink-muted);margin-bottom:12px;}
+
+/* TABLE */
+.perf-table{width:100%;border-collapse:collapse;font-size:12px;}
+.perf-table th{background:var(--bg-deep);color:var(--ink-muted);font-weight:600;padding:7px 8px;text-align:center;border:1px solid var(--rule-strong);font-size:11px;white-space:nowrap;position:sticky;top:0;}
+.perf-table td{padding:6px 8px;text-align:right;border:1px solid var(--rule);font-family:var(--mono);font-size:11px;white-space:nowrap;}
+.perf-table td.label-cell{text-align:left;font-family:var(--sans);font-weight:600;color:var(--ink-soft);background:rgba(37,41,50,0.6);}
+.perf-table td.sub-label{text-align:left;font-family:var(--sans);font-weight:400;color:var(--ink-muted);padding-left:20px;}
+.perf-table tr.total-row td{background:rgba(201,160,99,0.12);font-weight:700;color:var(--gold-bright);border-top:2px solid var(--gold);}
+.perf-table tr.segment-row td{background:rgba(90,159,196,0.08);font-weight:600;}
+.perf-table tr.segment-row td.label-cell{color:var(--info);}
+.perf-table th.month-header{background:rgba(201,160,99,0.15);color:var(--gold-bright);font-size:12px;font-weight:700;}
+.perf-table th.sub-header{font-size:10px;color:var(--ink-faint);}
+.val-pos{color:var(--positive);}
+.val-neg{color:var(--negative);}
+.val-warn{color:var(--warning);}
+
+/* CHARTS */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;margin-bottom:20px;}
+.chart-box{background:var(--bg-card);border-radius:10px;padding:16px;border:1px solid var(--rule);}
+.chart-box-title{font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:10px;}
+.chart-wrap{position:relative;height:260px;}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--bg-card);border-radius:8px;padding:14px 16px;border:1px solid var(--rule);}
+.kpi-label{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--ink-faint);margin-bottom:4px;}
+.kpi-value{font-size:22px;font-weight:800;color:var(--ink);font-family:var(--mono);}
+.kpi-sub{font-size:11px;color:var(--ink-muted);margin-top:2px;}
+
+/* RESPONSIVE */
+@media(max-width:860px){
+  :root{--sidebar-w:0px;}
+  .sidebar{display:none;}
+  .main-content{padding:16px;}
+  .chart-grid{grid-template-columns:1fr;}
+  .kpi-strip{grid-template-columns:repeat(2,1fr);}
+  .page-title .sub{display:block;margin-left:0;margin-top:4px;}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo-wrap">
+      <a href="gs-map.html" class="logo-mark">SONO · GS</a>
+      <span class="team-tag">WEEKLY MEETING</span>
+    </div>
+    <div class="page-badge">📋 주간회의자료</div>
+  </div>
+</header>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div>
+      <div class="filter-section-label">GS 실적 리포트</div>
+      <div class="otb-nav">
+        <a href="otb.html" class="otb-nav-link">당일현황</a>
+        <a href="weekly-compare.html" class="otb-nav-link">금주비교</a>
+        <a href="channel.html" class="otb-nav-link">채널별</a>
+        <a href="stay-date.html" class="otb-nav-link">투숙일기준</a>
+        <a href="booking-trend.html" class="otb-nav-link">예약추이</a>
+        <a href="product-detail.html" class="otb-nav-link">상품상세</a>
+        <a href="booking-status.html" class="otb-nav-link">Booking Status</a>
+        <a href="manager-analysis.html" class="otb-nav-link">담당자 분석</a>
+        <a href="property-report.html" class="otb-nav-link">사업장별 리포트</a>
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">주간회의</div>
+      <div class="otb-nav">
+        <a href="gs-weekly.html" class="otb-nav-link active">국내 영업 실적</a>
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">기타 리포트</div>
+      <div class="otb-nav">
+        <a href="gs-sales-report.html" class="otb-nav-link">영업활동 보고</a>
+        <a href="gs-strategy.html" class="otb-nav-link">전략 리포트</a>
+        <a href="gs-closing-report.html" class="otb-nav-link">마감 보고</a>
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="refresh-info">
+      <div class="refresh-label">DATA UPDATED</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">
+        III. [GS] 주간 업무 보고
+        <span class="sub">1. GS 실적 현황 — 국내 영업 · 단위: 객실수(RN)</span>
+      </div>
+      <div class="base-date-tag">기준 <strong id="base-date-display">—</strong></div>
+    </div>
+
+    <!-- Week Slicer -->
+    <div class="week-slicer">
+      <span class="week-slicer-label">WEEK</span>
+      <div id="week-chips"></div>
+    </div>
+
+    <!-- KPI Summary -->
+    <div class="kpi-strip" id="kpi-strip"></div>
+
+    <!-- 당월 실적 테이블 -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">01</span> 당월 예상실적 <span id="current-month-label" style="font-weight:400;font-size:12px;color:var(--ink-muted);"></span></div>
+      <div style="overflow-x:auto;">
+        <table class="perf-table" id="current-month-table"></table>
+      </div>
+    </div>
+
+    <!-- 익월 OTB 테이블 -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">02</span> 익월 OTB 현황 <span id="next-month-label" style="font-weight:400;font-size:12px;color:var(--ink-muted);"></span></div>
+      <div style="overflow-x:auto;">
+        <table class="perf-table" id="next-month-table"></table>
+      </div>
+    </div>
+
+    <!-- 누계 실적 테이블 -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">03</span> 누계 실적 <span id="ytd-label" style="font-weight:400;font-size:12px;color:var(--ink-muted);"></span></div>
+      <div style="overflow-x:auto;">
+        <table class="perf-table" id="ytd-table"></table>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">04</span> 시각화</div>
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-box-title">세그먼트별 당월 달성률</div>
+          <div class="chart-wrap"><canvas id="chart-ach"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">세그먼트별 OTB vs 목표 vs 전년</div>
+          <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">채널별 OTB 구성비</div>
+          <div class="chart-wrap"><canvas id="chart-channel-pie"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">전년 대비 증감률 (YoY)</div>
+          <div class="chart-wrap"><canvas id="chart-yoy"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Trend Chart -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">05</span> 당월 일별 추이 (투숙일 기준)</div>
+      <div class="chart-grid" style="grid-template-columns:1fr;">
+        <div class="chart-box">
+          <div class="chart-box-title">세그먼트별 일별 OTB 추이</div>
+          <div class="chart-wrap" style="height:300px;"><canvas id="chart-daily"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ===== DATA LOADING =====
+let OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED;
+const DATA_BASE = './data/';
+
+async function loadJSON(url) {
+  const r = await fetch(DATA_BASE + url);
+  return r.json();
+}
+
+async function init() {
+  try {
+    [OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED] = await Promise.all([
+      loadJSON('otb_data.json'),
+      loadJSON('db_aggregated.json'),
+      loadJSON('inbound_kpi.json'),
+      loadJSON('inbound_enriched.json')
+    ]);
+    document.getElementById('sidebar-refresh').textContent = OTB_DATA.meta?.refreshTime || '—';
+    document.getElementById('base-date-display').textContent = OTB_DATA.meta?.baseDate || '—';
+    buildWeekSlicer();
+    renderAll('all');
+  } catch(e) {
+    console.error('Data load error:', e);
+    document.querySelector('.main-content').innerHTML = '<div style="padding:40px;color:var(--negative);">데이터 로드 실패: ' + e.message + '</div>';
+  }
+}
+
+// ===== WEEK SLICER =====
+function getWeeksOfMonth(year, month) {
+  const weeks = [];
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  let wStart = new Date(firstDay);
+  // Align to Monday
+  const dow = wStart.getDay();
+  if (dow !== 1) {
+    // Go back to previous Monday or start from 1st
+  }
+  let weekNum = 1;
+  let d = new Date(firstDay);
+  while (d <= lastDay) {
+    let wEnd = new Date(d);
+    // Find end of week (Sunday) or end of month
+    while (wEnd.getDay() !== 0 && wEnd < lastDay) {
+      wEnd.setDate(wEnd.getDate() + 1);
+    }
+    if (wEnd > lastDay) wEnd = new Date(lastDay);
+    weeks.push({
+      label: `W${weekNum}`,
+      desc: `${d.getMonth()+1}/${d.getDate()}~${wEnd.getMonth()+1}/${wEnd.getDate()}`,
+      startDay: d.getDate(),
+      endDay: wEnd.getDate()
+    });
+    weekNum++;
+    d = new Date(wEnd);
+    d.setDate(d.getDate() + 1);
+  }
+  return weeks;
+}
+
+function buildWeekSlicer() {
+  const container = document.getElementById('week-chips');
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const weeks = getWeeksOfMonth(year, month);
+
+  let html = `<div class="week-chip active" data-week="all" onclick="selectWeek('all')">전체 (${month}월)</div>`;
+  weeks.forEach(w => {
+    html += `<div class="week-chip" data-week="${w.startDay}-${w.endDay}" onclick="selectWeek('${w.startDay}-${w.endDay}')">${w.label} <span style="font-size:10px;opacity:0.7;">${w.desc}</span></div>`;
+  });
+  container.innerHTML = html;
+}
+
+window.selectWeek = function(weekKey) {
+  document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.week-chip[data-week="${weekKey}"]`).classList.add('active');
+  renderAll(weekKey);
+};
+
+// ===== DATA PROCESSING =====
+const OTA_CHANNELS = ['야놀자', '여기어때', '쿠팡'];
+const GOTA_CHANNELS = ['아고다', '트립닷컴', '스마트인피니', '익스피디아'];
+const IB_NATS = ['홍콩', '대만', '싱가포르'];
+const NAT_MAP = {'싱가풀':'싱가포르'};
+
+function getChannelOTB(channelName, monthKey) {
+  return DB_DATA.by_channel?.[channelName]?.[monthKey]?.net_rn || 0;
+}
+
+function getSegmentOTB(segName, monthKey) {
+  return DB_DATA.by_segment?.[segName]?.[monthKey]?.net_rn || 0;
+}
+
+function getSegmentBudget(monthNum, segName) {
+  return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_budget || 0;
+}
+
+function getSegmentFcst(monthNum, segName) {
+  return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_fcst || 0;
+}
+
+function getSegmentLast(monthNum, segName) {
+  return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_last || 0;
+}
+
+function getInboundByNat(monthKey) {
+  const rmd = IB_ENRICHED.recent_member_detail?.[monthKey] || [];
+  const groups = {};
+  IB_NATS.forEach(n => groups[n] = 0);
+  groups['기타'] = 0;
+  rmd.forEach(item => {
+    let nat = item.nationality || '기타';
+    nat = NAT_MAP[nat] || nat;
+    if (IB_NATS.includes(nat)) groups[nat] += (item.rn_net || 0);
+    else groups['기타'] += (item.rn_net || 0);
+  });
+  return groups;
+}
+
+function getInboundBudgetByNat(monthIdx) {
+  const grid = IB_KPI.grid || [];
+  const natBudMap = {'홍콩':'홍콩','대만':'대만','싱가포르':'싱가포르'};
+  const groups = {};
+  IB_NATS.forEach(n => groups[n] = 0);
+  groups['기타'] = 0;
+  grid.forEach(item => {
+    const c = item.country || '';
+    const mapped = natBudMap[c] || '기타';
+    const b = item.budget?.monthly || [];
+    if (b.length > monthIdx) {
+      groups[mapped] = (groups[mapped] || 0) + Math.round(b[monthIdx]);
+    }
+  });
+  return groups;
+}
+
+function getDailySegmentData(yearMonth, segName) {
+  return OTB_DATA.stayDateDaily?.[yearMonth]?.segments?.[segName]?.net_rn || [];
+}
+
+function filterDailyByWeek(dailyArr, weekKey) {
+  if (weekKey === 'all') return dailyArr;
+  const [s, e] = weekKey.split('-').map(Number);
+  return dailyArr.slice(s - 1, e); // days are 1-indexed
+}
+
+function sumArr(arr) { return arr.reduce((a,b) => a + (b||0), 0); }
+function pct(a, b) { return b ? ((a / b) * 100) : 0; }
+function fmtN(n) { return n == null ? '—' : n.toLocaleString('ko-KR'); }
+function fmtP(n) { return n == null ? '—' : n.toFixed(1) + '%'; }
+function diffSign(n) { return n > 0 ? '+' + fmtN(n) : fmtN(n); }
+function colorClass(val, reverse) {
+  if (val > 0) return reverse ? 'val-neg' : 'val-pos';
+  if (val < 0) return reverse ? 'val-pos' : 'val-neg';
+  return '';
+}
+
+// ===== BUILD TABLE =====
+function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegRow) {
+  const diff_bud = otb - budget;
+  const ach = pct(otb, budget);
+  const diff_ly = otb - lastYear;
+  const yoy = pct(diff_ly, lastYear);
+
+  const cls = isTotalRow ? ' class="total-row"' : (isSegRow ? ' class="segment-row"' : '');
+  const labelCls = isSubRow ? 'sub-label' : 'label-cell';
+
+  return `<tr${cls}>
+    <td class="${labelCls}">${label}</td>
+    <td>${fmtN(budget)}</td>
+    <td>${fmtN(otb)}</td>
+    <td class="${colorClass(diff_bud)}">${diffSign(diff_bud)}</td>
+    <td class="${ach >= 100 ? 'val-pos' : ach >= 80 ? 'val-warn' : 'val-neg'}">${fmtP(ach)}</td>
+    <td>${fmtN(lastYear)}</td>
+    <td class="${colorClass(diff_ly)}">${diffSign(diff_ly)}</td>
+    <td class="${colorClass(yoy)}">${fmtP(yoy)}</td>
+  </tr>`;
+}
+
+function buildMonthTable(tableId, monthNum, yearMonth, lastYearMonth, weekKey) {
+  const table = document.getElementById(tableId);
+  const daily = {
+    'OTA': getDailySegmentData(yearMonth, 'OTA'),
+    'G-OTA': getDailySegmentData(yearMonth, 'G-OTA'),
+    'Inbound': getDailySegmentData(yearMonth, 'Inbound'),
+  };
+
+  // Get filtered data
+  const useWeek = weekKey !== 'all';
+
+  // Budgets (monthly level - no weekly breakdown for budget, so show monthly)
+  const budgets = {
+    'OTA': getSegmentBudget(monthNum, 'OTA'),
+    'G-OTA': getSegmentBudget(monthNum, 'G-OTA'),
+    'Inbound': getSegmentBudget(monthNum, 'Inbound'),
+  };
+
+  // OTB data
+  let otbData;
+  if (useWeek) {
+    otbData = {
+      'OTA': sumArr(filterDailyByWeek(daily['OTA'], weekKey)),
+      'G-OTA': sumArr(filterDailyByWeek(daily['G-OTA'], weekKey)),
+      'Inbound': sumArr(filterDailyByWeek(daily['Inbound'], weekKey)),
+    };
+  } else {
+    otbData = {
+      'OTA': getSegmentOTB('OTA', yearMonth),
+      'G-OTA': getSegmentOTB('G-OTA', yearMonth),
+      'Inbound': getSegmentOTB('Inbound', yearMonth),
+    };
+  }
+
+  // Last year
+  const lastData = {
+    'OTA': useWeek ? 0 : getSegmentOTB('OTA', lastYearMonth),
+    'G-OTA': useWeek ? 0 : getSegmentOTB('G-OTA', lastYearMonth),
+    'Inbound': useWeek ? 0 : getSegmentOTB('Inbound', lastYearMonth),
+  };
+  // If weekly, try to get daily data from last year
+  if (useWeek) {
+    const lyDaily = {
+      'OTA': getDailySegmentData(lastYearMonth, 'OTA'),
+      'G-OTA': getDailySegmentData(lastYearMonth, 'G-OTA'),
+      'Inbound': getDailySegmentData(lastYearMonth, 'Inbound'),
+    };
+    lastData['OTA'] = sumArr(filterDailyByWeek(lyDaily['OTA'], weekKey));
+    lastData['G-OTA'] = sumArr(filterDailyByWeek(lyDaily['G-OTA'], weekKey));
+    lastData['Inbound'] = sumArr(filterDailyByWeek(lyDaily['Inbound'], weekKey));
+  }
+
+  // Channel-level OTB
+  const chOTB = {};
+  OTA_CHANNELS.forEach(ch => {
+    chOTB[ch] = getChannelOTB(ch, yearMonth);
+  });
+  chOTB['OTA_기타'] = otbData['OTA'] - OTA_CHANNELS.reduce((s,c) => s + (useWeek ? 0 : getChannelOTB(c, yearMonth)), 0);
+
+  GOTA_CHANNELS.forEach(ch => {
+    chOTB[ch] = getChannelOTB(ch, yearMonth);
+  });
+  chOTB['GOTA_기타'] = otbData['G-OTA'] - GOTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, yearMonth), 0);
+
+  // Channel last year
+  const chLast = {};
+  OTA_CHANNELS.forEach(ch => { chLast[ch] = getChannelOTB(ch, lastYearMonth); });
+  chLast['OTA_기타'] = lastData['OTA'] - OTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, lastYearMonth), 0);
+  GOTA_CHANNELS.forEach(ch => { chLast[ch] = getChannelOTB(ch, lastYearMonth); });
+  chLast['GOTA_기타'] = lastData['G-OTA'] - GOTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, lastYearMonth), 0);
+
+  // Inbound by nationality
+  const ibNatOTB = getInboundByNat(yearMonth);
+  const ibNatLast = getInboundByNat(lastYearMonth);
+  const ibNatBudget = getInboundBudgetByNat(monthNum - 1);
+
+  // Recalculate OTA_기타 for weekly (approximate)
+  if (useWeek) {
+    // For weekly, channel detail uses monthly data (we don't have daily channel data)
+    chOTB['OTA_기타'] = Math.max(0, otbData['OTA'] - chOTB['야놀자'] - chOTB['여기어때'] - chOTB['쿠팡']);
+    chOTB['GOTA_기타'] = Math.max(0, otbData['G-OTA'] - chOTB['아고다'] - chOTB['트립닷컴'] - chOTB['스마트인피니'] - chOTB['익스피디아']);
+  }
+
+  // Total
+  const totalBudget = budgets['OTA'] + budgets['G-OTA'] + budgets['Inbound'];
+  const totalOTB = otbData['OTA'] + otbData['G-OTA'] + otbData['Inbound'];
+  const totalLast = lastData['OTA'] + lastData['G-OTA'] + lastData['Inbound'];
+
+  let html = `<thead>
+    <tr>
+      <th rowspan="2" style="min-width:120px;">구분</th>
+      <th colspan="4" class="month-header">${monthNum}월 실적</th>
+      <th colspan="3" class="month-header">전년 비교</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th>
+      <th class="sub-header">OTB</th>
+      <th class="sub-header">증감</th>
+      <th class="sub-header">달성률</th>
+      <th class="sub-header">전년</th>
+      <th class="sub-header">증감</th>
+      <th class="sub-header">증감률</th>
+    </tr>
+  </thead><tbody>`;
+
+  // Total row
+  html += buildPerfRow('합계', totalBudget, totalOTB, totalLast, false, true, false);
+
+  // OTA section
+  html += buildPerfRow('OTA', budgets['OTA'], otbData['OTA'], lastData['OTA'], false, false, true);
+  OTA_CHANNELS.forEach(ch => {
+    html += buildPerfRow(ch, 0, chOTB[ch], chLast[ch], true, false, false);
+  });
+  html += buildPerfRow('기타', 0, chOTB['OTA_기타'], chLast['OTA_기타'], true, false, false);
+
+  // G-OTA section
+  html += buildPerfRow('G-OTA', budgets['G-OTA'], otbData['G-OTA'], lastData['G-OTA'], false, false, true);
+  GOTA_CHANNELS.forEach(ch => {
+    html += buildPerfRow(ch, 0, chOTB[ch], chLast[ch], true, false, false);
+  });
+  html += buildPerfRow('기타', 0, chOTB['GOTA_기타'], chLast['GOTA_기타'], true, false, false);
+
+  // Inbound section
+  html += buildPerfRow('Inbound', budgets['Inbound'], otbData['Inbound'], lastData['Inbound'], false, false, true);
+  IB_NATS.forEach(nat => {
+    html += buildPerfRow(nat, ibNatBudget[nat] || 0, ibNatOTB[nat] || 0, ibNatLast[nat] || 0, true, false, false);
+  });
+  html += buildPerfRow('기타', ibNatBudget['기타'] || 0, ibNatOTB['기타'] || 0, ibNatLast['기타'] || 0, true, false, false);
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function buildYTDTable(weekKey) {
+  const table = document.getElementById('ytd-table');
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  let html = `<thead>
+    <tr>
+      <th rowspan="2" style="min-width:120px;">구분</th>
+      <th colspan="4" class="month-header">누계 (1~${curMonth}월)</th>
+      <th colspan="3" class="month-header">전년 동기 비교</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th>
+      <th class="sub-header">실적</th>
+      <th class="sub-header">증감</th>
+      <th class="sub-header">달성률</th>
+      <th class="sub-header">전년</th>
+      <th class="sub-header">증감</th>
+      <th class="sub-header">증감률</th>
+    </tr>
+  </thead><tbody>`;
+
+  // Accumulate YTD
+  const segs = ['OTA', 'G-OTA', 'Inbound'];
+  const ytdBudget = {}, ytdActual = {}, ytdLast = {};
+  segs.forEach(seg => { ytdBudget[seg] = 0; ytdActual[seg] = 0; ytdLast[seg] = 0; });
+
+  for (let m = 1; m <= curMonth; m++) {
+    segs.forEach(seg => {
+      ytdBudget[seg] += getSegmentBudget(m, seg);
+      const ym = String(curYear) + String(m).padStart(2,'0');
+      const lym = String(curYear-1) + String(m).padStart(2,'0');
+      ytdActual[seg] += getSegmentOTB(seg, ym);
+      ytdLast[seg] += getSegmentOTB(seg, lym);
+    });
+  }
+
+  const totalB = segs.reduce((s,seg) => s + ytdBudget[seg], 0);
+  const totalA = segs.reduce((s,seg) => s + ytdActual[seg], 0);
+  const totalL = segs.reduce((s,seg) => s + ytdLast[seg], 0);
+
+  html += buildPerfRow('합계', totalB, totalA, totalL, false, true, false);
+
+  // Channel YTD
+  const chYTD = {}, chLastYTD = {};
+  [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => { chYTD[ch] = 0; chLastYTD[ch] = 0; });
+  for (let m = 1; m <= curMonth; m++) {
+    const ym = String(curYear) + String(m).padStart(2,'0');
+    const lym = String(curYear-1) + String(m).padStart(2,'0');
+    [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => {
+      chYTD[ch] += getChannelOTB(ch, ym);
+      chLastYTD[ch] += getChannelOTB(ch, lym);
+    });
+  }
+
+  const otaChSum = OTA_CHANNELS.reduce((s,c) => s + chYTD[c], 0);
+  const otaChLastSum = OTA_CHANNELS.reduce((s,c) => s + chLastYTD[c], 0);
+  const gotaChSum = GOTA_CHANNELS.reduce((s,c) => s + chYTD[c], 0);
+  const gotaChLastSum = GOTA_CHANNELS.reduce((s,c) => s + chLastYTD[c], 0);
+
+  // OTA
+  html += buildPerfRow('OTA', ytdBudget['OTA'], ytdActual['OTA'], ytdLast['OTA'], false, false, true);
+  OTA_CHANNELS.forEach(ch => {
+    html += buildPerfRow(ch, 0, chYTD[ch], chLastYTD[ch], true, false, false);
+  });
+  html += buildPerfRow('기타', 0, ytdActual['OTA'] - otaChSum, ytdLast['OTA'] - otaChLastSum, true, false, false);
+
+  // G-OTA
+  html += buildPerfRow('G-OTA', ytdBudget['G-OTA'], ytdActual['G-OTA'], ytdLast['G-OTA'], false, false, true);
+  GOTA_CHANNELS.forEach(ch => {
+    html += buildPerfRow(ch, 0, chYTD[ch], chLastYTD[ch], true, false, false);
+  });
+  html += buildPerfRow('기타', 0, ytdActual['G-OTA'] - gotaChSum, ytdLast['G-OTA'] - gotaChLastSum, true, false, false);
+
+  // Inbound
+  html += buildPerfRow('Inbound', ytdBudget['Inbound'], ytdActual['Inbound'], ytdLast['Inbound'], false, false, true);
+
+  // Inbound by nationality YTD
+  const ibNatYTD = {};
+  const ibNatLastYTD = {};
+  IB_NATS.forEach(n => { ibNatYTD[n] = 0; ibNatLastYTD[n] = 0; });
+  ibNatYTD['기타'] = 0; ibNatLastYTD['기타'] = 0;
+  for (let m = 1; m <= curMonth; m++) {
+    const ym = String(curYear) + String(m).padStart(2,'0');
+    const lym = String(curYear-1) + String(m).padStart(2,'0');
+    const natCur = getInboundByNat(ym);
+    const natLast = getInboundByNat(lym);
+    [...IB_NATS, '기타'].forEach(n => {
+      ibNatYTD[n] += (natCur[n] || 0);
+      ibNatLastYTD[n] += (natLast[n] || 0);
+    });
+  }
+
+  const ibBudgetYTD = {};
+  IB_NATS.forEach(n => { ibBudgetYTD[n] = 0; });
+  ibBudgetYTD['기타'] = 0;
+  for (let m = 0; m < curMonth; m++) {
+    const bud = getInboundBudgetByNat(m);
+    [...IB_NATS, '기타'].forEach(n => {
+      ibBudgetYTD[n] = (ibBudgetYTD[n] || 0) + (bud[n] || 0);
+    });
+  }
+
+  IB_NATS.forEach(nat => {
+    html += buildPerfRow(nat, ibBudgetYTD[nat] || 0, ibNatYTD[nat] || 0, ibNatLastYTD[nat] || 0, true, false, false);
+  });
+  html += buildPerfRow('기타', ibBudgetYTD['기타'] || 0, ibNatYTD['기타'] || 0, ibNatLastYTD['기타'] || 0, true, false, false);
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// ===== KPI CARDS =====
+function buildKPIs(monthNum, yearMonth) {
+  const strip = document.getElementById('kpi-strip');
+  const segs = ['OTA', 'G-OTA', 'Inbound'];
+
+  const totalBud = segs.reduce((s,seg) => s + getSegmentBudget(monthNum, seg), 0);
+  const totalOTB = segs.reduce((s,seg) => s + getSegmentOTB(seg, yearMonth), 0);
+  const totalFcst = segs.reduce((s,seg) => s + getSegmentFcst(monthNum, seg), 0);
+  const totalAch = pct(totalOTB, totalBud);
+
+  strip.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">${monthNum}월 목표</div>
+      <div class="kpi-value">${fmtN(totalBud)}</div>
+      <div class="kpi-sub">객실수</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">${monthNum}월 OTB</div>
+      <div class="kpi-value" style="color:${totalAch >= 100 ? 'var(--positive)' : totalAch >= 80 ? 'var(--warning)' : 'var(--negative)'}">${fmtN(totalOTB)}</div>
+      <div class="kpi-sub">달성률 ${fmtP(totalAch)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">${monthNum}월 예상실적</div>
+      <div class="kpi-value" style="color:var(--info);">${fmtN(totalFcst)}</div>
+      <div class="kpi-sub">예상 달성률 ${fmtP(pct(totalFcst, totalBud))}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">OTA 달성률</div>
+      <div class="kpi-value">${fmtP(pct(getSegmentOTB('OTA', yearMonth), getSegmentBudget(monthNum, 'OTA')))}</div>
+      <div class="kpi-sub">${fmtN(getSegmentOTB('OTA', yearMonth))} / ${fmtN(getSegmentBudget(monthNum, 'OTA'))}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">G-OTA 달성률</div>
+      <div class="kpi-value">${fmtP(pct(getSegmentOTB('G-OTA', yearMonth), getSegmentBudget(monthNum, 'G-OTA')))}</div>
+      <div class="kpi-sub">${fmtN(getSegmentOTB('G-OTA', yearMonth))} / ${fmtN(getSegmentBudget(monthNum, 'G-OTA'))}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Inbound 달성률</div>
+      <div class="kpi-value">${fmtP(pct(getSegmentOTB('Inbound', yearMonth), getSegmentBudget(monthNum, 'Inbound')))}</div>
+      <div class="kpi-sub">${fmtN(getSegmentOTB('Inbound', yearMonth))} / ${fmtN(getSegmentBudget(monthNum, 'Inbound'))}</div>
+    </div>
+  `;
+}
+
+// ===== CHARTS =====
+let charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+const CHART_COLORS = {
+  OTA: '#5a9fc4',
+  'G-OTA': '#c9a063',
+  Inbound: '#4caf6f',
+};
+
+function buildCharts(monthNum, yearMonth, lastYearMonth) {
+  const segs = ['OTA', 'G-OTA', 'Inbound'];
+
+  // 1. Achievement bar chart
+  destroyChart('ach');
+  const achData = segs.map(seg => pct(getSegmentOTB(seg, yearMonth), getSegmentBudget(monthNum, seg)));
+  charts['ach'] = new Chart(document.getElementById('chart-ach'), {
+    type: 'bar',
+    data: {
+      labels: segs,
+      datasets: [{
+        label: '달성률 (%)',
+        data: achData,
+        backgroundColor: segs.map(s => CHART_COLORS[s]),
+        borderRadius: 6,
+        barThickness: 50,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: {},
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: '#a8acb3', callback: v => v + '%' },
+        },
+        x: { ticks: { color: '#a8acb3' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // 2. Compare bar chart (OTB vs Budget vs LY)
+  destroyChart('compare');
+  charts['compare'] = new Chart(document.getElementById('chart-compare'), {
+    type: 'bar',
+    data: {
+      labels: segs,
+      datasets: [
+        { label: '목표', data: segs.map(s => getSegmentBudget(monthNum, s)), backgroundColor: 'rgba(168,172,179,0.4)', borderRadius: 4 },
+        { label: 'OTB', data: segs.map(s => getSegmentOTB(s, yearMonth)), backgroundColor: segs.map(s => CHART_COLORS[s]), borderRadius: 4 },
+        { label: '전년', data: segs.map(s => getSegmentOTB(s, lastYearMonth)), backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#a8acb3' } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#a8acb3', callback: v => (v/1000).toFixed(0) + 'k' } },
+        x: { ticks: { color: '#a8acb3' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // 3. Channel pie chart
+  destroyChart('pie');
+  const allChannels = [...OTA_CHANNELS, ...GOTA_CHANNELS];
+  const chValues = allChannels.map(ch => getChannelOTB(ch, yearMonth));
+  const otaEtc = getSegmentOTB('OTA', yearMonth) - OTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, yearMonth), 0);
+  const gotaEtc = getSegmentOTB('G-OTA', yearMonth) - GOTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, yearMonth), 0);
+  const ibTotal = getSegmentOTB('Inbound', yearMonth);
+
+  const pieLabels = [...allChannels, 'OTA 기타', 'G-OTA 기타', 'Inbound'];
+  const pieValues = [...chValues, otaEtc, gotaEtc, ibTotal];
+  const pieColors = ['#5a9fc4','#4a8fb4','#3a7fa4','#c9a063','#b99053','#a98043','#997033','rgba(90,159,196,0.4)','rgba(201,160,99,0.4)','#4caf6f'];
+
+  charts['pie'] = new Chart(document.getElementById('chart-channel-pie'), {
+    type: 'doughnut',
+    data: {
+      labels: pieLabels,
+      datasets: [{ data: pieValues, backgroundColor: pieColors, borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#a8acb3', font: { size: 11 }, padding: 8 } }
+      }
+    }
+  });
+
+  // 4. YoY bar chart
+  destroyChart('yoy');
+  const yoyData = segs.map(seg => {
+    const cur = getSegmentOTB(seg, yearMonth);
+    const last = getSegmentOTB(seg, lastYearMonth);
+    return last ? ((cur - last) / last * 100) : 0;
+  });
+  charts['yoy'] = new Chart(document.getElementById('chart-yoy'), {
+    type: 'bar',
+    data: {
+      labels: segs,
+      datasets: [{
+        label: 'YoY (%)',
+        data: yoyData,
+        backgroundColor: yoyData.map(v => v >= 0 ? 'rgba(76,175,111,0.7)' : 'rgba(229,115,115,0.7)'),
+        borderRadius: 6,
+        barThickness: 50,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#a8acb3', callback: v => v + '%' } },
+        x: { ticks: { color: '#a8acb3' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // 5. Daily trend line chart
+  destroyChart('daily');
+  const dailyOTA = getDailySegmentData(yearMonth, 'OTA');
+  const dailyGOTA = getDailySegmentData(yearMonth, 'G-OTA');
+  const dailyIB = getDailySegmentData(yearMonth, 'Inbound');
+  const days = OTB_DATA.stayDateDaily?.[yearMonth]?.days || [];
+
+  charts['daily'] = new Chart(document.getElementById('chart-daily'), {
+    type: 'line',
+    data: {
+      labels: days.map(d => d + '일'),
+      datasets: [
+        { label: 'OTA', data: dailyOTA, borderColor: CHART_COLORS['OTA'], backgroundColor: 'rgba(90,159,196,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'G-OTA', data: dailyGOTA, borderColor: CHART_COLORS['G-OTA'], backgroundColor: 'rgba(201,160,99,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Inbound', data: dailyIB, borderColor: CHART_COLORS['Inbound'], backgroundColor: 'rgba(76,175,111,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#a8acb3' } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#a8acb3' } },
+        x: { ticks: { color: '#a8acb3', maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ===== RENDER ALL =====
+function renderAll(weekKey) {
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+  const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
+  const nextYear = curMonth === 12 ? curYear + 1 : curYear;
+
+  const curYM = `${curYear}${String(curMonth).padStart(2,'0')}`;
+  const lastYM = `${curYear-1}${String(curMonth).padStart(2,'0')}`;
+  const nextYM = `${nextYear}${String(nextMonth).padStart(2,'0')}`;
+  const lastNextYM = `${nextYear-1}${String(nextMonth).padStart(2,'0')}`;
+
+  document.getElementById('current-month-label').textContent = `(${curYear}.${String(curMonth).padStart(2,'0')}.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
+  document.getElementById('next-month-label').textContent = `(${nextYear}.${String(nextMonth).padStart(2,'0')}.01 ~ ${nextYear}.${String(nextMonth).padStart(2,'0')}.${new Date(nextYear, nextMonth, 0).getDate()})`;
+  document.getElementById('ytd-label').textContent = `(${curYear}.01.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
+
+  // Build tables
+  buildMonthTable('current-month-table', curMonth, curYM, lastYM, weekKey);
+  buildMonthTable('next-month-table', nextMonth, nextYM, lastNextYM, 'all');
+  buildYTDTable(weekKey);
+
+  // KPIs
+  buildKPIs(curMonth, curYM);
+
+  // Charts
+  buildCharts(curMonth, curYM, lastYM);
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

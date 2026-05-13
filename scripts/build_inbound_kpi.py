@@ -47,7 +47,7 @@ except ImportError:
 
 # ─── 경로 설정 ───
 BASE = Path(__file__).resolve().parent.parent
-EXCEL = BASE / "data" / "Inbound" / "(인바운드)2026_도전목표KPI.xlsx"
+EXCEL = BASE / "data" / "Inbound" / "★★도전목표_2026_전략방안_1201.xlsx"
 OUT   = BASE / "docs" / "data" / "inbound_kpi.json"
 
 MONTH_COLS = list(range(10, 22))  # col index 10~21 (0-based) = 1월~12월
