@@ -2724,6 +2724,132 @@ def inject_package_data(html: str, pkg_data: dict) -> str:
     return new_html
 
 
+def _normalize_freshness_date(value) -> str:
+    """다양한 포맷의 날짜 문자열을 YYYY-MM-DD HH:MM 또는 YYYY-MM-DD로 정리."""
+    if not value:
+        return ""
+    s = str(value).strip()
+    # ISO with timezone: 2026-05-13T23:42:40.377436+09:00
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)} {m.group(4)}:{m.group(5)}"
+    # YYYY-MM-DD HH:MM (KST 등 꼬리 제거)
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)} {m.group(4)}:{m.group(5)}"
+    # YYYY-MM-DD
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    # YYYYMMDD
+    m = re.match(r"^(\d{4})(\d{2})(\d{2})$", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    return s
+
+
+def _file_mtime_kst(path: Path) -> str:
+    if not path.exists():
+        return ""
+    ts = path.stat().st_mtime
+    return datetime.fromtimestamp(ts, tz=KST).strftime("%Y-%m-%d %H:%M")
+
+
+def build_data_freshness(
+    news_data: dict,
+    agg_data: dict,
+    booking_data: dict,
+    otb_data: dict,
+    comp_data: dict,
+) -> dict:
+    """각 데이터 소스의 최신 기준일을 모은 dict 생성.
+
+    gs-report.html 상단 'Data 기준일' 패널에서 fetch.
+    """
+    sources = []
+
+    # 1) 뉴스 수집 — news_latest.json: collected_at (ISO+TZ)
+    news_ts = (news_data or {}).get("collected_at", "")
+    news_path = DATA_DIR / "news_latest.json"
+    sources.append({
+        "key": "news",
+        "label": "뉴스 수집",
+        "icon": "📰",
+        "value": _normalize_freshness_date(news_ts),
+        "fallback_mtime": _file_mtime_kst(news_path),
+        "note": f"{(news_data or {}).get('total_count', 0):,}건" if news_data else "",
+    })
+
+    # 2) OTB 집계 — db_aggregated.json: generated_at
+    #    data/ 원본이 없으면 docs/data/ 동기본을 fallback 으로 사용
+    agg_ts = (agg_data or {}).get("generated_at", "")
+    agg_path = DATA_DIR / "db_aggregated.json"
+    docs_agg_path = DOCS_DIR / "data" / "db_aggregated.json"
+    if not agg_ts:
+        docs_agg = load_json(docs_agg_path)
+        agg_ts = (docs_agg or {}).get("generated_at", "")
+    fb_path = agg_path if agg_path.exists() else docs_agg_path
+    sources.append({
+        "key": "otb",
+        "label": "OTB 집계",
+        "icon": "📊",
+        "value": _normalize_freshness_date(agg_ts),
+        "fallback_mtime": _file_mtime_kst(fb_path),
+        "note": "온북 DB 누적",
+    })
+
+    # 3) 당일 분석 — daily_booking.json: meta.report_date
+    booking_meta = (booking_data or {}).get("meta", {})
+    booking_ts = booking_meta.get("report_date", "")
+    booking_path = DATA_DIR / "daily_booking.json"
+    sources.append({
+        "key": "daily_booking",
+        "label": "당일 분석",
+        "icon": "🌅",
+        "value": _normalize_freshness_date(booking_ts),
+        "fallback_mtime": _file_mtime_kst(booking_path),
+        "note": "Daily Booking Report",
+    })
+
+    # 4) Booking Status — otb_data.json: meta.refreshTime/baseDate
+    otb_meta = (otb_data or {}).get("meta", {})
+    otb_ts = otb_meta.get("refreshTime") or otb_meta.get("baseDate", "")
+    otb_path = DOCS_DIR / "data" / "otb_data.json"
+    sources.append({
+        "key": "booking_status",
+        "label": "Booking Status",
+        "icon": "📅",
+        "value": _normalize_freshness_date(otb_ts),
+        "fallback_mtime": _file_mtime_kst(otb_path),
+        "note": otb_meta.get("baseDate", "") and f"기준일 {otb_meta.get('baseDate', '')}" or "",
+    })
+
+    # 5) 경쟁사 모니터링 — competitor_analysis.json(자동 크롤) 우선, fallback competitors.json(수동)
+    comp_analysis_path = DOCS_DIR / "data" / "competitor_analysis.json"
+    comp_analysis = load_json(comp_analysis_path)
+    if comp_analysis and comp_analysis.get("generated_at"):
+        comp_ts = comp_analysis.get("generated_at", "")
+        comp_note = "팔라티움 크롤"
+        comp_fb = _file_mtime_kst(comp_analysis_path)
+    else:
+        comp_ts = (comp_data or {}).get("_updated_at", "")
+        comp_note = "수동 입력"
+        comp_fb = _file_mtime_kst(DATA_DIR / "competitors.json")
+    sources.append({
+        "key": "competitor",
+        "label": "경쟁사 모니터링",
+        "icon": "🎯",
+        "value": _normalize_freshness_date(comp_ts),
+        "fallback_mtime": comp_fb,
+        "note": comp_note,
+    })
+
+    return {
+        "generated_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M KST"),
+        "sources": sources,
+    }
+
+
 def main():
     logger.info("=" * 60)
     logger.info("V7 대시보드 빌드 (index.html + otb.html)")
@@ -2949,6 +3075,25 @@ def main():
                 logger.warning(f"✗ parse_overseas 실패: {result.stderr.strip()}")
         except Exception as e:
             logger.warning(f"✗ parse_overseas 실행 오류: {e}")
+
+    # ── data_freshness.json 생성 (gs-report.html 'Data 기준일' 패널용) ──
+    try:
+        freshness = build_data_freshness(
+            news_data=news_data,
+            agg_data=agg_data,
+            booking_data=booking_data,
+            otb_data=otb_data,
+            comp_data=comp_data,
+        )
+        freshness_path = DOCS_DIR / "data" / "data_freshness.json"
+        freshness_path.parent.mkdir(parents=True, exist_ok=True)
+        freshness_path.write_text(
+            json.dumps(freshness, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"✓ data_freshness.json 생성 ({len(freshness['sources'])}개 소스)")
+    except Exception as e:
+        logger.warning(f"✗ data_freshness.json 생성 실패: {e}")
 
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)

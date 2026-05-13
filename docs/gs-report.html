@@ -1034,6 +1034,46 @@
 <!-- CONTENT -->
 <div class="content">
 
+  <!-- Data 기준일 패널 -->
+  <div class="data-freshness" id="data-freshness-panel" style="margin-bottom:28px;background:var(--bg-card);border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:8px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.18em;font-weight:700;">DATA 기준일</div>
+      <div style="height:1px;flex:1;background:var(--rule);min-width:30px;"></div>
+      <div id="data-freshness-meta" style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);"></div>
+    </div>
+    <div id="data-freshness-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
+      <div style="color:var(--ink-faint);font-size:12px;">로딩 중…</div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    fetch('data/data_freshness.json?t=' + Date.now())
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j) return;
+        var meta = document.getElementById('data-freshness-meta');
+        if (meta && j.generated_at) meta.textContent = 'Build · ' + j.generated_at;
+        var grid = document.getElementById('data-freshness-grid');
+        if (!grid) return;
+        var srcs = j.sources || [];
+        grid.innerHTML = srcs.map(function(s){
+          var value = s.value || s.fallback_mtime || '—';
+          var isFallback = !s.value && s.fallback_mtime;
+          var note = s.note || '';
+          return '<div style="background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;">'
+               +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+               +     '<span style="font-size:13px;">' + (s.icon || '·') + '</span>'
+               +     '<span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);letter-spacing:.1em;font-weight:600;">' + s.label + '</span>'
+               +   '</div>'
+               +   '<div style="font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:600;">' + value + (isFallback ? ' <span style="color:var(--ink-faint);font-size:10px;">(mtime)</span>' : '') + '</div>'
+               +   (note ? '<div style="font-size:10.5px;color:var(--ink-muted);margin-top:3px;">' + note + '</div>' : '')
+               + '</div>';
+        }).join('');
+      })
+      .catch(function(){});
+  })();
+  </script>
+
   <!-- 빠른 진입 — 관리 도구 (영업기획용) -->
   <div class="report-section">
     <h2 class="section-title">🔗 빠른 이동 — 관리 도구</h2>
