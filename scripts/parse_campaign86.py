@@ -20,25 +20,64 @@ RAW_DB_DIR = PROJECT_DIR / "data" / "raw_db"
 OUTPUT_DIR = PROJECT_DIR / "docs" / "data"
 CAMPAIGN_JSON = OUTPUT_DIR / "campaign_data.json"
 
+# 동일 기획전이 스프레드시트 재번호로 여러 key에 흩어지는 경우를 대비해
+# 키 후보 + 이름 패턴을 모두 사용한다.
+DEFAULT_CAMPAIGN_KEYS = ["196", "198", "134"]
+DEFAULT_NAME_PATTERNS = ["비발디파크 x 5월 전략 프로모션", "비발디X5월 전략 프로모션"]
+
+
 # ─── 패키지코드 로드 ───
-def load_package_codes(campaign_key="196"):
-    """campaign_data.json에서 특정 Key의 패키지코드 + 메타 로드"""
+def load_package_codes(campaign_keys=None, name_patterns=None):
+    """campaign_data.json에서 키/이름 매칭으로 패키지코드 + 메타 로드.
+
+    - 스프레드시트 행 재번호(196→198 등)와 KPI/코드 분할(134=KPI, 198=코드) 모두 흡수.
+    - 매칭된 모든 이벤트의 package_codes + key_to_codes[key] 를 합집합으로 사용.
+    """
+    if campaign_keys is None:
+        campaign_keys = DEFAULT_CAMPAIGN_KEYS
+    if name_patterns is None:
+        name_patterns = DEFAULT_NAME_PATTERNS
+
     with open(CAMPAIGN_JSON, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    codes = set(data.get('key_to_codes', {}).get(campaign_key, []))
-    events = [e for e in data.get('events', []) if e.get('key') == campaign_key]
-    return codes, events
+
+    all_events = data.get('events', [])
+    matched = []
+    seen_keys = set()
+
+    def _add(ev):
+        k = ev.get('key')
+        if k in seen_keys:
+            return
+        seen_keys.add(k)
+        matched.append(ev)
+
+    for ev in all_events:
+        if ev.get('key') in campaign_keys:
+            _add(ev)
+    for pat in name_patterns:
+        for ev in all_events:
+            haystack = (ev.get('상품명') or '') + '|' + (ev.get('노출영역') or '')
+            if pat and pat in haystack:
+                _add(ev)
+
+    k2c = data.get('key_to_codes', {})
+    codes = set()
+    for ev in matched:
+        codes.update(ev.get('package_codes') or [])
+        codes.update(k2c.get(ev.get('key'), []))
+
+    return codes, matched
 
 
 # ─── 세그먼트 분류 ───
-# parse_raw_db.py와 동일한 로직: 변경예약집계코드 기준
-# A4, A5      → G-OTA
-# 53, 72      → OTA
-# 58          → Inbound
-# 나머지      → 코드명 그대로 (회원PKG, D멤버스 등)
+# 기획전 196 KPI 정렬: 회원 / 무기명 / D멤버스 / OTA / G-OTA / Inbound
+# - 변경예약집계코드 우선 (A4/A5=G-OTA, 53/72=OTA, 58=Inbound, 34=D멤버스, 73=무기명)
+# - 코드명 패턴 보조 (회원PKG→회원, 자사 패키지→무기명, D멤버스 키워드→D멤버스)
+# - parse_raw_db.py는 OTA/G-OTA/Inbound만 사용하므로 의도적으로 다름
 
 def classify_segment(code_num, code_name, agent_name):
-    """변경예약집계코드(숫자/알파) 기준 세그먼트 결정 — parse_raw_db.py와 동일"""
+    """기획전 KPI 세그먼트(회원/무기명/D멤버스/OTA/G-OTA/Inbound)로 분류"""
     num = (code_num or "").strip()
     name = (code_name or "").strip()
 
@@ -48,6 +87,12 @@ def classify_segment(code_num, code_name, agent_name):
         return "OTA"
     if num == "58":
         return "Inbound"
+    if num == "34" or "D멤버스" in name:
+        return "D멤버스"
+    if "회원" in name:
+        return "회원"
+    if num == "73" or "자사" in name:
+        return "무기명"
     return name if name else "기타"
 
 
@@ -474,9 +519,10 @@ def main():
     print("기획전 196번 (비발디파크 x 5월 전략 프로모션) 실적 집계")
     print("=" * 60)
 
-    # 패키지코드 로드
-    target_codes, events = load_package_codes("196")
-    print(f"패키지코드: {len(target_codes)}개")
+    # 패키지코드 로드 (스프레드시트 재번호 흡수)
+    target_codes, events = load_package_codes()
+    matched_keys = sorted({e.get('key') for e in events if e.get('key')})
+    print(f"패키지코드: {len(target_codes)}개 (매칭 키: {matched_keys})")
 
     if not target_codes:
         print("패키지코드가 없습니다. campaign_data.json을 먼저 생성하세요.")
