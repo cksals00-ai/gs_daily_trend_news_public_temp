@@ -1624,6 +1624,88 @@ function getChannelSegmentMap(){
   return map;
 }
 
+// OTB property name ("NN.foo") → db_aggregated.by_property_channel 키 목록
+// 출처: scripts/generate_otb_data.py PROPERTY_DEFS
+const PROP_TO_DB_KEYS = {
+  '01.벨비발디':     ['소노벨 비발디파크', '소노문 비발디파크'],
+  '02.캄비발디':     ['소노캄 비발디파크'],
+  '03.펫비발디':     ['소노펫 비발디파크'],
+  '04.펠리체비발디': ['소노펠리체 비발디파크'],
+  '05.빌리지비발디': ['소노펠리체 빌리지 비발디파크'],
+  '06.양평':         ['소노휴 양평', '소노벨 양평'],
+  '07.델피노':       ['델피노'],
+  '08.쏠비치양양':   ['쏠비치 양양'],
+  '09.쏠비치삼척':   ['쏠비치 삼척'],
+  '10.소노벨단양':   ['소노문 단양', '소노벨 단양'],
+  '11.소노캄경주':   ['소노벨 경주', '소노캄 경주'],
+  '12.소노벨청송':   ['소노벨 청송'],
+  '13.소노벨천안':   ['소노벨 천안'],
+  '14.소노벨변산':   ['소노벨 변산'],
+  '15.소노캄여수':   ['소노캄 여수'],
+  '16.소노캄거제':   ['소노캄 거제'],
+  '17.쏠비치진도':   ['쏠비치 진도'],
+  '18.소노벨제주':   ['소노벨 제주'],
+  '19.소노캄제주':   ['소노캄 제주'],
+  '20.소노캄고양':   ['소노캄 고양'],
+  '21.소노문해운대': ['소노문 해운대'],
+  '22.쏠비치남해':   ['쏠비치 남해'],
+  '23.르네블루':     ['르네블루'],
+  '25.팔라티움':     []   // DB 미포함
+};
+
+// 사업장/권역 필터를 반영한 by_channel 데이터
+// STATE.prop !== 'ALL'           → 해당 사업장 DB 키 합산
+// STATE.region !== 'ALL' (prop ALL) → 권역 내 사업장 합산
+// 둘 다 ALL                       → DATA.db.by_channel 그대로
+// 반환 shape: { channel: { '2026MM': {net_rn, gross_rn, cancel_rn, booking_rn, net_rev, adr, ...}, ... } }
+function getScopedByChannel(){
+  if (!DATA.db) return {};
+  if (STATE.prop === 'ALL' && STATE.region === 'ALL') return DATA.db.by_channel || {};
+
+  const dbKeys = [];
+  if (STATE.prop !== 'ALL'){
+    (PROP_TO_DB_KEYS[STATE.prop] || []).forEach(k => dbKeys.push(k));
+  } else {
+    (DATA.otb && DATA.otb.byProperty || []).forEach(p => {
+      if (p.region === STATE.region){
+        (PROP_TO_DB_KEYS[p.name] || []).forEach(k => dbKeys.push(k));
+      }
+    });
+  }
+  if (!dbKeys.length) return {};
+
+  const bpc = DATA.db.by_property_channel || {};
+  const agg = {};
+  dbKeys.forEach(propKey => {
+    const propData = bpc[propKey];
+    if (!propData) return;
+    Object.entries(propData).forEach(([ch, months]) => {
+      if (!agg[ch]) agg[ch] = {};
+      Object.entries(months).forEach(([mo, v]) => {
+        if (!agg[ch][mo]){
+          agg[ch][mo] = { booking_rn:0, cancel_rn:0, gross_rn:0, net_rn:0,
+                           booking_rev:0, cancel_rev:0, net_rev:0, adr:0 };
+        }
+        const a = agg[ch][mo];
+        a.booking_rn += v.booking_rn || 0;
+        a.cancel_rn  += v.cancel_rn  || 0;
+        a.gross_rn   += v.gross_rn   || 0;
+        a.net_rn     += v.net_rn     || 0;
+        a.booking_rev += v.booking_rev || 0;
+        a.cancel_rev  += v.cancel_rev  || 0;
+        a.net_rev     += v.net_rev     || 0;
+      });
+    });
+  });
+  // ADR 재계산 (단위: net_rev 백만원 × 1000 / net_rn = 천원/RN)
+  Object.values(agg).forEach(months => {
+    Object.values(months).forEach(v => {
+      if (v.net_rn > 0) v.adr = Math.round(v.net_rev * 1000 / v.net_rn);
+    });
+  });
+  return agg;
+}
+
 // Section 5 — 거래처별 진행 현황 (세그먼트 chip 필터)
 function buildChSegChips(){
   const host = document.getElementById('ch-seg-chips');
@@ -1662,11 +1744,11 @@ const CH_YOY_RATES = {
   '여행사(합산)': 15.0
 };
 
-function calcAITargetRn(channel, month){
-  if (!DATA.db) return null;
+function calcAITargetRn(channel, month, byChannel){
+  const bc = byChannel || (DATA.db && DATA.db.by_channel) || null;
+  if (!bc) return null;
   const monthStr = String(month).padStart(2, '0');
   const lyKey = `2025${monthStr}`; // 전년(동기간) 동월
-  const bc = DATA.db.by_channel || {};
   const lyMonthly = ((bc[channel] || {})[lyKey] || {}).net_rn || 0;
   if (lyMonthly === 0) return null;
   const rate = CH_YOY_RATES[channel] != null ? CH_YOY_RATES[channel] : 0;
@@ -1678,37 +1760,40 @@ function calcAITargetRn(channel, month){
   return Math.round(lyMonthly * (1 + adjustedRate / 100));
 }
 
-function getChannelTargetsFromKeyin(month){
-  // 1) user 입력 (localStorage) 우선
+function getChannelTargetsFromKeyin(month, byChannel){
+  // keyin 목표는 전사 단위 — 사업장/권역 필터 시에는 사용하지 않고 AI 만 사용
+  const scoped = (STATE.prop !== 'ALL') || (STATE.region !== 'ALL');
+  const bc = byChannel || (DATA.db && DATA.db.by_channel) || {};
+
+  // 1) user 입력 (localStorage) — 전사 모드에서만
   const userTargets = {};
-  try {
-    const raw = localStorage.getItem('gs_strategy_keyin_v2');
-    if (raw){
-      const data = JSON.parse(raw);
-      const monthStr = String(month).padStart(2, '0');
-      const monthData = data[`2026-${monthStr}`] || data[month] || data[String(month)] || {};
-      const channels = monthData.channels || {};
-      Object.entries(channels).forEach(([ch, v]) => {
-        const t = (v && v.target_rn) || null;
-        if (t != null && t !== '' && !isNaN(+t)) userTargets[ch] = +t;
-      });
-    }
-  } catch(e){ console.warn('keyin parse fail', e); }
-  // 2) AI 자동 배분 — db_aggregated.by_channel[ch][LY 동월] × YoY 보정
-  const out = {};
-  if (DATA.db){
-    const bc = DATA.db.by_channel || {};
-    Object.keys(bc).forEach(ch => {
-      if (ch === '기타') return;
-      // user 우선, 없으면 AI
-      if (userTargets[ch] != null) out[ch] = { value: userTargets[ch], source: 'keyin' };
-      else {
-        const ai = calcAITargetRn(ch, month);
-        if (ai != null) out[ch] = { value: ai, source: 'ai' };
+  if (!scoped){
+    try {
+      const raw = localStorage.getItem('gs_strategy_keyin_v2');
+      if (raw){
+        const data = JSON.parse(raw);
+        const monthStr = String(month).padStart(2, '0');
+        const monthData = data[`2026-${monthStr}`] || data[month] || data[String(month)] || {};
+        const channels = monthData.channels || {};
+        Object.entries(channels).forEach(([ch, v]) => {
+          const t = (v && v.target_rn) || null;
+          if (t != null && t !== '' && !isNaN(+t)) userTargets[ch] = +t;
+        });
       }
-    });
+    } catch(e){ console.warn('keyin parse fail', e); }
   }
-  // user 입력만 있고 db 데이터 없는 경우도 fallback
+
+  // 2) AI 자동 배분 — bc[ch][LY 동월] × YoY 보정 (필터된 bc 기준)
+  const out = {};
+  Object.keys(bc).forEach(ch => {
+    if (ch === '기타') return;
+    if (userTargets[ch] != null) out[ch] = { value: userTargets[ch], source: 'keyin' };
+    else {
+      const ai = calcAITargetRn(ch, month, bc);
+      if (ai != null) out[ch] = { value: ai, source: 'ai' };
+    }
+  });
+  // user 입력만 있고 db 데이터 없는 경우 fallback (전사 모드)
   Object.entries(userTargets).forEach(([ch, v]) => {
     if (!out[ch]) out[ch] = { value: v, source: 'keyin' };
   });
@@ -1798,8 +1883,14 @@ function renderPerfTable(){
   const m = STATE.month;
   const target = '2026' + String(m).padStart(2, '0');
   const lastY = '2025' + String(m).padStart(2, '0');
-  const bc = DATA.db.by_channel || {};
+  const bc = getScopedByChannel();  // 사업장/권역 필터 반영
   const map = getChannelSegmentMap();
+
+  // 사업장 필터 적용 여부 (scope label 표시)
+  const propLabel = STATE.prop !== 'ALL'
+    ? STATE.prop.replace(/^\d+\./, '')
+    : (STATE.region !== 'ALL' ? ((REGION_DEFS.find(r => r.key === STATE.region) || {}).label || STATE.region) + ' 권역' : '전사');
+  const isScoped = STATE.prop !== 'ALL' || STATE.region !== 'ALL';
 
   // 거래처 리스트 — '기타' 제외, OTA/G-OTA만 (사용자 요청: Inbound 스킵)
   let channels = Object.keys(bc).filter(ch => ch !== '기타' && (map[ch] === 'OTA' || map[ch] === 'G-OTA'));
@@ -1819,19 +1910,23 @@ function renderPerfTable(){
     });
   });
 
-  // strategy-keyin 목표 (localStorage)
-  const keyinTargets = getChannelTargetsFromKeyin(m); // {ch: {value, source: 'keyin'|'ai'}}
+  // strategy-keyin 목표 (localStorage) — 사업장/권역 필터 시 AI 만 사용
+  const keyinTargets = getChannelTargetsFromKeyin(m, bc); // {ch: {value, source: 'keyin'|'ai'}}
   const keyinCount = Object.values(keyinTargets).filter(v => v.source === 'keyin').length;
   const aiCount = Object.values(keyinTargets).filter(v => v.source === 'ai').length;
 
-  titleEl.textContent = `${m}월 거래처별 진행 현황 ${STATE.chSegment === 'ALL' ? '(OTA + G-OTA)' : '(' + STATE.chSegment + ')'}`;
+  titleEl.textContent = `${m}월 거래처별 진행 현황 — ${propLabel} ${STATE.chSegment === 'ALL' ? '(OTA + G-OTA)' : '(' + STATE.chSegment + ')'}`;
+  const scopeNote = isScoped ? `<b style="color:var(--gold-bright)">${propLabel}</b> 필터 적용 · ` : '';
   const keyinNote = keyinCount + aiCount > 0
-    ? `✓ 목표 ${keyinCount + aiCount}개 거래처 적용 — strategy-keyin 키인 ${keyinCount}건 + AI 1차 배분 ${aiCount}건 (전년(동기간) 동월 LY × YoY 보정)`
-    : `⚠ 목표 데이터 없음 — db_aggregated.by_channel 의 LY 데이터 확인 필요`;
-  subEl.textContent = `${channels.length}개 거래처 · ${keyinNote}`;
+    ? `${scopeNote}✓ 목표 ${keyinCount + aiCount}개 거래처 — ${isScoped ? `AI 1차 배분 ${aiCount}건 (해당 사업장 LY × YoY 보정)` : `strategy-keyin 키인 ${keyinCount}건 + AI 1차 배분 ${aiCount}건 (전년(동기간) 동월 LY × YoY 보정)`}`
+    : `${scopeNote}⚠ 목표 데이터 없음 — 해당 ${isScoped ? '사업장/권역의 ' : ''}LY 데이터 확인 필요`;
+  subEl.innerHTML = `${channels.length}개 거래처 · ${keyinNote}`;
 
   if (!channels.length){
-    tbl.innerHTML = '<tbody><tr><td class="empty" colspan="10">선택 세그먼트의 거래처 없음</td></tr></tbody>';
+    const msg = isScoped
+      ? `${propLabel} ${STATE.chSegment === 'ALL' ? '' : '· ' + STATE.chSegment + ' '}거래처 데이터 없음`
+      : '선택 세그먼트의 거래처 없음';
+    tbl.innerHTML = `<tbody><tr><td class="empty" colspan="10">${msg}</td></tr></tbody>`;
     return;
   }
 

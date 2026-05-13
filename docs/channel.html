@@ -57,13 +57,15 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
 .base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
 .base-date-tag strong{color:var(--gold-bright);font-weight:700;}
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
-.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .kpi-card.achievement::before{background:var(--gold);}
 .kpi-card.booking::before{background:var(--positive);}
 .kpi-card.info::before{background:var(--info);}
 .kpi-card.warning::before{background:var(--warning);}
+.kpi-card.negative::before{background:var(--negative);}
+.kpi-card.muted::before{background:#7a7e85;}
 .kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
 .kpi-card-value{font-family:var(--mono);font-size:clamp(22px,2.5vw,30px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
 .kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
@@ -108,8 +110,51 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .date-input{background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;color:var(--ink-muted);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;width:100%;max-width:140px;color-scheme:dark;}
 .date-input:focus{border-color:var(--gold);color:var(--ink);}
 .date-input::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
-@media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:1100px){.mid-row{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+.section-title{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;}
+.section-title .badge-no{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold-bright);background:rgba(201,160,99,0.12);border:1px solid rgba(201,160,99,0.3);padding:2px 8px;border-radius:3px;letter-spacing:0.08em;}
+.section-title .sub{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-faint);letter-spacing:0.04em;}
+.section-note{font-family:var(--sans);font-size:12px;color:var(--ink-muted);line-height:1.6;padding:12px 16px;background:var(--bg-soft);border-left:2px solid var(--gold);border-radius:0 4px 4px 0;margin-bottom:14px;}
+.role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:1100px){.role-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.role-grid{grid-template-columns:1fr;}}
+.role-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;}
+.role-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.role-card.volume::before{background:var(--info);}
+.role-card.profit::before{background:var(--gold);}
+.role-card.overseas::before{background:var(--positive);}
+.role-card.risk::before{background:var(--warning);}
+.role-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.role-card-title{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--ink);}
+.role-card-count{font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:var(--bg-soft);padding:2px 7px;border-radius:3px;}
+.role-card-desc{font-family:var(--sans);font-size:11px;color:var(--ink-faint);line-height:1.55;}
+.role-card-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 10px;margin-top:4px;border-top:1px solid var(--rule);padding-top:10px;}
+.role-stat-label{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);letter-spacing:0.06em;}
+.role-stat-value{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);text-align:right;}
+.role-card-chs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.role-card-chs .ch-pill{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);background:var(--bg-soft);border:1px solid var(--rule);padding:2px 6px;border-radius:3px;}
+.role-card-chs .ch-pill.empty{color:var(--ink-faint);font-style:italic;}
+.matrix-wrap{position:relative;height:420px;}
+.matrix-quad-labels{position:absolute;inset:0;pointer-events:none;z-index:2;}
+.matrix-quad-labels div{position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:0.06em;color:var(--ink-faint);padding:4px 8px;background:rgba(20,23,28,0.6);border-radius:3px;}
+.matrix-legend{display:flex;gap:14px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--rule);margin-top:10px;}
+.matrix-legend-item{font-family:var(--mono);font-size:10px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;}
+.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+@media(max-width:860px){.action-grid{grid-template-columns:1fr;}}
+.action-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;position:relative;}
+.action-card.A{border-left:3px solid var(--info);}
+.action-card.B{border-left:3px solid var(--warning);}
+.action-card.C{border-left:3px solid var(--negative);}
+.action-card.D{border-left:3px solid var(--positive);}
+.action-card-head{display:flex;align-items:baseline;gap:8px;}
+.action-card-letter{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);}
+.action-card-title{font-family:var(--serif);font-weight:700;font-size:13.5px;color:var(--ink);}
+.action-card-detail{font-family:var(--sans);font-size:11.5px;color:var(--ink-muted);line-height:1.6;}
+.action-card-channels{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.action-card-channels .ch-tag{font-family:var(--mono);font-size:10px;color:var(--gold-bright);background:rgba(201,160,99,0.1);border:1px solid rgba(201,160,99,0.3);padding:2px 8px;border-radius:3px;font-weight:600;}
+.action-card-channels .ch-tag.empty{color:var(--ink-faint);background:var(--bg-soft);border-color:var(--rule);font-style:italic;}
+.placeholder-note{font-family:var(--mono);font-size:11px;color:var(--ink-faint);background:var(--bg-soft);border:1px dashed var(--rule-strong);border-radius:4px;padding:10px 14px;text-align:center;}
 @media(max-width:560px){.main-content{padding:16px 14px;}}
 .mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
 @media(max-width:860px){.mobile-filter-bar{display:flex;}}
@@ -294,29 +339,43 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
-    <!-- KPI: 객실수 → ADR → 매출 → 활성채널 -->
+    <!-- KPI: Gross REV → 예상 수수료율 → Net REV → Net ADR → 평균 ADR → 활성 채널 -->
     <div class="kpi-strip" id="kpi-strip">
-      <div class="kpi-card achievement">
-        <div class="kpi-card-label">총 RNS</div>
-        <div class="kpi-card-value" id="kpi-rns">—<span class="unit">실</span></div>
-        <div class="kpi-card-sub" id="kpi-rns-sub">선택 기간</div>
-      </div>
-      <div class="kpi-card info">
-        <div class="kpi-card-label">평균 ADR</div>
-        <div class="kpi-card-value" id="kpi-adr">—<span class="unit">천원</span></div>
-        <div class="kpi-card-sub">평균단가</div>
-      </div>
       <div class="kpi-card booking">
-        <div class="kpi-card-label">총 매출 (REV)</div>
-        <div class="kpi-card-value" id="kpi-rev">—<span class="unit">억원</span></div>
-        <div class="kpi-card-sub" id="kpi-rev-sub">선택 기간</div>
+        <div class="kpi-card-label">Gross REV</div>
+        <div class="kpi-card-value" id="kpi-gross-rev">—<span class="unit">억원</span></div>
+        <div class="kpi-card-sub" id="kpi-gross-rev-sub">객실 매출</div>
       </div>
       <div class="kpi-card warning">
+        <div class="kpi-card-label">예상 수수료율</div>
+        <div class="kpi-card-value" id="kpi-comm-rate">—<span class="unit">%</span></div>
+        <div class="kpi-card-sub" id="kpi-comm-rate-sub">가중 평균</div>
+      </div>
+      <div class="kpi-card achievement">
+        <div class="kpi-card-label">Net REV</div>
+        <div class="kpi-card-value" id="kpi-net-rev">—<span class="unit">억원</span></div>
+        <div class="kpi-card-sub" id="kpi-net-rev-sub">수수료 차감</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-card-label">Net ADR</div>
+        <div class="kpi-card-value" id="kpi-net-adr">—<span class="unit">천원</span></div>
+        <div class="kpi-card-sub" id="kpi-net-adr-sub">순매출 단가</div>
+      </div>
+      <div class="kpi-card muted">
+        <div class="kpi-card-label">총 RNS · 평균 ADR</div>
+        <div class="kpi-card-value" id="kpi-rns">—<span class="unit">실</span></div>
+        <div class="kpi-card-sub" id="kpi-rns-sub">평균 ADR 포함</div>
+      </div>
+      <div class="kpi-card negative">
         <div class="kpi-card-label">활성 채널 수</div>
         <div class="kpi-card-value" id="kpi-channels">—<span class="unit">개</span></div>
-        <div class="kpi-card-sub">실적 있는 채널</div>
+        <div class="kpi-card-sub" id="kpi-channels-sub">실적 있는 채널</div>
       </div>
     </div>
+    <!-- hidden KPI placeholders (구버전 호환) -->
+    <span id="kpi-adr" style="display:none;">—</span>
+    <span id="kpi-rev" style="display:none;">—</span>
+    <span id="kpi-rev-sub" style="display:none;"></span>
 
     <!-- 상세 테이블: 객실수/ADR/매출 × CY/LY/YoY -->
     <div class="table-card">
@@ -347,10 +406,82 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- ===== 섹션 3: 채널 역할별 성과 ===== -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div class="section-title">
+        <span class="badge-no">SECTION 3</span>
+        채널 역할별 성과
+        <span class="sub">CHANNEL ROLE PERFORMANCE</span>
+      </div>
+      <div class="section-note">
+        채널은 단순 판매량 기준이 아니라 <strong style="color:var(--gold-bright);">역할별로 구분</strong>하여 관리합니다.
+        볼륨 확보 채널은 객실 소진과 노출 확대를 담당하고, 수익성 방어 채널은 ADR 및 순매출 방어를 담당합니다.
+        G-OTA 및 해외 채널은 인바운드 확대와 APAC 연계 가능성을 고려하여 별도 관리합니다.
+      </div>
+      <div class="role-grid" id="role-grid">
+        <div class="role-card volume">
+          <div class="role-card-head">
+            <div class="role-card-title">볼륨 확보 채널</div>
+            <div class="role-card-count" id="role-volume-count">—</div>
+          </div>
+          <div class="role-card-desc">객실 소진 · 노출 확대 (High RNS / Low ADR)</div>
+          <div class="role-card-stats">
+            <div class="role-stat-label">RNS</div><div class="role-stat-value" id="role-volume-rns">—</div>
+            <div class="role-stat-label">REV (억)</div><div class="role-stat-value" id="role-volume-rev">—</div>
+            <div class="role-stat-label">ADR (천원)</div><div class="role-stat-value" id="role-volume-adr">—</div>
+            <div class="role-stat-label">YoY</div><div class="role-stat-value" id="role-volume-yoy">—</div>
+          </div>
+          <div class="role-card-chs" id="role-volume-chs"></div>
+        </div>
+        <div class="role-card profit">
+          <div class="role-card-head">
+            <div class="role-card-title">수익성 방어 채널</div>
+            <div class="role-card-count" id="role-profit-count">—</div>
+          </div>
+          <div class="role-card-desc">ADR · 순매출 방어 (High ADR)</div>
+          <div class="role-card-stats">
+            <div class="role-stat-label">RNS</div><div class="role-stat-value" id="role-profit-rns">—</div>
+            <div class="role-stat-label">REV (억)</div><div class="role-stat-value" id="role-profit-rev">—</div>
+            <div class="role-stat-label">ADR (천원)</div><div class="role-stat-value" id="role-profit-adr">—</div>
+            <div class="role-stat-label">Net ADR</div><div class="role-stat-value" id="role-profit-netadr">—</div>
+          </div>
+          <div class="role-card-chs" id="role-profit-chs"></div>
+        </div>
+        <div class="role-card overseas">
+          <div class="role-card-head">
+            <div class="role-card-title">해외 확장 채널</div>
+            <div class="role-card-count" id="role-overseas-count">—</div>
+          </div>
+          <div class="role-card-desc">G-OTA · 인바운드 · APAC 연계</div>
+          <div class="role-card-stats">
+            <div class="role-stat-label">RNS</div><div class="role-stat-value" id="role-overseas-rns">—</div>
+            <div class="role-stat-label">REV (억)</div><div class="role-stat-value" id="role-overseas-rev">—</div>
+            <div class="role-stat-label">YoY</div><div class="role-stat-value" id="role-overseas-yoy">—</div>
+            <div class="role-stat-label">리드타임</div><div class="role-stat-value" id="role-overseas-lt">—</div>
+          </div>
+          <div class="role-card-chs" id="role-overseas-chs"></div>
+        </div>
+        <div class="role-card risk">
+          <div class="role-card-head">
+            <div class="role-card-title">리스크 분산 채널</div>
+            <div class="role-card-count" id="role-risk-count">—</div>
+          </div>
+          <div class="role-card-desc">소규모 · 다채널 분산 (Low RNS / Low ADR)</div>
+          <div class="role-card-stats">
+            <div class="role-stat-label">RNS</div><div class="role-stat-value" id="role-risk-rns">—</div>
+            <div class="role-stat-label">REV (억)</div><div class="role-stat-value" id="role-risk-rev">—</div>
+            <div class="role-stat-label">채널 수</div><div class="role-stat-value" id="role-risk-cnt">—</div>
+            <div class="role-stat-label">기여율</div><div class="role-stat-value" id="role-risk-share">—</div>
+          </div>
+          <div class="role-card-chs" id="role-risk-chs"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 통합 차트: RNS 바 + ADR 도트 (전체 채널) -->
-    <div class="chart-card">
+    <div class="chart-card" style="margin-top:8px;">
       <div class="chart-card-header">
-        <span class="chart-card-title">채널별 RNS · ADR 통합 순위</span>
+        <span class="chart-card-title">SECTION 4 · 채널별 RNS · ADR 통합 순위</span>
         <div class="chart-legend">
           <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>RNS</div>
           <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;border-radius:0;width:10px;height:3px;"></div>ADR (천원)</div>
@@ -361,11 +492,50 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- ===== 섹션 5: RNS × ADR 매트릭스 ===== -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div class="section-title">
+        <span class="badge-no">SECTION 5</span>
+        RNS × ADR 매트릭스
+        <span class="sub">CHANNEL POSITIONING MATRIX</span>
+      </div>
+      <div class="section-note">
+        RNS와 ADR을 함께 비교하여 채널별 역할을 구분합니다.
+        <strong style="color:var(--gold-bright);">RNS가 높고 ADR도 높은 채널은 핵심 유지 채널</strong>로 분류하고,
+        RNS는 높으나 ADR이 낮은 채널은 볼륨 확보 채널로 관리하되 단가 방어 전략이 필요합니다.
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">4사분면 포지셔닝 · 점선 = 중앙값 기준</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>OTA</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>G-OTA</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>Inbound</div>
+          </div>
+        </div>
+        <div class="matrix-wrap">
+          <div class="matrix-quad-labels">
+            <div style="top:8px;right:10px;border:1px solid rgba(76,175,111,0.4);color:#4caf6f;">⬈ 핵심 유지 채널 (High RNS / High ADR)</div>
+            <div style="bottom:36px;right:10px;border:1px solid rgba(90,159,196,0.4);color:#5a9fc4;">⬊ 볼륨 확보 (High RNS / Low ADR) · 단가 방어</div>
+            <div style="top:8px;left:60px;border:1px solid rgba(230,185,112,0.4);color:#e6b970;">⬉ 프리미엄/특화 (Low RNS / High ADR)</div>
+            <div style="bottom:36px;left:60px;border:1px solid rgba(229,115,115,0.4);color:#e57373;">⬋ 효율 낮음 (Low RNS / Low ADR) · 운영 축소 검토</div>
+          </div>
+          <canvas id="rns-adr-matrix"></canvas>
+        </div>
+        <div class="matrix-legend">
+          <div class="matrix-legend-item"><span style="color:#4caf6f;font-weight:700;">⬈ 핵심 유지</span> <span id="matrix-q1-count">—</span>개</div>
+          <div class="matrix-legend-item"><span style="color:#5a9fc4;font-weight:700;">⬊ 볼륨</span> <span id="matrix-q4-count">—</span>개</div>
+          <div class="matrix-legend-item"><span style="color:#e6b970;font-weight:700;">⬉ 프리미엄</span> <span id="matrix-q2-count">—</span>개</div>
+          <div class="matrix-legend-item"><span style="color:#e57373;font-weight:700;">⬋ 축소 검토</span> <span id="matrix-q3-count">—</span>개</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 인사이트 차트: YoY 변화율 + ADR 비교 -->
     <div class="mid-row">
       <div class="chart-card">
         <div class="chart-card-header">
-          <span class="chart-card-title">채널별 YoY RNS 변화율 (동기간)</span>
+          <span class="chart-card-title">SECTION 6 · 채널별 YoY RNS 변화율 (동기간)</span>
           <div class="chart-legend">
             <div class="chart-legend-item"><div class="legend-dot" style="background:var(--positive);"></div>증가</div>
             <div class="chart-legend-item"><div class="legend-dot" style="background:var(--negative);"></div>감소</div>
@@ -389,10 +559,104 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- ===== 섹션 7: 순매출 관점 분석 ===== -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div class="section-title">
+        <span class="badge-no">SECTION 7</span>
+        순매출 관점 분석
+        <span class="sub">NET REVENUE ANALYSIS · Gross / Commission / Net</span>
+      </div>
+      <div class="section-note">
+        채널 성과는 Gross REV뿐 아니라 <strong style="color:var(--gold-bright);">수수료 차감 후 Net REV 기준</strong>으로도 관리할 필요가 있습니다.
+        특히 G-OTA 및 광고 연계 채널은 판매 볼륨이 높더라도 순매출 기여도가 낮아질 수 있으므로,
+        채널별 예상 수수료율을 반영한 Net ADR 지표를 단계적으로 도입합니다.
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">채널별 Gross · Commission · Net 비교</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);">수수료율은 채널/세그먼트 표준값 기반 추정 (실제 정산 데이터 반영 예정)</span>
+        </div>
+        <div class="table-wrap">
+          <table class="pivot" id="netrev-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;min-width:160px;">채널명</th>
+                <th>RNS</th>
+                <th>Gross REV (억)</th>
+                <th>예상 수수료율</th>
+                <th>예상 수수료 (억)</th>
+                <th>Net REV (억)</th>
+                <th>Net ADR (천원)</th>
+                <th>순매출 기여도</th>
+              </tr>
+            </thead>
+            <tbody id="netrev-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink-faint);font-family:var(--mono);font-size:12px;">데이터 로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 섹션 8: 채널별 Action Insight ===== -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div class="section-title">
+        <span class="badge-no">SECTION 8</span>
+        채널별 Action Insight
+        <span class="sub">CHANNEL ACTION RECOMMENDATIONS</span>
+      </div>
+      <div class="action-grid">
+        <div class="action-card A">
+          <div class="action-card-head">
+            <span class="action-card-letter">A</span>
+            <span class="action-card-title">볼륨 핵심 채널</span>
+          </div>
+          <div class="action-card-detail">
+            객실 소진 필요 구간에 우선 배정, <strong>메인 노출 / 광고 크레딧 활용</strong>으로 RNS 추가 확보.
+            ADR 동시 방어를 위해 패키지·요금제 옵션 점검 필요.
+          </div>
+          <div class="action-card-channels" id="action-A-chs"></div>
+        </div>
+        <div class="action-card B">
+          <div class="action-card-head">
+            <span class="action-card-letter">B</span>
+            <span class="action-card-title">ADR 저하 채널</span>
+          </div>
+          <div class="action-card-detail">
+            할인율 점검, <strong>NR/Semi-NR 상품 검토</strong>, 고단가 패키지 노출 확대.
+            과도한 가격 경쟁 방지를 위해 채널 간 요금 일관성 유지.
+          </div>
+          <div class="action-card-channels" id="action-B-chs"></div>
+        </div>
+        <div class="action-card C">
+          <div class="action-card-head">
+            <span class="action-card-letter">C</span>
+            <span class="action-card-title">YoY 하락 채널</span>
+          </div>
+          <div class="action-card-detail">
+            전년 대비 상품 조건 비교, 노출 위치 확인, <strong>경쟁사 가격 비교</strong>로 원인 진단.
+            필요 시 채널 관계 재정비 및 프로모션 재투입 검토.
+          </div>
+          <div class="action-card-channels" id="action-C-chs"></div>
+        </div>
+        <div class="action-card D">
+          <div class="action-card-head">
+            <span class="action-card-letter">D</span>
+            <span class="action-card-title">성장 채널</span>
+          </div>
+          <div class="action-card-detail">
+            추가 사업장 확대, <strong>전용 프로모션 검토</strong>, APAC/인바운드 연계 가능성 검토.
+            성장세 유지를 위한 채널별 KPI 관리 및 담당자 매칭.
+          </div>
+          <div class="action-card-channels" id="action-D-chs"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 연도별 추이 차트 -->
-    <div class="chart-card" style="margin-bottom:20px;">
+    <div class="chart-card" style="margin-bottom:20px;margin-top:8px;">
       <div class="chart-card-header">
-        <span class="chart-card-title">채널별 연도 추이 (Top 5 RNS)</span>
+        <span class="chart-card-title">SECTION 9 · 채널별 연도 추이 (Top 5 RNS)</span>
         <div class="chart-legend" id="yoy-legend"></div>
       </div>
       <div class="chart-canvas-wrap" style="height:280px;">
@@ -440,6 +704,41 @@ const fmt = {
 };
 
 let unifiedChart = null, yoyChangeChart = null, adrCompareChart = null, yoyChart = null;
+let rnsAdrMatrixChart = null;
+
+// 채널별 예상 수수료율 (실제 정산 데이터 미연동 — 표준값 기반 추정)
+const CHANNEL_COMMISSION = {
+  // 국내 OTA
+  '야놀자': 0.10, '여기어때': 0.10, '데일리호텔': 0.10, '인터파크': 0.11,
+  '네이버': 0.08, '카카오': 0.08, '쿠팡': 0.10, '티몬': 0.10, '위메프': 0.10,
+  // G-OTA / 해외
+  '부킹닷컴': 0.18, 'Booking.com': 0.18, '아고다': 0.18, 'Agoda': 0.18,
+  '익스피디아': 0.18, 'Expedia': 0.18, '호텔스닷컴': 0.18, 'Hotels.com': 0.18,
+  '트립닷컴': 0.18, 'Trip.com': 0.18, '클룩': 0.15, 'Klook': 0.15,
+  // 자사/다이렉트
+  '온북': 0.02, 'GS': 0.02, '소노': 0.02, '직판': 0.02, '홈페이지': 0.02,
+};
+const SEGMENT_COMMISSION = { 'OTA': 0.10, 'G-OTA': 0.18, 'Inbound': 0.12 };
+const DEFAULT_COMMISSION = 0.08;
+
+function getCommissionRate(ch, segment) {
+  // 정확한 매칭
+  if (CHANNEL_COMMISSION[ch] != null) return CHANNEL_COMMISSION[ch];
+  // 부분 매칭 (대소문자 무시)
+  const lower = (ch || '').toLowerCase();
+  for (const [key, rate] of Object.entries(CHANNEL_COMMISSION)) {
+    if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) return rate;
+  }
+  if (segment && SEGMENT_COMMISSION[segment] != null) return SEGMENT_COMMISSION[segment];
+  return DEFAULT_COMMISSION;
+}
+
+const OVERSEAS_CHANNEL_HINTS = ['부킹닷컴','Booking','아고다','Agoda','익스피디아','Expedia','호텔스닷컴','Hotels.com','트립닷컴','Trip.com','클룩','Klook'];
+function isOverseasChannel(ch, segment) {
+  if (segment === 'G-OTA' || segment === 'Inbound') return true;
+  const lower = (ch || '').toLowerCase();
+  return OVERSEAS_CHANNEL_HINTS.some(h => lower.includes(h.toLowerCase()));
+}
 
 // 채널 → 세그먼트 매핑 (by_channel_segment 데이터 기반)
 function getChannelSegment(ch) {
@@ -683,11 +982,40 @@ function render() {
   const totalLyREV = Object.values(channelDataLY).reduce((s,d) => s + (d.net_rev||0), 0);
   const avgLyADR = totalLyRNS > 0 ? totalLyREV * 1000 / totalLyRNS : 0;
 
-  // KPIs: 객실수 → ADR → 매출 → 활성채널
+  // === 수수료 / Net REV 계산 ===
+  let totalCommission = 0; // 억원 환산은 아래에서
+  for (const [ch, d] of sorted) {
+    const rate = getCommissionRate(ch, d.segment);
+    totalCommission += (d.net_rev || 0) * rate;
+  }
+  const netREV = totalREV - totalCommission;
+  const commRate = totalREV > 0 ? (totalCommission / totalREV) * 100 : 0;
+  const netADR = totalRNS > 0 ? netREV * 1000 / totalRNS : 0;
+
+  // KPIs (6종): Gross REV / 예상 수수료율 / Net REV / Net ADR / 총 RNS+ADR / 활성 채널
+  setText('kpi-gross-rev', fmt.rev(totalREV));
+  setText('kpi-comm-rate', commRate.toFixed(1));
+  setText('kpi-net-rev', fmt.rev(netREV));
+  setText('kpi-net-adr', fmt.adr(Math.round(netADR)));
   setText('kpi-rns', fmt.num(totalRNS));
+  setText('kpi-channels', sorted.length.toString());
+
+  // Gross REV YoY sub
+  const grossYoy = totalLyREV > 0 ? ((totalREV/totalLyREV) - 1) * 100 : null;
+  const grossSub = grossYoy == null ? '객실 매출' : `객실 매출 · YoY <span class="${grossYoy>=0?'pos':'neg'}">${grossYoy>=0?'+':''}${grossYoy.toFixed(1)}%</span>`;
+  const grossSubEl = document.getElementById('kpi-gross-rev-sub'); if (grossSubEl) grossSubEl.innerHTML = grossSub;
+  const commSubEl = document.getElementById('kpi-comm-rate-sub'); if (commSubEl) commSubEl.innerHTML = `약 ${fmt.rev(totalCommission)}억 차감`;
+  const netSubEl = document.getElementById('kpi-net-rev-sub'); if (netSubEl) netSubEl.innerHTML = `Gross 대비 ${totalREV>0?((netREV/totalREV)*100).toFixed(1):'—'}%`;
+  const netADRSubEl = document.getElementById('kpi-net-adr-sub'); if (netADRSubEl) netADRSubEl.innerHTML = `ADR 대비 -${avgADR>0?(((avgADR-netADR)/avgADR)*100).toFixed(1):'—'}%`;
+  const rnsSubEl = document.getElementById('kpi-rns-sub');
+  if (rnsSubEl) rnsSubEl.innerHTML = `평균 ADR <strong style="color:var(--ink);">${fmt.adr(Math.round(avgADR))}</strong>천원 · ${months.length}개월`;
+  const chSubEl = document.getElementById('kpi-channels-sub');
+  if (chSubEl) chSubEl.innerHTML = `실적 있는 채널`;
+
+  // 구버전 호환 placeholders
   setText('kpi-adr', fmt.adr(Math.round(avgADR)));
   setText('kpi-rev', fmt.rev(totalREV));
-  setText('kpi-channels', sorted.length.toString());
+  setText('kpi-rev-sub', months.length + '개월 누계');
 
   const periodLabel = activeMonth === '0' ? activeYear + '년 전체' : activeYear + '년 ' + activeMonth + '월';
   const segLabel = activeSegment === 'ALL' ? '' : ' · ' + activeSegment;
@@ -700,15 +1028,25 @@ function render() {
     : '';
   setText('period-display', periodLabel + segLabel + regionLabel + bdLabel);
   setText('table-label', periodLabel + segLabel + regionLabel + bdLabel + ' · ' + months.length + '개월');
-  setText('kpi-rns-sub', months.length + '개월 누계');
-  setText('kpi-rev-sub', months.length + '개월 누계');
+
+  // ─── 섹션 3: 역할별 성과 ───
+  buildRolePerformance(sorted, channelDataLY);
 
   // ─── 통합 차트: 전체 채널 RNS 바 + ADR 도트 ───
   buildUnifiedChart(sorted, avgADR);
 
+  // ─── 섹션 5: RNS × ADR 매트릭스 ───
+  buildRnsAdrMatrix(sorted);
+
   // ─── 인사이트 차트들 ───
   buildYoYChangeChart(allChannelData, months);
   buildADRCompareChart(sorted, avgADR);
+
+  // ─── 섹션 7: Net REV 테이블 ───
+  buildNetRevTable(sorted, totalREV);
+
+  // ─── 섹션 8: Action Insight ───
+  buildActionInsights(sorted, channelDataLY);
 
   // ─── 테이블 (전체 채널, 더보기/접기) ───
   function yoyBadge(cy, ly) {
@@ -778,6 +1116,284 @@ function render() {
 
   // 연도별 추이 차트
   buildYoYTrendChart();
+}
+
+// ===== 섹션 3: 역할별 성과 =====
+function classifyChannelRole(ch, d, medians) {
+  const seg = d.segment;
+  // 해외 확장: G-OTA / Inbound / 해외 OTA hints
+  if (isOverseasChannel(ch, seg)) return 'overseas';
+  const rnsHi = d.net_rn >= medians.rns;
+  const adrHi = d.adr >= medians.adr;
+  // 수익성 방어: ADR 상위 (RNS 무관하게 ADR 높으면)
+  if (adrHi) return 'profit';
+  // 볼륨 확보: RNS 상위 + ADR 하위
+  if (rnsHi && !adrHi) return 'volume';
+  // 리스크 분산: 그 외 (소규모)
+  return 'risk';
+}
+
+function buildRolePerformance(sorted, lyData) {
+  // medians
+  const rnsList = sorted.map(([,d]) => d.net_rn).filter(v => v > 0).sort((a,b)=>a-b);
+  const adrList = sorted.map(([,d]) => d.adr).filter(v => v > 0).sort((a,b)=>a-b);
+  const median = arr => arr.length === 0 ? 0 : arr[Math.floor(arr.length/2)];
+  const medians = { rns: median(rnsList), adr: median(adrList) };
+
+  const buckets = { volume: [], profit: [], overseas: [], risk: [] };
+  for (const [ch, d] of sorted) {
+    const role = classifyChannelRole(ch, d, medians);
+    buckets[role].push([ch, d]);
+  }
+
+  const totalRev = sorted.reduce((s,[,d]) => s + (d.net_rev||0), 0);
+
+  function fillBucket(key, opts) {
+    const items = buckets[key];
+    const rns = items.reduce((s,[,d]) => s + (d.net_rn||0), 0);
+    const rev = items.reduce((s,[,d]) => s + (d.net_rev||0), 0);
+    const adr = rns > 0 ? rev * 1000 / rns : 0;
+    const lyRns = items.reduce((s,[ch]) => s + ((lyData[ch] && lyData[ch].net_rn) || 0), 0);
+    const yoy = lyRns > 0 ? ((rns/lyRns) - 1) * 100 : null;
+
+    document.getElementById(`role-${key}-count`).textContent = items.length + '개 채널';
+    if (opts.rns) document.getElementById(opts.rns).textContent = rns > 0 ? rns.toLocaleString('ko-KR') : '—';
+    if (opts.rev) document.getElementById(opts.rev).textContent = rev > 0 ? (rev/100).toFixed(1) : '—';
+    if (opts.adr) document.getElementById(opts.adr).textContent = adr > 0 ? Math.round(adr).toLocaleString('ko-KR') : '—';
+    if (opts.yoy) {
+      const el = document.getElementById(opts.yoy);
+      if (yoy == null) { el.textContent = '—'; el.style.color = ''; }
+      else { el.textContent = (yoy>=0?'+':'') + yoy.toFixed(1) + '%'; el.style.color = yoy>=0?'var(--positive)':'var(--negative)'; }
+    }
+    if (opts.netadr) {
+      // 수익성 방어: Net ADR
+      let comm = 0;
+      for (const [ch, d] of items) comm += (d.net_rev||0) * getCommissionRate(ch, d.segment);
+      const netRev = rev - comm;
+      const netAdr = rns > 0 ? netRev * 1000 / rns : 0;
+      document.getElementById(opts.netadr).textContent = netAdr > 0 ? Math.round(netAdr).toLocaleString('ko-KR') : '—';
+    }
+    if (opts.lt) {
+      // 리드타임 — 데이터 없음
+      document.getElementById(opts.lt).textContent = '—';
+      document.getElementById(opts.lt).style.fontSize = '10px';
+      document.getElementById(opts.lt).style.color = 'var(--ink-faint)';
+    }
+    if (opts.cnt) document.getElementById(opts.cnt).textContent = items.length + '개';
+    if (opts.share) {
+      const share = totalRev > 0 ? (rev / totalRev) * 100 : 0;
+      document.getElementById(opts.share).textContent = share.toFixed(1) + '%';
+    }
+
+    // 채널 칩 (상위 5)
+    const chsEl = document.getElementById(`role-${key}-chs`);
+    if (chsEl) {
+      const top = items.slice().sort(([,a],[,b]) => (b.net_rn||0) - (a.net_rn||0)).slice(0, 5);
+      if (top.length === 0) {
+        chsEl.innerHTML = '<span class="ch-pill empty">해당 채널 없음</span>';
+      } else {
+        chsEl.innerHTML = top.map(([ch]) => `<span class="ch-pill">${ch}</span>`).join('') +
+          (items.length > 5 ? `<span class="ch-pill empty">+${items.length - 5}</span>` : '');
+      }
+    }
+  }
+
+  fillBucket('volume',  { rns:'role-volume-rns', rev:'role-volume-rev', adr:'role-volume-adr', yoy:'role-volume-yoy' });
+  fillBucket('profit',  { rns:'role-profit-rns', rev:'role-profit-rev', adr:'role-profit-adr', netadr:'role-profit-netadr' });
+  fillBucket('overseas',{ rns:'role-overseas-rns', rev:'role-overseas-rev', yoy:'role-overseas-yoy', lt:'role-overseas-lt' });
+  fillBucket('risk',    { rns:'role-risk-rns', rev:'role-risk-rev', cnt:'role-risk-cnt', share:'role-risk-share' });
+}
+
+// ===== 섹션 5: RNS × ADR 매트릭스 =====
+function buildRnsAdrMatrix(sorted) {
+  const canvas = document.getElementById('rns-adr-matrix');
+  if (!canvas) return;
+  if (rnsAdrMatrixChart) rnsAdrMatrixChart.destroy();
+
+  const points = sorted.filter(([,d]) => d.net_rn > 0 && d.adr > 0);
+  if (points.length === 0) return;
+
+  const rnsList = points.map(([,d]) => d.net_rn).sort((a,b)=>a-b);
+  const adrList = points.map(([,d]) => d.adr).sort((a,b)=>a-b);
+  const median = arr => arr.length === 0 ? 0 : arr[Math.floor(arr.length/2)];
+  const rnsMed = median(rnsList);
+  const adrMed = median(adrList);
+
+  // 세그먼트별 분리
+  const dsByseg = { 'OTA': [], 'G-OTA': [], 'Inbound': [], 'Other': [] };
+  let q1=0,q2=0,q3=0,q4=0;
+  for (const [ch, d] of points) {
+    const key = (d.segment === 'OTA' || d.segment === 'G-OTA' || d.segment === 'Inbound') ? d.segment : 'Other';
+    dsByseg[key].push({ x: d.net_rn, y: Math.round(d.adr), ch, rev: d.net_rev });
+    if (d.net_rn >= rnsMed && d.adr >= adrMed) q1++;
+    else if (d.net_rn < rnsMed && d.adr >= adrMed) q2++;
+    else if (d.net_rn < rnsMed && d.adr < adrMed) q3++;
+    else q4++;
+  }
+  document.getElementById('matrix-q1-count').textContent = q1;
+  document.getElementById('matrix-q2-count').textContent = q2;
+  document.getElementById('matrix-q3-count').textContent = q3;
+  document.getElementById('matrix-q4-count').textContent = q4;
+
+  const segColors = { 'OTA':'#e6b970', 'G-OTA':'#5a9fc4', 'Inbound':'#4caf6f', 'Other':'#a8acb3' };
+  const datasets = Object.entries(dsByseg)
+    .filter(([,arr]) => arr.length > 0)
+    .map(([seg, arr]) => ({
+      label: seg, data: arr,
+      backgroundColor: segColors[seg] + 'bb', borderColor: segColors[seg], borderWidth: 1,
+      pointRadius: 6, pointHoverRadius: 9,
+    }));
+
+  // 중앙값 점선 plugin
+  const medianLinesPlugin = {
+    id: 'medianLines',
+    afterDatasetsDraw(chart) {
+      const {ctx, chartArea, scales:{x, y}} = chart;
+      const xMed = x.getPixelForValue(rnsMed);
+      const yMed = y.getPixelForValue(adrMed);
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(201,160,99,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xMed, chartArea.top); ctx.lineTo(xMed, chartArea.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chartArea.left, yMed); ctx.lineTo(chartArea.right, yMed); ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  rnsAdrMatrixChart = new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets },
+    plugins: [medianLinesPlugin],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor: '#e6b970', bodyColor: '#e0e0e3', padding: 10,
+          callbacks: {
+            label: c => {
+              const d = c.raw;
+              return [` 채널: ${d.ch}`, ` RNS: ${d.x.toLocaleString('ko-KR')}실`, ` ADR: ${d.y.toLocaleString('ko-KR')}천원`, ` REV: ${(d.rev/100).toFixed(1)}억`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { type:'linear', title:{display:true, text:'RNS (실)', color:'rgba(255,255,255,0.5)', font:{family:'JetBrains Mono', size:11}},
+             grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.4)', font:{family:'JetBrains Mono', size:10}, callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} },
+        y: { type:'linear', title:{display:true, text:'ADR (천원)', color:'rgba(255,255,255,0.5)', font:{family:'JetBrains Mono', size:11}},
+             grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'rgba(255,255,255,0.4)', font:{family:'JetBrains Mono', size:10}, callback:v=>v.toLocaleString('ko-KR')}, border:{display:false} }
+      }
+    }
+  });
+}
+
+// ===== 섹션 7: Net REV 테이블 =====
+function buildNetRevTable(sorted, totalGrossREV) {
+  const tbody = document.getElementById('netrev-tbody');
+  if (!tbody) return;
+  if (sorted.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink-faint);">데이터 없음</td></tr>';
+    return;
+  }
+
+  // 채널별 Net REV 계산
+  const rows = sorted.map(([ch, d]) => {
+    const rate = getCommissionRate(ch, d.segment);
+    const gross = d.net_rev || 0;
+    const comm = gross * rate;
+    const net = gross - comm;
+    const netAdr = d.net_rn > 0 ? net * 1000 / d.net_rn : 0;
+    return { ch, segment: d.segment, rns: d.net_rn || 0, gross, rate, comm, net, netAdr };
+  });
+
+  const totalNet = rows.reduce((s,r) => s + r.net, 0);
+  const totalComm = rows.reduce((s,r) => s + r.comm, 0);
+  const totalRns = rows.reduce((s,r) => s + r.rns, 0);
+
+  // Net REV 기준 정렬
+  rows.sort((a,b) => b.net - a.net);
+
+  let html = '';
+  const displayN = Math.min(rows.length, 15);
+  for (let i = 0; i < displayN; i++) {
+    const r = rows[i];
+    const segTag = r.segment ? `<span class="seg-tag ${r.segment === 'OTA' ? 'ota' : r.segment === 'G-OTA' ? 'gota' : 'inbound'}">${r.segment}</span>` : '';
+    const sharePct = totalNet > 0 ? (r.net / totalNet) * 100 : 0;
+    html += `<tr>
+      <td><span class="rank-num">${i+1}</span>${r.ch}${segTag}</td>
+      <td>${r.rns.toLocaleString('ko-KR')}</td>
+      <td>${(r.gross/100).toFixed(2)}</td>
+      <td><span style="color:var(--warning);">${(r.rate*100).toFixed(1)}%</span></td>
+      <td style="color:var(--negative);">-${(r.comm/100).toFixed(2)}</td>
+      <td style="color:var(--positive);font-weight:700;">${(r.net/100).toFixed(2)}</td>
+      <td>${r.netAdr > 0 ? Math.round(r.netAdr).toLocaleString('ko-KR') : '—'}</td>
+      <td><span style="color:${sharePct>=10?'var(--gold-bright)':'var(--ink-muted)'};">${sharePct.toFixed(1)}%</span></td>
+    </tr>`;
+  }
+  if (rows.length > displayN) {
+    const remaining = rows.length - displayN;
+    const rRev = rows.slice(displayN).reduce((s,r)=>s+r.net,0);
+    html += `<tr><td colspan="8" style="text-align:center;padding:8px;color:var(--ink-faint);font-size:11px;">+${remaining}개 채널 (Net REV 합계 ${(rRev/100).toFixed(2)}억)</td></tr>`;
+  }
+  // total row
+  const totalRate = totalGrossREV > 0 ? (totalComm / totalGrossREV) * 100 : 0;
+  const totalNetAdr = totalRns > 0 ? totalNet * 1000 / totalRns : 0;
+  html += `<tr class="total-row">
+    <td>합계 (추정)</td>
+    <td>${totalRns.toLocaleString('ko-KR')}</td>
+    <td>${(totalGrossREV/100).toFixed(2)}</td>
+    <td>${totalRate.toFixed(1)}%</td>
+    <td style="color:var(--negative);">-${(totalComm/100).toFixed(2)}</td>
+    <td style="color:var(--positive);">${(totalNet/100).toFixed(2)}</td>
+    <td>${Math.round(totalNetAdr).toLocaleString('ko-KR')}</td>
+    <td>100.0%</td>
+  </tr>`;
+  tbody.innerHTML = html;
+}
+
+// ===== 섹션 8: Action Insight =====
+function buildActionInsights(sorted, lyData) {
+  // A. 볼륨 핵심: net_rn 상위 3
+  const byRns = sorted.slice().sort(([,a],[,b]) => (b.net_rn||0) - (a.net_rn||0)).slice(0, 3);
+  // B. ADR 저하: RNS 평균 이상이면서 ADR 평균 미만인 채널 (저단가 볼륨)
+  const avgRns = sorted.length > 0 ? sorted.reduce((s,[,d])=>s+(d.net_rn||0),0)/sorted.length : 0;
+  const avgAdr = sorted.length > 0 ? sorted.reduce((s,[,d])=>s+(d.adr||0),0)/sorted.length : 0;
+  const adrDecline = sorted.filter(([,d]) => (d.net_rn||0) >= avgRns && (d.adr||0) < avgAdr && (d.adr||0) > 0)
+    .sort(([,a],[,b]) => (a.adr||0) - (b.adr||0)).slice(0, 4);
+  // C. YoY 하락: 전년대비 net_rn 감소 큰 채널
+  const yoyDecline = [];
+  const yoyGrowth = [];
+  for (const [ch, d] of sorted) {
+    const ly = lyData[ch];
+    if (!ly || (ly.net_rn||0) <= 0) continue;
+    const change = ((d.net_rn||0) - (ly.net_rn||0)) / (ly.net_rn||1) * 100;
+    if (change < -5) yoyDecline.push({ ch, change });
+    else if (change > 10) yoyGrowth.push({ ch, change });
+  }
+  yoyDecline.sort((a,b) => a.change - b.change);
+  yoyGrowth.sort((a,b) => b.change - a.change);
+
+  function paint(elId, items) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (items.length === 0) { el.innerHTML = '<span class="ch-tag empty">해당 채널 없음</span>'; return; }
+    el.innerHTML = items.map(it => {
+      if (typeof it === 'string') return `<span class="ch-tag">${it}</span>`;
+      if (it.change != null) {
+        const sign = it.change >= 0 ? '+' : '';
+        return `<span class="ch-tag">${it.ch} <span style="opacity:0.7;">${sign}${it.change.toFixed(1)}%</span></span>`;
+      }
+      return `<span class="ch-tag">${it.ch || it}</span>`;
+    }).join('');
+  }
+
+  paint('action-A-chs', byRns.map(([ch])=>ch));
+  paint('action-B-chs', adrDecline.map(([ch])=>ch));
+  paint('action-C-chs', yoyDecline.slice(0, 4));
+  paint('action-D-chs', yoyGrowth.slice(0, 4));
 }
 
 function buildUnifiedChart(sorted, avgADR) {
