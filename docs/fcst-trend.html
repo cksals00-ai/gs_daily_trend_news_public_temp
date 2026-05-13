@@ -171,7 +171,7 @@ td,th{font-weight:600}th{font-weight:800}
     <div class="sb-section">
       <div class="sb-label">옵션</div>
       <label style="font-size:11px;color:var(--ink-muted);cursor:pointer;display:flex;align-items:center;gap:5px;margin-top:4px">
-        <input type="checkbox" id="filter-yoy" onchange="renderAll()" style="accent-color:var(--gold)"> YoY 전년 동월 오버레이
+        <input type="checkbox" id="filter-yoy" onchange="renderAll()" style="accent-color:var(--gold)"> YoY 전년(동기간) 동월 오버레이
       </label>
     </div>
     <div class="sb-info" id="data-info"></div>
@@ -208,7 +208,7 @@ td,th{font-weight:600}th{font-weight:800}
       <canvas id="chart-ach"></canvas>
     </div>
     <div class="chart-box">
-      <div class="chart-label">YoY 비교 (전년 동월)</div>
+      <div class="chart-label">YoY 비교 (전년(동기간) 동월)</div>
       <canvas id="chart-yoy"></canvas>
     </div>
   </div>
@@ -1558,7 +1558,7 @@ function generateAIFactorSeg(propName, stayMonth, firstFcst, lastFcst, budget, l
     const yoyDiff = lastFcst - lyFcst;
     const yoyPct = ((lastFcst / lyFcst - 1) * 100).toFixed(1);
     const cls = yoyDiff >= 0 ? 'ai-up' : 'ai-dn';
-    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">전년대비 ${yoyDiff>=0?'+':''}${fmt(yoyDiff)}${unit} (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
+    lines.push(`<span class="ai-line"><span class="ai-tag yoy">YoY</span><span class="${cls}">전년(동기간) 대비 ${yoyDiff>=0?'+':''}${fmt(yoyDiff)}${unit} (${yoyDiff>=0?'+':''}${yoyPct}%)</span></span>`);
   }
 
   // 4) 세그별 드라이버 (GS/ALL 모드에서 어떤 세그가 변동 주도했는지)

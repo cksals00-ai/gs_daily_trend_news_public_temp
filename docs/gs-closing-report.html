@@ -627,7 +627,7 @@ function renderKPI(summary, id, cumulSummary) {
         ${yoyTag(summary.rns_yoy, 'RN')}
         ${targetTag(summary.rns_achievement)}
       </div>
-      <div class="kpi-prev">전년 ${fmt.n(summary.rns_last)} | 목표 ${fmt.n(summary.rns_budget)}</div>
+      <div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.n(summary.rns_last)} | 목표 ${fmt.n(summary.rns_budget)}</div>
       ${cumulBlock('RN', fmt.n(cumulSummary?.rns_actual) + ' <span style="font-size:10px;color:var(--ink-faint)">달성 ' + (cumulSummary?.rns_achievement?.toFixed(1)||'—') + '%</span>')}
     </div>
     <div class="kpi-card kpi-rev">
@@ -637,7 +637,7 @@ function renderKPI(summary, id, cumulSummary) {
         ${yoyTag(summary.rev_yoy, 'Rev')}
         ${targetTag(summary.rev_achievement)}
       </div>
-      <div class="kpi-prev">전년 ${fmt.rev(summary.rev_last)} | 목표 ${fmt.rev(summary.rev_budget)}</div>
+      <div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.rev(summary.rev_last)} | 목표 ${fmt.rev(summary.rev_budget)}</div>
       ${cumulBlock('매출', fmt.rev(cumulSummary?.rev_actual) + ' <span style="font-size:10px;color:var(--ink-faint)">달성 ' + (cumulSummary?.rev_achievement?.toFixed(1)||'—') + '%</span>')}
     </div>
     <div class="kpi-card kpi-adr">
@@ -647,7 +647,7 @@ function renderKPI(summary, id, cumulSummary) {
         ${yoyTag(summary.adr_yoy, '')}
         <span class="kpi-tag tag-neutral">천원</span>
       </div>
-      <div class="kpi-prev">전년 ${fmt.won(summary.adr_last)} | 목표 ${fmt.won(summary.adr_budget)}</div>
+      <div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.won(summary.adr_last)} | 목표 ${fmt.won(summary.adr_budget)}</div>
       ${cumulBlock('ADR', fmt.won(cumulSummary?.adr_actual))}
     </div>
   `;
@@ -660,11 +660,11 @@ function generateOverviewInsight(summary) {
   const items = [];
   const rnDir = summary.rns_yoy >= 0 ? '▲' : '▼';
   const revDir = summary.rev_yoy >= 0 ? '▲' : '▼';
-  items.push(`<span class="insight-kw">RN 성장</span> 전년대비 ${rnDir}${Math.abs(summary.rns_yoy).toFixed(1)}% | 실적 ${fmt.n(summary.rns_actual)}박 vs 전년 ${fmt.n(summary.rns_last)}박`);
+  items.push(`<span class="insight-kw">RN 성장</span> 전년(동기간) 대비 ${rnDir}${Math.abs(summary.rns_yoy).toFixed(1)}% | 실적 ${fmt.n(summary.rns_actual)}박 vs 전년 ${fmt.n(summary.rns_last)}박`);
   items.push(`<span class="insight-kw">목표 달성</span> RN 달성률 ${summary.rns_achievement.toFixed(1)}% | 매출 달성률 ${summary.rev_achievement.toFixed(1)}%`);
   const adrDiff = summary.adr_actual - summary.adr_last;
-  items.push(`<span class="insight-kw">ADR</span> ${fmt.won(summary.adr_actual)} 전년비 ${adrDiff >= 0 ? '+' : ''}${fmt.won(adrDiff)} (${fmt.pct(summary.adr_yoy)}) | ${summary.adr_yoy >= 0 ? '객단가 개선' : '객단가 하락 주의'}`);
-  items.push(`<span class="insight-kw">매출</span> ${fmt.rev(summary.rev_actual)} 전년비 ${revDir}${Math.abs(summary.rev_yoy).toFixed(1)}% | 목표 대비 ${summary.rev_achievement >= 100 ? '초과 달성' : (100 - summary.rev_achievement).toFixed(1) + '%p 갭'}`);
+  items.push(`<span class="insight-kw">ADR</span> ${fmt.won(summary.adr_actual)} 전년(동기간)비 ${adrDiff >= 0 ? '+' : ''}${fmt.won(adrDiff)} (${fmt.pct(summary.adr_yoy)}) | ${summary.adr_yoy >= 0 ? '객단가 개선' : '객단가 하락 주의'}`);
+  items.push(`<span class="insight-kw">매출</span> ${fmt.rev(summary.rev_actual)} 전년(동기간)비 ${revDir}${Math.abs(summary.rev_yoy).toFixed(1)}% | 목표 대비 ${summary.rev_achievement >= 100 ? '초과 달성' : (100 - summary.rev_achievement).toFixed(1) + '%p 갭'}`);
   return items;
 }
 
@@ -705,7 +705,7 @@ function generateChannelInsight(months) {
 
 function generateADRInsight(props, summary) {
   const items = [];
-  items.push(`<span class="insight-kw">전체 ADR</span> ${fmt.won(summary.adr_actual)} 전년비 ${fmt.pct(summary.adr_yoy)} | 목표 ${fmt.won(summary.adr_budget)}`);
+  items.push(`<span class="insight-kw">전체 ADR</span> ${fmt.won(summary.adr_actual)} 전년(동기간)비 ${fmt.pct(summary.adr_yoy)} | 목표 ${fmt.won(summary.adr_budget)}`);
   const topADR = [...props].filter(p => p.adr_actual > 0).sort((a,b) => b.adr_actual - a.adr_actual).slice(0, 3);
   if (topADR.length) items.push(`<span class="insight-kw">TOP 고단가</span> ${topADR.map(p => p.name.replace(/^\d+\./,'') + ' ' + fmt.won(p.adr_actual)).join(' · ')}`);
   const dropping = [...props].filter(p => p.adr_yoy != null && p.adr_yoy < -3).sort((a,b) => a.adr_yoy - b.adr_yoy).slice(0, 3);
@@ -731,9 +731,9 @@ function renderPropertyTable(props, containerId, showToggle = true) {
       <th class="group-header" colspan="5">REVENUE</th>
     </tr>
     <tr>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
     </tr>
   </thead><tbody>`;
 
@@ -798,9 +798,9 @@ function renderChannelTable(months, containerId) {
       <th class="group-header" colspan="5">REVENUE</th>
     </tr>
     <tr>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">목표비</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
     </tr>
   </thead><tbody>`;
 
@@ -1444,7 +1444,7 @@ function renderADRTable(props, containerId) {
       <th class="group-header" colspan="4">ADR</th>
     </tr>
     <tr>
-      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년</th><th class="sub-header">전년비</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="sub-header">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
     </tr>
   </thead><tbody>`;
   sorted.forEach((p, i) => {
@@ -1689,7 +1689,7 @@ function generateCancellationInsight(months) {
     const sr = segmentRates[seg];
     let dir = sr.yoy != null ? (sr.yoy > 0 ? '증가' : sr.yoy < 0 ? '감소' : '동일') : '—';
     const yoyStr = sr.yoy != null ? (sr.yoy > 0 ? '+' : '') + sr.yoy.toFixed(1) + 'p' : '—';
-    items.push(`<span class="insight-kw">${seg} 취소율</span> ${sr.rate26.toFixed(1)}% (전년 ${sr.rate25.toFixed(1)}%, ${yoyStr} ${dir})`);
+    items.push(`<span class="insight-kw">${seg} 취소율</span> ${sr.rate26.toFixed(1)}% (전년(동기간) ${sr.rate25.toFixed(1)}%, ${yoyStr} ${dir})`);
   });
 
   // 가장 높은/낮은 취소율 거래처
@@ -1704,7 +1704,7 @@ function generateCancellationInsight(months) {
   const increasing = allChannels.filter(ch => ch.cancelRateYoY != null && ch.cancelRateYoY > 1).sort((a, b) => b.cancelRateYoY - a.cancelRateYoY);
   if (increasing.length > 0) {
     const topInc = increasing[0];
-    items.push(`<span class="insight-kw">취소율 증가 주의</span> ${topInc.name} ${topInc.cancelRate25.toFixed(1)}% → ${topInc.cancelRate26.toFixed(1)}% (+${topInc.cancelRateYoY.toFixed(1)}p) · 전년 동기 대비 취소 수요 증가 추세`);
+    items.push(`<span class="insight-kw">취소율 증가 주의</span> ${topInc.name} ${topInc.cancelRate25.toFixed(1)}% → ${topInc.cancelRate26.toFixed(1)}% (+${topInc.cancelRateYoY.toFixed(1)}p) · 전년(동기간) 대비 취소 수요 증가 추세`);
   }
 
   return items;
@@ -1722,9 +1722,9 @@ function renderInboundSection(months, containerId) {
     const yoyColor = ib.rns_yoy >= 0 ? 'var(--positive)' : 'var(--negative)';
     let html = `
       <div class="kpi-grid" style="margin-bottom:16px">
-        <div class="kpi-card kpi-rn"><div class="kpi-label">Inbound RN</div><div class="kpi-value">${fmt.n(ib.rns_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rns_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.n(ib.rns_last)}</div></div>
-        <div class="kpi-card kpi-rev"><div class="kpi-label">Inbound Revenue</div><div class="kpi-value">${fmt.rev(ib.rev_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rev_yoy, '')}</div><div class="kpi-prev">전년 ${fmt.rev(ib.rev_last)}</div></div>
-        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">천원</span></div><div class="kpi-prev">전년 ${fmt.won(ib.adr_last)}</div></div>
+        <div class="kpi-card kpi-rn"><div class="kpi-label">Inbound RN</div><div class="kpi-value">${fmt.n(ib.rns_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rns_yoy, '')}</div><div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.n(ib.rns_last)}</div></div>
+        <div class="kpi-card kpi-rev"><div class="kpi-label">Inbound Revenue</div><div class="kpi-value">${fmt.rev(ib.rev_actual)}</div><div class="kpi-keywords">${yoyTag(ib.rev_yoy, '')}</div><div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.rev(ib.rev_last)}</div></div>
+        <div class="kpi-card kpi-adr"><div class="kpi-label">Inbound ADR</div><div class="kpi-value">${fmt.won(ib.adr_actual)}</div><div class="kpi-keywords"><span class="kpi-tag tag-neutral">천원</span></div><div class="kpi-prev">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${fmt.won(ib.adr_last)}</div></div>
       </div>
     `;
 
@@ -1875,7 +1875,7 @@ function getMarketPoints(months) {
   const topAdrProp = premiumProps[0];
   const btmAdrProp = premiumProps[premiumProps.length - 1];
   const adrGap = topAdrProp && btmAdrProp ? Math.round(topAdrProp.adr_actual - btmAdrProp.adr_actual) : 0;
-  points.push(`<span class="insight-kw">ADR 트렌드</span> 전년동기 대비 ${fmt.pct(s.adr_yoy)} · ${s.adr_yoy >= 0 ? '객단가 개선' : '하락 압력'} · 프리미엄↔이코노미 격차 ${fmt.won(adrGap)} → 가격 분화 ${adrGap > 100000 ? '심화' : '유지'}`);
+  points.push(`<span class="insight-kw">ADR 트렌드</span> 전년(동기간) 대비 ${fmt.pct(s.adr_yoy)} · ${s.adr_yoy >= 0 ? '객단가 개선' : '하락 압력'} · 프리미엄↔이코노미 격차 ${fmt.won(adrGap)} → 가격 분화 ${adrGap > 100000 ? '심화' : '유지'}`);
 
   // 4. Inbound 회복세
   points.push(`<span class="insight-kw">Inbound 회복</span> 점유율 ${ibShare}% · YoY ${fmt.pct(ib.rns_yoy)} · ${ib.rns_yoy > 5 ? '뚜렷한 회복세' : ib.rns_yoy > 0 ? '완만한 회복' : '수요 감소'} · ADR ${fmt.won(ib.adr_actual)} (${ib.adr_yoy >= 0 ? '단가 방어' : '단가 약세'})`);
@@ -1902,9 +1902,9 @@ function getMarketPoints(months) {
   if (prevMonthSummary && curMonthSummary.rns_actual > 0 && prevMonthSummary.rns_actual > 0) {
     const momChange = ((curMonthSummary.rns_actual - prevMonthSummary.rns_actual) / prevMonthSummary.rns_actual * 100);
     const seasonDir = momChange > 10 ? '성수기 진입' : momChange > 0 ? '소폭 상승' : momChange > -10 ? '소폭 하락' : '비수기 전환';
-    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} MoM ${fmt.pct(momChange)} · ${seasonDir} 패턴 · 전년 동월 대비 ${s.rns_yoy >= 0 ? '수요 확대' : '수요 위축'}`);
+    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} MoM ${fmt.pct(momChange)} · ${seasonDir} 패턴 · 전년(동기간) 동월 대비 ${s.rns_yoy >= 0 ? '수요 확대' : '수요 위축'}`);
   } else {
-    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} 전년동기 대비 RN ${fmt.pct(s.rns_yoy)} · ${s.rns_yoy > 5 ? '성수기 수요 확대' : s.rns_yoy >= 0 ? '수요 안정' : '수요 위축 주의'}`);
+    points.push(`<span class="insight-kw">계절성</span> ${MONTH_KO[lastMonth]} 전년(동기간) 대비 RN ${fmt.pct(s.rns_yoy)} · ${s.rns_yoy > 5 ? '성수기 수요 확대' : s.rns_yoy >= 0 ? '수요 안정' : '수요 위축 주의'}`);
   }
 
   // 7. 전체 시장 성장률
@@ -1991,7 +1991,7 @@ function buildTabHTML(tabId, months, label, showCumul) {
 
         <!-- 3-1 사업장별 -->
         <div class="card">
-          <div class="card-header"><h3>3-1. 사업장별 실적 (RN · ADR · 매출 — 목표/실적/전년비)</h3></div>
+          <div class="card-header"><h3>3-1. 사업장별 실적 (RN · ADR · 매출 — 목표/실적/전년(동기간)비)</h3></div>
           <div class="card-body">
             <div id="prop-cards-${uid}"></div>
             <div class="insight-box" style="margin-bottom:12px" id="insight-prop-wrap-${uid}">

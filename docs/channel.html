@@ -920,7 +920,7 @@ function buildYoYChangeChart(allChannelData, months) {
   const prevMonths = months.map(m => prevYear + m.slice(4)).filter(m => db.meta.months.includes(m));
 
   if (prevMonths.length === 0) {
-    yoyChangeChart = new Chart(ctx, { type: 'bar', data: { labels: ['전년 데이터 없음'], datasets: [{ data: [0] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    yoyChangeChart = new Chart(ctx, { type: 'bar', data: { labels: ['전년(동기간) 데이터 없음'], datasets: [{ data: [0] }] }, options: { responsive: true, maintainAspectRatio: false } });
     return;
   }
 
@@ -954,7 +954,7 @@ function buildYoYChangeChart(allChannelData, months) {
     prevChannelData[ch] = net_rn;
   }
 
-  // 현재 필터된 채널 중 전년 데이터도 있는 채널만
+  // 현재 필터된 채널 중 전년(동기간) 데이터도 있는 채널만
   const filtered = filterBySegment(allChannelData);
   const yoyData = [];
   for (const [ch, d] of Object.entries(filtered)) {

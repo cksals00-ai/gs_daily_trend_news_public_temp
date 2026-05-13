@@ -888,22 +888,128 @@ def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_
     return None, None
 
 
-def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst):
-    """동기간 기준으로 LY 데이터를 필터링하여 동적 보정 데이터 생성.
-    today가 2026-04-29라면, 2025년 데이터는 <= 2025-04-29 기준일 시점의 데이터만 포함.
-    {
-        "2025": {
-            "by_property": {prop_name: {month_key: {booking_rn, booking_rev, adjustment_rn, adjustment_rev}, ...}, ...},
-            "by_segment": {seg_name: {month_key: {...}, ...}, ...}
-        }
+def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_daily=None):
+    """진정한 동기간 기준으로 LY 데이터 생성 (stay_date_daily 일별 데이터 기반).
+
+    동기간 규칙:
+    - 과거월 (< 현재월): 풀 마감값 (전체 일수 합산)
+    - 현재월 (= 현재월): 1일 ~ 오늘 날짜까지만 합산
+    - 미래월 (> 현재월): 0 (비교 불가)
+
+    stay_date_daily: db_aggregated의 stay_date_daily 섹션.
+      {month_key: {days: [...], segments: {seg: {net_rn: [...], net_rev: [...]}}}}
+
+    Returns: {
+        "by_segment":          {seg: {month_key: {"booking_rn": X, "booking_rev_m": Y}}},
+        "by_property_segment": {prop: {seg: {month_key: {"booking_rn": X, "booking_rev_m": Y}}}},
+        "by_property":         {prop: {month_key: {"booking_rn": X, "adjustment_rn": 0}}},
     }
     """
-    # 2025년의 동기간 기준일 (today와 같은 월일, 작년)
-    ly_cutoff_date = f"{now_kst.year - 1}{now_kst.month:02d}{now_kst.day:02d}"
+    if stay_date_daily is None:
+        return {}
 
-    # 아직 구현하지 않음 - 실제 booking_date 필터링이 필요하므로 skip
-    # 현재 가용 데이터에서는 월 단위 aggregate만 있으므로, 정교한 동기간 필터링 불가
-    return {}
+    cur_month = now_kst.month
+    cur_day = now_kst.day
+
+    result_by_segment = {}
+    # 세그먼트별 동기간 비율 (property-level 비례 배분용)
+    same_period_ratios = {}  # {month_key: {seg: ratio}}
+
+    # ── 1. Segment-level: stay_date_daily에서 직접 계산 ──
+    for month_idx in range(1, 13):
+        mk_25 = f"2025{month_idx:02d}"
+        month_daily = stay_date_daily.get(mk_25, {})
+        segs_daily = month_daily.get("segments", {})
+        same_period_ratios[mk_25] = {}
+
+        for seg in SEGMENT_KEYS:
+            seg_daily = segs_daily.get(seg, {})
+            net_rn_arr = seg_daily.get("net_rn", [])
+            net_rev_arr = seg_daily.get("net_rev", [])
+
+            full_rn = sum(net_rn_arr)
+            full_rev = sum(net_rev_arr)
+
+            if month_idx < cur_month:
+                # 과거월: 풀 마감
+                sp_rn = full_rn
+                sp_rev = full_rev
+                ratio = 1.0
+            elif month_idx == cur_month:
+                # 현재월: 1일~오늘까지만
+                sp_rn = sum(net_rn_arr[:cur_day])
+                sp_rev = sum(net_rev_arr[:cur_day])
+                ratio = sp_rn / full_rn if full_rn > 0 else 0.0
+            else:
+                # 미래월: 0
+                sp_rn = 0
+                sp_rev = 0.0
+                ratio = 0.0
+
+            if seg not in result_by_segment:
+                result_by_segment[seg] = {}
+            result_by_segment[seg][mk_25] = {
+                "booking_rn": sp_rn,
+                "booking_rev_m": round(sp_rev, 2),
+            }
+            same_period_ratios[mk_25][seg] = ratio
+
+    # ── 2. Property×Segment-level: by_property_segment에 비율 적용 ──
+    result_by_prop_seg = {}
+    result_by_prop = {}
+
+    if db_bps:
+        for prop_name, prop_segs in db_bps.items():
+            result_by_prop_seg[prop_name] = {}
+            result_by_prop[prop_name] = {}
+
+            for seg in SEGMENT_KEYS:
+                seg_data = prop_segs.get(seg, {})
+                result_by_prop_seg[prop_name][seg] = {}
+
+                for month_idx in range(1, 13):
+                    mk_25 = f"2025{month_idx:02d}"
+                    m_data = seg_data.get(mk_25, {})
+                    full_rn = m_data.get("booking_rn", 0)
+                    full_rev = m_data.get("booking_rev", 0.0)
+
+                    ratio = same_period_ratios.get(mk_25, {}).get(seg, 1.0)
+
+                    if month_idx < cur_month:
+                        # 과거월: 풀 마감 (ratio=1.0이므로 원본 그대로)
+                        sp_rn = full_rn
+                        sp_rev = full_rev
+                    elif month_idx == cur_month:
+                        # 현재월: 비율 적용
+                        sp_rn = round(full_rn * ratio)
+                        sp_rev = round(full_rev * ratio, 2)
+                    else:
+                        # 미래월: 0
+                        sp_rn = 0
+                        sp_rev = 0.0
+
+                    result_by_prop_seg[prop_name][seg][mk_25] = {
+                        "booking_rn": sp_rn,
+                        "booking_rev_m": sp_rev,
+                    }
+
+            # Property-level: BUDGET_SEGMENT_KEYS 합산
+            for month_idx in range(1, 13):
+                mk_25 = f"2025{month_idx:02d}"
+                total_rn = sum(
+                    result_by_prop_seg[prop_name].get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    for seg in BUDGET_SEGMENT_KEYS
+                )
+                result_by_prop[prop_name][mk_25] = {
+                    "booking_rn": total_rn,
+                    "adjustment_rn": 0,
+                }
+
+    return {
+        "by_segment": result_by_segment,
+        "by_property_segment": result_by_prop_seg,
+        "by_property": result_by_prop,
+    }
 
 
 def apply_ly_same_period_adjustment(db_bp, db_seg, db_bps, month_idx, now_kst):
@@ -969,23 +1075,19 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         month_data = {}
         # ── bottom-up: 세그별 last_rn 먼저 계산하여 합계 행에 사용 ──
+        # adj_by_prop_seg에 동기간 보정 반영됨 (과거=풀마감, 현재=동기간, 미래=0)
         seg_last_rn_by_month = {}  # {m: sum of segment last_rn}
         if db_bps is not None and seg_budgets is not None:
             for m in months:
                 mk_25 = f"2025{m:02d}"
                 seg_sum = 0
-                is_future_or_current_m = (m >= now_kst.month)
                 for seg in BUDGET_SEGMENT_KEYS:
                     s_ly_rn = 0
-                    used_adj = False
-                    if is_future_or_current_m and adj_by_prop_seg:
+                    if adj_by_prop_seg:
                         for pname in db_props:
                             ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
                             s_ly_rn += ps_m.get("booking_rn", 0)
-                        if s_ly_rn > 0:
-                            used_adj = True
-                    if not used_adj:
-                        s_ly_rn = 0
+                    else:
                         for pname in db_props:
                             s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
                     seg_sum += s_ly_rn
@@ -1090,17 +1192,12 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                     s_ly_rn = 0
                     for pname in db_props:
                         s_act_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_26, {}).get("booking_rn", 0)
-                    # LY: 동기간 보정(adj_by_prop_seg) 우선, 없으면 풀년 db_bps
-                    is_future_or_current_m = (m >= now_kst.month)
-                    used_adj = False
-                    if is_future_or_current_m and adj_by_prop_seg:
+                    # LY: 동기간 보정 (adj_by_prop_seg에 과거=풀마감, 현재=동기간, 미래=0 반영됨)
+                    if adj_by_prop_seg:
                         for pname in db_props:
                             ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
                             s_ly_rn += ps_m.get("booking_rn", 0)
-                        if s_ly_rn > 0:
-                            used_adj = True
-                    if not used_adj:
-                        s_ly_rn = 0
+                    else:
                         for pname in db_props:
                             s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
                     sb = seg_budgets.get(display_name, {}).get(seg, {})
@@ -1154,9 +1251,7 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, 
         act_rev = sum(seg_db.get(mk, {}).get("booking_rev", 0.0) for mk in target_keys)
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # LY: 동기간 보정 적용 (미래월 판별: month_idx > 0이고 month_idx > now_kst.month이면 미래월)
-        is_future_for_ly = (month_idx > 0 and month_idx > now_kst.month)
-
+        # LY: 동기간 보정 적용 (adj_by_segment에 과거=풀마감, 현재=동기간, 미래=0 반영됨)
         if adj_by_segment and seg in adj_by_segment:
             seg_adj = adj_by_segment[seg]
             ly_rn  = sum(seg_adj.get(mk, {}).get("booking_rn", 0)  for mk in ly_keys)
@@ -1258,30 +1353,20 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 act_rev += d["rev_m"]
         act_adr = round(act_rev * 1_000_000 / act_rn) if act_rn > 0 else 0
 
-        # 전년 합산 — bottom-up: 세그별 동기간 보정 합산으로 일관성 확보
+        # 전년 합산 — 동기간 보정: adj_by_prop_seg에 과거=풀마감, 현재=동기간, 미래=0 반영됨
         lst_rn = 0
         lst_rev = 0.0
-        is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
 
-        if is_future_or_current and adj_by_prop_seg and db_bps is not None:
+        if adj_by_prop_seg and db_bps is not None:
             # bottom-up: OTA+G-OTA+Inbound 세그별 adj_by_prop_seg 합산
             for seg in BUDGET_SEGMENT_KEYS:
                 s_ly_rn = 0
                 s_ly_rev = 0.0
-                used_adj = False
                 for mk in last_keys:
                     for pname in db_props:
                         ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk, {})
                         s_ly_rn += ps_m.get("booking_rn", 0)
                         s_ly_rev += ps_m.get("booking_rev_m", 0.0)
-                if s_ly_rn > 0:
-                    used_adj = True
-                if not used_adj:
-                    for mk in last_keys:
-                        for pname in db_props:
-                            m_data = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
-                            s_ly_rn += m_data.get("booking_rn", 0)
-                            s_ly_rev += m_data.get("booking_rev", 0.0)
                 lst_rn += s_ly_rn
                 lst_rev += s_ly_rev
         elif db_bps is not None:
@@ -1601,20 +1686,14 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                         m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
                         s_act_rn  += m.get("booking_rn",  0)
                         s_act_rev += m.get("booking_rev", 0.0)
-                # LY: 동기간 보정 (adj_by_prop_seg) 우선, 없으면 풀년 db_bps
-                is_future_or_current = (month_idx > 0 and month_idx >= now_kst.month)
-                used_adj_seg = False
-                if is_future_or_current and adj_by_prop_seg:
+                # LY: 동기간 보정 (adj_by_prop_seg에 과거=풀마감, 현재=동기간, 미래=0 반영됨)
+                if adj_by_prop_seg:
                     for mk in last_keys:
                         for pname in db_props:
                             ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk, {})
                             s_lst_rn  += ps_m.get("booking_rn", 0)
                             s_lst_rev += ps_m.get("booking_rev_m", 0.0)
-                    if s_lst_rn > 0:
-                        used_adj_seg = True
-                if not used_adj_seg:
-                    s_lst_rn = 0
-                    s_lst_rev = 0.0
+                else:
                     for mk in last_keys:
                         for pname in db_props:
                             m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
@@ -2159,18 +2238,26 @@ def main():
 
     now_kst = datetime.now(KST)
 
-    # YoY 동기간 보정값 로드
+    # ── 진정한 동기간 보정: stay_date_daily 일별 데이터 기반 ──
+    stay_date_daily = db.get("stay_date_daily", {})
     adj_by_prop = {}
     adj_by_segment = {}
     adj_by_prop_seg = {}
-    yoy_base_date = ""
-    yoy_adj_section = db.get("yoy_adjusted", {})
-    if "2025" in yoy_adj_section:
-        adj_by_prop    = yoy_adj_section["2025"].get("by_property", {})
-        adj_by_segment = yoy_adj_section["2025"].get("by_segment", {})
-        adj_by_prop_seg = yoy_adj_section["2025"].get("by_property_segment", {})
-        yoy_base_date  = yoy_adj_section["2025"].get("base_date_full", "")
-    print(f"  YoY 동기간 보정 로드: 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}, base={yoy_base_date}")
+
+    same_period_result = build_ly_same_period_adjusted(
+        db_bp, db_bps, db_seg, now_kst, stay_date_daily=stay_date_daily,
+    )
+    if same_period_result:
+        adj_by_segment  = same_period_result.get("by_segment", {})
+        adj_by_prop_seg = same_period_result.get("by_property_segment", {})
+        adj_by_prop     = same_period_result.get("by_property", {})
+
+    # 동기간 기준일 정보
+    yoy_base_date = now_kst.strftime("%Y%m%d")
+    cur_day = now_kst.day
+    cur_month = now_kst.month
+    print(f"  동기간 보정 (stay_date_daily 기반): 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}")
+    print(f"  동기간 규칙: 과거월=풀마감, 현재월(~{cur_month}월 {cur_day}일)=동기간, 미래월=0")
 
     # 사업장별 리드타임 분포
     lead_time_by_prop = db.get("lead_time_by_property", {})
@@ -2366,6 +2453,8 @@ def main():
             "todayDate":    today_date,
             "yoyBaseDate":  yoy_base_date,
             "dataSource":   "온북 DB + 사업계획 Budget",
+            "samePeriodBasis": "stay_date_daily",
+            "samePeriodRule": f"과거월=풀마감, 현재월({cur_month}월 1~{cur_day}일)=동기간, 미래월=0",
         },
         "filters": {
             "months": [{"value": 0, "label": "전체"}] + [

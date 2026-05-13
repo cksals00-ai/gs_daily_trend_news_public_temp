@@ -452,8 +452,8 @@
           <th>FCST</th>
           <th>실적 (Actual)</th>
           <th>달성률</th>
-          <th>전년 (<span class="dy-ly"></span>)</th>
-          <th>전년비 (YoY)</th>
+          <th>전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> (<span class="dy-ly"></span>)</th>
+          <th>전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
         </tr></thead>
         <tbody id="summary-tbody"></tbody>
       </table>
@@ -526,8 +526,8 @@
     </section>
 
     <section class="card" id="sec-sug">
-      <h2><span class="num">7</span> 임박 기획전 제안 (전년 데이터 기반)</h2>
-      <div class="sub">전년/금년도 채널·인플루언서 실적 분석을 토대로 한 즉시 실행 가능한 제안 — 우선순위 A→B→C</div>
+      <h2><span class="num">7</span> 임박 기획전 제안 (전년(동기간) 데이터 기반)</h2>
+      <div class="sub">전년(동기간)/금년도 채널·인플루언서 실적 분석을 토대로 한 즉시 실행 가능한 제안 — 우선순위 A→B→C</div>
       <div class="sug-grid" id="sug-grid"></div>
     </section>
 
@@ -1403,7 +1403,7 @@ function buildChSegChips(){
 // strategy-keyin localStorage 에서 거래처별 목표 추출
 // ============================================================
 //  AI 1차 배분 — strategy-keyin.html 의 calcAISuggest 와 동일 로직
-//  근거: 전년 동월 LY (db_aggregated) × YoY 보정률 (CH_YOY_RATES)
+//  근거: 전년(동기간) 동월 LY (db_aggregated) × YoY 보정률 (CH_YOY_RATES)
 //  전략 보정: 급감(-20% 미만) → 감소폭 50%만 반영, 급성장(+50% 초과) → 성장폭 80% 반영
 // ============================================================
 const CH_YOY_RATES = {
@@ -1425,7 +1425,7 @@ const CH_YOY_RATES = {
 function calcAITargetRn(channel, month){
   if (!DATA.db) return null;
   const monthStr = String(month).padStart(2, '0');
-  const lyKey = `2025${monthStr}`; // 전년 동월
+  const lyKey = `2025${monthStr}`; // 전년(동기간) 동월
   const bc = DATA.db.by_channel || {};
   const lyMonthly = ((bc[channel] || {})[lyKey] || {}).net_rn || 0;
   if (lyMonthly === 0) return null;
@@ -1511,7 +1511,7 @@ function renderPerfTable(){
 
   titleEl.textContent = `${m}월 거래처별 진행 현황 ${STATE.chSegment === 'ALL' ? '(OTA + G-OTA)' : '(' + STATE.chSegment + ')'}`;
   const keyinNote = keyinCount + aiCount > 0
-    ? `✓ 목표 ${keyinCount + aiCount}개 거래처 적용 — strategy-keyin 키인 ${keyinCount}건 + AI 1차 배분 ${aiCount}건 (전년 동월 LY × YoY 보정)`
+    ? `✓ 목표 ${keyinCount + aiCount}개 거래처 적용 — strategy-keyin 키인 ${keyinCount}건 + AI 1차 배분 ${aiCount}건 (전년(동기간) 동월 LY × YoY 보정)`
     : `⚠ 목표 데이터 없음 — db_aggregated.by_channel 의 LY 데이터 확인 필요`;
   subEl.textContent = `${channels.length}개 거래처 · ${keyinNote}`;
 
@@ -1533,7 +1533,7 @@ function renderPerfTable(){
       <th>목표(Budget)</th>
       <th>실적 RN</th>
       <th>달성률</th>
-      <th>전년(LY)</th>
+      <th>전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
       <th>YoY</th>
       <th>기획전</th>
       <th>주간픽업</th>
@@ -1559,7 +1559,7 @@ function renderPerfTable(){
         const tgtCell = target_rn != null
           ? (tgtSrc === 'keyin'
              ? `<span style="color:var(--gold-bright);font-weight:700" title="strategy-keyin 사용자 입력">${fmt.num(target_rn)} ★</span>`
-             : `<span style="color:var(--ink-soft)" title="AI 1차 배분 (전년 동월 LY × YoY 보정)">${fmt.num(target_rn)} <span style="font-size:9px;color:var(--info);background:var(--info-bg);padding:1px 4px;border-radius:2px;font-weight:700">AI</span></span>`)
+             : `<span style="color:var(--ink-soft)" title="AI 1차 배분 (전년(동기간) 동월 LY × YoY 보정)">${fmt.num(target_rn)} <span style="font-size:9px;color:var(--info);background:var(--info-bg);padding:1px 4px;border-radius:2px;font-weight:700">AI</span></span>`)
           : '<span style="color:var(--ink-faint)">—</span>';
         return `<tr>
           <td class="name">${ch}</td>

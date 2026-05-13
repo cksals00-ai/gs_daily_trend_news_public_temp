@@ -214,7 +214,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
           <div class="chart-wrap"><canvas id="chart-ach"></canvas></div>
         </div>
         <div class="chart-box">
-          <div class="chart-box-title">세그먼트별 OTB vs 목표 vs 전년</div>
+          <div class="chart-box-title">세그먼트별 OTB vs 목표 vs 전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></div>
           <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
         </div>
         <div class="chart-box">
@@ -222,7 +222,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
           <div class="chart-wrap"><canvas id="chart-channel-pie"></canvas></div>
         </div>
         <div class="chart-box">
-          <div class="chart-box-title">전년 대비 증감률 (YoY)</div>
+          <div class="chart-box-title">전년(동기간) 대비 증감률 (YoY)</div>
           <div class="chart-wrap"><canvas id="chart-yoy"></canvas></div>
         </div>
       </div>
@@ -518,14 +518,14 @@ function buildMonthTable(tableId, monthNum, yearMonth, lastYearMonth, weekKey) {
     <tr>
       <th rowspan="2" style="min-width:120px;">구분</th>
       <th colspan="4" class="month-header">${monthNum}월 실적</th>
-      <th colspan="3" class="month-header">전년 비교</th>
+      <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> 비교</th>
     </tr>
     <tr>
       <th class="sub-header">목표</th>
       <th class="sub-header">OTB</th>
       <th class="sub-header">증감</th>
       <th class="sub-header">달성률</th>
-      <th class="sub-header">전년</th>
+      <th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
       <th class="sub-header">증감</th>
       <th class="sub-header">증감률</th>
     </tr>
@@ -569,14 +569,14 @@ function buildYTDTable(weekKey) {
     <tr>
       <th rowspan="2" style="min-width:120px;">구분</th>
       <th colspan="4" class="month-header">누계 (1~${curMonth}월)</th>
-      <th colspan="3" class="month-header">전년 동기 비교</th>
+      <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> 비교</th>
     </tr>
     <tr>
       <th class="sub-header">목표</th>
       <th class="sub-header">실적</th>
       <th class="sub-header">증감</th>
       <th class="sub-header">달성률</th>
-      <th class="sub-header">전년</th>
+      <th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
       <th class="sub-header">증감</th>
       <th class="sub-header">증감률</th>
     </tr>
@@ -770,7 +770,7 @@ function buildCharts(monthNum, yearMonth, lastYearMonth) {
       datasets: [
         { label: '목표', data: segs.map(s => getSegmentBudget(monthNum, s)), backgroundColor: 'rgba(168,172,179,0.4)', borderRadius: 4 },
         { label: 'OTB', data: segs.map(s => getSegmentOTB(s, yearMonth)), backgroundColor: segs.map(s => CHART_COLORS[s]), borderRadius: 4 },
-        { label: '전년', data: segs.map(s => getSegmentOTB(s, lastYearMonth)), backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4 },
+        { label: '전년(동기간)', data: segs.map(s => getSegmentOTB(s, lastYearMonth)), backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4 },
       ]
     },
     options: {
