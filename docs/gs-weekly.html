@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a1d23' width='192' height='192'/><circle cx='96' cy='96' r='85' fill='%23252932'/><text x='96' y='100' font-size='96' font-weight='700' fill='%23c9a063' text-anchor='middle' font-family='sans-serif'>GS</text></svg>">
 <style>
 :root {
@@ -201,6 +202,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <div id="week-chips" style="display:inline-flex;gap:8px;flex-wrap:wrap;"></div>
       <button id="confirm-btn" class="confirm-btn" onclick="confirmCurrentWeek()" title="현재 주차를 확정 — 페이지 전체 데이터를 스냅샷으로 저장">✓ 확정</button>
       <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
+      <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="현재 표시된 표를 .xlsx로 다운로드" style="margin-left:0;">Excel 다운로드</button>
     </div>
 
     <!-- Snapshot Banner -->
@@ -550,6 +552,63 @@ window.exportSnapshots = function() {
   a.click();
   URL.revokeObjectURL(a.href);
   toast('weekly_snapshots.json 내보냄 — docs/data/ 폴더에 덮어쓰세요', 'success');
+};
+
+window.exportExcel = function() {
+  if (typeof XLSX === 'undefined') {
+    toast('XLSX 라이브러리 로드 실패 — 네트워크를 확인하세요', 'error');
+    return;
+  }
+  try {
+    const wb = XLSX.utils.book_new();
+    const baseDate = OTB_DATA?.meta?.baseDate || '';
+    const activeChip = document.querySelector('.week-chip.active');
+    const weekLabelText = activeChip ? activeChip.textContent.replace(/\s+/g, ' ').trim() : '';
+
+    // 1) 요약 시트 — 헤더 + KPI 카드
+    const summaryRows = [
+      ['주간회의자료 · GS 실적 현황'],
+      ['기준일', baseDate],
+      ['선택 주차', weekLabelText],
+      ['내보낸 시각', new Date().toLocaleString('ko-KR')],
+      ACTIVE_SNAPSHOT_KEY ? ['스냅샷', ACTIVE_SNAPSHOT_KEY] : ['모드', '라이브 데이터'],
+      [],
+      ['KPI', '값', '부가설명'],
+    ];
+    document.querySelectorAll('#kpi-strip .kpi-card').forEach(card => {
+      const label = card.querySelector('.kpi-label')?.textContent.trim() || '';
+      const value = card.querySelector('.kpi-value')?.textContent.trim() || '';
+      const sub = card.querySelector('.kpi-sub')?.textContent.trim() || '';
+      summaryRows.push([label, value, sub]);
+    });
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{wch: 20}, {wch: 18}, {wch: 28}];
+    XLSX.utils.book_append_sheet(wb, wsSummary, '요약');
+
+    // 2) 표 3종
+    const sheets = [
+      { id: 'current-month-table', name: '당월 예상실적' },
+      { id: 'next-month-table', name: '익월 OTB 현황' },
+      { id: 'ytd-table', name: '누계 실적' },
+    ];
+    sheets.forEach(({ id, name }) => {
+      const tbl = document.getElementById(id);
+      if (!tbl) return;
+      const ws = XLSX.utils.table_to_sheet(tbl);
+      // 컬럼 폭: 첫 컬럼(구분) 넓게, 나머지 적당히
+      ws['!cols'] = [{wch: 18}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}];
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    });
+
+    const dateTag = (baseDate || new Date().toISOString().slice(0,10)).replace(/[^\d]/g, '');
+    const snapTag = ACTIVE_SNAPSHOT_KEY ? '_' + ACTIVE_SNAPSHOT_KEY : '';
+    const fname = `주간회의자료_${dateTag}${snapTag}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast(`${fname} 다운로드 완료`, 'success');
+  } catch (e) {
+    console.error('Excel 내보내기 실패:', e);
+    toast('Excel 내보내기 실패: ' + e.message, 'error');
+  }
 };
 
 function toast(msg, kind) {
