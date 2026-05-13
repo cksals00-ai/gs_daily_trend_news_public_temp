@@ -2129,6 +2129,181 @@ if ('serviceWorker' in navigator) {
         </div>
       </div>
 
+    </div>
+
+    <!-- ============ TODAY + WEEKLY COMPARISON — 당일/금주 vs 전주/전년 ============ -->
+    <div id="today-weekly-cmp" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#4ecdc4;font-weight:700;">◈ TODAY · WEEKLY COMPARISON · <span id="twc-date-label">—</span></div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="twc-window-label">—</div>
+      </div>
+
+      <!-- ROW 1: 당일현황 + 금주 합계 (3개 컬럼) -->
+      <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row1">
+
+        <!-- 당일현황 카드 -->
+        <div style="background:rgba(78,205,196,0.06);border:1px solid rgba(78,205,196,0.25);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">당일 현황</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-today-date">—</span>
+              <span id="twc-partial-badge" style="display:none;font-family:var(--mono);font-size:9px;color:#f0a500;background:rgba(240,165,0,0.1);padding:2px 6px;border-radius:3px;border:1px solid rgba(240,165,0,0.3);font-weight:700;">PARTIAL</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:36px;font-weight:800;color:#fff;line-height:1;" id="twc-today-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실 / 매출 <span id="twc-today-rev" style="color:rgba(255,255,255,0.7);font-weight:700;">—</span> 백만</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전주 동요일 (<span id="twc-today-prev-date">—</span>)</span>
+                <span><span id="twc-today-prev-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-wow" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:rgba(255,255,255,0.4);">전년 동기간 (<span id="twc-today-ly-date">—</span>)</span>
+                <span><span id="twc-today-ly-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-yoy" style="margin-left:6px;font-weight:700;">—</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 금주 카드 -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.5));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#fff;font-weight:900;">금주</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-this-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" id="twc-this-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);">매출 <span id="twc-this-rev" style="color:#fff;font-weight:700;">—</span> 백만</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">픽업 <span id="twc-this-pickup">—</span> · 취소 <span id="twc-this-cancel">—</span></div>
+          </div>
+        </div>
+
+        <!-- 전주 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.2));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:rgba(255,255,255,0.7);font-weight:900;">전주 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-prev-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-prev-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-wow-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-prev-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+        <!-- LY 카드 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">전년 동기간</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-ly-range">—</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
+              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-ly-rn">—</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 2: 사업장 → 거래처 → 상품카테고리 -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
+
+        <!-- 사업장별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#7dc4b0);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">사업장별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">금주 net 온북 RN, 전주/전년 동기간比</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전년</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-prop-tbody"></tbody>
+              </table>
+              <div id="twc-prop-more" style="text-align:center;padding:6px 0 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 거래처별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">거래처별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">아고다 / 야놀자 / 트립닷컴 등</span>
+              <span style="font-family:var(--mono);font-size:8.5px;color:#a892c8;">※ OTA + G-OTA 채널만 (Inbound 제외)</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">거래처</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-channel-tbody"></tbody>
+              </table>
+              <div id="twc-channel-more" style="text-align:center;padding:6px 0 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 상품카테고리별 비교 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">상품카테고리별 금주 비교</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">룸온니/프로모션 · 연박/투나잇 · 시즌패키지 등 · 패키지 회원번호=86</span>
+              <span style="font-family:var(--mono);font-size:8.5px;color:var(--gold);">※ OTA + G-OTA 채널만 (Inbound 제외)</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">상품카테고리</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
+                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="twc-seg-tbody"></tbody>
+              </table>
+              <div id="twc-seg-more" style="text-align:center;padding:6px 0 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
       <!-- ── ROW 2: 기획전 현황 + OTA 비발디 + GOTA 양양 ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px;align-items:stretch;" class="weekly-grid insight-grid">
 
@@ -2307,181 +2482,6 @@ if ('serviceWorker' in navigator) {
 
       </div>
       <!-- // INSIGHT ROW END -->
-
-    </div>
-
-    <!-- ============ TODAY + WEEKLY COMPARISON — 당일/금주 vs 전주/전년 ============ -->
-    <div id="today-weekly-cmp" style="margin-top:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#4ecdc4;font-weight:700;">◈ TODAY · WEEKLY COMPARISON · <span id="twc-date-label">—</span></div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="twc-window-label">—</div>
-      </div>
-
-      <!-- ROW 1: 당일현황 + 금주 합계 (3개 컬럼) -->
-      <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row1">
-
-        <!-- 당일현황 카드 -->
-        <div style="background:rgba(78,205,196,0.06);border:1px solid rgba(78,205,196,0.25);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">당일 현황</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-today-date">—</span>
-              <span id="twc-partial-badge" style="display:none;font-family:var(--mono);font-size:9px;color:#f0a500;background:rgba(240,165,0,0.1);padding:2px 6px;border-radius:3px;border:1px solid rgba(240,165,0,0.3);font-weight:700;">PARTIAL</span>
-            </div>
-            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
-              <span style="font-family:var(--serif);font-size:36px;font-weight:800;color:#fff;line-height:1;" id="twc-today-rn">—</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실 / 매출 <span id="twc-today-rev" style="color:rgba(255,255,255,0.7);font-weight:700;">—</span> 백만</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:rgba(255,255,255,0.4);">전주 동요일 (<span id="twc-today-prev-date">—</span>)</span>
-                <span><span id="twc-today-prev-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-wow" style="margin-left:6px;font-weight:700;">—</span></span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:rgba(255,255,255,0.4);">전년 동기간 (<span id="twc-today-ly-date">—</span>)</span>
-                <span><span id="twc-today-ly-rn" style="color:rgba(255,255,255,0.7);">—</span><span style="color:rgba(255,255,255,0.3);font-size:9px;"> 실</span> <span id="twc-today-yoy" style="margin-left:6px;font-weight:700;">—</span></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 금주 카드 -->
-        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.5));"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#fff;font-weight:900;">금주</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);" id="twc-this-range">—</span>
-            </div>
-            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
-              <span style="font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;line-height:1;" id="twc-this-rn">—</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.45);">실</span>
-            </div>
-            <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.5);">매출 <span id="twc-this-rev" style="color:#fff;font-weight:700;">—</span> 백만</div>
-            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">픽업 <span id="twc-this-pickup">—</span> · 취소 <span id="twc-this-cancel">—</span></div>
-          </div>
-        </div>
-
-        <!-- 전주 카드 -->
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.2));"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:rgba(255,255,255,0.7);font-weight:900;">전주 동기간</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-prev-range">—</span>
-            </div>
-            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
-              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-prev-rn">—</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
-            </div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-wow-pct">—</div>
-            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-prev-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
-          </div>
-        </div>
-
-        <!-- LY 카드 -->
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">전년 동기간</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.3);" id="twc-ly-range">—</span>
-            </div>
-            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;">
-              <span style="font-family:var(--serif);font-size:28px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1;" id="twc-ly-rn">—</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">실</span>
-            </div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
-            <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ROW 2: 사업장 → 거래처 → 상품카테고리 -->
-      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-bottom:14px;" class="twc-row2">
-
-        <!-- 사업장별 비교 -->
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#7dc4b0);"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#4ecdc4;font-weight:900;">사업장별 금주 비교</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">금주 net 온북 RN, 전주/전년 동기간比</span>
-            </div>
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
-                <thead>
-                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
-                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">사업장</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전주</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">전년</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
-                  </tr>
-                </thead>
-                <tbody id="twc-prop-tbody"></tbody>
-              </table>
-              <div id="twc-prop-more" style="text-align:center;padding:6px 0 2px;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 거래처별 비교 -->
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,146,200,0.2);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,#a892c8,#7a5fa8);"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:#a892c8;font-weight:900;">거래처별 금주 비교</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">아고다 / 야놀자 / 트립닷컴 등</span>
-              <span style="font-family:var(--mono);font-size:8.5px;color:#a892c8;">※ OTA + G-OTA 채널만 (Inbound 제외)</span>
-            </div>
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
-                <thead>
-                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
-                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">거래처</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
-                  </tr>
-                </thead>
-                <tbody id="twc-channel-tbody"></tbody>
-              </table>
-              <div id="twc-channel-more" style="text-align:center;padding:6px 0 2px;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 상품카테고리별 비교 -->
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,137,63,0.18);border-radius:8px;overflow:hidden;">
-          <div style="height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));"></div>
-          <div style="padding:14px 18px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.15em;color:var(--gold-bright);font-weight:900;">상품카테고리별 금주 비교</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">룸온니/프로모션 · 연박/투나잇 · 시즌패키지 등 · 패키지 회원번호=86</span>
-              <span style="font-family:var(--mono);font-size:8.5px;color:var(--gold);">※ OTA + G-OTA 채널만 (Inbound 제외)</span>
-            </div>
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
-                <thead>
-                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
-                    <th style="text-align:left;padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">상품카테고리</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">금주</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">WoW</th>
-                    <th style="padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
-                  </tr>
-                </thead>
-                <tbody id="twc-seg-tbody"></tbody>
-              </table>
-              <div id="twc-seg-more" style="text-align:center;padding:6px 0 2px;"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
 
       <!-- ROW 2.5: 상품 인사이트 카드 4개 (룸온니 실적 / 패키지 비중 / Top 카테고리 / YoY 최대 변동) -->
       <div id="product-insight-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px;">
