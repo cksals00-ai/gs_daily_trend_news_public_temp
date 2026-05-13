@@ -61,11 +61,34 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 .base-date-tag{font-family:var(--mono);font-size:11px;color:var(--ink-muted);background:var(--bg-card);padding:4px 10px;border-radius:4px;}
 
 /* WEEK SLICER */
-.week-slicer{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.week-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--rule-strong);background:var(--bg-card);color:var(--ink-muted);transition:all 0.2s;white-space:nowrap;}
+.week-slicer{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.week-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--rule-strong);background:var(--bg-card);color:var(--ink-muted);transition:all 0.2s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
 .week-chip:hover{background:var(--bg-hover);color:var(--ink);}
 .week-chip.active{background:rgba(201,160,99,0.22);border-color:var(--gold);color:var(--gold-bright);}
+.week-chip.confirmed{border-color:rgba(76,175,111,0.5);}
+.week-chip.confirmed .chip-check{color:var(--positive);font-weight:700;}
 .week-slicer-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--ink-faint);margin-right:4px;}
+.confirm-btn{margin-left:auto;padding:7px 16px;border-radius:6px;background:var(--gold);color:#1a1d23;font-weight:700;font-size:12px;border:none;cursor:pointer;transition:all 0.2s;letter-spacing:0.02em;}
+.confirm-btn:hover{background:var(--gold-bright);}
+.confirm-btn.secondary{background:transparent;color:var(--gold-bright);border:1px solid var(--gold);}
+.confirm-btn.secondary:hover{background:rgba(201,160,99,0.15);}
+.confirm-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.snapshot-banner{display:none;align-items:center;gap:10px;padding:10px 14px;margin-bottom:16px;background:rgba(76,175,111,0.10);border:1px solid rgba(76,175,111,0.35);border-radius:6px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap;}
+.snapshot-banner.live{background:rgba(90,159,196,0.08);border-color:rgba(90,159,196,0.35);}
+.snapshot-banner.live .snapshot-pill{background:rgba(90,159,196,0.25);color:#9ec9e0;}
+.snapshot-banner.active{display:flex;}
+.snapshot-pill{padding:2px 8px;border-radius:10px;background:rgba(76,175,111,0.25);color:#7fcf9a;font-family:var(--mono);font-size:10px;letter-spacing:0.05em;font-weight:700;}
+.snapshot-banner .meta{color:var(--ink-muted);font-family:var(--mono);font-size:11px;}
+.snapshot-banner .spacer{flex:1;}
+
+/* CHANNEL TARGET WARNING */
+.perf-table td.target-warn{border:1px solid var(--negative)!important;background:rgba(229,115,115,0.10);color:var(--negative);font-weight:700;position:relative;}
+.perf-table td.target-warn::after{content:'⚠';margin-left:4px;font-size:10px;}
+
+/* TOAST */
+.weekly-toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:8px;background:var(--bg-soft);border:1px solid var(--gold);color:var(--ink);font-size:13px;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,0.35);max-width:360px;}
+.weekly-toast.error{border-color:var(--negative);}
+.weekly-toast.success{border-color:var(--positive);}
 
 /* SECTION */
 .section-card{background:var(--bg-card);border-radius:10px;padding:20px;margin-bottom:20px;border:1px solid var(--rule);}
@@ -175,7 +198,19 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
     <!-- Week Slicer -->
     <div class="week-slicer">
       <span class="week-slicer-label">WEEK</span>
-      <div id="week-chips"></div>
+      <div id="week-chips" style="display:inline-flex;gap:8px;flex-wrap:wrap;"></div>
+      <button id="confirm-btn" class="confirm-btn" onclick="confirmCurrentWeek()" title="현재 주차를 확정 — 페이지 전체 데이터를 스냅샷으로 저장">✓ 확정</button>
+      <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
+    </div>
+
+    <!-- Snapshot Banner -->
+    <div id="snapshot-banner" class="snapshot-banner">
+      <span class="snapshot-pill" id="snapshot-pill">SNAPSHOT</span>
+      <span id="snapshot-text">—</span>
+      <span class="meta" id="snapshot-meta"></span>
+      <span class="spacer"></span>
+      <button id="back-to-live" class="confirm-btn secondary" onclick="exitSnapshot()" style="margin:0;padding:5px 12px;">현재 데이터 보기</button>
+      <button id="reconfirm-btn" class="confirm-btn" onclick="reconfirmSnapshot()" style="margin:0;padding:5px 12px;">재확정</button>
     </div>
 
     <!-- KPI Summary -->
@@ -247,12 +282,37 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 'use strict';
 
 // ===== DATA LOADING =====
-let OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED;
+let OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED, STRATEGY_DATA;
+let SNAPSHOTS = { version:'1.0', updated_at:null, snapshots:{} };
+let ACTIVE_SNAPSHOT_KEY = null;   // 'YYYY-MM-WN' when viewing a snapshot
+let ACTIVE_SNAPSHOT_DATA = null;  // resolved snapshot data when in snapshot mode
+const SNAPSHOT_LS_KEY = 'gs_weekly_snapshots_v1';
 const DATA_BASE = './data/';
 
 async function loadJSON(url) {
   const r = await fetch(DATA_BASE + url);
+  if (!r.ok) throw new Error(url + ' ' + r.status);
   return r.json();
+}
+
+async function loadJSONOpt(url) {
+  try { return await loadJSON(url); } catch(e) { return null; }
+}
+
+function loadSnapshotsFromLocal() {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.snapshots) return parsed;
+  } catch(e) { console.warn('localStorage snapshot load failed:', e); }
+  return null;
+}
+
+function saveSnapshotsToLocal() {
+  try {
+    localStorage.setItem(SNAPSHOT_LS_KEY, JSON.stringify(SNAPSHOTS));
+  } catch(e) { console.warn('localStorage snapshot save failed:', e); }
 }
 
 async function init() {
@@ -263,8 +323,18 @@ async function init() {
       loadJSON('inbound_kpi.json'),
       loadJSON('inbound_enriched.json')
     ]);
+    STRATEGY_DATA = await loadJSONOpt('strategy_targets.json');
+    const fileSnap = await loadJSONOpt('weekly_snapshots.json');
+    const localSnap = loadSnapshotsFromLocal();
+    // localStorage wins (more recent), fall back to file
+    if (localSnap && Object.keys(localSnap.snapshots || {}).length > 0) {
+      SNAPSHOTS = localSnap;
+    } else if (fileSnap) {
+      SNAPSHOTS = fileSnap;
+    }
     document.getElementById('sidebar-refresh').textContent = OTB_DATA.meta?.refreshTime || '—';
     document.getElementById('base-date-display').textContent = OTB_DATA.meta?.baseDate || '—';
+    validateChannelTargets();
     buildWeekSlicer();
     renderAll('all');
   } catch(e) {
@@ -306,6 +376,24 @@ function getWeeksOfMonth(year, month) {
   return weeks;
 }
 
+// Convert a weekKey ("8-14") under a given year/month into snapshot key "YYYY-MM-WN".
+// Returns null for "all".
+function snapshotKeyFor(year, month, weekKey) {
+  if (!weekKey || weekKey === 'all') return null;
+  const weeks = getWeeksOfMonth(year, month);
+  const idx = weeks.findIndex(w => `${w.startDay}-${w.endDay}` === weekKey);
+  if (idx < 0) return null;
+  return `${year}-${String(month).padStart(2,'0')}-W${idx + 1}`;
+}
+
+function weekLabelFor(year, month, weekKey) {
+  if (!weekKey || weekKey === 'all') return `${month}월 전체`;
+  const weeks = getWeeksOfMonth(year, month);
+  const idx = weeks.findIndex(w => `${w.startDay}-${w.endDay}` === weekKey);
+  if (idx < 0) return `${month}월`;
+  return `${month}월 ${idx + 1}주`;
+}
+
 function buildWeekSlicer() {
   const container = document.getElementById('week-chips');
   const now = new Date();
@@ -314,17 +402,164 @@ function buildWeekSlicer() {
   const weeks = getWeeksOfMonth(year, month);
 
   let html = `<div class="week-chip active" data-week="all" onclick="selectWeek('all')">전체 (${month}월)</div>`;
-  weeks.forEach(w => {
-    html += `<div class="week-chip" data-week="${w.startDay}-${w.endDay}" onclick="selectWeek('${w.startDay}-${w.endDay}')">${w.label} <span style="font-size:10px;opacity:0.7;">${w.desc}</span></div>`;
+  weeks.forEach((w, i) => {
+    const snapKey = `${year}-${String(month).padStart(2,'0')}-W${i + 1}`;
+    const isConfirmed = !!SNAPSHOTS.snapshots[snapKey];
+    const cls = 'week-chip' + (isConfirmed ? ' confirmed' : '');
+    const checkMark = isConfirmed ? '<span class="chip-check">✓</span>' : '';
+    html += `<div class="${cls}" data-week="${w.startDay}-${w.endDay}" data-snap="${snapKey}" onclick="selectWeek('${w.startDay}-${w.endDay}')">${checkMark}${w.label} <span style="font-size:10px;opacity:0.7;">${w.desc}</span></div>`;
   });
   container.innerHTML = html;
+  updateConfirmBtnState('all');
+}
+
+function updateConfirmBtnState(weekKey) {
+  const btn = document.getElementById('confirm-btn');
+  if (!btn) return;
+  if (weekKey === 'all') {
+    btn.disabled = true;
+    btn.title = '확정할 주차를 먼저 선택하세요';
+  } else {
+    btn.disabled = false;
+    const now = new Date();
+    const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+    const exists = snapKey && SNAPSHOTS.snapshots[snapKey];
+    btn.textContent = exists ? '↻ 재확정' : '✓ 확정';
+    btn.title = exists ? '이미 확정된 주차입니다. 현재 데이터로 다시 저장합니다.' : '현재 데이터로 이 주차를 확정 저장합니다.';
+  }
 }
 
 window.selectWeek = function(weekKey) {
   document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
   document.querySelector(`.week-chip[data-week="${weekKey}"]`).classList.add('active');
+
+  const now = new Date();
+  const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+  if (snapKey && SNAPSHOTS.snapshots[snapKey]) {
+    ACTIVE_SNAPSHOT_KEY = snapKey;
+    ACTIVE_SNAPSHOT_DATA = SNAPSHOTS.snapshots[snapKey].data || null;
+    showSnapshotBanner(snapKey, SNAPSHOTS.snapshots[snapKey]);
+  } else {
+    ACTIVE_SNAPSHOT_KEY = null;
+    ACTIVE_SNAPSHOT_DATA = null;
+    hideSnapshotBanner();
+  }
+  updateConfirmBtnState(weekKey);
   renderAll(weekKey);
 };
+
+function showSnapshotBanner(snapKey, snap) {
+  const banner = document.getElementById('snapshot-banner');
+  banner.classList.add('active');
+  banner.classList.remove('live');
+  document.getElementById('snapshot-pill').textContent = 'SNAPSHOT';
+  document.getElementById('snapshot-text').innerHTML = `<strong>${snap.weekLabel || snapKey}</strong> 확정 스냅샷을 보고 있습니다.`;
+  const dt = snap.confirmedAt ? new Date(snap.confirmedAt) : null;
+  document.getElementById('snapshot-meta').textContent = dt ? `확정일: ${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '';
+  document.getElementById('reconfirm-btn').style.display = '';
+  document.getElementById('back-to-live').style.display = '';
+}
+
+function hideSnapshotBanner() {
+  const banner = document.getElementById('snapshot-banner');
+  banner.classList.remove('active');
+}
+
+window.exitSnapshot = function() {
+  // Keep the same weekKey but force live data
+  ACTIVE_SNAPSHOT_KEY = null;
+  ACTIVE_SNAPSHOT_DATA = null;
+  hideSnapshotBanner();
+  const active = document.querySelector('.week-chip.active');
+  const weekKey = active ? active.dataset.week : 'all';
+  // Show a "live" banner so user knows they're overriding the snapshot
+  const banner = document.getElementById('snapshot-banner');
+  banner.classList.add('active', 'live');
+  document.getElementById('snapshot-pill').textContent = 'LIVE';
+  document.getElementById('snapshot-text').innerHTML = `현재 라이브 데이터를 보고 있습니다. (확정된 주차이지만 최신 데이터 표시 중)`;
+  document.getElementById('snapshot-meta').textContent = '';
+  document.getElementById('reconfirm-btn').style.display = '';
+  document.getElementById('back-to-live').style.display = 'none';
+  renderAll(weekKey);
+};
+
+window.reconfirmSnapshot = function() {
+  const active = document.querySelector('.week-chip.active');
+  const weekKey = active ? active.dataset.week : null;
+  if (!weekKey || weekKey === 'all') { toast('주차를 선택하세요', 'error'); return; }
+  if (!confirm('현재 데이터로 이 주차를 다시 확정합니다. 기존 스냅샷은 덮어쓰여집니다. 계속하시겠습니까?')) return;
+  doConfirmWeek(weekKey);
+};
+
+window.confirmCurrentWeek = function() {
+  const active = document.querySelector('.week-chip.active');
+  const weekKey = active ? active.dataset.week : null;
+  if (!weekKey || weekKey === 'all') { toast('확정할 주차를 선택하세요', 'error'); return; }
+  const now = new Date();
+  const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+  if (SNAPSHOTS.snapshots[snapKey]) {
+    if (!confirm(`${snapKey} 은(는) 이미 확정되어 있습니다. 현재 데이터로 덮어쓰시겠습니까?`)) return;
+  }
+  doConfirmWeek(weekKey);
+};
+
+function doConfirmWeek(weekKey) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const snapKey = snapshotKeyFor(year, month, weekKey);
+  if (!snapKey) { toast('주차 키 생성 실패', 'error'); return; }
+  // Temporarily exit snapshot mode so extracted data is from live sources
+  const prevKey = ACTIVE_SNAPSHOT_KEY;
+  const prevData = ACTIVE_SNAPSHOT_DATA;
+  ACTIVE_SNAPSHOT_KEY = null;
+  ACTIVE_SNAPSHOT_DATA = null;
+  const data = extractSnapshotData(year, month, weekKey);
+  ACTIVE_SNAPSHOT_KEY = prevKey;
+  ACTIVE_SNAPSHOT_DATA = prevData;
+
+  SNAPSHOTS.snapshots[snapKey] = {
+    confirmedAt: new Date().toISOString(),
+    weekLabel: weekLabelFor(year, month, weekKey),
+    weekKey: weekKey,
+    year: year,
+    month: month,
+    data: data,
+  };
+  SNAPSHOTS.updated_at = new Date().toISOString();
+  saveSnapshotsToLocal();
+  toast(`${weekLabelFor(year, month, weekKey)} 확정 완료 — 로컬 저장됨. JSON 내보내기로 파일에 반영하세요.`, 'success');
+  // Rebuild slicer to show ✓ and then load the snapshot
+  buildWeekSlicer();
+  document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.week-chip[data-week="${weekKey}"]`);
+  if (chip) chip.classList.add('active');
+  ACTIVE_SNAPSHOT_KEY = snapKey;
+  ACTIVE_SNAPSHOT_DATA = SNAPSHOTS.snapshots[snapKey].data;
+  showSnapshotBanner(snapKey, SNAPSHOTS.snapshots[snapKey]);
+  updateConfirmBtnState(weekKey);
+  renderAll(weekKey);
+}
+
+window.exportSnapshots = function() {
+  const payload = JSON.parse(JSON.stringify(SNAPSHOTS));
+  payload.updated_at = new Date().toISOString();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'weekly_snapshots.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('weekly_snapshots.json 내보냄 — docs/data/ 폴더에 덮어쓰세요', 'success');
+};
+
+function toast(msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'weekly-toast' + (kind === 'error' ? ' error' : kind === 'success' ? ' success' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 
 // ===== DATA PROCESSING =====
 const OTA_CHANNELS = ['야놀자', '여기어때', '쿠팡'];
@@ -332,19 +567,36 @@ const GOTA_CHANNELS = ['아고다', '트립닷컴', '스마트인피니', '익�
 const IB_NATS = ['홍콩', '대만', '중국', '베트남'];
 const NAT_MAP = {};
 
+function inSnapshot() { return !!ACTIVE_SNAPSHOT_DATA; }
+function monthNumToStratKey(year, monthNum) { return `${year}-${String(monthNum).padStart(2,'0')}`; }
+
 function getChannelOTB(channelName, monthKey) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.channels?.[monthKey]?.[channelName] !== undefined) {
+    return ACTIVE_SNAPSHOT_DATA.channels[monthKey][channelName];
+  }
   return DB_DATA.by_channel?.[channelName]?.[monthKey]?.net_rn || 0;
 }
 
 function getSegmentOTB(segName, monthKey) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.segments?.[monthKey]?.[segName]?.otb !== undefined) {
+    return ACTIVE_SNAPSHOT_DATA.segments[monthKey][segName].otb;
+  }
   return DB_DATA.by_segment?.[segName]?.[monthKey]?.net_rn || 0;
 }
 
 function getSegmentBudget(monthNum, segName) {
+  if (inSnapshot()) {
+    const sb = ACTIVE_SNAPSHOT_DATA.budgets?.[String(monthNum)]?.[segName];
+    if (sb !== undefined) return sb;
+  }
   return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_budget || 0;
 }
 
 function getSegmentFcst(monthNum, segName) {
+  if (inSnapshot()) {
+    const sf = ACTIVE_SNAPSHOT_DATA.fcsts?.[String(monthNum)]?.[segName];
+    if (sf !== undefined) return sf;
+  }
   return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_fcst || 0;
 }
 
@@ -353,6 +605,9 @@ function getSegmentLast(monthNum, segName) {
 }
 
 function getInboundByNat(monthKey) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.inboundByNat?.[monthKey]) {
+    return ACTIVE_SNAPSHOT_DATA.inboundByNat[monthKey];
+  }
   const rmd = IB_ENRICHED.recent_member_detail?.[monthKey] || [];
   const groups = {};
   IB_NATS.forEach(n => groups[n] = 0);
@@ -367,6 +622,9 @@ function getInboundByNat(monthKey) {
 }
 
 function getInboundBudgetByNat(monthIdx) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.inboundBudget?.[String(monthIdx)]) {
+    return ACTIVE_SNAPSHOT_DATA.inboundBudget[String(monthIdx)];
+  }
   const grid = IB_KPI.grid || [];
   const natBudMap = {'홍콩':'홍콩','대만':'대만','중국':'중국','베트남':'베트남'};
   const groups = {};
@@ -384,7 +642,158 @@ function getInboundBudgetByNat(monthIdx) {
 }
 
 function getDailySegmentData(yearMonth, segName) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.daily?.[yearMonth]?.[segName]) {
+    return ACTIVE_SNAPSHOT_DATA.daily[yearMonth][segName];
+  }
   return OTB_DATA.stayDateDaily?.[yearMonth]?.segments?.[segName]?.net_rn || [];
+}
+
+function getDailyDays(yearMonth) {
+  if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.days?.[yearMonth]) {
+    return ACTIVE_SNAPSHOT_DATA.days[yearMonth];
+  }
+  return OTB_DATA.stayDateDaily?.[yearMonth]?.days || [];
+}
+
+// ===== STRATEGY TARGETS (channel-level) =====
+// strategy_targets.json segment names → our segment names mapping
+const STRAT_SEG_MAP = { 'OTA':'OTA', 'G-OTA':'G-OTA', 'Inbound':'Inbound' };
+
+function getChannelTarget(channelName, year, monthNum, segName) {
+  if (inSnapshot()) {
+    const t = ACTIVE_SNAPSHOT_DATA.channelTargets?.[`${year}-${String(monthNum).padStart(2,'0')}`]?.[segName]?.[channelName];
+    if (t !== undefined) return t;
+  }
+  if (!STRATEGY_DATA) return 0;
+  const stratKey = monthNumToStratKey(year, monthNum);
+  return STRATEGY_DATA.targets?.[stratKey]?.[segName]?.channels?.[channelName]?.target_rn || 0;
+}
+
+// Validate: channel target should not be lower than last year actual
+function validateChannelTargets() {
+  if (!STRATEGY_DATA || !DB_DATA?.by_channel) return;
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const segMap = { 'OTA': OTA_CHANNELS, 'G-OTA': GOTA_CHANNELS };
+  const violations = [];
+  Object.keys(STRATEGY_DATA.targets || {}).forEach(stratKey => {
+    const [yStr, mStr] = stratKey.split('-');
+    const year = parseInt(yStr, 10);
+    const monthNum = parseInt(mStr, 10);
+    const lyYM = `${year - 1}${mStr}`;
+    Object.entries(segMap).forEach(([segName, channels]) => {
+      channels.forEach(ch => {
+        const target = STRATEGY_DATA.targets[stratKey]?.[segName]?.channels?.[ch]?.target_rn;
+        if (target == null) return;
+        const lastYear = DB_DATA.by_channel?.[ch]?.[lyYM]?.net_rn || 0;
+        if (lastYear > 0 && target < lastYear) {
+          violations.push({ stratKey, segment: segName, channel: ch, target, lastYear, gap: lastYear - target });
+        }
+      });
+    });
+  });
+  if (violations.length > 0) {
+    console.warn(`[gs-weekly] 채널 목표 < 전년실적 위반 ${violations.length}건:`);
+    console.table(violations);
+  }
+  // Stash on global for runtime use
+  window.__channelTargetViolations = violations;
+}
+
+function isTargetViolation(channelName, year, monthNum) {
+  const list = window.__channelTargetViolations || [];
+  const stratKey = monthNumToStratKey(year, monthNum);
+  return list.some(v => v.stratKey === stratKey && v.channel === channelName);
+}
+
+// ===== SNAPSHOT EXTRACTION =====
+function extractSnapshotData(year, month, weekKey) {
+  // Capture everything renderAll needs for current month, next month, YTD.
+  const allChannels = [...OTA_CHANNELS, ...GOTA_CHANNELS];
+  const segs = ['OTA', 'G-OTA', 'Inbound'];
+  const result = {
+    segments: {},        // monthKey → seg → {otb}
+    channels: {},        // monthKey → channel → otb
+    inboundByNat: {},    // monthKey → nat groups
+    inboundBudget: {},   // monthIdx → nat groups
+    budgets: {},         // monthNum → seg → rns_budget
+    fcsts: {},           // monthNum → seg → rns_fcst
+    daily: {},           // monthKey → seg → daily[]
+    days: {},            // monthKey → days[]
+    channelTargets: {},  // stratKey ("YYYY-MM") → seg → channel → target_rn
+    meta: { weekKey, year, month, baseDate: OTB_DATA?.meta?.baseDate || null },
+  };
+  // For full YTD + current + next + LY, iterate over all months of curYear and prevYear
+  const allYears = [year - 1, year];
+  for (let yr of allYears) {
+    for (let m = 1; m <= 12; m++) {
+      const ym = `${yr}${String(m).padStart(2,'0')}`;
+      result.segments[ym] = {};
+      segs.forEach(s => {
+        result.segments[ym][s] = { otb: DB_DATA.by_segment?.[s]?.[ym]?.net_rn || 0 };
+      });
+      result.channels[ym] = {};
+      allChannels.forEach(ch => {
+        result.channels[ym][ch] = DB_DATA.by_channel?.[ch]?.[ym]?.net_rn || 0;
+      });
+      // Inbound nat (use live function which doesn't depend on snapshot)
+      result.inboundByNat[ym] = (() => {
+        const rmd = IB_ENRICHED.recent_member_detail?.[ym] || [];
+        const groups = {};
+        IB_NATS.forEach(n => groups[n] = 0);
+        groups['기타'] = 0;
+        rmd.forEach(item => {
+          let nat = item.nationality || '기타';
+          nat = NAT_MAP[nat] || nat;
+          if (IB_NATS.includes(nat)) groups[nat] += (item.rn_net || 0);
+          else groups['기타'] += (item.rn_net || 0);
+        });
+        return groups;
+      })();
+      // daily
+      result.daily[ym] = {};
+      segs.forEach(s => {
+        result.daily[ym][s] = OTB_DATA.stayDateDaily?.[ym]?.segments?.[s]?.net_rn || [];
+      });
+      result.days[ym] = OTB_DATA.stayDateDaily?.[ym]?.days || [];
+    }
+  }
+  // budgets / fcsts by monthNum (1-12)
+  for (let m = 1; m <= 12; m++) {
+    result.budgets[String(m)] = {};
+    result.fcsts[String(m)] = {};
+    segs.forEach(s => {
+      result.budgets[String(m)][s] = OTB_DATA.allMonths?.[String(m)]?.segmentData?.[s]?.rns_budget || 0;
+      result.fcsts[String(m)][s] = OTB_DATA.allMonths?.[String(m)]?.segmentData?.[s]?.rns_fcst || 0;
+    });
+    // inbound budget by month index
+    const idx = m - 1;
+    const grid = IB_KPI.grid || [];
+    const groups = {};
+    IB_NATS.forEach(n => groups[n] = 0);
+    groups['기타'] = 0;
+    grid.forEach(item => {
+      const c = item.country || '';
+      const mapped = (['홍콩','대만','중국','베트남'].includes(c)) ? c : '기타';
+      const b = item.budget?.monthly || [];
+      if (b.length > idx) groups[mapped] += Math.round(b[idx]);
+    });
+    result.inboundBudget[String(idx)] = groups;
+  }
+  // strategy targets snapshot
+  if (STRATEGY_DATA?.targets) {
+    Object.entries(STRATEGY_DATA.targets).forEach(([stratKey, segObj]) => {
+      result.channelTargets[stratKey] = {};
+      Object.entries(segObj).forEach(([seg, info]) => {
+        if (!info?.channels) return;
+        result.channelTargets[stratKey][seg] = {};
+        Object.entries(info.channels).forEach(([ch, val]) => {
+          result.channelTargets[stratKey][seg][ch] = val.target_rn || 0;
+        });
+      });
+    });
+  }
+  return result;
 }
 
 function filterDailyByWeek(dailyArr, weekKey) {
@@ -405,7 +814,7 @@ function colorClass(val, reverse) {
 }
 
 // ===== BUILD TABLE =====
-function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegRow) {
+function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegRow, opts) {
   const diff_bud = otb - budget;
   const ach = pct(otb, budget);
   const diff_ly = otb - lastYear;
@@ -414,9 +823,14 @@ function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegR
   const cls = isTotalRow ? ' class="total-row"' : (isSegRow ? ' class="segment-row"' : '');
   const labelCls = isSubRow ? 'sub-label' : 'label-cell';
 
+  // Channel-level target validation: if budget > 0 but < lastYear, flag as warning
+  const targetWarn = !!(opts && opts.targetWarn && budget > 0 && lastYear > 0 && budget < lastYear);
+  const budgetCellCls = targetWarn ? 'target-warn' : '';
+  const budgetTitle = targetWarn ? `title="목표 ${fmtN(budget)} < 전년 ${fmtN(lastYear)} — 전년 실적보다 낮은 목표"` : '';
+
   return `<tr${cls}>
     <td class="${labelCls}">${label}</td>
-    <td>${fmtN(budget)}</td>
+    <td class="${budgetCellCls}" ${budgetTitle}>${fmtN(budget)}</td>
     <td>${fmtN(otb)}</td>
     <td class="${colorClass(diff_bud)}">${diffSign(diff_bud)}</td>
     <td class="${ach >= 100 ? 'val-pos' : ach >= 80 ? 'val-warn' : 'val-neg'}">${fmtP(ach)}</td>
@@ -531,20 +945,25 @@ function buildMonthTable(tableId, monthNum, yearMonth, lastYearMonth, weekKey) {
     </tr>
   </thead><tbody>`;
 
+  // Resolve the calendar year for this table from the yearMonth string (e.g. "202605")
+  const tblYear = parseInt(yearMonth.slice(0, 4), 10);
+
   // Total row
   html += buildPerfRow('합계', totalBudget, totalOTB, totalLast, false, true, false);
 
   // OTA section
   html += buildPerfRow('OTA', budgets['OTA'], otbData['OTA'], lastData['OTA'], false, false, true);
   OTA_CHANNELS.forEach(ch => {
-    html += buildPerfRow(ch, 0, chOTB[ch], chLast[ch], true, false, false);
+    const tgt = getChannelTarget(ch, tblYear, monthNum, 'OTA');
+    html += buildPerfRow(ch, tgt, chOTB[ch], chLast[ch], true, false, false, { targetWarn: true });
   });
   html += buildPerfRow('기타', 0, chOTB['OTA_기타'], chLast['OTA_기타'], true, false, false);
 
   // G-OTA section
   html += buildPerfRow('G-OTA', budgets['G-OTA'], otbData['G-OTA'], lastData['G-OTA'], false, false, true);
   GOTA_CHANNELS.forEach(ch => {
-    html += buildPerfRow(ch, 0, chOTB[ch], chLast[ch], true, false, false);
+    const tgt = getChannelTarget(ch, tblYear, monthNum, 'G-OTA');
+    html += buildPerfRow(ch, tgt, chOTB[ch], chLast[ch], true, false, false, { targetWarn: true });
   });
   html += buildPerfRow('기타', 0, chOTB['GOTA_기타'], chLast['GOTA_기타'], true, false, false);
 
@@ -620,17 +1039,25 @@ function buildYTDTable(weekKey) {
   const gotaChSum = GOTA_CHANNELS.reduce((s,c) => s + chYTD[c], 0);
   const gotaChLastSum = GOTA_CHANNELS.reduce((s,c) => s + chLastYTD[c], 0);
 
+  // Channel-level YTD targets (sum of monthly channel targets 1..curMonth)
+  const chTargetYTD = {};
+  [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => { chTargetYTD[ch] = 0; });
+  for (let m = 1; m <= curMonth; m++) {
+    OTA_CHANNELS.forEach(ch => { chTargetYTD[ch] += getChannelTarget(ch, curYear, m, 'OTA'); });
+    GOTA_CHANNELS.forEach(ch => { chTargetYTD[ch] += getChannelTarget(ch, curYear, m, 'G-OTA'); });
+  }
+
   // OTA
   html += buildPerfRow('OTA', ytdBudget['OTA'], ytdActual['OTA'], ytdLast['OTA'], false, false, true);
   OTA_CHANNELS.forEach(ch => {
-    html += buildPerfRow(ch, 0, chYTD[ch], chLastYTD[ch], true, false, false);
+    html += buildPerfRow(ch, chTargetYTD[ch] || 0, chYTD[ch], chLastYTD[ch], true, false, false, { targetWarn: true });
   });
   html += buildPerfRow('기타', 0, ytdActual['OTA'] - otaChSum, ytdLast['OTA'] - otaChLastSum, true, false, false);
 
   // G-OTA
   html += buildPerfRow('G-OTA', ytdBudget['G-OTA'], ytdActual['G-OTA'], ytdLast['G-OTA'], false, false, true);
   GOTA_CHANNELS.forEach(ch => {
-    html += buildPerfRow(ch, 0, chYTD[ch], chLastYTD[ch], true, false, false);
+    html += buildPerfRow(ch, chTargetYTD[ch] || 0, chYTD[ch], chLastYTD[ch], true, false, false, { targetWarn: true });
   });
   html += buildPerfRow('기타', 0, ytdActual['G-OTA'] - gotaChSum, ytdLast['G-OTA'] - gotaChLastSum, true, false, false);
 
@@ -843,7 +1270,7 @@ function buildCharts(monthNum, yearMonth, lastYearMonth) {
   const dailyOTA = getDailySegmentData(yearMonth, 'OTA');
   const dailyGOTA = getDailySegmentData(yearMonth, 'G-OTA');
   const dailyIB = getDailySegmentData(yearMonth, 'Inbound');
-  const days = OTB_DATA.stayDateDaily?.[yearMonth]?.days || [];
+  const days = getDailyDays(yearMonth);
 
   charts['daily'] = new Chart(document.getElementById('chart-daily'), {
     type: 'line',
