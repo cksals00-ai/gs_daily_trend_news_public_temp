@@ -360,8 +360,146 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- ====== 시즌 · 요일별 분석 (stay_calendar.json) ====== -->
+    <div class="page-header" style="margin-top:8px;">
+      <div class="page-title" style="font-size:clamp(18px,1.9vw,22px);">
+        시즌 · 요일별 분석
+        <span class="sub">SEASON × DAY-OF-WEEK ANALYTICS</span>
+      </div>
+      <div id="sc-period-tag" class="base-date-tag">기간 <strong id="sc-period-display">—</strong></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;white-space:nowrap;">기간:</span>
+      <div id="sc-range-chips" class="filter-chips">
+        <button class="chip" data-range="ytd_ty">YTD</button>
+        <button class="chip" data-range="full_ty">올해 전체</button>
+        <button class="chip" data-range="full_ly">전년</button>
+        <button class="chip active" data-range="last_12m">최근 12개월</button>
+        <button class="chip" data-range="all">전체기간</button>
+      </div>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:12px;">집계 기준일</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);" id="sc-data-max">—</span>
+    </div>
+
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">시즌별 — RN · ADR · 매출</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>RN(객실)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>ADR(₩천)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>매출(억원)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:300px;">
+          <canvas id="sc-season-bar"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">시즌별 — 리드타임 · 취소율</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#c9a063;"></div>리드타임(일)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e57373;"></div>취소율(%)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:300px;">
+          <canvas id="sc-season-line"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">시즌별 상세</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="sc-season-meta">—</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot" id="sc-season-table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">시즌</th>
+              <th>일수</th>
+              <th>RN(객실)</th>
+              <th>RN/일</th>
+              <th>ADR(₩)</th>
+              <th>매출(억원)</th>
+              <th>리드타임(일)</th>
+              <th>취소율(%)</th>
+              <th>구성비(RN)</th>
+            </tr>
+          </thead>
+          <tbody id="sc-season-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">요일별 — RN · ADR · 매출</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>RN(객실)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>ADR(₩천)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>매출(억원)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:300px;">
+          <canvas id="sc-dow-bar"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">요일별 — 리드타임 · 취소율</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#c9a063;"></div>리드타임(일)</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e57373;"></div>취소율(%)</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:300px;">
+          <canvas id="sc-dow-line"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">요일별 상세</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="sc-dow-meta">—</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot" id="sc-dow-table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">요일</th>
+              <th>일수</th>
+              <th>RN(객실)</th>
+              <th>RN/일</th>
+              <th>ADR(₩)</th>
+              <th>매출(억원)</th>
+              <th>리드타임(일)</th>
+              <th>취소율(%)</th>
+              <th>구성비(RN)</th>
+            </tr>
+          </thead>
+          <tbody id="sc-dow-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.14em;text-transform:uppercase;">시즌 분류 기준</div>
+      <div style="font-size:11.5px;color:var(--ink-muted);line-height:1.7;">
+        <strong style="color:var(--ink-soft);">연휴</strong> = 공휴일 당일 또는 공휴일 전날 · <strong style="color:var(--ink-soft);">골드</strong> = 한국 리조트 성수기(여름 7/25~8/20, 연말연시 12/24~1/3, 설 전후 1/25~2/5) · <strong style="color:var(--ink-soft);">토</strong>/<strong style="color:var(--ink-soft);">금</strong> = 토·금요일 · <strong style="color:var(--ink-soft);">주중</strong> = 일·월·화·수·목 (리조트 관행). 연휴 > 골드 > 토 > 금 > 주중 우선순위.
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-muted);line-height:1.7;">
+        <strong style="color:var(--ink-soft);">취소율</strong> = 취소 RN / (현재 예약 RN + 취소 RN) · <strong style="color:var(--ink-soft);">리드타임</strong> = 판매일자 − 최초입력일자 가중평균. 미래 일자는 취소율이 낮게 보일 수 있음(취소 누적기간 짧음).
+      </div>
+    </div>
+
     <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
-      DATA: 온북 DB 파싱 · 세그먼트별 집계 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
+      DATA: 온북 DB 파싱 · 세그먼트별 집계 (db_aggregated.json) &nbsp;·&nbsp; 시즌·요일 분석 (stay_calendar.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
     </div>
   </main>
 </div>
@@ -371,10 +509,13 @@ let db = null;       // db_aggregated.json (월별 세그먼트)
 let otb = null;      // otb_data.json (stayDateDaily)
 let occData = null;  // occ_data.json (전체OCC)
 let dailyBooking = null; // daily_booking.json (일별 OCC)
+let stayCalendar = null; // stay_calendar.json (시즌·요일별 투숙자료)
 let activeYear = new Date().getFullYear().toString();
 let activeMonth = null; // 'YYYYMM' or null — will be set to current month in loadData
 let segChart = null, pieChart = null, dailyChart = null;
 let insightTylyChart = null, insightOccAdrChart = null, insightYoyChart = null;
+let scActiveRange = 'last_12m';
+let scSeasonBarChart = null, scSeasonLineChart = null, scDowBarChart = null, scDowLineChart = null;
 
 // Dynamic year labels
 var _TY = (new Date().getFullYear() % 100) + 'Y';
@@ -1061,13 +1202,250 @@ function setText(id, v) {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// 시즌 · 요일별 분석 (stay_calendar.json)
+// ─────────────────────────────────────────────────────────
+const SC_SEASON_COLORS = { '주중':'#7a8290', '금':'#5a9fc4', '토':'#e6b970', '연휴':'#e57373', '골드':'#c9a063' };
+
+function scFilterDates(allDates, range) {
+  if (!allDates || !allDates.length) return [];
+  const today = new Date();
+  const ymd = (dt) => dt.getFullYear()*10000 + (dt.getMonth()+1)*100 + dt.getDate();
+  const todayN = ymd(today);
+  const ty = today.getFullYear();
+
+  if (range === 'all') return allDates;
+  if (range === 'full_ty') return allDates.filter(r => r.d.startsWith(String(ty)));
+  if (range === 'full_ly') return allDates.filter(r => r.d.startsWith(String(ty - 1)));
+  if (range === 'ytd_ty') {
+    return allDates.filter(r => r.d.startsWith(String(ty)) && parseInt(r.d) <= todayN);
+  }
+  if (range === 'last_12m') {
+    const from = new Date(today); from.setMonth(from.getMonth() - 12); from.setDate(from.getDate() + 1);
+    const fromN = ymd(from);
+    return allDates.filter(r => { const n = parseInt(r.d); return n >= fromN && n <= todayN; });
+  }
+  return allDates;
+}
+
+function scAggregate(rows, keyFn, orderedKeys) {
+  const groups = {};
+  for (const k of orderedKeys) groups[k] = { days: 0, rn: 0, rev_m: 0, c_rn: 0, lead_sum: 0, lead_cnt: 0 };
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!(k in groups)) continue;
+    const g = groups[k];
+    g.days += 1;
+    g.rn += r.rn;
+    g.rev_m += r.rev_m;
+    g.c_rn += r.c_rn;
+    if (r.lead_avg != null) {
+      g.lead_sum += r.lead_avg * r.rn;
+      g.lead_cnt += r.rn;
+    }
+  }
+  const totalRn = orderedKeys.reduce((s, k) => s + groups[k].rn, 0);
+  const result = [];
+  for (const k of orderedKeys) {
+    const g = groups[k];
+    const rev_won = g.rev_m * 1_000_000;
+    const adr = g.rn > 0 ? Math.round(rev_won / g.rn) : 0;
+    const ever = g.rn + g.c_rn;
+    const cancelRate = ever > 0 ? g.c_rn / ever : 0;
+    const leadAvg = g.lead_cnt > 0 ? g.lead_sum / g.lead_cnt : null;
+    result.push({
+      key: k,
+      days: g.days,
+      rn: g.rn,
+      c_rn: g.c_rn,
+      rn_per_day: g.days > 0 ? Math.round(g.rn / g.days) : 0,
+      adr: adr,
+      rev_eok: g.rev_m / 100, // 백만원 → 억원
+      lead_sum: g.lead_sum,
+      lead_cnt: g.lead_cnt,
+      lead_avg: leadAvg,
+      cancel_rate: cancelRate,
+      share: totalRn > 0 ? g.rn / totalRn : 0,
+    });
+  }
+  return result;
+}
+
+function scFmtInt(n) { return (n||0).toLocaleString('en-US'); }
+function scFmtWon(n) { return (n||0).toLocaleString('en-US'); }
+function scFmtPct(n) { return ((n||0) * 100).toFixed(1) + '%'; }
+function scFmtDec(n, d) { return n == null ? '—' : n.toFixed(d == null ? 1 : d); }
+function scFmtEok(n) { return n == null ? '—' : n.toFixed(1); }
+
+function scRenderTable(tbodyId, rows, colorMap) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-faint);">데이터 없음</td></tr>';
+    return;
+  }
+  let html = '';
+  let totalDays = 0, totalRn = 0, totalRev = 0, totalCRn = 0, totalLeadSum = 0, totalLeadCnt = 0;
+  for (const r of rows) {
+    totalDays += r.days; totalRn += r.rn; totalRev += r.rev_eok;
+    totalCRn += r.c_rn || 0;
+    totalLeadSum += r.lead_sum || 0;
+    totalLeadCnt += r.lead_cnt || 0;
+    const color = colorMap[r.key] || 'var(--ink-soft)';
+    html += `<tr>
+      <td style="color:${color};font-weight:700;">${r.key}</td>
+      <td>${scFmtInt(r.days)}</td>
+      <td>${scFmtInt(r.rn)}</td>
+      <td>${scFmtInt(r.rn_per_day)}</td>
+      <td>${scFmtWon(r.adr)}</td>
+      <td>${scFmtEok(r.rev_eok)}</td>
+      <td>${scFmtDec(r.lead_avg, 1)}</td>
+      <td>${scFmtPct(r.cancel_rate)}</td>
+      <td>${scFmtPct(r.share)}</td>
+    </tr>`;
+  }
+  const totalEver = totalRn + totalCRn;
+  const cancelOverall = totalEver > 0 ? totalCRn / totalEver : 0;
+  const leadOverall = totalLeadCnt > 0 ? totalLeadSum / totalLeadCnt : null;
+  const adrOverall = totalRn > 0 ? Math.round(totalRev * 100_000_000 / totalRn) : 0;
+  const rnPerDay = totalDays > 0 ? Math.round(totalRn / totalDays) : 0;
+  html += `<tr class="total-row">
+    <td>합계</td>
+    <td>${scFmtInt(totalDays)}</td>
+    <td>${scFmtInt(totalRn)}</td>
+    <td>${scFmtInt(rnPerDay)}</td>
+    <td>${scFmtWon(adrOverall)}</td>
+    <td>${scFmtEok(totalRev)}</td>
+    <td>${scFmtDec(leadOverall, 1)}</td>
+    <td>${scFmtPct(cancelOverall)}</td>
+    <td>100.0%</td>
+  </tr>`;
+  tbody.innerHTML = html;
+}
+
+function scDestroyChart(c) { try { if (c) c.destroy(); } catch(e){} }
+
+function scChartBaseOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor:'#1a1d23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1, titleColor:'#e6b970', bodyColor:'#e0e0e3', padding:10 },
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a8acb3', font: { family:'JetBrains Mono', size:11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a8acb3', font: { family:'JetBrains Mono', size:10 } } },
+      y1: { position: 'right', grid: { display:false }, ticks: { color: '#a8acb3', font: { family:'JetBrains Mono', size:10 } } },
+    }
+  };
+}
+
+function scRenderBarChart(canvasId, prevChartRef, rows, getColor) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  scDestroyChart(prevChartRef);
+  const labels = rows.map(r => r.key);
+  const data = {
+    labels,
+    datasets: [
+      { label: 'RN(객실)', data: rows.map(r => r.rn), backgroundColor:'rgba(230,185,112,0.85)', borderColor:'#e6b970', borderWidth:1, yAxisID:'y' },
+      { label: 'ADR(₩천)', data: rows.map(r => Math.round(r.adr/1000)), backgroundColor:'rgba(90,159,196,0.75)', borderColor:'#5a9fc4', borderWidth:1, yAxisID:'y1' },
+      { label: '매출(억원)', data: rows.map(r => +r.rev_eok.toFixed(1)), backgroundColor:'rgba(76,175,111,0.75)', borderColor:'#4caf6f', borderWidth:1, yAxisID:'y1' },
+    ]
+  };
+  const opts = scChartBaseOptions();
+  opts.plugins.legend = { display: false };
+  return new Chart(ctx, { type: 'bar', data, options: opts });
+}
+
+function scRenderLineChart(canvasId, prevChartRef, rows) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  scDestroyChart(prevChartRef);
+  const labels = rows.map(r => r.key);
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: '리드타임(일)',
+        data: rows.map(r => r.lead_avg == null ? null : +r.lead_avg.toFixed(1)),
+        borderColor: '#c9a063', backgroundColor: 'rgba(201,160,99,0.15)',
+        tension: 0.25, fill: false, yAxisID: 'y', pointRadius: 4, pointBackgroundColor: '#c9a063',
+      },
+      {
+        label: '취소율(%)',
+        data: rows.map(r => +(r.cancel_rate * 100).toFixed(1)),
+        borderColor: '#e57373', backgroundColor: 'rgba(229,115,115,0.15)',
+        tension: 0.25, fill: false, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#e57373',
+      },
+    ]
+  };
+  const opts = scChartBaseOptions();
+  return new Chart(ctx, { type: 'line', data, options: opts });
+}
+
+function renderStayCalendar() {
+  if (!stayCalendar || !stayCalendar.dates) return;
+  const rows = scFilterDates(stayCalendar.dates, scActiveRange);
+  // 기간 라벨
+  const periodEl = document.getElementById('sc-period-display');
+  const labels = { ytd_ty:'YTD', full_ty:'올해 전체', full_ly:'전년', last_12m:'최근 12개월', all:'전체기간' };
+  if (periodEl) {
+    if (rows.length) {
+      const minD = rows[0].d, maxD = rows[rows.length-1].d;
+      const fmt = (s) => s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8);
+      periodEl.textContent = `${labels[scActiveRange] || scActiveRange} · ${fmt(minD)} ~ ${fmt(maxD)}`;
+    } else {
+      periodEl.textContent = labels[scActiveRange] || scActiveRange;
+    }
+  }
+  const dmaxEl = document.getElementById('sc-data-max');
+  if (dmaxEl && stayCalendar.stay_range && stayCalendar.stay_range.data_max) {
+    const s = stayCalendar.stay_range.data_max;
+    dmaxEl.textContent = s ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : '—';
+  }
+
+  // 시즌별
+  const seasonOrder = stayCalendar.season_order || ['주중','금','토','연휴','골드'];
+  const seasonRows = scAggregate(rows, r => r.season, seasonOrder).filter(r => r.days > 0);
+  scRenderTable('sc-season-tbody', seasonRows, SC_SEASON_COLORS);
+  scSeasonBarChart = scRenderBarChart('sc-season-bar', scSeasonBarChart, seasonRows);
+  scSeasonLineChart = scRenderLineChart('sc-season-line', scSeasonLineChart, seasonRows);
+  const seasonMeta = document.getElementById('sc-season-meta');
+  if (seasonMeta) seasonMeta.textContent = `${rows.length}일 · 시즌 ${seasonRows.length}구분`;
+
+  // 요일별 (월~일)
+  const dowLabels = stayCalendar.dow_labels || ['월','화','수','목','금','토','일'];
+  const dowMap = {};
+  dowLabels.forEach((lab, idx) => { dowMap[idx] = lab; });
+  const dowRows = scAggregate(rows, r => dowMap[r.dow], dowLabels).filter(r => r.days > 0);
+  scRenderTable('sc-dow-tbody', dowRows, {});
+  scDowBarChart = scRenderBarChart('sc-dow-bar', scDowBarChart, dowRows);
+  scDowLineChart = scRenderLineChart('sc-dow-line', scDowLineChart, dowRows);
+  const dowMeta = document.getElementById('sc-dow-meta');
+  if (dowMeta) dowMeta.textContent = `${rows.length}일 · 요일 7구분`;
+}
+
+function scBindRangeChips() {
+  document.querySelectorAll('#sc-range-chips .chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sc-range-chips .chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scActiveRange = btn.dataset.range;
+      renderStayCalendar();
+    });
+  });
+}
+
 async function loadData() {
   try {
-    const [r1, r2, r3, r4] = await Promise.all([
+    const [r1, r2, r3, r4, r5] = await Promise.all([
       fetch('data/db_aggregated.json?t=' + Date.now()),
       fetch('data/otb_data.json?t=' + Date.now()),
       fetch('data/occ_data.json?t=' + Date.now()).catch(err => { console.warn('OCC data fetch failed:', err); return null; }),
       fetch('data/daily_booking.json?t=' + Date.now()).catch(err => { console.warn('daily_booking fetch failed:', err); return null; }),
+      fetch('data/stay_calendar.json?t=' + Date.now()).catch(err => { console.warn('stay_calendar fetch failed:', err); return null; }),
     ]);
     db = await r1.json();
     otb = await r2.json();
@@ -1084,8 +1462,13 @@ async function loadData() {
     if (r4) {
       try { dailyBooking = await r4.json(); } catch(e) { console.warn('daily_booking parse error:', e); }
     }
+    if (r5) {
+      try { stayCalendar = await r5.json(); } catch(e) { console.warn('stay_calendar parse error:', e); }
+    }
     buildFilters();
+    scBindRangeChips();
     render();
+    renderStayCalendar();
   } catch (e) {
     console.error(e);
     document.getElementById('seg-tbody').innerHTML =
