@@ -97,7 +97,7 @@
   .anchor-item:hover{background:var(--bg-soft);color:var(--ink);border-left-color:var(--gold)}
   .anchor-item.active-section{background:rgba(201,160,99,0.10);color:var(--gold-bright);border-left-color:var(--gold);font-weight:700}
   html{scroll-behavior:smooth}
-  section.card,.summary-wrap{scroll-margin-top:60px}
+  section.card,.summary-wrap,.exec-wrap{scroll-margin-top:60px}
   .prop-item{padding:5px 9px;font-size:12px;color:var(--ink-muted);background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;text-align:left;font-family:var(--sans);transition:.15s}
   .prop-item:hover{background:var(--bg-soft);color:var(--ink)}
   .prop-item.active{background:rgba(201,160,99,0.18);border-color:var(--gold);color:var(--gold-bright);font-weight:700}
@@ -110,6 +110,37 @@
   .page-title em{font-family:var(--sans);font-weight:600;color:var(--ink-muted);font-size:0.6em;font-style:normal;margin-left:8px}
   .page-context{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em}
   .page-context b{color:var(--gold-bright)}
+
+  /* Executive Summary 카드 — 임원 보고용 결론 */
+  .exec-wrap{background:linear-gradient(180deg,rgba(201,160,99,0.08) 0%,var(--bg-card) 35%);border:1px solid var(--rule);border-top:3px solid var(--gold);border-radius:8px;padding:18px 20px;margin-bottom:18px;position:relative}
+  .exec-wrap::before{content:"";position:absolute;top:-3px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold) 0%,var(--gold-bright) 50%,var(--gold) 100%)}
+  .exec-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+  .exec-title{font-size:16px;font-weight:900;letter-spacing:-.01em;color:var(--gold-bright);display:flex;align-items:center;gap:8px}
+  .exec-title .badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;padding:2px 7px;background:rgba(201,160,99,0.2);color:var(--gold-bright);border-radius:3px}
+  .exec-ctx{font-family:var(--mono);font-size:11px;color:var(--ink-muted);letter-spacing:.05em}
+  .exec-ctx b{color:var(--gold-bright);font-weight:700}
+  .exec-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}
+  @media(max-width:900px){.exec-grid{grid-template-columns:1fr}}
+  .exec-block{background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .exec-block.verdict{border-left:3px solid var(--gold)}
+  .exec-block.verdict.tier-hi{border-left-color:var(--positive)}
+  .exec-block.verdict.tier-md{border-left-color:var(--warning)}
+  .exec-block.verdict.tier-lo{border-left-color:var(--negative)}
+  .exec-block .h{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+  .exec-block .h .ach{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:none}
+  .exec-block .h .ach.pos{color:var(--positive)}
+  .exec-block .h .ach.warn{color:var(--warning)}
+  .exec-block .h .ach.neg{color:var(--negative)}
+  .exec-verdict-text{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.5;letter-spacing:-.005em}
+  .exec-verdict-text b{color:var(--gold-bright)}
+  .exec-list{display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;margin:0}
+  .exec-list li{font-size:12.5px;color:var(--ink-soft);line-height:1.5;padding:6px 8px 6px 24px;background:var(--bg-soft);border-radius:4px;position:relative}
+  .exec-list li::before{content:attr(data-idx);position:absolute;left:7px;top:6px;font-family:var(--mono);font-size:10px;font-weight:800;color:var(--gold-bright);width:14px;height:14px;display:flex;align-items:center;justify-content:center;background:rgba(201,160,99,0.18);border-radius:3px;line-height:1}
+  .exec-list li.empty-pos{color:var(--positive);background:var(--positive-bg);padding-left:12px}
+  .exec-list li.empty-pos::before{display:none}
+  .exec-list li b{color:var(--gold-bright);font-weight:700}
+  .exec-list.actions li::before{color:var(--positive);background:rgba(76,175,111,0.18)}
+  .exec-list.actions li b{color:var(--positive)}
 
   /* 핵심 지표 요약 테이블 */
   .summary-wrap{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:16px;margin-bottom:18px}
@@ -405,6 +436,7 @@
     <div class="sb-section">
       <div class="sb-label">페이지 이동</div>
       <div class="anchor-nav" id="anchor-nav">
+        <a href="#sec-exec" class="anchor-item" style="color:var(--gold-bright);font-weight:700">★ Executive Summary</a>
         <a href="#sec-summary" class="anchor-item">0 · 핵심 지표 요약</a>
         <a href="#sec-matrix" class="anchor-item">1 · 거래처×시기 매트릭스</a>
         <a href="#sec-kpi" class="anchor-item">2 · 채널 KPI 진단</a>
@@ -440,6 +472,27 @@
       <div>
         <h1 class="page-title">월 전략 리포트<em>월별·사업장별 채널 기획전 + 목표 달성 방안</em></h1>
         <div class="page-context">선택: <b id="ctx-month">—</b> · <b id="ctx-prop">전체</b></div>
+      </div>
+    </div>
+
+    <div class="exec-wrap" id="sec-exec">
+      <div class="exec-head">
+        <div class="exec-title">EXECUTIVE SUMMARY <span class="badge">AUTO</span></div>
+        <div class="exec-ctx">선택 월: <b id="exec-ctx-month">—</b> · 사업장: <b id="exec-ctx-prop">전체</b></div>
+      </div>
+      <div class="exec-grid">
+        <div class="exec-block verdict" id="exec-verdict-block">
+          <div class="h"><span>종합 판단</span><span class="ach" id="exec-ach">—</span></div>
+          <div class="exec-verdict-text" id="exec-verdict-text">데이터 로딩 중…</div>
+        </div>
+        <div class="exec-block">
+          <div class="h"><span>핵심 이슈</span></div>
+          <ul class="exec-list" id="exec-issues"></ul>
+        </div>
+        <div class="exec-block">
+          <div class="h"><span>즉시 액션</span></div>
+          <ul class="exec-list actions" id="exec-actions"></ul>
+        </div>
       </div>
     </div>
 
@@ -880,7 +933,7 @@ function buildRegionTree(){
 
 // 페이지 앵커 active 하이라이트 — IntersectionObserver
 function setupAnchorObserver(){
-  const sections = document.querySelectorAll('#sec-summary, #sec-matrix, #sec-kpi, #sec-monthly, #sec-camp, #sec-channel, #sec-fcst, #sec-sug, #sec-process, #sec-build, #sec-changelog');
+  const sections = document.querySelectorAll('#sec-exec, #sec-summary, #sec-matrix, #sec-kpi, #sec-monthly, #sec-camp, #sec-channel, #sec-fcst, #sec-sug, #sec-process, #sec-build, #sec-changelog');
   if (!sections.length || !window.IntersectionObserver) return;
   const links = document.querySelectorAll('.anchor-item');
   const linkMap = {};
@@ -2185,8 +2238,187 @@ function renderSuggestions(){
   `).join('');
 }
 
+// ─── Executive Summary 자동 생성 ───────────────────────────
+// 종합 판단 = FCST/Budget 달성률 기반 / 이슈·액션 = 데이터 자동 감지
+function buildExecSummary(){
+  const s = getSelectedSummary();
+  const ach = s ? (s.fcst_achievement != null ? s.fcst_achievement : (s.rns_fcst && s.rns_budget ? s.rns_fcst / s.rns_budget * 100 : null)) : null;
+
+  // 1) 종합 판단
+  let verdict, tier;
+  if (ach == null){
+    verdict = '<b>데이터 부족</b> — FCST/목표 데이터 확인 후 판단 가능';
+    tier = 'md';
+  } else if (ach >= 95){
+    verdict = `FCST 기준 목표 대비 <b>${ach.toFixed(1)}%</b> — 목표 달성 궤도, 현행 유지하되 <b>ADR 관리</b>에 집중`;
+    tier = 'hi';
+  } else if (ach >= 85){
+    verdict = `FCST 기준 목표 대비 <b>${ach.toFixed(1)}%</b> 수준 — <b>OTA·GOTA 중심 단기 픽업 강화</b> 필요`;
+    tier = 'md';
+  } else {
+    verdict = `FCST 기준 목표 대비 <b>${ach.toFixed(1)}%</b> — 목표 대비 큰 갭, <b>긴급 프로모션 배분 및 채널 부스팅</b> 필요`;
+    tier = 'lo';
+  }
+
+  // 2) 핵심 이슈 자동 감지
+  const issues = [];
+
+  // (a) 주중 객실 수요 부족 — stayDateDaily 전 세그 합산, 주중(월~목) vs 주말(금~일)
+  try {
+    const ym = '2026' + String(STATE.month).padStart(2,'0');
+    const sdd = (DATA.otb && DATA.otb.stayDateDaily) ? DATA.otb.stayDateDaily[ym] : null;
+    if (sdd && sdd.days && sdd.segments){
+      const days = sdd.days;
+      const dailyTotal = new Array(days.length).fill(0);
+      Object.values(sdd.segments).forEach(seg => {
+        (seg.net_rn || []).forEach((v, i) => { if (i < dailyTotal.length) dailyTotal[i] += v || 0; });
+      });
+      let wdSum=0, wdN=0, weSum=0, weN=0;
+      days.forEach((d, i) => {
+        const dt = new Date(2026, STATE.month - 1, d);
+        const dow = dt.getDay(); // 0=Sun, 5=Fri, 6=Sat
+        const v = dailyTotal[i] || 0;
+        if (dow >= 1 && dow <= 4){ wdSum += v; wdN++; }
+        else if (dow === 5 || dow === 6 || dow === 0){ weSum += v; weN++; }
+      });
+      if (wdN && weN){
+        const wdAvg = wdSum / wdN, weAvg = weSum / weN;
+        if (weAvg > 0 && wdAvg / weAvg < 0.6){
+          issues.push({ key: 'weekday', text: `<b>주중 객실 수요 부족</b> — 주중 평균 ${Math.round(wdAvg)}실 vs 주말 ${Math.round(weAvg)}실 (${(wdAvg/weAvg*100).toFixed(0)}%)` });
+        }
+      }
+    }
+  } catch(e){}
+
+  // (b) FCST 하락 사업장 — rm_fcst_trend 최근 2 snapshot 비교
+  try {
+    if (DATA.fcstTrend && DATA.fcstTrend.snapshots && DATA.fcstTrend.snapshots.length >= 2){
+      const snaps = DATA.fcstTrend.snapshots;
+      const target = '2026-' + String(STATE.month).padStart(2,'0');
+      const last = snaps[snaps.length - 1], prev = snaps[snaps.length - 2];
+      const declined = [];
+      const propRegionMap = {};
+      if (DATA.otb){ (DATA.otb.byProperty || []).forEach(p => { propRegionMap[p.name] = p.region; }); }
+      for (const [pname, pdata] of Object.entries(last.properties || {})){
+        // 사업장 필터 시 해당 사업장만 / 권역 필터 시 해당 권역만
+        if (STATE.prop !== 'ALL' && pname !== STATE.prop) continue;
+        if (STATE.prop === 'ALL' && STATE.region !== 'ALL' && propRegionMap[pname] !== STATE.region) continue;
+        const lastF = (pdata[target] || {}).rm_fcst_rn;
+        const prevP = (prev.properties || {})[pname];
+        const prevF = prevP ? (prevP[target] || {}).rm_fcst_rn : null;
+        if (lastF != null && prevF != null && prevF > 0 && lastF < prevF){
+          declined.push({ name: pname.replace(/^\d+\./, ''), delta: lastF - prevF, pct: (lastF - prevF) / prevF * 100 });
+        }
+      }
+      if (declined.length){
+        declined.sort((a, b) => a.pct - b.pct);
+        const top = declined.slice(0, 2).map(x => `${x.name} (${x.pct.toFixed(1)}%)`).join(', ');
+        const extra = declined.length > 2 ? ` 등 ${declined.length}개` : '';
+        issues.push({ key: 'fcst_drop', text: `<b>${top}${extra}</b> FCST 하락 — 전주 대비 ${declined.reduce((a,x)=>a+x.delta,0).toLocaleString()}실` });
+      }
+    }
+  } catch(e){}
+
+  // (c) 인바운드 전년 동기간 대비 감소
+  try {
+    if (DATA.db && DATA.db.by_segment && DATA.db.by_segment['Inbound']){
+      const ib = DATA.db.by_segment['Inbound'];
+      const ym = '2026' + String(STATE.month).padStart(2,'0');
+      const lyYm = '2025' + String(STATE.month).padStart(2,'0');
+      const cur = ib[ym], ly = ib[lyYm];
+      if (cur && ly && (ly.net_rn || 0) > 0){
+        const yoyPct = ((cur.net_rn || 0) - ly.net_rn) / ly.net_rn * 100;
+        if (yoyPct < -5){
+          issues.push({ key: 'inbound', text: `<b>인바운드 기여도 약화</b> — 전년 동기간 대비 ${yoyPct.toFixed(1)}% (${ly.net_rn.toLocaleString()}→${(cur.net_rn||0).toLocaleString()}실)` });
+        }
+      }
+    }
+  } catch(e){}
+
+  // (d) OTA/GOTA 채널 전년비 -20% 이상 감소 (sales-prop=ALL 일 때만 유의미)
+  try {
+    if (DATA.db && DATA.db.by_channel_segment && DATA.db.by_channel && STATE.prop === 'ALL'){
+      const ym = '2026' + String(STATE.month).padStart(2,'0');
+      const lyYm = '2025' + String(STATE.month).padStart(2,'0');
+      const segMap = DATA.db.by_channel_segment; // ch -> 'OTA'|'G-OTA'|'Inbound'
+      const dropped = [];
+      for (const [ch, mdata] of Object.entries(DATA.db.by_channel)){
+        const seg = segMap[ch];
+        if (seg !== 'OTA' && seg !== 'G-OTA') continue;
+        const cur = mdata[ym], ly = mdata[lyYm];
+        if (!cur || !ly || (ly.net_rn || 0) < 50) continue; // 너무 작은 채널은 무시
+        const yoy = ((cur.net_rn || 0) - ly.net_rn) / ly.net_rn * 100;
+        if (yoy <= -20) dropped.push({ ch, seg, yoy, lyRn: ly.net_rn });
+      }
+      if (dropped.length){
+        dropped.sort((a, b) => a.yoy - b.yoy);
+        const top = dropped[0];
+        issues.push({ key: 'channel_drop', text: `<b>${top.ch}</b> 채널 전년비 ${top.yoy.toFixed(1)}% 큰폭 감소${dropped.length > 1 ? ` (외 ${dropped.length - 1}개 채널)` : ''}` });
+      }
+    }
+  } catch(e){}
+
+  // 최대 3개로 컷
+  const topIssues = issues.slice(0, 3);
+
+  // 3) 즉시 액션 — 이슈 키에 매칭
+  const actionMap = {
+    weekday: '<b>주중 전용 패키지</b> 노출 강화 (주중 1박+조식, 비즈니스 패키지)',
+    fcst_drop: '<b>FCST 갭 사업장</b> 우선 프로모션 배분 — 잔여 객실 OTA 노출 확대',
+    inbound: '<b>인바운드 여행사 타겟 프로모션</b> 검토 — 하나투어/모두투어 단체 발주 협의',
+    channel_drop: '<b>해당 채널 잔여 객실 기획전</b> 확대 — 단기 픽업 부스팅',
+  };
+  const fallbackActions = [
+    '<b>Agoda / Trip.com</b> 잔여 객실 기획전 노출 확대',
+    '<b>채널별 KPI 모니터링</b> 강화 — 주간 픽업/취소율 추적',
+    '<b>RM·세일즈 합동 리뷰</b> — FCST 정확도 보정 및 채널 mix 점검',
+  ];
+  const actions = [];
+  topIssues.forEach(i => { if (actionMap[i.key]) actions.push(actionMap[i.key]); });
+  for (let i = 0; actions.length < Math.max(2, topIssues.length) && i < fallbackActions.length; i++){
+    if (!actions.includes(fallbackActions[i])) actions.push(fallbackActions[i]);
+  }
+  const topActions = actions.slice(0, 3);
+
+  return { verdict, tier, ach, issues: topIssues, actions: topActions };
+}
+
+function renderExecSummary(){
+  const exec = buildExecSummary();
+  const propLabel = STATE.prop === 'ALL'
+    ? (STATE.region !== 'ALL' ? `${STATE.region} 권역` : '전체')
+    : STATE.prop.replace(/^\d+\./, '');
+  document.getElementById('exec-ctx-month').textContent = STATE.month + '월';
+  document.getElementById('exec-ctx-prop').textContent = propLabel;
+
+  const block = document.getElementById('exec-verdict-block');
+  block.className = 'exec-block verdict tier-' + exec.tier;
+  document.getElementById('exec-verdict-text').innerHTML = exec.verdict;
+
+  const achEl = document.getElementById('exec-ach');
+  if (exec.ach != null){
+    achEl.textContent = '달성률 ' + exec.ach.toFixed(1) + '%';
+    achEl.className = 'ach ' + (exec.tier === 'hi' ? 'pos' : exec.tier === 'md' ? 'warn' : 'neg');
+  } else { achEl.textContent = '—'; achEl.className = 'ach'; }
+
+  const issuesEl = document.getElementById('exec-issues');
+  if (exec.issues.length){
+    issuesEl.innerHTML = exec.issues.map((it, i) => `<li data-idx="${i+1}">${it.text}</li>`).join('');
+  } else {
+    issuesEl.innerHTML = '<li class="empty-pos">현재 특이사항 없음 — 현행 운영 안정적</li>';
+  }
+
+  const actionsEl = document.getElementById('exec-actions');
+  if (exec.actions.length){
+    actionsEl.innerHTML = exec.actions.map((a, i) => `<li data-idx="${String.fromCharCode(65 + i)}">${a}</li>`).join('');
+  } else {
+    actionsEl.innerHTML = '<li class="empty-pos">즉시 액션 없음 — 모니터링 유지</li>';
+  }
+}
+
 function render(){
   renderHeaderContext();
+  renderExecSummary();
   renderKPI();
   renderGapPlan();
   renderTimeline();
