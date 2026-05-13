@@ -2769,6 +2769,24 @@ def main():
         except Exception as e:
             logger.warning(f"✗ generate_otb_data 실행 오류: {e}")
 
+    # ── 주간비교(weekly_comparison.json) 자동 재생성 ──
+    # index.html / weekly-compare.html 상단 "기준일자" 표시용.
+    # agg_data가 있을 때만 실행 (cloud workflow에서는 data/db_aggregated.json이
+    # gitignore되어 없으므로 호출 자체를 스킵).
+    wcomp_script = Path(__file__).resolve().parent / "build_weekly_comparison.py"
+    if wcomp_script.exists() and agg_data:
+        try:
+            result = subprocess.run(
+                [sys.executable, str(wcomp_script)],
+                capture_output=True, text=True, timeout=180,
+            )
+            if result.returncode == 0:
+                logger.info("✓ build_weekly_comparison 완료")
+            else:
+                logger.warning(f"✗ build_weekly_comparison 실패: {result.stderr.strip()[-200:]}")
+        except Exception as e:
+            logger.warning(f"✗ build_weekly_comparison 실행 오류: {e}")
+
     otb_data = load_json(DOCS_DIR / "data" / "otb_data.json")
     rm_fcst = load_json(DOCS_DIR / "data" / "rm_fcst.json")
 
