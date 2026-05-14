@@ -708,17 +708,17 @@ let rnsAdrMatrixChart = null;
 
 // 채널별 예상 수수료율 (실제 정산 데이터 미연동 — 표준값 기반 추정)
 const CHANNEL_COMMISSION = {
-  // 국내 OTA
-  '야놀자': 0.10, '여기어때': 0.10, '데일리호텔': 0.10, '인터파크': 0.11,
-  '네이버': 0.08, '카카오': 0.08, '쿠팡': 0.10, '티몬': 0.10, '위메프': 0.10,
-  // G-OTA / 해외
-  '부킹닷컴': 0.18, 'Booking.com': 0.18, '아고다': 0.18, 'Agoda': 0.18,
-  '익스피디아': 0.18, 'Expedia': 0.18, '호텔스닷컴': 0.18, 'Hotels.com': 0.18,
-  '트립닷컴': 0.18, 'Trip.com': 0.18, '클룩': 0.15, 'Klook': 0.15,
+  // 국내 OTA (네이버 제외 11%, 쿠팡 9.9%)
+  '야놀자': 0.11, '여기어때': 0.11, '데일리호텔': 0.11, '인터파크': 0.11,
+  '네이버': 0.08, '카카오': 0.11, '쿠팡': 0.099, '티몬': 0.11, '위메프': 0.11,
+  // G-OTA / 해외 (15%)
+  '부킹닷컴': 0.15, 'Booking.com': 0.15, '아고다': 0.15, 'Agoda': 0.15,
+  '익스피디아': 0.15, 'Expedia': 0.15, '호텔스닷컴': 0.15, 'Hotels.com': 0.15,
+  '트립닷컴': 0.15, 'Trip.com': 0.15, '클룩': 0.15, 'Klook': 0.15,
   // 자사/다이렉트
   '온북': 0.02, 'GS': 0.02, '소노': 0.02, '직판': 0.02, '홈페이지': 0.02,
 };
-const SEGMENT_COMMISSION = { 'OTA': 0.10, 'G-OTA': 0.18, 'Inbound': 0.12 };
+const SEGMENT_COMMISSION = { 'OTA': 0.11, 'G-OTA': 0.15, 'Inbound': 0.12 };
 const DEFAULT_COMMISSION = 0.08;
 
 function getCommissionRate(ch, segment) {
@@ -1371,7 +1371,7 @@ function buildActionInsights(sorted, lyData) {
     if (!ly || (ly.net_rn||0) <= 0) continue;
     const change = ((d.net_rn||0) - (ly.net_rn||0)) / (ly.net_rn||1) * 100;
     if (change < -5) yoyDecline.push({ ch, change });
-    else if (change > 10) yoyGrowth.push({ ch, change });
+    else if (change > 10 && !/^기타/.test(ch)) yoyGrowth.push({ ch, change });
   }
   yoyDecline.sort((a,b) => a.change - b.change);
   yoyGrowth.sort((a,b) => b.change - a.change);
