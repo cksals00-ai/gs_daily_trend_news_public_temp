@@ -426,8 +426,10 @@ def _add_metric(d, r):
 
 
 def _with_net(v):
-    return {**v, 'rn_net': v['rn_booking'] - v['rn_cancel'],
-            'rev_net': v['rev_booking'] - v['rev_cancel']}
+    # 43 예약파일은 활성(active) 확정 예약만 포함 — 취소건은 파일에서 제거됨 (parse_raw_db.py 참고).
+    # 따라서 net = booking. 44 취소파일은 wash-rate 분석용 메타데이터로만 유지.
+    return {**v, 'rn_net': v['rn_booking'],
+            'rev_net': v['rev_booking']}
 
 
 def aggregate(enriched):
@@ -544,9 +546,9 @@ def aggregate_member_detail(enriched, recent_months=24):
                 'property': v['property'],
                 'rn_booking': v['rn_booking'],
                 'rn_cancel': v['rn_cancel'],
-                'rn_net': v['rn_booking'] - v['rn_cancel'],
+                'rn_net': v['rn_booking'],  # 43 활성예약만 → net = booking
                 'rev_booking': v['rev_booking'],
-                'rev_net': v['rev_booking'] - v['rev_cancel'],
+                'rev_net': v['rev_booking'],
                 'stay_days': sorted(v['stay_days']),
                 'n_days': len(v['stay_days']),
             })
@@ -579,8 +581,8 @@ def aggregate_daily(enriched, recent_months=24):
     for ymd, v in sorted(daily.items()):
         out[ymd] = {
             **v,
-            'rn_net': v['rn_booking'] - v['rn_cancel'],
-            'rev_net': v['rev_booking'] - v['rev_cancel'],
+            'rn_net': v['rn_booking'],  # 43 활성예약만 → net = booking
+            'rev_net': v['rev_booking'],
         }
     return out
 
@@ -615,7 +617,7 @@ def _collect_partners_with_confidence(enriched, target_confidence):
             'rows': d['rows'],
             'rn_booking': d['rn_booking'],
             'rn_cancel': d['rn_cancel'],
-            'rn_net': d['rn_booking'] - d['rn_cancel'],
+            'rn_net': d['rn_booking'],  # 43 활성예약만 → net = booking
             'rev_booking': d['rev_booking'],
             'prefix': sorted(d['prefix']),
             'years_rn': dict(sorted(d['years'].items())),
