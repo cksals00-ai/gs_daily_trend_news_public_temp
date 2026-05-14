@@ -1555,7 +1555,7 @@ function buildYoYChangeChart(allChannelData, months) {
 
   const prevChannelData = {};
   for (const ch of db.meta.channels) {
-    if (ch === '기타') continue;
+    if (/^기타/.test(ch)) continue;
     const chData = db.by_channel[ch];
     if (!chData) continue;
     let net_rn = 0;
@@ -1574,6 +1574,7 @@ function buildYoYChangeChart(allChannelData, months) {
   const filtered = filterBySegment(allChannelData);
   const yoyData = [];
   for (const [ch, d] of Object.entries(filtered)) {
+    if (/^기타/.test(ch)) continue;
     if (d.net_rn <= 0) continue;
     const prevRn = prevChannelData[ch] || 0;
     if (prevRn > 0) {
@@ -1683,7 +1684,7 @@ function buildYoYTrendChart() {
 
   const allChannelYearly = {};
   for (const ch of db.meta.channels) {
-    if (ch === '기타') continue;
+    if (/^기타/.test(ch)) continue;
     // 세그먼트 필터 적용 (Inbound 제외)
     const seg = getChannelSegment(ch);
     if (seg === 'Inbound') continue;
