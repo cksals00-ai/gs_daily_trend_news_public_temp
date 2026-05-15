@@ -161,7 +161,7 @@ def main():
 
     data['red_alerts'] = {
         'generated_at': REPORT_DATE.isoformat(),
-        'thresholds': {'2026-04': 90.0, '2026-05': 70.0, '2026-06': 30.0, '2026-07': 10.0},
+        'thresholds': {f"{REPORT_DATE.year}-{REPORT_DATE.month + i:02d}": t for i, t in enumerate([90.0, 70.0, 30.0, 10.0]) if REPORT_DATE.month + i <= 12},
         'criteria': {
             'budget_under': '월별 적정 달성률 미달',
             'yoy_decline': 'YoY 5% 이상 하락',

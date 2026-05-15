@@ -10,7 +10,9 @@ BI 26OTB 시트 기준으로 docs/data/otb_data.json 생성
 """
 import calendar
 import json
+import os
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -21,7 +23,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 DATA_DIR = PROJECT_DIR / "data"
 DOCS_DATA_DIR = PROJECT_DIR / "docs" / "data"
-BUDGET_XLSX = DATA_DIR / "raw_db" / "budget" / "★최종★(검토완료)_2026년 객실 사업계획_총량 수립(2차+사업장변경건).xlsx"
+# Budget 파일: 정확한 파일명 우선, 없으면 glob 패턴으로 탐색
+_BUDGET_EXACT = DATA_DIR / "raw_db" / "budget" / "★최종★(검토완료)_2026년 객실 사업계획_총량 수립(2차+사업장변경건).xlsx"
+if _BUDGET_EXACT.exists():
+    BUDGET_XLSX = _BUDGET_EXACT
+else:
+    _budget_candidates = sorted((DATA_DIR / "raw_db" / "budget").glob("*사업계획*.xlsx")) if (DATA_DIR / "raw_db" / "budget").exists() else []
+    BUDGET_XLSX = _budget_candidates[0] if _budget_candidates else _BUDGET_EXACT
 DB_JSON = DATA_DIR / "db_aggregated.json"
 RM_FCST_JSON = DATA_DIR / "rm_fcst.json"
 FCST_SEG_TREND_JSON = DATA_DIR / "fcst_segment_trend.json"  # 사업장×월×세그 RM FCST 분배본
@@ -190,8 +198,8 @@ def _load_local_holidays():
         try:
             data = json.loads(HOLIDAYS_KR_JSON.read_text(encoding="utf-8"))
             return data.get("holidays", {})
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  ⚠ holidays_kr.json 파싱 실패: {e}")
     return {}
 
 
@@ -1160,6 +1168,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "bud_rn":       bud_rn,
                 "rns_fcst":     rm_rn if (rm_rn and rm_rn > 0) else (rns_fcst_ai if rns_fcst_ai else (rns_fcst or act_rn)),
                 "fcst_ach":     (round(rm_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0) if (rm_rn and rm_rn > 0) else (fcst_ach_ai if fcst_ach_ai else (fcst_ach or 0)),
+                "fcst_source":  "RM" if (rm_rn and rm_rn > 0) else ("AI" if rns_fcst_ai else ("basic" if rns_fcst else "act")),
                 "rns_fcst_ai":  rns_fcst_ai,
                 "fcst_ach_ai":  fcst_ach_ai,
                 "fcst_lo":      fcst_lo,
@@ -1450,6 +1459,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
 
             # FCST 우선순위: RM > AI > basic
+            _prop_fcst_source = "basic"
             if rm_rn_prop and rm_rn_prop > 0:
                 rns_fcst = rm_rn_prop
                 fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
@@ -1461,9 +1471,11 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     rev_fcst = rns_fcst * (bud_rev / bud_rn)
                 adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
                 rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+                _prop_fcst_source = "RM"
             elif ai_fcst_rn and ai_fcst_rn > 0 and rns_fcst is not None:
                 rns_fcst = ai_fcst_rn
                 fcst_ach = ai_fcst_ach
+                _prop_fcst_source = "AI"
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
             if rns_fcst is None:
                 if ai_fcst_rn is not None and ai_fcst_rn > 0:
@@ -1573,6 +1585,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "rns_last":        lst_rn,
             "rns_yoy":         rns_yoy,
             "rns_fcst":        rns_fcst,
+            "fcst_source":     _prop_fcst_source if month_idx > 0 else "sum",
             "fcst_achievement": fcst_ach,
             "ai_fcst_rn":      ai_fcst_rn,
             "ai_fcst_ach":     ai_fcst_ach,
@@ -2240,6 +2253,13 @@ def validate_otb_data(result):
 
 def main():
     print("db_aggregated.json 로드 중...")
+    # 데이터 신선도 검증
+    import os
+    from datetime import datetime as _dtm, timezone as _tz, timedelta as _td
+    _db_mtime = os.path.getmtime(DB_JSON)
+    _db_age_hours = (time.time() - _db_mtime) / 3600
+    if _db_age_hours > 48:
+        print(f"⚠ 경고: db_aggregated.json이 {_db_age_hours:.0f}시간 전 데이터입니다. 최신 데이터인지 확인하세요.")
     db = json.loads(DB_JSON.read_text(encoding="utf-8"))
     db_bp  = db.get("by_property", {})
     db_seg = db.get("by_segment", {})
@@ -2292,10 +2312,14 @@ def main():
     # 사업장별 리드타임 분포
     lead_time_by_prop = db.get("lead_time_by_property", {})
 
-    # RM FCST 로드
+    # RM FCST 로드 + 신선도 검증
     print("RM FCST 로드 중...")
     rm_fcst_props = load_rm_fcst()
     print(f"  RM FCST 사업장 수: {len(rm_fcst_props)}")
+    if RM_FCST_JSON.exists():
+        _rm_age_hours = (time.time() - os.path.getmtime(RM_FCST_JSON)) / 3600
+        if _rm_age_hours > 168:  # 7일
+            print(f"  ⚠ 경고: rm_fcst.json이 {_rm_age_hours:.0f}시간({_rm_age_hours/24:.0f}일) 전 데이터입니다. RM PDF 업데이트가 필요할 수 있습니다.")
 
     # RM FCST Trend 스냅샷 로드 (리드타임 pickup 패턴 분석용)
     rm_trend_snapshots = []

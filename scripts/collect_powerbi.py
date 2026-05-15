@@ -40,8 +40,12 @@ DATASET_ID      = "8ee000d9-5efb-403f-83ad-9a8e3d3b80eb"
 REPORT_ID       = "846569"
 _CLUSTER_FALLBACK = "https://wabi-korea-central-a-primary-redirect.analysis.windows.net"
 
-# 조회할 3개월
-STAY_MONTHS = ["202604", "202605", "202606"]
+# 조회할 3개월 (당월 + 향후 2개월, 자동 계산)
+def _build_stay_months():
+    now = datetime.now()
+    return [f"{now.year}{(now.month + i - 1) % 12 + 1:02d}" for i in range(3)]
+
+STAY_MONTHS = _build_stay_months()
 
 # 채널 구분 매핑 (거래처명 키워드 → 채널 티어)
 CHANNEL_TIER_MAP = {
@@ -584,10 +588,11 @@ def main():
         region = detect_region(name)
         properties_by_region.setdefault(region, []).append(data)
     
-    # 권역별로 4월 달성률 오름차순 정렬 (하위 사업장이 위)
+    # 권역별로 당월 달성률 오름차순 정렬 (하위 사업장이 위)
+    _sort_month = f"{datetime.now().year}-{datetime.now().month:02d}"
     for region in properties_by_region:
         properties_by_region[region].sort(
-            key=lambda p: p.get("2026-04", {}).get("achievement", 999)
+            key=lambda p: p.get(_sort_month, {}).get("achievement", 999)
         )
     
     # 성공 여부 판정 (최소 하나의 권역에 데이터가 있어야)
@@ -650,10 +655,11 @@ def main():
             yoy_pct = round(((rns - last_rns) / last_rns) * 100, 1) if last_rns > 0 else 0
             channel_monthly[name][month_label] = {"rns": rns, "yoy_pct": yoy_pct}
 
-    # 4월 RNS 기준 TOP 10 정렬
+    # 당월 RNS 기준 TOP 10 정렬
+    _ch_sort_month = f"{datetime.now().year}-{datetime.now().month:02d}"
     ranked_channels = sorted(
         channel_monthly.items(),
-        key=lambda x: x[1].get("2026-04", {}).get("rns", 0),
+        key=lambda x: x[1].get(_ch_sort_month, {}).get("rns", 0),
         reverse=True,
     )[:10]
 

@@ -343,9 +343,9 @@ def render_ota_rows(ota_data: dict) -> str:
                 yoy_str = f'<span style="color:#8a8a8a;font-weight:700;">▬ 0%</span>'
             return rns_str, yoy_str
         
-        m0_rns, m0_yoy = fmt_month(ch.get("2026-04"))
-        m1_rns, m1_yoy = fmt_month(ch.get("2026-05"))
-        m2_rns, m2_yoy = fmt_month(ch.get("2026-06"))
+        m0_rns, m0_yoy = fmt_month(ch.get(STAY_MONTHS[0]))
+        m1_rns, m1_yoy = fmt_month(ch.get(STAY_MONTHS[1]))
+        m2_rns, m2_yoy = fmt_month(ch.get(STAY_MONTHS[2]))
         
         rows.append(f'''
         <tr style="border-bottom:1px solid var(--rule);transition:background 0.15s;" 
@@ -539,7 +539,7 @@ def build_weekly_onbook(db_agg: dict) -> dict:
 
     for disp, region, db_props in _PROP_REGION_MAP:
         prop_months = {}
-        for stay_m in ["202604", "202605", "202606"]:
+        for stay_m in [m.replace("-", "") for m in STAY_MONTHS]:
             # 일별 net pickup 합산 (여러 db_prop 합산)
             daily_net = {}
             for dbp in db_props:
@@ -619,7 +619,7 @@ def inject_signal_cards(html: str, prop_data: dict) -> str:
         cards_html = []
         for prop in properties:
             name = escape_html(prop.get("name", ""))
-            m4 = prop.get("2026-04", {})
+            m4 = prop.get(STAY_MONTHS[0], {})
             achievement = m4.get("achievement", 0)
             yoy_pct = m4.get("yoy_pct", 0)
             rns_check = m4.get("rns", 0)

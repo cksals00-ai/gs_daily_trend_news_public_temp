@@ -72,11 +72,13 @@ def build_headline(kpi: dict, news_context: list) -> str:
     k2 = kpi.get("kpi_2", {})
     k3 = kpi.get("kpi_3", {})
     
-    # 3개월 구조 지원 (2026-04 우선, 없으면 기본값)
+    # 3개월 구조 지원 (당월 우선, 없으면 기본값)
+    _now = datetime.now(timezone(timedelta(hours=9)))
+    _current_month_key = f"{_now.year}-{_now.month:02d}"
     def get_value(kpi_item):
         stay_months = kpi_item.get("stay_months", {})
         if stay_months:
-            return stay_months.get("2026-04", {}).get("value")
+            return stay_months.get(_current_month_key, {}).get("value")
         return kpi_item.get("value")
     
     v1 = parse_float(get_value(k1))
@@ -124,10 +126,12 @@ def build_headline(kpi: dict, news_context: list) -> str:
 
 def build_action_alerts(kpi: dict, news_by_region: dict) -> dict:
     """권역별 액션 알림 자동 생성"""
+    _now_a = datetime.now(timezone(timedelta(hours=9)))
+    _cmk = f"{_now_a.year}-{_now_a.month:02d}"
     def get_value(kpi_item):
         stay_months = kpi_item.get("stay_months", {})
         if stay_months:
-            return stay_months.get("2026-04", {}).get("value")
+            return stay_months.get(_cmk, {}).get("value")
         return kpi_item.get("value")
     
     k1_val = parse_float(get_value(kpi.get("kpi_1", {})))
@@ -200,8 +204,10 @@ def build_action_alerts(kpi: dict, news_by_region: dict) -> dict:
 
 
 def build_region_status(kpi: dict) -> dict:
-    """권역별 달성률 상태 (4월 값 사용)"""
-    def get_month_data(kpi_item, month="2026-04"):
+    """권역별 달성률 상태 (당월 값 사용)"""
+    _now_r = datetime.now(timezone(timedelta(hours=9)))
+    _default_month = f"{_now_r.year}-{_now_r.month:02d}"
+    def get_month_data(kpi_item, month=_default_month):
         stay_months = kpi_item.get("stay_months", {})
         if stay_months:
             return stay_months.get(month, {})

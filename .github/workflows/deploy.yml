@@ -85,7 +85,7 @@ jobs:
 
       - name: 📚 Install dependencies
         if: steps.mode.outputs.full == 'true'
-        run: python -m pip install --upgrade pip && pip install requests
+        run: python -m pip install --upgrade pip && pip install requests openpyxl
 
       - name: 📰 [Step 1] 뉴스 수집 (Google News RSS)
         if: steps.mode.outputs.full == 'true'
@@ -162,7 +162,21 @@ jobs:
             echo "ℹ 변경사항 없음 - 커밋 스킵"
           else
             git commit -m "chore(auto): daily update $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M') KST [skip ci]"
-            git push || echo "⚠ 푸시 실패 (동시 실행 충돌 가능)"
+            for i in 1 2 3; do
+              git push && break || {
+                echo "⚠ 푸시 시도 $i 실패 — 3초 후 재시도"
+                sleep 3
+                git pull --rebase origin main
+              }
+            done
+            # 최종 확인: push 후 로컬과 리모트가 동기화됐는지
+            git fetch origin
+            LOCAL=$(git rev-parse HEAD)
+            REMOTE=$(git rev-parse origin/main)
+            if [ "$LOCAL" != "$REMOTE" ]; then
+              echo "::error::❌ git push 최종 실패 — 로컬($LOCAL) != 리모트($REMOTE)"
+              exit 1
+            fi
           fi
 
       - name: 📄 Setup GitHub Pages
