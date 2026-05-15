@@ -888,16 +888,18 @@ def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_
     return None, None
 
 
-def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_daily=None):
+def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_daily=None, yoy_adjusted=None):
     """진정한 동기간 기준으로 LY 데이터 생성 (stay_date_daily 일별 데이터 기반).
 
     동기간 규칙:
     - 과거월 (< 현재월): 풀 마감값 (전체 일수 합산)
     - 현재월 (= 현재월): 1일 ~ 오늘 날짜까지만 합산
-    - 미래월 (> 현재월): 0 (비교 불가)
+    - 미래월 (> 현재월): yoy_adjusted 투숙일 기준 동기간 데이터 사용
 
     stay_date_daily: db_aggregated의 stay_date_daily 섹션.
       {month_key: {days: [...], segments: {seg: {net_rn: [...], net_rev: [...]}}}}
+    yoy_adjusted: db_aggregated의 yoy_adjusted 섹션 (2025년).
+      미래월 동기간 데이터를 제공하기 위해 사용.
 
     Returns: {
         "by_segment":          {seg: {month_key: {"booking_rn": X, "booking_rev_m": Y}}},
@@ -907,6 +909,9 @@ def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_dail
     """
     if stay_date_daily is None:
         return {}
+
+    # yoy_adjusted에서 2025년(LY) 데이터 추출 — 미래월 동기간용
+    _yoy_ly = (yoy_adjusted or {}).get(str(now_kst.year - 1), {})
 
     cur_month = now_kst.month
     cur_day = now_kst.day
@@ -941,10 +946,12 @@ def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_dail
                 sp_rev = sum(net_rev_arr[:cur_day])
                 ratio = sp_rn / full_rn if full_rn > 0 else 0.0
             else:
-                # 미래월: 0
-                sp_rn = 0
-                sp_rev = 0.0
-                ratio = 0.0
+                # 미래월: yoy_adjusted에서 투숙일 기준 동기간 데이터 사용
+                _yoy_seg_m = _yoy_ly.get("by_segment", {}).get(seg, {}).get(mk_25, {})
+                sp_rn = _yoy_seg_m.get("booking_rn", 0)
+                sp_rev = _yoy_seg_m.get("booking_rev_m", 0.0)
+                # 비율: yoy_adjusted 동기간 / 풀마감 (property 비례 배분용)
+                ratio = sp_rn / full_rn if full_rn > 0 else 0.0
 
             if seg not in result_by_segment:
                 result_by_segment[seg] = {}
@@ -984,9 +991,15 @@ def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_dail
                         sp_rn = round(full_rn * ratio)
                         sp_rev = round(full_rev * ratio, 2)
                     else:
-                        # 미래월: 0
-                        sp_rn = 0
-                        sp_rev = 0.0
+                        # 미래월: yoy_adjusted가 있으면 직접 사용, 없으면 비율 적용
+                        _yoy_ps_m = _yoy_ly.get("by_property_segment", {}).get(prop_name, {}).get(seg, {}).get(mk_25, {})
+                        if _yoy_ps_m:
+                            sp_rn = _yoy_ps_m.get("booking_rn", 0)
+                            sp_rev = _yoy_ps_m.get("booking_rev_m", 0.0)
+                        else:
+                            # fallback: 세그먼트 비율로 비례 배분
+                            sp_rn = round(full_rn * ratio)
+                            sp_rev = round(full_rev * ratio, 2)
 
                     result_by_prop_seg[prop_name][seg][mk_25] = {
                         "booking_rn": sp_rn,
@@ -2244,8 +2257,10 @@ def main():
     adj_by_segment = {}
     adj_by_prop_seg = {}
 
+    yoy_adjusted = db.get("yoy_adjusted", {})
     same_period_result = build_ly_same_period_adjusted(
         db_bp, db_bps, db_seg, now_kst, stay_date_daily=stay_date_daily,
+        yoy_adjusted=yoy_adjusted,
     )
     if same_period_result:
         adj_by_segment  = same_period_result.get("by_segment", {})
@@ -2256,8 +2271,8 @@ def main():
     yoy_base_date = now_kst.strftime("%Y%m%d")
     cur_day = now_kst.day
     cur_month = now_kst.month
-    print(f"  동기간 보정 (stay_date_daily 기반): 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}")
-    print(f"  동기간 규칙: 과거월=풀마감, 현재월(~{cur_month}월 {cur_day}일)=동기간, 미래월=0")
+    print(f"  동기간 보정 (stay_date_daily + yoy_adjusted 기반): 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}")
+    print(f"  동기간 규칙: 과거월=풀마감, 현재월(~{cur_month}월 {cur_day}일)=동기간, 미래월=yoy_adjusted 투숙일기준")
 
     # 사업장별 리드타임 분포
     lead_time_by_prop = db.get("lead_time_by_property", {})
