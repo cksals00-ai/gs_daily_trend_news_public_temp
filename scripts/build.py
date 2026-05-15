@@ -1061,7 +1061,21 @@ def inject_news_section(html: str, news_data: dict) -> str:
     now = datetime.now(KST)
     day_kr = ['월', '화', '수', '목', '금', '토', '일'][now.weekday()]
     new_html = apply_tpl(new_html, "news-date", f"{now.strftime('%Y.%m.%d')} ({day_kr})")
-    
+
+    # 5. 뉴스 수집 시간 표시
+    collected_at = news_data.get("collected_at", "") if news_data else ""
+    if collected_at:
+        from datetime import datetime as _dt
+        try:
+            ct = _dt.fromisoformat(collected_at)
+            ct_kst = ct.astimezone(KST)
+            news_time_str = f"{ct_kst.strftime('%Y.%m.%d %H:%M')} 업데이트"
+        except Exception:
+            news_time_str = "업데이트 시간 확인 불가"
+    else:
+        news_time_str = f"{now.strftime('%Y.%m.%d %H:%M')} 업데이트"
+    new_html = apply_tpl(new_html, "news-updated", news_time_str)
+
     return new_html
 
 
