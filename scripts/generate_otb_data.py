@@ -1158,8 +1158,8 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                 "last_rn":      base_rn,
                 "yoy":          yoy,
                 "bud_rn":       bud_rn,
-                "rns_fcst":     rns_fcst if rns_fcst else (rns_fcst_ai or act_rn),
-                "fcst_ach":     fcst_ach if fcst_ach else (fcst_ach_ai or 0),
+                "rns_fcst":     rm_rn if (rm_rn and rm_rn > 0) else (rns_fcst_ai if rns_fcst_ai else (rns_fcst or act_rn)),
+                "fcst_ach":     (round(rm_rn / bud_rn * 100, 1) if bud_rn > 0 else 0.0) if (rm_rn and rm_rn > 0) else (fcst_ach_ai if fcst_ach_ai else (fcst_ach or 0)),
                 "rns_fcst_ai":  rns_fcst_ai,
                 "fcst_ach_ai":  fcst_ach_ai,
                 "fcst_lo":      fcst_lo,
@@ -1449,6 +1449,21 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             rm_rn_prop, rm_budget_prop = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if (rm_rn_prop and rm_budget_prop and rm_budget_prop > 0) else None
 
+            # FCST 우선순위: RM > AI > basic
+            if rm_rn_prop and rm_rn_prop > 0:
+                rns_fcst = rm_rn_prop
+                fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+                mk_25_rm = f"2025{month_idx:02d}"
+                ly_f = sum_db_segments(db_bps, db_props, mk_25_rm) if db_bps is not None else sum_db(db_bp, db_props, mk_25_rm)
+                if ly_f["rn"] > 0:
+                    rev_fcst = rns_fcst * (ly_f["rev_m"] / ly_f["rn"])
+                elif bud_rev > 0 and bud_rn > 0:
+                    rev_fcst = rns_fcst * (bud_rev / bud_rn)
+                adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
+                rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+            elif ai_fcst_rn and ai_fcst_rn > 0 and rns_fcst is not None:
+                rns_fcst = ai_fcst_rn
+                fcst_ach = ai_fcst_ach
             # 미래월 fallback: _calc_fcst가 None이면 AI FCST 사용
             if rns_fcst is None:
                 if ai_fcst_rn is not None and ai_fcst_rn > 0:
