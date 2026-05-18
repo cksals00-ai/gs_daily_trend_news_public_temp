@@ -935,7 +935,14 @@ function render() {
     const spRatiosTable = {};
     if (yoyAdjLY && yoyAdjLY.by_month) {
       for (const m of lyMonths) {
-        const adjRn = yoyAdjLY.by_month[m] ? yoyAdjLY.by_month[m].booking_rn : null;
+        const bm = yoyAdjLY.by_month[m];
+        if (!bm) continue;
+        // 마감월(adjustment_rn=0)은 보정 불필요 → ratio=1.0 (원본 유지)
+        if ((bm.adjustment_rn || 0) === 0) {
+          spRatiosTable[m] = 1;
+          continue;
+        }
+        const adjRn = bm.booking_rn;
         const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
         if (adjRn != null && normRn > 0) {
           spRatiosTable[m] = adjRn / normRn;
@@ -1545,7 +1552,14 @@ function buildYoYChangeChart(allChannelData, months) {
   const samePeriodRatios = {};
   if (yoyAdj && yoyAdj.by_month) {
     for (const m of prevMonths) {
-      const adjRn = yoyAdj.by_month[m] ? yoyAdj.by_month[m].booking_rn : null;
+      const bm = yoyAdj.by_month[m];
+      if (!bm) continue;
+      // 마감월(adjustment_rn=0)은 보정 불필요 → ratio=1.0 (원본 유지)
+      if ((bm.adjustment_rn || 0) === 0) {
+        samePeriodRatios[m] = 1;
+        continue;
+      }
+      const adjRn = bm.booking_rn;
       const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
       if (adjRn != null && normRn > 0) {
         samePeriodRatios[m] = adjRn / normRn;
