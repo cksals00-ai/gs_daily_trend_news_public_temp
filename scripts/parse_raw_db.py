@@ -1667,6 +1667,14 @@ def main():
     print(f"\n  전체: {summary['meta']['total_rows']:,}행")
     print("=" * 60)
 
+    # ── 팔라티움 DB 파싱 (온북 txt와 함께 자동 실행) ──
+    try:
+        from parse_palatium_db import main as parse_palatium
+        print("\n▶ 팔라티움 DB 파싱 연계 실행...")
+        parse_palatium()
+    except Exception as e:
+        logger.warning(f"팔라티움 DB 파싱 실패 (무시): {e}")
+
 
 if __name__ == "__main__":
     main()

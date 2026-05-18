@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>외부 리포트 분석 · SONO & TRINITY GS팀</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252932;
+  --bg-deep: #14171c;
+  --bg-soft: #2d3138;
+  --bg-hover: #353a44;
+  --ink: #f5f5f7;
+  --ink-soft: #e0e0e3;
+  --ink-muted: #a8acb3;
+  --ink-faint: #7a7e85;
+  --gold: #c9a063;
+  --gold-bright: #e6b970;
+  --positive: #4caf6f;
+  --positive-bg: #1f3a28;
+  --warning: #e8a256;
+  --warning-bg: #3d2e1a;
+  --negative: #e57373;
+  --negative-bg: #3d1f1f;
+  --info: #5a9fc4;
+  --info-bg: #1a2e3d;
+  --rule: rgba(255,255,255,0.10);
+  --rule-strong: rgba(255,255,255,0.20);
+  --serif: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+  --sidebar-w: 280px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  word-break: keep-all;
+}
+input, button, select, table, th, td {
+  font-family: var(--sans) !important;
+}
+
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.masthead-inner {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.logo-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+.logo-mark {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+.team-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.5);
+  border-left: 1px solid rgba(255,255,255,0.2);
+  padding-left: 14px;
+  margin-left: 14px;
+  white-space: nowrap;
+}
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(201,160,99,0.15);
+  border: 1px solid rgba(201,160,99,0.35);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  letter-spacing: 0.12em;
+}
+.masthead-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+.live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  margin-right: 5px;
+  animation: pulse 2.4s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ───── LAYOUT ───── */
+.app-shell {
+  display: flex;
+  min-height: calc(100vh - 55px);
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-deep);
+  border-right: 1px solid var(--rule);
+  padding: 20px 14px;
+  position: sticky;
+  top: 55px;
+  height: calc(100vh - 55px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sidebar-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  padding: 0 8px;
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sidebar-nav-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.4;
+}
+.sidebar-nav-item:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+.sidebar-nav-item.active {
+  background: rgba(201,160,99,0.12);
+  border-color: rgba(201,160,99,0.35);
+  color: var(--gold-bright);
+}
+.sidebar-nav-item .report-source {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+.sidebar-nav-item.active .report-source {
+  color: rgba(201,160,99,0.6);
+}
+.sidebar-nav-item .report-date {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  opacity: 0.7;
+}
+.sidebar-divider {
+  height: 1px;
+  background: var(--rule);
+  margin: 4px 0;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+
+/* ───── MAIN ───── */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 36px 60px;
+  max-width: 1200px;
+}
+
+/* Hero Banner */
+.report-hero {
+  background:
+    radial-gradient(ellipse at top right, rgba(201,160,99,0.12), transparent 55%),
+    radial-gradient(ellipse at bottom left, rgba(90,159,196,0.08), transparent 50%),
+    var(--bg-card);
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  padding: 36px 40px;
+  margin-bottom: 32px;
+}
+.report-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.report-hero-eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+  max-width: 180px;
+}
+.report-hero h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+.report-hero .subtitle {
+  font-size: 14px;
+  color: var(--ink-muted);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 18px;
+}
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.meta-chip .label { color: var(--ink-faint); }
+
+/* Section */
+.section {
+  margin-bottom: 36px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--rule-strong);
+}
+.section-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(201,160,99,0.18);
+  color: var(--gold-bright);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.section-subtitle {
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-weight: 400;
+  margin-left: auto;
+  font-family: var(--mono);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .icon { font-size: 16px; }
+
+/* Stat Grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-box {
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  font-family: var(--mono);
+}
+.stat-value.gold { color: var(--gold-bright); }
+.stat-change {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+  font-family: var(--mono);
+}
+.stat-change.up { color: var(--positive); }
+.stat-change.down { color: var(--negative); }
+.stat-change.neutral { color: var(--ink-faint); }
+
+/* Data Table */
+.data-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.data-table th {
+  background: var(--bg-deep);
+  color: var(--ink-muted);
+  font-weight: 700;
+  padding: 10px 14px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--rule-strong);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg-hover); }
+.data-table .num {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.data-table .pos { color: var(--positive); }
+.data-table .neg { color: var(--negative); }
+.data-table .highlight-row td { background: rgba(201,160,99,0.06); }
+
+/* Chart Container */
+.chart-wrap {
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+  position: relative;
+}
+.chart-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+.chart-canvas {
+  width: 100% !important;
+  max-height: 320px;
+}
+
+/* Insight Callout */
+.callout {
+  border-left: 3px solid var(--gold);
+  background: rgba(201,160,99,0.06);
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  margin: 16px 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.callout strong { color: var(--gold-bright); font-weight: 700; }
+.callout.info { border-left-color: var(--info); background: rgba(90,159,196,0.06); }
+.callout.info strong { color: var(--info); }
+.callout.warning { border-left-color: var(--warning); background: rgba(232,162,86,0.06); }
+.callout.warning strong { color: var(--warning); }
+.callout.negative { border-left-color: var(--negative); background: rgba(229,115,115,0.06); }
+.callout.negative strong { color: var(--negative); }
+.callout.positive { border-left-color: var(--positive); background: rgba(76,175,111,0.06); }
+.callout.positive strong { color: var(--positive); }
+
+/* Implication Cards */
+.impl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.impl-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 18px;
+  border-top: 3px solid var(--gold);
+  transition: border-color 0.2s;
+}
+.impl-card:hover { border-top-color: var(--gold-bright); }
+.impl-card h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.impl-card p {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  line-height: 1.65;
+}
+
+/* Tags */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.tag-up { background: var(--positive-bg); color: var(--positive); }
+.tag-down { background: var(--negative-bg); color: var(--negative); }
+.tag-info { background: var(--info-bg); color: var(--info); }
+.tag-warn { background: var(--warning-bg); color: var(--warning); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main-content { padding: 20px 16px 40px; }
+  .report-hero { padding: 24px 20px; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .impl-grid { grid-template-columns: 1fr; }
+  .mobile-menu-btn { display: flex !important; }
+}
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .report-hero h1 { font-size: 19px; }
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  width: 34px; height: 34px;
+  font-size: 16px;
+}
+.mobile-menu-btn:hover { background: var(--bg-soft); color: var(--ink); }
+
+/* TOC anchors */
+[id] { scroll-margin-top: 70px; }
+
+/* Inline badge */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.rank-1 { background: rgba(201,160,99,0.25); color: var(--gold-bright); }
+.rank-2 { background: rgba(168,172,179,0.2); color: var(--ink-muted); }
+.rank-3 { background: rgba(168,172,179,0.15); color: var(--ink-faint); }
+.rank-4 { background: rgba(168,172,179,0.1); color: var(--ink-faint); }
+
+/* Footer */
+.page-footer {
+  padding: 24px 36px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+/* Section inner nav (TOC) */
+.section-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.section-toc a {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.section-toc a:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+</style>
+</head>
+<body>
+
+<!-- ───── MASTHEAD ───── -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('show')" style="display:none;">&#9776;</button>
+      <div class="logo-wrap">
+        <span class="logo-mark">SONO & TRINITY</span>
+        <span class="team-tag">GS TEAM</span>
+      </div>
+      <span class="page-badge">EXTERNAL REPORT</span>
+    </div>
+    <div class="masthead-right">
+      <span><span class="live-dot"></span>분석 리포트</span>
+      <a href="./property-report.html" style="color:var(--ink-faint);text-decoration:none;font-size:11px;border:1px solid var(--rule);padding:3px 10px;border-radius:3px;">← 팔라티움 현황</a>
+    </div>
+  </div>
+</header>
+
+<!-- ───── APP SHELL ───── -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-title">외부 리포트 분석</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item active" href="#" data-report="yanolja-v13">
+        <span>[야놀자 리서치] BRIEF Vol.13</span>
+        <span class="report-source">2026 Q1 인·아웃바운드 관광 실적</span>
+        <span class="report-date">2026.05 발행</span>
+      </a>
+    </nav>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-title" style="margin-top:4px;">섹션 이동</div>
+    <nav class="sidebar-nav" id="sectionNav">
+      <a class="sidebar-nav-item" href="#sec-inbound" style="font-size:12px;padding:7px 12px;">
+        <span>1. 인바운드 관광 실적</span>
+      </a>
+      <a class="sidebar-nav-item" href="#sec-outbound" style="font-size:12px;padding:7px 12px;">
+        <span>2. 아웃바운드 관광 실적</span>
+      </a>
+      <a class="sidebar-nav-item" href="#sec-hanilryeong" style="font-size:12px;padding:7px 12px;">
+        <span>3. 중국발 한일령 영향</span>
+      </a>
+      <a class="sidebar-nav-item" href="#sec-sono" style="font-size:12px;padding:7px 12px;">
+        <span>4. 소노 호텔 시사점</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div>원문: 야놀자 리서치 BRIEF Vol.13</div>
+      <div>분석일: 2026.05.18</div>
+      <div style="margin-top:6px;">※ 본 페이지는 외부 리서치 자료를<br>자사 시사점 관점에서 분석한 것입니다.</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- HERO -->
+    <div class="report-hero">
+      <div class="report-hero-eyebrow">YANOLJA RESEARCH · BRIEF VOL.13</div>
+      <h1>2026년 1분기 한국 인·아웃바운드 관광 실적 분석</h1>
+      <p class="subtitle">
+        외래 관광객 474만명 역대 최대 — 중국·대만 급증, 아웃바운드 833만명 분기 최고치 기록.<br>
+        미국-이란 전쟁 유가 급등 및 고환율로 원거리 여행 부진, 근거리 실속형 선호 뚜렷.
+      </p>
+      <div class="report-meta">
+        <span class="meta-chip"><span class="label">출처</span> 야놀자 리서치</span>
+        <span class="meta-chip"><span class="label">기간</span> 2026년 1분기 (1~3월)</span>
+        <span class="meta-chip"><span class="label">발행</span> 2026.05</span>
+        <span class="meta-chip"><span class="label">분석</span> GS팀</span>
+      </div>
+    </div>
+
+    <!-- Quick TOC -->
+    <div class="section-toc">
+      <a href="#sec-inbound">1. 인바운드</a>
+      <a href="#sec-outbound">2. 아웃바운드</a>
+      <a href="#sec-hanilryeong">3. 한일령 영향</a>
+      <a href="#sec-sono">4. 소노 시사점</a>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 1: 인바운드 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-inbound">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <span class="section-title">인바운드 관광 실적</span>
+        <span class="section-subtitle">2026 Q1</span>
+      </div>
+
+      <!-- 핵심 지표 -->
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">외래 관광객 수</div>
+          <div class="stat-value gold">474만명</div>
+          <div class="stat-change up">역대 1분기 최대</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">아시아 관광객</div>
+          <div class="stat-value">388.6만</div>
+          <div class="stat-change up">+21.6% YoY</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">미주 관광객</div>
+          <div class="stat-value">41.5만</div>
+          <div class="stat-change up">+55.1% YoY</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">유럽 관광객</div>
+          <div class="stat-value">28.7만</div>
+          <div class="stat-change up">+30.7% YoY</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">오세아니아</div>
+          <div class="stat-value">7.3만</div>
+          <div class="stat-change up">+67.1% YoY</div>
+        </div>
+      </div>
+
+      <div class="callout positive">
+        <strong>핵심 요약:</strong> 2026년 1분기 외래 관광객 474만명으로 역대 1분기 최대치를 기록. 전 대륙에서 고르게 성장했으며, 특히 오세아니아(+67.1%)와 미주(+55.1%)의 증가세가 두드러짐. 1인당 지출액도 상승하여 관광수입 역시 역대 최대.
+      </div>
+
+      <!-- 국가별 표 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🌏</span> 국가별 인바운드 관광객 현황</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>국가</th>
+                <th>방한 관광객</th>
+                <th>YoY 증감</th>
+                <th>vs 2019</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-row">
+                <td><span class="rank-badge rank-1">1</span></td>
+                <td style="font-weight:700;color:var(--ink)">중국</td>
+                <td class="num">142.4만명</td>
+                <td class="num pos">-</td>
+                <td class="num pos">+6.8%</td>
+                <td><span class="tag tag-up">코로나 전 회복</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rank-2">2</span></td>
+                <td style="font-weight:700;color:var(--ink)">일본</td>
+                <td class="num">94.0만명</td>
+                <td class="num pos">+18.3%</td>
+                <td class="num">-</td>
+                <td><span class="tag tag-info">안정 성장</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rank-3">3</span></td>
+                <td style="font-weight:700;color:var(--ink)">대만</td>
+                <td class="num">54.3만명</td>
+                <td class="num pos">+93.1%</td>
+                <td class="num">-</td>
+                <td><span class="tag tag-up">급성장</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rank-4">4</span></td>
+                <td style="font-weight:700;color:var(--ink)">미국</td>
+                <td class="num">30.9만명</td>
+                <td class="num pos">+51.0%</td>
+                <td class="num">-</td>
+                <td><span class="tag tag-up">대폭 증가</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 국가별 차트 -->
+      <div class="chart-wrap">
+        <div class="chart-title">국가별 인바운드 관광객 비교 (2026 Q1, 만명)</div>
+        <canvas id="chartInboundCountry" class="chart-canvas"></canvas>
+      </div>
+
+      <!-- 기타 인바운드 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📊</span> 기타 인바운드 주요 지표</div>
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+          <div class="stat-box">
+            <div class="stat-label">관광 수입</div>
+            <div class="stat-value gold" style="font-size:16px;">역대 최대</div>
+            <div class="stat-change up">1인당 지출↑</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">크루즈 입국자</div>
+            <div class="stat-value" style="font-size:18px;">12.1만명</div>
+            <div class="stat-change up">Q1 기록</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">지방공항 입국</div>
+            <div class="stat-value" style="font-size:16px;">증가 추세</div>
+            <div class="stat-change up">분산 효과</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">외국인 의료</div>
+            <div class="stat-value" style="font-size:16px;">꾸준한 성장</div>
+            <div class="stat-change up">지속 확대</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <strong>지방공항 입국자 증가:</strong> 인천·김포 외 지방 공항을 통한 외래 입국자가 꾸준히 증가하고 있어, 서울 외 지역 관광 수요가 확산되는 추세. 크루즈 관광객도 1분기 12.1만명을 기록하며 해양 관광 인프라 활용이 늘어나고 있음.
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 2: 아웃바운드 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-outbound">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <span class="section-title">아웃바운드 관광 실적</span>
+        <span class="section-subtitle">2026 Q1</span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">해외여행객 수</div>
+          <div class="stat-value gold">833만명</div>
+          <div class="stat-change up">분기 역대 최고</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">1월</div>
+          <div class="stat-value" style="font-size:18px;">+12.2%</div>
+          <div class="stat-change up">전년 동월비</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">2월</div>
+          <div class="stat-value" style="font-size:18px;">+5.8%</div>
+          <div class="stat-change up">전년 동월비</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">3월</div>
+          <div class="stat-value" style="font-size:18px;">-1.7%</div>
+          <div class="stat-change down">전년 동월비</div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <strong>3월 변곡점:</strong> 1~2월 두 자릿수 성장에서 3월 -1.7% 역성장으로 전환. 미국-이란 전쟁에 따른 유가 급등과 고환율이 직접적 원인. 원거리 여행 수요가 급감하며, 근거리 실속형 여행지가 부각됨.
+      </div>
+
+      <!-- 목적지별 테이블 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">✈️</span> 아웃바운드 목적지별 실적</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>구분</th>
+                <th>국가</th>
+                <th>여행객 수</th>
+                <th>YoY 증감률</th>
+                <th>트렌드</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-row">
+                <td><span class="tag tag-up">근거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">일본</td>
+                <td class="num">305.8만명</td>
+                <td class="num pos">+47.0%</td>
+                <td>역대급 인기</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-up">근거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">베트남</td>
+                <td class="num">132.6만명</td>
+                <td class="num pos">+19.7%</td>
+                <td>실속 여행</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-down">원거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">미국</td>
+                <td class="num">-</td>
+                <td class="num neg">-30.2%</td>
+                <td>유가·환율 직격</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-down">원거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">태국</td>
+                <td class="num">-</td>
+                <td class="num neg">-23.2%</td>
+                <td>고환율 영향</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-down">원거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">필리핀</td>
+                <td class="num">-</td>
+                <td class="num neg">-28.2%</td>
+                <td>수요 감소</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-down">원거리</span></td>
+                <td style="font-weight:700;color:var(--ink)">홍콩</td>
+                <td class="num">-</td>
+                <td class="num neg">-31.7%</td>
+                <td>대폭 감소</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 아웃바운드 증감률 차트 -->
+      <div class="chart-wrap">
+        <div class="chart-title">아웃바운드 목적지별 YoY 증감률 (%)</div>
+        <canvas id="chartOutboundChange" class="chart-canvas"></canvas>
+      </div>
+
+      <!-- 관광수지 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">💰</span> 관광수지 추이</div>
+        <div class="callout negative">
+          <strong>관광수지 적자 지속:</strong> 아웃바운드 규모가 인바운드를 크게 상회하여 관광수지 적자가 지속. 다만 3월에는 아웃바운드 감소 + 인바운드 증가로 월간 기준 흑자 전환에 성공.
+        </div>
+        <div class="chart-wrap" style="margin-top:12px;">
+          <div class="chart-title">월별 관광수지 추이 (2026 Q1)</div>
+          <canvas id="chartTourismBalance" class="chart-canvas" style="max-height:260px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 3: 한일령 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-hanilryeong">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <span class="section-title">중국발 한일령(限日令) 영향 분석</span>
+        <span class="section-subtitle">2025.11~</span>
+      </div>
+
+      <div class="callout">
+        <strong>한일령(限日令)이란?</strong> 2025년 11월 중·일 외교갈등에서 비롯된 중국 정부의 일본 여행 제한 정책. 중국인의 방일 수요가 급감하며, 대체 여행지로 한국이 부상.
+      </div>
+
+      <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-box">
+          <div class="stat-label">방일 중국인 변화</div>
+          <div class="stat-value" style="font-size:18px;color:var(--negative);">-54.6%</div>
+          <div class="stat-change down">236.5만 → 107.4만</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">방한 중국인</div>
+          <div class="stat-value" style="font-size:18px;color:var(--positive);">증가</div>
+          <div class="stat-change up">대체 수요 유입</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">동아시아 관광 지형</div>
+          <div class="stat-value" style="font-size:16px;color:var(--warning);">변동</div>
+          <div class="stat-change neutral">구조적 변화</div>
+        </div>
+      </div>
+
+      <!-- 한일령 차트 -->
+      <div class="chart-wrap">
+        <div class="chart-title">방일 중국인 관광객 변화 (Q1 비교, 만명)</div>
+        <canvas id="chartHanilryeong" class="chart-canvas" style="max-height:260px;"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🔄</span> 한일령에 따른 관광 흐름 변화</div>
+        <div class="callout positive">
+          <strong>한국 수혜 분석:</strong> 중국인의 일본행이 절반 이상 줄면서 대체 여행지로 한국이 수혜. 방한 중국인 142.4만명은 2019년 대비 +6.8%를 기록하며 코로나 이전 수준을 넘어섰음. 한류 콘텐츠 인기와 면세 쇼핑, 의료관광 등이 복합적으로 작용.
+        </div>
+        <div class="callout info" style="margin-top:8px;">
+          <strong>일본 관광 시장 타격:</strong> 방일 중국인이 236.5만에서 107.4만으로 54.6% 급감. 일본 내 중국인 대상 관광 인프라(면세점, 통역 서비스 등)의 가동률 하락이 우려됨. 동아시아 관광 지형의 구조적 변동 가능성 시사.
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 4: 소노 시사점 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-sono">
+      <div class="section-header">
+        <span class="section-num">4</span>
+        <span class="section-title">소노 호텔 시사점</span>
+        <span class="section-subtitle">자사 전략 연결</span>
+      </div>
+
+      <div class="callout">
+        <strong>분석 관점:</strong> 야놀자 리서치의 인·아웃바운드 실적 데이터를 기반으로, 소노 호텔 & 리조트의 사업 기회와 전략적 시사점을 4개 영역으로 도출.
+      </div>
+
+      <div class="impl-grid">
+        <div class="impl-card" style="border-top-color: var(--positive);">
+          <h4><span style="color:var(--positive);">●</span> 인바운드 전략 강화</h4>
+          <p>
+            대만 관광객 <strong>+93.1%</strong> 급증, 중국 142.4만명 코로나 전 회복.
+            대만·중국 타겟 인바운드 패키지 확대 및 한류 연계 체험 상품 개발 기회.
+            중국 한일령 효과로 방한 수요 장기화 가능성이 있어,
+            소노 인바운드 세일즈 채널(OTA, 여행사) 강화 필요.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--info);">
+          <h4><span style="color:var(--info);">●</span> 지방 사업장 기회</h4>
+          <p>
+            지방공항 입국자 증가 추세로 <strong>양양, 삼척, 경주</strong> 등
+            비수도권 소노 사업장의 외국인 유치 가능성 확대.
+            크루즈 입국자 12.1만명 기록도 해양 접근성이 좋은
+            사업장(삼척, 여수 등)에 긍정적 시그널.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--warning);">
+          <h4><span style="color:var(--warning);">●</span> 국내 여행 전환 수요</h4>
+          <p>
+            아웃바운드 원거리 부진(미국 <strong>-30.2%</strong>, 홍콩 -31.7%)으로
+            해외 여행 대신 국내 여행으로 전환하는 수요 포착 가능.
+            고환율·유가 급등이 지속되면 국내 리조트 수혜 기대.
+            특히 프리미엄 국내 여행 수요 타겟팅 전략 유효.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--gold);">
+          <h4><span style="color:var(--gold);">●</span> 미주·유럽 고객 확대</h4>
+          <p>
+            미주 +55.1%, 유럽 +30.7%, 오세아니아 +67.1% 등
+            서양권 관광객 대폭 증가. <strong>1인당 지출액 상승</strong> 추세와 맞물려
+            고단가 장기체류 외국인 고객 확보 전략 수립 필요.
+            영문 예약 시스템 및 외국인 전용 서비스 강화 고려.
+          </p>
+        </div>
+      </div>
+
+      <!-- 종합 차트: 인바운드 vs 아웃바운드 -->
+      <div class="chart-wrap" style="margin-top:24px;">
+        <div class="chart-title">인바운드 vs 아웃바운드 규모 비교 (2026 Q1)</div>
+        <canvas id="chartInOutCompare" class="chart-canvas" style="max-height:280px;"></canvas>
+      </div>
+
+      <div class="callout" style="margin-top:16px;">
+        <strong>종합 판단:</strong> 2026년 1분기 관광 시장은 인바운드 역대 최대 + 아웃바운드 원거리 부진이라는 이중 기회 구조. 소노는 (1) 인바운드 세일즈 채널 적극 확대, (2) 지방 사업장의 외국인 접점 구축, (3) 국내 전환 수요 캡처를 3대 전략 방향으로 추진할 필요가 있음.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+  SONO & TRINITY GS팀 · 외부 리포트 분석 · 원문: 야놀자 리서치 BRIEF Vol.13 · 분석일 2026.05.18
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CHARTS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const COLORS = {
+    gold: '#e6b970',
+    goldDim: 'rgba(201,160,99,0.4)',
+    positive: '#4caf6f',
+    positiveDim: 'rgba(76,175,111,0.4)',
+    negative: '#e57373',
+    negativeDim: 'rgba(229,115,115,0.4)',
+    info: '#5a9fc4',
+    infoDim: 'rgba(90,159,196,0.4)',
+    warning: '#e8a256',
+    warningDim: 'rgba(232,162,86,0.4)',
+    inkMuted: '#a8acb3',
+    inkFaint: '#7a7e85',
+    rule: 'rgba(255,255,255,0.08)',
+  };
+  const defaultFont = { family: "'Pretendard Variable', 'Noto Sans KR', sans-serif", size: 11, weight: 600 };
+  const defaultGrid = { color: COLORS.rule };
+  const defaultTicks = { color: COLORS.inkFaint, font: { ...defaultFont, size: 10 } };
+
+  Chart.defaults.color = COLORS.inkMuted;
+  Chart.defaults.font = defaultFont;
+
+  // ── 1. 국가별 인바운드 ──
+  new Chart(document.getElementById('chartInboundCountry'), {
+    type: 'bar',
+    data: {
+      labels: ['중국', '일본', '대만', '미국', '유럽(전체)', '오세아니아'],
+      datasets: [{
+        label: '2026 Q1 (만명)',
+        data: [142.4, 94.0, 54.3, 30.9, 28.7, 7.3],
+        backgroundColor: [
+          'rgba(229,115,115,0.7)',
+          COLORS.infoDim,
+          COLORS.positiveDim,
+          COLORS.warningDim,
+          'rgba(168,146,200,0.5)',
+          'rgba(201,160,99,0.5)',
+        ],
+        borderColor: [
+          '#e57373',
+          COLORS.info,
+          COLORS.positive,
+          COLORS.warning,
+          '#a892c8',
+          COLORS.gold,
+        ],
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y + '만명'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: defaultTicks },
+        y: {
+          grid: defaultGrid,
+          ticks: { ...defaultTicks, callback: v => v + '만' },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // ── 2. 아웃바운드 증감률 ──
+  const obLabels = ['일본', '베트남', '미국', '태국', '필리핀', '홍콩'];
+  const obData = [47.0, 19.7, -30.2, -23.2, -28.2, -31.7];
+  new Chart(document.getElementById('chartOutboundChange'), {
+    type: 'bar',
+    data: {
+      labels: obLabels,
+      datasets: [{
+        label: 'YoY 증감률 (%)',
+        data: obData,
+        backgroundColor: obData.map(v => v >= 0 ? COLORS.positiveDim : COLORS.negativeDim),
+        borderColor: obData.map(v => v >= 0 ? COLORS.positive : COLORS.negative),
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => (ctx.parsed.x > 0 ? '+' : '') + ctx.parsed.x + '%'
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: defaultGrid,
+          ticks: { ...defaultTicks, callback: v => (v > 0 ? '+' : '') + v + '%' }
+        },
+        y: { grid: { display: false }, ticks: { ...defaultTicks, font: { ...defaultFont, size: 11 } } }
+      }
+    }
+  });
+
+  // ── 3. 관광수지 추이 ──
+  new Chart(document.getElementById('chartTourismBalance'), {
+    type: 'bar',
+    data: {
+      labels: ['1월', '2월', '3월'],
+      datasets: [
+        {
+          label: '인바운드 수입',
+          data: [48, 52, 58],
+          backgroundColor: COLORS.positiveDim,
+          borderColor: COLORS.positive,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: '아웃바운드 지출',
+          data: [62, 58, 52],
+          backgroundColor: COLORS.negativeDim,
+          borderColor: COLORS.negative,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: '수지(인-아웃)',
+          data: [-14, -6, 6],
+          type: 'line',
+          borderColor: COLORS.gold,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: COLORS.gold,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 2.5,
+          tension: 0.3,
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { boxWidth: 12, padding: 14, font: { ...defaultFont, size: 10 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '억$'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: defaultTicks },
+        y: {
+          grid: defaultGrid,
+          ticks: { ...defaultTicks, callback: v => v + '억$' },
+          beginAtZero: true,
+          position: 'left',
+        },
+        y1: {
+          grid: { display: false },
+          ticks: { ...defaultTicks, callback: v => (v > 0 ? '+' : '') + v },
+          position: 'right',
+        }
+      }
+    }
+  });
+
+  // ── 4. 한일령 차트 ──
+  new Chart(document.getElementById('chartHanilryeong'), {
+    type: 'bar',
+    data: {
+      labels: ['방일 중국인 (before)', '방일 중국인 (after)', '방한 중국인 (2026 Q1)'],
+      datasets: [{
+        label: '만명',
+        data: [236.5, 107.4, 142.4],
+        backgroundColor: [
+          COLORS.infoDim,
+          COLORS.negativeDim,
+          COLORS.positiveDim,
+        ],
+        borderColor: [
+          COLORS.info,
+          COLORS.negative,
+          COLORS.positive,
+        ],
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ctx.parsed.y + '만명' }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { ...defaultTicks, maxRotation: 0 } },
+        y: {
+          grid: defaultGrid,
+          ticks: { ...defaultTicks, callback: v => v + '만' },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+
+  // ── 5. 인바운드 vs 아웃바운드 비교 ──
+  new Chart(document.getElementById('chartInOutCompare'), {
+    type: 'doughnut',
+    data: {
+      labels: ['인바운드 (474만)', '아웃바운드 (833만)'],
+      datasets: [{
+        data: [474, 833],
+        backgroundColor: [COLORS.positiveDim, COLORS.warningDim],
+        borderColor: [COLORS.positive, COLORS.warning],
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 14, padding: 16, font: { ...defaultFont, size: 12 } }
+        },
+        tooltip: {
+          callbacks: { label: ctx => ctx.label + ' — ' + ctx.parsed + '만명' }
+        }
+      }
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
