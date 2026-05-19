@@ -170,6 +170,43 @@ def main():
     raw_db = find_raw_db()
     logger.info(f"raw_db: {raw_db}")
 
+    # 27/28 txt 파일이 실제로 있는지 사전 점검 — 없으면 기존 결과 보존하고 종료
+    # (GitHub Actions 환경처럼 raw_db가 budget/만 있는 상태에서 빈 결과로 덮어쓰는 사고 방지)
+    years = ["2024", "2025", "2026"]
+    has_any_txt = False
+    for year in years:
+        ydir = raw_db / year
+        if not ydir.exists():
+            continue
+        for fname in os.listdir(ydir):
+            if fname.startswith("27.") or fname.startswith("28."):
+                has_any_txt = True
+                break
+        if has_any_txt:
+            break
+
+    if not has_any_txt:
+        logger.warning(f"⚠ raw_db에 27/28 txt 파일이 없음 ({raw_db}) — 기존 결과 보존하고 종료")
+        if OUTPUT_JSON.exists():
+            logger.info(f"  기존 파일 유지: {OUTPUT_JSON}")
+        else:
+            # 최초 실행이면 빈 결과라도 남겨야 다운스트림이 깨지지 않음
+            OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
+            OUTPUT_JSON.write_text(json.dumps({
+                "by_key": {},
+                "meta": {
+                    "total_codes": total_codes,
+                    "keys_with_codes": keys_with_codes,
+                    "keys_with_data": 0,
+                    "total_matched_rows": 0,
+                    "raw_db_years": years,
+                    "duplicate_codes": data.get("duplicate_codes", {}),
+                    "note": "raw_db 27/28 txt 없음 — 빈 결과(최초)",
+                },
+            }, ensure_ascii=False, indent=2), encoding="utf-8")
+            logger.info(f"  최초 빈 결과 저장: {OUTPUT_JSON}")
+        return
+
     # 키별 누적 버킷
     def new_bucket():
         return {
@@ -183,7 +220,6 @@ def main():
     agg: dict[str, dict] = defaultdict(new_bucket)
 
     # 27 (예약) + 28 (취소) — 2026 우선, 다른 연도도 같은 코드면 합산
-    years = ["2024", "2025", "2026"]
     total_matched = 0
     for year in years:
         ydir = raw_db / year
@@ -203,6 +239,16 @@ def main():
                     total_matched += n
 
     logger.info(f"총 매칭 행: {total_matched:,}")
+
+    # 매칭 0건이면 기존 결과 보존 — 코드는 있는데 txt가 어쩌다 비어있는 케이스 방어
+    if total_matched == 0 and OUTPUT_JSON.exists():
+        try:
+            prev = json.loads(OUTPUT_JSON.read_text(encoding="utf-8"))
+            if prev.get("meta", {}).get("keys_with_data", 0) > 0:
+                logger.warning("⚠ 이번 매칭 0건인데 기존 파일에 데이터 있음 — 기존 결과 보존")
+                return
+        except Exception:
+            pass
 
     # Key별 net 집계 + 정리
     by_key: dict[str, dict] = {}

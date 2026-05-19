@@ -137,10 +137,14 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "::group::기획전 실적"
-          if [ -d "data/raw_db" ] && [ "$(ls -A data/raw_db 2>/dev/null)" ]; then
+          # data/raw_db/ 자체는 budget/ 서브디렉토리 때문에 항상 존재 — 실제 27/28 txt가 있는지로 판정.
+          # GH Actions 환경처럼 raw_db txt가 없는 상태에서 기존 campaign_performance.json을 빈 결과로 덮어쓰는 사고 방지.
+          TXT_COUNT=$(find data/raw_db -maxdepth 2 -type f \( -name '27.*.txt' -o -name '28.*.txt' \) 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$TXT_COUNT" -gt 0 ]; then
+            echo "raw_db 27/28 txt: ${TXT_COUNT}개 발견 → 집계 실행"
             python scripts/generate_campaign_performance.py || echo "⚠ 기획전 실적 집계 실패 - 기존 데이터 유지"
           else
-            echo "⚠ raw_db 디렉토리 없음 - 기획전 실적 스킵 (기존 데이터 유지)"
+            echo "⚠ raw_db에 27/28 txt 없음 (GH Actions 환경) - 기획전 실적 스킵 (기존 데이터 유지)"
           fi
           echo "::endgroup::"
 
