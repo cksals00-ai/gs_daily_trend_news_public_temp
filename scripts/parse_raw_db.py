@@ -1726,7 +1726,7 @@ def main():
     # JSON 출력
     output_path = OUTPUT_DIR / "db_aggregated.json"
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+        json.dump(summary, f, ensure_ascii=False)
 
     logger.info(f"\n출력: {output_path}")
     logger.info(f"연도: {summary['meta']['years']}")
