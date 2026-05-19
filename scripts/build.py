@@ -242,6 +242,33 @@ def apply_tpl(html: str, selector: str, new_text) -> str:
     return new_html
 
 
+_COLOR_VAL_RE = r'(?:var\([^)]*\)|rgba?\([^)]*\)|#[0-9a-fA-F]+|[A-Za-z_][\w-]*)'
+
+
+def set_style_color(html: str, tpl_name: str, new_color: str, *, on_ancestor: bool = False) -> str:
+    """data-tpl-{tpl_name} 속성과 연관된 element 의 style 속성에서 color:... 부분을 new_color 로 교체.
+
+    동일 파일을 source/output 으로 쓰는 빌드 흐름에서도 idempotent.
+    이전 빌드의 결과(var(--positive)/var(--negative)/특정 hex)를 직접 매칭하여 갱신.
+
+    on_ancestor=False: data-tpl-{tpl_name} 을 가진 element 자체의 style.color 를 교체
+    on_ancestor=True:  data-tpl-{tpl_name} 바로 직전(부모 또는 형제) 의 style.color 를 교체
+    """
+    if on_ancestor:
+        # color:VALUE; ... > <child data-tpl-{name}>  ← 부모 wrapping span 의 color 갱신
+        pattern = re.compile(
+            rf'(style="[^"]*?color:){_COLOR_VAL_RE}((?:;[^"]*)?"[^>]*>\s*<[^>]*?\bdata-tpl-{re.escape(tpl_name)}\b)',
+            re.DOTALL
+        )
+    else:
+        pattern = re.compile(
+            rf'(<[^>]*style="[^"]*?color:){_COLOR_VAL_RE}((?:;[^"]*)?"[^>]*\bdata-tpl-{re.escape(tpl_name)}\b)',
+            re.DOTALL
+        )
+    new_html, _ = pattern.subn(lambda m: m.group(1) + new_color + m.group(2), html, count=1)
+    return new_html
+
+
 def replace_block(html: str, attr_name: str, inner_html: str) -> str:
     """data-tpl-XXX 속성을 가진 div 안의 전체 내용을 통째 교체"""
     pattern = re.compile(
@@ -1164,6 +1191,8 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             html = html.replace(f"OTB_M{m_idx}_FACH_CLASS", _ach_class(fcst_ach))
             net_clr = "var(--positive)" if t_net >= 0 else "var(--negative)"
             html = html.replace(f"OTB_M{m_idx}_NET_CLR", net_clr)
+            # 부모 span 의 color 갱신 (data-tpl-otb-m{i}-today-net 바로 위 wrapper span)
+            html = set_style_color(html, f"otb-m{m_idx}-today-net", net_clr, on_ancestor=True)
 
         # 월 라벨 동적 주입 (하드코딩 방지)
         for m_idx, mkey in enumerate(month_keys):
@@ -1181,6 +1210,8 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         yoy_clr = "var(--positive)" if yoy_val >= 0 else "var(--negative)"
         html = apply_tpl(html, "otb-yoy", f"{yoy_sign}{yoy_val:.1f}%")
         html = html.replace("OTB_YOY_CLR", yoy_clr)
+        # 자기 element 의 color 갱신 (data-tpl-otb-yoy 가 span 본체에 있음)
+        html = set_style_color(html, "otb-yoy", yoy_clr)
 
         # 목표 갭
         gap = (cur_s.get("rns_budget", 0) or 0) - (cur_s.get("rns_actual", 0) or 0)
