@@ -455,7 +455,7 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
     return 0
 
 
-def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, adj_by_segment=None, adj_by_prop_seg=None, adj_by_channel_seg=None):
+def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, adj_by_segment=None, adj_by_prop_seg=None, adj_by_channel_seg=None, adj_by_prop_channel_seg=None):
     """28/44 취소파일에서 동기간 보정값 추출 (OTB 세그먼트 기준).
 
     조건: 최초입력일자(col27) ≤ base_date_str AND 취소일자(col33) > base_date_str
@@ -552,6 +552,9 @@ def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, ad
                             if channel_nm not in ('기타', '미분류'):
                                 adj_by_channel_seg[channel_nm][segment][stay_month]['rn']  += rn
                                 adj_by_channel_seg[channel_nm][segment][stay_month]['rev'] += night_rate
+                                if adj_by_prop_channel_seg is not None:
+                                    adj_by_prop_channel_seg[prop_name][channel_nm][segment][stay_month]['rn']  += rn
+                                    adj_by_prop_channel_seg[prop_name][channel_nm][segment][stay_month]['rev'] += night_rate
                         ok_count += 1
 
                     except (IndexError, ValueError):
@@ -567,7 +570,7 @@ def parse_yoy_adjustments(filepath, base_date_str, adj_by_month, adj_by_prop, ad
     return 0
 
 
-def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg, orig_by_prop_seg=None, orig_by_channel_seg=None):
+def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg, orig_by_prop_seg=None, orig_by_channel_seg=None, orig_by_prop_channel_seg=None):
     """27/43 예약파일에서 최초입력일자 ≤ base_date인 레코드만 집계.
 
     동기간 OTB 산출을 위해 기준일 이전에 생성된 예약만 카운트.
@@ -677,6 +680,9 @@ def parse_yoy_bookings(filepath, base_date_str, orig_by_prop, orig_by_seg, orig_
                             if channel_nm not in ('기타', '미분류'):
                                 orig_by_channel_seg[channel_nm][segment][stay_month]['rn']  += rn
                                 orig_by_channel_seg[channel_nm][segment][stay_month]['rev'] += rev
+                                if orig_by_prop_channel_seg is not None:
+                                    orig_by_prop_channel_seg[prop_name][channel_nm][segment][stay_month]['rn']  += rn
+                                    orig_by_prop_channel_seg[prop_name][channel_nm][segment][stay_month]['rev'] += rev
                         ok_count += 1
 
                     except (IndexError, ValueError):
@@ -1538,18 +1544,21 @@ def main():
         adj_by_segment = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
         adj_by_prop_seg = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
         adj_by_channel_seg = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+        # 사업장×채널×세그먼트×월 (channel.html 사업장 필터 모드 동기간 보정용)
+        adj_by_prop_channel_seg = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))))
 
         cancel_files = [fp for fp in txt_files
                         if fp.parent.name == year
                         and detect_file_type(fp.name) in ("28", "44")]
         for fpath in cancel_files:
-            parse_yoy_adjustments(str(fpath), base_date_str, adj_by_month, adj_by_prop, adj_by_segment, adj_by_prop_seg, adj_by_channel_seg)
+            parse_yoy_adjustments(str(fpath), base_date_str, adj_by_month, adj_by_prop, adj_by_segment, adj_by_prop_seg, adj_by_channel_seg, adj_by_prop_channel_seg)
 
         # 해당 연도의 27/43 예약파일에서 최초입력일자 ≤ base_date인 건만 집계
         orig_by_prop_month = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
         orig_by_seg_month  = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))
         orig_by_prop_seg_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
         orig_by_channel_seg_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0})))
+        orig_by_prop_channel_seg_month = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev': 0}))))
         booking_files = [fp for fp in txt_files
                          if fp.parent.name == year
                          and detect_file_type(fp.name) in ("27", "43")]
@@ -1558,7 +1567,8 @@ def main():
             total_booking_ok += parse_yoy_bookings(str(fpath), base_date_str,
                                                     orig_by_prop_month, orig_by_seg_month,
                                                     orig_by_prop_seg_month,
-                                                    orig_by_channel_seg_month)
+                                                    orig_by_channel_seg_month,
+                                                    orig_by_prop_channel_seg_month)
         logger.info(f"  {year}년 기준일 이전 예약: {total_booking_ok:,}건")
 
         # by_month (전체 사업장 합산)
@@ -1667,6 +1677,37 @@ def main():
                 ch_seg_data[seg] = seg_months
             by_channel_segment[ch] = ch_seg_data
 
+        # by_property_channel_segment (사업장×거래처×세그먼트×월) — channel.html 사업장 필터 동기간 보정용
+        all_pcs_props = set(list(orig_by_prop_channel_seg_month.keys()) + list(adj_by_prop_channel_seg.keys()))
+        by_property_channel_segment = {}
+        for p in sorted(all_pcs_props):
+            p_orig_chs = orig_by_prop_channel_seg_month.get(p, {})
+            p_adj_chs  = adj_by_prop_channel_seg.get(p, {})
+            prop_ch_data = {}
+            for ch in sorted(set(list(p_orig_chs.keys()) + list(p_adj_chs.keys()))):
+                c_orig_segs = p_orig_chs.get(ch, {})
+                c_adj_segs  = p_adj_chs.get(ch, {})
+                ch_seg_data = {}
+                for seg in sorted(set(list(c_orig_segs.keys()) + list(c_adj_segs.keys()))):
+                    seg_orig = c_orig_segs.get(seg, {})
+                    seg_adj  = c_adj_segs.get(seg, {})
+                    seg_months = {}
+                    for m in sorted(set(list(seg_orig.keys()) + list(seg_adj.keys()))):
+                        orig_rn  = seg_orig.get(m, {}).get('rn', 0)
+                        orig_rev = seg_orig.get(m, {}).get('rev', 0)
+                        adj_rn   = seg_adj.get(m, {}).get('rn', 0)
+                        adj_rev  = seg_adj.get(m, {}).get('rev', 0)
+                        seg_months[m] = {
+                            'booking_rn':       orig_rn + adj_rn,
+                            'adjustment_rn':    adj_rn,
+                            'net_rn':           orig_rn + adj_rn,
+                            'booking_rev_m':    round((orig_rev + adj_rev) / 1_000_000, 2),
+                            'adjustment_rev_m': round(adj_rev / 1_000_000, 2),
+                        }
+                    ch_seg_data[seg] = seg_months
+                prop_ch_data[ch] = ch_seg_data
+            by_property_channel_segment[p] = prop_ch_data
+
         total_adj = sum(v['rn'] for v in adj_by_month.values())
         logger.info(f"  {year}년 보정 합계: {total_adj:,} RNs")
         yoy_adjusted[year] = {
@@ -1677,6 +1718,7 @@ def main():
             'by_segment':     by_segment,
             'by_property_segment': by_property_segment,
             'by_channel_segment': by_channel_segment,
+            'by_property_channel_segment': by_property_channel_segment,
         }
 
     summary['yoy_adjusted'] = yoy_adjusted
