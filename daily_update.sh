@@ -74,6 +74,26 @@ run_streaming() {
     echo -e "  ${GREEN}✅ 완료${NC}"
 }
 
+# 조건부 스텝: 패턴에 매칭되는 입력 파일이 있을 때만 실행
+run_if_input() {
+    local label="$1"
+    local script="$2"
+    local glob_dir="$3"
+    local glob_pat="$4"
+    CURRENT_STAGE="$label"
+    echo ""
+    echo -e "${BOLD}[${label}]${NC}"
+    local match
+    match=$(find "$glob_dir" -maxdepth 1 -name "$glob_pat" 2>/dev/null | head -1)
+    if [ -z "$match" ]; then
+        echo -e "  ${YELLOW}⚠ ${glob_dir}/${glob_pat} 없음 — 스킵${NC}"
+        return 0
+    fi
+    echo "  ✓ 입력: $(basename "$match")"
+    python3 "$script" 2>&1 | tail -8
+    echo -e "  ${GREEN}✅ 완료${NC}"
+}
+
 # ── 시작 ─────────────────────────────────────────────────────
 print_header "GS팀 일별 데이터 업데이트 파이프라인"
 echo "  시작 : $(date '+%Y-%m-%d %H:%M:%S')"
@@ -109,22 +129,31 @@ PALAT_ROOM=$(find data/palatium_rooma -maxdepth 1 -name '*객실*.xlsx' 2>/dev/n
 [ -n "$PALAT_BIZ"  ] && echo "  ✓ 팔라티움 사업계획     : $(basename "$PALAT_BIZ")"
 [ -n "$PALAT_ROOM" ] && echo "  ✓ 팔라티움 객실 현황    : $(basename "$PALAT_ROOM")"
 
-# ── [2/8] 팔라티움 객실 가용성 ───────────────────────────────
+# ── [2/9] 팔라티움 객실 가용성 ───────────────────────────────
 # parse_palatium_db.py 가 palatium_room_availability.json 을 읽으므로 선행 실행
-run_quick "2/8 parse_palatium_rooms" "scripts/parse_palatium_rooms.py"
+run_if_input "2/9 parse_palatium_rooms" \
+    "scripts/parse_palatium_rooms.py" \
+    "data/palatium_rooma" "*객실*.xlsx"
 
-# ── [3/8] 온북 파싱 (느림 — 전체 출력) ───────────────────────
-# parse_raw_db.py 가 종료 직전 parse_palatium_db.py 도 자동 호출함
-run_streaming "3/8 parse_raw_db (+ parse_palatium_db 자동 연계)" "scripts/parse_raw_db.py"
+# ── [3/9] 온북 파싱 (느림 — 전체 출력) ───────────────────────
+# parse_raw_db.py 는 종료 직전 parse_palatium_db.py 도 호출하지만,
+# 실패 시 logger.warning 만 띄우고 silent 이므로 아래 [4/9] 에서 명시 재실행한다.
+run_streaming "3/9 parse_raw_db" "scripts/parse_raw_db.py"
 
-# ── [4/8] ~ [7/8] 후속 집계 ──────────────────────────────────
-run_quick "4/8 compare_and_update"          "scripts/compare_and_update.py"
-run_quick "5/8 generate_otb_data"           "scripts/generate_otb_data.py"
-run_quick "6/8 generate_insights"           "scripts/generate_insights.py"
-run_quick "7/8 generate_campaign_perf"      "scripts/generate_campaign_performance.py"
+# ── [4/9] 팔라티움 예약 DB (명시적 실행, 에러 시 중단) ─────
+# data/palatium_db/예약정보조회*.xlsx 있을 때만 실행
+run_if_input "4/9 parse_palatium_db" \
+    "scripts/parse_palatium_db.py" \
+    "data/palatium_db" "예약정보조회*.xlsx"
 
-# ── [8/8] HTML 빌드 ──────────────────────────────────────────
-run_quick "8/8 build"                       "scripts/build.py"
+# ── [5/9] ~ [8/9] 후속 집계 ──────────────────────────────────
+run_quick "5/9 compare_and_update"          "scripts/compare_and_update.py"
+run_quick "6/9 generate_otb_data"           "scripts/generate_otb_data.py"
+run_quick "7/9 generate_insights"           "scripts/generate_insights.py"
+run_quick "8/9 generate_campaign_perf"      "scripts/generate_campaign_performance.py"
+
+# ── [9/9] HTML 빌드 ──────────────────────────────────────────
+run_quick "9/9 build"                       "scripts/build.py"
 
 # ── Git 커밋 & 푸시 ─────────────────────────────────────────
 CURRENT_STAGE="git"
