@@ -211,7 +211,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <button id="confirm-btn" class="confirm-btn" onclick="confirmCurrentWeek()" title="현재 주차를 확정 — 페이지 전체 데이터를 스냅샷으로 저장">✓ 확정</button>
       <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
       <button id="ppt-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
-      <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
+      <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="요약/당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
     </div>
 
     <!-- Snapshot Banner -->
@@ -808,6 +808,9 @@ window.exportExcel = function() {
     }
 
     const wb = XLSX.utils.book_new();
+    addSheet(wb, 'GS실적요약',
+      'summary-table',
+      `00 GS 실적 요약 · 기준 ${baseDate}`);
     addSheet(wb, '당월 예상실적',
       'current-month-table',
       `당월 예상실적 (${curMonth}월) · 기준 ${baseDate}`);
