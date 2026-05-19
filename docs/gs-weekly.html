@@ -13,6 +13,7 @@
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a1d23' width='192' height='192'/><circle cx='96' cy='96' r='85' fill='%23252932'/><text x='96' y='100' font-size='96' font-weight='700' fill='%23c9a063' text-anchor='middle' font-family='sans-serif'>GS</text></svg>">
 <style>
 :root {
@@ -209,7 +210,8 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <div id="week-chips" style="display:inline-flex;gap:8px;flex-wrap:wrap;"></div>
       <button id="confirm-btn" class="confirm-btn" onclick="confirmCurrentWeek()" title="현재 주차를 확정 — 페이지 전체 데이터를 스냅샷으로 저장">✓ 확정</button>
       <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
-      <button id="excel-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
+      <button id="ppt-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
+      <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
     </div>
 
     <!-- Snapshot Banner -->
@@ -708,6 +710,120 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ===== EXCEL EXPORT (SheetJS) =====
+window.exportExcel = function() {
+  if (typeof XLSX === 'undefined') {
+    toast('SheetJS(xlsx) 라이브러리 로드 실패 — 네트워크를 확인하세요', 'error');
+    return;
+  }
+  try {
+    const now = new Date();
+    const curMonth = now.getMonth() + 1;
+    const curYear = now.getFullYear();
+    const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
+    const baseDate = (typeof OTB_DATA !== 'undefined' && OTB_DATA?.meta?.baseDate)
+      ? OTB_DATA.meta.baseDate
+      : now.toISOString().slice(0, 10);
+    const weekNum = (typeof getCurrentWeekNum === 'function' ? getCurrentWeekNum() : '') || '';
+
+    // DOM 테이블 → 2차원 배열 (헤더 colspan/rowspan 유지)
+    function tableToAOA(tableId) {
+      const tbl = document.getElementById(tableId);
+      if (!tbl) return { aoa: [], merges: [] };
+      const aoa = [];
+      const merges = [];
+      // 그리드 점유 추적용
+      const occ = {};
+      const mark = (r, c) => { occ[r + ',' + c] = true; };
+      const isOcc = (r, c) => !!occ[r + ',' + c];
+
+      let rIdx = 0;
+      const allRows = tbl.querySelectorAll('thead tr, tbody tr, tfoot tr');
+      allRows.forEach(tr => {
+        const row = [];
+        let cIdx = 0;
+        const cells = tr.querySelectorAll('th, td');
+        cells.forEach(cell => {
+          while (isOcc(rIdx, cIdx)) cIdx++;
+          const cs = cell.colSpan || 1;
+          const rs = cell.rowSpan || 1;
+          const text = cell.textContent.trim();
+          // 숫자(콤마/퍼센트/부호) 변환 시도
+          let val = text;
+          if (text && text !== '—' && text !== '-') {
+            const m = text.match(/^[-+]?[\d,]+(\.\d+)?%?$/);
+            if (m) {
+              const isPct = text.endsWith('%');
+              const n = parseFloat(text.replace(/[,%]/g, ''));
+              if (!isNaN(n)) val = isPct ? n / 100 : n;
+            }
+          }
+          row[cIdx] = val;
+          // 병합 처리
+          if (cs > 1 || rs > 1) {
+            merges.push({ s: { r: rIdx, c: cIdx }, e: { r: rIdx + rs - 1, c: cIdx + cs - 1 } });
+            for (let rr = 0; rr < rs; rr++) {
+              for (let cc = 0; cc < cs; cc++) {
+                mark(rIdx + rr, cIdx + cc);
+              }
+            }
+          } else {
+            mark(rIdx, cIdx);
+          }
+          cIdx += cs;
+        });
+        aoa.push(row);
+        rIdx++;
+      });
+      return { aoa, merges };
+    }
+
+    function addSheet(wb, name, tableId, titleRow) {
+      const { aoa, merges } = tableToAOA(tableId);
+      if (!aoa.length) return;
+      const sheetData = [];
+      if (titleRow) sheetData.push([titleRow]);
+      sheetData.push([]); // 빈 줄
+      const offset = sheetData.length;
+      aoa.forEach(r => sheetData.push(r));
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      // 병합 offset 적용
+      ws['!merges'] = merges.map(m => ({
+        s: { r: m.s.r + offset, c: m.s.c },
+        e: { r: m.e.r + offset, c: m.e.c }
+      }));
+      // 컬럼 폭 기본값
+      const colCount = Math.max(...aoa.map(r => r.length));
+      ws['!cols'] = Array.from({ length: colCount }, (_, i) => ({ wch: i === 0 ? 18 : 12 }));
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    }
+
+    const wb = XLSX.utils.book_new();
+    addSheet(wb, '당월 예상실적',
+      'current-month-table',
+      `당월 예상실적 (${curMonth}월) · 기준 ${baseDate}`);
+    addSheet(wb, `익월 OTB (${nextMonth}월)`,
+      'next-month-table',
+      `익월 OTB 현황 (${nextMonth}월) · 기준 ${baseDate}`);
+    addSheet(wb, '누계 실적',
+      'ytd-table',
+      `누계 실적 (01.01~${String(curMonth).padStart(2,'0')}.말일) · 기준 ${baseDate}`);
+
+    if (!wb.SheetNames.length) {
+      toast('내보낼 테이블이 없습니다', 'error');
+      return;
+    }
+
+    const weekTag = weekNum ? `_${curMonth}월${weekNum}주차` : `_${curMonth}월`;
+    const filename = `GS_주간업무보고${weekTag}_${baseDate.replace(/-/g, '')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    if (typeof toast === 'function') toast(`엑셀 파일 다운로드 완료 — ${filename}`, 'success');
+  } catch (e) {
+    console.error('[excel export] error:', e);
+    if (typeof toast === 'function') toast('엑셀 다운로드 실패: ' + e.message, 'error');
+  }
+};
 
 // ===== PPT EXPORT =====
 window.exportPPT = function() {
