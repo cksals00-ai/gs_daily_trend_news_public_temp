@@ -811,6 +811,20 @@
           </div>
           <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">_pipeline_status.json</span>의 <b>"git" 스테이지</b>에서 멈춤. <b style="color:var(--negative)">5/14 이후</b> 자동 실행되지 않음 — 일별 자동화 전반 영향</div>
         </div>
+        <div style="border-left:4px solid var(--negative);background:var(--negative-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--negative);background:rgba(229,115,115,0.15);padding:2px 7px;border-radius:3px">🔴 CRITICAL</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">campaign_data 갱신 파이프라인 누락</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">scripts/generate_campaign_data.py</span>가 <b>deploy.yml · _run_daily_pipeline.sh · daily_update.sh 모두에 미포함</b>. 구글시트 → <span style="font-family:var(--mono);color:var(--gold-bright)">campaign_data.json</span> 갱신이 수동 실행에만 의존 → 다운스트림 <span style="font-family:var(--mono)">campaign_performance.py</span>가 stale 데이터로 매칭. 액션플랜 대시보드(기획전 목록 + 86코드 매핑)에도 직접 영향.</div>
+        </div>
+        <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 ATTENTION</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">기획전 패키지코드 매핑 1/216건만 등록</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">campaign_data.json</span>의 <b>events 216건</b> 중 <b style="color:var(--negative)">key 198 하나만</b> <span style="font-family:var(--mono)">package_codes</span> 등록 (86xxx 코드 124개). 나머지 <b>215건은 실적 매칭 불가</b> — 구글시트 Key시트(패키지코드 컬럼)에 코드 채워야 <span style="font-family:var(--mono)">generate_campaign_performance.py</span>가 매칭 가능.</div>
+        </div>
         <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 PATCHED</span>
@@ -884,11 +898,19 @@
                 <td style="text-align:center;color:var(--positive)">✅ 중복제거</td>
               </tr>
               <tr>
+                <td>구글시트(기획전)<div style="font-size:10px;color:var(--ink-faint);font-weight:400">CSV publish</div></td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">generate_campaign_<br>data.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">campaign_<br>data.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">기획전 카드 · 액션플랜 대시보드 · 86코드 매핑</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동만<div style="font-size:10px;color:var(--ink-faint);font-weight:400">deploy.yml · _run_daily_pipeline.sh · daily_update.sh 미포함</div></td>
+                <td style="text-align:center;color:var(--warning)">⚠ events 216 중 코드 1건만<div style="font-size:10px;color:var(--ink-faint);font-weight:400">key 198만 등록</div></td>
+              </tr>
+              <tr>
                 <td>기획전 실적</td>
                 <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">generate_campaign_<br>performance.py</td>
                 <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">campaign_<br>performance.json</td>
                 <td style="text-align:left;color:var(--ink-soft)">기획전 카드</td>
-                <td style="text-align:center;color:var(--warning)">⚠ GH Actions 이슈<div style="font-size:10px;color:var(--ink-faint);font-weight:400">빈데이터 덮어쓰기 (5/19 수정)</div></td>
+                <td style="text-align:center;color:var(--warning)">⚠ GH Actions 이슈<div style="font-size:10px;color:var(--ink-faint);font-weight:400">빈데이터 덮어쓰기 (5/19 수정) · 단, 상류 campaign_data가 stale이면 매칭 누락</div></td>
                 <td style="text-align:center;color:var(--warning)">⚠ 안전망 추가됨</td>
               </tr>
               <tr>
@@ -1019,6 +1041,7 @@
           </div>
           <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
             <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">자동화 로직 점검 섹션 신규 추가</b> (일별·주간·마감 3개 카테고리 + 긴급 점검 사항)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">campaign_data 파이프라인 누락 진단 추가</b> — generate_campaign_data.py가 deploy.yml/_run_daily_pipeline.sh/daily_update.sh 미포함, 패키지코드 1/216건만 매핑</li>
             <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>FCST 폴백 OTB 배지 표시 개선 (7월 이후 RM FCST 미제공 월 사용자 인지성)</li>
             <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>campaign_performance GH Actions 안전망 추가 (빈 raw_db에서 기존 실적 덮어쓰기 방지)</li>
             <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>deploy.yml 가드 수정 — raw_db 27/28 txt 파일 유무로 판정</li>
