@@ -923,46 +923,52 @@ function render() {
   } : undefined;
   const allChannelDataLY_raw = aggregateChannels(lyMonths, lyOpts);
 
-  // 동기간 비율 보정: 예약일 필터 비활성 시에만 yoy_adjusted 적용
+  // 동기간 보정: 예약일 필터 비활성 시에만 yoy_adjusted 실데이터 적용
   // 예약일 필터 활성 시에는 이미 날짜를 -1년 shift해서 비교하므로 추가 보정 불필요
   let allChannelDataLY;
   if (isBookingDateFilterActive()) {
     // 예약일 필터 모드: 날짜 shift만으로 동기간 비교 (추가 보정 없음)
     allChannelDataLY = allChannelDataLY_raw;
   } else {
-    // 일반 모드: yoy_adjusted 비율로 동기간 보정
+    // 일반 모드: yoy_adjusted.by_channel_segment 실수치로 거래처별 동기간 보정
+    // 마감월(adjustment_rn === 0): 원본 LY 그대로 / 미래월: booking_rn(orig+adj) 직접 사용
     const lyYear = String(parseInt(activeYear) - 1);
     const yoyAdjLY = db.yoy_adjusted && db.yoy_adjusted[lyYear];
-    const spRatiosTable = {};
-    if (yoyAdjLY && yoyAdjLY.by_month) {
-      for (const m of lyMonths) {
-        const bm = yoyAdjLY.by_month[m];
-        if (!bm) continue;
-        // 마감월(adjustment_rn=0)은 보정 불필요 → ratio=1.0 (원본 유지)
-        if ((bm.adjustment_rn || 0) === 0) {
-          spRatiosTable[m] = 1;
-          continue;
-        }
-        const adjRn = bm.booking_rn;
-        const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
-        if (adjRn != null && normRn > 0) {
-          spRatiosTable[m] = adjRn / normRn;
-        }
-      }
-    }
+    const yoyChSeg = yoyAdjLY && yoyAdjLY.by_channel_segment;
 
     allChannelDataLY = {};
     for (const [ch, d] of Object.entries(allChannelDataLY_raw)) {
       const chData = db.by_channel[ch];
       if (!chData) { allChannelDataLY[ch] = { ...d }; continue; }
+      const yoyCh = yoyChSeg && yoyChSeg[ch];
       let adj_booking_rn = 0, adj_booking_rev = 0, adj_net_rn = 0, adj_net_rev = 0;
       for (const m of lyMonths) {
-        if (!chData[m]) continue;
-        const ratio = spRatiosTable[m] != null ? spRatiosTable[m] : 1;
-        adj_booking_rn += Math.round((chData[m].booking_rn || 0) * ratio);
-        adj_booking_rev += (chData[m].booking_rev || 0) * ratio;
-        adj_net_rn += Math.round((chData[m].net_rn || 0) * ratio);
-        adj_net_rev += (chData[m].net_rev || 0) * ratio;
+        // 거래처×월 yoy 데이터 합산 (보통 채널당 세그먼트 1개, 다중 세그먼트면 합산)
+        let segBkRn = 0, segAdjRn = 0, segBkRevM = 0, hasYoyData = false;
+        if (yoyCh) {
+          for (const seg of Object.keys(yoyCh)) {
+            const sd = yoyCh[seg] && yoyCh[seg][m];
+            if (sd) {
+              segBkRn += sd.booking_rn || 0;
+              segAdjRn += sd.adjustment_rn || 0;
+              segBkRevM += sd.booking_rev_m || 0;
+              hasYoyData = true;
+            }
+          }
+        }
+        if (hasYoyData && segAdjRn !== 0) {
+          // 미래월: yoy 실수치 직접 사용 (OTB: net_rn = booking_rn)
+          adj_booking_rn += segBkRn;
+          adj_net_rn += segBkRn;
+          adj_booking_rev += segBkRevM;
+          adj_net_rev += segBkRevM;
+        } else if (chData[m]) {
+          // 마감월 or yoy 데이터 없음: 원본 LY 숫자 그대로
+          adj_booking_rn += chData[m].booking_rn || 0;
+          adj_booking_rev += chData[m].booking_rev || 0;
+          adj_net_rn += chData[m].net_rn || 0;
+          adj_net_rev += chData[m].net_rev || 0;
+        }
       }
       allChannelDataLY[ch] = {
         ...d,
@@ -1548,38 +1554,34 @@ function buildYoYChangeChart(allChannelData, months) {
     return;
   }
 
-  // 동기간 비율 계산: yoy_adjusted[prevYear].by_month[m] / monthly_total[m]
+  // 동기간 보정: yoy_adjusted.by_channel_segment 실수치 직접 사용
+  // 마감월(adjustment_rn === 0): 원본 LY 그대로 / 미래월: booking_rn(orig+adj) 직접 사용
   const yoyAdj = db.yoy_adjusted && db.yoy_adjusted[prevYear];
-  const samePeriodRatios = {};
-  if (yoyAdj && yoyAdj.by_month) {
-    for (const m of prevMonths) {
-      const bm = yoyAdj.by_month[m];
-      if (!bm) continue;
-      // 마감월(adjustment_rn=0)은 보정 불필요 → ratio=1.0 (원본 유지)
-      if ((bm.adjustment_rn || 0) === 0) {
-        samePeriodRatios[m] = 1;
-        continue;
-      }
-      const adjRn = bm.booking_rn;
-      const normRn = db.monthly_total && db.monthly_total[m] ? (db.monthly_total[m].booking_rn || db.monthly_total[m].net_rn) : null;
-      if (adjRn != null && normRn > 0) {
-        samePeriodRatios[m] = adjRn / normRn;
-      }
-    }
-  }
+  const yoyChSegPrev = yoyAdj && yoyAdj.by_channel_segment;
 
   const prevChannelData = {};
   for (const ch of db.meta.channels) {
     if (/^기타/.test(ch)) continue;
     const chData = db.by_channel[ch];
     if (!chData) continue;
+    const yoyCh = yoyChSegPrev && yoyChSegPrev[ch];
     let net_rn = 0;
     for (const m of prevMonths) {
-      if (chData[m]) {
-        const raw = chData[m].net_rn || 0;
-        // 동기간 비율 보정 적용
-        const ratio = samePeriodRatios[m] != null ? samePeriodRatios[m] : 1;
-        net_rn += Math.round(raw * ratio);
+      let segBkRn = 0, segAdjRn = 0, hasYoyData = false;
+      if (yoyCh) {
+        for (const seg of Object.keys(yoyCh)) {
+          const sd = yoyCh[seg] && yoyCh[seg][m];
+          if (sd) {
+            segBkRn += sd.booking_rn || 0;
+            segAdjRn += sd.adjustment_rn || 0;
+            hasYoyData = true;
+          }
+        }
+      }
+      if (hasYoyData && segAdjRn !== 0) {
+        net_rn += segBkRn;
+      } else if (chData[m]) {
+        net_rn += chData[m].net_rn || 0;
       }
     }
     prevChannelData[ch] = net_rn;
