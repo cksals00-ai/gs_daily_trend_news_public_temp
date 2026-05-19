@@ -65,11 +65,12 @@ run_stage() {
   write_status "$STAGE_NAME" "done" 0
 }
 
-run_stage "parse_raw_db"       "python3 scripts/parse_raw_db.py"
-run_stage "compare_and_update" "python3 scripts/compare_and_update.py"
-run_stage "generate_otb_data"  "python3 scripts/generate_otb_data.py"
-run_stage "generate_insights"  "python3 scripts/generate_insights.py"
-run_stage "build"              "python3 scripts/build.py"
+run_stage "parse_raw_db"           "python3 scripts/parse_raw_db.py"
+run_stage "compare_and_update"     "python3 scripts/compare_and_update.py"
+run_stage "generate_otb_data"      "python3 scripts/generate_otb_data.py"
+run_stage "generate_insights"      "python3 scripts/generate_insights.py"
+run_stage "campaign_performance"   "python3 scripts/generate_campaign_performance.py"
+run_stage "build"                  "python3 scripts/build.py"
 
 # Git commit + push (lock 재정리)
 rm -f "$PROJECT_ROOT/.git/index.lock" "$PROJECT_ROOT/.git/HEAD.lock" 2>>"$LOG_FILE"
