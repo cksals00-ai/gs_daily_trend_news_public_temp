@@ -93,6 +93,15 @@ EXCLUDE_KEYWORDS = [
 ]
 
 # ─────────────────────────────────────────────
+# 연예/가십 컨텐츠 필터 (제목 키워드 기준)
+# 자사 키워드(오션월드 등)에 인물 가십이 묻어 들어오는 케이스 차단.
+# ─────────────────────────────────────────────
+EXCLUDE_CONTENT_KEYWORDS = [
+    "비키니", "몸매", "화보", "섹시", "노출",
+    "수영복", "글래머", "볼륨감", "각선미", "란제리",
+]
+
+# ─────────────────────────────────────────────
 # 소노(자사) 뉴스 수집용 키워드
 # ─────────────────────────────────────────────
 SONO_KEYWORDS = [
@@ -259,6 +268,11 @@ def is_old_article_by_title(title: str) -> bool:
 def is_excluded(title: str) -> bool:
     """자사/소노 언급 여부 검사"""
     return any(kw in title for kw in EXCLUDE_KEYWORDS)
+
+
+def is_gossip_content(title: str) -> bool:
+    """연예/가십 컨텐츠 여부 검사 (자사 카테고리에도 적용)."""
+    return any(kw in title for kw in EXCLUDE_CONTENT_KEYWORDS)
 
 
 def detect_region(title: str) -> str:
@@ -482,6 +496,9 @@ def main():
         if category != "소노" and is_excluded(title):
             logger.debug(f"  ❌ 제외 (자사): {title[:50]}")
             return False
+        if is_gossip_content(title):
+            logger.info(f"  ❌ 제외 (연예/가십): {title[:50]}")
+            return False
         if is_stale_by_pub_date(item.get("pub_date", ""), now):
             logger.info(f"  ⏳ 제외 (오래된 기사): {title[:50]} | pub_date={item.get('pub_date','')}")
             return False
@@ -526,6 +543,9 @@ def main():
             tkey = _norm_title_key(title)
             lkey = (item.get("link") or "").strip()
             if (tkey and tkey in seen_titles) or (lkey and lkey in seen_links):
+                continue
+            if is_gossip_content(title):
+                logger.info(f"  ❌ 제외 (연예/가십): {title[:50]}")
                 continue
             if is_stale_by_pub_date(item.get("pub_date", ""), now):
                 continue

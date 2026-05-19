@@ -234,6 +234,14 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
     <!-- KPI Summary -->
     <div class="kpi-strip" id="kpi-strip"></div>
 
+    <!-- GS 세그먼트 요약 (당월 + 누계 side-by-side) -->
+    <div class="section-card">
+      <div class="section-title"><span class="num">00</span> GS 실적 요약 <span id="summary-label" style="font-weight:400;font-size:12px;color:var(--ink-muted);"></span></div>
+      <div style="overflow-x:auto;">
+        <table class="perf-table" id="summary-table"></table>
+      </div>
+    </div>
+
     <!-- 당월 실적 테이블 -->
     <div class="section-card">
       <div class="section-title"><span class="num">01</span> 당월 예상실적 <span id="current-month-label" style="font-weight:400;font-size:12px;color:var(--ink-muted);"></span></div>
@@ -1567,6 +1575,97 @@ function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegR
   </tr>`;
 }
 
+// ===== SUMMARY TABLE (당월 + 누계 합계/세그먼트 4행 side-by-side) =====
+function buildSummaryTable(weekKey) {
+  const table = document.getElementById('summary-table');
+  if (!table) return;
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+  const curYM = `${curYear}${String(curMonth).padStart(2,'0')}`;
+  const lastYM = `${curYear-1}${String(curMonth).padStart(2,'0')}`;
+  const isSamePeriod = YEAR_MODE === 'samePeriod';
+  const spLabel = isSamePeriod ? '동기간' : '마감';
+  const useWeek = weekKey !== 'all';
+  const segs = ['OTA', 'G-OTA', 'Inbound'];
+
+  // 당월
+  const monBud = {}, monOTB = {}, monLast = {};
+  segs.forEach(seg => {
+    monBud[seg] = getSegmentBudget(curMonth, seg);
+    if (useWeek) {
+      monOTB[seg]  = sumArr(filterDailyByWeek(getDailySegmentData(curYM, seg), weekKey));
+      monLast[seg] = sumArr(filterDailyByWeek(getDailySegmentData(lastYM, seg), weekKey));
+    } else {
+      monOTB[seg]  = getSegmentOTB(seg, curYM);
+      monLast[seg] = isSamePeriod ? getYoYAdjustedSegment(seg, lastYM) : getSegmentOTB(seg, lastYM);
+    }
+  });
+
+  // 누계
+  const ytdBud = {}, ytdAct = {}, ytdLast = {};
+  segs.forEach(seg => { ytdBud[seg] = 0; ytdAct[seg] = 0; ytdLast[seg] = 0; });
+  for (let m = 1; m <= curMonth; m++) {
+    const ym  = `${curYear}${String(m).padStart(2,'0')}`;
+    const lym = `${curYear-1}${String(m).padStart(2,'0')}`;
+    segs.forEach(seg => {
+      ytdBud[seg]  += getSegmentBudget(m, seg);
+      ytdAct[seg]  += getSegmentOTB(seg, ym);
+      ytdLast[seg] += isSamePeriod ? getYoYAdjustedSegment(seg, lym) : getSegmentOTB(seg, lym);
+    });
+  }
+
+  const monTotalBud  = segs.reduce((s,seg)=>s+monBud[seg],0);
+  const monTotalOTB  = segs.reduce((s,seg)=>s+monOTB[seg],0);
+  const monTotalLast = segs.reduce((s,seg)=>s+monLast[seg],0);
+  const ytdTotalBud  = segs.reduce((s,seg)=>s+ytdBud[seg],0);
+  const ytdTotalAct  = segs.reduce((s,seg)=>s+ytdAct[seg],0);
+  const ytdTotalLast = segs.reduce((s,seg)=>s+ytdLast[seg],0);
+
+  function side(budget, actual, lastYear) {
+    const diff_bud = actual - budget;
+    const ach = pct(actual, budget);
+    const diff_ly = actual - lastYear;
+    const yoy = pct(diff_ly, lastYear);
+    return `
+      <td>${fmtN(budget)}</td>
+      <td>${fmtN(actual)}</td>
+      <td class="${colorClass(diff_bud)}">${diffSign(diff_bud)}</td>
+      <td class="${ach >= 100 ? 'val-pos' : ach >= 80 ? 'val-warn' : 'val-neg'}">${fmtP(ach)}</td>
+      <td>${fmtN(lastYear)}</td>
+      <td class="${colorClass(diff_ly)}">${diffSign(diff_ly)}</td>
+      <td class="${colorClass(yoy)}">${fmtP(yoy)}</td>`;
+  }
+  function row(label, monB, monA, monL, ytdB, ytdA, ytdL, isTotal) {
+    const cls = isTotal ? ' class="total-row"' : ' class="segment-row"';
+    return `<tr${cls}><td class="label-cell">${label}</td>${side(monB, monA, monL)}${side(ytdB, ytdA, ytdL)}</tr>`;
+  }
+
+  let html = `<thead>
+    <tr>
+      <th rowspan="2" style="min-width:120px;">구분</th>
+      <th colspan="4" class="month-header">${curMonth}월 예상실적</th>
+      <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
+      <th colspan="4" class="month-header">누계 (1~${curMonth}월)</th>
+      <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
+    </tr>
+    <tr>
+      <th class="sub-header">목표</th><th class="sub-header">OTB</th><th class="sub-header">증감</th><th class="sub-header">달성률</th>
+      <th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span></th><th class="sub-header">증감</th><th class="sub-header">증감률</th>
+      <th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">증감</th><th class="sub-header">달성률</th>
+      <th class="sub-header">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span></th><th class="sub-header">증감</th><th class="sub-header">증감률</th>
+    </tr>
+  </thead><tbody>`;
+
+  html += row('합계', monTotalBud, monTotalOTB, monTotalLast, ytdTotalBud, ytdTotalAct, ytdTotalLast, true);
+  segs.forEach(seg => {
+    html += row(seg, monBud[seg], monOTB[seg], monLast[seg], ytdBud[seg], ytdAct[seg], ytdLast[seg], false);
+  });
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
 function buildMonthTable(tableId, monthNum, yearMonth, lastYearMonth, weekKey) {
   const table = document.getElementById(tableId);
   const daily = {
@@ -2092,8 +2191,11 @@ function renderAll(weekKey) {
   document.getElementById('current-month-label').innerHTML = `(${curYear}.${String(curMonth).padStart(2,'0')}.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
   document.getElementById('next-month-label').innerHTML = `(${nextYear}.${String(nextMonth).padStart(2,'0')}.01 ~ ${nextYear}.${String(nextMonth).padStart(2,'0')}.${new Date(nextYear, nextMonth, 0).getDate()})`;
   document.getElementById('ytd-label').innerHTML = `(${curYear}.01.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
+  const _sumLbl = document.getElementById('summary-label');
+  if (_sumLbl) _sumLbl.innerHTML = `(세그먼트 요약)`;
 
   // Build tables
+  buildSummaryTable(weekKey);
   buildMonthTable('current-month-table', curMonth, curYM, lastYM, weekKey);
   buildMonthTable('next-month-table', nextMonth, nextYM, lastNextYM, 'all');
   buildYTDTable(weekKey);
