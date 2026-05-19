@@ -250,16 +250,19 @@ def main():
         except Exception:
             pass
 
-    # Key별 net 집계 + 정리
+    # Key별 booking 기준 집계 + 정리
+    # 주의: 27 데이터는 이미 취소된 건이 빠진 "현재 유효 예약" 상태.
+    # 28(취소이력)을 차감하면 이중 차감이 되므로, rn/rev는 booking 그대로 사용.
+    # 28은 cancel_rate(참고지표) / 동기간 비교용으로만 별도 유지.
     by_key: dict[str, dict] = {}
     for key, b in agg.items():
-        net_rn = max(0, b["booking_rn"] - b["cancel_rn"])
-        net_rev_won = max(0, b["booking_rev"] - b["cancel_rev"])
-        adr = round(net_rev_won / net_rn) if net_rn > 0 else 0
+        rn = b["booking_rn"]
+        rev_won = b["booking_rev"]
+        adr = round(rev_won / rn) if rn > 0 else 0
         by_key[key] = {
-            "rn": net_rn,
-            "rev_won": net_rev_won,
-            "rev_m": round(net_rev_won / 1_000_000, 2),
+            "rn": rn,
+            "rev_won": rev_won,
+            "rev_m": round(rev_won / 1_000_000, 2),
             "adr": adr,
             "booking_rn": b["booking_rn"],
             "cancel_rn": b["cancel_rn"],
