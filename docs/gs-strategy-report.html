@@ -509,6 +509,7 @@
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--ink-faint);font-weight:700;padding:10px 9px 2px;border-top:1px solid var(--rule);margin-top:6px">— 운영 · 관리 —</div>
         <a href="#sec-process" class="anchor-item" data-tab="ops">· 상품 기획 프로세스</a>
         <a href="#sec-build" class="anchor-item" data-tab="ops">· 시스템 구축현황</a>
+        <a href="#sec-automation" class="anchor-item" data-tab="ops">· 자동화 점검</a>
         <a href="#sec-changelog" class="anchor-item" data-tab="ops">· 변경이력</a>
       </div>
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)">
@@ -789,11 +790,244 @@
       </div>
     </section>
 
-    <!-- ══════ 운영-3. 변경이력 ══════ -->
+    <!-- ══════ 운영-3. 자동화 로직 점검 ══════ -->
+    <section class="card" id="sec-automation">
+      <h2><span class="num">3</span> 자동화 로직 점검</h2>
+      <div class="sub">데이터 입력 → 파싱 → 출력 → 리포트 반영 전 단계 점검 <span style="font-family:var(--mono);font-size:11px;color:var(--gold-bright);margin-left:8px">점검기간: 2026-05-20 ~ 05-22</span></div>
+
+      <!-- 긴급 점검 사항 -->
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+        <div style="border-left:4px solid var(--negative);background:var(--negative-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--negative);background:rgba(229,115,115,0.15);padding:2px 7px;border-radius:3px">🔴 CRITICAL</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">기획전 실적 업데이트 지연</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">비발디 5월 프로모션 <b style="color:var(--gold-bright)">1,867실 → 2,000+실</b>로 증가했으나 리포트 미반영. 원인: cowork 스케줄러 5/14 이후 중단 + GH Actions가 빈 데이터로 덮어씀 (5/19 안전망 추가)</div>
+        </div>
+        <div style="border-left:4px solid var(--negative);background:var(--negative-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--negative);background:rgba(229,115,115,0.15);padding:2px 7px;border-radius:3px">🔴 CRITICAL</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">cowork 스케줄러 파이프라인 stuck</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">_pipeline_status.json</span>의 <b>"git" 스테이지</b>에서 멈춤. <b style="color:var(--negative)">5/14 이후</b> 자동 실행되지 않음 — 일별 자동화 전반 영향</div>
+        </div>
+        <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 PATCHED</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">FCST 폴백 OTB 배지 표시</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">7월 이후 RM FCST 미제공 월에 대해 OTB로 폴백 + 배지로 사용자 인지성 개선 (5/19 수정)</div>
+        </div>
+        <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 PATCHED</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">deploy.yml 27/28 txt 가드 수정</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">raw_db/27/28</span> txt 파일 유무로 판정하도록 수정 — 빈 데이터로 인한 실적 덮어쓰기 차단 (5/19 수정)</div>
+        </div>
+      </div>
+
+      <!-- 카테고리 1: 일별 -->
+      <div style="margin-top:18px">
+        <h3 style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;font-weight:800">① 일별 업데이트 자료 <span style="color:var(--ink-faint);font-weight:600">— 매일</span></h3>
+        <div style="overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--bg-deep)">
+          <table class="summary-tbl" style="font-size:11.5px">
+            <thead>
+              <tr>
+                <th style="text-align:left">입력 자료</th>
+                <th style="text-align:left">파싱 스크립트</th>
+                <th style="text-align:left">출력 데이터</th>
+                <th style="text-align:left">반영 리포트</th>
+                <th style="text-align:center">자동화</th>
+                <th style="text-align:center">검증</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>온북 txt (27/28)</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">parse_raw_db.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">db_aggregated.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">OTB · Booking Status · 당일분석 · 기획전 · 주간회의</td>
+                <td style="text-align:center;color:var(--warning)">⚠ 반자동<div style="font-size:10px;color:var(--ink-faint);font-weight:400">cowork 5/14 중단</div></td>
+                <td style="text-align:center;color:var(--warning)">⚠ 미연동<div style="font-size:10px;color:var(--ink-faint);font-weight:400">스크립트만 존재</div></td>
+              </tr>
+              <tr>
+                <td>온북 txt (43/44)</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">parse_raw_db.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">db_aggregated.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">투숙일 기준 분석</td>
+                <td style="text-align:center;color:var(--warning)">⚠ 반자동</td>
+                <td style="text-align:center;color:var(--warning)">⚠</td>
+              </tr>
+              <tr>
+                <td>Daily Booking PDF</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">parse_daily_booking.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">daily_booking.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">금일 주요지표 · Booking Status</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동<div style="font-size:10px;color:var(--ink-faint);font-weight:400">PDF 업로드 필요</div></td>
+                <td style="text-align:center;color:var(--positive)">✅ 자동검증</td>
+              </tr>
+              <tr>
+                <td>경쟁사 크롤링</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">crawler (GH Actions)</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">CSV → dashboard</td>
+                <td style="text-align:left;color:var(--ink-soft)">경쟁사 대시보드</td>
+                <td style="text-align:center;color:var(--positive)">✅ 자동</td>
+                <td style="text-align:center;color:var(--warning)">⚠ 실패 알림 없음</td>
+              </tr>
+              <tr>
+                <td>뉴스 수집</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">news_crawler.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">news.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">트렌드 뉴스</td>
+                <td style="text-align:center;color:var(--positive)">✅ 자동</td>
+                <td style="text-align:center;color:var(--positive)">✅ 중복제거</td>
+              </tr>
+              <tr>
+                <td>기획전 실적</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">generate_campaign_<br>performance.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">campaign_<br>performance.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">기획전 카드</td>
+                <td style="text-align:center;color:var(--warning)">⚠ GH Actions 이슈<div style="font-size:10px;color:var(--ink-faint);font-weight:400">빈데이터 덮어쓰기 (5/19 수정)</div></td>
+                <td style="text-align:center;color:var(--warning)">⚠ 안전망 추가됨</td>
+              </tr>
+              <tr>
+                <td>AI 인사이트</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">generate_insights.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">enriched_notes.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">메인 대시보드</td>
+                <td style="text-align:center;color:var(--positive)">✅ 자동</td>
+                <td style="text-align:center;color:var(--negative)">❌ 관리자 검수 미구현</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 카테고리 2: 주간 -->
+      <div style="margin-top:22px">
+        <h3 style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;font-weight:800">② 주간 업데이트 자료</h3>
+        <div style="overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--bg-deep)">
+          <table class="summary-tbl" style="font-size:11.5px">
+            <thead>
+              <tr>
+                <th style="text-align:left">입력 자료</th>
+                <th style="text-align:left">처리</th>
+                <th style="text-align:left">출력</th>
+                <th style="text-align:left">반영 리포트</th>
+                <th style="text-align:center">자동화</th>
+                <th style="text-align:center">검증</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>RM FCST PDF<div style="font-size:10px;color:var(--ink-faint);font-weight:400">Revenue Meeting</div></td>
+                <td style="text-align:left;color:var(--ink-soft)">parse 수동</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">rm_fcst.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">Booking Status Forecast</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동 파싱</td>
+                <td style="text-align:center;color:var(--positive)">✅ 값 검증</td>
+              </tr>
+              <tr>
+                <td>팔라티움 엑셀</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">parse_palatium.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">palatium_data.json</td>
+                <td style="text-align:left;color:var(--ink-soft)">팔라티움 리포트</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동 업로드</td>
+                <td style="text-align:center;color:var(--warning)">⚠</td>
+              </tr>
+              <tr>
+                <td>주간회의 데이터</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">build.py</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">gs-weekly.html</td>
+                <td style="text-align:left;color:var(--ink-soft)">주간회의 자료</td>
+                <td style="text-align:center;color:var(--warning)">⚠ 반자동</td>
+                <td style="text-align:center;color:var(--warning)">⚠</td>
+              </tr>
+              <tr>
+                <td>외부 리서치</td>
+                <td style="text-align:left;color:var(--ink-soft)">수동 분석</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">external-report.html</td>
+                <td style="text-align:left;color:var(--ink-soft)">외부 리포트</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동</td>
+                <td style="text-align:center;color:var(--negative)">❌</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 카테고리 3: 마감 -->
+      <div style="margin-top:22px">
+        <h3 style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;font-weight:800">③ 마감 자료</h3>
+        <div style="overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--bg-deep)">
+          <table class="summary-tbl" style="font-size:11.5px">
+            <thead>
+              <tr>
+                <th style="text-align:left">입력 자료</th>
+                <th style="text-align:left">처리</th>
+                <th style="text-align:left">반영 리포트</th>
+                <th style="text-align:center">자동화</th>
+                <th style="text-align:center">검증</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>사업계획 xlsx</td>
+                <td style="text-align:left;color:var(--ink-soft)">budget 파싱</td>
+                <td style="text-align:left;color:var(--ink-soft)">목표 기준 (전체)</td>
+                <td style="text-align:center;color:var(--warning)">⚠ 연초 1회</td>
+                <td style="text-align:center;color:var(--positive)">✅</td>
+              </tr>
+              <tr>
+                <td>월별 마감 데이터</td>
+                <td style="text-align:left;color:var(--ink-soft)">관리자 키인</td>
+                <td style="text-align:left;color:var(--ink-soft)">전략리포트 · 마감</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동 키인</td>
+                <td style="text-align:center;color:var(--warning)">⚠</td>
+              </tr>
+              <tr>
+                <td>채널 매핑</td>
+                <td style="text-align:left;font-family:var(--mono);color:var(--ink-soft)">channel-mapping.html</td>
+                <td style="text-align:left;color:var(--ink-soft)">거래처-세그먼트 분류</td>
+                <td style="text-align:center;color:var(--negative)">❌ 수동</td>
+                <td style="text-align:center;color:var(--negative)">❌</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 범례 -->
+      <div style="margin-top:16px;padding:10px 14px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:6px;display:flex;flex-wrap:wrap;gap:18px;font-size:11px;color:var(--ink-muted);font-family:var(--mono)">
+        <span><span style="color:var(--positive);font-weight:700">✅</span> 정상 자동화</span>
+        <span><span style="color:var(--warning);font-weight:700">⚠</span> 반자동 · 모니터링 필요</span>
+        <span><span style="color:var(--negative);font-weight:700">❌</span> 수동 · 자동화 미구현</span>
+        <span style="margin-left:auto;color:var(--ink-faint)">점검 책임: 영업기획 GS팀</span>
+      </div>
+    </section>
+
+    <!-- ══════ 운영-4. 변경이력 ══════ -->
     <section class="card" id="sec-changelog">
-      <h2><span class="num">3</span> 변경이력</h2>
+      <h2><span class="num">4</span> 변경이력</h2>
       <div class="sub">시스템 업데이트 및 수정 내역</div>
       <div style="display:flex;flex-direction:column;gap:14px" id="changelog-list">
+        <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-05-19 ~ 20</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:var(--bg-soft);padding:2px 6px;border-radius:3px">v2.9</span>
+          </div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">자동화 로직 점검 섹션 신규 추가</b> (일별·주간·마감 3개 카테고리 + 긴급 점검 사항)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>FCST 폴백 OTB 배지 표시 개선 (7월 이후 RM FCST 미제공 월 사용자 인지성)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>campaign_performance GH Actions 안전망 추가 (빈 raw_db에서 기존 실적 덮어쓰기 방지)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>deploy.yml 가드 수정 — raw_db 27/28 txt 파일 유무로 판정</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>OCC 차트 바 랭킹으로 변경 (가독성 개선)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>overseas 네비 제거 (영업기획 링크 격리)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>요약표 엑셀 다운로드 추가</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>외부리포트 참고문헌 추가 (JLL / KPMG / 관광공사 / 레저백서)</li>
+          </ul>
+        </div>
         <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-05-14</span>
@@ -1087,7 +1321,7 @@ function buildRegionTree(){
 
 // 페이지 앵커 active 하이라이트 — IntersectionObserver
 function setupAnchorObserver(){
-  const sections = document.querySelectorAll('#sec-exec, #sec-summary, #sec-matrix, #sec-kpi, #sec-monthly, #sec-camp, #sec-channel, #sec-fcst, #sec-sug, #sec-process, #sec-build, #sec-changelog');
+  const sections = document.querySelectorAll('#sec-exec, #sec-summary, #sec-matrix, #sec-kpi, #sec-monthly, #sec-camp, #sec-channel, #sec-fcst, #sec-sug, #sec-process, #sec-build, #sec-automation, #sec-changelog');
   if (!sections.length || !window.IntersectionObserver) return;
   const links = document.querySelectorAll('.anchor-item');
   const linkMap = {};
