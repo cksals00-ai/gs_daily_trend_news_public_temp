@@ -2215,6 +2215,7 @@ if ('serviceWorker' in navigator) {
             </div>
             <div style="font-family:var(--mono);font-size:11px;font-weight:700;" id="twc-yoy-pct">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">매출 <span id="twc-ly-rev" style="color:rgba(255,255,255,0.55);">—</span> 백만</div>
+            <div id="twc-ly-spike-hint" style="display:none;margin-top:8px;padding:6px 8px;background:rgba(255,179,71,0.08);border-left:2px solid #ffb347;border-radius:3px;font-family:var(--mono);font-size:9.5px;line-height:1.45;color:#ffd089;"></div>
           </div>
         </div>
 
@@ -12371,7 +12372,7 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
         if (idx >= 0) twcData.latest_data_date = keys[idx];
         if (agg.generated_at) twcData.source_generated_at = agg.generated_at;
       }
-      renderTWC(twcData);
+      renderTWC(twcData, agg);
     })
     .catch(function (e) { console.warn('[twc] load failed:', e); });
 
@@ -12404,7 +12405,59 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
     return ['일','월','화','수','목','금','토'][dt.getDay()];
   }
 
-  function renderTWC(d) {
+  // LY 주간 net_rn을 사업장×일자로 분해해 단일일 스파이크 원인 사업장 탐지
+  function detectLySpikeBy(agg, lyStart, lyEnd) {
+    if (!agg || !lyStart || !lyEnd) return null;
+    var pdp = agg.pickup_daily_by_property || {};
+    var cdp = agg.cancel_daily_by_property || {};
+    var props = Object.keys(pdp);
+    if (!props.length) return null;
+
+    // YYYYMMDD 기준 일자 리스트 생성
+    function toDate(ymd) { return new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8)); }
+    function toKey(dt) {
+      var y = dt.getFullYear(), m = ('0'+(dt.getMonth()+1)).slice(-2), d = ('0'+dt.getDate()).slice(-2);
+      return y + m + d;
+    }
+    var days = [];
+    var cur = toDate(lyStart), end = toDate(lyEnd);
+    while (cur <= end) { days.push(toKey(cur)); cur.setDate(cur.getDate()+1); }
+    if (!days.length) return null;
+
+    // 일자별 총 net, 사업장별 net
+    var dailyTotals = days.map(function(k) {
+      var perProp = {}, total = 0;
+      props.forEach(function(p) {
+        var pk = (pdp[p] || {})[k] || {};
+        var ck = (cdp[p] || {})[k] || {};
+        var net = (pk.rn || 0) - (ck.rn || 0);
+        if (net) perProp[p] = net;
+        total += net;
+      });
+      return { date: k, total: total, perProp: perProp };
+    });
+    var weekTotal = dailyTotals.reduce(function(s,r){ return s + r.total; }, 0);
+    if (weekTotal <= 0) return null;
+
+    // 스파이크일: 하루 net이 주간 합의 25%+ AND 한 사업장이 그날 net의 50%+ 차지
+    var spikes = [];
+    dailyTotals.forEach(function(r) {
+      if (r.total <= 0) return;
+      if (r.total / weekTotal < 0.25) return;
+      var topProp = null, topVal = 0;
+      Object.keys(r.perProp).forEach(function(p) {
+        if (r.perProp[p] > topVal) { topVal = r.perProp[p]; topProp = p; }
+      });
+      if (topProp && topVal / r.total >= 0.5) {
+        spikes.push({ date: r.date, property: topProp, propNet: topVal, dayTotal: r.total, share: topVal / weekTotal });
+      }
+    });
+    if (!spikes.length) return null;
+    spikes.sort(function(a,b){ return b.propNet - a.propNet; });
+    return { weekTotal: weekTotal, spikes: spikes };
+  }
+
+  function renderTWC(d, agg) {
     var latest = d.latest_data_date || '';
     document.getElementById('twc-date-label').textContent = fmtDate(latest) + ' (' + dowKr(latest) + ') 기준';
     var src = d.source_generated_at ? (' · 데이터 ' + d.source_generated_at) : '';
@@ -12460,6 +12513,21 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
     var yoyWel = document.getElementById('twc-yoy-pct');
     yoyWel.textContent = 'YoY ' + yoyW.text + '  /  매출 ' + (pctBadge(wt.yoy_rev_pct).text);
     yoyWel.style.color = yoyW.color;
+
+    // LY 단일일 스파이크 원인 사업장 힌트
+    var hintEl = document.getElementById('twc-ly-spike-hint');
+    if (hintEl) {
+      var spikeInfo = detectLySpikeBy(agg, lw.start, lw.end);
+      if (spikeInfo && spikeInfo.spikes.length) {
+        var parts = spikeInfo.spikes.slice(0, 2).map(function(s) {
+          return fmtDate(s.date) + '(' + dowKr(s.date) + ') <strong>' + escapeHtml(s.property) + '</strong> +' + fmtNum(s.propNet) + '실 (주간 ' + Math.round(s.share * 100) + '%)';
+        });
+        hintEl.innerHTML = '⚠ LY 단일일 스파이크: ' + parts.join(' · ');
+        hintEl.style.display = 'block';
+      } else {
+        hintEl.style.display = 'none';
+      }
+    }
 
     // 6줄 제한 + 더보기 토글
     var SHOW_LIMIT = 10;
