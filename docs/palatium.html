@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>팔라티움 해운대 객실 현황 리포트</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: #f6f5f1;
+  --bg-card: #ffffff;
+  --bg-soft: #efece4;
+  --bg-deep: #1a1d23;
+  --ink: #1a1d23;
+  --ink-soft: #3a3f48;
+  --ink-muted: #6b7280;
+  --ink-faint: #9aa0a8;
+  --gold: #b88a45;
+  --gold-bright: #d4a460;
+  --gold-deep: #8a6533;
+  --positive: #2f7a4d;
+  --warning: #c97a32;
+  --negative: #c14a3e;
+  --rule: rgba(0,0,0,0.08);
+  --rule-strong: rgba(0,0,0,0.14);
+  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  --sans: 'Pretendard Variable', Pretendard, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Pretendard Variable', Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  word-break: keep-all;
+}
+
+/* ───── MASTHEAD ───── */
+.masthead {
+  background: var(--bg-deep);
+  border-bottom: 3px solid var(--gold);
+}
+.masthead-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.brand-mark {
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  color: var(--gold-bright);
+  font-weight: 700;
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+.brand-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.brand-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 500;
+  margin-top: 4px;
+}
+.meta {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.06em;
+  line-height: 1.8;
+}
+.meta .label {
+  color: rgba(255,255,255,0.45);
+  margin-right: 6px;
+}
+
+/* ───── LAYOUT ───── */
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px;
+}
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow);
+}
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--ink);
+}
+.section-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.section-sub {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-family: var(--mono);
+}
+
+/* ───── KPI GRID ───── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.kpi-unit {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-left: 4px;
+  font-weight: 500;
+}
+.kpi-foot {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  font-family: var(--mono);
+}
+
+/* ───── CHART ───── */
+.chart-box {
+  position: relative;
+  height: 320px;
+  width: 100%;
+}
+
+/* ───── TABLES ───── */
+.tbl-wrap {
+  overflow-x: auto;
+}
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.tbl th, table.tbl td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+table.tbl th {
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--rule-strong);
+  text-align: right;
+}
+table.tbl th:first-child, table.tbl td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+table.tbl tbody tr:hover {
+  background: var(--bg-soft);
+}
+.bar-cell {
+  position: relative;
+  min-width: 120px;
+}
+.bar-cell .bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 4px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-cell .bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  border-radius: 2px;
+}
+.bar-cell .pct {
+  font-weight: 700;
+  color: var(--ink);
+}
+.occ-hot { color: var(--negative); font-weight: 700; }
+.occ-warm { color: var(--warning); font-weight: 700; }
+.occ-cool { color: var(--ink-muted); }
+
+/* ───── MONTH TABS ───── */
+.month-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.month-tab {
+  padding: 6px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.month-tab:hover {
+  color: var(--ink);
+  border-color: var(--gold);
+}
+.month-tab.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+/* ───── NOTES / FOOTER ───── */
+.note {
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: var(--bg-soft);
+  border-left: 3px solid var(--gold);
+  padding: 12px 16px;
+  border-radius: 3px;
+  margin-top: 16px;
+  line-height: 1.7;
+}
+.footer {
+  max-width: 1200px;
+  margin: 16px auto 40px;
+  padding: 0 32px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 720px) {
+  .masthead-inner { padding: 20px 18px; }
+  .brand-title { font-size: 22px; }
+  .wrap { padding: 18px; }
+  .section { padding: 20px 18px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .meta { text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <div class="brand-mark">PALATIUM · HAEUNDAE</div>
+      <div class="brand-title">팔라티움 해운대 객실 현황 리포트</div>
+      <div class="brand-sub">Inventory · Sold · OCC 월별/일별 추이</div>
+    </div>
+    <div class="meta">
+      <div><span class="label">REPORT</span><span id="meta-generated">—</span></div>
+      <div><span class="label">SOURCE</span>사용가능 객실 현황</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- 월별 OCC -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <span class="section-title">월별 OCC 추이</span>
+      <span class="section-sub" id="monthly-range">—</span>
+    </div>
+    <div class="chart-box"><canvas id="chart-monthly"></canvas></div>
+    <div class="tbl-wrap" style="margin-top:20px;">
+      <table class="tbl" id="tbl-monthly">
+        <thead>
+          <tr>
+            <th>월</th>
+            <th>일수</th>
+            <th>Total</th>
+            <th>Inventory</th>
+            <th>Sold</th>
+            <th>OOO</th>
+            <th class="bar-cell">OCC</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note" id="note-monthly">
+      OCC(%) = Sold Rooms / Inventory Rooms × 100. Inventory = Total − Out of Order.
+    </div>
+  </section>
+
+  <!-- 일별 -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <span class="section-title">일별 객실 현황</span>
+      <span class="section-sub" id="daily-month-label">—</span>
+    </div>
+    <div class="month-tabs" id="month-tabs"></div>
+    <div class="tbl-wrap">
+      <table class="tbl" id="tbl-daily">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>요일</th>
+            <th>Total</th>
+            <th>Inventory</th>
+            <th>Available</th>
+            <th>Sold</th>
+            <th>OOO</th>
+            <th>HU</th>
+            <th>Comp</th>
+            <th class="bar-cell">OCC</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  PALATIUM HAEUNDAE · ROOM AVAILABILITY REPORT · Generated by GS Team Data Pipeline
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var DATA_URL = './data/palatium_room_availability.json';
+  var DOW = ['일','월','화','수','목','금','토'];
+
+  function fmtN(n, d){ d = d||0; if (n===null||n===undefined||isNaN(n)) return '–'; return Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+  function fmtPct(n){ if (n===null||n===undefined||isNaN(n)) return '–'; return Number(n).toFixed(1)+'%'; }
+  function occClass(o){ if (o>=70) return 'occ-hot'; if (o>=40) return 'occ-warm'; return 'occ-cool'; }
+  function occColor(o){ if (o>=70) return '#c14a3e'; if (o>=40) return '#c97a32'; return '#b88a45'; }
+
+  function el(tag, attrs, html){
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs){ if (k==='class') e.className=attrs[k]; else e.setAttribute(k, attrs[k]); }
+    if (html!==undefined) e.innerHTML = html;
+    return e;
+  }
+
+  fetch(DATA_URL, {cache:'no-store'})
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(render)
+    .catch(function(err){
+      document.querySelector('.wrap').innerHTML = '<div class="section"><div class="section-head"><span class="section-num">!</span><span class="section-title">데이터를 불러오지 못했습니다</span></div><pre style="font-family:var(--mono);font-size:12px;color:var(--negative);">'+(err.message||err)+'</pre></div>';
+    });
+
+  function render(data){
+    var generated = data._generated || '';
+    document.getElementById('meta-generated').textContent = generated;
+
+    var monthly = data.monthly || {};
+    var daily = data.daily || {};
+
+    var months = Object.keys(monthly).sort();
+    var activeMonths = months.filter(function(m){ return (monthly[m].sold_sum||0) > 0 || (monthly[m].out_of_order_sum||0) > 0; });
+
+    // KPI: aggregate over months that have any inventory activity
+    var aggInv = 0, aggSold = 0, aggOOO = 0, aggTotal = 0;
+    months.forEach(function(m){
+      var v = monthly[m];
+      aggInv   += (v.inventory_sum||0);
+      aggSold  += (v.sold_sum||0);
+      aggOOO   += (v.out_of_order_sum||0);
+      aggTotal += (v.total_sum||0);
+    });
+    var aggOcc = aggInv > 0 ? (aggSold/aggInv*100) : 0;
+
+    var kpiGrid = document.getElementById('kpi-grid');
+    [
+      {label:'데이터 기간', value: months[0]+' ~ '+months[months.length-1], unit:'', foot: months.length+'개월'},
+      {label:'전체 Inventory', value: fmtN(aggInv), unit:'rooms', foot:'OOO '+fmtN(aggOOO)+' 차감 후'},
+      {label:'전체 Sold', value: fmtN(aggSold), unit:'rooms', foot:'전 기간 합계'},
+      {label:'평균 OCC', value: fmtN(aggOcc,1), unit:'%', foot:'Sold ÷ Inventory'}
+    ].forEach(function(k){
+      var c = el('div', {class:'kpi-card'});
+      c.appendChild(el('div',{class:'kpi-label'}, k.label));
+      var v = el('div',{class:'kpi-value'}, k.value);
+      if (k.unit) v.appendChild(el('span',{class:'kpi-unit'}, k.unit));
+      c.appendChild(v);
+      if (k.foot) c.appendChild(el('div',{class:'kpi-foot'}, k.foot));
+      kpiGrid.appendChild(c);
+    });
+
+    // ───── Monthly table ─────
+    document.getElementById('monthly-range').textContent = months[0]+' → '+months[months.length-1];
+    var tbody = document.querySelector('#tbl-monthly tbody');
+    months.forEach(function(m){
+      var v = monthly[m];
+      var occ = v.occ || 0;
+      var pct = Math.min(100, Math.max(0, occ));
+      var tr = el('tr');
+      tr.appendChild(el('td', null, m));
+      tr.appendChild(el('td', null, fmtN(v.days)));
+      tr.appendChild(el('td', null, fmtN(v.total_sum)));
+      tr.appendChild(el('td', null, fmtN(v.inventory_sum)));
+      tr.appendChild(el('td', null, fmtN(v.sold_sum)));
+      tr.appendChild(el('td', null, fmtN(v.out_of_order_sum)));
+      var bc = el('td',{class:'bar-cell'});
+      bc.innerHTML = '<span class="pct '+occClass(occ)+'">'+fmtPct(occ)+'</span><div class="bar"><div class="bar-fill" style="width:'+pct+'%;background:'+occColor(occ)+';"></div></div>';
+      tr.appendChild(bc);
+      tbody.appendChild(tr);
+    });
+
+    // ───── Monthly chart ─────
+    var ctx = document.getElementById('chart-monthly').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Sold',
+            data: months.map(function(m){ return monthly[m].sold_sum||0; }),
+            backgroundColor: 'rgba(184,138,69,0.85)',
+            borderRadius: 2,
+            yAxisID: 'y',
+            order: 2
+          },
+          {
+            type: 'bar',
+            label: 'Inventory',
+            data: months.map(function(m){ return Math.max(0,(monthly[m].inventory_sum||0)-(monthly[m].sold_sum||0)); }),
+            backgroundColor: 'rgba(0,0,0,0.08)',
+            borderRadius: 2,
+            yAxisID: 'y',
+            order: 3,
+            stack: 'inv'
+          },
+          {
+            type: 'line',
+            label: 'OCC (%)',
+            data: months.map(function(m){ return monthly[m].occ||0; }),
+            borderColor: '#1a1d23',
+            backgroundColor: 'rgba(26,29,35,0.08)',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#1a1d23',
+            tension: 0.3,
+            yAxisID: 'y1',
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { font: { family: 'Pretendard Variable', size: 12 }, color: '#3a3f48', boxWidth: 14, padding: 14 }
+          },
+          tooltip: {
+            backgroundColor: '#1a1d23',
+            titleFont: { family: 'Pretendard Variable', weight: '700' },
+            bodyFont: { family: 'JetBrains Mono', size: 12 },
+            padding: 12,
+            callbacks: {
+              label: function(ctx){
+                if (ctx.dataset.label === 'OCC (%)') return 'OCC: '+ctx.parsed.y.toFixed(1)+'%';
+                return ctx.dataset.label+': '+Number(ctx.parsed.y).toLocaleString('ko-KR');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#6b7280' },
+            grid: { display: false }
+          },
+          y: {
+            stacked: true,
+            position: 'left',
+            title: { display: true, text: 'Rooms', font: { family: 'Pretendard Variable', size: 11, weight: '700' }, color: '#6b7280' },
+            ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#6b7280', callback: function(v){ return v.toLocaleString('ko-KR'); } },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          },
+          y1: {
+            position: 'right',
+            title: { display: true, text: 'OCC (%)', font: { family: 'Pretendard Variable', size: 11, weight: '700' }, color: '#6b7280' },
+            min: 0,
+            max: 100,
+            ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#6b7280', callback: function(v){ return v+'%'; } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // ───── Daily section ─────
+    var dailyMonths = {};
+    Object.keys(daily).forEach(function(d){
+      var m = d.slice(0,7);
+      (dailyMonths[m] = dailyMonths[m] || []).push(d);
+    });
+    var dmList = Object.keys(dailyMonths).sort();
+    // Default to latest month that has activity (sold>0 anywhere)
+    var defaultMonth = null;
+    for (var i = dmList.length-1; i >= 0; i--){
+      var anyActivity = dailyMonths[dmList[i]].some(function(d){ return (daily[d].sold||0) > 0 || (daily[d].out_of_order||0) > 0; });
+      if (anyActivity){ defaultMonth = dmList[i]; break; }
+    }
+    if (!defaultMonth) defaultMonth = dmList[dmList.length-1];
+
+    var tabsBox = document.getElementById('month-tabs');
+    dmList.forEach(function(m){
+      var t = el('button',{class:'month-tab'+(m===defaultMonth?' active':''), 'data-month': m}, m);
+      t.addEventListener('click', function(){
+        tabsBox.querySelectorAll('.month-tab').forEach(function(x){ x.classList.remove('active'); });
+        t.classList.add('active');
+        renderDaily(m);
+      });
+      tabsBox.appendChild(t);
+    });
+
+    function renderDaily(m){
+      document.getElementById('daily-month-label').textContent = m;
+      var tb = document.querySelector('#tbl-daily tbody');
+      tb.innerHTML = '';
+      var dates = (dailyMonths[m]||[]).sort();
+      dates.forEach(function(d){
+        var v = daily[d];
+        var occ = v.occ || 0;
+        var pct = Math.min(100, Math.max(0, occ));
+        var dow = DOW[new Date(d+'T00:00:00').getDay()];
+        var tr = el('tr');
+        tr.appendChild(el('td', null, d));
+        tr.appendChild(el('td', null, dow));
+        tr.appendChild(el('td', null, fmtN(v.total)));
+        tr.appendChild(el('td', null, fmtN(v.inventory)));
+        tr.appendChild(el('td', null, fmtN(v.available)));
+        tr.appendChild(el('td', null, fmtN(v.sold)));
+        tr.appendChild(el('td', null, fmtN(v.out_of_order)));
+        tr.appendChild(el('td', null, fmtN(v.house_use)));
+        tr.appendChild(el('td', null, fmtN(v.complimentary)));
+        var bc = el('td',{class:'bar-cell'});
+        bc.innerHTML = '<span class="pct '+occClass(occ)+'">'+fmtPct(occ)+'</span><div class="bar"><div class="bar-fill" style="width:'+pct+'%;background:'+occColor(occ)+';"></div></div>';
+        tr.appendChild(bc);
+        tb.appendChild(tr);
+      });
+    }
+    renderDaily(defaultMonth);
+  }
+})();
+</script>
+
+</body>
+</html>
