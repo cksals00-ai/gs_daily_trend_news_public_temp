@@ -610,6 +610,7 @@ function buildSegChips() {
         document.querySelectorAll('#seg-chips .chip,#mobile-seg-chips .chip')
           .forEach(b => b.classList.toggle('active', b.textContent === activeSegment));
         render();
+        renderPaceChart();
       });
       c.appendChild(btn);
     });
@@ -754,35 +755,34 @@ function renderPaceChart() {
   const datasets = [];
   const legendEl = document.getElementById('pace-legend');
 
-  // Booking Status 표와 정합을 위해 OTA+G-OTA+Inbound 3세그먼트만 합산.
-  // net_daily_by_month_seg가 있으면 사용, 없으면 fallback으로 net_daily_by_month(전체).
-  const BUDGET_SEGS = ['OTA', 'G-OTA', 'Inbound'];
-  const segScoped = !!db.net_daily_by_month_seg;
+  // activeSegment에 따라 합산 대상 결정:
+  //  - '전체' → OTA+G-OTA+Inbound (GS 합계)
+  //  - 개별 세그먼트 → 해당 세그먼트만
+  const targetSegs = activeSegment === '전체' ? GS_SEGS : [activeSegment];
+  const pickupBySeg = db.pickup_daily_by_segment_month || {};
+  const cancelBySeg = db.cancel_daily_by_segment_month || {};
 
   function _getMonthData(monthKey) {
-    // net_daily_by_month_seg가 없으면 net_daily_by_month에서 GS 세그먼트만 합산
-    if (!segScoped) {
-      const monthData = db.net_daily_by_month[monthKey];
-      if (!monthData) return null;
-
-      // GS 세그먼트만 필터링 (전체가 아니면 by_segment로 관리됨)
-      // net_daily_by_month는 일자별 데이터이므로 그대로 반환
-      return monthData;
-    }
-
-    // 세그먼트 합산 로직
     const acc = {};
     let any = false;
-    BUDGET_SEGS.forEach(seg => {
-      const segMonth = (db.net_daily_by_month_seg[seg] || {})[monthKey];
-      if (!segMonth) return;
-      any = true;
-      Object.keys(segMonth).forEach(d => {
+    targetSegs.forEach(seg => {
+      const pMonth = (pickupBySeg[seg] || {})[monthKey] || {};
+      const cMonth = (cancelBySeg[seg] || {})[monthKey] || {};
+      Object.keys(pMonth).forEach(d => {
+        const p = (pMonth[d] && pMonth[d].rn) || 0;
+        if (!p) return;
         if (!acc[d]) acc[d] = { pickup_rn: 0, cancel_rn: 0, net_rn: 0 };
-        const v = segMonth[d];
-        acc[d].pickup_rn += v.pickup_rn || 0;
-        acc[d].cancel_rn += v.cancel_rn || 0;
-        acc[d].net_rn    += v.net_rn    || 0;
+        acc[d].pickup_rn += p;
+        acc[d].net_rn    += p;
+        any = true;
+      });
+      Object.keys(cMonth).forEach(d => {
+        const c = (cMonth[d] && cMonth[d].rn) || 0;
+        if (!c) return;
+        if (!acc[d]) acc[d] = { pickup_rn: 0, cancel_rn: 0, net_rn: 0 };
+        acc[d].cancel_rn += c;
+        acc[d].net_rn    -= c;
+        any = true;
       });
     });
     return any ? acc : null;
