@@ -675,9 +675,9 @@ function generateTables(){
             <th colspan="6" style="border-bottom:2px solid var(--info);color:var(--info);">GS (${segsArr.join('+')})</th>
           </tr>
           <tr>
-            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
+            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB${DATA.otb&&DATA.otb.meta&&DATA.otb.meta.baseDate?'('+DATA.otb.meta.baseDate.slice(5).replace('-','/')+')':''}</th><th style="width:65px;">진행률</th>
             <th style="width:80px;">FCST</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
-            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB</th><th style="width:65px;">진행률</th>
+            <th style="width:80px;">목표</th><th style="width:80px;">현재OTB${DATA.otb&&DATA.otb.meta&&DATA.otb.meta.baseDate?'('+DATA.otb.meta.baseDate.slice(5).replace('-','/')+')':''}</th><th style="width:65px;">진행률</th>
             <th style="width:80px;">FCST</th><th style="width:80px;">증감</th><th style="width:65px;">달성률</th>
           </tr>
         </thead>
@@ -1197,7 +1197,8 @@ function addToExcelDownload(){
 
   // Forecast sheet — 수동 빌드 (셀 서식 적용)
   const header1 = ['월','항목','전체 (RM)','','','','','','GS ('+segsArr.join('+')+')','','','','',''];
-  const header2 = ['','','목표','현재OTB','진행률','FCST','증감','달성률','목표','현재OTB','진행률','FCST','증감','달성률'];
+  const otbLabel = '현재OTB'+(DATA.otb&&DATA.otb.meta&&DATA.otb.meta.baseDate?'('+DATA.otb.meta.baseDate.slice(5).replace('-','/')+')':'');
+  const header2 = ['','','목표',otbLabel,'진행률','FCST','증감','달성률','목표',otbLabel,'진행률','FCST','증감','달성률'];
   const aoa = [header1, header2];
 
   const revUnit = v => (v!=null&&!isNaN(v)) ? Math.round(v) : null; // 백만원
