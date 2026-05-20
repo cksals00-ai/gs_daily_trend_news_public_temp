@@ -625,6 +625,31 @@ select option{background:var(--bg-deep);}
     </div>
   </div>
 
+  <!-- FCST 허용 오차 설정 -->
+  <div class="card" id="fcstToleranceConfig">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">FCST TOLERANCE</div>
+    <h3 style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px;">FCST 허용 오차 설정</h3>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:16px;line-height:1.6;">
+      AI FCST가 RM FCST 대비 이 범위를 초과하면 자동으로 클램핑됩니다.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;">
+        <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;font-weight:600;">허용 오차 (%)</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="fcstTolerancePct" value="5" min="0" max="50" step="0.5" style="flex:1;padding:8px;background:var(--bg);color:var(--info);border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:18px;font-weight:700;text-align:center;">
+          <span style="font-size:14px;color:var(--ink-faint);font-weight:700;">%</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">RM FCST 대비 허용 범위</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-soft);border-radius:6px;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:12px;color:var(--ink-soft);line-height:1.7;">
+          예) 5% 설정 시<br>
+          RM FCST 10,000실 → AI FCST <strong>9,500~10,500</strong> 범위
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 수수료율 설정 -->
   <div class="card" id="commissionConfig">
     <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--gold);margin-bottom:8px;">COMMISSION RATE CONFIG</div>
@@ -1144,6 +1169,7 @@ function getFormData() {
       actual_current: parseFloat(document.getElementById('cancelRateActual')?.value || '54.8'),
       impact_per_1pp: parseInt(document.getElementById('cancelRateImpact')?.value || '6496'),
     },
+    fcst_tolerance_pct: parseFloat(document.getElementById('fcstTolerancePct')?.value || '5'),
     commission_rates: {
       g_ota: parseFloat(document.getElementById('commGOTA')?.value || '15'),
       ota: parseFloat(document.getElementById('commOTA')?.value || '11'),
@@ -1182,6 +1208,8 @@ function applyFormData(d, reRenderInsights = true) {
     if (d.cancel_rate_criteria.actual_current !== undefined) setVal('cancelRateActual', d.cancel_rate_criteria.actual_current);
     if (d.cancel_rate_criteria.impact_per_1pp !== undefined) setVal('cancelRateImpact', d.cancel_rate_criteria.impact_per_1pp);
   }
+  // FCST tolerance
+  if (d.fcst_tolerance_pct !== undefined) setVal('fcstTolerancePct', d.fcst_tolerance_pct);
   // Commission rates
   if (d.commission_rates) {
     if (d.commission_rates.g_ota !== undefined) setVal('commGOTA', d.commission_rates.g_ota);
