@@ -195,8 +195,12 @@ def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
     # ══ 채널별 데이터 ══
     seg_channels: dict[str, set[str]] = defaultdict(set)
     channel_monthly: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {"rn": 0, "rev": 0.0}))
+    # 사업장×채널 교차 데이터
+    prop_ch_monthly: dict[str, dict[str, dict[str, dict]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(lambda: {"rn": 0, "rev": 0.0}))
+    )
 
-    for _prop, channels in by_pcs.items():
+    for prop_name, channels in by_pcs.items():
         for ch_name, seg_map in channels.items():
             if not isinstance(seg_map, dict):
                 continue
@@ -212,6 +216,9 @@ def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
                     agg = channel_monthly[ch_name][m]
                     agg["rn"] += rn
                     agg["rev"] += rev
+                    pagg = prop_ch_monthly[prop_name][ch_name][m]
+                    pagg["rn"] += rn
+                    pagg["rev"] += rev
 
     channels_list = {seg: sorted(chs) for seg, chs in seg_channels.items()}
 
@@ -225,6 +232,23 @@ def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
         if ch_data:
             by_channel[ch] = ch_data
 
+    # 사업장×채널 → 컴팩트
+    by_prop_channel: dict = {}
+    pc_count = 0
+    for prop_name, ch_map in prop_ch_monthly.items():
+        prop_chs = {}
+        for ch_name, months_map in ch_map.items():
+            ch_data = {}
+            for m, agg in months_map.items():
+                rn, rev = agg["rn"], agg["rev"]
+                if rn > 0:
+                    ch_data[m] = {"rn": rn, "adr": round(rev * 1_000_000 / rn) if rn else 0, "rev": round(rev, 2)}
+            if ch_data:
+                prop_chs[ch_name] = ch_data
+                pc_count += 1
+        if prop_chs:
+            by_prop_channel[prop_name] = prop_chs
+
     months_sorted = sorted(all_months)
 
     result = {
@@ -237,6 +261,7 @@ def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
         "channels": channels_list,
         "budget_fcst": budget_fcst,
         "by_channel": by_channel,
+        "by_prop_channel": by_prop_channel,
         "by_nationality": nat_data,
         "nationalities": nationalities,
     }
@@ -248,7 +273,7 @@ def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
     size_kb = dst_path.stat().st_size / 1024
     print(f"  ▸ 출력: {dst_path}  ({size_kb:.0f} KB)")
     print(f"  ▸ 사업장 {len(properties)}개 × 세그먼트 {len(TARGET_SEGMENTS)+1}개 × 월 {len(months_sorted)}개")
-    print(f"  ▸ 채널 {len(by_channel)}개 · 국적 {len(nat_data)}개")
+    print(f"  ▸ 채널 {len(by_channel)}개 · 사업장×채널 {pc_count}개 · 국적 {len(nat_data)}개")
     print(f"  ▸ 목표/FCST 사업장: {len(budget_fcst)}개")
     return dst_path
 
