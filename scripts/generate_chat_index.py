@@ -2,38 +2,10 @@
 """
 generate_chat_index.py
 =====================
-db_aggregated.json → docs/data/chat_index.json
+db_aggregated.json + otb_data.json + inbound_enriched.json
+→ docs/data/chat_index.json
 
-사업장 × 세그먼트(OTA / G-OTA / Inbound) × 월 단위로
-RN·ADR·Revenue 경량 색인을 생성한다.
-
-출력 구조:
-{
-  "generated_at": "...",
-  "properties": ["델피노", ...],
-  "segments": ["OTA","G-OTA","Inbound"],
-  "months": ["202201", ...],
-  "data": {
-    "델피노": {
-      "OTA":     { "202201": {"rn":..,"adr":..,"rev":..}, ... },
-      "G-OTA":   { ... },
-      "Inbound": { ... },
-      "전체":    { ... }
-    },
-    ...
-  },
-  "totals": {            # 전사 합계
-    "OTA":     { "202201": {...}, ... },
-    "G-OTA":   { ... },
-    "Inbound": { ... },
-    "전체":    { ... }
-  },
-  "channels": {          # 세그먼트별 주요 채널(거래처) 목록
-    "OTA": ["여기어때","야놀자","네이버",...],
-    "G-OTA": ["아고다","트립닷컴","익스피디아",...],
-    "Inbound": ["Inbound"]
-  }
-}
+사업장 × 세그먼트 × 월 + 채널별 + 국적별 + 목표/FCST/LY/YoY
 """
 from __future__ import annotations
 import json, os, sys
@@ -43,56 +15,116 @@ from collections import defaultdict
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent
-SRC = ROOT / "data" / "db_aggregated.json"
+SRC_DB = ROOT / "data" / "db_aggregated.json"
+SRC_OTB = ROOT / "docs" / "data" / "otb_data.json"
+SRC_INBOUND = ROOT / "docs" / "data" / "inbound_enriched.json"
 DST = ROOT / "docs" / "data" / "chat_index.json"
 
 TARGET_SEGMENTS = ["OTA", "G-OTA", "Inbound"]
 
+OTB_NAME_MAP = {
+    "01.벨비발디": "소노벨 비발디파크",
+    "02.캄비발디": "소노캄 비발디파크",
+    "03.펫비발디": "소노펫 비발디파크",
+    "04.펠리체비발디": "소노펠리체 비발디파크",
+    "05.빌리지비발디": "소노펠리체 빌리지 비발디파크",
+    "06.문비발디": "소노문 비발디파크",
+    "07.오션월드빌리지": "오션월드빌리지",
+    "08.캄고양": "소노캄 고양",
+    "09.델피노": "델피노",
+    "10.벨변산": "소노벨 변산",
+    "11.쏠비치진도": "쏠비치 진도",
+    "12.벨천안": "소노벨 천안",
+    "13.벨청송": "소노벨 청송",
+    "14.휴양평": "소노휴 양평",
+    "15.쏠비치삼척": "쏠비치 삼척",
+    "16.문단양": "소노문 단양",
+    "17.벨경주": "소노벨 경주",
+    "18.르네블루": "르네블루",
+    "19.벨제주": "소노벨 제주",
+    "20.캄제주": "소노캄 제주",
+    "21.캄여수": "소노캄 여수",
+    "22.캄거제": "소노캄 거제",
+    "23.쏠비치양양": "쏠비치 양양",
+    "24.문해운대": "소노문 해운대",
+    "25.쏠비치남해": "쏠비치 남해",
+    "팔라티움": "팔라티움",
+    "전사합계": "_total_",
+}
 
-def _round_metric(v, decimals=1):
-    """숫자 반올림 (None → 0)"""
-    if v is None:
-        return 0
-    return round(v, decimals)
+
+def _round(v, d=1):
+    if v is None: return 0
+    return round(v, d)
 
 
-def _compact_month(raw: dict) -> dict:
-    """원본 월별 메트릭에서 필요한 3개만 추출"""
+def _compact(raw: dict) -> dict:
     return {
-        "rn":  raw.get("net_rn") or raw.get("booking_rn") or 0,
-        "adr": _round_metric(raw.get("adr", 0), 0),
-        "rev": _round_metric(raw.get("net_rev") or raw.get("booking_rev") or 0, 2),
+        "rn": raw.get("net_rn") or raw.get("booking_rn") or 0,
+        "adr": _round(raw.get("adr", 0), 0),
+        "rev": _round(raw.get("net_rev") or raw.get("booking_rev") or 0, 2),
     }
 
 
-def _sum_months(*dicts) -> dict:
-    """여러 월별 메트릭 합산"""
-    total_rn = sum(d.get("rn", 0) for d in dicts)
-    total_rev = sum(d.get("rev", 0) for d in dicts)
-    return {
-        "rn": total_rn,
-        "adr": round(total_rev * 1_000_000 / total_rn) if total_rn else 0,
-        "rev": round(total_rev, 2),
-    }
+def _load_otb_budget_fcst(otb_path: Path) -> dict:
+    if not otb_path.exists():
+        print("  ⚠ otb_data.json 없음 — 목표/FCST 생략")
+        return {}
+    with open(otb_path, "r", encoding="utf-8") as f:
+        otb = json.load(f)
+    result = {}
+    for entry in otb.get("yoyTable", []):
+        otb_name = entry.get("name", "")
+        db_name = OTB_NAME_MAP.get(otb_name, otb_name)
+        if db_name == "_total_":
+            continue
+        months_data = entry.get("months", {})
+        prop_budget = {}
+        for m_str, md in months_data.items():
+            month_key = f"2026{int(m_str):02d}"
+            prop_budget[month_key] = {
+                "bud": md.get("bud_rn") or 0,
+                "fcst": md.get("rns_fcst") or 0,
+                "last": md.get("last_rn") or 0,
+                "yoy": md.get("yoy"),
+                "fcst_src": md.get("fcst_source", ""),
+            }
+        result[db_name] = prop_budget
+    return result
 
 
-def _collect_channels(bpcs: dict) -> dict[str, list[str]]:
-    """by_property_channel_segment 에서 세그먼트별 채널(거래처) 목록 수집"""
-    seg_channels: dict[str, set[str]] = defaultdict(set)
-    for _prop, channels in bpcs.items():
-        for ch_name, seg_map in channels.items():
-            if not isinstance(seg_map, dict):
+def _load_nationality_monthly(inbound_path: Path) -> tuple[dict, list]:
+    if not inbound_path.exists():
+        print("  ⚠ inbound_enriched.json 없음 — 국적 생략")
+        return {}, []
+    with open(inbound_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    mbn = data.get("monthly_by_nationality", {})
+    # Restructure: {nationality: {month: {rn, adr, rev}}}
+    nat_data: dict[str, dict] = defaultdict(dict)
+    all_nats = set()
+    skip = {"매핑불가", "미확인"}
+    for month_key, nat_map in mbn.items():
+        for nat, metrics in nat_map.items():
+            if nat in skip:
                 continue
-            for seg_name in seg_map:
-                if seg_name in TARGET_SEGMENTS:
-                    seg_channels[seg_name].add(ch_name)
-    # 정렬 후 반환
-    return {seg: sorted(chs) for seg, chs in seg_channels.items()}
+            rn = metrics.get("rn_net") or metrics.get("rn_booking") or 0
+            rev_raw = metrics.get("rev_net") or metrics.get("rev_booking") or 0
+            rev = round(rev_raw / 1_000_000, 2)  # 원 → 백만원
+            if rn > 0:
+                all_nats.add(nat)
+                nat_data[nat][month_key] = {
+                    "rn": rn,
+                    "adr": round(rev_raw / rn / 1000) if rn else 0,  # 원→천원
+                    "rev": rev,
+                }
+    return dict(nat_data), sorted(all_nats)
 
 
-def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
-    print(f"  ▸ 소스: {src_path}")
-    with open(src_path, "r", encoding="utf-8") as f:
+def build(src_db: Path = SRC_DB, dst_path: Path = DST) -> Path:
+    print(f"  ▸ 소스: {src_db}")
+    with open(src_db, "r", encoding="utf-8") as f:
         db = json.load(f)
 
     by_prop_seg = db.get("by_property_segment", {})
@@ -102,12 +134,15 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
     properties = sorted(by_prop_seg.keys())
     all_months: set[str] = set()
 
-    # ── 사업장별 데이터 ──────────────────────────────────
+    budget_fcst = _load_otb_budget_fcst(SRC_OTB)
+    nat_data, nationalities = _load_nationality_monthly(SRC_INBOUND)
+
+    # ══ 사업장별 데이터 ══
     data: dict = {}
     for prop in properties:
         seg_map = by_prop_seg[prop]
         prop_entry: dict = {}
-        prop_all_months: dict[str, dict] = {}  # month -> aggregated
+        prop_all: dict[str, dict] = {}
 
         for seg in TARGET_SEGMENTS:
             if seg not in seg_map:
@@ -116,21 +151,18 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
             month_data = seg_map[seg]
             compact: dict = {}
             for m, raw in month_data.items():
-                c = _compact_month(raw)
+                c = _compact(raw)
                 compact[m] = c
                 all_months.add(m)
-                # 전체 합산용
-                if m not in prop_all_months:
-                    prop_all_months[m] = {"rn": 0, "rev": 0.0}
-                prop_all_months[m]["rn"] += c["rn"]
-                prop_all_months[m]["rev"] += c["rev"]
+                if m not in prop_all:
+                    prop_all[m] = {"rn": 0, "rev": 0.0}
+                prop_all[m]["rn"] += c["rn"]
+                prop_all[m]["rev"] += c["rev"]
             prop_entry[seg] = compact
 
-        # 사업장 전체 (OTA+G-OTA+Inbound 합산)
-        total_months: dict = {}
-        for m, agg in prop_all_months.items():
-            rn = agg["rn"]
-            rev = agg["rev"]
+        total_months = {}
+        for m, agg in prop_all.items():
+            rn, rev = agg["rn"], agg["rev"]
             total_months[m] = {
                 "rn": rn,
                 "adr": round(rev * 1_000_000 / rn) if rn else 0,
@@ -139,14 +171,14 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
         prop_entry["전체"] = total_months
         data[prop] = prop_entry
 
-    # ── 전사 합계 ────────────────────────────────────────
+    # ══ 전사 합계 ══
     totals: dict = {}
     totals_all: dict[str, dict] = {}
     for seg in TARGET_SEGMENTS:
         seg_data = by_segment.get(seg, {})
         compact: dict = {}
         for m, raw in seg_data.items():
-            c = _compact_month(raw)
+            c = _compact(raw)
             compact[m] = c
             all_months.add(m)
             if m not in totals_all:
@@ -154,20 +186,44 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
             totals_all[m]["rn"] += c["rn"]
             totals_all[m]["rev"] += c["rev"]
         totals[seg] = compact
-    # 전체
-    total_all: dict = {}
+    total_all = {}
     for m, agg in totals_all.items():
-        rn = agg["rn"]
-        rev = agg["rev"]
-        total_all[m] = {
-            "rn": rn,
-            "adr": round(rev * 1_000_000 / rn) if rn else 0,
-            "rev": round(rev, 2),
-        }
+        rn, rev = agg["rn"], agg["rev"]
+        total_all[m] = {"rn": rn, "adr": round(rev * 1_000_000 / rn) if rn else 0, "rev": round(rev, 2)}
     totals["전체"] = total_all
 
-    # ── 채널 목록 ────────────────────────────────────────
-    channels = _collect_channels(by_pcs)
+    # ══ 채널별 데이터 ══
+    seg_channels: dict[str, set[str]] = defaultdict(set)
+    channel_monthly: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {"rn": 0, "rev": 0.0}))
+
+    for _prop, channels in by_pcs.items():
+        for ch_name, seg_map in channels.items():
+            if not isinstance(seg_map, dict):
+                continue
+            for seg_name, month_data in seg_map.items():
+                if seg_name not in TARGET_SEGMENTS:
+                    continue
+                seg_channels[seg_name].add(ch_name)
+                if not isinstance(month_data, dict):
+                    continue
+                for m, raw in month_data.items():
+                    rn = raw.get("net_rn") or raw.get("booking_rn") or 0
+                    rev = raw.get("net_rev") or raw.get("booking_rev") or 0.0
+                    agg = channel_monthly[ch_name][m]
+                    agg["rn"] += rn
+                    agg["rev"] += rev
+
+    channels_list = {seg: sorted(chs) for seg, chs in seg_channels.items()}
+
+    by_channel: dict = {}
+    for ch, months_map in channel_monthly.items():
+        ch_data = {}
+        for m, agg in months_map.items():
+            rn, rev = agg["rn"], agg["rev"]
+            if rn > 0:
+                ch_data[m] = {"rn": rn, "adr": round(rev * 1_000_000 / rn) if rn else 0, "rev": round(rev, 2)}
+        if ch_data:
+            by_channel[ch] = ch_data
 
     months_sorted = sorted(all_months)
 
@@ -178,7 +234,11 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
         "months": months_sorted,
         "data": data,
         "totals": totals,
-        "channels": channels,
+        "channels": channels_list,
+        "budget_fcst": budget_fcst,
+        "by_channel": by_channel,
+        "by_nationality": nat_data,
+        "nationalities": nationalities,
     }
 
     dst_path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,6 +248,8 @@ def build(src_path: Path = SRC, dst_path: Path = DST) -> Path:
     size_kb = dst_path.stat().st_size / 1024
     print(f"  ▸ 출력: {dst_path}  ({size_kb:.0f} KB)")
     print(f"  ▸ 사업장 {len(properties)}개 × 세그먼트 {len(TARGET_SEGMENTS)+1}개 × 월 {len(months_sorted)}개")
+    print(f"  ▸ 채널 {len(by_channel)}개 · 국적 {len(nat_data)}개")
+    print(f"  ▸ 목표/FCST 사업장: {len(budget_fcst)}개")
     return dst_path
 
 
