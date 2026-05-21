@@ -266,14 +266,45 @@ function processQuery(query) {
       const resolved = resolveFollowUp(query);
 
       // ── 비교(vs) 감지 ──
-      const vsMatch = resolved.match(/(.+?)\s*(?:vs|VS|비교|대비)\s*(.+)/);
-      if (vsMatch) {
-        const r1 = runSingle(vsMatch[1].trim(), resolved);
-        const r2 = runSingle(vsMatch[2].trim(), resolved);
+      let vsItems = null;
+      // "A vs B" or "A 대비 B"
+      const vsMatch1 = resolved.match(/(.+?)\s*(?:vs|VS)\s*(.+)/);
+      if (vsMatch1) vsItems = [vsMatch1[1].trim(), vsMatch1[2].trim()];
+      // "A, B 비교" or "A B 비교" (끝에 비교)
+      if (!vsItems) {
+        const vsMatch2 = resolved.match(/^(.+?)\s*비교\s*$/);
+        if (vsMatch2) {
+          const inner = vsMatch2[1];
+          // 쉼표 구분: "델피노 아고다, 여기어때 비교"
+          if (inner.includes(",")) {
+            vsItems = inner.split(",").map(s => s.trim()).filter(Boolean);
+          }
+        }
+      }
+      // "A 대비 B" (중간)
+      if (!vsItems) {
+        const vsMatch3 = resolved.match(/(.+?)\s*대비\s*(.+)/);
+        if (vsMatch3) vsItems = [vsMatch3[1].trim(), vsMatch3[2].trim()];
+      }
+      if (vsItems && vsItems.length >= 2) {
+        // 공통 사업장/기간 컨텍스트 추출
+        const contextProps = findProperties(resolved);
+        const contextMonths = parseMonths(resolved);
+        const results = vsItems.map(item => {
+          // 각 항목에 공통 컨텍스트 보충
+          let enriched = item;
+          if (contextProps.length && !findProperties(item).length) {
+            enriched = contextProps.join(" ") + " " + item;
+          }
+          if (contextMonths && contextMonths.result && !/\d{4}|올해|작년|최근|상반기|하반기|이번|지난|월/.test(item)) {
+            enriched = enriched + " " + (contextMonths.label || "");
+          }
+          return runSingle(enriched, resolved);
+        });
         hideTyping();
-        if (r1.error) { addBotMsg(r1.error); }
-        else if (r2.error) { addBotMsg(r2.error); }
-        else { showCompareMsg(r1, r2); }
+        const errors = results.filter(r => r.error);
+        if (errors.length) { addBotMsg(errors[0].error); }
+        else { showCompareMsg(results); }
         isLoading = false; return;
       }
 
@@ -665,63 +696,156 @@ function showChannelBreakdown(parsed) {
 // 비교 표시
 // ═══════════════════════════════════════════════
 
-function showCompareMsg(r1, r2) {
-  const sum = (rows) => {
-    let rn=0,rev=0; rows.forEach(r=>{rn+=r.RN||0;rev+=r["매출(백만원)"]||0;});
-    return {rn, rev:Math.round(rev*100)/100, adr:rn>0?Math.round(rev*1000000/rn/1000):0};
-  };
-  const s1 = sum(r1.rows), s2 = sum(r2.rows);
-  const label1 = r1.summary.split("·")[0].trim();
-  const label2 = r2.summary.split("·")[0].trim();
+function showCompareMsg(results) {
+  const COLORS = ["#d4a74a","#5cc4d0","#a07ee8","#5cc49a","#e87a8a"];
 
-  let html = `<b>${esc(label1)} vs ${esc(label2)}</b><br><br>`;
-  html += '<div class="preview-wrap"><table class="pv-table"><thead><tr>';
-  html += `<th>지표</th><th class="num">${esc(label1)}</th><th class="num">${esc(label2)}</th><th class="num">차이</th>`;
+  // 라벨 추출
+  const labels = results.map(r => r.summary.split("·")[0].trim());
+
+  // 월별 데이터 피벗
+  const allMonthSet = new Set();
+  const byLabel = results.map(r => {
+    const byM = {};
+    r.rows.forEach(row => {
+      const mk = row.연도 + String(row.월).padStart(2,"0");
+      allMonthSet.add(mk);
+      if (!byM[mk]) byM[mk] = {rn:0, rev:0};
+      byM[mk].rn += row.RN||0;
+      byM[mk].rev += row["매출(백만원)"]||0;
+    });
+    return byM;
+  });
+  const allMonths = [...allMonthSet].sort();
+
+  // 합계
+  const totals = results.map((_,i) => {
+    let rn=0, rev=0;
+    allMonths.forEach(m => { const d=byLabel[i][m]; if(d){rn+=d.rn;rev+=d.rev;} });
+    return {rn, rev:Math.round(rev*100)/100, adr:rn>0?Math.round(rev*1000000/rn/1000):0};
+  });
+
+  let html = `<b>${labels.map(l=>esc(l)).join(" vs ")}</b><br><br>`;
+
+  // ── 합계 비교 테이블 ──
+  html += '<div class="preview-wrap"><table class="pv-table"><thead><tr><th>지표</th>';
+  labels.forEach(l => { html += `<th class="num">${esc(l)}</th>`; });
+  if (labels.length === 2) html += '<th class="num">차이</th>';
   html += '</tr></thead><tbody>';
 
-  const metrics = [
-    {name:"RN (실)", v1:s1.rn, v2:s2.rn},
-    {name:"ADR (천원)", v1:s1.adr, v2:s2.adr},
-    {name:"매출 (백만원)", v1:s1.rev, v2:s2.rev},
-  ];
-  metrics.forEach(m => {
-    const diff = m.v1 - m.v2;
-    const cls = diff>0?"num pos":diff<0?"num neg":"num";
-    html += `<tr><td>${m.name}</td><td class="num">${fmt(m.v1)}</td><td class="num">${fmt(m.v2)}</td><td class="${cls}">${diff>0?"+":""}${fmt(diff)}</td></tr>`;
+  ["RN","ADR (천원)","매출 (백만원)"].forEach((name,mi) => {
+    html += `<tr><td>${name}</td>`;
+    const vals = totals.map(t => mi===0?t.rn:mi===1?t.adr:t.rev);
+    vals.forEach(v => { html += `<td class="num">${fmt(v)}</td>`; });
+    if (vals.length === 2) {
+      const diff = vals[0]-vals[1];
+      const cls = diff>0?"num pos":diff<0?"num neg":"num";
+      html += `<td class="${cls}">${diff>0?"+":""}${fmt(diff)}</td>`;
+    }
+    html += '</tr>';
   });
   html += '</tbody></table></div>';
 
-  // 차트
-  html += buildBarChartSVG(label1, label2, s1, s2);
+  // ── 월별 비교 테이블 (열 구분) ──
+  if (allMonths.length > 1) {
+    html += '<div class="preview-wrap" style="margin-top:10px"><table class="pv-table"><thead><tr><th>월</th>';
+    labels.forEach(l => { html += `<th class="num">${esc(l)} RN</th><th class="num">ADR</th><th class="num">매출</th>`; });
+    html += '</tr></thead><tbody>';
 
-  // 인사이트
-  const rnDiff = s1.rn - s2.rn;
-  const rnPct = s2.rn > 0 ? Math.round(rnDiff / s2.rn * 1000) / 10 : 0;
-  html += `<div class="insight-box">`;
-  html += `<b>${esc(label1)}</b>이 <b>${esc(label2)}</b> 대비 RN 기준 `;
-  html += rnDiff > 0 ? `<b style="color:var(--mint)">+${fmt(rnDiff)} (${pct(rnPct)})</b> 많습니다.`
-    : `<b style="color:var(--rose)">${fmt(rnDiff)} (${pct(rnPct)})</b> 적습니다.`;
-  html += `</div>`;
+    allMonths.forEach(m => {
+      const mLabel = m.slice(2,4)+"/"+parseInt(m.slice(4));
+      html += `<tr><td>${mLabel}</td>`;
+      byLabel.forEach(bl => {
+        const d = bl[m];
+        if (d) {
+          const adr = d.rn>0?Math.round(d.rev*1000000/d.rn/1000):0;
+          html += `<td class="num">${fmt(d.rn)}</td><td class="num">${fmt(adr)}</td><td class="num">${fmt(Math.round(d.rev*100)/100)}</td>`;
+        } else {
+          html += '<td class="num">-</td><td class="num">-</td><td class="num">-</td>';
+        }
+      });
+      html += '</tr>';
+    });
+    // 합계행
+    html += '<tr class="row-total"><td>합계</td>';
+    totals.forEach(t => {
+      html += `<td class="num">${fmt(t.rn)}</td><td class="num">${fmt(t.adr)}</td><td class="num">${fmt(t.rev)}</td>`;
+    });
+    html += '</tr></tbody></table></div>';
+  }
+
+  // ── 월별 RN 추이 비교 차트 (SVG) ──
+  if (allMonths.length >= 2) {
+    html += buildCompareChartSVG(labels, byLabel, allMonths, COLORS);
+  }
+
+  // ── 인사이트 ──
+  if (labels.length === 2) {
+    const rnDiff = totals[0].rn - totals[1].rn;
+    const rnPct = totals[1].rn > 0 ? Math.round(rnDiff / totals[1].rn * 1000) / 10 : 0;
+    html += `<div class="insight-box">`;
+    html += `<b>${esc(labels[0])}</b>이 <b>${esc(labels[1])}</b> 대비 RN 기준 `;
+    html += rnDiff > 0 ? `<b style="color:var(--mint)">+${fmt(rnDiff)} (${pct(rnPct)})</b> 많습니다.`
+      : `<b style="color:var(--rose)">${fmt(rnDiff)} (${pct(rnPct)})</b> 적습니다.`;
+    html += `</div>`;
+  }
 
   addBotMsg(html);
-  lastContext = r1; // 첫 번째를 맥락으로
+  lastContext = results[0];
 }
 
-function buildBarChartSVG(l1, l2, s1, s2) {
-  const w = 400, h = 140, barH = 24, gap = 8;
-  const maxRN = Math.max(s1.rn, s2.rn) || 1;
-  const bw = 280;
-  const w1 = Math.round(s1.rn / maxRN * bw);
-  const w2 = Math.round(s2.rn / maxRN * bw);
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">
-    <text x="0" y="20" fill="#8b8f9a" font-size="11" font-family="var(--sans)">RN 비교</text>
-    <text x="0" y="${45}" fill="#c8cad0" font-size="12" font-family="var(--sans)">${l1}</text>
-    <rect x="100" y="${33}" width="${w1}" height="${barH}" rx="4" fill="#d4a74a" opacity="0.8"/>
-    <text x="${104+w1}" y="${50}" fill="#ecc06a" font-size="11" font-family="var(--mono)">${fmt(s1.rn)}</text>
-    <text x="0" y="${45+barH+gap+16}" fill="#c8cad0" font-size="12" font-family="var(--sans)">${l2}</text>
-    <rect x="100" y="${33+barH+gap+4}" width="${w2}" height="${barH}" rx="4" fill="#5cc4d0" opacity="0.8"/>
-    <text x="${104+w2}" y="${50+barH+gap+4}" fill="#5cc4d0" font-size="11" font-family="var(--mono)">${fmt(s2.rn)}</text>
-  </svg></div>`;
+function buildCompareChartSVG(labels, byLabel, months, colors) {
+  const w = Math.max(months.length * 70, 350), h = 200;
+  const padL = 50, padR = 20, padT = 30, padB = 35;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  // 최대값
+  let maxV = 0;
+  byLabel.forEach(bl => { months.forEach(m => { const d=bl[m]; if(d && d.rn>maxV) maxV=d.rn; }); });
+  if (!maxV) maxV = 1;
+
+  let svg = `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<text x="${padL}" y="16" fill="#8b8f9a" font-size="11" font-family="var(--sans)">월별 RN 추이 비교</text>`;
+
+  // 그리드
+  for (let i=0;i<=4;i++) {
+    const y = padT + plotH * i / 4;
+    const val = Math.round(maxV * (4-i) / 4);
+    svg += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>`;
+    svg += `<text x="${padL-6}" y="${y+4}" fill="#5c6070" font-size="9" text-anchor="end" font-family="var(--mono)">${val>=1000?(val/1000).toFixed(1)+"k":val}</text>`;
+  }
+
+  // 각 시리즈
+  byLabel.forEach((bl, si) => {
+    const pts = months.map((m,i) => {
+      const d = bl[m];
+      const x = padL + (i/(months.length-1||1)) * plotW;
+      const y = d ? padT + plotH - (d.rn/maxV)*plotH : null;
+      return {x, y, rn:d?d.rn:0};
+    }).filter(p => p.y !== null);
+
+    if (pts.length < 2) return;
+    const path = pts.map((p,i) => (i===0?"M":"L")+p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ");
+    const col = colors[si % colors.length];
+    svg += `<path d="${path}" fill="none" stroke="${col}" stroke-width="2.5" opacity="0.85"/>`;
+    pts.forEach(p => { svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${col}"/>`; });
+  });
+
+  // X축 라벨
+  months.forEach((m,i) => {
+    const x = padL + (i/(months.length-1||1)) * plotW;
+    svg += `<text x="${x.toFixed(1)}" y="${h-8}" fill="#8b8f9a" font-size="9" text-anchor="middle" font-family="var(--sans)">${m.slice(2,4)}/${parseInt(m.slice(4))}</text>`;
+  });
+
+  // 범례
+  labels.forEach((l,i) => {
+    const lx = padL + i * 120;
+    const col = colors[i % colors.length];
+    svg += `<rect x="${lx}" y="${h-padB+18}" width="10" height="3" rx="1" fill="${col}"/>`;
+    svg += `<text x="${lx+14}" y="${h-padB+22}" fill="#c8cad0" font-size="9" font-family="var(--sans)">${l.length>10?l.slice(0,10)+"…":l}</text>`;
+  });
+
+  svg += '</svg></div>';
+  return svg;
 }
 
 // ═══════════════════════════════════════════════
