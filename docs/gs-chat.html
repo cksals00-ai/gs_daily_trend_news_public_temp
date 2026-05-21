@@ -279,6 +279,15 @@ function processQuery(query) {
           if (inner.includes(",")) {
             vsItems = inner.split(",").map(s => s.trim()).filter(Boolean);
           }
+          // 공백 구분: "여기어때 야놀자 비교" → 채널/사업장 자동 감지
+          if (!vsItems) {
+            const chs = findAllChannels(inner);
+            if (chs.length >= 2) { vsItems = chs; }
+            else {
+              const props = findAllProperties(inner);
+              if (props.length >= 2) { vsItems = props; }
+            }
+          }
         }
       }
       // "A 대비 B" (중간)
@@ -454,6 +463,34 @@ function findChannels(q) {
     }
   }
   return chs;
+}
+
+// 비교용: 문자열에서 모든 채널 별칭 찾기 (각 채널명을 개별 반환)
+function findAllChannels(q) {
+  const ql = q.toLowerCase();
+  let chs = [];
+  for (const [a, ch] of Object.entries(CHANNEL_ALIASES)) {
+    if (ql.includes(a.toLowerCase())) {
+      const found = Object.keys(CI.by_channel||{}).find(c => c.includes(ch));
+      if (found && !chs.includes(found)) chs.push(found);
+    }
+  }
+  return chs;
+}
+
+// 비교용: 문자열에서 모든 사업장 별칭 찾기
+function findAllProperties(q) {
+  const ql = q.toLowerCase();
+  let props = [];
+  const keys = Object.keys(PROP_ALIASES).sort((a,b) => b.length - a.length);
+  for (const alias of keys) {
+    if (ql.includes(alias.toLowerCase())) {
+      const matched = (PROP_ALIASES[alias]||[]).filter(p => CI.properties.includes(p));
+      // 단일 사업장만 (그룹 별칭 제외)
+      if (matched.length === 1 && !props.includes(matched[0])) props.push(matched[0]);
+    }
+  }
+  return props;
 }
 
 function findSegments(q) {
