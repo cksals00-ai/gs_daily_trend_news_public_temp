@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .top-brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block}
 .top-back{font-size:12px;color:var(--ink3);text-decoration:none;padding:5px 12px;border:1px solid var(--rule);border-radius:16px;transition:all .2s}
 .top-back:hover{color:var(--gold2);border-color:var(--gold)}
-.chat-wrap{flex:1;display:flex;flex-direction:column;max-width:920px;width:100%;margin:0 auto;padding:0 16px;overflow:hidden}
+.chat-wrap{flex:1;display:flex;flex-direction:column;max-width:960px;width:100%;margin:0 auto;padding:0 16px;overflow:hidden}
 .messages{flex:1;overflow-y:auto;padding:24px 0 16px;display:flex;flex-direction:column;gap:16px}
 .messages::-webkit-scrollbar{width:4px}
 .messages::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:4px}
@@ -53,6 +53,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .pv-table td.pos{color:var(--mint)}
 .pv-table td.neg{color:var(--rose)}
 .pv-count{font-size:11px;color:var(--ink4);margin-top:6px}
+.insight-box{margin-top:12px;padding:10px 14px;border-radius:10px;background:rgba(212,167,74,.06);border:1px solid rgba(212,167,74,.15);font-size:13px;line-height:1.7;color:var(--ink2)}
+.insight-box b{color:var(--gold2)}
+.chart-wrap{margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--bg2);padding:16px;overflow-x:auto}
+.chart-wrap canvas{max-width:100%;height:200px}
 .dl-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 16px;border-radius:10px;border:1px solid var(--gold);background:rgba(212,167,74,.12);color:var(--gold2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none}
 .dl-btn:hover{background:rgba(212,167,74,.25);color:var(--gold3)}
 .dl-icon{width:16px;height:16px}
@@ -77,13 +81,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce{to{transform:translateY(-6px);opacity:.4}}
 .footer-note{text-align:center;font-size:11px;color:var(--ink4);padding:0 0 12px}
-@media(max-width:600px){
-  .chat-wrap{padding:0 8px}
-  .welcome{padding:32px 8px 16px}
-  .welcome h2{font-size:18px}
-  .templates{gap:6px}
-  .tpl-btn{font-size:11.5px;padding:7px 11px}
-}
+@media(max-width:600px){.chat-wrap{padding:0 8px}.welcome{padding:32px 8px 16px}.welcome h2{font-size:18px}.templates{gap:6px}.tpl-btn{font-size:11.5px;padding:7px 11px}}
 </style>
 </head>
 <body>
@@ -95,133 +93,115 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
   <div class="messages" id="messages">
     <div class="welcome" id="welcome">
       <h2>세일즈 데이터 챗</h2>
-      <p>실적 데이터를 자연어로 질문하면 테이블 프리뷰와 엑셀 파일을 제공합니다.<br>
-      사업장·채널·세그먼트·국적·기간을 포함해 질문해 주세요.</p>
+      <p>실적 데이터를 자연어로 질문하세요. 후속 질문도 가능합니다.<br>
+      사업장 미지정 시 전사 실적으로 자동 조회됩니다.</p>
       <div class="templates" id="templates"></div>
     </div>
   </div>
   <div class="input-area">
     <div class="input-row">
       <textarea class="input-field" id="userInput" rows="1"
-        placeholder="예: 델피노 2026년 OTA 실적, 아고다 올해 실적, 대만 인바운드 현황"></textarea>
+        placeholder="예: OTA 올해 실적, 아고다 vs 트립닷컴 비교, 채널별 실적"></textarea>
       <button class="send-btn" id="sendBtn" title="전송">
         <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
   </div>
-  <div class="footer-note">읽기 전용 · 실적 데이터 한정 · 사업장 / 채널 / 세그먼트 / 국적</div>
+  <div class="footer-note">© Chanmin Park · Haein Kim — 읽기 전용 · 실적 데이터 한정</div>
 </div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   GS 세일즈 데이터 챗 v3 — 채널 + 국적 + 목표 + FCST + YoY
+   GS 세일즈 데이터 챗 v4
+   — 복합질문·비교·인사이트·기간유연·차트·맥락유지
    ═══════════════════════════════════════════════════════════ */
 
-let CI = null;
-let isLoading = false;
+let CI = null, isLoading = false;
+
+// ── 대화 맥락 (후속 질문용) ──
+let lastContext = null; // {parsed, result}
 
 const TEMPLATES = [
-  "델피노 2026년 OTA 실적",
-  "소노캄 고양 올해 G-OTA 실적",
-  "아고다 2026년 실적",
-  "대만 인바운드 올해 현황",
-  "전사 2025년 전체 세그먼트 실적",
-  "쏠비치 삼척 2025년 1월~6월 OTA",
+  "OTA 올해 실적",
+  "델피노 2026년 G-OTA 실적",
+  "아고다 vs 트립닷컴 비교",
+  "채널별 올해 실적",
+  "대만 인바운드 현황",
+  "최근 3개월 전사 실적",
 ];
 
-// ── 사업장 별칭 ──
+// ═══════════════════════════════════════════════
+// 별칭 사전
+// ═══════════════════════════════════════════════
+
 const PROP_ALIASES = {
-  "비발디": ["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
-  "비발디파크": ["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
-  "델피노": ["델피노"], "르네블루": ["르네블루"],
-  "소노문 단양": ["소노문 단양"], "단양": ["소노문 단양"],
-  "소노문 비발디": ["소노문 비발디파크"],
-  "소노문 해운대": ["소노문 해운대"], "해운대": ["소노문 해운대"],
-  "소노벨 경주": ["소노벨 경주"], "경주": ["소노벨 경주"],
-  "소노벨 변산": ["소노벨 변산"], "변산": ["소노벨 변산"],
-  "소노벨 비발디파크": ["소노벨 비발디파크"],
-  "소노벨 제주": ["소노벨 제주"],
-  "소노벨 천안": ["소노벨 천안"], "천안": ["소노벨 천안"],
-  "소노벨 청송": ["소노벨 청송"], "청송": ["소노벨 청송"],
-  "소노캄 거제": ["소노캄 거제"], "거제": ["소노캄 거제"],
-  "소노캄 고양": ["소노캄 고양"], "고양": ["소노캄 고양"],
-  "소노캄 비발디파크": ["소노캄 비발디파크"],
-  "소노캄 여수": ["소노캄 여수"], "여수": ["소노캄 여수"],
-  "소노캄 제주": ["소노캄 제주"],
-  "소노펠리체 비발디파크": ["소노펠리체 비발디파크"], "펠리체": ["소노펠리체 비발디파크"],
-  "소노펠리체 빌리지 비발디파크": ["소노펠리체 빌리지 비발디파크"], "빌리지": ["소노펠리체 빌리지 비발디파크"],
-  "소노펫 비발디파크": ["소노펫 비발디파크"], "소노펫": ["소노펫 비발디파크"],
-  "소노휴 양평": ["소노휴 양평"], "양평": ["소노휴 양평"],
-  "쏠비치 남해": ["쏠비치 남해"], "남해": ["쏠비치 남해"],
-  "쏠비치 삼척": ["쏠비치 삼척"], "삼척": ["쏠비치 삼척"],
-  "쏠비치 양양": ["쏠비치 양양"], "양양": ["쏠비치 양양"],
-  "쏠비치 진도": ["쏠비치 진도"], "진도": ["쏠비치 진도"],
-  "오션월드빌리지": ["오션월드빌리지"], "오션월드": ["오션월드빌리지"],
-  "팔라티움": ["팔라티움"],
+  "비발디":["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
+  "비발디파크":["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
+  "델피노":["델피노"],"르네블루":["르네블루"],
+  "소노문 단양":["소노문 단양"],"단양":["소노문 단양"],
+  "소노문 비발디":["소노문 비발디파크"],
+  "소노문 해운대":["소노문 해운대"],"해운대":["소노문 해운대"],
+  "소노벨 경주":["소노벨 경주"],"경주":["소노벨 경주"],
+  "소노벨 변산":["소노벨 변산"],"변산":["소노벨 변산"],
+  "소노벨 비발디파크":["소노벨 비발디파크"],
+  "소노벨 제주":["소노벨 제주"],
+  "소노벨 천안":["소노벨 천안"],"천안":["소노벨 천안"],
+  "소노벨 청송":["소노벨 청송"],"청송":["소노벨 청송"],
+  "소노캄 거제":["소노캄 거제"],"거제":["소노캄 거제"],
+  "소노캄 고양":["소노캄 고양"],"고양":["소노캄 고양"],
+  "소노캄 비발디파크":["소노캄 비발디파크"],
+  "소노캄 여수":["소노캄 여수"],"여수":["소노캄 여수"],
+  "소노캄 제주":["소노캄 제주"],
+  "소노펠리체 비발디파크":["소노펠리체 비발디파크"],"펠리체":["소노펠리체 비발디파크"],
+  "소노펠리체 빌리지 비발디파크":["소노펠리체 빌리지 비발디파크"],"빌리지":["소노펠리체 빌리지 비발디파크"],
+  "소노펫 비발디파크":["소노펫 비발디파크"],"소노펫":["소노펫 비발디파크"],
+  "소노휴 양평":["소노휴 양평"],"양평":["소노휴 양평"],
+  "쏠비치 남해":["쏠비치 남해"],"남해":["쏠비치 남해"],
+  "쏠비치 삼척":["쏠비치 삼척"],"삼척":["쏠비치 삼척"],
+  "쏠비치 양양":["쏠비치 양양"],"양양":["쏠비치 양양"],
+  "쏠비치 진도":["쏠비치 진도"],"진도":["쏠비치 진도"],
+  "오션월드빌리지":["오션월드빌리지"],"오션월드":["오션월드빌리지"],
+  "팔라티움":["팔라티움"],
 };
 
-// ── 세그먼트 별칭 (다양한 입력 허용) ──
-const SEG_ALIASES = {
-  "ota": "OTA", "오타": "OTA", "OTA": "OTA",
-  "g-ota": "G-OTA", "G-OTA": "G-OTA", "gota": "G-OTA", "GOTA": "G-OTA",
-  "g ota": "G-OTA", "G OTA": "G-OTA", "g_ota": "G-OTA", "G_OTA": "G-OTA",
-  "글로벌ota": "G-OTA", "글로벌 ota": "G-OTA", "글로벌OTA": "G-OTA",
-  "지오타": "G-OTA", "지OTA": "G-OTA", "글로벌": "G-OTA",
-  "inbound": "Inbound", "Inbound": "Inbound", "INBOUND": "Inbound",
-  "인바운드": "Inbound", "IB": "Inbound", "ib": "Inbound",
-  "전체": "전체", "전세그먼트": "전체", "모든 세그먼트": "전체", "합계": "전체",
-};
+const SEG_NORM = (() => {
+  const m = {};
+  const add = (keys, val) => keys.forEach(k => { m[k.replace(/[-_\s]/g,"").toLowerCase()] = val; });
+  add(["ota","OTA","오타"], "OTA");
+  add(["g-ota","G-OTA","gota","GOTA","g ota","G OTA","g_ota","G_OTA","글로벌ota","글로벌OTA","글로벌 ota","지오타","지OTA","글로벌"], "G-OTA");
+  add(["inbound","Inbound","INBOUND","인바운드","IB","ib"], "Inbound");
+  add(["전체","전세그먼트","모든세그먼트","합계"], "전체");
+  return m;
+})();
 
-// ── 주요 채널 별칭 ──
 const CHANNEL_ALIASES = {
-  "아고다": "아고다", "agoda": "아고다",
-  "트립닷컴": "트립닷컴", "trip.com": "트립닷컴", "trip": "트립닷컴",
-  "익스피디아": "익스피디아", "expedia": "익스피디아",
-  "부킹닷컴": "부킹닷컴", "booking.com": "부킹닷컴", "부킹": "부킹닷컴",
-  "여기어때": "여기어때", "야놀자": "야놀자", "네이버": "네이버",
-  "놀": "야놀자",
+  "아고다":"아고다","agoda":"아고다","트립닷컴":"트립닷컴","trip.com":"트립닷컴","trip":"트립닷컴",
+  "익스피디아":"익스피디아","expedia":"익스피디아","부킹닷컴":"부킹닷컴","booking.com":"부킹닷컴","부킹":"부킹닷컴",
+  "여기어때":"여기어때","야놀자":"야놀자","네이버":"네이버","놀":"야놀자","클룩":"GOTA_클룩",
 };
 
-// ── 국적 별칭 ──
 const NAT_ALIASES = {
-  "일본": "일본", "japan": "일본", "jp": "일본",
-  "중국": "중국", "china": "중국", "cn": "중국",
-  "대만": "대만", "taiwan": "대만", "tw": "대만",
-  "홍콩": "홍콩", "hongkong": "홍콩", "hk": "홍콩",
-  "베트남": "베트남", "vietnam": "베트남", "vn": "베트남",
-  "태국": "태국", "thailand": "태국", "th": "태국",
-  "미주": "미주", "미국": "미주", "usa": "미주", "us": "미주",
-  "필리핀": "필리핀", "philippines": "필리핀",
-  "말레이시아": "말레이시아", "malaysia": "말레이시아",
-  "싱가포르": "싱가포르", "singapore": "싱가포르",
-  "인도네시아": "인도네시아", "indonesia": "인도네시아",
-  "동남아": null, // 여러 국적 묶음 — 별도 처리
+  "일본":"일본","japan":"일본","대만":"대만","taiwan":"대만","중국":"중국","china":"중국",
+  "홍콩":"홍콩","hongkong":"홍콩","베트남":"베트남","vietnam":"베트남","태국":"태국","thailand":"태국",
+  "미주":"미주","미국":"미주","usa":"미주","필리핀":"필리핀","말레이시아":"말레이시아",
+  "싱가포르":"싱가포르","인도네시아":"인도네시아",
 };
 const SOUTHEAST_ASIA = ["베트남","태국","필리핀","말레이시아","싱가포르","인도네시아"];
 
-const SALES_KEYWORDS = [
-  "실적","매출","rn","adr","revenue","객실","단가","판매","현황","목표","예산",
-  "fcst","forecast","예측","달성","달성률","yoy","전년","작년","올해","금년",
-  "월별","연간","분기","전체","채널","국적","인바운드",
-  "ota","g-ota","gota","inbound",
-];
+// ═══════════════════════════════════════════════
+// 초기화
+// ═══════════════════════════════════════════════
 
-// ── 초기화 ──
 (async function init() {
   renderTemplates();
   try {
     const r = await fetch("data/chat_index.json?t=" + Date.now());
     if (!r.ok) throw new Error(r.status);
     CI = await r.json();
-    CI.properties.forEach(p => { if (!SALES_KEYWORDS.includes(p)) SALES_KEYWORDS.push(p); });
-    // 채널명도 실적 키워드에 추가
-    Object.keys(CI.by_channel || {}).forEach(ch => { if (!SALES_KEYWORDS.includes(ch)) SALES_KEYWORDS.push(ch); });
-    // 국적도
-    (CI.nationalities || []).forEach(n => { if (!SALES_KEYWORDS.includes(n)) SALES_KEYWORDS.push(n); });
-    console.log("[chat] loaded:", CI.properties.length, "props,", Object.keys(CI.by_channel||{}).length, "channels,", (CI.nationalities||[]).length, "nationalities");
+    console.log("[chat] loaded:", CI.properties.length, "props,", Object.keys(CI.by_channel||{}).length, "ch,", (CI.nationalities||[]).length, "nat");
   } catch (e) {
     console.error("[chat] load fail:", e);
-    addBotMsg("데이터 로드에 실패했습니다. 페이지를 새로고침해 주세요.");
+    addBotMsg("데이터 로드 실패. 새로고침해 주세요.");
   }
 })();
 
@@ -235,26 +215,32 @@ function renderTemplates() {
   });
 }
 
+// ═══════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════
+
 const msgBox = document.getElementById("messages");
-function addUserMsg(text) { hideWelcome(); const d = document.createElement("div"); d.className = "msg msg-user"; d.innerHTML = `<div class="msg-bubble">${esc(text)}</div>`; msgBox.appendChild(d); scrollDown(); }
-function addBotMsg(html) { const d = document.createElement("div"); d.className = "msg msg-bot"; d.innerHTML = `<div class="msg-bubble">${html}</div>`; msgBox.appendChild(d); scrollDown(); return d; }
-function showTyping() { const d = document.createElement("div"); d.className = "msg msg-bot"; d.id = "typing"; d.innerHTML = `<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`; msgBox.appendChild(d); scrollDown(); }
-function hideTyping() { const el = document.getElementById("typing"); if (el) el.remove(); }
-function scrollDown() { setTimeout(() => msgBox.scrollTop = msgBox.scrollHeight, 60); }
-function hideWelcome() { const w = document.getElementById("welcome"); if (w) w.style.display = "none"; }
-function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function addUserMsg(t){hideWelcome();const d=el("div","msg msg-user");d.innerHTML=`<div class="msg-bubble">${esc(t)}</div>`;msgBox.appendChild(d);scrollDown();}
+function addBotMsg(h){const d=el("div","msg msg-bot");d.innerHTML=`<div class="msg-bubble">${h}</div>`;msgBox.appendChild(d);scrollDown();return d;}
+function showTyping(){const d=el("div","msg msg-bot");d.id="typing";d.innerHTML=`<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;msgBox.appendChild(d);scrollDown();}
+function hideTyping(){const e=document.getElementById("typing");if(e)e.remove();}
+function scrollDown(){setTimeout(()=>msgBox.scrollTop=msgBox.scrollHeight,60);}
+function hideWelcome(){const w=document.getElementById("welcome");if(w)w.style.display="none";}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function el(tag,cls){const d=document.createElement(tag);d.className=cls;return d;}
+function fmt(n){return n!=null?Number(n).toLocaleString("ko-KR"):"-";}
+function pct(n){if(n==null)return"-";return(n>0?"+":"")+n+"%";}
 
 const inputEl = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
 sendBtn.addEventListener("click", handleSend);
-inputEl.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } });
-inputEl.addEventListener("input", () => { inputEl.style.height = "auto"; inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + "px"; });
+inputEl.addEventListener("keydown", e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleSend();}});
+inputEl.addEventListener("input",()=>{inputEl.style.height="auto";inputEl.style.height=Math.min(inputEl.scrollHeight,100)+"px";});
 
-function handleSend() {
-  const q = inputEl.value.trim();
-  if (!q || isLoading) return;
-  inputEl.value = ""; inputEl.style.height = "auto";
-  addUserMsg(q); processQuery(q);
+function handleSend(){
+  const q=inputEl.value.trim();if(!q||isLoading)return;
+  inputEl.value="";inputEl.style.height="auto";
+  addUserMsg(q);processQuery(q);
 }
 
 // ═══════════════════════════════════════════════
@@ -262,43 +248,86 @@ function handleSend() {
 // ═══════════════════════════════════════════════
 
 function processQuery(query) {
-  if (!CI) { addBotMsg("데이터가 아직 로드되지 않았습니다."); return; }
+  if (!CI) { addBotMsg("데이터 로드 중..."); return; }
   isLoading = true; showTyping();
 
   setTimeout(() => {
     try {
-      if (!isSalesQuery(query)) {
+      // ── 후속 질문 감지 ──
+      const resolved = resolveFollowUp(query);
+
+      // ── 비교(vs) 감지 ──
+      const vsMatch = resolved.match(/(.+?)\s*(?:vs|VS|비교|대비)\s*(.+)/);
+      if (vsMatch) {
+        const r1 = runSingle(vsMatch[1].trim(), resolved);
+        const r2 = runSingle(vsMatch[2].trim(), resolved);
         hideTyping();
-        addBotMsg("실적 데이터 관련 질문만 가능합니다.<br><br>" +
-          "<b>질문 가능 범위:</b><br>" +
-          "• <b>사업장</b> — 25개 사업장<br>" +
-          "• <b>채널</b> — 아고다, 트립닷컴, 여기어때, 야놀자 등<br>" +
-          "• <b>세그먼트</b> — OTA, G-OTA, Inbound<br>" +
-          "• <b>국적</b> — 일본, 대만, 중국, 홍콩, 동남아 등<br>" +
-          "• <b>기간</b> — 연도/월, 올해, 작년<br>" +
-          "• <b>지표</b> — RN, ADR, 매출, 목표, FCST, YoY");
+        if (r1.error) { addBotMsg(r1.error); }
+        else if (r2.error) { addBotMsg(r2.error); }
+        else { showCompareMsg(r1, r2); }
         isLoading = false; return;
       }
 
-      const parsed = parseQuery(query);
-      if (parsed.error) { hideTyping(); addBotMsg(parsed.error); isLoading = false; return; }
+      // ── "채널별" 키워드 → 주요 채널 리스트 ──
+      if (/채널\s*별/i.test(resolved) && !findChannels(resolved).length) {
+        const parsed = parseQuery(resolved);
+        if (!parsed.error) {
+          hideTyping();
+          showChannelBreakdown(parsed);
+          isLoading = false; return;
+        }
+      }
 
-      const result = extractData(parsed);
-      if (result.error) { hideTyping(); addBotMsg(result.error); isLoading = false; return; }
-
+      // ── 단일 쿼리 ──
+      const result = runSingle(resolved, resolved);
       hideTyping();
-      showResultMsg(result, parsed);
+      if (result.error) { addBotMsg(result.error); }
+      else { showResultMsg(result); lastContext = result; }
     } catch (e) {
       console.error(e); hideTyping();
       addBotMsg("처리 중 오류: " + esc(e.message));
     }
     isLoading = false;
-  }, 300);
+  }, 250);
 }
 
-function isSalesQuery(q) {
-  const ql = q.toLowerCase().replace(/[-_]/g, "");
-  return SALES_KEYWORDS.some(kw => ql.includes(kw.toLowerCase().replace(/[-_]/g, "")));
+// ── 후속 질문 해결 ──
+function resolveFollowUp(q) {
+  if (!lastContext) return q;
+  const ql = q.toLowerCase();
+  const followCues = ["그거","그걸","위에","방금","아까","거기서","이번에는","대신","으로"];
+  const isFollow = followCues.some(c => ql.includes(c)) ||
+    (q.length < 20 && !findProperties(q).length && !/\d{4}/.test(q));
+
+  if (!isFollow) return q;
+
+  // 이전 맥락에서 사업장/기간 가져오기
+  const prev = lastContext.parsed;
+  let resolved = q;
+
+  // "채널별로 쪼개줘" → 이전 사업장 + 기간 유지
+  if (/채널\s*별|채널로|세그.*별|세그로|ota만|gota만|인바운드만|국적별/.test(ql)) {
+    const propPart = prev.isTotal ? "전사" : (prev.properties || []).join(" ");
+    const monthPart = prev.monthLabel || "";
+    resolved = propPart + " " + monthPart + " " + q;
+  }
+  // "OTA만 보여줘" → 이전 사업장 + 기간 + OTA
+  else if (findSegments(q).length > 0 && !findProperties(q).length) {
+    const propPart = prev.isTotal ? "전사" : (prev.properties || []).join(" ");
+    const monthPart = prev.monthLabel || "";
+    resolved = propPart + " " + monthPart + " " + q;
+  }
+
+  return resolved;
+}
+
+function runSingle(query, fullQuery) {
+  const parsed = parseQuery(query);
+  if (parsed.error) return { error: parsed.error };
+  const result = extractData(parsed);
+  if (result.error) return { error: result.error };
+  result.parsed = parsed;
+  return result;
 }
 
 // ═══════════════════════════════════════════════
@@ -308,169 +337,164 @@ function isSalesQuery(q) {
 function parseQuery(q) {
   const ql = q.toLowerCase().replace(/\s+/g, " ");
 
-  // 1) 쿼리 유형 감지: 국적 / 채널 / 사업장
-  let queryType = "property"; // default
+  // 1) 국적
   let nationalities = [];
-  let channels = [];
-  let properties = [];
-  let isTotal = false;
-
-  // 국적 감지
-  if (/동남아/i.test(q)) {
-    nationalities = SOUTHEAST_ASIA.filter(n => (CI.by_nationality || {})[n]);
-    if (nationalities.length > 0) queryType = "nationality";
-  }
-  if (nationalities.length === 0) {
-    for (const [alias, nat] of Object.entries(NAT_ALIASES)) {
-      if (nat && ql.includes(alias.toLowerCase())) {
-        if ((CI.by_nationality || {})[nat] && !nationalities.includes(nat)) {
-          nationalities.push(nat);
-          queryType = "nationality";
-        }
-      }
+  if (/동남아/i.test(q)) nationalities = SOUTHEAST_ASIA.filter(n => (CI.by_nationality||{})[n]);
+  if (!nationalities.length) {
+    for (const [a, nat] of Object.entries(NAT_ALIASES)) {
+      if (ql.includes(a.toLowerCase()) && (CI.by_nationality||{})[nat] && !nationalities.includes(nat))
+        nationalities.push(nat);
     }
   }
-
-  // 채널 감지 — 별칭 먼저
-  for (const [alias, ch] of Object.entries(CHANNEL_ALIASES)) {
-    if (ql.includes(alias.toLowerCase())) {
-      // 실제 채널 데이터에서 찾기
-      const found = Object.keys(CI.by_channel || {}).find(c => c.includes(ch));
-      if (found && !channels.includes(found)) { channels.push(found); queryType = "channel"; }
-    }
-  }
-  // 정확한 채널명 매칭
-  if (channels.length === 0) {
-    const allChannels = Object.keys(CI.by_channel || {}).sort((a, b) => b.length - a.length);
-    for (const ch of allChannels) {
-      if (q.includes(ch) || ql.includes(ch.toLowerCase())) {
-        channels.push(ch); queryType = "channel"; break;
-      }
-    }
+  if (nationalities.length) {
+    const months = parseMonths(q);
+    if (months.error) return { error: months.error };
+    return { queryType:"nationality", nationalities, months:months.result, monthLabel:months.label,
+      properties:[], channels:[], segments:["Inbound"], isTotal:false };
   }
 
-  // 사업장 감지
-  if (queryType === "property") {
-    if (/전사|전체\s*사업장|모든\s*사업장|all\s*prop/i.test(q)) {
-      isTotal = true;
-    } else {
-      const propNames = CI.properties.slice().sort((a, b) => b.length - a.length);
-      for (const p of propNames) {
-        if (q.includes(p)) properties.push(p);
-      }
-      if (properties.length === 0) {
-        const aliasKeys = Object.keys(PROP_ALIASES).sort((a, b) => b.length - a.length);
-        for (const alias of aliasKeys) {
-          if (ql.includes(alias.toLowerCase()) || q.includes(alias)) {
-            properties.push(...PROP_ALIASES[alias].filter(p => CI.properties.includes(p)));
-            break;
-          }
-        }
-      }
-      properties = [...new Set(properties)];
-    }
-
-    if (!isTotal && properties.length === 0 && channels.length === 0 && nationalities.length === 0) {
-      return { error: '사업장·채널·국적을 인식하지 못했습니다.<br><br>' +
-        '<b>사업장:</b> ' + CI.properties.slice(0,10).join(", ") + ' ...<br>' +
-        '<b>채널:</b> 아고다, 트립닷컴, 여기어때, 야놀자 등<br>' +
-        '<b>국적:</b> ' + (CI.nationalities || []).slice(0,10).join(", ") };
-    }
+  // 2) 채널
+  let channels = findChannels(q);
+  if (channels.length) {
+    const months = parseMonths(q);
+    if (months.error) return { error: months.error };
+    return { queryType:"channel", channels, months:months.result, monthLabel:months.label,
+      properties:[], nationalities:[], segments:[], isTotal:false };
   }
 
-  // 2) 세그먼트
-  let segments = [];
-  // 정규화: g-ota, gota, G OTA 등 모두 처리
-  const qNorm = q.replace(/[-_\s]/g, "").toLowerCase();
-  for (const [alias, seg] of Object.entries(SEG_ALIASES)) {
-    const aNorm = alias.replace(/[-_\s]/g, "").toLowerCase();
-    if (qNorm.includes(aNorm) || ql.includes(alias.toLowerCase())) {
-      if (seg && !segments.includes(seg)) segments.push(seg);
-    }
-  }
-  if (segments.length === 0) segments = ["전체"];
+  // 3) 사업장 + 세그먼트
+  let properties = findProperties(q);
+  let isTotal = /전사|전체\s*사업장|모든\s*사업장/i.test(q);
 
-  // 3) 기간
+  // ★ 사업장 미지정 → 전사 기본
+  if (!isTotal && properties.length === 0) isTotal = true;
+
+  let segments = findSegments(q);
+  if (!segments.length) segments = ["전체"];
+
   const months = parseMonths(q);
   if (months.error) return { error: months.error };
 
-  return { queryType, properties, segments, months: months.result, isTotal, monthLabel: months.label, channels, nationalities };
+  return { queryType:"property", properties, segments, months:months.result, isTotal, monthLabel:months.label,
+    channels:[], nationalities:[] };
+}
+
+function findProperties(q) {
+  const ql = q.toLowerCase();
+  let props = [];
+  const propNames = (CI?.properties || []).slice().sort((a,b) => b.length - a.length);
+  for (const p of propNames) { if (q.includes(p)) props.push(p); }
+  if (!props.length) {
+    const keys = Object.keys(PROP_ALIASES).sort((a,b) => b.length - a.length);
+    for (const alias of keys) {
+      if (ql.includes(alias.toLowerCase())) {
+        props.push(...(PROP_ALIASES[alias] || []).filter(p => CI.properties.includes(p)));
+        break;
+      }
+    }
+  }
+  return [...new Set(props)];
+}
+
+function findChannels(q) {
+  const ql = q.toLowerCase();
+  let chs = [];
+  for (const [a, ch] of Object.entries(CHANNEL_ALIASES)) {
+    if (ql.includes(a.toLowerCase())) {
+      const found = Object.keys(CI.by_channel||{}).find(c => c.includes(ch));
+      if (found && !chs.includes(found)) chs.push(found);
+    }
+  }
+  if (!chs.length) {
+    const all = Object.keys(CI.by_channel||{}).sort((a,b) => b.length - a.length);
+    for (const ch of all) {
+      if (q.includes(ch) || ql.includes(ch.toLowerCase())) { chs.push(ch); break; }
+    }
+  }
+  return chs;
+}
+
+function findSegments(q) {
+  const qn = q.replace(/[-_\s]/g,"").toLowerCase();
+  const found = [];
+  for (const [key, seg] of Object.entries(SEG_NORM)) {
+    if (qn.includes(key) && !found.includes(seg)) found.push(seg);
+  }
+  return found;
 }
 
 function parseMonths(q) {
-  const now = new Date();
-  const thisYear = now.getFullYear();
-  const allMonths = CI.months;
+  const now = new Date(), ty = now.getFullYear(), tm = now.getMonth()+1;
+  const all = CI.months;
 
-  const rangeMatch = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*[~\-부터]\s*(\d{1,2})\s*월/);
-  if (rangeMatch) {
-    const [, y, m1, m2] = rangeMatch;
+  // "최근 N개월"
+  const recentMatch = q.match(/최근\s*(\d+)\s*개월/);
+  if (recentMatch) {
+    const n = parseInt(recentMatch[1]);
     const results = [];
-    for (let m = parseInt(m1); m <= parseInt(m2); m++) {
-      const key = y + String(m).padStart(2, "0");
-      if (allMonths.includes(key)) results.push(key);
+    for (let i = 0; i < n; i++) {
+      let y = ty, m = tm - i;
+      while (m < 1) { m += 12; y--; }
+      const k = String(y) + String(m).padStart(2,"0");
+      if (all.includes(k)) results.unshift(k);
     }
-    if (results.length > 0) return { result: results, label: `${y}년 ${m1}월~${m2}월` };
+    if (results.length) return { result: results, label: `최근 ${n}개월` };
   }
 
-  const ymMatch = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/g);
-  if (ymMatch) {
-    const results = [];
-    for (const m of ymMatch) {
-      const [, y, mo] = m.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
-      const key = y + String(mo).padStart(2, "0");
-      if (allMonths.includes(key)) results.push(key);
-    }
-    if (results.length > 0) return { result: results, label: ymMatch.join(", ") };
+  // "상반기" / "하반기"
+  if (/상반기/.test(q)) {
+    const y = q.match(/(\d{4})/)?.[1] || String(ty);
+    const f = all.filter(m => m.startsWith(y) && parseInt(m.slice(4)) <= 6);
+    if (f.length) return { result: f, label: y + "년 상반기" };
+  }
+  if (/하반기/.test(q)) {
+    const y = q.match(/(\d{4})/)?.[1] || String(ty);
+    const f = all.filter(m => m.startsWith(y) && parseInt(m.slice(4)) >= 7);
+    if (f.length) return { result: f, label: y + "년 하반기" };
   }
 
-  const yearMatch = q.match(/(\d{4})\s*년/);
-  if (yearMatch) {
-    const y = yearMatch[1];
-    const filtered = allMonths.filter(m => m.startsWith(y));
-    if (filtered.length > 0) return { result: filtered, label: y + "년" };
-    return { error: `${y}년 데이터 없음. 가용: ${[...new Set(allMonths.map(m => m.slice(0,4)))].join(", ")}년` };
+  // "YYYY년 M~M월"
+  const rng = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월?\s*[~\-부터]\s*(\d{1,2})\s*월/);
+  if (rng) {
+    const [,y,m1,m2] = rng; const r = [];
+    for (let m=parseInt(m1);m<=parseInt(m2);m++) { const k=y+String(m).padStart(2,"0"); if(all.includes(k))r.push(k); }
+    if (r.length) return { result: r, label: `${y}년 ${m1}~${m2}월` };
   }
 
-  if (/올해|금년|이번\s*해/.test(q)) {
-    const y = String(thisYear), f = allMonths.filter(m => m.startsWith(y));
-    if (f.length > 0) return { result: f, label: y + "년 (올해)" };
+  // "YYYY년 M월" (복수)
+  const ym = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/g);
+  if (ym) {
+    const r = [];
+    for (const m of ym) { const [,y,mo]=m.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/); const k=y+String(mo).padStart(2,"0"); if(all.includes(k))r.push(k); }
+    if (r.length) return { result: r, label: ym.join(", ") };
   }
-  if (/작년|전년|지난\s*해/.test(q)) {
-    const y = String(thisYear - 1), f = allMonths.filter(m => m.startsWith(y));
-    if (f.length > 0) return { result: f, label: y + "년 (작년)" };
+
+  // "YYYY년"
+  const yr = q.match(/(\d{4})\s*년/);
+  if (yr) {
+    const y = yr[1], f = all.filter(m => m.startsWith(y));
+    if (f.length) return { result: f, label: y+"년" };
+    return { error: `${y}년 데이터 없음` };
   }
-  if (/재작년|전전년/.test(q)) {
-    const y = String(thisYear - 2), f = allMonths.filter(m => m.startsWith(y));
-    if (f.length > 0) return { result: f, label: y + "년 (재작년)" };
-  }
-  if (/이번\s*달|이달|당월/.test(q)) {
-    const key = String(thisYear) + String(now.getMonth()+1).padStart(2,"0");
-    if (allMonths.includes(key)) return { result: [key], label: thisYear+"년 "+(now.getMonth()+1)+"월" };
-  }
-  if (/지난\s*달|전월/.test(q)) {
-    let y=thisYear, m=now.getMonth(); if(m<1){m=12;y--;}
-    const key = String(y)+String(m).padStart(2,"0");
-    if (allMonths.includes(key)) return { result: [key], label: y+"년 "+m+"월" };
-  }
-  const monthOnly = q.match(/(\d{1,2})\s*월/);
-  if (monthOnly) {
-    const mo = parseInt(monthOnly[1]);
-    if (mo >= 1 && mo <= 12) {
-      const key = String(thisYear)+String(mo).padStart(2,"0");
-      if (allMonths.includes(key)) return { result: [key], label: thisYear+"년 "+mo+"월" };
-    }
-  }
-  if (/yoy|전년\s*비교|동기간|전년\s*대비|vs\s*작년/i.test(q)) {
-    const ty = String(thisYear), ly = String(thisYear-1);
-    const f = allMonths.filter(m => m.startsWith(ty)||m.startsWith(ly));
-    if (f.length > 0) return { result: f, label: ly+"~"+ty+"년 (YoY)" };
+
+  if (/올해|금년|이번\s*해/.test(q)) { const f=all.filter(m=>m.startsWith(String(ty))); if(f.length)return{result:f,label:ty+"년 (올해)"}; }
+  if (/작년|전년|지난\s*해/.test(q)) { const y=String(ty-1),f=all.filter(m=>m.startsWith(y)); if(f.length)return{result:f,label:y+"년 (작년)"}; }
+  if (/재작년|전전년/.test(q)) { const y=String(ty-2),f=all.filter(m=>m.startsWith(y)); if(f.length)return{result:f,label:y+"년 (재작년)"}; }
+  if (/이번\s*달|이달|당월/.test(q)) { const k=String(ty)+String(tm).padStart(2,"0"); if(all.includes(k))return{result:[k],label:ty+"년 "+tm+"월"}; }
+  if (/지난\s*달|전월/.test(q)) { let y=ty,m=tm-1; if(m<1){m=12;y--;} const k=String(y)+String(m).padStart(2,"0"); if(all.includes(k))return{result:[k],label:y+"년 "+m+"월"}; }
+
+  const mo = q.match(/(\d{1,2})\s*월/);
+  if (mo) { const m=parseInt(mo[1]); if(m>=1&&m<=12){ const k=String(ty)+String(m).padStart(2,"0"); if(all.includes(k))return{result:[k],label:ty+"년 "+m+"월"}; } }
+
+  if (/yoy|전년\s*비교|동기간|전년\s*대비/i.test(q)) {
+    const f=all.filter(m=>m.startsWith(String(ty))||m.startsWith(String(ty-1)));
+    if(f.length)return{result:f,label:(ty-1)+"~"+ty+"년 (YoY)"};
   }
 
   // 기본: 올해
-  const y = String(thisYear), f = allMonths.filter(m => m.startsWith(y));
-  if (f.length > 0) return { result: f, label: y + "년 (기본)" };
-  return { result: allMonths, label: "전체 기간" };
+  const f = all.filter(m => m.startsWith(String(ty)));
+  if (f.length) return { result: f, label: ty+"년 (기본)" };
+  return { result: all, label: "전체 기간" };
 }
 
 // ═══════════════════════════════════════════════
@@ -478,219 +502,350 @@ function parseMonths(q) {
 // ═══════════════════════════════════════════════
 
 function extractData(parsed) {
-  const { queryType, properties, segments, months, isTotal, monthLabel, channels, nationalities } = parsed;
-  const rows = [];
+  const { queryType, months, monthLabel } = parsed;
+  let rows = [], cols = [], nameTag = "", summary = "";
 
   if (queryType === "nationality") {
-    // 국적별 조회
+    const { nationalities } = parsed;
     for (const nat of nationalities) {
-      const nd = (CI.by_nationality || {})[nat];
-      if (!nd) continue;
-      for (const m of months) {
-        const d = nd[m];
-        if (d) rows.push({ 국적: nat, 연도: m.slice(0,4), 월: parseInt(m.slice(4)),
-          RN: d.rn, "ADR(천원)": d.adr, "매출(백만원)": d.rev });
-      }
+      const nd = (CI.by_nationality||{})[nat]; if (!nd) continue;
+      for (const m of months) { const d = nd[m]; if (d) rows.push({국적:nat, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev}); }
     }
-    if (rows.length === 0) return { error: "해당 국적의 데이터가 없습니다." };
-    const label = nationalities.join(", ");
-    return buildResult(rows, `국적_${label}`, `${label} · ${monthLabel}`, parsed,
-      ["국적","연도","월","RN","ADR(천원)","매출(백만원)"]);
+    if (!rows.length) return { error: "해당 국적 데이터가 없습니다." };
+    cols = ["국적","연도","월","RN","ADR(천원)","매출(백만원)"];
+    nameTag = "국적_" + nationalities.join("_");
+    summary = nationalities.join(", ") + " · " + monthLabel;
   }
-
-  if (queryType === "channel") {
-    // 채널별 조회
+  else if (queryType === "channel") {
+    const { channels } = parsed;
     for (const ch of channels) {
-      const cd = (CI.by_channel || {})[ch];
-      if (!cd) continue;
-      for (const m of months) {
-        const d = cd[m];
-        if (d) rows.push({ 채널: ch, 연도: m.slice(0,4), 월: parseInt(m.slice(4)),
-          RN: d.rn, "ADR(천원)": d.adr, "매출(백만원)": d.rev });
-      }
+      const cd = (CI.by_channel||{})[ch]; if (!cd) continue;
+      for (const m of months) { const d = cd[m]; if (d) rows.push({채널:ch, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev}); }
     }
-    if (rows.length === 0) return { error: "해당 채널의 데이터가 없습니다." };
-    const label = channels.join(", ");
-    return buildResult(rows, `채널_${label}`, `${label} · ${monthLabel}`, parsed,
-      ["채널","연도","월","RN","ADR(천원)","매출(백만원)"]);
+    if (!rows.length) return { error: "해당 채널 데이터가 없습니다." };
+    cols = ["채널","연도","월","RN","ADR(천원)","매출(백만원)"];
+    nameTag = "채널_" + channels.join("_");
+    summary = channels.join(", ") + " · " + monthLabel;
   }
+  else {
+    // property
+    const { properties, segments, isTotal } = parsed;
+    const segs = segments.includes("전체") ? ["OTA","G-OTA","Inbound"] : segments;
+    const bf = CI.budget_fcst || {};
 
-  // ── 사업장별 조회 (목표/FCST/LY/YoY 포함) ──
-  const targetSegs = segments.includes("전체") ? ["OTA","G-OTA","Inbound"] : segments;
-  const bf = CI.budget_fcst || {};
-  const is2026 = months.some(m => m.startsWith("2026"));
-
-  if (isTotal) {
-    for (const seg of targetSegs) {
-      const segData = CI.totals[seg] || {};
-      for (const m of months) {
-        const d = segData[m];
-        if (d) {
-          const row = { 사업장: "전사 합계", 세그먼트: seg, 연도: m.slice(0,4), 월: parseInt(m.slice(4)),
-            RN: d.rn, "ADR(천원)": d.adr, "매출(백만원)": d.rev };
-          // LY (전년 동월)
-          const lyMonth = String(parseInt(m.slice(0,4))-1) + m.slice(4);
-          const lyData = segData[lyMonth];
-          if (lyData) {
-            row["LY_RN"] = lyData.rn;
-            row["YoY(%)"] = lyData.rn > 0 ? Math.round((d.rn - lyData.rn) / lyData.rn * 1000) / 10 : null;
-          }
+    const fetchRows = (source, label) => {
+      for (const seg of segs) {
+        const sd = source[seg] || {};
+        for (const m of months) {
+          const d = sd[m]; if (!d) continue;
+          const row = {사업장:label, 세그먼트:seg, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev};
+          // LY
+          const lym = String(+m.slice(0,4)-1)+m.slice(4);
+          const ly = sd[lym];
+          if (ly) { row.LY_RN = ly.rn; row["YoY(%)"] = ly.rn>0? Math.round((d.rn-ly.rn)/ly.rn*1000)/10 : null; }
           rows.push(row);
         }
       }
-    }
-  } else {
-    for (const prop of properties) {
-      const propData = CI.data[prop];
-      if (!propData) continue;
-      const propBF = bf[prop] || {};
-      for (const seg of targetSegs) {
-        const segData = propData[seg] || {};
-        for (const m of months) {
-          const d = segData[m];
-          if (d) {
-            const row = { 사업장: prop, 세그먼트: seg, 연도: m.slice(0,4), 월: parseInt(m.slice(4)),
-              RN: d.rn, "ADR(천원)": d.adr, "매출(백만원)": d.rev };
-            // 목표/FCST (2026 전체 세그먼트 한정)
-            if (m.startsWith("2026") && seg === targetSegs[0] && targetSegs.length === 1 || segments.includes("전체")) {
-              const bfm = propBF[m];
-              if (bfm) {
-                row["목표_RN"] = bfm.bud || null;
-                row["FCST_RN"] = bfm.fcst || null;
-                row["FCST출처"] = bfm.fcst_src || null;
-              }
-            }
-            // LY (전년 동월)
-            const lyMonth = String(parseInt(m.slice(0,4))-1) + m.slice(4);
-            const lyData = segData[lyMonth];
-            if (lyData) {
-              row["LY_RN"] = lyData.rn;
-              row["YoY(%)"] = lyData.rn > 0 ? Math.round((d.rn - lyData.rn) / lyData.rn * 1000) / 10 : null;
-            } else {
-              // 전체 세그먼트에서 LY 찾기
-              const allData = propData["전체"] || {};
-              const lyAll = allData[lyMonth];
-              const tyAll = allData[m];
-              if (lyAll && tyAll && seg === targetSegs[0] && targetSegs.length === 1) {
-                row["LY_RN"] = lyAll.rn;
-                row["YoY(%)"] = lyAll.rn > 0 ? Math.round((tyAll.rn - lyAll.rn) / lyAll.rn * 1000) / 10 : null;
-              }
-            }
-            rows.push(row);
+    };
+
+    if (isTotal) {
+      fetchRows(CI.totals, "전사 합계");
+      // 목표/FCST: 전사 합산
+      if (months.some(m=>m.startsWith("2026"))) {
+        rows.forEach(r => {
+          const mk = r.연도+String(r.월).padStart(2,"0");
+          if (!mk.startsWith("2026")) return;
+          let budSum=0, fcstSum=0;
+          for (const [,pb] of Object.entries(bf)) {
+            const bfm = pb[mk];
+            if (bfm) { budSum += bfm.bud||0; fcstSum += bfm.fcst||0; }
           }
-        }
+          if (budSum) r["목표_RN"] = budSum;
+          if (fcstSum) r["FCST_RN"] = fcstSum;
+        });
+      }
+    } else {
+      for (const prop of properties) {
+        const pd = CI.data[prop]; if (!pd) continue;
+        fetchRows(pd, prop);
+        // 목표/FCST
+        const propBF = bf[prop] || {};
+        rows.filter(r=>r.사업장===prop && r.연도==="2026").forEach(r => {
+          const mk = r.연도+String(r.월).padStart(2,"0");
+          const bfm = propBF[mk];
+          if (bfm) {
+            if (bfm.bud) r["목표_RN"] = bfm.bud;
+            if (bfm.fcst) r["FCST_RN"] = bfm.fcst;
+            if (bfm.fcst_src) r["FCST출처"] = bfm.fcst_src;
+          }
+        });
       }
     }
+
+    if (!rows.length) return { error: "해당 조건에 맞는 데이터가 없습니다." };
+
+    cols = ["사업장","세그먼트","연도","월","RN","ADR(천원)","매출(백만원)"];
+    if (rows.some(r=>r["목표_RN"])) cols.push("목표_RN");
+    if (rows.some(r=>r["FCST_RN"])) cols.push("FCST_RN");
+    if (rows.some(r=>r["FCST출처"])) cols.push("FCST출처");
+    if (rows.some(r=>r.LY_RN)) cols.push("LY_RN");
+    if (rows.some(r=>r["YoY(%)"]!=null)) cols.push("YoY(%)");
+
+    const pl = isTotal ? "전사" : properties.join(", ");
+    nameTag = (isTotal?"전사":properties.map(p=>p.replace(/\s/g,"")).join("_")) + "_" + segments.join("_");
+    summary = pl + " · " + segments.join(", ") + " · " + monthLabel;
   }
 
-  if (rows.length === 0) return { error: "해당 조건에 맞는 데이터가 없습니다." };
-
-  // 컬럼 동적 결정
-  const baseCols = ["사업장","세그먼트","연도","월","RN","ADR(천원)","매출(백만원)"];
-  const extraCols = [];
-  if (rows.some(r => r["목표_RN"])) extraCols.push("목표_RN");
-  if (rows.some(r => r["FCST_RN"])) extraCols.push("FCST_RN","FCST출처");
-  if (rows.some(r => r["LY_RN"])) extraCols.push("LY_RN");
-  if (rows.some(r => r["YoY(%)"] !== undefined && r["YoY(%)"] !== null)) extraCols.push("YoY(%)");
-
-  const propLabel = isTotal ? "전사" : properties.map(p => p.replace(/\s/g,"")).join("_");
-  const segLabel = segments.join("_");
-  const summary = `${isTotal ? "전사" : properties.join(", ")} · ${segments.join(", ")} · ${monthLabel}`;
-
-  return buildResult(rows, `${propLabel}_${segLabel}`, summary, parsed, [...baseCols, ...extraCols]);
-}
-
-function buildResult(rows, nameTag, summary, parsed, cols) {
   const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
-  return { rows, filename: `GS_실적_${nameTag}_${dateStr}.xlsx`, summary, parsed, cols };
+  return { rows, cols, filename:`GS_실적_${nameTag}_${dateStr}.xlsx`, summary, parsed };
 }
 
 // ═══════════════════════════════════════════════
-// 결과 표시
+// "채널별" → 주요 채널 분해
 // ═══════════════════════════════════════════════
 
-function showResultMsg(result, parsed) {
-  const { rows, filename, summary, cols } = result;
+function showChannelBreakdown(parsed) {
+  const { months } = parsed;
+  const byCh = CI.by_channel || {};
+
+  // 해당 기간 채널별 RN 합산 → 상위 15개
+  const chTotals = [];
+  for (const [ch, md] of Object.entries(byCh)) {
+    let rn = 0, rev = 0;
+    for (const m of months) { const d = md[m]; if (d) { rn += d.rn; rev += d.rev; } }
+    if (rn > 0) chTotals.push({ ch, rn, rev, adr: rn>0 ? Math.round(rev*1000000/rn/1000) : 0 });
+  }
+  chTotals.sort((a,b) => b.rn - a.rn);
+  const top = chTotals.slice(0, 15);
+
+  const rows = top.map(t => ({채널:t.ch, RN:t.rn, "ADR(천원)":t.adr, "매출(백만원)":Math.round(t.rev*100)/100}));
+  const cols = ["채널","RN","ADR(천원)","매출(백만원)"];
+  const result = {
+    rows, cols, summary: `채널별 실적 TOP15 · ${parsed.monthLabel}`,
+    filename: `GS_채널별실적_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.xlsx`, parsed
+  };
+
+  showResultMsg(result);
+  lastContext = result;
+}
+
+// ═══════════════════════════════════════════════
+// 비교 표시
+// ═══════════════════════════════════════════════
+
+function showCompareMsg(r1, r2) {
+  const sum = (rows) => {
+    let rn=0,rev=0; rows.forEach(r=>{rn+=r.RN||0;rev+=r["매출(백만원)"]||0;});
+    return {rn, rev:Math.round(rev*100)/100, adr:rn>0?Math.round(rev*1000000/rn/1000):0};
+  };
+  const s1 = sum(r1.rows), s2 = sum(r2.rows);
+  const label1 = r1.summary.split("·")[0].trim();
+  const label2 = r2.summary.split("·")[0].trim();
+
+  let html = `<b>${esc(label1)} vs ${esc(label2)}</b><br><br>`;
+  html += '<div class="preview-wrap"><table class="pv-table"><thead><tr>';
+  html += `<th>지표</th><th class="num">${esc(label1)}</th><th class="num">${esc(label2)}</th><th class="num">차이</th>`;
+  html += '</tr></thead><tbody>';
+
+  const metrics = [
+    {name:"RN (실)", v1:s1.rn, v2:s2.rn},
+    {name:"ADR (천원)", v1:s1.adr, v2:s2.adr},
+    {name:"매출 (백만원)", v1:s1.rev, v2:s2.rev},
+  ];
+  metrics.forEach(m => {
+    const diff = m.v1 - m.v2;
+    const cls = diff>0?"num pos":diff<0?"num neg":"num";
+    html += `<tr><td>${m.name}</td><td class="num">${fmt(m.v1)}</td><td class="num">${fmt(m.v2)}</td><td class="${cls}">${diff>0?"+":""}${fmt(diff)}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // 차트
+  html += buildBarChartSVG(label1, label2, s1, s2);
+
+  // 인사이트
+  const rnDiff = s1.rn - s2.rn;
+  const rnPct = s2.rn > 0 ? Math.round(rnDiff / s2.rn * 1000) / 10 : 0;
+  html += `<div class="insight-box">`;
+  html += `<b>${esc(label1)}</b>이 <b>${esc(label2)}</b> 대비 RN 기준 `;
+  html += rnDiff > 0 ? `<b style="color:var(--mint)">+${fmt(rnDiff)} (${pct(rnPct)})</b> 많습니다.`
+    : `<b style="color:var(--rose)">${fmt(rnDiff)} (${pct(rnPct)})</b> 적습니다.`;
+  html += `</div>`;
+
+  addBotMsg(html);
+  lastContext = r1; // 첫 번째를 맥락으로
+}
+
+function buildBarChartSVG(l1, l2, s1, s2) {
+  const w = 400, h = 140, barH = 24, gap = 8;
+  const maxRN = Math.max(s1.rn, s2.rn) || 1;
+  const bw = 280;
+  const w1 = Math.round(s1.rn / maxRN * bw);
+  const w2 = Math.round(s2.rn / maxRN * bw);
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">
+    <text x="0" y="20" fill="#8b8f9a" font-size="11" font-family="var(--sans)">RN 비교</text>
+    <text x="0" y="${45}" fill="#c8cad0" font-size="12" font-family="var(--sans)">${l1}</text>
+    <rect x="100" y="${33}" width="${w1}" height="${barH}" rx="4" fill="#d4a74a" opacity="0.8"/>
+    <text x="${104+w1}" y="${50}" fill="#ecc06a" font-size="11" font-family="var(--mono)">${fmt(s1.rn)}</text>
+    <text x="0" y="${45+barH+gap+16}" fill="#c8cad0" font-size="12" font-family="var(--sans)">${l2}</text>
+    <rect x="100" y="${33+barH+gap+4}" width="${w2}" height="${barH}" rx="4" fill="#5cc4d0" opacity="0.8"/>
+    <text x="${104+w2}" y="${50+barH+gap+4}" fill="#5cc4d0" font-size="11" font-family="var(--mono)">${fmt(s2.rn)}</text>
+  </svg></div>`;
+}
+
+// ═══════════════════════════════════════════════
+// 결과 표시 (테이블 + 인사이트 + 차트 + 다운로드)
+// ═══════════════════════════════════════════════
+
+function showResultMsg(result) {
+  const { rows, cols, filename, summary } = result;
   const numCols = new Set(["RN","ADR(천원)","매출(백만원)","연도","월","목표_RN","FCST_RN","LY_RN","YoY(%)"]);
 
-  let tableHtml = '<div class="preview-wrap"><table class="pv-table"><thead><tr>';
-  cols.forEach(c => { tableHtml += `<th${numCols.has(c)?' class="num"':''}>${esc(c)}</th>`; });
-  tableHtml += '</tr></thead><tbody>';
+  // 테이블
+  let html = '<div class="preview-wrap"><table class="pv-table"><thead><tr>';
+  cols.forEach(c => { html += `<th${numCols.has(c)?' class="num"':''}>${esc(c)}</th>`; });
+  html += '</tr></thead><tbody>';
 
-  rows.forEach(row => {
-    tableHtml += '<tr>';
+  rows.forEach(r => {
+    html += '<tr>';
     cols.forEach(c => {
-      const v = row[c];
-      if (c === "YoY(%)") {
-        const cls = v > 0 ? "num pos" : v < 0 ? "num neg" : "num";
-        tableHtml += `<td class="${cls}">${v !== null && v !== undefined ? (v > 0 ? "+" : "") + v + "%" : "-"}</td>`;
-      } else if (numCols.has(c)) {
-        tableHtml += `<td class="num">${v !== null && v !== undefined ? (typeof v === "number" ? v.toLocaleString("ko-KR") : v) : "-"}</td>`;
-      } else {
-        tableHtml += `<td>${v ? esc(String(v)) : "-"}</td>`;
-      }
+      const v = r[c];
+      if (c==="YoY(%)") { const cls=v>0?"num pos":v<0?"num neg":"num"; html+=`<td class="${cls}">${v!=null?pct(v):"-"}</td>`; }
+      else if (numCols.has(c)) html+=`<td class="num">${fmt(v)}</td>`;
+      else html+=`<td>${v?esc(String(v)):"-"}</td>`;
     });
-    tableHtml += '</tr>';
+    html += '</tr>';
   });
 
-  // 합계행 (RN/매출)
+  // 합계
   if (rows.length > 1) {
-    let totalRN = 0, totalRev = 0;
-    rows.forEach(r => { totalRN += r.RN || r["RN"] || 0; totalRev += r["매출(백만원)"] || 0; });
-    const totalADR = totalRN > 0 ? Math.round(totalRev * 1_000_000 / totalRN / 1000) : 0;
-    tableHtml += '<tr class="row-total">';
-    cols.forEach(c => {
-      if (c === cols[0]) tableHtml += '<td>합계</td>';
-      else if (c === "RN") tableHtml += `<td class="num">${totalRN.toLocaleString("ko-KR")}</td>`;
-      else if (c === "ADR(천원)") tableHtml += `<td class="num">${totalADR.toLocaleString("ko-KR")}</td>`;
-      else if (c === "매출(백만원)") tableHtml += `<td class="num">${(Math.round(totalRev*100)/100).toLocaleString("ko-KR")}</td>`;
-      else tableHtml += '<td>-</td>';
+    let tRN=0, tRev=0;
+    rows.forEach(r => { tRN+=r.RN||0; tRev+=r["매출(백만원)"]||0; });
+    const tADR = tRN>0 ? Math.round(tRev*1000000/tRN/1000) : 0;
+    html += '<tr class="row-total">';
+    cols.forEach((c,i) => {
+      if (i===0) html+='<td>합계</td>';
+      else if (c==="RN") html+=`<td class="num">${fmt(tRN)}</td>`;
+      else if (c==="ADR(천원)") html+=`<td class="num">${fmt(tADR)}</td>`;
+      else if (c==="매출(백만원)") html+=`<td class="num">${fmt(Math.round(tRev*100)/100)}</td>`;
+      else html+='<td>-</td>';
     });
-    tableHtml += '</tr>';
+    html += '</tr>';
   }
+  html += '</tbody></table></div>';
+  html += `<div class="pv-count">${esc(summary)} — ${rows.length}건</div>`;
 
-  tableHtml += '</tbody></table></div>';
-  tableHtml += `<div class="pv-count">${esc(summary)} — ${rows.length}건</div>`;
+  // ── 인사이트 ──
+  html += buildInsight(result);
 
-  const blob = buildExcelBlob(result);
+  // ── 미니 차트 (월별 RN 추이) ──
+  if (rows.length >= 3) html += buildTrendChart(result);
+
+  // ── 다운로드 ──
+  const blob = buildExcel(result);
   const url = URL.createObjectURL(blob);
-  const dlHtml = `<a class="dl-btn" href="${url}" download="${esc(filename)}">` +
+  html += `<a class="dl-btn" href="${url}" download="${esc(filename)}">` +
     `<svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">` +
     `<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>` +
     `${esc(filename)}</a>`;
 
-  addBotMsg(tableHtml + dlHtml);
+  addBotMsg(html);
 }
 
-function buildExcelBlob(result) {
-  const wb = XLSX.utils.book_new();
-  // 엑셀용 데이터 (cols 순서)
-  const sheetData = result.rows.map(r => {
-    const obj = {};
-    result.cols.forEach(c => { obj[c] = r[c] !== undefined ? r[c] : null; });
-    return obj;
+// ── 자동 인사이트 ──
+function buildInsight(result) {
+  const { rows, parsed } = result;
+  if (!rows.length) return "";
+  let totalRN = 0, totalRev = 0, totalLY = 0, budSum = 0, fcstSum = 0;
+  let hasYoY = false, hasBud = false, hasFcst = false;
+
+  rows.forEach(r => {
+    totalRN += r.RN || 0;
+    totalRev += r["매출(백만원)"] || 0;
+    if (r.LY_RN) { totalLY += r.LY_RN; hasYoY = true; }
+    if (r["목표_RN"]) { budSum += r["목표_RN"]; hasBud = true; }
+    if (r["FCST_RN"]) { fcstSum += r["FCST_RN"]; hasFcst = true; }
   });
-  const ws = XLSX.utils.json_to_sheet(sheetData);
-  ws["!cols"] = result.cols.map(c => ({ wch: c.length > 8 ? c.length + 4 : 12 }));
+
+  const parts = [];
+  parts.push(`총 <b>${fmt(totalRN)}</b> RN · 매출 <b>${fmt(Math.round(totalRev*100)/100)}</b> 백만원`);
+  if (totalRN > 0) parts.push(`평균 ADR <b>${fmt(Math.round(totalRev*1000000/totalRN/1000))}</b> 천원`);
+  if (hasYoY && totalLY > 0) {
+    const yoy = Math.round((totalRN - totalLY) / totalLY * 1000) / 10;
+    const color = yoy >= 0 ? "var(--mint)" : "var(--rose)";
+    parts.push(`전년 대비 <b style="color:${color}">${pct(yoy)}</b> (LY ${fmt(totalLY)} RN)`);
+  }
+  if (hasBud && budSum > 0) {
+    const ach = Math.round(totalRN / budSum * 1000) / 10;
+    parts.push(`목표 달성률 <b>${ach}%</b> (목표 ${fmt(budSum)} RN)`);
+  }
+  if (hasFcst && fcstSum > 0) {
+    parts.push(`FCST <b>${fmt(fcstSum)}</b> RN`);
+  }
+
+  return `<div class="insight-box">${parts.join("<br>")}</div>`;
+}
+
+// ── 월별 RN 추이 차트 (SVG) ──
+function buildTrendChart(result) {
+  const { rows } = result;
+  // 월별 집계
+  const byMonth = {};
+  rows.forEach(r => {
+    const k = r.연도 + String(r.월).padStart(2,"0");
+    byMonth[k] = (byMonth[k] || 0) + (r.RN || 0);
+  });
+  const keys = Object.keys(byMonth).sort();
+  if (keys.length < 2) return "";
+
+  const vals = keys.map(k => byMonth[k]);
+  const maxV = Math.max(...vals) || 1;
+  const w = Math.max(keys.length * 60, 300);
+  const h = 160;
+  const padL = 10, padR = 10, padT = 20, padB = 30;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const pts = vals.map((v,i) => {
+    const x = padL + (i / (vals.length-1||1)) * plotW;
+    const y = padT + plotH - (v / maxV) * plotH;
+    return [x, y];
+  });
+
+  let path = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+  let dots = pts.map((p,i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#d4a74a"/>`).join("");
+  let labels = pts.map((p,i) => {
+    const m = keys[i]; const label = m.slice(2,4)+"/"+parseInt(m.slice(4));
+    return `<text x="${p[0].toFixed(1)}" y="${h-6}" fill="#8b8f9a" font-size="9" text-anchor="middle" font-family="var(--sans)">${label}</text>`;
+  }).join("");
+
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">
+    <path d="${path}" fill="none" stroke="#d4a74a" stroke-width="2" opacity="0.8"/>
+    ${dots}${labels}
+  </svg></div>`;
+}
+
+// ── 엑셀 ──
+function buildExcel(result) {
+  const wb = XLSX.utils.book_new();
+  const sd = result.rows.map(r => { const o={}; result.cols.forEach(c=>{o[c]=r[c]!=null?r[c]:null;}); return o; });
+  const ws = XLSX.utils.json_to_sheet(sd);
+  ws["!cols"] = result.cols.map(c => ({wch: Math.max(c.length+4, 12)}));
   XLSX.utils.book_append_sheet(wb, ws, "실적데이터");
 
-  const p = result.parsed;
+  const p = result.parsed || {};
   const info = [
-    { 항목: "조회일시", 내용: new Date().toLocaleString("ko-KR") },
-    { 항목: "조회유형", 내용: p.queryType === "nationality" ? "국적별" : p.queryType === "channel" ? "채널별" : "사업장별" },
-    { 항목: "대상", 내용: p.queryType === "nationality" ? p.nationalities.join(", ") : p.queryType === "channel" ? p.channels.join(", ") : (p.isTotal ? "전사" : p.properties.join(", ")) },
-    { 항목: "세그먼트", 내용: p.segments.join(", ") },
-    { 항목: "기간", 내용: p.monthLabel },
-    { 항목: "건수", 내용: result.rows.length + "건" },
-    { 항목: "기준", 내용: "예약일(Booking Date) 기준 · Net RN" },
-    { 항목: "단위", 내용: "RN=실, ADR=천원, 매출=백만원" },
+    {항목:"조회일시",내용:new Date().toLocaleString("ko-KR")},
+    {항목:"조회유형",내용:p.queryType==="nationality"?"국적별":p.queryType==="channel"?"채널별":"사업장별"},
+    {항목:"대상",내용:p.queryType==="nationality"?(p.nationalities||[]).join(", "):p.queryType==="channel"?(p.channels||[]).join(", "):(p.isTotal?"전사":(p.properties||[]).join(", "))},
+    {항목:"기간",내용:p.monthLabel||""},
+    {항목:"건수",내용:result.rows.length+"건"},
+    {항목:"단위",내용:"RN=실, ADR=천원, 매출=백만원"},
   ];
   const ws2 = XLSX.utils.json_to_sheet(info);
-  ws2["!cols"] = [{ wch: 12 }, { wch: 60 }];
+  ws2["!cols"] = [{wch:12},{wch:60}];
   XLSX.utils.book_append_sheet(wb, ws2, "조회조건");
 
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const buf = XLSX.write(wb, {bookType:"xlsx",type:"array"});
+  return new Blob([buf], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
 }
 </script>
 </body>
