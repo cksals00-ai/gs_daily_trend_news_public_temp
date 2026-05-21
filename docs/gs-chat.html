@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS 세일즈 데이터 챗</title>
+<meta name="theme-color" content="#0f1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#161921;--bg3:#1c1f2a;--bg4:#242836;
+  --glass:rgba(255,255,255,.04);--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.10);
+  --ink:#f0f0f4;--ink2:#c8cad0;--ink3:#8b8f9a;--ink4:#5c6070;
+  --gold:#d4a74a;--gold2:#ecc06a;--gold3:#f5d98a;--gold-glow:rgba(212,167,74,.15);
+  --rose:#e87a8a;--violet:#a07ee8;--cyan:#5cc4d0;--mint:#5cc49a;
+  --rule:rgba(255,255,255,.08);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+
+/* ─── TOP BAR ─── */
+.top-bar{
+  background:var(--bg);border-bottom:1px solid var(--rule);
+  padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.top-brand{font-size:13px;font-weight:700;color:var(--ink2);display:flex;align-items:center;gap:8px}
+.top-brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block}
+.top-back{
+  font-size:12px;color:var(--ink3);text-decoration:none;
+  padding:5px 12px;border:1px solid var(--rule);border-radius:16px;transition:all .2s;
+}
+.top-back:hover{color:var(--gold2);border-color:var(--gold)}
+
+/* ─── CHAT CONTAINER ─── */
+.chat-wrap{flex:1;display:flex;flex-direction:column;max-width:800px;width:100%;margin:0 auto;padding:0 16px;overflow:hidden}
+
+/* ─── MESSAGES ─── */
+.messages{flex:1;overflow-y:auto;padding:24px 0 16px;display:flex;flex-direction:column;gap:16px}
+.messages::-webkit-scrollbar{width:4px}
+.messages::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:4px}
+
+.msg{max-width:92%;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg-user{align-self:flex-end}
+.msg-bot{align-self:flex-start}
+.msg-bubble{
+  padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.65;word-break:keep-all;
+}
+.msg-user .msg-bubble{background:var(--gold);color:#111;border-bottom-right-radius:4px;font-weight:500}
+.msg-bot .msg-bubble{background:var(--bg3);color:var(--ink);border-bottom-left-radius:4px;border:1px solid var(--rule)}
+
+.msg-bot .msg-bubble .dl-btn{
+  display:inline-flex;align-items:center;gap:6px;margin-top:10px;
+  padding:8px 16px;border-radius:10px;border:1px solid var(--gold);
+  background:rgba(212,167,74,.12);color:var(--gold2);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;text-decoration:none;
+}
+.msg-bot .msg-bubble .dl-btn:hover{background:rgba(212,167,74,.25);color:var(--gold3)}
+.dl-icon{width:16px;height:16px}
+
+/* ─── WELCOME ─── */
+.welcome{text-align:center;padding:48px 16px 24px}
+.welcome h2{font-size:22px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.welcome p{font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:24px}
+.templates{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.tpl-btn{
+  padding:8px 14px;border-radius:20px;border:1px solid var(--rule);
+  background:var(--glass);color:var(--ink2);font-size:12.5px;cursor:pointer;
+  transition:all .2s;font-family:var(--sans);
+}
+.tpl-btn:hover{border-color:var(--gold);color:var(--gold2);background:var(--gold-glow)}
+
+/* ─── INPUT ─── */
+.input-area{flex-shrink:0;padding:12px 0 20px;border-top:1px solid var(--rule)}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+.input-field{
+  flex:1;resize:none;border:1px solid var(--rule);border-radius:14px;
+  background:var(--bg2);color:var(--ink);font-family:var(--sans);font-size:14px;
+  padding:12px 16px;outline:none;min-height:46px;max-height:100px;line-height:1.5;
+  transition:border-color .2s;
+}
+.input-field:focus{border-color:var(--gold)}
+.input-field::placeholder{color:var(--ink4)}
+.send-btn{
+  width:46px;height:46px;border-radius:14px;border:none;
+  background:var(--gold);color:#111;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;flex-shrink:0;
+}
+.send-btn:hover{background:var(--gold2)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+.send-icon{width:20px;height:20px}
+
+/* ─── LOADING ─── */
+.typing{display:flex;gap:4px;padding:8px 0}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--ink3);animation:bounce .6s infinite alternate}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{to{transform:translateY(-6px);opacity:.4}}
+
+/* ─── FOOTER ─── */
+.footer-note{text-align:center;font-size:11px;color:var(--ink4);padding:0 0 12px}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:600px){
+  .chat-wrap{padding:0 8px}
+  .welcome{padding:32px 8px 16px}
+  .welcome h2{font-size:18px}
+  .templates{gap:6px}
+  .tpl-btn{font-size:11.5px;padding:7px 11px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-brand"><span class="top-brand-dot"></span>GS DATA CHAT</div>
+  <a class="top-back" href="gs-sales.html">Sales Home</a>
+</div>
+
+<!-- CHAT -->
+<div class="chat-wrap">
+  <div class="messages" id="messages">
+    <!-- Welcome -->
+    <div class="welcome" id="welcome">
+      <h2>세일즈 데이터 챗</h2>
+      <p>실적 데이터를 자연어로 요청하면 엑셀 파일로 다운로드해 드립니다.<br>
+      사업장, 기간, 세그먼트(OTA / G-OTA / Inbound)를 포함해 질문해 주세요.</p>
+      <div class="templates" id="templates"></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <textarea class="input-field" id="userInput" rows="1"
+        placeholder="예: 델피노 2025년 OTA 실적 알려줘"></textarea>
+      <button class="send-btn" id="sendBtn" title="전송">
+        <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="footer-note">읽기 전용 — 데이터 수정/입력 불가 · OTA / G-OTA / Inbound 세그먼트 한정</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   GS 세일즈 데이터 챗 — 자연어 → 엑셀 다운로드
+   ═══════════════════════════════════════════════════════════ */
+
+// ── 전역 상태 ──
+let CI = null;          // chat_index.json 데이터
+let isLoading = false;
+
+// ── 질문 예시 템플릿 ──
+const TEMPLATES = [
+  "비발디파크 2025년 OTA 실적",
+  "델피노 2024년 G-OTA 월별 현황",
+  "소노캄 고양 올해 Inbound 실적",
+  "쏠비치 삼척 전체 세그먼트 2025년",
+  "전사 2025년 OTA 실적",
+  "소노벨 제주 작년 전체 실적",
+];
+
+// ── 사업장 별칭 매핑 ──
+const PROP_ALIASES = {
+  "비발디": ["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
+  "비발디파크": ["소노벨 비발디파크","소노캄 비발디파크","소노펠리체 비발디파크","소노펠리체 빌리지 비발디파크","소노펫 비발디파크","소노문 비발디파크"],
+  "델피노": ["델피노"],
+  "르네블루": ["르네블루"],
+  "소노문 단양": ["소노문 단양"], "단양": ["소노문 단양"],
+  "소노문 비발디": ["소노문 비발디파크"],
+  "소노문 해운대": ["소노문 해운대"], "해운대": ["소노문 해운대"],
+  "소노벨 경주": ["소노벨 경주"], "경주": ["소노벨 경주"],
+  "소노벨 변산": ["소노벨 변산"], "변산": ["소노벨 변산"],
+  "소노벨 비발디파크": ["소노벨 비발디파크"],
+  "소노벨 제주": ["소노벨 제주"],
+  "소노벨 천안": ["소노벨 천안"], "천안": ["소노벨 천안"],
+  "소노벨 청송": ["소노벨 청송"], "청송": ["소노벨 청송"],
+  "소노캄 거제": ["소노캄 거제"], "거제": ["소노캄 거제"],
+  "소노캄 고양": ["소노캄 고양"], "고양": ["소노캄 고양"],
+  "소노캄 비발디파크": ["소노캄 비발디파크"],
+  "소노캄 여수": ["소노캄 여수"], "여수": ["소노캄 여수"],
+  "소노캄 제주": ["소노캄 제주"],
+  "소노펠리체 비발디파크": ["소노펠리체 비발디파크"], "펠리체": ["소노펠리체 비발디파크"],
+  "소노펠리체 빌리지 비발디파크": ["소노펠리체 빌리지 비발디파크"], "빌리지": ["소노펠리체 빌리지 비발디파크"],
+  "소노펫 비발디파크": ["소노펫 비발디파크"], "소노펫": ["소노펫 비발디파크"],
+  "소노휴 양평": ["소노휴 양평"], "양평": ["소노휴 양평"],
+  "쏠비치 남해": ["쏠비치 남해"], "남해": ["쏠비치 남해"],
+  "쏠비치 삼척": ["쏠비치 삼척"], "삼척": ["쏠비치 삼척"],
+  "쏠비치 양양": ["쏠비치 양양"], "양양": ["쏠비치 양양"],
+  "쏠비치 진도": ["쏠비치 진도"], "진도": ["쏠비치 진도"],
+  "오션월드빌리지": ["오션월드빌리지"], "오션월드": ["오션월드빌리지"],
+};
+
+// ── 세그먼트 별칭 ──
+const SEG_ALIASES = {
+  "ota": "OTA", "오타": "OTA",
+  "g-ota": "G-OTA", "gota": "G-OTA", "글로벌ota": "G-OTA", "글로벌 ota": "G-OTA", "지오타": "G-OTA",
+  "inbound": "Inbound", "인바운드": "Inbound",
+  "전체": "전체", "전세그먼트": "전체", "모든 세그먼트": "전체", "합계": "전체",
+};
+
+// ── 초기화 ──
+(async function init() {
+  renderTemplates();
+  try {
+    const r = await fetch("data/chat_index.json");
+    if (!r.ok) throw new Error(r.status);
+    CI = await r.json();
+    console.log("[chat] index loaded:", CI.properties.length, "properties,", CI.months.length, "months");
+  } catch (e) {
+    console.error("[chat] index load fail:", e);
+    addBotMsg("데이터 로드에 실패했습니다. 페이지를 새로고침해 주세요.");
+  }
+})();
+
+function renderTemplates() {
+  const box = document.getElementById("templates");
+  TEMPLATES.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "tpl-btn";
+    btn.textContent = t;
+    btn.onclick = () => { document.getElementById("userInput").value = t; handleSend(); };
+    box.appendChild(btn);
+  });
+}
+
+// ── UI 헬퍼 ──
+const msgBox = document.getElementById("messages");
+
+function addUserMsg(text) {
+  hideWelcome();
+  const div = document.createElement("div");
+  div.className = "msg msg-user";
+  div.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+  msgBox.appendChild(div);
+  scrollDown();
+}
+
+function addBotMsg(html) {
+  const div = document.createElement("div");
+  div.className = "msg msg-bot";
+  div.innerHTML = `<div class="msg-bubble">${html}</div>`;
+  msgBox.appendChild(div);
+  scrollDown();
+}
+
+function showTyping() {
+  const div = document.createElement("div");
+  div.className = "msg msg-bot";
+  div.id = "typing";
+  div.innerHTML = `<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgBox.appendChild(div);
+  scrollDown();
+}
+function hideTyping() { const el = document.getElementById("typing"); if (el) el.remove(); }
+
+function scrollDown() { setTimeout(() => msgBox.scrollTop = msgBox.scrollHeight, 50); }
+function hideWelcome() { const w = document.getElementById("welcome"); if (w) w.style.display = "none"; }
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// ── 입력 처리 ──
+const inputEl = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+sendBtn.addEventListener("click", handleSend);
+inputEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + "px";
+});
+
+function handleSend() {
+  const q = inputEl.value.trim();
+  if (!q || isLoading) return;
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  addUserMsg(q);
+  processQuery(q);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 자연어 파싱 & 데이터 추출
+// ═══════════════════════════════════════════════════════════
+
+function processQuery(query) {
+  if (!CI) { addBotMsg("데이터가 아직 로드되지 않았습니다. 잠시 후 다시 시도해 주세요."); return; }
+  isLoading = true;
+  showTyping();
+
+  setTimeout(() => {
+    try {
+      const parsed = parseQuery(query);
+      if (parsed.error) { hideTyping(); addBotMsg(parsed.error); isLoading = false; return; }
+
+      const result = extractData(parsed);
+      if (result.error) { hideTyping(); addBotMsg(result.error); isLoading = false; return; }
+
+      const blob = buildExcel(result, parsed);
+      hideTyping();
+      offerDownload(blob, result.filename, result.summary);
+    } catch (e) {
+      console.error(e);
+      hideTyping();
+      addBotMsg("처리 중 오류가 발생했습니다: " + escHtml(e.message));
+    }
+    isLoading = false;
+  }, 400);
+}
+
+// ── 파싱 ──
+function parseQuery(q) {
+  const ql = q.toLowerCase().replace(/\s+/g, " ");
+
+  // 1) 사업장
+  let properties = [];
+  let isTotal = false;
+
+  if (/전사|전체\s*사업장|모든\s*사업장|all\s*prop/i.test(q)) {
+    isTotal = true;
+    properties = [];
+  } else {
+    // 정확한 사업장명 먼저 매칭 (긴 이름 우선)
+    const propNames = CI.properties.slice().sort((a, b) => b.length - a.length);
+    for (const p of propNames) {
+      if (q.includes(p)) {
+        properties.push(p);
+      }
+    }
+    // 별칭 매칭
+    if (properties.length === 0) {
+      const aliasKeys = Object.keys(PROP_ALIASES).sort((a, b) => b.length - a.length);
+      for (const alias of aliasKeys) {
+        if (ql.includes(alias.toLowerCase()) || q.includes(alias)) {
+          const mapped = PROP_ALIASES[alias];
+          // 비발디 같은 복수 매칭은 전부 포함
+          properties.push(...mapped.filter(p => CI.properties.includes(p)));
+          break;
+        }
+      }
+    }
+    // 중복 제거
+    properties = [...new Set(properties)];
+  }
+
+  if (!isTotal && properties.length === 0) {
+    return { error: `사업장을 인식하지 못했습니다. "전사" 또는 아래 사업장명을 포함해 주세요:<br><br>${CI.properties.map(p => `<span style="color:var(--gold2)">${p}</span>`).join(" · ")}` };
+  }
+
+  // 2) 세그먼트
+  let segments = [];
+  for (const [alias, seg] of Object.entries(SEG_ALIASES)) {
+    if (ql.includes(alias)) {
+      if (!segments.includes(seg)) segments.push(seg);
+    }
+  }
+  if (segments.length === 0) segments = ["전체"];
+
+  // 3) 기간
+  const months = parseMonths(q);
+  if (months.error) return { error: months.error };
+
+  return { properties, segments, months: months.result, isTotal, monthLabel: months.label };
+}
+
+function parseMonths(q) {
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+  const allMonths = CI.months;
+
+  // "YYYY년 M월" 패턴
+  const ymMatch = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/g);
+  if (ymMatch) {
+    const results = [];
+    for (const m of ymMatch) {
+      const [, y, mo] = m.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
+      const key = y + String(mo).padStart(2, "0");
+      if (allMonths.includes(key)) results.push(key);
+    }
+    if (results.length > 0) return { result: results, label: ymMatch.join(", ") };
+  }
+
+  // "YYYY년" 패턴 (연간)
+  const yearMatch = q.match(/(\d{4})\s*년/);
+  if (yearMatch) {
+    const y = yearMatch[1];
+    const filtered = allMonths.filter(m => m.startsWith(y));
+    if (filtered.length > 0) return { result: filtered, label: y + "년" };
+    return { error: `${y}년 데이터가 없습니다. 사용 가능: ${[...new Set(allMonths.map(m => m.slice(0, 4)))].join(", ")}년` };
+  }
+
+  // "올해" / "금년"
+  if (/올해|금년|이번\s*해/.test(q)) {
+    const y = String(thisYear);
+    const filtered = allMonths.filter(m => m.startsWith(y));
+    if (filtered.length > 0) return { result: filtered, label: y + "년 (올해)" };
+  }
+
+  // "작년" / "전년" / "지난해"
+  if (/작년|전년|지난\s*해|지난\s*년/.test(q)) {
+    const y = String(thisYear - 1);
+    const filtered = allMonths.filter(m => m.startsWith(y));
+    if (filtered.length > 0) return { result: filtered, label: y + "년 (작년)" };
+  }
+
+  // "재작년"
+  if (/재작년|전전년/.test(q)) {
+    const y = String(thisYear - 2);
+    const filtered = allMonths.filter(m => m.startsWith(y));
+    if (filtered.length > 0) return { result: filtered, label: y + "년 (재작년)" };
+  }
+
+  // "이번 달" / "이달"
+  if (/이번\s*달|이달|당월/.test(q)) {
+    const key = String(thisYear) + String(thisMonth).padStart(2, "0");
+    if (allMonths.includes(key)) return { result: [key], label: key.slice(0, 4) + "년 " + parseInt(key.slice(4)) + "월" };
+  }
+
+  // "지난달" / "전월"
+  if (/지난\s*달|전월/.test(q)) {
+    let y = thisYear, m = thisMonth - 1;
+    if (m < 1) { m = 12; y--; }
+    const key = String(y) + String(m).padStart(2, "0");
+    if (allMonths.includes(key)) return { result: [key], label: y + "년 " + m + "월" };
+  }
+
+  // "M월" 패턴 (올해 기준)
+  const monthOnly = q.match(/(\d{1,2})\s*월/);
+  if (monthOnly) {
+    const mo = parseInt(monthOnly[1]);
+    if (mo >= 1 && mo <= 12) {
+      const key = String(thisYear) + String(mo).padStart(2, "0");
+      if (allMonths.includes(key)) return { result: [key], label: thisYear + "년 " + mo + "월" };
+      // 올해 없으면 작년
+      const keyLY = String(thisYear - 1) + String(mo).padStart(2, "0");
+      if (allMonths.includes(keyLY)) return { result: [keyLY], label: (thisYear - 1) + "년 " + mo + "월" };
+    }
+  }
+
+  // "YoY" / "동기간" / "전년비교" → 올해+작년
+  if (/yoy|전년\s*비교|동기간|전년\s*대비|vs\s*작년/.test(q)) {
+    const ty = String(thisYear);
+    const ly = String(thisYear - 1);
+    const filtered = allMonths.filter(m => m.startsWith(ty) || m.startsWith(ly));
+    if (filtered.length > 0) return { result: filtered, label: ly + "~" + ty + "년 (YoY)" };
+  }
+
+  // 기본값: 올해
+  const y = String(thisYear);
+  const filtered = allMonths.filter(m => m.startsWith(y));
+  if (filtered.length > 0) return { result: filtered, label: y + "년 (기본)" };
+
+  // 최종 폴백: 전체
+  return { result: allMonths, label: "전체 기간" };
+}
+
+// ── 데이터 추출 ──
+function extractData(parsed) {
+  const { properties, segments, months, isTotal, monthLabel } = parsed;
+  const rows = [];
+
+  if (isTotal) {
+    // 전사 합계
+    for (const seg of segments) {
+      const segData = CI.totals[seg] || {};
+      for (const m of months) {
+        const d = segData[m];
+        if (!d) continue;
+        rows.push({
+          사업장: "전사 합계",
+          세그먼트: seg,
+          연도: m.slice(0, 4),
+          월: parseInt(m.slice(4)),
+          "RN (객실수)": d.rn,
+          "ADR (평균단가, 천원)": d.adr,
+          "Revenue (매출, 백만원)": d.rev,
+        });
+      }
+    }
+  } else {
+    for (const prop of properties) {
+      const propData = CI.data[prop];
+      if (!propData) continue;
+      for (const seg of segments) {
+        const segData = propData[seg] || {};
+        for (const m of months) {
+          const d = segData[m];
+          if (!d) continue;
+          rows.push({
+            사업장: prop,
+            세그먼트: seg,
+            연도: m.slice(0, 4),
+            월: parseInt(m.slice(4)),
+            "RN (객실수)": d.rn,
+            "ADR (평균단가, 천원)": d.adr,
+            "Revenue (매출, 백만원)": d.rev,
+          });
+        }
+      }
+    }
+  }
+
+  if (rows.length === 0) {
+    return { error: "해당 조건에 맞는 데이터가 없습니다. 사업장명, 세그먼트, 기간을 다시 확인해 주세요." };
+  }
+
+  // 파일명 생성
+  const propLabel = isTotal ? "전사" : properties.map(p => p.replace(/\s/g, "")).join("_");
+  const segLabel = segments.join("_");
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const filename = `GS_실적_${propLabel}_${segLabel}_${dateStr}.xlsx`;
+
+  const summary = `${isTotal ? "전사" : properties.join(", ")} · ${segments.join(", ")} · ${monthLabel} — ${rows.length}건`;
+
+  return { rows, filename, summary };
+}
+
+// ── 엑셀 생성 ──
+function buildExcel(result, parsed) {
+  const wb = XLSX.utils.book_new();
+
+  // 메인 데이터 시트
+  const ws = XLSX.utils.json_to_sheet(result.rows);
+
+  // 열 너비 설정
+  ws["!cols"] = [
+    { wch: 22 },  // 사업장
+    { wch: 10 },  // 세그먼트
+    { wch: 6 },   // 연도
+    { wch: 4 },   // 월
+    { wch: 14 },  // RN
+    { wch: 18 },  // ADR
+    { wch: 20 },  // Revenue
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, "실적데이터");
+
+  // 조회조건 시트
+  const info = [
+    { 항목: "조회일시", 내용: new Date().toLocaleString("ko-KR") },
+    { 항목: "사업장", 내용: parsed.isTotal ? "전사 합계" : parsed.properties.join(", ") },
+    { 항목: "세그먼트", 내용: parsed.segments.join(", ") },
+    { 항목: "기간", 내용: parsed.monthLabel },
+    { 항목: "데이터건수", 내용: result.rows.length + "건" },
+    { 항목: "비고", 내용: "RN=Net RN, ADR=천원, Revenue=백만원 (세그먼트: OTA/G-OTA/Inbound)" },
+  ];
+  const ws2 = XLSX.utils.json_to_sheet(info);
+  ws2["!cols"] = [{ wch: 12 }, { wch: 60 }];
+  XLSX.utils.book_append_sheet(wb, ws2, "조회조건");
+
+  return XLSX.write(wb, { bookType: "xlsx", type: "array" });
+}
+
+// ── 다운로드 제공 ──
+function offerDownload(arrayBuf, filename, summary) {
+  const blob = new Blob([arrayBuf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+
+  addBotMsg(`
+    ${escHtml(summary)}<br>
+    엑셀 파일이 준비되었습니다.
+    <a class="dl-btn" href="${url}" download="${escHtml(filename)}">
+      <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      ${escHtml(filename)}
+    </a>
+  `);
+}
+</script>
+</body>
+</html>

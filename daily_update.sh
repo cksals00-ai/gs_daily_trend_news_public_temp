@@ -151,10 +151,11 @@ run_quick "5/9 compare_and_update"          "scripts/compare_and_update.py"
 run_quick "6/9 generate_otb_data"           "scripts/generate_otb_data.py"
 run_quick "7/9 generate_insights"           "scripts/generate_insights.py"
 run_quick "8/10 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
-run_quick "9/10 parse_campaign86"           "scripts/parse_campaign86.py"
+run_quick "9/11 parse_campaign86"           "scripts/parse_campaign86.py"
+run_quick "10/11 generate_chat_index"       "scripts/generate_chat_index.py"
 
-# ── [10/10] HTML 빌드 ──────────────────────────────────────────
-run_quick "10/10 build"                     "scripts/build.py"
+# ── [11/11] HTML 빌드 ──────────────────────────────────────────
+run_quick "11/11 build"                     "scripts/build.py"
 
 # ── Git 커밋 & 푸시 ─────────────────────────────────────────
 CURRENT_STAGE="git"
