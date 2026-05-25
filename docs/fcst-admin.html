@@ -217,7 +217,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
   <label class="btn btn-ghost" style="cursor:pointer">📂 불러오기<input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
   <button class="btn btn-secondary" id="btn-save" onclick="saveToStorage()">💾 임시 저장</button>
   <button class="btn btn-excel" onclick="exportExcel()">📊 엑셀</button>
-  <button class="btn btn-primary" id="btn-export" onclick="pushToGitHub()">⬆ 반영</button>
+  <button class="btn btn-primary" id="btn-export" onclick="pushToGAS()">⬆ 반영</button>
 </div>
 
 <script>
@@ -450,19 +450,37 @@ async function loadFcstData() {
       console.log('AI FCST data not available:', e.message);
     }
 
-    // Preload existing admin_input.json so export merges (preserves admin.html fields)
+    // GAS에서 FCST 데이터 로드 시도 (우선), 실패 시 admin_input.json 폴백
+    let gasLoaded = false;
     try {
-      const adResp = await fetch('data/admin_input.json?t=' + Date.now());
-      if (adResp.ok) {
-        baseAdminData = await adResp.json();
-        // 키인이 admin_input.json에 이미 있다면 history 비어있을 때 복원
-        if (baseAdminData.fcst_history && Object.keys(fcstHistory).length === 0) {
-          fcstHistory = migrateKeyinKeys(baseAdminData.fcst_history);
+      const gasData = await loadFromGAS();
+      if (gasData && typeof gasData === 'object') {
+        baseAdminData = gasData;
+        if (gasData.fcst_history && Object.keys(fcstHistory).length === 0) {
+          fcstHistory = migrateKeyinKeys(gasData.fcst_history);
           renderWeekTabs();
         }
+        gasLoaded = true;
+        console.log('FCST data loaded from GAS');
       }
     } catch(e) {
-      console.log('admin_input.json baseline not loaded:', e.message);
+      console.log('GAS load_fcst not available, falling back to static file:', e.message);
+    }
+
+    // 폴백: 정적 admin_input.json (GAS 미응답 시)
+    if (!gasLoaded) {
+      try {
+        const adResp = await fetch('data/admin_input.json?t=' + Date.now());
+        if (adResp.ok) {
+          baseAdminData = await adResp.json();
+          if (baseAdminData.fcst_history && Object.keys(fcstHistory).length === 0) {
+            fcstHistory = migrateKeyinKeys(baseAdminData.fcst_history);
+            renderWeekTabs();
+          }
+        }
+      } catch(e) {
+        console.log('admin_input.json baseline not loaded:', e.message);
+      }
     }
 
     const yoy0 = otbRaw.yoyTable?.[0];
@@ -896,80 +914,34 @@ function saveToStorage(){
 function loadStorage(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY));}catch{return null;}}
 let _at;function autoSave(){clearTimeout(_at);_at=setTimeout(saveToStorage,1800);}
 
-/* ═══ GITHUB PUSH ═══ */
-const GH_TOKEN_KEY = 'gs_github_token';
-const GH_OWNER = 'sonoresort';
-const GH_REPO = 'gs_daily_trend_news_public_temp';
-const GH_PATH = 'docs/data/admin_input.json';
-
-function getGitHubToken() {
-  let token = localStorage.getItem(GH_TOKEN_KEY);
-  if (!token) {
-    token = prompt('GitHub Personal Access Token을 입력하세요.\n(repo 권한 필요, 이후 localStorage에 저장됩니다)');
-    if (token) localStorage.setItem(GH_TOKEN_KEY, token.trim());
-  }
-  return token ? token.trim() : null;
-}
-
-async function pushToGitHub() {
+/* ═══ GAS API 저장/로드 ═══ */
+async function pushToGAS() {
   const btn = document.getElementById('btn-export');
-  const token = getGitHubToken();
-  if (!token) { showToast('토큰이 입력되지 않았습니다', 'err'); return; }
+
+  if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) {
+    showToast('로그인이 필요합니다. 다시 로그인해주세요.', 'err');
+    setTimeout(() => GSNAuth.logout(), 1500);
+    return;
+  }
 
   btn.disabled = true; btn.textContent = '⬆ 반영 중...';
 
-  const jsonStr = JSON.stringify(getFormData(), null, 2);
-  const contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+  const formData = getFormData();
 
   try {
-    // 1) 기존 파일의 sha 조회
-    const getResp = await fetch(
-      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`,
-      { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }
-    );
-    let sha = null;
-    if (getResp.ok) {
-      const existing = await getResp.json();
-      sha = existing.sha;
-    } else if (getResp.status === 401 || getResp.status === 403) {
-      localStorage.removeItem(GH_TOKEN_KEY);
-      throw new Error('토큰 인증 실패 — 다시 시도하세요');
-    }
-
-    // 2) PUT으로 커밋
-    const putBody = {
-      message: `[fcst-admin] admin_input.json 업데이트 (${new Date().toLocaleString('ko-KR')})`,
-      content: contentB64,
-      branch: 'main'
-    };
-    if (sha) putBody.sha = sha;
-
-    const putResp = await fetch(
-      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(putBody)
-      }
-    );
-
-    if (putResp.ok) {
-      localStorage.setItem(STORAGE_KEY, jsonStr);
-      showToast('admin_input.json 반영 완료');
-    } else {
-      const errData = await putResp.json().catch(() => ({}));
-      if (putResp.status === 401 || putResp.status === 403) {
-        localStorage.removeItem(GH_TOKEN_KEY);
-      }
-      throw new Error(errData.message || `HTTP ${putResp.status}`);
-    }
+    const result = await GSNAuth.saveFcst(formData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    showToast('FCST 키인 반영 완료' + (result.message ? ` — ${result.message}` : ''));
   } catch (e) {
-    showToast('GitHub 반영 실패: ' + e.message + ' — JSON 다운로드로 폴백', 'err');
+    const msg = e.message || '알 수 없는 오류';
+    // 서버에서 save_fcst 미지원 시 안내
+    if (msg.includes('action') || msg.includes('not found') || msg.includes('지원')) {
+      showToast('서버에서 save_fcst를 아직 지원하지 않습니다. GAS 배포를 확인하세요.', 'err');
+    } else {
+      showToast('반영 실패: ' + msg + ' — JSON 다운로드로 폴백', 'err');
+    }
     // 폴백: JSON 파일 다운로드
+    const jsonStr = JSON.stringify(formData, null, 2);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([jsonStr], { type: 'application/json' }));
     a.download = 'admin_input.json'; a.click(); URL.revokeObjectURL(a.href);
@@ -978,8 +950,19 @@ async function pushToGitHub() {
   }
 }
 
-/* (레거시 호환) exportJSON → pushToGitHub 래핑 */
-function exportJSON() { pushToGitHub(); }
+async function loadFromGAS() {
+  if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) return null;
+  try {
+    const result = await GSNAuth.loadFcst();
+    return result.data || null;
+  } catch (e) {
+    console.log('GAS load_fcst:', e.message);
+    return null;
+  }
+}
+
+/* (레거시 호환) */
+function exportJSON() { pushToGAS(); }
 
 /* ═══ EXPORT EXCEL ═══ */
 function exportExcel(){
