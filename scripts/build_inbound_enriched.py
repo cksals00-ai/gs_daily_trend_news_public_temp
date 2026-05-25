@@ -113,7 +113,16 @@ VALID_NATIONALITIES = {
     '유럽', '네덜란드', '중동', '다국적',
 }
 
-PFX_RE = re.compile(r'^[#*\s]+')
+PFX_RE = re.compile(r'^[#*★※▶▷◆◇●○□■△▲▽▼♥♡→←↑↓~!@\s]+')
+# 이모지(국기 포함) 접두사 제거용 — PFX_RE 이후 추가 적용
+_EMOJI_PFX_RE = re.compile(
+    r'^[\U0001F1E0-\U0001F1FF'    # 국기(Regional Indicator)
+    r'\U0001F300-\U0001F9FF'       # 기타 이모지
+    r'\U00002600-\U000027BF'       # 기호·딩뱃
+    r'\U0000FE00-\U0000FE0F'       # Variation Selectors
+    r'\U0000200D'                  # ZWJ
+    r'\s]+'
+)
 PAREN_RE = re.compile(r'\(([^)]+)\)')
 
 # 43 (예약) 컬럼 인덱스 — KEY_RSV_NO 포함 헤더
@@ -162,6 +171,12 @@ def normalize_nationality(nat):
     return None
 
 
+# 동일 거래처의 공백/표기 변형 매핑 (base_partner 결과에 최종 적용)
+PARTNER_ALIAS = {
+    '강원관광재단팸투어': '강원관광재단 팸투어',
+    '경기관광공사팸투어': '경기관광공사 팸투어',
+}
+
 # 거래처명 정규화: 동일 거래처를 다양하게 표기한 케이스를 같은 base로 모음.
 LEADING_CO_RE = re.compile(r'^(\(주\)|㈜|㈜\s*)')
 TRAILING_CO_RE = re.compile(r'(\(주\)|㈜|주식회사)\s*$')
@@ -196,7 +211,7 @@ def _strip_malformed_close_paren(s):
 
 def base_partner(member_name):
     """거래처 base 이름 추출:
-    - 선두 #/*/공백 제거
+    - 선두 #/*/이모지(국기 포함)/특수기호/공백 제거
     - 닫는 괄호만 있는 형식 보정
     - 첫 '(' 앞부분 (단, '(주)'/'㈜'은 회사형식이므로 별도 처리)
     - 끝의 -NNN, _A, ' A' 등 정리
@@ -206,6 +221,7 @@ def base_partner(member_name):
     if not member_name:
         return ''
     s = PFX_RE.sub('', member_name).strip()
+    s = _EMOJI_PFX_RE.sub('', s).strip()  # 이모지 국기 등 추가 제거
     # 닫는 괄호만 있는 형식 → 토큰 분리
     _, s = _strip_malformed_close_paren(s)
     # 첫 '(' 앞부분 (단 (주)/㈜는 보존했다가 아래에서 제거)
@@ -224,10 +240,27 @@ def base_partner(member_name):
     s = TRAILING_CO_RE.sub('', s).strip()
     s = re.sub(r'[\-_]\d{2,}\s*$', '', s).strip()
     s = re.sub(r'[\s_]+[A-Za-z]{1,2}\s*$', '', s).strip()
+    # 한글 뒤 바로 붙은 팀구분 알파벳 제거 ('여기여행사A' → '여기여행사', 단 'US아주투어'는 보존)
+    s = re.sub(r'(?<=[가-힣])[A-E]$', '', s).strip()
     # 끝의 장식용 ' - ' / '_' / 공백 제거 ('US아주투어 - ' → 'US아주투어')
     s = re.sub(r'[\s\-_]+$', '', s).strip()
+    # '답사팀', '답사건' 같은 내부 관리용 접미사 제거
+    s = re.sub(r'\s*답사(팀|건)\s*$', '', s).strip()
     s = re.sub(r'\s+', ' ', s).strip()
-    return s
+    # 대소문자 통일: 영문만으로 구성된 이름이 아니면 소→대 변환 불필요,
+    # 단 전체 소문자인 영문 접두 이름은 원본(대문자) 형태로 통일
+    # 예: 'tk트래블' → 'TK트래블'
+    if s and s[0].islower() and any('가' <= c <= '힣' for c in s):
+        # 첫 연속 영문 블록만 대문자화 (한글 뒤는 그대로)
+        import itertools
+        idx = 0
+        for idx, c in enumerate(s):
+            if not c.isascii() or not c.isalpha():
+                break
+        if idx > 0:
+            s = s[:idx].upper() + s[idx:]
+    # 최종 별칭 매핑
+    return PARTNER_ALIAS.get(s, s)
 
 
 def extract_country_from_name(member_name):
@@ -257,6 +290,7 @@ def infer_nationality_from_name(member_name):
     if not member_name:
         return None
     s = PFX_RE.sub('', member_name).strip()
+    s = _EMOJI_PFX_RE.sub('', s).strip()
     # '(주)' 같은 회사형식은 검사에서 제거
     s_clean = re.sub(r'\(주\)|㈜', '', s)
     for token in sorted(KNOWN_COUNTRY_TOKENS.keys(), key=len, reverse=True):

@@ -472,7 +472,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
   <!-- Filters -->
   <div class="chip-bar">
-    <span class="f-label">채널</span>
+    <span class="f-label">월</span>
+    <select class="filter-select" id="f-month" onchange="onFilterChange()" style="min-width:100px;max-width:140px"><option value="">전체 월</option></select>
+    <span class="f-label" style="margin-left:6px">채널</span>
     <select class="filter-select" id="f-channel" onchange="onFilterChange()"><option value="">전체 채널</option></select>
     <span class="f-label" style="margin-left:6px">사업장</span>
     <select class="filter-select" id="f-prop" onchange="onFilterChange()"><option value="">전체 사업장</option></select>
@@ -700,6 +702,20 @@ function populateFilters(){
   ch.innerHTML='<option value="">전체 채널 ('+channels.length+')</option>'+channels.map(p=>`<option>${escapeHtml(p)}</option>`).join('');
   const pr=document.getElementById('f-prop');
   pr.innerHTML='<option value="">전체 사업장 ('+props.length+')</option>'+props.map(p=>`<option>${escapeHtml(p)}</option>`).join('');
+  /* 월 필터 옵션 생성: 데이터에서 판매/투숙 기간이 걸치는 월 추출 */
+  const monthSet=new Set();
+  allRows.forEach(d=>{
+    [d.saleStart,d.saleEnd,d.stayStart,d.stayEnd].forEach(dt=>{
+      if(dt){const ym=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');monthSet.add(ym);}
+    });
+  });
+  const months=[...monthSet].sort();
+  const mSel=document.getElementById('f-month');
+  const curMonth=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+  mSel.innerHTML='<option value="">전체 월 ('+months.length+')</option>'+months.map(m=>{
+    const [y,mm]=m.split('-');const label=y+'년 '+parseInt(mm)+'월';
+    return `<option value="${m}"${m===curMonth?' selected':''}>${label}</option>`;
+  }).join('');
   buildStatusChips();
 }
 function buildStatusChips(){
@@ -719,10 +735,19 @@ function onFilterChange(){selectedEventIdx=null;selectedDate=null;render()}
 function getFiltered(){
   const ch=document.getElementById('f-channel').value;
   const pr=document.getElementById('f-prop').value;
+  const mo=document.getElementById('f-month').value;
   return allRows.filter(d=>{
     if(ch&&d.channel!==ch)return false;
     if(pr&&d.property!==pr)return false;
     if(selStatus!=='전체'&&d.status!==selStatus)return false;
+    /* 월 필터: 선택한 월과 판매기간 또는 투숙기간이 겹치는 항목만 표시 */
+    if(mo){
+      const [fy,fm]=mo.split('-').map(Number);
+      const mStart=new Date(fy,fm-1,1);
+      const mEnd=new Date(fy,fm,0,23,59,59);
+      const overlaps=(s,e)=>s&&e?s<=mEnd&&e>=mStart:s?s<=mEnd&&s>=mStart:e?e<=mEnd&&e>=mStart:false;
+      if(!overlaps(d.saleStart,d.saleEnd)&&!overlaps(d.stayStart,d.stayEnd))return false;
+    }
     return true;
   });
 }

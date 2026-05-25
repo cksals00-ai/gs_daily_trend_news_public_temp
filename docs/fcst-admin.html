@@ -123,26 +123,6 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
     내보낸 <code>admin_input.json</code>은 data/ 폴더에 덮어쓴 뒤 <code>generate_fcst.py</code> · 빌드에서 반영됩니다.</p>
   </div>
 
-  <!-- 구글시트 중앙저장 설정 -->
-  <div class="card" id="sheet-sync-card">
-    <div class="card-head">
-      <span class="card-icon">☁</span>
-      <span class="card-title">GOOGLE SHEETS 중앙저장</span>
-      <span class="card-desc" id="sheet-sync-state">미연결</span>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-      <input type="text" id="sheet-url" placeholder="Apps Script 웹앱 URL (https://script.google.com/macros/s/.../exec)"
-             style="flex:1;min-width:280px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:4px;color:var(--ink);padding:7px 11px;font-family:var(--mono);font-size:11.5px;outline:none;">
-      <button class="btn btn-secondary" onclick="saveSheetUrl()" style="font-size:11.5px;padding:7px 14px;">💾 URL 저장</button>
-      <button class="btn btn-ghost" onclick="testSheetConnection()" style="font-size:11.5px;padding:7px 14px;">🔗 연결 테스트</button>
-      <button class="btn btn-secondary" onclick="pullFromSheet()" id="btn-sheet-pull" style="font-size:11.5px;padding:7px 14px;">⬇ 시트에서 불러오기</button>
-    </div>
-    <div style="font-size:10.5px;color:var(--ink-faint);line-height:1.6;">
-      세일즈가 키인한 값이 구글시트에 자동 저장됩니다 (저장 실패 시 localStorage 유지). Apps Script 코드는
-      <code>scripts/apps_script_fcst_keyin.js</code> 참고. 시트 unique key = 주차+월+사업장+세그+지표(RN/ADR).
-    </div>
-  </div>
-
   <!-- 주차 정보 배너 -->
   <div class="week-banner" id="week-banner">
     <div><div class="week-banner-main" id="wb-title">—</div><div class="week-banner-sub" id="wb-sub">—</div></div>
@@ -196,6 +176,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
           <th style="text-align:right;color:var(--ink-faint);background:var(--bg-card);">목표</th>
           <th style="text-align:right;color:var(--ink-faint);background:var(--bg-card);">실적</th>
           <th style="text-align:right;color:var(--ink-faint);background:var(--bg-card);">전년 동기간</th>
+          <th style="text-align:right;color:var(--ink-faint);background:var(--bg-card);">전년 마감</th>
           <th style="text-align:right;color:var(--ink-muted);background:var(--bg-card);">기존 FCST</th>
           <th style="text-align:right;color:var(--info);background:var(--bg-card);">자동 FCST</th>
           <th style="text-align:right;color:var(--warning);background:var(--bg-card);">RM FCST</th>
@@ -210,6 +191,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
           <td id="ft-bud" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--ink-muted)">—</td>
           <td id="ft-act" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--ink)">—</td>
           <td id="ft-last" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--ink-faint)">—</td>
+          <td id="ft-full" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--ink-faint)">—</td>
           <td id="ft-prev" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--ink-muted)">—</td>
           <td id="ft-auto" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--info)">—</td>
           <td id="ft-rm" style="text-align:right;padding:8px;font-family:var(--mono);font-weight:700;color:var(--warning)">—</td>
@@ -223,7 +205,7 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <button class="btn btn-secondary" id="btn-reset" onclick="resetFcstKeyin()" style="font-size:12px;padding:7px 14px;">↺ 키인 초기화</button>
       <button class="btn btn-ghost" onclick="toggleAllProps()" id="btn-toggle-all" style="font-size:12px;padding:7px 14px;">▼ 전체 펼치기</button>
-      <span style="font-size:10.5px;color:var(--ink-faint);margin-left:auto">키인 수정값은 JSON / 엑셀 내보내기에 포함됩니다</span>
+      <span style="font-size:10.5px;color:var(--ink-faint);margin-left:auto">키인 수정값은 저장 / 엑셀 내보내기에 포함됩니다</span>
     </div>
   </div>
 
@@ -234,160 +216,14 @@ input[type=text]:focus{border-color:var(--gold);background:var(--bg-hover)}
   <span class="bar-status" id="bar-status">—</span>
   <label class="btn btn-ghost" style="cursor:pointer">📂 불러오기<input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
   <button class="btn btn-secondary" id="btn-save" onclick="saveToStorage()">💾 임시 저장</button>
-  <button class="btn btn-secondary" id="btn-sheet-push" onclick="pushToSheet()">☁ 시트 저장</button>
   <button class="btn btn-excel" onclick="exportExcel()">📊 엑셀</button>
-  <button class="btn btn-primary" id="btn-export" onclick="exportJSON()">⬇ JSON 내보내기</button>
+  <button class="btn btn-primary" id="btn-export" onclick="pushToGitHub()">⬆ 반영</button>
 </div>
 
 <script>
 /* ═══ CONSTANTS ═══ */
 const STORAGE_KEY = 'gs_fcst_admin_v3';
-const SHEET_URL_KEY = 'gs_fcst_sheet_url';
 const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
-
-/* ═══ GOOGLE SHEETS SYNC ═══ */
-/* Apps Script 웹앱과 통신. POST(쓰기)는 CORS 제약으로 no-cors 모드 사용 (응답 못 읽음).
- * GET(읽기)은 simple request로 JSON 응답 수신.
- * URL은 localStorage에 보관 — 사용자별 설정. */
-function getSheetUrl() {
-  return (document.getElementById('sheet-url')?.value || '').trim() ||
-         localStorage.getItem(SHEET_URL_KEY) || '';
-}
-function setSheetState(text, ok) {
-  const el = document.getElementById('sheet-sync-state');
-  if (!el) return;
-  el.textContent = text;
-  el.style.color = ok === true ? 'var(--positive)' : ok === false ? 'var(--negative)' : 'var(--ink-faint)';
-}
-window.saveSheetUrl = function () {
-  const url = document.getElementById('sheet-url').value.trim();
-  if (!url) { showToast('URL을 입력하세요', 'err'); return; }
-  if (!/^https:\/\/script\.google\.com\//.test(url)) {
-    showToast('Apps Script URL 형식이 아닙니다', 'err'); return;
-  }
-  localStorage.setItem(SHEET_URL_KEY, url);
-  setSheetState('URL 저장됨', null);
-  showToast('Apps Script URL 저장됨');
-};
-window.testSheetConnection = async function () {
-  const url = getSheetUrl();
-  if (!url) { showToast('먼저 URL을 입력/저장하세요', 'err'); return; }
-  setSheetState('연결 테스트 중...', null);
-  try {
-    const r = await fetch(url, { method: 'GET' });
-    const j = await r.json();
-    if (j.status === 'ok') {
-      setSheetState(`연결 OK · 시트="${j.sheet}" · ${j.count}건`, true);
-      showToast(`연결 성공 (${j.count}건)`);
-    } else throw new Error(j.message || '응답 오류');
-  } catch (e) {
-    setSheetState('연결 실패', false);
-    showToast('연결 실패: ' + e.message, 'err');
-  }
-};
-
-/* localStorage history → Apps Script entries 배열로 평탄화 */
-function buildSheetEntries() {
-  const updatedBy = (document.getElementById('updatedBy')?.value || '').trim() || '';
-  const entries = [];
-  Object.entries(fcstHistory).forEach(([weekKey, wd]) => {
-    if (!wd?.keyin) return;
-    Object.entries(wd.keyin).forEach(([k, v]) => {
-      if (v === null || v === undefined || v === '') return;
-      // key format: "사업장|세그|월" (RN) or "사업장|세그|ADR|월"
-      const parts = k.split('|');
-      let property, segment, metric, month;
-      if (parts.length === 4 && parts[2] === 'ADR') {
-        property = parts[0]; segment = parts[1]; metric = 'ADR'; month = parts[3];
-      } else if (parts.length === 3) {
-        property = parts[0]; segment = parts[1]; metric = 'RN'; month = parts[2];
-      } else { return; }  // legacy / malformed
-      const monthIso = '2026-' + String(month).padStart(2, '0');
-      entries.push({
-        week: weekKey, month: monthIso, property, segment, metric,
-        value: v, updated_by: updatedBy
-      });
-    });
-  });
-  return entries;
-}
-
-window.pushToSheet = async function () {
-  const url = getSheetUrl();
-  if (!url) { showToast('Apps Script URL을 먼저 설정하세요', 'err'); return; }
-  const entries = buildSheetEntries();
-  if (!entries.length) { showToast('저장할 키인 데이터가 없습니다', 'err'); return; }
-  const btn = document.getElementById('btn-sheet-push');
-  if (btn) { btn.disabled = true; btn.textContent = '☁ 저장 중...'; }
-  setSheetState(`${entries.length}건 저장 중...`, null);
-  try {
-    // no-cors → 응답 못 읽음. 성공 가정 (실패 시 localStorage 폴백 유지).
-    await fetch(url, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ entries })
-    });
-    setSheetState(`${entries.length}건 전송 완료 (${new Date().toLocaleTimeString()})`, true);
-    showToast(`구글시트에 ${entries.length}건 전송 완료`);
-  } catch (e) {
-    setSheetState('전송 실패 — localStorage 유지', false);
-    showToast('시트 저장 실패: ' + e.message + ' (localStorage는 유지됨)', 'err');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '☁ 시트 저장'; }
-  }
-};
-
-/* GET으로 시트 전체를 받아와 fcstHistory에 머지. 같은 (주차,월,사업장,세그,지표)는 시트값으로 덮어쓰기 */
-window.pullFromSheet = async function () {
-  const url = getSheetUrl();
-  if (!url) { showToast('Apps Script URL을 먼저 설정하세요', 'err'); return; }
-  const btn = document.getElementById('btn-sheet-pull');
-  if (btn) { btn.disabled = true; btn.textContent = '⬇ 로딩...'; }
-  setSheetState('시트 조회 중...', null);
-  try {
-    const r = await fetch(url, { method: 'GET' });
-    const j = await r.json();
-    if (j.status !== 'ok') throw new Error(j.message || '응답 오류');
-    const entries = j.entries || [];
-    let merged = 0;
-    entries.forEach(e => {
-      if (!e.week || !e.property || !e.segment || !e.metric) return;
-      const v = Number(e.value);
-      if (!isFinite(v)) return;
-      // month: "2026-05" → "5"
-      const monthNum = String(parseInt(String(e.month || '').split('-')[1] || e.month, 10));
-      if (!monthNum || monthNum === 'NaN') return;
-      const k = e.metric === 'ADR'
-        ? `${e.property}|${e.segment}|ADR|${monthNum}`
-        : `${e.property}|${e.segment}|${monthNum}`;
-      if (!fcstHistory[e.week]) {
-        fcstHistory[e.week] = {
-          month: monthNum, week_label: e.week, created: (e.timestamp || '').slice(0, 10), keyin: {}
-        };
-      }
-      fcstHistory[e.week].keyin[k] = v;
-      merged++;
-    });
-    setSheetState(`${merged}건 불러옴 (${entries.length}건 중)`, true);
-    showToast(`구글시트에서 ${merged}건 불러옴`);
-    renderWeekTabs(); renderFcstTable(); updateEditableState();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(getFormData()));
-  } catch (e) {
-    setSheetState('조회 실패', false);
-    showToast('시트 조회 실패: ' + e.message, 'err');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⬇ 시트에서 불러오기'; }
-  }
-};
-
-/* 키인 변경 시 디바운스로 시트에 자동 전송 (URL 설정된 경우만) */
-let _sheetPushTimer;
-function autoPushSheet() {
-  const url = getSheetUrl();
-  if (!url) return;
-  clearTimeout(_sheetPushTimer);
-  _sheetPushTimer = setTimeout(() => { window.pushToSheet(); }, 3000);
-}
 
 /* ═══ WEEK UTILS ═══ */
 function getISOWeek(d) {
@@ -512,22 +348,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (saved?.fcst_history) fcstHistory = migrateKeyinKeys(saved.fcst_history);
   if (saved?._updated_by) setVal('updatedBy', saved._updated_by);
 
-  // Sheet URL 복원
-  const savedSheetUrl = localStorage.getItem(SHEET_URL_KEY);
-  if (savedSheetUrl) {
-    document.getElementById('sheet-url').value = savedSheetUrl;
-    setSheetState('URL 저장됨 (자동 동기화 활성)', null);
-  }
-
   renderWeekBanner();
   renderWeekTabs();
   await loadFcstData();
   updateEditableState();
-
-  // 페이지 로드 시 시트에서 최신 데이터 자동 불러오기 (URL 있으면)
-  if (savedSheetUrl) {
-    try { await window.pullFromSheet(); } catch (_) { /* fall back silently */ }
-  }
 });
 
 /* ═══ WEEK BANNER ═══ */
@@ -792,7 +616,7 @@ function renderFcstTable() {
   const M = fcstCurrentMonth;
 
   let html='';
-  let totBud=0,totAct=0,totLast=0,totPrev=0,totAuto=0,totFinal=0,totRm=0;
+  let totBud=0,totAct=0,totLast=0,totFull=0,totPrev=0,totAuto=0,totFinal=0,totRm=0;
 
   const inputStyle = (hasVal) => `width:72px;background:var(--bg-soft);border:1px solid ${hasVal?'var(--gold)':'var(--rule)'};border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;padding:4px 6px;outline:none;${editable?'':'opacity:.5'}`;
 
@@ -804,24 +628,25 @@ function renderFcstTable() {
     const rmEntryProp=rmFcstData[prop.name]?.[rmKey];
 
     // 사업장 합산 (RN 기준)
-    let pBud=0,pAct=0,pLast=0,pAuto=0,pFinal=0,pPrev=0,pRm=0,hasRm=false;
+    let pBud=0,pAct=0,pLast=0,pFull=0,pAuto=0,pFinal=0,pPrev=0,pRm=0,hasRm=false;
     SEGMENTS.forEach(seg=>{
       const sd=getSegData(prop.name,seg,M);
       const bud=sd?.rns_budget||0, act=sd?.rns_actual||0, autoF=sd?.rns_fcst||0, last=sd?.rns_last||0;
+      const full=sd?.ly_full_rn||0;
       const kKey=`${prop.name}|${seg}|${M}`;
       const kVal=keyin[kKey]??null;
       const prevVal=prevKeyin[kKey]??null;
       const finalV=kVal!==null?kVal:autoF;
       const segRm=rmEntryProp?.segments?.[seg]?.rm_fcst_rn??null;
       if(segRm!==null){pRm+=segRm;hasRm=true;}
-      pBud+=bud;pAct+=act;pLast+=last;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
+      pBud+=bud;pAct+=act;pLast+=last;pFull+=full;pAuto+=autoF;pFinal+=finalV;pPrev+=(prevVal!==null?prevVal:autoF);
     });
     const pAch=pBud>0?(pFinal/pBud*100).toFixed(1):'0.0';
     const pAchN=pBud>0?pFinal/pBud*100:0;
     const pAchCls=pAchN>=100?'positive':pAchN>=80?'warning':pAchN>0?'negative':'';
     // RM 데이터 없으면 자동 FCST로 폴백 (회색 이탤릭)
     const rmDisplay=hasRm?fmt(pRm):`<span style="opacity:.55;font-style:italic">${fmt(pAuto)}</span>`;
-    totBud+=pBud;totAct+=pAct;totLast+=pLast;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
+    totBud+=pBud;totAct+=pAct;totLast+=pLast;totFull+=pFull;totPrev+=pPrev;totAuto+=pAuto;totFinal+=pFinal;
     if(hasRm)totRm+=pRm; else totRm+=pAuto;
 
     // 사업장 헤더 행
@@ -833,6 +658,7 @@ function renderFcstTable() {
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pBud)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink)">${fmt(pAct)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-faint)">${fmt(pLast)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-faint)">${fmt(pFull)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${fmt(pPrev)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--info);font-weight:600">${fmt(pAuto)}</td>
       <td style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--warning);font-weight:600">${rmDisplay}</td>
@@ -848,7 +674,7 @@ function renderFcstTable() {
         const segCls=seg==='OTA'?'ota':seg==='G-OTA'?'gota':'inbound';
 
         // --- RNS 행 ---
-        const rnBud=sd?.rns_budget||0, rnAct=sd?.rns_actual||0, rnAuto=sd?.rns_fcst||0, rnLast=sd?.rns_last||0;
+        const rnBud=sd?.rns_budget||0, rnAct=sd?.rns_actual||0, rnAuto=sd?.rns_fcst||0, rnLast=sd?.rns_last||0, rnFull=sd?.ly_full_rn||0;
         const rnKey=`${prop.name}|${seg}|${M}`;
         const rnKVal=keyin[rnKey]??null;
         const rnPrev=prevKeyin[rnKey]??null;
@@ -866,6 +692,7 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(rnBud)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(rnAct)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(rnLast)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(rnFull)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${rnPrevDisp}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(rnAuto)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${rnRmDisp}</td>
@@ -885,6 +712,7 @@ function renderFcstTable() {
         const adrAct  = (sd?.rev_actual>0 && sd?.rns_actual>0) ? Math.round(sd.rev_actual/sd.rns_actual/1000) : 0;
         const adrAuto = (sd?.rev_fcst>0   && sd?.rns_fcst>0)   ? Math.round(sd.rev_fcst/sd.rns_fcst/1000)     : (sd?.adr_fcst ? Math.round(sd.adr_fcst/1000) : 0);
         const adrLast = (sd?.rev_last>0   && sd?.rns_last>0)   ? Math.round(sd.rev_last/sd.rns_last/1000)     : 0;
+        const adrFull = (sd?.ly_full_rev>0 && sd?.ly_full_rn>0) ? Math.round(sd.ly_full_rev/sd.ly_full_rn/1000) : 0;
         const adrKey=`${prop.name}|${seg}|ADR|${M}`;
         const adrKVal=keyin[adrKey]??null;  // 천원 단위로 저장
         const adrPrev=prevKeyin[adrKey]??null;
@@ -902,6 +730,7 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrBud)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(adrAct)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrLast)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(adrFull)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${adrPrevDisp}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(adrAuto)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${adrRmDisp}</td>
@@ -916,8 +745,8 @@ function renderFcstTable() {
         </tr>`;
 
         // --- 매출 행 (자동계산: RNS × ADR(천원) / 1000 = 백만원) ---
-        const revBud=sd?.rev_budget||0, revAct=sd?.rev_actual||0, revLast=sd?.rev_last||0;
-        const revBudM=Math.round(revBud/1000000), revActM=Math.round(revAct/1000000), revLastM=Math.round(revLast/1000000);
+        const revBud=sd?.rev_budget||0, revAct=sd?.rev_actual||0, revLast=sd?.rev_last||0, revFullRaw=sd?.ly_full_rev||0;
+        const revBudM=Math.round(revBud/1000000), revActM=Math.round(revAct/1000000), revLastM=Math.round(revLast/1000000), revFullM=Math.round(revFullRaw/1000000);
         const revAuto = Math.round(rnAuto * adrAuto / 1000);
         const revFinal = Math.round(rnFinal * adrFinal / 1000);
         const revPrevRn = rnPrev!==null?rnPrev:rnAuto;
@@ -936,6 +765,7 @@ function renderFcstTable() {
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revBudM)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${fmt(revActM)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revLastM)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revFullM)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)">${fmt(revPrev)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--info)">${fmt(revAuto)}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--warning)">${revRmDisp}</td>
@@ -955,6 +785,7 @@ function renderFcstTable() {
   document.getElementById('ft-bud').textContent=fmt(totBud);
   document.getElementById('ft-act').textContent=fmt(totAct);
   document.getElementById('ft-last').textContent=fmt(totLast);
+  document.getElementById('ft-full').textContent=fmt(totFull);
   document.getElementById('ft-prev').textContent=fmt(totPrev);
   document.getElementById('ft-auto').textContent=fmt(totAuto);
   // RM 합계: 데이터 있으면 실제 합, 없으면 자동 FCST로 폴백 (위 루프에서 누적됨)
@@ -984,7 +815,7 @@ window.updateSegKeyin=function(input){
   if(val==='')delete keyin[key];
   else keyin[key]=parseInt(val)||0;
   setActiveKeyin(keyin);
-  renderFcstTable();updateEditableState();autoSave();autoPushSheet();
+  renderFcstTable();updateEditableState();autoSave();
 };
 window.resetFcstKeyin=function(){
   if(!canEditNow())return;
@@ -1065,36 +896,113 @@ function saveToStorage(){
 function loadStorage(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY));}catch{return null;}}
 let _at;function autoSave(){clearTimeout(_at);_at=setTimeout(saveToStorage,1800);}
 
-/* ═══ EXPORT JSON ═══ */
-function exportJSON(){
-  const j=JSON.stringify(getFormData(),null,2);
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([j],{type:'application/json'}));
-  a.download='admin_input.json';a.click();URL.revokeObjectURL(a.href);
-  localStorage.setItem(STORAGE_KEY,j);showToast('admin_input.json 다운로드 완료 — data/ 폴더에 덮어쓰기');
+/* ═══ GITHUB PUSH ═══ */
+const GH_TOKEN_KEY = 'gs_github_token';
+const GH_OWNER = 'sonoresort';
+const GH_REPO = 'gs_daily_trend_news_public_temp';
+const GH_PATH = 'docs/data/admin_input.json';
+
+function getGitHubToken() {
+  let token = localStorage.getItem(GH_TOKEN_KEY);
+  if (!token) {
+    token = prompt('GitHub Personal Access Token을 입력하세요.\n(repo 권한 필요, 이후 localStorage에 저장됩니다)');
+    if (token) localStorage.setItem(GH_TOKEN_KEY, token.trim());
+  }
+  return token ? token.trim() : null;
 }
+
+async function pushToGitHub() {
+  const btn = document.getElementById('btn-export');
+  const token = getGitHubToken();
+  if (!token) { showToast('토큰이 입력되지 않았습니다', 'err'); return; }
+
+  btn.disabled = true; btn.textContent = '⬆ 반영 중...';
+
+  const jsonStr = JSON.stringify(getFormData(), null, 2);
+  const contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+  try {
+    // 1) 기존 파일의 sha 조회
+    const getResp = await fetch(
+      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`,
+      { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }
+    );
+    let sha = null;
+    if (getResp.ok) {
+      const existing = await getResp.json();
+      sha = existing.sha;
+    } else if (getResp.status === 401 || getResp.status === 403) {
+      localStorage.removeItem(GH_TOKEN_KEY);
+      throw new Error('토큰 인증 실패 — 다시 시도하세요');
+    }
+
+    // 2) PUT으로 커밋
+    const putBody = {
+      message: `[fcst-admin] admin_input.json 업데이트 (${new Date().toLocaleString('ko-KR')})`,
+      content: contentB64,
+      branch: 'main'
+    };
+    if (sha) putBody.sha = sha;
+
+    const putResp = await fetch(
+      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(putBody)
+      }
+    );
+
+    if (putResp.ok) {
+      localStorage.setItem(STORAGE_KEY, jsonStr);
+      showToast('admin_input.json 반영 완료');
+    } else {
+      const errData = await putResp.json().catch(() => ({}));
+      if (putResp.status === 401 || putResp.status === 403) {
+        localStorage.removeItem(GH_TOKEN_KEY);
+      }
+      throw new Error(errData.message || `HTTP ${putResp.status}`);
+    }
+  } catch (e) {
+    showToast('GitHub 반영 실패: ' + e.message + ' — JSON 다운로드로 폴백', 'err');
+    // 폴백: JSON 파일 다운로드
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([jsonStr], { type: 'application/json' }));
+    a.download = 'admin_input.json'; a.click(); URL.revokeObjectURL(a.href);
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆ 반영';
+  }
+}
+
+/* (레거시 호환) exportJSON → pushToGitHub 래핑 */
+function exportJSON() { pushToGitHub(); }
 
 /* ═══ EXPORT EXCEL ═══ */
 function exportExcel(){
   if(typeof XLSX==='undefined'){showToast('SheetJS 로딩 실패','err');return;}
   const keyin=getActiveKeyin();
   const M=fcstCurrentMonth;
-  const rows=[['사업장','세그먼트','지표','권역','투숙월','목표','실적','전년(동기간)','최종FCST','달성률(%)']];
+  const rows=[['사업장','세그먼트','지표','권역','투숙월','목표','실적','전년(동기간)','전년(마감)','최종FCST','달성률(%)']];
   propertyList.forEach(prop=>{
     SEGMENTS.forEach(seg=>{
       const sd=getSegData(prop.name,seg,M);
-      const rnBud=sd?.rns_budget||0,rnAct=sd?.rns_actual||0,rnAuto=sd?.rns_fcst||0,rnLast=sd?.rns_last||0;
+      const rnBud=sd?.rns_budget||0,rnAct=sd?.rns_actual||0,rnAuto=sd?.rns_fcst||0,rnLast=sd?.rns_last||0,rnFull=sd?.ly_full_rn||0;
       const rnKVal=keyin[`${prop.name}|${seg}|${M}`]??null;
       const rnFin=rnKVal!==null?rnKVal:rnAuto;
       const rnAch=rnBud>0?Math.round(rnFin/rnBud*1000)/10:'';
-      rows.push([prop.name,seg,'RNS',prop.region,M+'월',rnBud,rnAct,rnLast,rnFin,rnAch]);
+      rows.push([prop.name,seg,'RNS',prop.region,M+'월',rnBud,rnAct,rnLast,rnFull,rnFin,rnAch]);
 
       const adrBud=sd?.adr_budget||0,adrAct=sd?.adr_actual||0,adrAuto=sd?.adr_fcst||0;
       const adrKVal=keyin[`${prop.name}|${seg}|ADR|${M}`]??null;
       const adrFin=adrKVal!==null?adrKVal:adrAuto;
-      rows.push([prop.name,seg,'ADR(천원)',prop.region,M+'월',adrBud,adrAct,'',adrFin,'']);
+      rows.push([prop.name,seg,'ADR(천원)',prop.region,M+'월',adrBud,adrAct,'','',adrFin,'']);
 
       const revFin=Math.round(rnFin*adrFin/1000);
-      rows.push([prop.name,seg,'매출(백만)',prop.region,M+'월','','','',revFin,'']);
+      rows.push([prop.name,seg,'매출(백만)',prop.region,M+'월','','','','',revFin,'']);
     });
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);

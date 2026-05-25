@@ -48,6 +48,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .btn-primary{background:linear-gradient(135deg,#e6b970,#c9a063);color:#0a0a0a}.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .btn-secondary{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule)}.btn-secondary:hover{background:var(--bg-hover);border-color:var(--rule-strong)}
 .btn-ghost{background:transparent;color:var(--ink-faint);border:1px solid var(--rule)}.btn-ghost:hover{color:var(--ink-muted)}
+.btn-del{background:transparent;color:var(--ink-faint);border:1px solid transparent;padding:5px 7px;min-width:0;font-size:13px;opacity:.5;transition:all .2s}.btn-del:hover{opacity:1;color:var(--negative);border-color:var(--negative);background:var(--negative-bg)}
 .btn-danger{background:var(--negative-bg);color:var(--negative);border:1px solid rgba(229,115,115,.3)}.btn-danger:hover{background:rgba(229,115,115,.18)}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:none!important;transform:none!important}
 .btn-sm{padding:5px 10px;font-size:11px;font-weight:700;border-radius:4px}
@@ -289,8 +290,9 @@ select.role-sel:focus{border-color:var(--gold)}
         + '<td>'
         +   '<button class="btn btn-secondary btn-sm" data-act="edit" data-email="'+escapeHtml(u.email)+'">수정</button> '
         +   (u.status==='active'
-              ? '<button class="btn btn-danger btn-sm" data-act="deactivate" data-email="'+escapeHtml(u.email)+'">비활성</button>'
-              : '<button class="btn btn-secondary btn-sm" data-act="reactivate" data-email="'+escapeHtml(u.email)+'">활성화</button>')
+              ? '<button class="btn btn-danger btn-sm" data-act="deactivate" data-email="'+escapeHtml(u.email)+'">비활성</button> '
+              : '<button class="btn btn-secondary btn-sm" data-act="reactivate" data-email="'+escapeHtml(u.email)+'">활성화</button> ')
+        +   '<button class="btn btn-del btn-sm" data-act="delete" data-email="'+escapeHtml(u.email)+'" title="영구 삭제">🗑</button>'
         + '</td>'
         + '</tr>';
     });
@@ -388,6 +390,14 @@ select.role-sel:focus{border-color:var(--gold)}
         toast('활성화됨: ' + email);
         load();
       }).catch(function(err){ toast(err.message || '실패', true); });
+    } else if (act === 'delete'){
+      if (!confirm('⚠ ' + email + ' 계정을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) return;
+      if (!confirm('정말로 삭제하시겠습니까? (최종 확인)')) return;
+      GSNAuth.deleteUser(email).then(function(j){
+        if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '삭제 실패');
+        toast('삭제됨: ' + email);
+        load();
+      }).catch(function(err){ toast(err.message || '삭제 실패', true); });
     }
   });
   $tbody.addEventListener('change', function(e){

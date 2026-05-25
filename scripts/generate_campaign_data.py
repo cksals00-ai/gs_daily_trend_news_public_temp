@@ -223,9 +223,28 @@ def is_summer(stay_start, stay_end) -> bool:
     return summer_start <= stay_start <= summer_end
 
 
+def load_csv_from_file(path: str) -> list[list[str]]:
+    """로컬 CSV 파일 → rows"""
+    with open(path, "r", encoding="utf-8-sig") as f:
+        return list(csv.reader(f))
+
+
 def main():
-    print(f"CSV 다운로드: {CSV_URL}")
-    rows = fetch_csv(CSV_URL)
+    import argparse
+    parser = argparse.ArgumentParser(description="구글시트 CSV → campaign_data.json")
+    parser.add_argument("--csv-file", default=None,
+                        help="로컬 CSV 파일 경로 (메인시트). 지정 시 구글시트 다운로드 생략")
+    parser.add_argument("--subsheets-dir", default=None,
+                        help="Key 서브시트 CSV가 저장된 디렉토리 (파일명: {key}.csv). "
+                             "지정 시 pubhtml/서브시트 다운로드 생략")
+    args = parser.parse_args()
+
+    if args.csv_file:
+        print(f"로컬 CSV 사용: {args.csv_file}")
+        rows = load_csv_from_file(args.csv_file)
+    else:
+        print(f"CSV 다운로드: {CSV_URL}")
+        rows = fetch_csv(CSV_URL)
     print(f"총 {len(rows)}행 수신")
 
     hdr_idx = find_header_row(rows)
@@ -346,34 +365,57 @@ def main():
             summer_detail.append(entry)
 
     # ─ Key 서브시트에서 패키지코드 매핑 ─
-    print(f"pubhtml에서 시트 인덱스 발견 중: {PUBHTML_URL}")
-    name_to_gid = discover_sheet_gids()
-    print(f"  발행된 시트 {len(name_to_gid)}개 발견")
-
     key_to_codes: dict[str, list[str]] = {}
     key_to_meta: dict[str, dict[str, str]] = {}
     fetched = 0
     skipped_unpublished = 0
     skipped_empty = 0
-    for key in keys_in_order:
-        gid = name_to_gid.get(key)
-        if not gid:
-            skipped_unpublished += 1
-            continue
-        try:
-            sub_text = fetch_text(sub_sheet_csv_url(gid))
-            sub_rows = list(csv.reader(io.StringIO(sub_text)))
-            codes = parse_sub_sheet_codes(sub_rows)
-            meta  = parse_sub_sheet_meta(sub_rows)
-            if codes:
-                key_to_codes[key] = codes
-                fetched += 1
-            else:
-                skipped_empty += 1
-            if meta:
-                key_to_meta[key] = meta
-        except Exception as e:
-            print(f"  Key={key} (gid={gid}) 페치 실패: {e}")
+
+    if args.subsheets_dir:
+        # 로컬 서브시트 CSV 사용
+        sub_dir = Path(args.subsheets_dir)
+        print(f"로컬 서브시트 디렉토리: {sub_dir}")
+        for key in keys_in_order:
+            sub_path = sub_dir / f"{key}.csv"
+            if not sub_path.exists():
+                skipped_unpublished += 1
+                continue
+            try:
+                sub_rows = load_csv_from_file(str(sub_path))
+                codes = parse_sub_sheet_codes(sub_rows)
+                meta  = parse_sub_sheet_meta(sub_rows)
+                if codes:
+                    key_to_codes[key] = codes
+                    fetched += 1
+                else:
+                    skipped_empty += 1
+                if meta:
+                    key_to_meta[key] = meta
+            except Exception as e:
+                print(f"  Key={key} 로컬 로드 실패: {e}")
+    else:
+        print(f"pubhtml에서 시트 인덱스 발견 중: {PUBHTML_URL}")
+        name_to_gid = discover_sheet_gids()
+        print(f"  발행된 시트 {len(name_to_gid)}개 발견")
+        for key in keys_in_order:
+            gid = name_to_gid.get(key)
+            if not gid:
+                skipped_unpublished += 1
+                continue
+            try:
+                sub_text = fetch_text(sub_sheet_csv_url(gid))
+                sub_rows = list(csv.reader(io.StringIO(sub_text)))
+                codes = parse_sub_sheet_codes(sub_rows)
+                meta  = parse_sub_sheet_meta(sub_rows)
+                if codes:
+                    key_to_codes[key] = codes
+                    fetched += 1
+                else:
+                    skipped_empty += 1
+                if meta:
+                    key_to_meta[key] = meta
+            except Exception as e:
+                print(f"  Key={key} (gid={gid}) 페치 실패: {e}")
     print(f"  Key 서브시트 결과: {fetched}건 패키지코드 적재 / "
           f"미발행 {skipped_unpublished} / 빈시트 {skipped_empty}")
 

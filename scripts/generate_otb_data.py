@@ -1160,10 +1160,14 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
             rm_rn, rm_budget = sum_rm_seg_fcst(rm_fcst_props, display_name, rm_key)
             rm_ach = round(rm_rn / rm_budget * 100, 1) if (rm_rn and rm_budget and rm_budget > 0) else None
 
+            # LY 풀마감: 동기간 보정 없이 db_bps에서 직접 합산
+            ly_full_rn = sum_db_segments(db_bps, db_props, mk_25)["rn"] if db_bps else 0
+
             yoy = round((act_rn / base_rn - 1) * 100, 1) if base_rn > 0 else None
             month_data[m] = {
                 "act_rn":       act_rn,
                 "last_rn":      base_rn,
+                "ly_full_rn":   ly_full_rn,
                 "yoy":          yoy,
                 "bud_rn":       bud_rn,
                 "rns_fcst":     rm_rn if (rm_rn and rm_rn > 0) else (rns_fcst_ai if rns_fcst_ai else (rns_fcst or act_rn)),
@@ -1189,6 +1193,7 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                     month_data[m] = {
                         "act_rn":       act_rn,
                         "last_rn":      lst_rn,
+                        "ly_full_rn":   lst_rn,  # daily_bk 사업장은 동기간 보정 없으므로 동일값
                         "yoy":          yoy_v,
                         "bud_rn":       bud_rn,
                         "rns_fcst":     act_rn,
@@ -1222,14 +1227,19 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                     else:
                         for pname in db_props:
                             s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    # LY 풀마감: 동기간 보정 없이 db_bps에서 직접 합산
+                    s_ly_full_rn = 0
+                    for pname in db_props:
+                        s_ly_full_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
                     sb = seg_budgets.get(display_name, {}).get(seg, {})
                     s_bud_rn = sb.get(bud_label, {}).get("rn", 0)
                     s_yoy = round((s_act_rn / s_ly_rn - 1) * 100, 1) if s_ly_rn > 0 else None
                     seg_month_data[m] = {
-                        "act_rn":   s_act_rn,
-                        "last_rn":  s_ly_rn,
-                        "yoy":      s_yoy,
-                        "bud_rn":   s_bud_rn,
+                        "act_rn":      s_act_rn,
+                        "last_rn":     s_ly_rn,
+                        "ly_full_rn":  s_ly_full_rn,
+                        "yoy":         s_yoy,
+                        "bud_rn":      s_bud_rn,
                     }
                 # 실적이 0인 세그먼트는 생략
                 has_data = any(seg_month_data[m]["act_rn"] > 0 or seg_month_data[m]["last_rn"] > 0 for m in months)
@@ -1339,7 +1349,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         bud_labels  = [BUDGET_MONTH_LABEL[month_idx - 1]]
 
     props = []
-    tot_bud_rn = tot_act_rn = tot_lst_rn = tot_rns_fcst = 0
+    tot_bud_rn = tot_act_rn = tot_lst_rn = tot_full_rn = tot_rns_fcst = 0
     tot_bud_rev = tot_act_rev = tot_lst_rev = tot_rev_fcst = 0.0
     tot_ai_fcst_rn = 0
     tot_ai_fcst_lo = 0
@@ -1403,6 +1413,20 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 lst_rev += d["rev_m"]
 
         lst_adr = round(lst_rev * 1_000_000 / lst_rn) if lst_rn > 0 else 0
+
+        # LY 풀마감: 동기간 보정 없이 직접 합산 (전년 마감실적)
+        full_rn = 0
+        full_rev = 0.0
+        if db_bps is not None:
+            for mk in last_keys:
+                d = sum_db_segments(db_bps, db_props, mk)
+                full_rn  += d["rn"]
+                full_rev += d["rev_m"]
+        else:
+            for mk in last_keys:
+                d = sum_db(db_bp, db_props, mk)
+                full_rn  += d["rn"]
+                full_rev += d["rev_m"]
 
         rns_ach = round((act_rn / bud_rn * 100), 1) if bud_rn > 0 else 0.0
         rev_ach = round((act_rev / bud_rev * 100), 1) if bud_rev > 0 else 0.0
@@ -1583,6 +1607,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             "rns_actual":      act_rn,
             "rns_achievement": rns_ach,
             "rns_last":        lst_rn,
+            "ly_full_rn":      full_rn,
             "rns_yoy":         rns_yoy,
             "rns_fcst":        rns_fcst,
             "fcst_source":     _prop_fcst_source if month_idx > 0 else "sum",
@@ -1619,6 +1644,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         tot_bud_rn   += bud_rn
         tot_act_rn   += act_rn
         tot_lst_rn   += lst_rn
+        tot_full_rn  += full_rn
         tot_rns_fcst += rns_fcst if rns_fcst is not None else 0
         tot_bud_rev  += bud_rev
         tot_act_rev  += act_rev
@@ -1666,6 +1692,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         "rns_actual":      tot_act_rn,
         "rns_achievement": tot_rns_ach,
         "rns_last":        tot_lst_rn,
+        "ly_full_rn":      tot_full_rn,
         "rns_yoy":         tot_yoy,
         "rns_fcst":        tot_rns_fcst,
         "fcst_achievement": tot_fcst_ach,
@@ -1740,10 +1767,18 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                             m = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
                             s_lst_rn  += m.get("booking_rn",  0)
                             s_lst_rev += m.get("booking_rev", 0.0)
+                # LY 풀마감: 동기간 보정 없이 db_bps에서 직접 합산 (전년 마감실적)
+                s_full_rn = s_full_rev = 0
+                for mk in last_keys:
+                    for pname in db_props:
+                        m_full = db_bps.get(pname, {}).get(seg, {}).get(mk, {})
+                        s_full_rn  += m_full.get("booking_rn",  0)
+                        s_full_rev += m_full.get("booking_rev", 0.0)
                 seg_aggs[seg] = {
                     "bud_rn": s_bud_rn, "bud_rev": s_bud_rev, "bud_adr": s_bud_adr,
                     "act_rn": s_act_rn, "act_rev": s_act_rev,
                     "lst_rn": s_lst_rn, "lst_rev": s_lst_rev,
+                    "full_rn": s_full_rn, "full_rev": s_full_rev,
                 }
             prop_seg_data[display_name] = seg_aggs
 
@@ -1781,6 +1816,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_bud_rn = sa["bud_rn"]; s_bud_rev = sa["bud_rev"]; s_bud_adr = sa["bud_adr"]
                 s_act_rn = sa["act_rn"]; s_act_rev = sa["act_rev"]
                 s_lst_rn = sa["lst_rn"]; s_lst_rev = sa["lst_rev"]
+                s_full_rn = sa.get("full_rn", 0); s_full_rev = sa.get("full_rev", 0.0)
 
                 s_rns_ach = round((s_act_rn / s_bud_rn * 100), 1) if s_bud_rn > 0 else 0.0
                 s_rev_ach = round((s_act_rev / s_bud_rev * 100), 1) if s_bud_rev > 0 else 0.0
@@ -1890,6 +1926,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     "rns_actual":      s_act_rn,
                     "rns_achievement": s_rns_ach,
                     "rns_last":        s_lst_rn,
+                    "ly_full_rn":      s_full_rn,
                     "rns_yoy":         round((s_act_rn / s_lst_rn - 1) * 100, 1) if s_lst_rn > 0 else 0.0,
                     "rns_fcst":        s_rns_f,
                     "fcst_achievement": s_fcst_ach,
@@ -1903,6 +1940,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                     "rev_budget":      round(s_bud_rev * 1_000_000),
                     "rev_actual":      round(s_act_rev * 1_000_000),
                     "rev_last":        round(s_lst_rev * 1_000_000),
+                    "ly_full_rev":     round(s_full_rev * 1_000_000),
                     "rev_fcst":        round(s_rev_f * 1_000_000),
                     "rev_achievement": s_rev_ach,
                     "rev_fcst_achievement": s_rev_fcst_ach,

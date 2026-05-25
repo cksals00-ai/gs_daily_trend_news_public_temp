@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GS WATCH</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#eee;font-family:-apple-system,sans-serif;padding:6px 8px;-webkit-text-size-adjust:100%}
+h1{font-size:11px;font-weight:700;letter-spacing:1px;color:#7c7cff;text-align:center;padding:4px 0 8px}
+.c{background:#23234a;border-radius:12px;padding:12px 10px;margin-bottom:8px;text-align:center}
+.n{font-size:26px;font-weight:800;line-height:1.1;color:#fff}
+.l{font-size:10px;color:#9a9ac0;margin-top:4px}
+.s{font-size:9px;color:#56567a;text-align:center;padding:4px 0 2px}
+</style>
+</head>
+<body>
+<h1>GS WATCH</h1>
+<div class="c"><div class="n" id="rn">—</div><div class="l">총 RN</div></div>
+<div class="c"><div class="n" id="rev">—</div><div class="l">총 매출</div></div>
+<div class="c"><div class="n" id="adr">—</div><div class="l">ADR</div></div>
+<div class="c"><div class="n" id="irn">—</div><div class="l">인플루언서 RN</div></div>
+<div class="c"><div class="n" id="irev">—</div><div class="l">인플루언서 매출</div></div>
+<div class="c"><div class="n" id="camp">—</div><div class="l">기획전 수</div></div>
+<div class="s" id="ts"></div>
+<script>
+var s=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+var num=function(v){return Math.round(v).toLocaleString('en-US');};
+fetch('data/otb_data.json').then(function(r){return r.json();}).then(function(d){
+  var u=d.summary;
+  s('rn',num(u.rns_actual));
+  s('rev',(u.rev_actual/1e8).toFixed(0)+'억');
+  s('adr',(u.adr_actual/1e4).toFixed(1)+'만');
+  if(d.meta&&d.meta.refreshTime)s('ts',d.meta.refreshTime);
+}).catch(function(){});
+fetch('data/influencer_86code_performance.json').then(function(r){return r.json();}).then(function(d){
+  var u=d.summary;
+  s('irn',num(u.total_rn));
+  s('irev',(u.total_rev_m/100).toFixed(0)+'억');
+  s('camp',num(u.campaigns_with_data));
+}).catch(function(){});
+</script>
+</body>
+</html>

@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="admin">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>인플루언서 분석 · SONO & TRINITY GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;
+  --ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;
+  --gold:#c9a063;--gold-bright:#e6b970;
+  --positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;
+  --negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.10);--rule-strong:rgba(255,255,255,0.20);
+  --serif:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --sidebar-w:220px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:500;line-height:1.55;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:keep-all;}
+input,button,select,table,th,td{font-family:var(--sans)!important;}
+.masthead{background:var(--bg-deep);border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
+.masthead-inner{max-width:1640px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.logo-mark{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--gold-bright);white-space:nowrap;}
+.team-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.5);border-left:1px solid rgba(255,255,255,0.2);padding-left:14px;margin-left:14px;white-space:nowrap;}
+.page-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(201,160,99,0.15);border:1px solid rgba(201,160,99,0.35);border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:0.12em;}
+.masthead-right{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.6);}
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--positive);margin-right:5px;animation:pulse 2.4s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.app-shell{display:flex;min-height:calc(100vh - 52px);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-deep);border-right:1px solid var(--rule);padding:20px 16px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.filter-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.sidebar-divider{height:1px;background:var(--rule);}
+.otb-nav{display:flex;flex-direction:column;gap:2px;}
+.otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;letter-spacing:0.03em;white-space:nowrap;}
+.otb-nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.otb-nav-link.active{background:rgba(201,160,99,0.18);color:var(--gold-bright);}
+.refresh-info{margin-top:auto;padding-top:16px;border-top:1px solid var(--rule);}
+.refresh-label{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;margin-bottom:4px;}
+.refresh-time{font-family:var(--mono);font-size:12px;color:var(--ink-muted);font-weight:600;}
+.main-content{flex:1;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:24px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--serif);font-weight:800;font-size:clamp(20px,2.2vw,26px);color:var(--ink);letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.page-title .sub{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-faint);letter-spacing:0.08em;}
+.base-date-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
+.base-date-tag strong{color:var(--gold-bright);font-weight:700;}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+.kpi-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.achievement::before{background:var(--gold);}
+.kpi-card.booking::before{background:var(--positive);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-card.warning::before{background:var(--warning);}
+.kpi-card.negative::before{background:var(--negative);}
+.kpi-card-label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);margin-bottom:8px;text-transform:uppercase;}
+.kpi-card-value{font-family:var(--mono);font-size:clamp(20px,2.4vw,28px);font-weight:700;color:var(--ink);line-height:1;margin-bottom:6px;}
+.kpi-card-value .unit{font-size:0.45em;color:var(--ink-faint);font-weight:500;margin-left:2px;}
+.kpi-card-sub{font-family:var(--mono);font-size:11px;color:var(--ink-faint);}
+.section{display:flex;flex-direction:column;gap:14px;}
+.section-title{font-family:var(--serif);font-weight:700;font-size:16px;color:var(--ink);letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.section-title .badge-no{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold-bright);background:rgba(201,160,99,0.12);border:1px solid rgba(201,160,99,0.3);padding:2px 8px;border-radius:3px;letter-spacing:0.08em;}
+.section-title .sub{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-faint);letter-spacing:0.04em;}
+.section-note{font-family:var(--sans);font-size:12px;color:var(--ink-muted);line-height:1.6;padding:12px 16px;background:var(--bg-soft);border-left:2px solid var(--gold);border-radius:0 4px 4px 0;}
+.mid-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.chart-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;}
+.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.chart-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-canvas-wrap{height:340px;position:relative;}
+.chart-canvas-wrap.tall{height:420px;}
+.table-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
+.table-card-header{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.table-card-title{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--ink-muted);text-transform:uppercase;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.pivot{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.pivot thead tr{background:var(--bg-deep);}
+table.pivot th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule-strong);text-align:right;cursor:default;}
+table.pivot th:first-child,table.pivot th:nth-child(2){text-align:left;}
+table.pivot td{font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule);text-align:right;color:var(--ink-muted);}
+table.pivot td:first-child{text-align:center;color:var(--ink-faint);}
+table.pivot td:nth-child(2){text-align:left;color:var(--ink-soft);font-weight:700;}
+table.pivot tr:hover td{background:var(--bg-soft);}
+table.pivot tr.total-row td{background:rgba(201,160,99,0.07);border-top:1px solid var(--rule-strong);color:var(--ink);font-weight:700;}
+table.pivot tr.total-row td:nth-child(2){color:var(--gold-bright);}
+table.pivot tr.hidden-row{display:none;}
+.rank-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;background:var(--bg-soft);color:var(--ink-faint);}
+.rank-num.top{background:rgba(201,160,99,0.2);color:var(--gold-bright);}
+.grade-pill{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;white-space:nowrap;}
+.grade-high{background:var(--positive-bg);color:var(--positive);}
+.grade-medium{background:var(--warning-bg);color:var(--warning);}
+.grade-low{background:var(--negative-bg);color:var(--negative);}
+.grade-neutral{background:var(--bg-soft);color:var(--ink-muted);}
+.prop-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);background:var(--bg-soft);border:1px solid var(--rule);margin:1px 2px 1px 0;}
+.muted-cell{color:var(--ink-faint);}
+.more-btn{display:block;width:100%;padding:11px;background:var(--bg-deep);border:none;border-top:1px solid var(--rule);color:var(--gold-bright);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:background 0.15s;}
+.more-btn:hover{background:var(--bg-soft);}
+.heatmap-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;}
+table.heatmap{border-collapse:separate;border-spacing:3px;font-size:11px;}
+table.heatmap th{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-muted);padding:6px 8px;white-space:nowrap;text-align:center;}
+table.heatmap th.row-head{text-align:left;color:var(--ink-soft);font-weight:700;position:sticky;left:0;background:var(--bg-card);z-index:1;}
+table.heatmap th.col-head{writing-mode:vertical-rl;transform:rotate(180deg);max-height:90px;}
+table.heatmap td{width:46px;height:38px;text-align:center;font-family:var(--mono);font-size:10.5px;font-weight:600;border-radius:3px;color:#0c0e12;}
+table.heatmap td.empty{background:var(--bg-deep);color:var(--ink-faint);font-weight:400;}
+.matrix-legend{display:flex;gap:14px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--rule);margin-top:12px;align-items:center;}
+.matrix-legend-item{font-family:var(--mono);font-size:10px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;}
+.yoy-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;}
+.yoy-stat{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
+.yoy-stat-row{display:flex;flex-direction:column;gap:8px;}
+.yoy-stat-label{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-faint);text-transform:uppercase;}
+.yoy-bars{display:flex;flex-direction:column;gap:6px;}
+.yoy-bar-row{display:flex;align-items:center;gap:10px;}
+.yoy-bar-year{font-family:var(--mono);font-size:11px;color:var(--ink-muted);width:42px;flex-shrink:0;}
+.yoy-bar-track{flex:1;height:22px;background:var(--bg-deep);border-radius:3px;overflow:hidden;position:relative;}
+.yoy-bar-fill{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:#0c0e12;min-width:fit-content;}
+.yoy-bar-fill.y25{background:linear-gradient(90deg,#5a9fc4,#7bb8d8);}
+.yoy-bar-fill.y26{background:linear-gradient(90deg,var(--gold),var(--gold-bright));}
+.yoy-delta{font-family:var(--mono);font-size:12px;font-weight:700;}
+.yoy-delta.neg{color:var(--negative);}
+.yoy-delta.pos{color:var(--positive);}
+.error-banner{background:var(--negative-bg);border:1px solid var(--negative);border-radius:6px;padding:20px 24px;color:var(--ink);font-family:var(--sans);}
+.error-banner h3{font-family:var(--serif);font-size:16px;color:var(--negative);margin-bottom:8px;}
+.error-banner code{font-family:var(--mono);font-size:11px;color:var(--ink-muted);background:var(--bg-deep);padding:2px 6px;border-radius:3px;}
+.loading-note{font-family:var(--mono);font-size:12px;color:var(--ink-faint);padding:40px;text-align:center;}
+@media(max-width:1100px){.mid-row,.yoy-grid{grid-template-columns:1fr;}.kpi-strip{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:860px){:root{--sidebar-w:0px;}.sidebar{display:none;}.kpi-strip{grid-template-columns:repeat(2,1fr);}.main-content{padding:18px 14px;}}
+@media(max-width:480px){.kpi-strip{grid-template-columns:1fr;}}
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200;padding-top:env(safe-area-inset-top,0px)}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}
+.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;font-size:18px;padding:4px 8px;margin-left:auto}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:860px){.gsn{position:sticky;top:0;z-index:200}}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+</style>
+</head>
+<body>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/external-report.html" data-gsn="external-report">외부 리포트 분석</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">☰</button>
+  </div>
+</nav>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div style="display:flex;align-items:center;">
+      <span class="logo-mark">GS INFLUENCER ANALYTICS</span>
+      <span class="team-tag">SONO &amp; TRINITY · GS팀</span>
+    </div>
+    <div class="masthead-right">
+      <span class="page-badge">ADMIN</span>
+      <span><span class="live-dot"></span>LIVE</span>
+    </div>
+  </div>
+</header>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div>
+      <div class="filter-section-label">인플루언서 분석</div>
+      <div class="otb-nav">
+        <a href="#sec-kpi" class="otb-nav-link active">① Executive KPI</a>
+        <a href="#sec-ranking" class="otb-nav-link">② 인플루언서 랭킹</a>
+        <a href="#sec-roi" class="otb-nav-link">③ ROI 버블차트</a>
+        <a href="#sec-conv" class="otb-nav-link">④ 전환율·취소율</a>
+        <a href="#sec-heat" class="otb-nav-link">⑤ 사업장별 히트맵</a>
+        <a href="#sec-yoy" class="otb-nav-link">⑥ YoY 비교</a>
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">바로가기</div>
+      <div class="otb-nav">
+        <a href="channel.html" class="otb-nav-link">채널별 실적</a>
+        <a href="gs-salefesta.html" class="otb-nav-link">기획전 현황</a>
+        <a href="otb.html" class="otb-nav-link">GS 실적 리포트</a>
+      </div>
+    </div>
+    <div class="refresh-info">
+      <div class="refresh-label">DATA UPDATED</div>
+      <div class="refresh-time" id="sidebar-refresh">—</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">
+        인플루언서 분석
+        <span class="sub">INFLUENCER CAMPAIGN PERFORMANCE · 86코드 패키지 매칭 기반</span>
+      </div>
+      <div class="base-date-tag">분석 기준 <strong id="analysis-date">—</strong></div>
+    </div>
+
+    <div id="error-zone"></div>
+    <div id="dashboard-body">
+      <div class="loading-note">데이터 로딩 중…</div>
+    </div>
+  </main>
+</div>
+
+<script>
+const fmtInt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('ko-KR');
+const fmtPct = (n,d=1) => (n==null||isNaN(n)) ? '—' : (n*100).toFixed(d)+'%';
+const fmtRev = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('ko-KR'); // 백만원 단위
+const GRADE_KO = {high:'우수',medium:'양호',low:'저조',neutral:'중립',negative:'부진',unknown:'미상'};
+const GRADE_RANK = {high:3,medium:2,low:1,neutral:0,negative:-1,unknown:-2};
+const GRADE_COLOR = {high:'#4caf6f',medium:'#e8a256',low:'#e57373',neutral:'#7a8794',negative:'#b85c5c',unknown:'#5a6068'};
+
+function showError(msg, detail){
+  document.getElementById('dashboard-body').innerHTML = '';
+  document.getElementById('error-zone').innerHTML =
+    '<div class="error-banner"><h3>⚠ 데이터를 불러오지 못했습니다</h3>'
+    + '<p style="margin-bottom:8px;color:var(--ink-soft);">'+msg+'</p>'
+    + (detail ? '<code>'+detail+'</code>' : '')
+    + '<p style="margin-top:10px;font-size:12px;color:var(--ink-faint);">실데이터 없이는 대시보드를 렌더링하지 않습니다. 데이터 파일을 확인해 주세요.</p></div>';
+}
+
+async function fetchJSON(path){
+  const res = await fetch(path + '?t=' + Date.now());
+  if(!res.ok) throw new Error(path + ' → HTTP ' + res.status);
+  return res.json();
+}
+
+async function init(){
+  let perf86, individual;
+  try {
+    perf86 = await fetchJSON('data/influencer_86code_performance.json');
+  } catch (e) {
+    showError('86코드 실적 JSON을 불러올 수 없습니다.', e.message);
+    return;
+  }
+  try { individual = await fetchJSON('data/campaign_individual_analysis.json'); } catch(e){ individual = null; }
+
+  const campaigns = Object.values(perf86.by_campaign);
+  if (!campaigns.length) {
+    showError('매칭된 인플루언서 캠페인 데이터가 없습니다.', 'by_campaign 0건');
+    return;
+  }
+
+  document.getElementById('analysis-date').textContent = perf86.generated_at || '—';
+  document.getElementById('sidebar-refresh').textContent = perf86.generated_at || '—';
+
+  // individual_analysis에서 enrichment 매핑
+  const enrichMap = {};
+  if (individual && individual.individual_analysis) {
+    individual.individual_analysis.forEach(c => {
+      if (c.influencer_data) {
+        enrichMap[c.campaign_key || c.campaign_id] = {
+          cancel_rate: c.influencer_data.cancel_rate,
+          otb_rns: c.influencer_data.otb_rns,
+          channel_rns: c.influencer_data.channel_rns,
+          effectiveness: c.effectiveness_score
+        };
+      }
+    });
+  }
+
+  render(campaigns, perf86.summary, enrichMap);
+}
+
+function render(campaigns, summary, enrichMap){
+  // ---- 인플루언서별 집계 (86코드 실적 기반) ----
+  const byInf = {};
+  campaigns.forEach(c => {
+    // 인플루언서명 추출: influencer 필드 또는 channel에서 "인플루언서(이름)" 파싱
+    let infName = c.influencer;
+    if (!infName) {
+      const m = (c.channel||'').match(/인플루언서\((.+?)\)/);
+      infName = m ? m[1] : (c.channel || '미상');
+    }
+    const key = infName;
+    if (!byInf[key]) byInf[key] = {name:key, rns:0, revM:0, roomRevM:0, commM:0, count:0, props:new Set(), cancelSum:0, cancelN:0, otb:0, otbRns:0, gradeMax:'unknown'};
+    const o = byInf[key];
+    o.rns += c.rn || 0;
+    o.revM += c.total_rev_m || 0;
+    o.roomRevM += c.room_rev_m || 0;
+    o.commM += c.commission_m || 0;
+    o.count++;
+    o.props.add(c.property);
+    // enrichment: cancel_rate, otb, grade
+    const enr = enrichMap[c.campaign_key] || {};
+    if (enr.cancel_rate != null) { o.cancelSum += enr.cancel_rate; o.cancelN++; }
+    if (enr.otb_rns != null) { o.otb += enr.otb_rns; o.otbRns += enr.channel_rns || c.rn || 0; }
+    if (GRADE_RANK[enr.effectiveness] > GRADE_RANK[o.gradeMax]) o.gradeMax = enr.effectiveness;
+  });
+  const infList = Object.values(byInf).map(o => ({
+    name:o.name, rns:o.rns, rev:o.revM, roomRev:o.roomRevM, comm:o.commM, count:o.count,
+    adr: o.rns>0 ? Math.round(o.roomRevM*1e6/o.rns) : null,
+    conv: o.otbRns>0 ? o.otb/o.otbRns : null,
+    cancel: o.cancelN>0 ? o.cancelSum/o.cancelN : null,
+    grade:o.gradeMax, props:[...o.props]
+  })).sort((a,b)=>b.rns-a.rns);
+
+  const totRns = summary.total_rn || infList.reduce((s,x)=>s+x.rns,0);
+  const totRevM = summary.total_rev_m || infList.reduce((s,x)=>s+x.rev,0);
+  const totRoomRevM = summary.total_room_rev_m || infList.reduce((s,x)=>s+x.roomRev,0);
+  const cancelVals = campaigns.map(c=> (enrichMap[c.campaign_key]||{}).cancel_rate).filter(v=>v!=null);
+  const avgCancel = cancelVals.length ? cancelVals.reduce((s,v)=>s+v,0)/cancelVals.length : null;
+  const adr = summary.avg_adr_k ? summary.avg_adr_k * 1000 : (totRns>0 ? totRoomRevM*1e6/totRns : null);
+
+  const body = document.getElementById('dashboard-body');
+  body.innerHTML = `
+    <!-- ① KPI -->
+    <section class="section" id="sec-kpi">
+      <div class="section-title"><span class="badge-no">SEC 01</span> Executive KPI <span class="sub">86코드 매칭 · ${campaigns.length}개 기획전 · ${infList.length}명 인플루언서</span></div>
+      <div class="kpi-strip">
+        <div class="kpi-card info"><div class="kpi-card-label">기획전 / 인플루언서</div><div class="kpi-card-value">${fmtInt(campaigns.length)}<span class="unit">건</span></div><div class="kpi-card-sub">인플루언서 ${infList.length}명</div></div>
+        <div class="kpi-card booking"><div class="kpi-card-label">총 RNs</div><div class="kpi-card-value">${fmtInt(totRns)}<span class="unit">RN</span></div><div class="kpi-card-sub">86코드 넷 기준</div></div>
+        <div class="kpi-card achievement"><div class="kpi-card-label">총 매출</div><div class="kpi-card-value">${fmtRev(totRevM)}<span class="unit">백만원</span></div><div class="kpi-card-sub">약 ${(totRevM/100).toFixed(1)}억원 · 객실매출 ${fmtRev(totRoomRevM)}백만</div></div>
+        <div class="kpi-card warning"><div class="kpi-card-label">평균 취소율</div><div class="kpi-card-value">${avgCancel!=null?fmtPct(avgCancel):'—'}</div><div class="kpi-card-sub">${cancelVals.length?'보유 '+cancelVals.length+'건':'enrichment 데이터 없음'}</div></div>
+        <div class="kpi-card negative"><div class="kpi-card-label">평균 ADR</div><div class="kpi-card-value">${fmtInt(adr)}<span class="unit">원</span></div><div class="kpi-card-sub">객실매출 ÷ 총RNs</div></div>
+      </div>
+    </section>
+
+    <!-- ② 랭킹 -->
+    <section class="section" id="sec-ranking">
+      <div class="section-title"><span class="badge-no">SEC 02</span> 인플루언서 랭킹 <span class="sub">RNs 내림차순 · 전체 ${infList.length}명 개별 노출</span></div>
+      <div class="table-card">
+        <div class="table-card-header"><span class="table-card-title">INFLUENCER RANKING</span><span class="table-card-title" style="color:var(--ink-faint);">전환율 = OTB RNs ÷ 채널 RNs</span></div>
+        <div class="table-wrap">
+          <table class="pivot">
+            <thead><tr>
+              <th>#</th><th>인플루언서</th><th>캠페인</th><th>RNs</th><th>매출(백만)</th><th>OTB전환율</th><th>취소율</th><th>등급</th><th>사업장</th>
+            </tr></thead>
+            <tbody id="ranking-body"></tbody>
+            <tfoot><tr class="total-row">
+              <td></td><td>합계</td><td>${fmtInt(campaigns.length)}</td><td>${fmtInt(totRns)}</td><td>${fmtRev(totRevM)}</td><td>—</td><td>${avgCancel!=null?fmtPct(avgCancel):'—'}</td><td></td><td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <button class="more-btn" id="ranking-more" style="display:none;"></button>
+      </div>
+    </section>
+
+    <!-- ③ ROI 버블 -->
+    <section class="section" id="sec-roi">
+      <div class="section-title"><span class="badge-no">SEC 03</span> ROI 버블차트 <span class="sub">X: RNs · Y: 매출 · 크기: 캠페인 수 · 색상: 등급</span></div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">RNs × 매출 × 캠페인수</span>
+          <div class="chart-legend" id="roi-legend"></div>
+        </div>
+        <div class="chart-canvas-wrap tall"><canvas id="roiChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ④ 전환율 & 취소율 -->
+    <section class="section" id="sec-conv">
+      <div class="section-title"><span class="badge-no">SEC 04</span> 전환율 &amp; 취소율 비교 <span class="sub">OTB 전환율 및 취소율 보유 인플루언서</span></div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">OTB 전환율 vs 취소율</span>
+          <div class="chart-legend">
+            <span class="chart-legend-item"><span class="legend-dot" style="background:#5a9fc4;"></span>OTB 전환율</span>
+            <span class="chart-legend-item"><span class="legend-dot" style="background:#e57373;"></span>취소율</span>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap tall"><canvas id="convChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ⑤ 히트맵 -->
+    <section class="section" id="sec-heat">
+      <div class="section-title"><span class="badge-no">SEC 05</span> 사업장별 히트맵 <span class="sub">사업장 × 인플루언서 RNs 매트릭스</span></div>
+      <div class="chart-card">
+        <div class="heatmap-wrap" id="heatmap-zone"></div>
+        <div class="matrix-legend">
+          <span class="matrix-legend-item">RNs 강도</span>
+          <span class="matrix-legend-item"><span style="display:inline-block;width:18px;height:14px;border-radius:2px;background:#2d3138;"></span>낮음</span>
+          <span class="matrix-legend-item"><span style="display:inline-block;width:18px;height:14px;border-radius:2px;background:#c9a063;"></span>중간</span>
+          <span class="matrix-legend-item"><span style="display:inline-block;width:18px;height:14px;border-radius:2px;background:#4caf6f;"></span>높음</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ YoY -->
+    <section class="section" id="sec-yoy">
+      <div class="section-title"><span class="badge-no">SEC 06</span> YoY 비교 <span class="sub">2025 vs 2026 인플루언서 채널 총 실적</span></div>
+      <div id="yoy-zone"></div>
+    </section>
+
+    <div class="section-note">
+      <strong>데이터 출처</strong> · 86XX 패키지코드 기반 실적 (<code style="font-family:var(--mono);">influencer_86code_performance.json</code>).
+      27번 txt 넷 데이터(취소 반영) → 패키지코드 매칭 → 기획전 ${campaigns.length}건, 인플루언서 ${infList.length}명, 총 ${fmtInt(totRns)} RN.
+      취소율·OTB 전환율은 보조 데이터(campaign_individual_analysis.json) 존재 시 표시.
+    </div>
+  `;
+
+  renderRanking(infList);
+  renderROI(infList);
+  renderConv(campaigns, enrichMap);
+  renderHeatmap(campaigns);
+  renderYoY(campaigns);
+  setupNavHighlight();
+}
+
+function renderRanking(infList){
+  const tb = document.getElementById('ranking-body');
+  const LIMIT = 10;
+  tb.innerHTML = infList.map((x,i) => {
+    const hidden = i >= LIMIT ? ' hidden-row' : '';
+    const propTags = x.props.map(p=>`<span class="prop-tag">${p}</span>`).join('');
+    return `<tr class="rank-row${hidden}">
+      <td><span class="rank-num${i<3?' top':''}">${i+1}</span></td>
+      <td>${x.name}</td>
+      <td>${fmtInt(x.count)}</td>
+      <td>${fmtInt(x.rns)}</td>
+      <td>${x.rev>0?fmtRev(x.rev):'<span class="muted-cell">—</span>'}</td>
+      <td>${x.conv!=null?fmtPct(x.conv):'<span class="muted-cell">—</span>'}</td>
+      <td>${x.cancel!=null?fmtPct(x.cancel):'<span class="muted-cell">—</span>'}</td>
+      <td><span class="grade-pill grade-${x.grade}">${GRADE_KO[x.grade]||x.grade}</span></td>
+      <td style="text-align:left;white-space:normal;max-width:160px;">${propTags}</td>
+    </tr>`;
+  }).join('');
+
+  if (infList.length > LIMIT) {
+    const btn = document.getElementById('ranking-more');
+    btn.style.display = 'block';
+    let expanded = false;
+    const setLabel = () => btn.textContent = expanded ? '▲ 접기' : `▼ 더보기 (${infList.length - LIMIT}명 더)`;
+    setLabel();
+    btn.onclick = () => {
+      expanded = !expanded;
+      document.querySelectorAll('#ranking-body .rank-row').forEach((r,i)=>{
+        if (i >= LIMIT) r.classList.toggle('hidden-row', !expanded);
+      });
+      setLabel();
+    };
+  }
+}
+
+let roiChartObj, convChartObj;
+function renderROI(infList){
+  const data = infList.map(x => ({
+    x: x.rns, y: x.rev,
+    r: Math.max(6, Math.sqrt(x.count) * 9),
+    name: x.name, count: x.count, grade: x.grade
+  }));
+  // 등급별 그룹 데이터셋 (범례용)
+  const grades = [...new Set(infList.map(x=>x.grade))].sort((a,b)=>GRADE_RANK[b]-GRADE_RANK[a]);
+  const datasets = grades.map(g => ({
+    label: GRADE_KO[g]||g,
+    data: data.filter(d=>d.grade===g),
+    backgroundColor: GRADE_COLOR[g] + 'cc',
+    borderColor: GRADE_COLOR[g],
+    borderWidth: 1.5
+  }));
+  document.getElementById('roi-legend').innerHTML = grades.map(g =>
+    `<span class="chart-legend-item"><span class="legend-dot" style="background:${GRADE_COLOR[g]};"></span>${GRADE_KO[g]||g}</span>`).join('');
+
+  const ctx = document.getElementById('roiChart');
+  roiChartObj = new Chart(ctx, {
+    type:'bubble',
+    data:{datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>{const d=c.raw;return `${d.name} · RNs ${fmtInt(d.x)} · 매출 ${fmtRev(d.y)}백만 · ${d.count}캠페인 · ${GRADE_KO[d.grade]}`;}}}
+      },
+      scales:{
+        x:{title:{display:true,text:'RNs',color:'#7a7e85',font:{family:'monospace',size:11}},ticks:{color:'#a8acb3',font:{family:'monospace',size:10}},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{title:{display:true,text:'매출 (백만원)',color:'#7a7e85',font:{family:'monospace',size:11}},ticks:{color:'#a8acb3',font:{family:'monospace',size:10}},grid:{color:'rgba(255,255,255,0.06)'}}
+      }
+    }
+  });
+}
+
+function renderConv(campaigns, enrichMap){
+  // OTB 전환율 + 취소율: enrichment 데이터에서 가져옴
+  const rows = campaigns.map(c=>{
+    const enr = enrichMap[c.campaign_key] || {};
+    let infName = c.influencer;
+    if (!infName) { const m=(c.channel||'').match(/인플루언서\((.+?)\)/); infName=m?m[1]:(c.channel||'미상'); }
+    const conv = (enr.otb_rns!=null && (enr.channel_rns||c.rn)) ? enr.otb_rns/(enr.channel_rns||c.rn) : null;
+    return {name:infName, prop:c.property, conv, cancel:enr.cancel_rate||null, rns:c.rn||0};
+  }).filter(r => r.conv!=null || r.cancel!=null)
+    .sort((a,b)=>b.rns-a.rns);
+
+  const labels = rows.map(r=>`${r.name}\n(${r.prop})`);
+  const convData = rows.map(r=>r.conv!=null?+(r.conv*100).toFixed(1):null);
+  const cancelData = rows.map(r=>r.cancel!=null?+(r.cancel*100).toFixed(1):null);
+
+  const ctx = document.getElementById('convChart');
+  convChartObj = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'OTB 전환율(%)',data:convData,backgroundColor:'rgba(90,159,196,0.75)',borderColor:'#5a9fc4',borderWidth:1},
+      {label:'취소율(%)',data:cancelData,backgroundColor:'rgba(229,115,115,0.7)',borderColor:'#e57373',borderWidth:1}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw==null?'—':c.raw+'%'}`}}},
+      scales:{
+        x:{ticks:{color:'#a8acb3',font:{family:'monospace',size:9},maxRotation:60,minRotation:45},grid:{display:false}},
+        y:{ticks:{color:'#a8acb3',font:{family:'monospace',size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.06)'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+function heatColor(t){ // t 0..1
+  if (t<=0) return 'var(--bg-soft)';
+  // 0→soft, 0.5→gold, 1→green
+  if (t<0.5){
+    const k=t/0.5; return `rgba(${Math.round(45+(201-45)*k)},${Math.round(49+(160-49)*k)},${Math.round(56+(99-56)*k)},${0.45+0.55*k})`;
+  } else {
+    const k=(t-0.5)/0.5; return `rgba(${Math.round(201+(76-201)*k)},${Math.round(160+(175-160)*k)},${Math.round(99+(111-99)*k)},1)`;
+  }
+}
+function renderHeatmap(campaigns){
+  // 행=사업장, 열=인플루언서, 셀=RNs 합
+  const matrix={}, props=new Set(), infs={};
+  campaigns.forEach(c=>{
+    const p=c.property;
+    let n=c.influencer;
+    if(!n){ const m=(c.channel||'').match(/인플루언서\((.+?)\)/); n=m?m[1]:(c.channel||'미상'); }
+    const rn=c.rn||0;
+    props.add(p);
+    infs[n]=(infs[n]||0)+rn;
+    matrix[p]=matrix[p]||{}; matrix[p][n]=(matrix[p][n]||0)+rn;
+  });
+  const propRows = [...props].sort((a,b)=>{
+    const sa=Object.values(matrix[a]).reduce((s,v)=>s+v,0), sb=Object.values(matrix[b]).reduce((s,v)=>s+v,0);
+    return sb-sa;
+  });
+  const infCols = Object.keys(infs).sort((a,b)=>infs[b]-infs[a]);
+  let max=0;
+  propRows.forEach(p=>infCols.forEach(n=>{ if((matrix[p][n]||0)>max) max=matrix[p][n]; }));
+
+  let html='<table class="heatmap"><thead><tr><th class="row-head">사업장 \\ 인플루언서</th>';
+  infCols.forEach(n=>html+=`<th class="col-head">${n}</th>`);
+  html+='</tr></thead><tbody>';
+  propRows.forEach(p=>{
+    html+=`<tr><th class="row-head">${p}</th>`;
+    infCols.forEach(n=>{
+      const v=matrix[p][n]||0;
+      if(v>0){ const t=max>0?v/max:0; html+=`<td style="background:${heatColor(t)};" title="${p} × ${n}: ${fmtInt(v)} RN">${fmtInt(v)}</td>`; }
+      else html+='<td class="empty">·</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('heatmap-zone').innerHTML=html;
+}
+
+function renderYoY(campaigns){
+  // by_month에서 2025 vs 2026 집계
+  let r25=0,r26=0,v25=0,v26=0;
+  campaigns.forEach(c=>{
+    if(!c.by_month) return;
+    Object.entries(c.by_month).forEach(([ym,d])=>{
+      const yr=ym.substring(0,4);
+      if(yr==='2025'){r25+=d.rn||0; v25+=Math.round((d.total_rev||0)/1e6);}
+      else if(yr==='2026'){r26+=d.rn||0; v26+=Math.round((d.total_rev||0)/1e6);}
+    });
+  });
+  const rnMax=Math.max(r25,r26)||1, revMax=Math.max(v25,v26)||1;
+  const dRn=r25>0?(r26-r25)/r25:null, dRev=v25>0?(v26-v25)/v25:null;
+  const dCls=v=>v==null?'':(v>=0?'pos':'neg');
+  const dTxt=v=>v==null?'—':(v>=0?'▲ ':'▼ ')+fmtPct(Math.abs(v));
+
+  // 2026 TOP performers: 인플루언서별 2026 RN 집계
+  const byInf26={};
+  campaigns.forEach(c=>{
+    let n=c.influencer;
+    if(!n){const m=(c.channel||'').match(/인플루언서\((.+?)\)/);n=m?m[1]:(c.channel||'미상');}
+    if(!byInf26[n]) byInf26[n]={name:n,rns:0,revM:0,count:0};
+    if(!c.by_month) return;
+    Object.entries(c.by_month).forEach(([ym,d])=>{
+      if(ym.substring(0,4)==='2026'){
+        byInf26[n].rns+=d.rn||0;
+        byInf26[n].revM+=Math.round((d.total_rev||0)/1e6);
+      }
+    });
+    byInf26[n].count++;
+  });
+  const tops=Object.values(byInf26).filter(t=>t.rns>0).sort((a,b)=>b.rns-a.rns).slice(0,10);
+
+  document.getElementById('yoy-zone').innerHTML=`
+    <div class="yoy-grid">
+      <div class="yoy-stat">
+        <div class="yoy-stat-row">
+          <span class="yoy-stat-label">총 RNs <span class="yoy-delta ${dCls(dRn)}">${dTxt(dRn)}</span></span>
+          <div class="yoy-bars">
+            <div class="yoy-bar-row"><span class="yoy-bar-year">2025</span><div class="yoy-bar-track"><div class="yoy-bar-fill y25" style="width:${(r25/rnMax*100).toFixed(1)}%;">${fmtInt(r25)}</div></div></div>
+            <div class="yoy-bar-row"><span class="yoy-bar-year">2026</span><div class="yoy-bar-track"><div class="yoy-bar-fill y26" style="width:${(r26/rnMax*100).toFixed(1)}%;">${fmtInt(r26)}</div></div></div>
+          </div>
+        </div>
+        <div class="yoy-stat-row">
+          <span class="yoy-stat-label">총 매출 (백만원) <span class="yoy-delta ${dCls(dRev)}">${dTxt(dRev)}</span></span>
+          <div class="yoy-bars">
+            <div class="yoy-bar-row"><span class="yoy-bar-year">2025</span><div class="yoy-bar-track"><div class="yoy-bar-fill y25" style="width:${(v25/revMax*100).toFixed(1)}%;">${fmtRev(v25)}</div></div></div>
+            <div class="yoy-bar-row"><span class="yoy-bar-year">2026</span><div class="yoy-bar-track"><div class="yoy-bar-fill y26" style="width:${(v26/revMax*100).toFixed(1)}%;">${fmtRev(v26)}</div></div></div>
+          </div>
+        </div>
+        <div class="section-note" style="margin:0;font-size:11px;">86코드 기반 by_month 집계 · 2026은 진행 중 연도(누적)</div>
+      </div>
+      <div class="table-card" style="border:1px solid var(--rule);">
+        <div class="table-card-header"><span class="table-card-title">2026 TOP PERFORMERS</span><span class="table-card-title" style="color:var(--ink-faint);">RNs 기준 · 86코드 넷</span></div>
+        <div class="table-wrap">
+          <table class="pivot"><thead><tr><th>#</th><th>인플루언서</th><th>RNs</th><th>매출(백만)</th><th>기획전수</th></tr></thead>
+          <tbody>${tops.map((t,i)=>`<tr>
+            <td><span class="rank-num${i<3?' top':''}">${i+1}</span></td>
+            <td>${t.name}</td>
+            <td>${fmtInt(t.rns)}</td>
+            <td>${fmtRev(t.revM)}</td>
+            <td>${fmtInt(t.count)}</td>
+          </tr>`).join('')}</tbody></table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function setupNavHighlight(){
+  const links=[...document.querySelectorAll('.sidebar .otb-nav-link[href^="#"]')];
+  const secs=links.map(l=>document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+e.target.id));
+      }
+    });
+  },{rootMargin:'-40% 0px -55% 0px'});
+  secs.forEach(s=>obs.observe(s));
+}
+
+init();
+</script>
+</body>
+</html>

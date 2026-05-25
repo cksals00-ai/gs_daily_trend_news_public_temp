@@ -1428,7 +1428,7 @@ function buildActionInsights(sorted, lyData) {
     if (!ly || (ly.net_rn||0) <= 0) continue;
     const change = ((d.net_rn||0) - (ly.net_rn||0)) / (ly.net_rn||1) * 100;
     if (change < -5) yoyDecline.push({ ch, change });
-    else if (change > 10 && !/^기타/.test(ch)) yoyGrowth.push({ ch, change });
+    else if (change > 10 && !/^기타/.test(ch) && (d.net_rn||0) >= 1000) yoyGrowth.push({ ch, change });
   }
   yoyDecline.sort((a,b) => a.change - b.change);
   yoyGrowth.sort((a,b) => b.change - a.change);

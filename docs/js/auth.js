@@ -266,6 +266,13 @@
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ email: email })
       }).then(function (r) { return r.json(); });
+    },
+    deleteUser: function (email) {
+      var t = readToken();
+      return fetch(getApiUrl() + '?action=delete&token=' + encodeURIComponent(t), {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ email: email, permanent: true })
+      }).then(function (r) { return r.json(); });
     }
   };
   window.GSNAuth = GSNAuth;

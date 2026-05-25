@@ -59,12 +59,24 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .dl-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 16px;border-radius:10px;border:1px solid var(--gold);background:rgba(212,167,74,.12);color:var(--gold2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none}
 .dl-btn:hover{background:rgba(212,167,74,.25);color:var(--gold3)}
 .dl-icon{width:16px;height:16px}
-.welcome{text-align:center;padding:48px 16px 24px}
-.welcome h2{font-size:22px;font-weight:700;color:var(--ink);margin-bottom:8px}
-.welcome p{font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:24px}
-.templates{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-.tpl-btn{padding:8px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--glass);color:var(--ink2);font-size:12.5px;cursor:pointer;transition:all .2s;font-family:var(--sans)}
-.tpl-btn:hover{border-color:var(--gold);color:var(--gold2);background:var(--gold-glow)}
+/* ── Welcome Hero ── */
+@keyframes welcomeFadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes glowPulse{0%,100%{opacity:.4}50%{opacity:.7}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes floatUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.welcome{text-align:center;padding:56px 24px 32px;position:relative;animation:welcomeFadeIn .7s ease both}
+.welcome::before{content:'';position:absolute;top:20%;left:50%;transform:translateX(-50%);width:260px;height:260px;background:radial-gradient(circle,rgba(212,167,74,.08) 0%,transparent 70%);border-radius:50%;pointer-events:none;animation:glowPulse 4s ease-in-out infinite}
+.welcome-icon{display:flex;align-items:center;justify-content:center;margin:0 auto 20px;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,rgba(212,167,74,.15),rgba(212,167,74,.05));border:1px solid rgba(212,167,74,.2);animation:floatUp 3s ease-in-out infinite;position:relative}
+.welcome-icon svg{width:28px;height:28px}
+.welcome-icon::after{content:'';position:absolute;inset:-1px;border-radius:16px;background:linear-gradient(135deg,rgba(212,167,74,.3),transparent 60%);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;-webkit-mask-composite:xor;padding:1px;pointer-events:none}
+.welcome h2{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;background:linear-gradient(135deg,var(--gold2) 0%,var(--gold3) 40%,var(--gold) 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+.welcome-sub{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:rgba(212,167,74,.1);border:1px solid rgba(212,167,74,.15);border-radius:20px;padding:4px 14px;margin-bottom:16px}
+.welcome p{font-size:14px;color:var(--ink3);line-height:1.7;margin-bottom:28px;max-width:420px;margin-left:auto;margin-right:auto}
+.welcome-divider{width:40px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:0 auto 24px;border-radius:1px}
+.templates{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:520px;margin:0 auto}
+.tpl-btn{padding:10px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink2);font-size:13px;cursor:pointer;transition:all .25s ease;font-family:var(--sans);font-weight:500;position:relative;overflow:hidden}
+.tpl-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);pointer-events:none}
+.tpl-btn:hover{border-color:rgba(212,167,74,.35);color:var(--gold2);background:rgba(212,167,74,.08);transform:translateY(-1px);box-shadow:0 4px 16px rgba(212,167,74,.12)}
 .input-area{flex-shrink:0;padding:12px 0 20px;border-top:1px solid var(--rule)}
 .input-row{display:flex;gap:8px;align-items:flex-end}
 .input-field{flex:1;resize:none;border:1px solid var(--rule);border-radius:14px;background:var(--bg2);color:var(--ink);font-family:var(--sans);font-size:14px;padding:12px 16px;outline:none;min-height:46px;max-height:100px;line-height:1.5;transition:border-color .2s}
@@ -80,7 +92,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce{to{transform:translateY(-6px);opacity:.4}}
 .footer-note{text-align:center;font-size:11px;color:var(--ink4);padding:0 0 12px}
-@media(max-width:600px){.chat-wrap{padding:0 8px}.welcome{padding:32px 8px 16px}.welcome h2{font-size:18px}.templates{gap:6px}.tpl-btn{font-size:11.5px;padding:7px 11px}}
+@media(max-width:600px){.chat-wrap{padding:0 8px}.welcome{padding:36px 12px 20px}.welcome::before{width:180px;height:180px}.welcome-icon{width:48px;height:48px;border-radius:14px;margin-bottom:16px}.welcome-icon svg{width:24px;height:24px}.welcome h2{font-size:22px}.welcome-sub{font-size:10px;padding:3px 12px}.welcome p{font-size:13px;margin-bottom:22px}.welcome-divider{margin-bottom:18px}.templates{gap:8px;max-width:100%}.tpl-btn{font-size:12px;padding:9px 14px;border-radius:10px}}
 </style>
 </head>
 <body>
@@ -101,9 +113,18 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 <div class="chat-wrap">
   <div class="messages" id="messages">
     <div class="welcome" id="welcome">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 3v18h18" stroke="var(--gold2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 14l4-4 3 3 6-6" stroke="var(--gold3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="20" cy="7" r="1.5" fill="var(--gold)"/>
+        </svg>
+      </div>
+      <span class="welcome-sub">Sales Intelligence</span>
       <h2>세일즈 데이터 챗</h2>
       <p>실적 데이터를 자연어로 질문하세요. 후속 질문도 가능합니다.<br>
       사업장 미지정 시 전사 실적으로 자동 조회됩니다.</p>
+      <div class="welcome-divider"></div>
       <div class="templates" id="templates"></div>
     </div>
   </div>
@@ -135,6 +156,8 @@ const TEMPLATES = [
   "델피노 2026년 G-OTA 실적",
   "아고다 vs 트립닷컴 비교",
   "채널별 올해 실적",
+  "인플루언서 실적",
+  "기획전 채널별 실적",
   "대만 인바운드 현황",
   "최근 3개월 전사 실적",
 ];
@@ -276,9 +299,10 @@ function processQuery(query) {
       const resolved = resolveFollowUp(query);
 
       // ── 전년 비교 (YoY) 감지 ──
-      if (/전년\s*(?:비교|대비)|yoy|YoY|작년\s*비교|올해\s*(?:vs|대비)\s*작년|작년\s*(?:vs|대비)\s*올해/i.test(resolved)) {
+      const yoyRe = /전년\s*(?:비교|대비)|yoy|YoY|작년\s*비교|올해\s*작년\s*비교|작년\s*올해\s*비교|올해\s*(?:vs|대비)\s*작년|작년\s*(?:vs|대비)\s*올해/i;
+      if (yoyRe.test(resolved)) {
         // 기간 키워드 제거 후 기본 쿼리 추출
-        const baseQ = resolved.replace(/전년\s*(?:비교|대비)|yoy|YoY|작년\s*비교|올해\s*(?:vs|대비)\s*작년|작년\s*(?:vs|대비)\s*올해/gi, "").trim();
+        const baseQ = resolved.replace(/전년\s*(?:비교|대비)|yoy|YoY|올해\s*작년\s*비교|작년\s*올해\s*비교|작년\s*비교|올해\s*(?:vs|대비)\s*작년|작년\s*(?:vs|대비)\s*올해/gi, "").trim();
         const ty = new Date().getFullYear();
         const ly = ty - 1;
         // 올해 월 범위 파악
@@ -393,6 +417,10 @@ function resolveFollowUp(q) {
 
   if (!isFollow) return q;
 
+  // ★ 독립 질문 판별: "실적/현황/추이/매출" + (세그먼트 or 채널별) + 사업장 미지정 = 전사 기본
+  const standaloneRe = /실적|현황|추이|매출|올해|rn|RN|객실|전체/;
+  if (standaloneRe.test(q) && !findProperties(q).length) return q;
+
   // 이전 맥락에서 사업장/기간 가져오기
   const prev = lastContext.parsed;
   let resolved = q;
@@ -428,6 +456,31 @@ function runSingle(query, fullQuery) {
 
 function parseQuery(q) {
   const ql = q.toLowerCase().replace(/\s+/g, " ");
+
+  // 0) 인플루언서 / 기획전 / 86코드 / 캠페인
+  const isInfluencer = /인플루언서|인플\s|86코드|86code/i.test(q);
+  const isCampaign = /기획전|캠페인|프로모션\s*실적|campaign/i.test(q) && !isInfluencer;
+  if (isInfluencer || isCampaign) {
+    const qType = isInfluencer ? "influencer" : "campaign";
+    // 세부 키워드 추출
+    let subQuery = "";
+    if (/top|순위|랭킹|상위/i.test(q)) subQuery = "top";
+    else if (/전환율|conversion/i.test(q)) subQuery = "conversion";
+    else if (/사업장|property/i.test(q)) subQuery = "by_property";
+    else if (/월별|monthly/i.test(q)) subQuery = "monthly";
+    else if (/adr|단가/i.test(q)) subQuery = "adr";
+    else subQuery = "summary";
+    // 특정 인플루언서명 추출
+    let targetInfluencer = null;
+    const infNames = Object.keys((CI?.influencer?.by_influencer)||{});
+    for (const name of infNames) {
+      if (q.includes(name)) { targetInfluencer = name; break; }
+    }
+    // 사업장 필터
+    let filterProp = findProperties(q);
+    return { queryType:qType, subQuery, targetInfluencer, properties:filterProp,
+      channels:[], nationalities:[], segments:[], months:[], isTotal:false };
+  }
 
   // 1) 국적
   let nationalities = [];
@@ -626,6 +679,92 @@ function parseMonths(q) {
 function extractData(parsed) {
   const { queryType, months, monthLabel } = parsed;
   let rows = [], cols = [], nameTag = "", summary = "";
+
+  // ─ 인플루언서 ─
+  if (queryType === "influencer") {
+    const inf = CI.influencer;
+    if (!inf) return { error: "인플루언서 데이터가 로드되지 않았습니다." };
+    const { subQuery, targetInfluencer, properties } = parsed;
+
+    if (targetInfluencer) {
+      // 특정 인플루언서 상세
+      const d = inf.by_influencer[targetInfluencer];
+      if (!d) return { error: `"${targetInfluencer}" 인플루언서 데이터가 없습니다.` };
+      rows.push({인플루언서:targetInfluencer, RN:d.rn, "객실매출(백만)":d.room_rev_m, "총매출(백만)":d.total_rev_m, "ADR(천원)":d.adr_k, 캠페인수:d.campaigns, 사업장:d.properties.join(", ")});
+      // 해당 인플루언서의 캠페인 목록
+      const camps = inf.campaigns.filter(c => c.influencer === targetInfluencer);
+      camps.forEach(c => {
+        rows.push({인플루언서:targetInfluencer+"_캠페인", 채널:c.channel, 사업장:c.property, RN:c.rn, "객실매출(백만)":c.room_rev_m, "ADR(천원)":c.adr_k, 판매기간:c.sale_period});
+      });
+      cols = ["인플루언서","채널","사업장","RN","객실매출(백만)","총매출(백만)","ADR(천원)","캠페인수","판매기간"];
+      nameTag = "인플루언서_" + targetInfluencer;
+      summary = `인플루언서 "${targetInfluencer}" 실적 (86코드 매핑)`;
+    }
+    else if (subQuery === "top" || subQuery === "summary") {
+      // 인플루언서 전체 요약 + TOP
+      const s = inf.summary;
+      rows.push({구분:"전체 합계", RN:s.total_rn, "객실매출(백만)":s.total_room_rev_m, "총매출(백만)":s.total_rev_m, "평균ADR(천원)":s.avg_adr_k, 매칭캠페인수:s.campaigns_with_data});
+      // 인플루언서별 순위
+      const sorted = Object.entries(inf.by_influencer).sort((a,b) => b[1].rn - a[1].rn);
+      sorted.forEach(([name, d], i) => {
+        if (properties.length && !d.properties.some(p => properties.some(fp => p.includes(fp) || fp.includes(p)))) return;
+        rows.push({구분:`#${i+1} ${name}`, RN:d.rn, "객실매출(백만)":d.room_rev_m, "총매출(백만)":d.total_rev_m, "평균ADR(천원)":d.adr_k, 매칭캠페인수:d.campaigns, 사업장:d.properties.join(", ")});
+      });
+      cols = ["구분","RN","객실매출(백만)","총매출(백만)","평균ADR(천원)","매칭캠페인수","사업장"];
+      nameTag = "인플루언서_실적";
+      summary = "인플루언서 실적 순위 (86코드 매핑 기준)";
+    }
+    else if (subQuery === "by_property") {
+      Object.entries(inf.by_property).sort((a,b) => b[1].rn - a[1].rn).forEach(([prop, d]) => {
+        rows.push({사업장:prop, RN:d.rn, "객실매출(백만)":d.room_rev_m, "총매출(백만)":d.total_rev_m, 캠페인수:d.campaigns});
+      });
+      cols = ["사업장","RN","객실매출(백만)","총매출(백만)","캠페인수"];
+      nameTag = "인플루언서_사업장별";
+      summary = "인플루언서 사업장별 실적";
+    }
+    else {
+      // 기본: 캠페인 리스트
+      inf.campaigns.forEach(c => {
+        if (properties.length && !properties.some(p => c.property.includes(p) || p.includes(c.property))) return;
+        rows.push({채널:c.channel, 사업장:c.property, 인플루언서:c.influencer||"-", RN:c.rn, "객실매출(백만)":c.room_rev_m, "ADR(천원)":c.adr_k, 판매기간:c.sale_period});
+      });
+      cols = ["채널","사업장","인플루언서","RN","객실매출(백만)","ADR(천원)","판매기간"];
+      nameTag = "인플루언서_캠페인";
+      summary = "인플루언서 캠페인별 실적";
+    }
+    if (!rows.length) return { error: "해당 조건의 인플루언서 데이터가 없습니다." };
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    return { rows, cols, filename:`GS_${nameTag}_${dateStr}.xlsx`, summary, parsed };
+  }
+
+  // ─ 기획전 ─
+  if (queryType === "campaign") {
+    const camp = CI.campaign;
+    if (!camp) return { error: "기획전 데이터가 로드되지 않았습니다." };
+    const { subQuery } = parsed;
+    // 채널별 기획전 요약
+    const cs = camp.channel_summary || {};
+    if (subQuery === "top") {
+      // TOP 기획전 by key
+      camp.top_campaigns.forEach((c,i) => {
+        rows.push({순위:i+1, 기획전Key:c.key, RN:c.rn, "매출(백만)":c.rev_m, ADR:c.adr, "취소율(%)":c.cancel_rate});
+      });
+      cols = ["순위","기획전Key","RN","매출(백만)","ADR","취소율(%)"];
+      nameTag = "기획전_TOP";
+      summary = "기획전 실적 TOP (86코드 매핑 기준)";
+    } else {
+      // 채널별 요약
+      Object.entries(cs).sort((a,b) => (b[1].total_rn||0) - (a[1].total_rn||0)).forEach(([ch, d]) => {
+        rows.push({채널:ch, 기획전수:d.campaigns||0, 매칭수:d.matched||0, 총RN:d.total_rn||0, "PKG매출(백만)":d.pkg_rev_m||0, "객실매출(백만)":d.room_rev_m||0, 평균ADR:d.avg_adr||0, "캠페인당RN":d.avg_rn_per_campaign||0});
+      });
+      cols = ["채널","기획전수","매칭수","총RN","PKG매출(백만)","객실매출(백만)","평균ADR","캠페인당RN"];
+      nameTag = "기획전_채널별";
+      summary = "기획전 채널별 실적 요약 (4개년)";
+    }
+    if (!rows.length) return { error: "기획전 데이터가 없습니다." };
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    return { rows, cols, filename:`GS_${nameTag}_${dateStr}.xlsx`, summary, parsed };
+  }
 
   if (queryType === "nationality") {
     const { nationalities } = parsed;
