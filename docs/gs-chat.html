@@ -794,17 +794,34 @@ function extractData(parsed) {
         // 사업장 필터 적용: by_prop_channel 사용
         for (const prop of properties) {
           const pcd = (bpc[prop]||{})[ch]; if (!pcd) continue;
-          for (const m of months) { const d = pcd[m]; if (d) rows.push({사업장:prop, 채널:ch, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev}); }
+          for (const m of months) {
+            const d = pcd[m]; if (!d) continue;
+            const row = {사업장:prop, 채널:ch, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev};
+            // LY 비교
+            const lym = String(+m.slice(0,4)-1)+m.slice(4);
+            const ly = pcd[lym];
+            if (ly) { row.LY_RN = ly.rn; row.LY_ADR = ly.adr; row.LY_매출 = ly.rev; row["YoY(%)"] = ly.rn>0? Math.round((d.rn-ly.rn)/ly.rn*1000)/10 : null; }
+            rows.push(row);
+          }
         }
       } else {
         // 전사 채널
         const cd = (CI.by_channel||{})[ch]; if (!cd) continue;
-        for (const m of months) { const d = cd[m]; if (d) rows.push({채널:ch, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev}); }
+        for (const m of months) {
+          const d = cd[m]; if (!d) continue;
+          const row = {채널:ch, 연도:m.slice(0,4), 월:+m.slice(4), RN:d.rn, "ADR(천원)":d.adr, "매출(백만원)":d.rev};
+          // LY 비교
+          const lym = String(+m.slice(0,4)-1)+m.slice(4);
+          const ly = cd[lym];
+          if (ly) { row.LY_RN = ly.rn; row.LY_ADR = ly.adr; row.LY_매출 = ly.rev; row["YoY(%)"] = ly.rn>0? Math.round((d.rn-ly.rn)/ly.rn*1000)/10 : null; }
+          rows.push(row);
+        }
       }
     }
     if (!rows.length) return { error: "해당 채널 데이터가 없습니다." };
     const hasProp = !isTotal && properties.length;
     cols = hasProp ? ["사업장","채널","연도","월","RN","ADR(천원)","매출(백만원)"] : ["채널","연도","월","RN","ADR(천원)","매출(백만원)"];
+    if (rows.some(r=>r.LY_RN)) cols.push("LY_RN","LY_ADR","LY_매출","YoY(%)");
     const propLabel = hasProp ? properties.join(", ") + " · " : "";
     nameTag = "채널_" + (hasProp ? properties.map(p=>p.replace(/\s/g,"")).join("_")+"_" : "") + channels.join("_");
     summary = propLabel + channels.join(", ") + " · " + monthLabel;
@@ -890,18 +907,40 @@ function showChannelBreakdown(parsed) {
   const { months } = parsed;
   const byCh = CI.by_channel || {};
 
-  // 해당 기간 채널별 RN 합산 → 상위 15개
+  // LY 월키 계산
+  const lyMonthMap = {};
+  months.forEach(m => {
+    const lym = String(+m.slice(0,4)-1)+m.slice(4);
+    lyMonthMap[m] = lym;
+  });
+
+  // 해당 기간 채널별 RN 합산 → 상위 15개 (+ LY)
   const chTotals = [];
   for (const [ch, md] of Object.entries(byCh)) {
-    let rn = 0, rev = 0;
-    for (const m of months) { const d = md[m]; if (d) { rn += d.rn; rev += d.rev; } }
-    if (rn > 0) chTotals.push({ ch, rn, rev, adr: rn>0 ? Math.round(rev*1000000/rn/1000) : 0 });
+    let rn = 0, rev = 0, lyRn = 0, lyRev = 0;
+    for (const m of months) {
+      const d = md[m]; if (d) { rn += d.rn; rev += d.rev; }
+      const lym = lyMonthMap[m];
+      const ld = md[lym]; if (ld) { lyRn += ld.rn; lyRev += ld.rev; }
+    }
+    if (rn > 0) chTotals.push({ ch, rn, rev, adr: rn>0 ? Math.round(rev*1000000/rn/1000) : 0,
+      lyRn, lyRev, lyAdr: lyRn>0 ? Math.round(lyRev*1000000/lyRn/1000) : 0 });
   }
   chTotals.sort((a,b) => b.rn - a.rn);
   const top = chTotals.slice(0, 15);
+  const hasLY = top.some(t => t.lyRn > 0);
 
-  const rows = top.map(t => ({채널:t.ch, RN:t.rn, "ADR(천원)":t.adr, "매출(백만원)":Math.round(t.rev*100)/100}));
-  const cols = ["채널","RN","ADR(천원)","매출(백만원)"];
+  const rows = top.map(t => {
+    const row = {채널:t.ch, RN:t.rn, "ADR(천원)":t.adr, "매출(백만원)":Math.round(t.rev*100)/100};
+    if (hasLY) {
+      row.LY_RN = t.lyRn;
+      row.LY_ADR = t.lyAdr;
+      row.LY_매출 = Math.round(t.lyRev*100)/100;
+      row["YoY(%)"] = t.lyRn > 0 ? Math.round((t.rn-t.lyRn)/t.lyRn*1000)/10 : null;
+    }
+    return row;
+  });
+  const cols = hasLY ? ["채널","RN","ADR(천원)","매출(백만원)","LY_RN","LY_ADR","LY_매출","YoY(%)"] : ["채널","RN","ADR(천원)","매출(백만원)"];
   const result = {
     rows, cols, summary: `채널별 실적 TOP15 · ${parsed.monthLabel}`,
     filename: `GS_채널별실적_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.xlsx`, parsed
@@ -1176,7 +1215,7 @@ function buildCompareChartSVG(labels, byLabel, months, colors) {
 
 function showResultMsg(result) {
   const { rows, cols, filename, summary } = result;
-  const numCols = new Set(["RN","ADR(천원)","매출(백만원)","연도","월","목표_RN","FCST_RN","LY_RN","YoY(%)","점유비(%)"]);
+  const numCols = new Set(["RN","ADR(천원)","매출(백만원)","연도","월","목표_RN","FCST_RN","LY_RN","LY_ADR","LY_매출","YoY(%)","점유비(%)"]);
 
   // 테이블
   let html = '<div class="preview-wrap"><table class="pv-table"><thead><tr>';
@@ -1264,10 +1303,10 @@ function buildInsight(result) {
   return `<div class="insight-box">${parts.join("<br>")}</div>`;
 }
 
-// ── 월별 RN 추이 차트 (SVG) ──
+// ── 월별 RN 추이 차트 (SVG) — TY + LY 비교 ──
 function buildTrendChart(result) {
   const { rows } = result;
-  // 월별 집계
+  // 월별 TY 집계
   const byMonth = {};
   rows.forEach(r => {
     const k = r.연도 + String(r.월).padStart(2,"0");
@@ -1276,11 +1315,25 @@ function buildTrendChart(result) {
   const keys = Object.keys(byMonth).sort();
   if (keys.length < 2) return "";
 
+  // LY 데이터 월별 집계 (같은 월 번호 기준)
+  const hasLY = rows.some(r => r.LY_RN);
+  const lyByMonthNum = {};
+  if (hasLY) {
+    rows.forEach(r => {
+      if (r.LY_RN) {
+        const mn = r.월;
+        lyByMonthNum[mn] = (lyByMonthNum[mn] || 0) + r.LY_RN;
+      }
+    });
+  }
+
   const vals = keys.map(k => byMonth[k]);
-  const maxV = Math.max(...vals) || 1;
+  const lyVals = hasLY ? keys.map(k => lyByMonthNum[+k.slice(4)] || 0) : [];
+  const allVals = hasLY ? [...vals, ...lyVals.filter(v => v > 0)] : vals;
+  const maxV = Math.max(...allVals) || 1;
   const w = Math.max(keys.length * 60, 300);
-  const h = 160;
-  const padL = 10, padR = 10, padT = 20, padB = 30;
+  const h = 180;
+  const padL = 10, padR = 10, padT = 20, padB = 40;
   const plotW = w - padL - padR, plotH = h - padT - padB;
 
   const pts = vals.map((v,i) => {
@@ -1293,12 +1346,35 @@ function buildTrendChart(result) {
   let dots = pts.map((p,i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#d4a74a"/>`).join("");
   let labels = pts.map((p,i) => {
     const m = keys[i]; const label = m.slice(2,4)+"/"+parseInt(m.slice(4));
-    return `<text x="${p[0].toFixed(1)}" y="${h-6}" fill="#8b8f9a" font-size="9" text-anchor="middle" font-family="var(--sans)">${label}</text>`;
+    return `<text x="${p[0].toFixed(1)}" y="${h-16}" fill="#8b8f9a" font-size="9" text-anchor="middle" font-family="var(--sans)">${label}</text>`;
   }).join("");
 
+  // LY 라인
+  let lyPath = "", lyDots = "", lyLegend = "";
+  if (hasLY && lyVals.some(v => v > 0)) {
+    const lyPts = lyVals.map((v,i) => {
+      if (v <= 0) return null;
+      const x = padL + (i / (vals.length-1||1)) * plotW;
+      const y = padT + plotH - (v / maxV) * plotH;
+      return [x, y];
+    }).filter(Boolean);
+
+    if (lyPts.length >= 2) {
+      lyPath = `<path d="${lyPts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="none" stroke="#5c6070" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>`;
+      lyDots = lyPts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="#5c6070" opacity="0.7"/>`).join("");
+    }
+    const ty = keys[0].slice(0,4);
+    const ly = String(+ty - 1);
+    lyLegend = `<rect x="${padL}" y="${h-8}" width="10" height="3" rx="1" fill="#d4a74a"/>` +
+      `<text x="${padL+14}" y="${h-5}" fill="#c8cad0" font-size="9" font-family="var(--sans)">${ty} (TY)</text>` +
+      `<rect x="${padL+80}" y="${h-8}" width="10" height="3" rx="1" fill="#5c6070"/>` +
+      `<text x="${padL+94}" y="${h-5}" fill="#8b8f9a" font-size="9" font-family="var(--sans)">${ly} (LY)</text>`;
+  }
+
   return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">
+    ${lyPath}${lyDots}
     <path d="${path}" fill="none" stroke="#d4a74a" stroke-width="2" opacity="0.8"/>
-    ${dots}${labels}
+    ${dots}${labels}${lyLegend}
   </svg></div>`;
 }
 
