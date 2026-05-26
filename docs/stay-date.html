@@ -255,6 +255,31 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       <div id="month-chips" class="filter-chips"></div>
     </div>
 
+    <!-- ====== 여름 성수기 투숙 리포트 ====== -->
+    <div id="summer-peak-section" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-family:var(--serif);font-weight:800;font-size:clamp(16px,1.8vw,20px);color:var(--gold-bright);">☀ 여름 성수기 투숙 리포트</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.1em;">7/19 ~ 7/31 · SUMMER PEAK STAY</span>
+      </div>
+      <div class="kpi-strip" id="summer-peak-kpi" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px;">
+        <!-- JS에서 동적 렌더링 -->
+      </div>
+      <div class="chart-card" style="margin-top:0;">
+        <div class="chart-card-header">
+          <span class="chart-card-title">7/19~7/31 세그먼트별 일별 투숙 RN</span>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#e6b970;"></div>OTA</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#5a9fc4;"></div>G-OTA</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:#4caf6f;"></div>Inbound</div>
+            <div class="chart-legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.4);"></div>LY 합계</div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:220px;">
+          <canvas id="summer-peak-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div class="chart-card">
       <div class="chart-card-header">
         <span class="chart-card-title" id="daily-chart-title">일별 투숙 RNS</span>
@@ -1002,6 +1027,191 @@ function renderInsightCharts() {
   }
 }
 
+// ====== 여름 성수기 투숙 리포트 렌더링 ======
+let summerPeakChart = null;
+function renderSummerPeak() {
+  const section = document.getElementById('summer-peak-section');
+  const kpiEl = document.getElementById('summer-peak-kpi');
+  if (!section || !kpiEl) return;
+
+  const stayDaily = (otb && otb.stayDateDaily) ? otb.stayDateDaily : {};
+  const tyKey = activeYear + '07';
+  const lyKey = (parseInt(activeYear) - 1) + '07';
+  const tyData = stayDaily[tyKey];
+  const lyData = stayDaily[lyKey];
+
+  // 7월 데이터가 없으면 숨김
+  if (!tyData) { section.style.display = 'none'; return; }
+
+  const tyDays = tyData.days || [];
+  const tySegs = tyData.segments || {};
+  const lyDays = lyData ? (lyData.days || []) : [];
+  const lySegs = lyData ? (lyData.segments || {}) : {};
+
+  const TARGET_SEGS = ['OTA', 'G-OTA', 'Inbound'];
+  const START_DAY = 19, END_DAY = 31;
+
+  // 인덱스 매핑: day → array index
+  function dayIdx(days, day) { return days.indexOf(day); }
+
+  // 해당 기간 세그먼트별 합산
+  function sumPeriod(days, segs, segName, startD, endD) {
+    let rn = 0, rev = 0;
+    for (let d = startD; d <= endD; d++) {
+      const idx = dayIdx(days, d);
+      if (idx < 0) continue;
+      const seg = segs[segName];
+      if (seg && seg.net_rn) rn += (seg.net_rn[idx] || 0);
+      if (seg && seg.net_rev) rev += (seg.net_rev[idx] || 0);
+    }
+    return { rn, rev };
+  }
+
+  // TY 세그먼트별 집계
+  let tyTotal = { rn: 0, rev: 0 };
+  const tySegData = {};
+  TARGET_SEGS.forEach(seg => {
+    const r = sumPeriod(tyDays, tySegs, seg, START_DAY, END_DAY);
+    tySegData[seg] = r;
+    tyTotal.rn += r.rn;
+    tyTotal.rev += r.rev;
+  });
+
+  // LY 세그먼트별 집계
+  let lyTotal = { rn: 0, rev: 0 };
+  const lySegData = {};
+  TARGET_SEGS.forEach(seg => {
+    const r = sumPeriod(lyDays, lySegs, seg, START_DAY, END_DAY);
+    lySegData[seg] = r;
+    lyTotal.rn += r.rn;
+    lyTotal.rev += r.rev;
+  });
+
+  const yoyPct = lyTotal.rn > 0 ? ((tyTotal.rn / lyTotal.rn - 1) * 100) : null;
+  const yoyRevPct = lyTotal.rev > 0 ? ((tyTotal.rev / lyTotal.rev - 1) * 100) : null;
+
+  section.style.display = '';
+
+  // ── KPI 카드 렌더링 ──
+  const yoyClass = yoyPct == null ? '' : yoyPct >= 0 ? 'net-pos' : 'net-neg';
+  const yoySign = yoyPct == null ? '' : yoyPct >= 0 ? '+' : '';
+  const yoyRevClass = yoyRevPct == null ? '' : yoyRevPct >= 0 ? 'net-pos' : 'net-neg';
+  const yoyRevSign = yoyRevPct == null ? '' : yoyRevPct >= 0 ? '+' : '';
+
+  // 세그먼트 비중 문자열
+  const segPctArr = TARGET_SEGS.map(seg => {
+    const pct = tyTotal.rn > 0 ? (tySegData[seg].rn / tyTotal.rn * 100) : 0;
+    return seg + ' ' + pct.toFixed(1) + '%';
+  });
+
+  kpiEl.innerHTML = `
+    <div class="kpi-card warning">
+      <div class="kpi-card-label">7/19~31 합계 RN</div>
+      <div class="kpi-card-value">${fmt.num(tyTotal.rn)}<span class="unit">실</span></div>
+      <div class="kpi-card-sub">매출 ${tyTotal.rev.toFixed(1)}백만</div>
+    </div>
+    <div class="kpi-card info">
+      <div class="kpi-card-label">세그먼트 비중</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">
+        ${TARGET_SEGS.map(seg => {
+          const pct = tyTotal.rn > 0 ? (tySegData[seg].rn / tyTotal.rn * 100) : 0;
+          const color = SEG_COLORS[seg];
+          return '<div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);">' +
+            '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>' +
+            '<span style="min-width:48px;">' + seg + '</span>' +
+            '<div style="flex:1;height:6px;background:var(--bg-deep);border-radius:3px;overflow:hidden;">' +
+              '<div style="width:' + pct.toFixed(1) + '%;height:100%;background:' + color + ';border-radius:3px;"></div>' +
+            '</div>' +
+            '<span style="min-width:40px;text-align:right;font-weight:600;color:' + color + ';">' + pct.toFixed(1) + '%</span>' +
+            '<span style="min-width:42px;text-align:right;color:var(--ink-faint);font-size:10px;">' + fmt.num(tySegData[seg].rn) + '실</span>' +
+          '</div>';
+        }).join('')}
+      </div>
+    </div>
+    <div class="kpi-card ${yoyPct != null && yoyPct >= 0 ? 'booking' : 'warning'}">
+      <div class="kpi-card-label">YoY 객실 (동기간)</div>
+      <div class="kpi-card-value ${yoyClass}">${yoyPct != null ? yoySign + yoyPct.toFixed(1) + '%' : '—'}</div>
+      <div class="kpi-card-sub">LY ${fmt.num(lyTotal.rn)}실 → TY ${fmt.num(tyTotal.rn)}실</div>
+    </div>
+    <div class="kpi-card ${yoyRevPct != null && yoyRevPct >= 0 ? 'booking' : 'warning'}">
+      <div class="kpi-card-label">YoY 매출 (동기간)</div>
+      <div class="kpi-card-value ${yoyRevClass}">${yoyRevPct != null ? yoyRevSign + yoyRevPct.toFixed(1) + '%' : '—'}</div>
+      <div class="kpi-card-sub">LY ${lyTotal.rev.toFixed(1)}백만 → TY ${tyTotal.rev.toFixed(1)}백만</div>
+    </div>
+  `;
+
+  // ── 미니 바차트 렌더링 ──
+  if (summerPeakChart) { summerPeakChart.destroy(); summerPeakChart = null; }
+  const ctx = document.getElementById('summer-peak-chart');
+  if (!ctx) return;
+
+  const chartDays = [];
+  for (let d = START_DAY; d <= END_DAY; d++) chartDays.push(d);
+  const labels = chartDays.map(d => d + '일');
+
+  const gridColor = 'rgba(255,255,255,0.06)';
+  const tickFont = { family: "'JetBrains Mono', monospace", size: 10 };
+
+  // TY 세그먼트별 일별 데이터
+  const datasets = TARGET_SEGS.map(seg => ({
+    label: seg,
+    data: chartDays.map(d => {
+      const idx = dayIdx(tyDays, d);
+      return idx >= 0 ? ((tySegs[seg] || {}).net_rn || [])[idx] || 0 : 0;
+    }),
+    backgroundColor: SEG_COLORS[seg] + 'bb',
+    borderColor: SEG_COLORS[seg],
+    borderWidth: 1, borderRadius: 2,
+  }));
+
+  // LY 합계 라인
+  const lyTotalLine = chartDays.map(d => {
+    const idx = dayIdx(lyDays, d);
+    if (idx < 0) return 0;
+    let sum = 0;
+    TARGET_SEGS.forEach(seg => {
+      sum += ((lySegs[seg] || {}).net_rn || [])[idx] || 0;
+    });
+    return sum;
+  });
+
+  datasets.push({
+    label: 'LY 합계',
+    data: lyTotalLine,
+    type: 'line',
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 2,
+    borderDash: [4, 3],
+    pointRadius: 3,
+    pointBackgroundColor: 'rgba(255,255,255,0.5)',
+    fill: false,
+    order: 0,
+  });
+
+  summerPeakChart = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          titleFont: tickFont, bodyFont: tickFont,
+          callbacks: {
+            label: item => item.dataset.label + ': ' + (item.raw || 0).toLocaleString() + '실'
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: 'rgba(255,255,255,0.5)', font: tickFont }, border: { display: false } },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: 'rgba(255,255,255,0.3)', font: tickFont }, border: { display: false } }
+      }
+    }
+  });
+}
+
 function render() {
   if (!db) return;
   const months = db.meta.months.filter(m => m.startsWith(activeYear));
@@ -1052,6 +1262,7 @@ function render() {
   renderDailyChart();
   renderDailyDetailTable();
   renderInsightCharts();
+  renderSummerPeak();
 }
 
 function buildFilters() {

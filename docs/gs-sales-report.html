@@ -190,7 +190,7 @@ a{color:inherit}
 .c86-tab.active{color:var(--gold-bright);border-bottom-color:var(--gold)}
 .c86-tab-body{padding:14px 18px}
 .c86-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
-.c86-table th{font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:0.06em;text-transform:uppercase;padding:7px 8px;text-align:right;border-bottom:1px solid var(--rule);background:var(--bg-soft);position:sticky;top:0}
+.c86-table th{font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:0.06em;text-transform:uppercase;padding:5px 6px;text-align:right;border-bottom:1px solid var(--rule);background:var(--bg-soft);position:sticky;top:0;white-space:nowrap}
 .c86-table th:first-child{text-align:left}
 .c86-table td{padding:6px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--ink-soft)}
 .c86-table td:first-child{text-align:left;font-weight:600;color:var(--ink)}
@@ -2431,7 +2431,7 @@ async function render(){
   renderOccHeatmap();
   renderCampaignRoi();
   /* 기획전 86 실적 카드 */
-  ensureC86Data().then(()=>renderC86()).catch(e=>console.warn('[C86] 렌더 오류:',e));
+  Promise.all([ensureC86Data(),ensureDB()]).then(()=>renderC86()).catch(e=>console.warn('[C86] 렌더 오류:',e));
 }
 
 function sortRows(rows){
@@ -4588,9 +4588,94 @@ function renderC86(){
   /* ── 탭 콘텐츠 ── */
   html+=`<div class="c86-tab-body">`;
 
-  const colHeaders=`<th>객실수</th><th>ADR</th><th>객실매출</th><th>총매출</th><th>수수료</th><th>수수료율</th>`;
-  function c86Row(v){
-    return `<td>${c86Fmt(v.rn||0)}</td><td>${c86Fmt(v.adr||0)}</td><td>${c86FmtM(v.room_rev_m)}</td><td>${c86FmtM(v.total_rev_m)}</td><td>${c86FmtM(v.commission_m)}</td><td>${c86CommRate(v)}%</td>`;
+  /* ── 전년(동기간) 데이터 추출 (db_aggregated.yoy_adjusted.2025) ── */
+  const lyMonths = months.map(mo => String(parseInt(mo) - 100)); // 202605→202505
+  let lyByPropSeg = {};
+  let lyByPropChSeg = {};
+  if(dbCache && dbCache.yoy_adjusted && dbCache.yoy_adjusted['2025']){
+    lyByPropSeg = dbCache.yoy_adjusted['2025'].by_property_segment || {};
+    lyByPropChSeg = dbCache.yoy_adjusted['2025'].by_property_channel_segment || {};
+  }
+
+  /* 전년 합계 계산 헬퍼 */
+  function c86LySum(filterProps, filterSegs, filterMonths){
+    let rn=0, revM=0;
+    (filterProps||props).forEach(p=>{
+      const pData = lyByPropSeg[p]||{};
+      Object.keys(pData).forEach(seg=>{
+        if(filterSegs && !filterSegs.includes(seg)) return;
+        (filterMonths||lyMonths).forEach(mo=>{
+          const v = pData[seg][mo];
+          if(v){ rn += v.booking_rn||0; revM += v.booking_rev_m||0; }
+        });
+      });
+    });
+    const adr = rn>0 ? Math.round(revM*1000000/rn/1000) : 0;
+    return {rn, adr, room_rev_m: Math.round(revM*10)/10};
+  }
+  function c86LyProp(prop, filterMonths){
+    let rn=0, revM=0;
+    const pData = lyByPropSeg[prop]||{};
+    Object.keys(pData).forEach(seg=>{
+      (filterMonths||lyMonths).forEach(mo=>{
+        const v = pData[seg][mo];
+        if(v){ rn += v.booking_rn||0; revM += v.booking_rev_m||0; }
+      });
+    });
+    const adr = rn>0 ? Math.round(revM*1000000/rn/1000) : 0;
+    return {rn, adr, room_rev_m: Math.round(revM*10)/10};
+  }
+  function c86LySeg(seg, filterMonths){
+    let rn=0, revM=0;
+    props.forEach(p=>{
+      const sData = (lyByPropSeg[p]||{})[seg]||{};
+      (filterMonths||lyMonths).forEach(mo=>{
+        const v = sData[mo];
+        if(v){ rn += v.booking_rn||0; revM += v.booking_rev_m||0; }
+      });
+    });
+    const adr = rn>0 ? Math.round(revM*1000000/rn/1000) : 0;
+    return {rn, adr, room_rev_m: Math.round(revM*10)/10};
+  }
+  function c86LyCh(chName, filterMonths){
+    /* 거래처명 매칭: campaign86 채널명 ⊇ db 채널명 (substring) */
+    let rn=0, revM=0;
+    props.forEach(p=>{
+      const chMap = lyByPropChSeg[p]||{};
+      Object.keys(chMap).forEach(dbCh=>{
+        const dbClean = dbCh.replace(/^(OTA_|GOTA_)/,'');
+        if(dbClean===chName || chName.includes(dbClean) || dbClean.includes(chName)){
+          Object.values(chMap[dbCh]).forEach(segMonths=>{
+            (filterMonths||lyMonths).forEach(mo=>{
+              const v = segMonths[mo];
+              if(v){ rn += v.booking_rn||0; revM += v.booking_rev_m||0; }
+            });
+          });
+        }
+      });
+    });
+    const adr = rn>0 ? Math.round(revM*1000000/rn/1000) : 0;
+    return {rn, adr, room_rev_m: Math.round(revM*10)/10};
+  }
+
+  /* 월 필터 적용된 LY months */
+  const lyFilterMonths = c86Month==='all' ? lyMonths : [String(parseInt(c86Month)-100)];
+
+  /* ── 통합 헤더 (RN / ADR / 객실매출 각 3서브열: 금년·전년·증감%) + 수수료·수수료율 ── */
+  const COL_SPAN = 12; /* 전체 컬럼 수: 구분(1)+RN(3)+ADR(3)+매출(3)+수수료(1)+수수료율(1) */
+  const colHeaders=`<tr><th rowspan="2" style="min-width:100px">구분</th><th colspan="3" style="border-bottom:none">객실(RN)</th><th colspan="3" style="border-bottom:none">ADR<span style="font-size:0.7em;opacity:0.6"> 천원</span></th><th colspan="3" style="border-bottom:none">객실매출<span style="font-size:0.7em;opacity:0.6"> 백만</span></th><th rowspan="2">수수료</th><th rowspan="2">수수료율</th></tr>
+<tr><th>금년</th><th>전년</th><th>증감%</th><th>금년</th><th>전년</th><th>증감%</th><th>금년</th><th>전년</th><th>증감%</th></tr>`;
+
+  function c86Yoy(cur, ly){ return ly>0 ? ((cur/ly-1)*100).toFixed(1) : '—'; }
+  function c86YoyCls(cur, ly){ if(ly<=0) return ''; return cur>=ly?'color:var(--positive)':'color:var(--negative)'; }
+  function c86Row(v, ly){
+    ly = ly||{};
+    const lyRn=ly.rn||0, lyAdr=ly.adr||0, lyRevM=ly.room_rev_m||0;
+    const rnY=c86Yoy(v.rn||0,lyRn), adrY=c86Yoy(v.adr||0,lyAdr), revY=c86Yoy(v.room_rev_m||0,lyRevM);
+    return `<td>${c86Fmt(v.rn||0)}</td><td style="color:var(--ink-muted)">${c86Fmt(lyRn)}</td><td style="${c86YoyCls(v.rn||0,lyRn)};font-family:var(--mono);font-size:11px">${rnY==='—'?'—':rnY+'%'}</td>`+
+      `<td>${c86Fmt(v.adr||0)}</td><td style="color:var(--ink-muted)">${c86Fmt(lyAdr)}</td><td style="${c86YoyCls(v.adr||0,lyAdr)};font-family:var(--mono);font-size:11px">${adrY==='—'?'—':adrY+'%'}</td>`+
+      `<td>${c86FmtM(v.room_rev_m)}</td><td style="color:var(--ink-muted)">${c86FmtM(lyRevM)}</td><td style="${c86YoyCls(v.room_rev_m||0,lyRevM)};font-family:var(--mono);font-size:11px">${revY==='—'?'—':revY+'%'}</td>`+
+      `<td>${c86FmtM(v.commission_m)}</td><td>${c86CommRate(v)}%</td>`;
   }
 
   if(c86Tab==='segment'){
@@ -4599,7 +4684,7 @@ function renderC86(){
     const segTotals=segHasNested?(d.by_segment.totals||{}):(d.by_segment||{});
     const segHasMonthly=Object.keys(segMonthly).length>0;
 
-    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>세그먼트 / 거래처</th>${colHeaders}</tr></thead><tbody>`;
+    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead>${colHeaders.replace('>구분<','>세그먼트 / 거래처<')}</thead><tbody>`;
 
     segs.forEach(s=>{
       let v;
@@ -4611,13 +4696,13 @@ function renderC86(){
         v=segTotals[s]||{};
       }
       if(c86Month!=='all' && segHasMonthly && !v.rn) return;
-      html+=`<tr class="seg-row" style="color:${c86SegColor(s)}"><td>${s}</td>${c86Row(v)}</tr>`;
-
-      /* 2뎁스: 해당 세그먼트 소속 거래처 (by_channel에서 세그먼트 매칭은 데이터 구조상 어려우므로 생략) */
+      const ly = c86LySeg(s, lyFilterMonths);
+      html+=`<tr class="seg-row" style="color:${c86SegColor(s)}"><td>${s}</td>${c86Row(v,ly)}</tr>`;
     });
 
     /* 합계 행 */
-    html+=`<tr class="total-row"><td>합계</td>${c86Row(tFiltered)}</tr>`;
+    const lyTotal = c86LySum(props, null, lyFilterMonths);
+    html+=`<tr class="total-row"><td>합계</td>${c86Row(tFiltered,lyTotal)}</tr>`;
     html+=`</tbody></table></div>`;
 
   } else if(c86Tab==='property'){
@@ -4626,7 +4711,7 @@ function renderC86(){
     const propTotals=propHasNested?(d.by_property.totals||{}):(d.by_property||{});
     const propHasMonthly=Object.keys(propMonthly).length>0;
 
-    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>사업장</th>${colHeaders}</tr></thead><tbody>`;
+    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead>${colHeaders.replace('>구분<','>사업장<')}</thead><tbody>`;
 
     const sortedProps=[...props].sort((a,b)=>(propTotals[b]?.rn||0)-(propTotals[a]?.rn||0));
     sortedProps.forEach(p=>{
@@ -4639,18 +4724,26 @@ function renderC86(){
         v=propTotals[p]||{};
       }
       if(c86Month!=='all' && propHasMonthly && !v.rn) return;
-      html+=`<tr><td>${escapeHtml(p)}</td>${c86Row(v)}</tr>`;
+      const lyP = c86LyProp(p, lyFilterMonths);
+      html+=`<tr><td>${escapeHtml(p)}</td>${c86Row(v,lyP)}</tr>`;
 
       /* 사업장 내 세그먼트 서브행 */
       const pSeg=d.by_property_segment?.[p]||{};
       Object.keys(pSeg).sort().forEach(s=>{
         const sv = c86Month==='all' ? (pSeg[s]?.total||{}) : ((pSeg[s]?.monthly||{})[c86Month]||{});
         if(!sv.rn) return;
-        html+=`<tr class="ch-row"><td style="color:${c86SegColor(s)}">${s}</td>${c86Row(sv)}</tr>`;
+        /* 사업장×세그먼트 LY */
+        let lyPS={rn:0,room_rev_m:0,adr:0};
+        const psd=(lyByPropSeg[p]||{})[s]||{};
+        lyFilterMonths.forEach(mo=>{const x=psd[mo];if(x){lyPS.rn+=x.booking_rn||0;lyPS.room_rev_m+=x.booking_rev_m||0;}});
+        lyPS.room_rev_m=Math.round(lyPS.room_rev_m*10)/10;
+        lyPS.adr=lyPS.rn>0?Math.round(lyPS.room_rev_m*1000000/lyPS.rn/1000):0;
+        html+=`<tr class="ch-row"><td style="color:${c86SegColor(s)}">${s}</td>${c86Row(sv,lyPS)}</tr>`;
       });
     });
 
-    html+=`<tr class="total-row"><td>합계</td>${c86Row(tFiltered)}</tr>`;
+    const lyTotal = c86LySum(props, null, lyFilterMonths);
+    html+=`<tr class="total-row"><td>합계</td>${c86Row(tFiltered,lyTotal)}</tr>`;
     html+=`</tbody></table></div>`;
 
   } else if(c86Tab==='channel'){
@@ -4710,36 +4803,42 @@ function renderC86(){
       ${searchQ?`<button onclick="c86ChSearch='';renderC86()" style="background:none;border:1px solid var(--rule);border-radius:4px;padding:4px 8px;color:var(--ink-muted);cursor:pointer;font-size:11px">초기화</button>`:''}
     </div>`;
 
-    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead><tr><th>거래처</th>${colHeaders}<th>비중</th></tr></thead><tbody>`;
+    const CH_COL_SPAN = 13; /* 구분(1)+RN(3)+ADR(3)+매출(3)+수수료(1)+수수료율(1)+비중(1) */
+    html+=`<div style="overflow-x:auto"><table class="c86-table"><thead>${colHeaders.replace('>구분<','>거래처<').replace('</tr>\n<tr>','<th rowspan="2">비중</th></tr>\n<tr>')}</thead><tbody>`;
 
     /* OTA 그룹 */
     if(otaGroup.length){
-      html+=`<tr class="seg-row" style="color:var(--gold)"><td colspan="8" style="text-align:left;font-size:12px;letter-spacing:0.03em">OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${otaGroup.length}개</span></td></tr>`;
+      html+=`<tr class="seg-row" style="color:var(--gold)"><td colspan="${CH_COL_SPAN}" style="text-align:left;font-size:12px;letter-spacing:0.03em">OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${otaGroup.length}개</span></td></tr>`;
       otaShown.forEach(e=>{
-        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
+        const lyCh = c86LyCh(e.ch, lyFilterMonths);
+        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v,lyCh)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
       });
       if(otaMore>0){
-        html+=`<tr><td colspan="8" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandOTA=!c86ChExpandOTA;renderC86()">${c86ChExpandOTA?'접기':`+${otaMore}개 더보기`}</button></td></tr>`;
+        html+=`<tr><td colspan="${CH_COL_SPAN}" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandOTA=!c86ChExpandOTA;renderC86()">${c86ChExpandOTA?'접기':`+${otaMore}개 더보기`}</button></td></tr>`;
       }
       /* OTA 소계 */
-      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--gold);background:rgba(201,160,99,.05)"><td style="color:var(--gold-bright)">OTA 소계</td>${c86Row(otaSub)}<td style="font-family:var(--mono);font-size:11px;color:var(--gold-bright)">${pctOf(otaSub.rn)}%</td></tr>`;
+      const lyOtaSub = c86LySeg('OTA', lyFilterMonths);
+      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--gold);background:rgba(201,160,99,.05)"><td style="color:var(--gold-bright)">OTA 소계</td>${c86Row(otaSub,lyOtaSub)}<td style="font-family:var(--mono);font-size:11px;color:var(--gold-bright)">${pctOf(otaSub.rn)}%</td></tr>`;
     }
 
     /* G-OTA 그룹 */
     if(gotaGroup.length){
-      html+=`<tr class="seg-row" style="color:var(--info)"><td colspan="8" style="text-align:left;font-size:12px;letter-spacing:0.03em">G-OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${gotaGroup.length}개</span></td></tr>`;
+      html+=`<tr class="seg-row" style="color:var(--info)"><td colspan="${CH_COL_SPAN}" style="text-align:left;font-size:12px;letter-spacing:0.03em">G-OTA 채널 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:6px">${gotaGroup.length}개</span></td></tr>`;
       gotaShown.forEach(e=>{
-        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
+        const lyCh = c86LyCh(e.ch, lyFilterMonths);
+        html+=`<tr><td>${escapeHtml(e.ch)}</td>${c86Row(e.v,lyCh)}<td style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">${pctOf(e.v.rn||0)}%</td></tr>`;
       });
       if(gotaMore>0){
-        html+=`<tr><td colspan="8" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandGOTA=!c86ChExpandGOTA;renderC86()">${c86ChExpandGOTA?'접기':`+${gotaMore}개 더보기`}</button></td></tr>`;
+        html+=`<tr><td colspan="${CH_COL_SPAN}" style="text-align:center;padding:6px"><button class="comp-more-btn" onclick="c86ChExpandGOTA=!c86ChExpandGOTA;renderC86()">${c86ChExpandGOTA?'접기':`+${gotaMore}개 더보기`}</button></td></tr>`;
       }
       /* G-OTA 소계 */
-      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--info);background:rgba(90,159,196,.05)"><td style="color:#9ec5dd">G-OTA 소계</td>${c86Row(gotaSub)}<td style="font-family:var(--mono);font-size:11px;color:#9ec5dd">${pctOf(gotaSub.rn)}%</td></tr>`;
+      const lyGotaSub = c86LySeg('G-OTA', lyFilterMonths);
+      html+=`<tr style="font-weight:700;border-top:1.5px solid var(--info);background:rgba(90,159,196,.05)"><td style="color:#9ec5dd">G-OTA 소계</td>${c86Row(gotaSub,lyGotaSub)}<td style="font-family:var(--mono);font-size:11px;color:#9ec5dd">${pctOf(gotaSub.rn)}%</td></tr>`;
     }
 
     /* Grand Total */
-    html+=`<tr class="total-row"><td>Grand Total</td>${c86Row(tFiltered)}<td style="font-family:var(--mono);font-size:11px">100%</td></tr>`;
+    const lyGrand = c86LySum(props, null, lyFilterMonths);
+    html+=`<tr class="total-row"><td>Grand Total</td>${c86Row(tFiltered,lyGrand)}<td style="font-family:var(--mono);font-size:11px">100%</td></tr>`;
     html+=`</tbody></table></div>`;
   }
 
@@ -4826,12 +4925,25 @@ function downloadC86Excel(){
   applyStyles(wsSumm);
   XLSX.utils.book_append_sheet(wb,wsSumm,'서머리');
 
-  /* 2) 세그먼트별 시트 */
-  const segData=[['세그먼트','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']];
+  /* 2) 세그먼트별 시트 (전년 동기간 포함) */
+  const segData=[['세그먼트','금년RN','전년RN','RN증감%','금년ADR','전년ADR','ADR증감%','금년객실매출','전년객실매출','매출증감%','총매출(백만)','수수료(백만)']];
   const segTotals=d.by_segment&&d.by_segment.totals||{};
+  /* LY data for Excel */
+  const xlLyByPS=(dbCache&&dbCache.yoy_adjusted&&dbCache.yoy_adjusted['2025'])?dbCache.yoy_adjusted['2025'].by_property_segment||{}:{};
+  const xlProps=d.meta.properties||[];
+  const xlLyMonths=(d.meta.months||[]).map(mo=>String(parseInt(mo)-100));
+  function xlLySeg(seg){
+    let rn=0,revM=0;
+    xlProps.forEach(p=>{const sd=(xlLyByPS[p]||{})[seg]||{};xlLyMonths.forEach(mo=>{const v=sd[mo];if(v){rn+=v.booking_rn||0;revM+=v.booking_rev_m||0;}});});
+    return {rn,adr:rn>0?Math.round(revM*1000000/rn/1000):0,room_rev_m:Math.round(revM*10)/10};
+  }
   Object.keys(segTotals).forEach(seg=>{
     const s=segTotals[seg];
-    segData.push([seg,s.rn,s.adr,s.room_rev_m,s.total_rev_m,s.commission_m]);
+    const ly=xlLySeg(seg);
+    const rnPct=ly.rn>0?Math.round((s.rn/ly.rn-1)*1000)/10:null;
+    const adrPct=ly.adr>0?Math.round((s.adr/ly.adr-1)*1000)/10:null;
+    const revPct=ly.room_rev_m>0?Math.round((s.room_rev_m/ly.room_rev_m-1)*1000)/10:null;
+    segData.push([seg,s.rn,ly.rn,rnPct,s.adr,ly.adr,adrPct,s.room_rev_m,ly.room_rev_m,revPct,s.total_rev_m,s.commission_m]);
   });
   if(d.by_segment&&d.by_segment.monthly){
     segData.push([]);
@@ -4848,12 +4960,22 @@ function downloadC86Excel(){
   applyStyles(wsSeg);
   XLSX.utils.book_append_sheet(wb,wsSeg,'세그먼트별');
 
-  /* 3) 사업장별 시트 */
-  const propData=[['사업장','객실수','ADR','객실매출(백만)','총매출(백만)','수수료(백만)']];
+  /* 3) 사업장별 시트 (전년 동기간 포함) */
+  const propData=[['사업장','금년RN','전년RN','RN증감%','금년ADR','전년ADR','ADR증감%','금년객실매출','전년객실매출','매출증감%','총매출(백만)','수수료(백만)']];
   const propTotals=d.by_property&&d.by_property.totals||{};
+  function xlLyProp(prop){
+    let rn=0,revM=0;
+    const pData=xlLyByPS[prop]||{};
+    Object.keys(pData).forEach(seg=>{xlLyMonths.forEach(mo=>{const v=pData[seg][mo];if(v){rn+=v.booking_rn||0;revM+=v.booking_rev_m||0;}});});
+    return {rn,adr:rn>0?Math.round(revM*1000000/rn/1000):0,room_rev_m:Math.round(revM*10)/10};
+  }
   Object.keys(propTotals).forEach(p=>{
     const v=propTotals[p];
-    propData.push([p,v.rn,v.adr,v.room_rev_m,v.total_rev_m,v.commission_m]);
+    const ly=xlLyProp(p);
+    const rnPct=ly.rn>0?Math.round((v.rn/ly.rn-1)*1000)/10:null;
+    const adrPct=ly.adr>0?Math.round((v.adr/ly.adr-1)*1000)/10:null;
+    const revPct=ly.room_rev_m>0?Math.round((v.room_rev_m/ly.room_rev_m-1)*1000)/10:null;
+    propData.push([p,v.rn,ly.rn,rnPct,v.adr,ly.adr,adrPct,v.room_rev_m,ly.room_rev_m,revPct,v.total_rev_m,v.commission_m]);
   });
   if(d.by_property&&d.by_property.monthly){
     propData.push([]);
