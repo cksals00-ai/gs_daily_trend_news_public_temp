@@ -1402,6 +1402,18 @@ def main():
         retrans = [fp for fp in fps if _is_retrans(fp)]
         snapshots = [fp for fp in fps if not _is_retrans(fp)]
 
+        # 동일 타입 누적 스냅샷이 여러 개 있으면 최신(파일명 날짜 기준)만 사용
+        if len(snapshots) > 1:
+            def _snap_date(fp):
+                m = re.search(r'_(\d{8})_생성시간', fp.name)
+                return m.group(1) if m else '00000000'
+            snapshots.sort(key=_snap_date, reverse=True)
+            latest = snapshots[0]
+            for old_fp in snapshots[1:]:
+                file_month_filter[old_fp] = 'skip'
+                logger.info(f"  구 스냅샷 스킵 (최신={latest.name}): {old_fp.name}")
+            snapshots = [latest]
+
         if retrans and snapshots:
             # 재전송 + 최신 스냅샷이 공존: 월별 분리 (예약/취소 모두 동일 규칙)
             for fp in retrans:
@@ -1454,10 +1466,12 @@ def main():
         file_type = detect_file_type(fpath.name)
         if not file_type:
             logger.warning(f"  스킵 (타입 불명): {fpath.name}")
+            done_indices.add(fi)
             continue
 
         mfilter = file_month_filter.get(fpath)
         if mfilter == 'skip':
+            done_indices.add(fi)
             continue
 
         folder_name = fpath.parent.name

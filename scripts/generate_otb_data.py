@@ -42,6 +42,28 @@ OUTPUT_JSON = DOCS_DATA_DIR / "otb_data.json"
 BUDGET_SEGS = ('OTA', 'G-OTA', 'Inbound')
 
 KST = timezone(timedelta(hours=9))
+RAW_DB_DIR = DATA_DIR / "raw_db"
+
+
+def _extract_file_date_from_27():
+    """27번 파일명에서 날짜를 추출하여 전날(todayDate)을 반환.
+    파일명 예: '27.온라인영업팀...예약자료_20260526_생성시간(202605260501).txt'
+    → file_date=20260526 → todayDate=20260525 (전일 기준 데일리 픽업)
+    반환: (today_date_str, file_date_str) 또는 (None, None)
+    """
+    import re
+    raw_2026 = RAW_DB_DIR / "2026"
+    if not raw_2026.exists():
+        return None, None
+    for fp in sorted(raw_2026.glob("27.*예약자료*.txt"), reverse=True):
+        m = re.search(r'_(\d{8})_생성시간', fp.name)
+        if m:
+            file_date_str = m.group(1)
+            file_date = datetime.strptime(file_date_str, "%Y%m%d")
+            today_date = (file_date - timedelta(days=1)).strftime("%Y%m%d")
+            return today_date, file_date_str
+    return None, None
+
 
 def _calc_target_months_tuple():
     """매월 2일부터 다음 3개월로 롤링. 1일은 전월 마감 실적 확인용."""
@@ -2008,8 +2030,42 @@ def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_pr
 
 def get_today_summary(db, now_kst):
     """OTA+G-OTA+Inbound 3개 세그먼트만 합산한 전일 데이터 반환.
-    빌드 시점(now_kst)의 당일 데이터는 미완성이므로 전일(days_ago=1)부터 탐색."""
+
+    todayDate 결정 우선순위:
+      1) 27번 파일명에서 추출한 날짜의 전일 (파일 기준, 스냅샷 공백에도 안정)
+      2) 빌드 시점(now_kst) 전일부터 7일간 탐색 (fallback)
+    """
     nd_seg = db.get("net_daily_by_segment", {})
+
+    # ── 1순위: 27번 파일명 기반 todayDate ──
+    file_today, file_date_raw = _extract_file_date_from_27()
+    if file_today:
+        pickup, cancel = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            entry = nd_seg.get(seg, {}).get(file_today, {})
+            pickup += entry.get("pickup_rn", 0)
+            cancel += entry.get("cancel_rn", 0)
+        if pickup > 0 or cancel > 0:
+            print(f"  todayDate: 27번 파일명({file_date_raw}) 기반 전일 → {file_today}")
+            return pickup, cancel, pickup - cancel, file_today
+        # 파일명 전일에 데이터가 없으면 해당 날짜 전후로 탐색 (±3일)
+        file_today_dt = datetime.strptime(file_today, "%Y%m%d")
+        for offset in range(0, 4):
+            for direction in [0, -1, 1]:
+                if offset == 0 and direction != 0:
+                    continue
+                d = (file_today_dt + timedelta(days=direction * offset)).strftime("%Y%m%d")
+                p, c = 0, 0
+                for seg in BUDGET_SEGMENT_KEYS:
+                    entry = nd_seg.get(seg, {}).get(d, {})
+                    p += entry.get("pickup_rn", 0)
+                    c += entry.get("cancel_rn", 0)
+                if p > 0 or c > 0:
+                    print(f"  todayDate: 27번 파일명({file_date_raw}) 기반, "
+                          f"전일({file_today})에 데이터 없어 인접일 → {d}")
+                    return p, c, p - c, d
+
+    # ── 2순위: now_kst 기반 탐색 (기존 fallback) ──
     for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
         pickup, cancel = 0, 0
@@ -2089,26 +2145,47 @@ def get_today_cancel_by_props_month(db, date_str, db_props, stay_month):
 
 
 def get_today_summary_by_month(db, now_kst, stay_month):
-    """OTA+G-OTA+Inbound 3개 세그먼트만 합산, 특정 투숙월의 전일 데이터 반환."""
+    """OTA+G-OTA+Inbound 3개 세그먼트만 합산, 특정 투숙월의 전일 데이터 반환.
+
+    todayDate 결정: 27번 파일명 기반 전일 → now_kst 기반 탐색 → fallback.
+    """
     pdsm = db.get("pickup_daily_by_segment_month", {})
     cdsm = db.get("cancel_daily_by_segment_month", {})
+
+    def _lookup(d):
+        p, c = 0, 0
+        for seg in BUDGET_SEGMENT_KEYS:
+            p += pdsm.get(seg, {}).get(stay_month, {}).get(d, {}).get("rn", 0)
+            c += cdsm.get(seg, {}).get(stay_month, {}).get(d, {}).get("rn", 0)
+        return p, c
+
+    # 1순위: 27번 파일명 기반 전일
+    file_today, _ = _extract_file_date_from_27()
+    if file_today:
+        p, c = _lookup(file_today)
+        if p > 0 or c > 0:
+            return p, c, p - c
+        # 전일에 데이터 없으면 인접일 탐색
+        file_today_dt = datetime.strptime(file_today, "%Y%m%d")
+        for offset in range(1, 4):
+            for sign in [-1, 1]:
+                d = (file_today_dt + timedelta(days=sign * offset)).strftime("%Y%m%d")
+                p, c = _lookup(d)
+                if p > 0 or c > 0:
+                    return p, c, p - c
+
+    # 2순위: now_kst 기반 탐색
     for days_ago in range(1, 8):
         date_str = (now_kst - timedelta(days=days_ago)).strftime("%Y%m%d")
-        pickup, cancel = 0, 0
-        for seg in BUDGET_SEGMENT_KEYS:
-            pickup += pdsm.get(seg, {}).get(stay_month, {}).get(date_str, {}).get("rn", 0)
-            cancel += cdsm.get(seg, {}).get(stay_month, {}).get(date_str, {}).get("rn", 0)
-        if pickup > 0 or cancel > 0:
-            return pickup, cancel, pickup - cancel
+        p, c = _lookup(date_str)
+        if p > 0 or c > 0:
+            return p, c, p - c
     # fallback
     net_daily_m = db.get("net_daily_by_month", {}).get(stay_month, {})
     if net_daily_m:
         most_recent = max(net_daily_m.keys())
-        pickup, cancel = 0, 0
-        for seg in BUDGET_SEGMENT_KEYS:
-            pickup += pdsm.get(seg, {}).get(stay_month, {}).get(most_recent, {}).get("rn", 0)
-            cancel += cdsm.get(seg, {}).get(stay_month, {}).get(most_recent, {}).get("rn", 0)
-        return pickup, cancel, pickup - cancel
+        p, c = _lookup(most_recent)
+        return p, c, p - c
     return 0, 0, 0
 
 
