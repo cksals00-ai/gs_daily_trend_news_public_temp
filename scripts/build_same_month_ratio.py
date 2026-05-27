@@ -4,7 +4,7 @@ build_same_month_ratio.py — 당월 예약 비중 집계 (OTA + G-OTA만)
 투숙월별 '예약월==투숙월' RN 비중 계산 (27번 예약파일, 세그먼트 OTA/G-OTA만)
 출력: data/same_month_booking.json, docs/data/same_month_booking.json
 """
-import os, sys, json, re
+import os, sys, json, re, unicodedata
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -29,7 +29,7 @@ def classify_segment(code_num):
 
 
 def detect_month_filter(filename):
-    basename = os.path.basename(filename)
+    basename = unicodedata.normalize('NFC', os.path.basename(filename))
     m = re.search(r'재전송\((\d{8})-(\d{8})\)', basename)
     if m:
         return ('retransmit', m.group(1)[:6], m.group(2)[:6])
@@ -42,7 +42,8 @@ def detect_month_filter(filename):
 def find_types_with_retransmit(year_dir):
     result = set()
     for f in os.listdir(year_dir):
-        if '재전송' in f and os.path.basename(f).startswith("27"):
+        fn = unicodedata.normalize('NFC', f)
+        if '재전송' in fn and fn.startswith("27"):
             result.add("27")
     return result
 
