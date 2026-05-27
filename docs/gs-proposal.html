@@ -188,6 +188,30 @@ a{color:inherit;text-decoration:none}
 
 @media(max-width:900px){.form-row{flex-direction:column}.stepper{flex-wrap:wrap;gap:4px}.step-arrow{display:none}.summary-grid{grid-template-columns:1fr 1fr}.occ-grid{grid-template-columns:repeat(4,1fr)}}
 @keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* ── 자동 품의서 미리보기 (소노캄여수 양식, 라이트 테마) ── */
+.pb-preview{background:#f0f2f5;color:#333;border-radius:8px;padding:18px;font-family:'Malgun Gothic','맑은 고딕',sans-serif}
+.pb-preview .pb-doc{max-width:980px;margin:0 auto}
+.pb-preview .pb-tabs{display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap}
+.pb-preview .pb-tab{padding:10px 22px;background:#e0e0e0;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-weight:bold;color:#666}
+.pb-preview .pb-tab.active{background:#fff;color:#1a237e;box-shadow:0 -2px 8px rgba(0,0,0,.1)}
+.pb-preview .pb-tabc{display:none;background:#fff;border-radius:0 8px 8px 8px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.pb-preview .pb-tabc.active{display:block}
+.pb-preview .pb-section{margin-bottom:22px}
+.pb-preview .pb-stitle{font-size:15px;font-weight:bold;color:#1a237e;padding:8px 12px;background:#e8eaf6;border-left:4px solid #1a237e;border-radius:0 4px 4px 0;margin-bottom:12px}
+.pb-preview .pb-info{display:grid;grid-template-columns:110px 1fr;gap:1px;background:#ddd;border:1px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:14px}
+.pb-preview .pb-info>div{padding:8px 12px;background:#fff;font-size:13px}
+.pb-preview .pb-info>div:nth-child(odd){background:#f5f5f5;font-weight:bold}
+.pb-preview table.pb-t{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.pb-preview table.pb-t th{background:#1a237e;color:#fff;padding:7px 5px;text-align:center;border:1px solid #0d1559;font-weight:600}
+.pb-preview table.pb-t td{padding:6px 7px;text-align:center;border:1px solid #ddd}
+.pb-preview .pb-season{font-weight:bold;background:#e8eaf6!important;color:#1a237e;vertical-align:middle}
+.pb-preview .pb-lbl{font-weight:600;text-align:center;min-width:50px}
+.pb-preview .pb-alloc{background:#fff8e1!important;font-weight:bold;color:#e65100}
+.pb-preview .pb-disc{background:#f3e5f5!important;color:#6a1b9a;font-size:11px}
+.pb-preview .pb-note{font-size:11px;color:#888;margin-top:4px}
+.pb-preview .pb-unit{text-align:right;font-size:11px;color:#999;margin-bottom:4px}
+.pb-preview .pb-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;background:#e3f2fd;color:#1565c0}
 </style>
 </head>
 <body>
@@ -203,6 +227,35 @@ a{color:inherit;text-decoration:none}
 </header>
 
 <div class="main-wrap">
+  <!-- ═══ 요금표 업로드 → 품의서 자동생성 (소노캄여수 양식) ═══ -->
+  <div class="sec-card" id="pb-card" style="border-color:rgba(201,160,99,0.45);margin-bottom:24px">
+    <div class="sec-head" style="background:linear-gradient(90deg,rgba(201,160,99,0.16),transparent)">
+      <span class="sec-head-title">📤 요금표 업로드 → 품의서 자동생성</span>
+      <span class="sec-head-meta"><span class="tag tag-gold">소노캄여수 품의서 양식</span></span>
+    </div>
+    <div class="sec-body">
+      <p style="color:var(--ink-muted);font-size:12px;margin-bottom:14px;line-height:1.7">요금표 엑셀을 업로드하면 시즌별 배분가·할인율·부대시설 GAP을 자동 계산하여 <strong style="color:var(--gold-bright)">품의서 미리보기</strong>와 <strong style="color:var(--gold-bright)">엑셀/HTML</strong>을 생성합니다. 처음이라면 아래 업로드 양식을 받아 작성하세요.</p>
+      <div class="btn-group" style="margin-bottom:16px">
+        <a class="btn btn-info" href="품의기획_요금표_업로드양식.xlsx" download>📋 업로드 양식 다운로드</a>
+      </div>
+      <div class="upload-zone" id="pb-upload-zone" onclick="document.getElementById('pb-file').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pbHandleDrop(event)">
+        <div class="upload-icon">📊</div><div class="upload-text">요금표 엑셀(.xlsx)을 드래그하거나 클릭하여 업로드</div>
+        <div class="upload-sub">상품별 시트 · 부대시설 · 객실요금(시즌×타입, 천원)</div>
+      </div>
+      <input type="file" id="pb-file" accept=".xlsx,.xls" style="display:none" onchange="pbHandleFile(this.files[0])">
+      <div class="upload-status" id="pb-status"></div>
+
+      <div id="pb-result" style="display:none;margin-top:18px">
+        <div class="btn-group" style="margin-bottom:14px">
+          <button class="btn btn-primary" onclick="pbExportExcel()">📥 품의서 엑셀 다운로드</button>
+          <button class="btn btn-positive" onclick="pbDownloadHtml()">📋 품의서 HTML 다운로드</button>
+          <button class="btn btn-info" onclick="pbCopyHtml()">📝 HTML 복사 (그룹웨어)</button>
+        </div>
+        <div class="pb-preview" id="pb-preview"></div>
+      </div>
+    </div>
+  </div>
+
   <nav class="stepper" id="stepper">
     <div class="step-item active" data-step="1" onclick="goStep(1)"><div class="step-num">1</div><div class="step-text"><span class="step-label">STEP 1</span><span class="step-title">기본 선택</span></div></div>
     <span class="step-arrow">›</span>
@@ -347,7 +400,6 @@ a{color:inherit;text-decoration:none}
         </div>
         <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
         <div class="upload-status" id="upload-status"></div>
-        <div style="margin-top:14px"><button class="btn" onclick="loadDummyRates()">🧪 더미 요금표 로드 (테스트용)</button></div>
       </div>
     </div>
     <div class="sec-card" id="rate-section" style="display:none">
@@ -1428,6 +1480,309 @@ function copyHtmlSourceCode(){
   navigator.clipboard.writeText(h).then(()=>showToast('HTML 소스코드 복사 완료! (text/plain)')).catch(()=>{
     const ta=document.createElement('textarea');ta.value=h;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('HTML 소스코드 복사 완료');
   });
+}
+
+/* ════════════════════════════════════════════════════════════
+   요금표 업로드 → 품의서 자동생성 (소노캄여수 양식)
+   ════════════════════════════════════════════════════════════ */
+let pbData = null; // {common, products:[{info, addons, seasons, addonDetail}]}
+
+/* ── 숫자/범위 포맷 (단위: 천원) ── */
+function pbFmt(n){ if(n==null||isNaN(n)) return ''; return Number.isInteger(n)? String(n) : String(Math.round(n*10)/10); }
+function pbRange(lo,hi){ return (lo===hi)? pbFmt(lo) : pbFmt(lo)+'~'+pbFmt(hi); }
+function pbPct(lo,hi){ return (lo===hi)? lo+'%' : lo+'~'+hi+'%'; }
+const pbEsc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ── 파일 업로드 ── */
+function pbHandleDrop(e){ e.preventDefault(); e.currentTarget.classList.remove('dragover'); if(e.dataTransfer.files.length) pbHandleFile(e.dataTransfer.files[0]); }
+function pbHandleFile(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      pbData=pbParseWorkbook(wb);
+      if(!pbData.products.length){ pbStatus('⚠️ 상품 시트를 찾지 못했습니다. 업로드 양식을 확인하세요.', true); return; }
+      pbData.products.forEach(p=>pbComputeProduct(p));
+      pbStatus('✅ '+file.name+' — 상품 '+pbData.products.length+'개 파싱 완료', false);
+      document.getElementById('pb-result').style.display='';
+      pbRenderPreview();
+      document.getElementById('pb-result').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }catch(err){ console.error(err); pbStatus('파싱 오류: '+err.message, true); }
+  };
+  r.readAsArrayBuffer(file);
+}
+function pbStatus(msg, isErr){
+  const s=document.getElementById('pb-status');
+  s.textContent=msg; s.classList.add('show');
+  s.style.background = isErr? 'var(--negative-bg)':'var(--positive-bg)';
+  s.style.color = isErr? 'var(--negative)':'var(--positive)';
+  s.style.borderColor = isErr? 'rgba(229,115,115,.3)':'rgba(76,175,111,.3)';
+}
+
+/* ── 워크북 파싱 ── */
+function pbParseWorkbook(wb){
+  const common={}, products=[];
+  wb.SheetNames.forEach(name=>{
+    const ws=wb.Sheets[name];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,blankrows:false});
+    const A=r=>(r&&r[0]!=null)?String(r[0]).trim():'';
+    if(/^00\.?\s*공통/.test(name.trim())){
+      rows.forEach(r=>{ const k=A(r); if(k && r[1]!=null) common[k]=r[1]; });
+      return;
+    }
+    // 상품 시트
+    const info={}, addons=[], rooms=[];
+    let mode=null, curSeason='';
+    rows.forEach(r=>{
+      const a=A(r);
+      if(a.indexOf('[부대시설]')===0){ mode='addon'; return; }
+      if(a.indexOf('[객실요금]')===0){ mode='room'; return; }
+      if(mode===null){ if(a && r[1]!=null) info[a]=r[1]; return; }
+      if(mode==='addon'){
+        if(a==='항목'||a===''){ if(a==='') mode=null; return; }
+        addons.push({name:a, nw:+r[1]||0, nf:+r[2]||0, aw:+r[3]||0, af:+r[4]||0});
+      } else if(mode==='room'){
+        if(a==='시즌'){ return; }
+        if(a==='' && r[1]==null) return;
+        if(a) curSeason=a;
+        const season = a || curSeason;
+        if(r[1]==null) return; // 타입 없으면 skip
+        rooms.push({season, type:String(r[1]).trim(), nw:+r[2]||0, nf:+r[3]||0, aw:+r[4]||0, af:+r[5]||0});
+      }
+    });
+    if(addons.length || rooms.length || info['상품명']){
+      products.push({info, addons, rooms});
+    }
+  });
+  return {common, products};
+}
+
+/* ── 상품 계산 (GAP=FIT−회원, 판매가=객실+부대) ── */
+function pbComputeProduct(p){
+  const A=p.addons;
+  const anw=A.reduce((s,x)=>s+x.nw,0), anf=A.reduce((s,x)=>s+x.nf,0);
+  const aaw=A.reduce((s,x)=>s+x.aw,0), aaf=A.reduce((s,x)=>s+x.af,0);
+  p.addonSum={anw,anf,aaw,aaf};
+  // 시즌 그룹 (순서 보존)
+  const order=[], byS={};
+  p.rooms.forEach(rm=>{ if(!byS[rm.season]){byS[rm.season]=[];order.push(rm.season);} byS[rm.season].push(rm); });
+  const mnmx=arr=>[Math.min(...arr),Math.max(...arr)];
+  p.seasons = order.map(s=>{
+    const rs=byS[s];
+    const nGapArr=rs.map(r=>r.nf-r.nw), aGapArr=rs.map(r=>r.af-r.aw);
+    const drMem=rs.map(r=>Math.round((1-r.aw/r.nw)*100)), drFit=rs.map(r=>Math.round((1-r.af/r.nf)*100));
+    const spNw=rs.map(r=>r.nw+anw), spNf=rs.map(r=>r.nf+anf), spAw=rs.map(r=>r.aw+aaw), spAf=rs.map(r=>r.af+aaf);
+    const spNgap=rs.map(r=>(r.nf+anf)-(r.nw+anw)), spAgap=rs.map(r=>(r.af+aaf)-(r.aw+aaw));
+    const spDrMem=rs.map(r=>Math.round((1-(r.aw+aaw)/(r.nw+anw))*100)), spDrFit=rs.map(r=>Math.round((1-(r.af+aaf)/(r.nf+anf))*100));
+    return {
+      season:s,
+      room:{ nMem:mnmx(rs.map(r=>r.nw)), nFit:mnmx(rs.map(r=>r.nf)), nGap:mnmx(nGapArr),
+             aMem:mnmx(rs.map(r=>r.aw)), aFit:mnmx(rs.map(r=>r.af)), aGap:mnmx(aGapArr),
+             drMem:mnmx(drMem), drFit:mnmx(drFit) },
+      addon:{ nMem:anw, nFit:anf, nGap:anf-anw, aMem:aaw, aFit:aaf, aGap:aaf-aaw,
+              drMem:anw?Math.round((1-aaw/anw)*100):0, drFit:anf?Math.round((1-aaf/anf)*100):0 },
+      sale:{ nMem:mnmx(spNw), nFit:mnmx(spNf), nGap:mnmx(spNgap),
+             aMem:mnmx(spAw), aFit:mnmx(spAf), aGap:mnmx(spAgap),
+             drMem:mnmx(spDrMem), drFit:mnmx(spDrFit) }
+    };
+  });
+  // 부대 상세 (전시즌)
+  p.addonDetail = A.map(x=>({
+    name:x.name, nMem:x.nw, nFit:x.nf, nGap:x.nf-x.nw, aMem:x.aw, aFit:x.af, aGap:x.af-x.aw,
+    drMem:x.nw?Math.round((1-x.aw/x.nw)*100):0, drFit:x.nf?Math.round((1-x.af/x.nf)*100):0
+  }));
+  p.addonTotal = { nMem:anw,nFit:anf,nGap:anf-anw, aMem:aaw,aFit:aaf,aGap:aaf-aaw,
+    drMem:anw?Math.round((1-aaw/anw)*100):0, drFit:anf?Math.round((1-aaf/anf)*100):0 };
+  return p;
+}
+
+/* ── 미리보기/HTML 본문 생성 (gs-proposal-yeosu.html 양식) ── */
+function pbInfoRows(info){
+  const order=['상품명','사업장','판매채널','판매기간','투숙기간','상품구성','비고'];
+  let h='';
+  order.forEach(k=>{ if(info[k]!=null && String(info[k]).trim()!=='') h+='<div>'+pbEsc(k)+'</div><div>'+pbEsc(info[k])+'</div>'; });
+  return h;
+}
+function pbAllocTable(p){
+  const cR=t=>pbRange(t[0],t[1]);
+  let body='';
+  p.seasons.forEach((s,i)=>{
+    const bg1=i%2?'#ffffff':'#f8f9fa';
+    body+='<tr style="background:'+bg1+'">'
+      +'<td rowspan="3" class="pb-season">'+pbEsc(s.season)+'</td>'
+      +'<td class="pb-lbl">정상가</td>'
+      +'<td>'+cR(s.room.nMem)+'</td><td>'+cR(s.room.nFit)+'</td><td>'+cR(s.room.nGap)+'</td>'
+      +'<td>'+pbFmt(s.addon.nMem)+'</td><td>'+pbFmt(s.addon.nFit)+'</td><td>'+pbFmt(s.addon.nGap)+'</td>'
+      +'<td>'+cR(s.sale.nMem)+'</td><td>'+cR(s.sale.nFit)+'</td><td>'+cR(s.sale.nGap)+'</td></tr>'
+      +'<tr style="background:#fff8e1">'
+      +'<td class="pb-lbl pb-alloc">배분가</td>'
+      +'<td class="pb-alloc">'+cR(s.room.aMem)+'</td><td class="pb-alloc">'+cR(s.room.aFit)+'</td><td class="pb-alloc">'+cR(s.room.aGap)+'</td>'
+      +'<td class="pb-alloc">'+pbFmt(s.addon.aMem)+'</td><td class="pb-alloc">'+pbFmt(s.addon.aFit)+'</td><td class="pb-alloc">'+pbFmt(s.addon.aGap)+'</td>'
+      +'<td class="pb-alloc">'+cR(s.sale.aMem)+'</td><td class="pb-alloc">'+cR(s.sale.aFit)+'</td><td class="pb-alloc">'+cR(s.sale.aGap)+'</td></tr>'
+      +'<tr style="background:#f0f4ff">'
+      +'<td class="pb-lbl pb-disc">할인율</td>'
+      +'<td class="pb-disc">'+pbPct(s.room.drMem[0],s.room.drMem[1])+'</td><td class="pb-disc">'+pbPct(s.room.drFit[0],s.room.drFit[1])+'</td><td class="pb-disc"></td>'
+      +'<td class="pb-disc">'+s.addon.drMem+'%</td><td class="pb-disc">'+s.addon.drFit+'%</td><td class="pb-disc"></td>'
+      +'<td class="pb-disc">'+pbPct(s.sale.drMem[0],s.sale.drMem[1])+'</td><td class="pb-disc">'+pbPct(s.sale.drFit[0],s.sale.drFit[1])+'</td><td class="pb-disc"></td></tr>';
+  });
+  return '<table class="pb-t"><thead>'
+    +'<tr><th rowspan="2">시즌</th><th rowspan="2">구분</th><th colspan="3">객실</th><th colspan="3">부대</th><th colspan="3">판매가</th></tr>'
+    +'<tr><th>회원</th><th>FIT</th><th>GAP</th><th>회원</th><th>FIT</th><th>GAP</th><th>회원</th><th>FIT</th><th>GAP</th></tr>'
+    +'</thead><tbody>'+body+'</tbody></table>';
+}
+function pbAddonDetailTable(p){
+  const ad=p.addonDetail, tot=p.addonTotal;
+  let h1='<tr><th rowspan="2">시즌</th><th rowspan="2">구분</th>';
+  ad.forEach(a=>h1+='<th colspan="3">'+pbEsc(a.name)+'</th>');
+  h1+='<th colspan="3">합계</th></tr><tr>';
+  for(let i=0;i<ad.length+1;i++) h1+='<th>회원</th><th>FIT</th><th>GAP</th>';
+  h1+='</tr>';
+  const rowN='<tr><td rowspan="3" class="pb-season">전시즌</td><td class="pb-lbl">정상가</td>'
+    +ad.map(a=>'<td>'+pbFmt(a.nMem)+'</td><td>'+pbFmt(a.nFit)+'</td><td>'+pbFmt(a.nGap)+'</td>').join('')
+    +'<td>'+pbFmt(tot.nMem)+'</td><td>'+pbFmt(tot.nFit)+'</td><td>'+pbFmt(tot.nGap)+'</td></tr>';
+  const rowA='<tr style="background:#fff8e1"><td class="pb-lbl pb-alloc">배분가</td>'
+    +ad.map(a=>'<td class="pb-alloc">'+pbFmt(a.aMem)+'</td><td class="pb-alloc">'+pbFmt(a.aFit)+'</td><td class="pb-alloc">'+pbFmt(a.aGap)+'</td>').join('')
+    +'<td class="pb-alloc">'+pbFmt(tot.aMem)+'</td><td class="pb-alloc">'+pbFmt(tot.aFit)+'</td><td class="pb-alloc">'+pbFmt(tot.aGap)+'</td></tr>';
+  const rowD='<tr style="background:#f0f4ff"><td class="pb-lbl pb-disc">할인율</td>'
+    +ad.map(a=>'<td class="pb-disc">'+a.drMem+'%</td><td class="pb-disc">'+a.drFit+'%</td><td class="pb-disc"></td>').join('')
+    +'<td class="pb-disc">'+tot.drMem+'%</td><td class="pb-disc">'+tot.drFit+'%</td><td class="pb-disc"></td></tr>';
+  return '<table class="pb-t"><thead>'+h1+'</thead><tbody>'+rowN+rowA+rowD+'</tbody></table>';
+}
+function pbProductBody(p){
+  const info=p.info;
+  const fee=info['수수료']?(' | 수수료: '+info['수수료']):'';
+  const kpi=info['KPI']?(' | KPI: '+info['KPI']):'';
+  return '<div class="pb-section"><div class="pb-stitle">3. 상품 운영(안)</div>'
+    +'<div class="pb-info">'+pbInfoRows(info)+'</div></div>'
+    +'<div class="pb-section"><div class="pb-stitle">4. 배분가</div>'
+    +'<p class="pb-unit">[단위: 천원]</p>'+pbAllocTable(p)
+    +'<p class="pb-note">※ FIT GAP : 회원 比(정상가끼리·배분가끼리) | 판매가 = 객실 + 부대'+fee+kpi+'</p></div>'
+    +'<div class="pb-section"><div class="pb-stitle">5. 부대시설 상세내용</div>'
+    +'<p class="pb-unit">[단위: 천원]</p>'+pbAddonDetailTable(p)+'</div>';
+}
+function pbBuildBody(){
+  const prods=pbData.products;
+  let tabs='<div class="pb-tabs">';
+  prods.forEach((p,i)=>{ tabs+='<button class="pb-tab'+(i===0?' active':'')+'" onclick="pbSwitchTab('+i+')">'+pbEsc(p.info['상품명']||('상품'+(i+1)))+'</button>'; });
+  tabs+='</div>';
+  let panels='';
+  prods.forEach((p,i)=>{ panels+='<div class="pb-tabc'+(i===0?' active':'')+'" data-pbtab="'+i+'">'+pbProductBody(p)+'</div>'; });
+  return '<div class="pb-doc">'+tabs+panels+'</div>';
+}
+function pbSwitchTab(i){
+  document.querySelectorAll('#pb-preview .pb-tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+  document.querySelectorAll('#pb-preview .pb-tabc').forEach(c=>c.classList.toggle('active',+c.dataset.pbtab===i));
+}
+function pbRenderPreview(){ document.getElementById('pb-preview').innerHTML=pbBuildBody(); }
+
+/* ── 다운로드용 standalone HTML (gs-proposal-yeosu 와 동일 스타일) ── */
+function pbBuildFullHtml(){
+  const title=(pbData.products[0]&&pbData.products[0].info['사업장']||'')+' 품의서';
+  const style=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:#f0f2f5;color:#333}
+.container{max-width:1100px;margin:0 auto;padding:20px}.header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;padding:28px;border-radius:12px;margin-bottom:22px}.header h1{font-size:22px;margin-bottom:6px}
+.tabs{display:flex;gap:4px}.tab{padding:11px 22px;background:#e0e0e0;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-weight:bold;color:#666}.tab.active{background:#fff;color:#1a237e}
+.tabc{display:none;background:#fff;border-radius:0 8px 8px 8px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.08)}.tabc.active{display:block}
+.section{margin-bottom:22px}.stitle{font-size:15px;font-weight:bold;color:#1a237e;padding:8px 12px;background:#e8eaf6;border-left:4px solid #1a237e;border-radius:0 4px 4px 0;margin-bottom:12px}
+.pb-info{display:grid;grid-template-columns:110px 1fr;gap:1px;background:#ddd;border:1px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:14px}.pb-info>div{padding:8px 12px;background:#fff;font-size:13px}.pb-info>div:nth-child(odd){background:#f5f5f5;font-weight:bold}
+table.pb-t{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}table.pb-t th{background:#1a237e;color:#fff;padding:7px 5px;text-align:center;border:1px solid #0d1559}table.pb-t td{padding:6px 7px;text-align:center;border:1px solid #ddd}
+.pb-season{font-weight:bold;background:#e8eaf6!important;color:#1a237e}.pb-lbl{font-weight:600}.pb-alloc{background:#fff8e1!important;font-weight:bold;color:#e65100}.pb-disc{background:#f3e5f5!important;color:#6a1b9a;font-size:11px}
+.pb-note{font-size:11px;color:#888;margin-top:4px}.pb-unit{text-align:right;font-size:11px;color:#999;margin-bottom:4px}`;
+  const prods=pbData.products;
+  let tabs='<div class="tabs">';
+  prods.forEach((p,i)=>tabs+='<button class="tab'+(i===0?' active':'')+'" onclick="st('+i+')">'+pbEsc(p.info['상품명']||('상품'+(i+1)))+'</button>');
+  tabs+='</div>';
+  let panels='';
+  prods.forEach((p,i)=>{ panels+='<div class="tabc'+(i===0?' active':'')+'" data-t="'+i+'">'+pbProductBody(p).replace(/pb-section/g,'section').replace(/pb-stitle/g,'stitle')+'</div>'; });
+  return '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>'+pbEsc(title)+'</title><style>'+style+'</style></head><body>'
+    +'<div class="container"><div class="header"><h1>'+pbEsc(title)+'</h1><p>요금표 업로드 자동생성 · 단위: 천원</p></div>'+tabs+panels+'</div>'
+    +'<script>function st(i){document.querySelectorAll(".tab").forEach((t,x)=>t.classList.toggle("active",x===i));document.querySelectorAll(".tabc").forEach(c=>c.classList.toggle("active",+c.dataset.t===i))}<\/script>'
+    +'</body></html>';
+}
+function pbDownloadHtml(){
+  if(!pbData) return;
+  const blob=new Blob([pbBuildFullHtml()],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(pbData.products[0].info['사업장']||'품의서')+'_품의서.html'; a.click();
+  showToast('품의서 HTML 다운로드 완료');
+}
+function pbCopyHtml(){
+  if(!pbData) return;
+  const body=pbBuildBody();
+  navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([body],{type:'text/html'}),'text/plain':new Blob([body],{type:'text/plain'})})])
+    .then(()=>showToast('HTML 복사 완료! 그룹웨어에 Ctrl+V'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=body;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('HTML 복사 완료');});
+}
+
+/* ── 품의서 엑셀 내보내기 (소노캄여수_아워스테이_품의서.xlsx 양식) ── */
+function pbExportExcel(){
+  if(!pbData) return;
+  const wb=XLSX.utils.book_new();
+  const C=pbData.common||{};
+  const rTxt=(t)=>(t[0]===t[1])?String(t[0]):t[0]+'~'+t[1];
+  pbData.products.forEach(p=>{
+    const info=p.info, aoa=[];
+    const push=(...row)=>aoa.push(row);
+    push('내   용 : 다음과 같이 업무를 진행 하고자 하오니 검토 후 재가 하여 주시기 바랍니다.');
+    push('-  다     음  -');
+    push('1. 목  적');
+    push('', C['목적']||' - 프로모션 진행을 통한 차질 물량 감소 및 선물량 확보');
+    push('');
+    push('2. 상품 운영(안)');
+    push('','구 분','','내 용');
+    push('','상품명','',' · '+(info['상품명']||''));
+    push('','사업장','',' · '+(info['사업장']||''));
+    push('','판매채널','',' · '+(info['판매채널']||''));
+    push('','기간','판매',' · '+(info['판매기간']||''));
+    push('','','투숙',' · '+(info['투숙기간']||''));
+    push('','상품구성','기본구성',' · '+(info['상품구성']||''));
+    push('','','비고', info['비고']? (' · '+info['비고']):'');
+    push('');
+    // 3. 배분가
+    push('3. 배분가');
+    push('','시즌','구분','객실','','','부대','','','판매가','','','[단위: 천원]');
+    push('','','','회원','FIT','GAP','회원','FIT','GAP','회원','FIT','GAP');
+    p.seasons.forEach(s=>{
+      push('',s.season,'정상가', rTxt(s.room.nMem),rTxt(s.room.nFit),rTxt(s.room.nGap),
+        s.addon.nMem,s.addon.nFit,s.addon.nGap, rTxt(s.sale.nMem),rTxt(s.sale.nFit),rTxt(s.sale.nGap));
+      push('','','배분가', rTxt(s.room.aMem),rTxt(s.room.aFit),rTxt(s.room.aGap),
+        s.addon.aMem,s.addon.aFit,s.addon.aGap, rTxt(s.sale.aMem),rTxt(s.sale.aFit),rTxt(s.sale.aGap));
+      push('','','할인율', pbPct(s.room.drMem[0],s.room.drMem[1]),pbPct(s.room.drFit[0],s.room.drFit[1]),'',
+        s.addon.drMem+'%',s.addon.drFit+'%','', pbPct(s.sale.drMem[0],s.sale.drMem[1]),pbPct(s.sale.drFit[0],s.sale.drFit[1]),'');
+    });
+    if(info['수수료']) push('','수수료','',' · '+info['수수료']);
+    if(info['KPI']) push('','KPI','',' · '+info['KPI']);
+    push('','※ FIT GAP : 회원 比 (정상가끼리·배분가끼리) | 판매가 = 객실 + 부대');
+    push('');
+    // 4. 부대시설 상세
+    push('4. 부대시설 상세내용');
+    const adHdr=['','시즌','구분']; p.addonDetail.forEach(a=>{adHdr.push(a.name,'','');}); adHdr.push('합계','','');
+    push(...adHdr);
+    const sub=['','','']; for(let i=0;i<p.addonDetail.length+1;i++) sub.push('회원','FIT','GAP'); push(...sub);
+    const tot=p.addonTotal;
+    const rN=['','전시즌','정상가']; p.addonDetail.forEach(a=>rN.push(a.nMem,a.nFit,a.nGap)); rN.push(tot.nMem,tot.nFit,tot.nGap); push(...rN);
+    const rA=['','','배분가']; p.addonDetail.forEach(a=>rA.push(a.aMem,a.aFit,a.aGap)); rA.push(tot.aMem,tot.aFit,tot.aGap); push(...rA);
+    const rD=['','','할인율']; p.addonDetail.forEach(a=>rD.push(a.drMem+'%',a.drFit+'%','')); rD.push(tot.drMem+'%',tot.drFit+'%',''); push(...rD);
+    push('');
+    // 5. 판매 & 홍보 일정
+    push('5. 판매 & 홍보 일정');
+    push('','판매일정','', C['판매일정']||' · 채널별 판매일정 (자유표기)');
+    push('','홍보일정','', C['홍보일정']||' · 홍보일정 (자유표기)');
+    push('','지원사항','', C['지원사항']||'  (자유표기)');
+    push('');
+    push('6. 기 타');
+    push('', C['기타1']||' - 영업기획: 패키지번호 세팅 및 회신');
+    push('', C['기타2']||' - 판매 추이에 따라 추가 판매 여부 검토(PRM 협의)');
+    push('','','','','','','','','','','','','이상/끝.');
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:4},{wch:12},{wch:9}].concat(Array(12).fill({wch:11}));
+    let sheetName=(info['상품명']||'품의').replace(/[\\\/\?\*\[\]:]/g,'').slice(0,28)+' 품의';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+  const base=(pbData.products[0].info['사업장']||'품의서');
+  XLSX.writeFile(wb, base+'_품의서.xlsx');
+  showToast('품의서 엑셀 다운로드 완료');
 }
 
 /* ══════════ INIT ══════════ */
