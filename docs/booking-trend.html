@@ -128,6 +128,14 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 .smr-yoy{font-family:var(--mono);font-size:9px;margin-top:2px;}
 .smr-yoy.pos{color:var(--positive);}
 .smr-yoy.neg{color:var(--negative);}
+.smr-cell{cursor:pointer;}
+.smr-cell:hover{background:var(--bg-soft);}
+.smr-cell.selected{border-color:var(--gold-bright);background:rgba(201,160,99,0.16);box-shadow:inset 0 0 0 1px var(--gold-bright);}
+.smr-drill{margin-top:14px;border-top:1px solid var(--rule);padding-top:10px;}
+.smr-drill-toggle{font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--ink-muted);background:none;border:none;cursor:pointer;padding:4px 0;}
+.smr-drill-toggle:hover{color:var(--gold-bright);}
+.smr-drill-month{color:var(--gold-bright);font-weight:700;}
+.smr-drill-body{margin-top:10px;}
 @media(max-width:1100px){.smr-grid{grid-template-columns:repeat(6,1fr);}}
 @media(max-width:560px){.smr-grid{grid-template-columns:repeat(4,1fr);}.smr-cell{padding:6px 2px;}}
 .mobile-filter-bar{display:none;padding:12px 14px;background:var(--bg-deep);border-bottom:1px solid var(--rule);gap:8px;flex-wrap:wrap;align-items:center;}
@@ -276,13 +284,24 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
-    <!-- 당월 예약 비중 카드 -->
+    <!-- Start 달성률 카드 -->
     <div class="smr-card">
       <div class="smr-card-header">
-        <span class="smr-card-title">당월 예약 비중 (OTA + G-OTA)</span>
-        <span class="smr-card-desc">투숙월 = 예약월 동일 RN 비중 · <span id="smr-base-date">—</span> 기준</span>
+        <span class="smr-card-title">Start 달성률 (OTA + G-OTA)</span>
+        <span class="smr-card-desc">투숙월 시작 전 사전예약 달성률 · 목표 대비 · <span id="smr-base-date">—</span> 기준</span>
       </div>
-      <div class="smr-grid" id="smr-grid"><!-- JS 렌더 --></div>
+      <div class="smr-grid" id="smr-grid"><!-- JS 렌더 (월 클릭 → 사업장별 상세) --></div>
+      <div class="smr-drill">
+        <button class="smr-drill-toggle" id="smr-drill-toggle"><span id="smr-drill-arrow">▸</span> 사업장별 상세 <span class="smr-drill-month" id="smr-drill-month"></span></button>
+        <div class="smr-drill-body" id="smr-drill-body" style="display:none;">
+          <div class="table-wrap">
+            <table class="pivot" id="smr-prop-table">
+              <thead><tr><th>사업장</th><th>사전예약</th><th>목표(budget)</th><th>Start 달성률</th><th>전년</th></tr></thead>
+              <tbody id="smr-prop-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="kpi-strip">
@@ -663,6 +682,7 @@ function buildRegionChips() {
           .forEach(b => b.classList.toggle('active', b.textContent === r.label));
         buildPropChips();
         render();
+        renderSmrDrill();
       });
       c.appendChild(btn);
     });
@@ -912,75 +932,144 @@ function renderPaceChart() {
   }
 }
 
-// ─── 당월 예약 비중 카드 ───
+// ─── Start 달성률 카드 (목표 대비 사전예약 달성률) ───
+let smrData = null;
+let selectedSmrMonth = new Date().getMonth() + 1; // 디폴트: 당월
+
+function renderSmrGrid() {
+  const grid = document.getElementById('smr-grid');
+  if (!grid || !smrData || !smrData.by_year) return;
+
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const ty = String(curYear), ly = String(curYear - 1), ly2 = String(curYear - 2);
+  const tyData = smrData.by_year[ty] || {};
+  const lyData = smrData.by_year[ly] || {};
+  const ly2Data = smrData.by_year[ly2] || {};
+
+  let html = '';
+  for (let m = 1; m <= 12; m++) {
+    const mm = String(m).padStart(2, '0');
+    const tyD = tyData[mm], lyD = lyData[mm], ly2D = ly2Data[mm];
+
+    let cellClass = 'smr-cell';
+    if (m === curMonth) cellClass += ' current';
+    if (m === selectedSmrMonth) cellClass += ' selected';
+    if (!tyD) cellClass += ' future';
+
+    html += '<div class="' + cellClass + '" data-month="' + m + '">';
+    html += '<div class="smr-month">' + m + '월</div>';
+
+    if (tyD) {
+      html += '<div class="smr-val">' + tyD.start_ratio.toFixed(1) + '<span style="font-size:9px;color:var(--ink-faint)">%</span></div>';
+      const denom = tyD.budget_rn ? tyD.budget_rn : tyD.total_rn;
+      html += '<div class="smr-rn">' + tyD.advance_rn.toLocaleString('ko-KR') + ' / ' + denom.toLocaleString('ko-KR') + '</div>';
+    } else {
+      html += '<div class="smr-val smr-year-val pending">(예정)</div>';
+    }
+
+    if (lyD) html += '<div class="smr-year-row"><span class="smr-year-label">' + ly.slice(2) + '</span><span class="smr-year-val">' + lyD.start_ratio.toFixed(1) + '%</span></div>';
+    if (ly2D) html += '<div class="smr-year-row"><span class="smr-year-label">' + ly2.slice(2) + '</span><span class="smr-year-val">' + ly2D.start_ratio.toFixed(1) + '%</span></div>';
+
+    // YoY pp는 분모 기준(목표 vs 실적)이 같을 때만 — TY 목표대비 ↔ LY 실적대비는 비교 불가
+    if (tyD && lyD && lyD.start_ratio > 0 && (!!tyD.budget_rn === !!lyD.budget_rn)) {
+      const diff = tyD.start_ratio - lyD.start_ratio;
+      const cls = diff >= 0 ? 'pos' : 'neg';
+      const sign = diff >= 0 ? '+' : '';
+      html += '<div class="smr-yoy ' + cls + '">YoY ' + sign + diff.toFixed(1) + 'p</div>';
+    }
+
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.smr-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      selectedSmrMonth = parseInt(cell.getAttribute('data-month'), 10);
+      grid.querySelectorAll('.smr-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      renderSmrDrill();
+    });
+  });
+}
+
+function renderSmrDrill() {
+  const tbody = document.getElementById('smr-prop-tbody');
+  const monthLbl = document.getElementById('smr-drill-month');
+  if (monthLbl) monthLbl.textContent = '(' + selectedSmrMonth + '월)';
+  if (!tbody || !smrData || !smrData.by_property) return;
+
+  const now = new Date();
+  const ty = String(now.getFullYear()), ly = String(now.getFullYear() - 1);
+  const mm = String(selectedSmrMonth).padStart(2, '0');
+
+  const rows = [];
+  let totAdv = 0, totBud = 0, totTotal = 0, hasBudget = false;
+  Object.keys(smrData.by_property).forEach(name => {
+    const node = smrData.by_property[name];
+    if (activeRegion !== '전체' && node.region !== activeRegion) return;
+    const tyM = (node[ty] || {})[mm];
+    if (!tyM) return;
+    const lyM = (node[ly] || {})[mm];
+    rows.push({ name, tyM, lyM });
+    totAdv += tyM.advance_rn;
+    totTotal += tyM.total_rn;
+    if (tyM.budget_rn) { totBud += tyM.budget_rn; hasBudget = true; }
+  });
+  rows.sort((a, b) => b.tyM.start_ratio - a.tyM.start_ratio);
+
+  let html = '';
+  rows.forEach(r => {
+    const t = r.tyM;
+    const budCell = t.budget_rn ? t.budget_rn.toLocaleString('ko-KR') : '—';
+    let lyCell = '—';
+    if (r.lyM && r.lyM.start_ratio > 0) {
+      lyCell = r.lyM.start_ratio.toFixed(1) + '%';
+      // pp 차이는 분모 기준(목표 vs 실적)이 같을 때만
+      if (!!t.budget_rn === !!r.lyM.budget_rn) {
+        const diff = t.start_ratio - r.lyM.start_ratio;
+        const c = diff >= 0 ? 'net-pos' : 'net-neg';
+        const s = diff >= 0 ? '+' : '';
+        lyCell += ' <span class="' + c + '">(' + s + diff.toFixed(1) + 'p)</span>';
+      }
+    }
+    html += '<tr><td>' + r.name + '</td><td>' + t.advance_rn.toLocaleString('ko-KR') + '</td><td>' + budCell +
+            '</td><td class="this-year">' + t.start_ratio.toFixed(1) + '%</td><td>' + lyCell + '</td></tr>';
+  });
+
+  if (rows.length) {
+    const totRatio = (hasBudget && totBud > 0) ? (totAdv / totBud * 100) : (totTotal > 0 ? totAdv / totTotal * 100 : 0);
+    html += '<tr class="total-row"><td>합계</td><td>' + totAdv.toLocaleString('ko-KR') + '</td><td>' +
+            (hasBudget ? totBud.toLocaleString('ko-KR') : '—') + '</td><td>' + totRatio.toFixed(1) + '%</td><td>—</td></tr>';
+  } else {
+    html = '<tr><td colspan="5" style="text-align:center;color:var(--ink-faint);">데이터 없음</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
 async function loadSameMonthRatio() {
   try {
     const res = await fetch('data/same_month_booking.json?t=' + Date.now());
-    const smr = await res.json();
-    const grid = document.getElementById('smr-grid');
-    if (!grid || !smr.by_year) return;
+    smrData = await res.json();
+    const baseEl = document.getElementById('smr-base-date');
+    if (baseEl) baseEl.textContent = smrData.generated_at || '—';
 
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = now.getMonth() + 1; // 1-12
+    renderSmrGrid();
+    renderSmrDrill();
 
-    const ty = String(curYear);
-    const ly = String(curYear - 1);
-    const ly2 = String(curYear - 2);
-
-    const tyData = smr.by_year[ty] || {};
-    const lyData = smr.by_year[ly] || {};
-    const ly2Data = smr.by_year[ly2] || {};
-
-    document.getElementById('smr-base-date').textContent = smr.generated_at || '—';
-
-    let html = '';
-    for (let m = 1; m <= 12; m++) {
-      const mm = String(m).padStart(2, '0');
-      const isCurrent = (m === curMonth);
-      const isFuture = (m > curMonth);
-      const isPast = (m <= curMonth);
-
-      const tyD = tyData[mm];
-      const lyD = lyData[mm];
-      const ly2D = ly2Data[mm];
-
-      let cellClass = 'smr-cell';
-      if (isCurrent) cellClass += ' current';
-      if (isFuture) cellClass += ' future';
-
-      html += '<div class="' + cellClass + '">';
-      html += '<div class="smr-month">' + m + '월</div>';
-
-      // 당해연도 (1~현재월만 실데이터, 미래월은 '예정')
-      if (isPast && tyD) {
-        html += '<div class="smr-val">' + tyD.ratio.toFixed(1) + '<span style="font-size:9px;color:var(--ink-faint)">%</span></div>';
-        html += '<div class="smr-rn">' + tyD.same_month_rn.toLocaleString('ko-KR') + ' / ' + tyD.total_rn.toLocaleString('ko-KR') + '</div>';
-      } else {
-        html += '<div class="smr-val smr-year-val pending">(예정)</div>';
-      }
-
-      // 전년
-      if (lyD) {
-        html += '<div class="smr-year-row"><span class="smr-year-label">' + ly.slice(2) + '</span><span class="smr-year-val">' + lyD.ratio.toFixed(1) + '%</span></div>';
-      }
-
-      // 전전년
-      if (ly2D) {
-        html += '<div class="smr-year-row"><span class="smr-year-label">' + ly2.slice(2) + '</span><span class="smr-year-val">' + ly2D.ratio.toFixed(1) + '%</span></div>';
-      }
-
-      // YoY (당해 vs 전년, 과거월만)
-      if (isPast && tyD && lyD && lyD.ratio > 0) {
-        const diff = tyD.ratio - lyD.ratio;
-        const cls = diff >= 0 ? 'pos' : 'neg';
-        const sign = diff >= 0 ? '+' : '';
-        html += '<div class="smr-yoy ' + cls + '">YoY ' + sign + diff.toFixed(1) + 'p</div>';
-      }
-
-      html += '</div>';
+    const toggle = document.getElementById('smr-drill-toggle');
+    if (toggle && !toggle._wired) {
+      toggle._wired = true;
+      toggle.addEventListener('click', () => {
+        const body = document.getElementById('smr-drill-body');
+        const arrow = document.getElementById('smr-drill-arrow');
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        if (arrow) arrow.textContent = open ? '▸' : '▾';
+        if (!open) renderSmrDrill();
+      });
     }
-    grid.innerHTML = html;
   } catch (e) {
     console.error('SMR load error:', e);
   }

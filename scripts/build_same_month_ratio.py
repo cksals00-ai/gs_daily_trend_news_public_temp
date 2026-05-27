@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """
-build_same_month_ratio.py — 당월 예약 비중 집계 (OTA + G-OTA만)
-투숙월별 '예약월==투숙월' RN 비중 계산 (27번 예약파일, 세그먼트 OTA/G-OTA만)
+build_same_month_ratio.py — Start 달성률 집계 (OTA + G-OTA만)
+투숙월 M의 전체 예약 중 M월 시작 전(사전)에 예약된 RN(advance_rn)을
+목표(budget) 대비로 표시. GS 전체 + 사업장별.
+
+  advance_rn      = total_rn - same_month_rn  (예약월 < 투숙월)
+  start_ratio     = advance_rn / budget_rn * 100      (budget 있는 경우: 2026)
+                  = advance_rn / total_rn  * 100      (budget 없는 과거연도)
+
 출력: data/same_month_booking.json, docs/data/same_month_booking.json
+세그먼트: OTA + G-OTA만 (27번 예약파일)
 """
 import os, sys, json, re, unicodedata
 import fs_utils  # macOS NFD→NFC 유니코드 정규화
@@ -14,10 +21,39 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_DIR / "data" / "raw_db"
 OUTPUT_PATH = PROJECT_DIR / "data" / "same_month_booking.json"
 DOCS_PATH = PROJECT_DIR / "docs" / "data" / "same_month_booking.json"
+DAILY_BOOKING_PATH = PROJECT_DIR / "data" / "daily_booking.json"
+
+# ── 권역 매핑 (parse_raw_db.PROPERTY_REGION / 페이지 region 칩과 동일 기준) ──
+PROPERTY_REGION = {
+    "비발디": "vivaldi", "양평": "central", "델피노": "central",
+    "양양": "central", "삼척": "central", "단양": "central",
+    "천안": "central", "변산": "central",
+    "여수": "south", "거제": "south", "남해": "south",
+    "진도": "south", "경주": "south", "해운대": "south",
+    "청송": "south", "영덕": "south", "르네블루": "central",
+    "제주": "apac", "고양": "apac",
+    "하이퐁": "apac", "괌": "apac", "하와이": "apac",
+}
+
+
+def get_region(prop_name):
+    if not prop_name:
+        return "unknown"
+    for key, region in PROPERTY_REGION.items():
+        if key in prop_name:
+            return region
+    return "unknown"
+
+
+def normalize_property(prop_name):
+    """'02. 소노벨 비발디파크' → '소노벨 비발디파크'"""
+    if not prop_name:
+        return ""
+    return re.sub(r'^\d+\.\s*', '', prop_name).strip()
 
 
 def _parse_ym(s):
-    s = s.strip().replace('-','').replace('/','').replace('.','')
+    s = s.strip().replace('-', '').replace('/', '').replace('.', '')
     return s[:6] if len(s) >= 6 else None
 
 
@@ -49,8 +85,58 @@ def find_types_with_retransmit(year_dir):
     return result
 
 
-def process_file(filepath, min_month=None, max_month=None):
-    """27번 파일에서 OTA/G-OTA만 (stay_month, booking_month) → rn 집계"""
+# ── budget 로드: daily_booking.json 의 budget_rns (2026년만 존재) ──
+def load_budget():
+    """returns (budget_by_prop[canon][month] = rn,
+                budget_gs[month] = grand_total_rn,
+                canon_names: set)"""
+    budget_by_prop = defaultdict(dict)
+    budget_gs = {}
+    canon = set()
+    if not DAILY_BOOKING_PATH.exists():
+        print("⚠ daily_booking.json 없음 — budget 없이 진행", file=sys.stderr)
+        return budget_by_prop, budget_gs, canon
+    data = json.load(open(DAILY_BOOKING_PATH, encoding='utf-8'))
+    for md in data.get("months_detail", []):
+        mm = str(md.get("month", "")).zfill(2)
+        if not mm.isdigit():
+            continue
+        for p in md.get("properties", []):
+            name = p.get("name", "")
+            rn = p.get("budget_rns", 0) or 0
+            if name == "Grand Total":
+                budget_gs[mm] = rn
+            elif name:
+                budget_by_prop[name][mm] = rn
+                canon.add(name)
+    return budget_by_prop, budget_gs, canon
+
+
+def build_alias_map(canon):
+    """raw 정규화 사업장명 → budget 정답지(canon) 매핑.
+    이름이 다른 케이스는 명시적으로, 나머지는 공백 무시 매칭."""
+    explicit = {
+        "소노문 비발디파크": "소노벨 비발디파크",
+        "오션월드빌리지": "소노펠리체빌리지 비발디파크",
+        "소노문 단양": "소노벨 단양",
+        "소노벨 경주": "소노캄 경주",
+        "소노휴 양평": "소노벨 양평",
+    }
+    nospace = {c.replace(" ", ""): c for c in canon}
+
+    def to_canon(raw):
+        if raw in explicit:
+            return explicit[raw]
+        if raw in canon:
+            return raw
+        hit = nospace.get(raw.replace(" ", ""))
+        return hit if hit else raw  # 매칭 실패 시 raw 그대로(budget 없음)
+
+    return to_canon
+
+
+def process_file(filepath, to_canon, min_month=None, max_month=None):
+    """27번 파일 → (canon_prop, stay_month, booking_month) → rn 집계 (OTA/G-OTA만)"""
     result = defaultdict(int)
     encodings = ['cp949', 'euc-kr', 'utf-8']
 
@@ -61,6 +147,8 @@ def process_file(filepath, min_month=None, max_month=None):
                 headers = header_line.split(';')
                 col_map = {h.strip(): i for i, h in enumerate(headers)}
 
+                idx_prop = col_map.get('영업장명', -1)
+                idx_cprop = col_map.get('변경사업장명', -1)
                 idx_selldate = col_map.get('판매일자', -1)
                 idx_checkin = col_map.get('입실일자', -1)
                 idx_pickup_date = col_map.get('최초입력일자', -1)
@@ -79,28 +167,32 @@ def process_file(filepath, min_month=None, max_month=None):
                     plen = len(parts)
 
                     try:
-                        # 세그먼트 필터: OTA/G-OTA만
-                        code_num = parts[idx_code_num].strip() if idx_code_num >= 0 and idx_code_num < plen else ''
+                        code_num = parts[idx_code_num].strip() if 0 <= idx_code_num < plen else ''
                         seg = classify_segment(code_num)
                         if seg not in ("OTA", "G-OTA"):
                             continue
 
-                        sell_date = parts[idx_selldate].strip() if idx_selldate >= 0 and idx_selldate < plen else ''
+                        sell_date = parts[idx_selldate].strip() if 0 <= idx_selldate < plen else ''
                         if len(sell_date) < 6:
-                            sell_date = parts[idx_checkin].strip() if idx_checkin >= 0 and idx_checkin < plen else ''
+                            sell_date = parts[idx_checkin].strip() if 0 <= idx_checkin < plen else ''
                             if len(sell_date) < 6: continue
                         stay_month = _parse_ym(sell_date)
                         if not stay_month: continue
-
                         if min_month and stay_month < min_month: continue
                         if max_month and stay_month > max_month: continue
 
-                        pickup_str = parts[idx_pickup_date].strip() if idx_pickup_date >= 0 and idx_pickup_date < plen else ''
+                        pickup_str = parts[idx_pickup_date].strip() if 0 <= idx_pickup_date < plen else ''
                         booking_month = _parse_ym(pickup_str)
                         if not booking_month: continue
 
-                        rn = int(parts[idx_rooms].strip()) if idx_rooms >= 0 and idx_rooms < plen else 1
-                        result[(stay_month, booking_month)] += rn
+                        cprop = parts[idx_cprop].strip() if 0 <= idx_cprop < plen else ''
+                        praw = parts[idx_prop].strip() if 0 <= idx_prop < plen else ''
+                        prop = normalize_property(cprop) if cprop else normalize_property(praw)
+                        if not prop: continue
+                        canon = to_canon(prop)
+
+                        rn = int(parts[idx_rooms].strip()) if 0 <= idx_rooms < plen else 1
+                        result[(canon, stay_month, booking_month)] += rn
                         count += 1
                     except (IndexError, ValueError):
                         continue
@@ -112,55 +204,89 @@ def process_file(filepath, min_month=None, max_month=None):
     return result
 
 
+def _ratios(total, same, budget_rn):
+    advance = total - same
+    if advance < 0:
+        advance = 0
+    if budget_rn:
+        start_ratio = round(advance / budget_rn * 100, 1)
+    elif total > 0:
+        start_ratio = round(advance / total * 100, 1)
+    else:
+        start_ratio = 0
+    rec = {
+        "total_rn": total,
+        "same_month_rn": same,
+        "advance_rn": advance,
+        "start_ratio": start_ratio,
+        "ratio": round(same / total * 100, 1) if total > 0 else 0,
+    }
+    if budget_rn:
+        rec["budget_rn"] = budget_rn
+    return rec
+
+
 def main():
-    agg = defaultdict(int)
+    budget_by_prop, budget_gs, canon_names = load_budget()
+    to_canon = build_alias_map(canon_names)
+
+    agg = defaultdict(int)  # (canon, stay_month, booking_month) -> rn
     year_dirs = sorted([d for d in RAW_DIR.iterdir() if d.is_dir() and d.name.isdigit()])
 
     for year_dir in year_dirs:
         year = year_dir.name
         print(f"Processing {year}...", file=sys.stderr)
-
         has_retransmit = find_types_with_retransmit(year_dir)
-        txt_files = sorted(year_dir.glob("27*.txt"))  # 27번만
+        txt_files = sorted(year_dir.glob("27*.txt"))
 
         for fpath in txt_files:
             ftype, ret_start, ret_end = detect_month_filter(fpath.name)
             min_month = max_month = None
-
             if ftype == 'retransmit':
                 max_month = min(ret_end, f"{year}03") if int(year) >= 2026 else ret_end
             elif ftype == 'snapshot' and has_retransmit:
                 min_month = f"{year}04" if int(year) >= 2026 else None
 
-            result = process_file(fpath, min_month, max_month)
+            result = process_file(fpath, to_canon, min_month, max_month)
             for k, v in result.items():
                 agg[k] += v
 
-    # Build output by year
-    stay_month_total = defaultdict(int)
-    stay_month_same = defaultdict(int)
+    # ── GS 전체 집계 (by_year) ──
+    gs_total = defaultdict(int)
+    gs_same = defaultdict(int)
+    # ── 사업장별 집계 (by_property) ──
+    prop_total = defaultdict(int)  # (canon, stay_month) -> rn
+    prop_same = defaultdict(int)
 
-    for (stay_m, booking_m), rn in agg.items():
-        stay_month_total[stay_m] += rn
+    for (canon, stay_m, booking_m), rn in agg.items():
+        gs_total[stay_m] += rn
+        prop_total[(canon, stay_m)] += rn
         if stay_m == booking_m:
-            stay_month_same[stay_m] += rn
+            gs_same[stay_m] += rn
+            prop_same[(canon, stay_m)] += rn
 
-    output = {}
-    for sm in sorted(stay_month_total.keys()):
+    # by_year
+    by_year = {}
+    for sm in sorted(gs_total.keys()):
         year, month = sm[:4], sm[4:6]
-        if year not in output: output[year] = {}
-        total = stay_month_total[sm]
-        same = stay_month_same.get(sm, 0)
-        output[year][month] = {
-            "total_rn": total,
-            "same_month_rn": same,
-            "ratio": round(same / total * 100, 1) if total > 0 else 0
-        }
+        budget_rn = budget_gs.get(month, 0) if year == "2026" else 0
+        by_year.setdefault(year, {})[month] = _ratios(gs_total[sm], gs_same.get(sm, 0), budget_rn)
+
+    # by_property
+    by_property = {}
+    for (canon, sm), total in prop_total.items():
+        year, month = sm[:4], sm[4:6]
+        budget_rn = budget_by_prop.get(canon, {}).get(month, 0) if year == "2026" else 0
+        rec = _ratios(total, prop_same.get((canon, sm), 0), budget_rn)
+        node = by_property.setdefault(canon, {"region": get_region(canon)})
+        node.setdefault(year, {})[month] = rec
 
     result_json = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "description": "당월 예약 비중 (OTA+G-OTA): 투숙월=예약월 RN 비중",
-        "by_year": output
+        "description": "Start 달성률 (OTA+G-OTA): 투숙월 시작 전 사전예약(advance_rn) 목표(budget) 대비",
+        "budget_source": "daily_booking",
+        "by_year": by_year,
+        "by_property": by_property,
     }
 
     for p in (OUTPUT_PATH, DOCS_PATH):
@@ -171,11 +297,14 @@ def main():
     print(f"\n✅ {OUTPUT_PATH}", file=sys.stderr)
     print(f"✅ {DOCS_PATH}", file=sys.stderr)
 
-    for year in sorted(output.keys()):
-        print(f"\n{year}년:", file=sys.stderr)
-        for month in sorted(output[year].keys()):
-            d = output[year][month]
-            print(f"  {month}월: 당월 {d['same_month_rn']:,} / 전체 {d['total_rn']:,} = {d['ratio']}%", file=sys.stderr)
+    for year in sorted(by_year.keys()):
+        print(f"\n{year}년 (GS):", file=sys.stderr)
+        for month in sorted(by_year[year].keys()):
+            d = by_year[year][month]
+            b = d.get("budget_rn", 0)
+            print(f"  {month}월: advance {d['advance_rn']:,} / "
+                  f"{'budget '+format(b,',') if b else 'total '+format(d['total_rn'],',')} "
+                  f"= Start {d['start_ratio']}%", file=sys.stderr)
 
 
 if __name__ == "__main__":
