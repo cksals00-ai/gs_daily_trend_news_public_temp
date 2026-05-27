@@ -18,6 +18,7 @@ build_weekly_comparison.py — 당일/금주 vs 전주/전년동기간 비교 �
 - insights: 자동 추출 인사이트
 """
 from __future__ import annotations
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import json, os, re, sys, logging
 from pathlib import Path
 from datetime import datetime, timedelta

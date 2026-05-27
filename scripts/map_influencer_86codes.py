@@ -12,6 +12,7 @@ map_influencer_86codes.py — 인플루언서 기획전 86XX 패키지코드 매
 - 더미/추정 데이터 절대 금지
 """
 import os, json, re, sys
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime

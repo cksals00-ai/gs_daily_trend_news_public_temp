@@ -8,6 +8,7 @@ parse_raw_db.py — 온북 원시 DB txt 파일 파싱 → JSON 집계
 CP949 인코딩, 세미콜론(;) 구분
 """
 import os, sys, json, re, logging, glob, unicodedata, pickle
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta

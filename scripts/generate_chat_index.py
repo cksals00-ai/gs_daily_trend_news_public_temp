@@ -8,6 +8,7 @@ db_aggregated.json + otb_data.json + inbound_enriched.json
 사업장 × 세그먼트 × 월 + 채널별 + 국적별 + 목표/FCST/LY/YoY
 """
 from __future__ import annotations
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import json, os, sys
 from datetime import datetime
 from pathlib import Path

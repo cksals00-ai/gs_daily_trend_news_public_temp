@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fix all HTML navs to 7-item standard + remove package section from index.html"""
 import re
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 
 DOCS = Path("/sessions/funny-fervent-rubin/mnt/gs_daily_trend_news_public_temp/docs")

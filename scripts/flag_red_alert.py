@@ -6,6 +6,7 @@
 - 결과를 daily_booking.json에 alert_flags로 추가
 """
 import json, os, re
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from datetime import datetime, date
 from collections import defaultdict
 

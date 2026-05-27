@@ -14,6 +14,7 @@ GS Daily Trend Report V7 - HTML 빌드 (최종 통합)
 © 2026 GS팀 · Haein Kim Manager
 """
 import html as html_module
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import json
 import logging
 import re

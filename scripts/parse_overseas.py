@@ -6,6 +6,7 @@
 © 2026 GS팀 · Haein Kim Manager
 """
 import json
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import logging
 import os
 import sys

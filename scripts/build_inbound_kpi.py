@@ -37,6 +37,7 @@ build_inbound_kpi.py
 """
 
 import json, os, sys
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from datetime import date
 from pathlib import Path
 

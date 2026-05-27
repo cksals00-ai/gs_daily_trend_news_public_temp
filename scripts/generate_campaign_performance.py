@@ -17,6 +17,7 @@ generate_campaign_performance.py — 기획전(Key)별 실적 집계
 - 옵션으로 events[].판매기간 / 투숙기간으로 필터링 가능 (CLI 플래그).
 """
 from __future__ import annotations
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import os, json, sys, logging
 from pathlib import Path
 from collections import defaultdict

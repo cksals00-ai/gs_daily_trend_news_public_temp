@@ -10,6 +10,7 @@ compare_and_update.py
 - 출력: data/daily_notes.json (property_performance 키만 교체)
 """
 import json
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import re
 import sys
 from collections import defaultdict

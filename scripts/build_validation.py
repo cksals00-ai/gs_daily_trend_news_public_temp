@@ -26,6 +26,7 @@ docs/data/validation/YYYYMMDD_validation.json
 """
 
 import json
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import re
 import sys
 from datetime import datetime

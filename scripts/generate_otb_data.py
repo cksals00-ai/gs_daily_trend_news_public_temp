@@ -9,6 +9,7 @@ BI 26OTB 시트 기준으로 docs/data/otb_data.json 생성
 - 월별 분리 데이터 포함 (월 필터 작동용)
 """
 import calendar
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import json
 import os
 import sys

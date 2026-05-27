@@ -12,6 +12,7 @@ OCC 출처:    data/palatium_room_availability.json (parse_palatium_rooms.py 산
 parse_raw_db.py 종료 후 자동 호출되거나 단독 실행 가능.
 """
 import json
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import logging
 import re
 import sys

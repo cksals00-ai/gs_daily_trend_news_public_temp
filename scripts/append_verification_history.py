@@ -16,6 +16,7 @@
 중복 검증 (같은 verification_date + excel_file) 은 자동으로 skip.
 """
 from __future__ import annotations
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 
 import argparse
 import json

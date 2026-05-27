@@ -9,6 +9,7 @@
 기준일: 어제(today-1) 의 MM-DD 를 각 연도에 적용. 2026/05/03 실행 시 base = MM=05 DD=02.
 """
 from __future__ import annotations
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import os, sys, json, logging
 from pathlib import Path
 from collections import defaultdict

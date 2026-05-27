@@ -5,6 +5,7 @@ build_same_month_ratio.py — 당월 예약 비중 집계 (OTA + G-OTA만)
 출력: data/same_month_booking.json, docs/data/same_month_booking.json
 """
 import os, sys, json, re, unicodedata
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime

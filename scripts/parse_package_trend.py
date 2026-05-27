@@ -6,6 +6,7 @@ parse_package_trend.py — 온북 DB 패키지(회원번호=86XXXXXX) 분류별 
 출력: data/package_series_trend.json
 """
 import os, json, re, logging
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict
 

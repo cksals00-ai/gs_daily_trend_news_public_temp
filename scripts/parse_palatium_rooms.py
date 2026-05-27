@@ -31,6 +31,7 @@ data/palatium_rooma/ 폴더의 "사용가능 객실 현황*.xlsx" 파일들을 �
 © 2026 GS팀
 """
 import json
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import logging
 import re
 import sys

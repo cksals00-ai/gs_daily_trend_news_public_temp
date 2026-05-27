@@ -1,5 +1,6 @@
 """사업장별 stayDateDaily 생성 — 27+43번 파일만 빠르게 파싱 (GS 세그먼트만)"""
 import os, re, json, sys
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from collections import defaultdict
 from datetime import datetime
 

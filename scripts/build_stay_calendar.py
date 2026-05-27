@@ -11,6 +11,7 @@ raw_db txt 파일을 스트리밍 파싱하여 stay_date 단위로 집계:
 출력: docs/data/stay_calendar.json
 """
 import os, sys, json, re, logging, glob, unicodedata
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta

@@ -22,6 +22,7 @@ build_inbound_enriched.py — Inbound (변경예약집계코드=58) 거래처별
 RN = 객실수 (각 행이 1박 단위)
 """
 import os, re, json, sys, logging, glob
+import fs_utils  # macOS NFD→NFC 유니코드 정규화
 from pathlib import Path
 from collections import defaultdict, Counter
 
