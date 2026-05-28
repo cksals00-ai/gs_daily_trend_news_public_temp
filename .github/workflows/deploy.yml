@@ -168,9 +168,15 @@ jobs:
             git commit -m "chore(auto): daily update $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M') KST [skip ci]"
             for i in 1 2 3; do
               git push && break || {
-                echo "⚠ 푸시 시도 $i 실패 — 3초 후 재시도"
+                echo "⚠ 푸시 시도 $i 실패 — origin 갱신 후 재시도"
+                # 동시 실행된 다른 빌드가 같은 파생 파일(data/·docs/)을 재생성해
+                # 푸시가 거부됨. rebase 충돌은 모두 build 산출물이므로 방금 생성한
+                # 우리 버전(-X theirs: rebase 중 replay되는 로컬 커밋)으로 자동 해소.
+                if ! git pull --rebase -X theirs origin main; then
+                  echo "⚠ 재베이스 충돌 자동해소 실패 — abort 후 재시도"
+                  git rebase --abort || true
+                fi
                 sleep 3
-                git pull --rebase origin main
               }
             done
             # 최종 확인: push 후 로컬과 리모트가 동기화됐는지
