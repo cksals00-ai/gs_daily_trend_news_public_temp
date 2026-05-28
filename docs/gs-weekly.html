@@ -212,7 +212,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
       <button id="ppt-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
       <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="요약/당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
-      <a id="rm-fcst-btn" class="confirm-btn secondary" href="data/RM_FCST_정리.xlsx" download="RM_FCST_정리.xlsx" title="RM FCST 정리 엑셀(사업장별 총괄/세그먼트별 상세) 다운로드" style="margin-left:0;text-decoration:none;">RM FCST 정리</a>
+      <a id="rm-fcst-btn" class="confirm-btn secondary" href="data/RM_FCST_정리.xlsx" download="RM_FCST_정리.xlsx" title="RM FCST 정리 엑셀(사업장별 총괄/세그먼트별 상세) 다운로드" style="margin-left:0;text-decoration:none;">RM FCST 정리 <span id="rm-fcst-month-label"></span></a>
     </div>
 
     <!-- Snapshot Banner -->
@@ -439,6 +439,19 @@ async function init() {
     }
     document.getElementById('sidebar-refresh').textContent = OTB_DATA.meta?.refreshTime || '—';
     document.getElementById('base-date-display').textContent = OTB_DATA.meta?.baseDate || '—';
+    // RM FCST 정리 링크: 다음달(curMonth+1) 라벨 동적 표기 (예: 5월에 보면 (6월))
+    (function setRmFcstMonthLabel() {
+      const _n = new Date();
+      const _nextMon = (_n.getMonth() + 1) % 12 + 1;
+      const _nextYr  = _n.getMonth() + 1 === 12 ? _n.getFullYear() + 1 : _n.getFullYear();
+      const _lbl = document.getElementById('rm-fcst-month-label');
+      if (_lbl) _lbl.textContent = `(${_nextMon}월)`;
+      const _a = document.getElementById('rm-fcst-btn');
+      if (_a) {
+        const _fname = `RM_FCST_정리_${_nextYr}_${String(_nextMon).padStart(2,'0')}.xlsx`;
+        _a.setAttribute('download', _fname);
+      }
+    })();
     buildWeekSlicer();
     renderAll('all');
   } catch(e) {
