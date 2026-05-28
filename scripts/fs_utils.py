@@ -76,7 +76,9 @@ def _apply_nfc_patch():
         def __fspath__(self):     return self.path
 
     class _NFCScandirIterator:
-        """os.scandir context manager 래퍼"""
+        """os.scandir context manager + iterator 래퍼
+        os.walk 등 내부 코드가 __next__를 직접 호출하므로
+        __iter__는 self를 반환하고 __next__로 위임해야 함."""
         def __init__(self, path='.'):
             self._it = _orig_scandir(path)
         def __enter__(self):
@@ -84,8 +86,9 @@ def _apply_nfc_patch():
         def __exit__(self, *args):
             self._it.close()
         def __iter__(self):
-            for entry in self._it:
-                yield _NFCDirEntry(entry)
+            return self
+        def __next__(self):
+            return _NFCDirEntry(next(self._it))
         def close(self):
             self._it.close()
 
