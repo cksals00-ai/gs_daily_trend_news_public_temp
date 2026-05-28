@@ -1643,6 +1643,8 @@ function buildSummaryTable(weekKey) {
   const monYear  = isLastWk && actualMonth === 12 ? curYear + 1 : curYear;
   const monYM     = `${monYear}${String(monMonth).padStart(2,'0')}`;
   const monLastYM = `${monYear-1}${String(monMonth).padStart(2,'0')}`;
+  // 마지막 주이면 누계도 익월까지 포함 (12월은 연 경계라 당해 12월까지 유지)
+  const ytdEndMonth = (isLastWk && actualMonth < 12) ? actualMonth + 1 : actualMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
@@ -1664,10 +1666,10 @@ function buildSummaryTable(weekKey) {
     }
   });
 
-  // 누계 (항상 실제 당월 기준 유지)
+  // 누계 (마지막 주이면 익월까지 합산)
   const ytdBud = {}, ytdAct = {}, ytdLast = {};
   segs.forEach(seg => { ytdBud[seg] = 0; ytdAct[seg] = 0; ytdLast[seg] = 0; });
-  for (let m = 1; m <= actualMonth; m++) {
+  for (let m = 1; m <= ytdEndMonth; m++) {
     const ym  = `${curYear}${String(m).padStart(2,'0')}`;
     const lym = `${curYear-1}${String(m).padStart(2,'0')}`;
     segs.forEach(seg => {
@@ -1708,7 +1710,7 @@ function buildSummaryTable(weekKey) {
       <th rowspan="2" style="min-width:120px;">구분</th>
       <th colspan="4" class="month-header">${monMonth}월 예상실적</th>
       <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
-      <th colspan="4" class="month-header">누계 (1~${actualMonth}월)</th>
+      <th colspan="4" class="month-header">누계 (1~${ytdEndMonth}월)</th>
       <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
     </tr>
     <tr>
@@ -1907,13 +1909,16 @@ function buildYTDTable(weekKey) {
   const now = new Date();
   const curMonth = now.getMonth() + 1;
   const curYear = now.getFullYear();
+  // 마지막 주이면 누계도 익월까지 포함 (12월은 연 경계라 당해 12월까지 유지)
+  const isLastWk = isLastWeekOfMonth(now);
+  const ytdEndMonth = (isLastWk && curMonth < 12) ? curMonth + 1 : curMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
   let html = `<thead>
     <tr>
       <th rowspan="2" style="min-width:120px;">구분</th>
-      <th colspan="4" class="month-header">누계 (1~${curMonth}월)</th>
+      <th colspan="4" class="month-header">누계 (1~${ytdEndMonth}월)</th>
       <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
     </tr>
     <tr>
