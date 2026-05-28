@@ -387,6 +387,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
 
 // ===== DATA LOADING =====
 let OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED, STRATEGY_DATA;
+let RM_FCST_DATA = {};
 let SNAPSHOTS = { version:'1.0', updated_at:null, snapshots:{} };
 let ACTIVE_SNAPSHOT_KEY = null;   // 'YYYY-MM-WN' when viewing a snapshot
 let ACTIVE_SNAPSHOT_DATA = null;  // resolved snapshot data when in snapshot mode
@@ -422,12 +423,14 @@ function saveSnapshotsToLocal() {
 
 async function init() {
   try {
-    [OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED] = await Promise.all([
+    [OTB_DATA, DB_DATA, IB_KPI, IB_ENRICHED, RM_FCST_DATA] = await Promise.all([
       loadJSON('otb_data.json'),
       loadJSON('db_aggregated.json'),
       loadJSON('inbound_kpi.json'),
-      loadJSON('inbound_enriched.json')
+      loadJSON('inbound_enriched.json'),
+      loadJSONOpt('rm_fcst.json')
     ]);
+    RM_FCST_DATA = RM_FCST_DATA || {};
     STRATEGY_DATA = await loadJSONOpt('strategy_targets.json');
     const fileSnap = await loadJSONOpt('weekly_snapshots.json');
     const localSnap = loadSnapshotsFromLocal();
@@ -1397,6 +1400,23 @@ function getSegmentFcst(monthNum, segName) {
   return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_fcst || 0;
 }
 
+// rm_fcst.json 기반 RM FCST 세그먼트 합산 (사업장 전체)
+function getRmFcstSegment(monthNum, segName) {
+  if (inSnapshot()) {
+    const sf = ACTIVE_SNAPSHOT_DATA.fcsts?.[String(monthNum)]?.[segName];
+    if (sf !== undefined) return sf;
+  }
+  const yr = new Date().getFullYear();
+  const monthKey = `${yr}-${String(monthNum).padStart(2,'0')}`;
+  const props = RM_FCST_DATA?.properties || {};
+  let total = 0;
+  for (const p in props) {
+    const v = props[p]?.[monthKey]?.segments?.[segName]?.rm_fcst_rn;
+    if (typeof v === 'number') total += v;
+  }
+  return total;
+}
+
 function getSegmentLast(monthNum, segName) {
   return OTB_DATA.allMonths?.[String(monthNum)]?.segmentData?.[segName]?.rns_last || 0;
 }
@@ -1671,7 +1691,7 @@ function buildSummaryTable(weekKey) {
   const monBud = {}, monOTB = {}, monLast = {};
   segs.forEach(seg => {
     monBud[seg] = getSegmentBudget(monMonth, seg);
-    monOTB[seg] = getSegmentFcst(monMonth, seg);
+    monOTB[seg] = getRmFcstSegment(monMonth, seg);
     if (monUseWeek) {
       monLast[seg] = sumArr(filterDailyByWeek(getDailySegmentData(monLastYM, seg), weekKey));
     } else {
