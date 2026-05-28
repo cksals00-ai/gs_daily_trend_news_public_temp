@@ -1638,30 +1638,30 @@ function buildSummaryTable(weekKey) {
   const curYear = now.getFullYear();
   const isLastWk = isLastWeekOfMonth(now);
 
-  // 마지막 주이면 "당월 예상실적"을 익월로 전환해서 표시
-  const monMonth = isLastWk ? (actualMonth === 12 ? 1 : actualMonth + 1) : actualMonth;
-  const monYear  = isLastWk && actualMonth === 12 ? curYear + 1 : curYear;
+  // 마지막 주이면 "당월 예상실적"을 +2개월로 전환 (예: 5월 말 → 7월)
+  const _mm_n = isLastWk ? actualMonth + 2 : actualMonth;
+  const monMonth = _mm_n > 12 ? _mm_n - 12 : _mm_n;
+  const monYear  = _mm_n > 12 ? curYear + 1 : curYear;
   const monYM     = `${monYear}${String(monMonth).padStart(2,'0')}`;
   const monLastYM = `${monYear-1}${String(monMonth).padStart(2,'0')}`;
-  // 마지막 주이면 누계도 익월까지 포함 (12월은 연 경계라 당해 12월까지 유지)
-  const ytdEndMonth = (isLastWk && actualMonth < 12) ? actualMonth + 1 : actualMonth;
+  // 누계도 +2 (12를 넘지 않도록 capping)
+  const ytdEndMonth = isLastWk ? Math.min(actualMonth + 2, 12) : actualMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
   const useWeek = weekKey !== 'all';
-  // 익월 전환 시에는 주차 필터가 무의미하므로 전체월 OTB 사용
+  // RM FCST는 월 단위 예측치이므로 주차 필터 무의미. 전년비교(monLast)는 주차 필터 유지.
   const monUseWeek = useWeek && !isLastWk;
   const segs = ['OTA', 'G-OTA', 'Inbound'];
 
-  // 당월(마지막 주이면 익월)
+  // 당월(마지막 주이면 익월) — monOTB는 변수명만 유지, 실제값은 RM FCST
   const monBud = {}, monOTB = {}, monLast = {};
   segs.forEach(seg => {
     monBud[seg] = getSegmentBudget(monMonth, seg);
+    monOTB[seg] = getSegmentFcst(monMonth, seg);
     if (monUseWeek) {
-      monOTB[seg]  = sumArr(filterDailyByWeek(getDailySegmentData(monYM, seg), weekKey));
       monLast[seg] = sumArr(filterDailyByWeek(getDailySegmentData(monLastYM, seg), weekKey));
     } else {
-      monOTB[seg]  = getSegmentOTB(seg, monYM);
       monLast[seg] = isSamePeriod ? getYoYAdjustedSegment(seg, monLastYM) : getSegmentOTB(seg, monLastYM);
     }
   });
@@ -1909,9 +1909,9 @@ function buildYTDTable(weekKey) {
   const now = new Date();
   const curMonth = now.getMonth() + 1;
   const curYear = now.getFullYear();
-  // 마지막 주이면 누계도 익월까지 포함 (12월은 연 경계라 당해 12월까지 유지)
+  // 누계도 +2 (12를 넘지 않도록 capping)
   const isLastWk = isLastWeekOfMonth(now);
-  const ytdEndMonth = (isLastWk && curMonth < 12) ? curMonth + 1 : curMonth;
+  const ytdEndMonth = isLastWk ? Math.min(curMonth + 2, 12) : curMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
@@ -1937,7 +1937,7 @@ function buildYTDTable(weekKey) {
   const ytdBudget = {}, ytdActual = {}, ytdLast = {};
   segs.forEach(seg => { ytdBudget[seg] = 0; ytdActual[seg] = 0; ytdLast[seg] = 0; });
 
-  for (let m = 1; m <= curMonth; m++) {
+  for (let m = 1; m <= ytdEndMonth; m++) {
     segs.forEach(seg => {
       ytdBudget[seg] += getSegmentBudget(m, seg);
       const ym = String(curYear) + String(m).padStart(2,'0');
@@ -1961,7 +1961,7 @@ function buildYTDTable(weekKey) {
   // Channel YTD — 동기간: 당월분만 비율 적용
   const chYTD = {}, chLastYTD = {};
   [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => { chYTD[ch] = 0; chLastYTD[ch] = 0; });
-  for (let m = 1; m <= curMonth; m++) {
+  for (let m = 1; m <= ytdEndMonth; m++) {
     const ym = String(curYear) + String(m).padStart(2,'0');
     const lym = String(curYear-1) + String(m).padStart(2,'0');
     [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => {
@@ -1986,7 +1986,7 @@ function buildYTDTable(weekKey) {
   const chTargetYTD = {};
   let etcTargetYTD_OTA = 0, etcTargetYTD_GOTA = 0;
   [...OTA_CHANNELS, ...GOTA_CHANNELS].forEach(ch => { chTargetYTD[ch] = 0; });
-  for (let m = 1; m <= curMonth; m++) {
+  for (let m = 1; m <= ytdEndMonth; m++) {
     OTA_CHANNELS.forEach(ch => { chTargetYTD[ch] += getChannelTarget(ch, curYear, m, 'OTA'); });
     GOTA_CHANNELS.forEach(ch => { chTargetYTD[ch] += getChannelTarget(ch, curYear, m, 'G-OTA'); });
     etcTargetYTD_OTA += getEtcChannelTarget(curYear, m, 'OTA');
@@ -2015,7 +2015,7 @@ function buildYTDTable(weekKey) {
   const ibNatLastYTD = {};
   IB_NATS.forEach(n => { ibNatYTD[n] = 0; ibNatLastYTD[n] = 0; });
   ibNatYTD['기타'] = 0; ibNatLastYTD['기타'] = 0;
-  for (let m = 1; m <= curMonth; m++) {
+  for (let m = 1; m <= ytdEndMonth; m++) {
     const ym = String(curYear) + String(m).padStart(2,'0');
     const lym = String(curYear-1) + String(m).padStart(2,'0');
     const natCur = getInboundByNat(ym);
@@ -2030,7 +2030,7 @@ function buildYTDTable(weekKey) {
   const ibBudgetYTD = {};
   IB_NATS.forEach(n => { ibBudgetYTD[n] = 0; });
   ibBudgetYTD['기타'] = 0;
-  for (let m = 0; m < curMonth; m++) {
+  for (let m = 0; m < ytdEndMonth; m++) {
     const bud = getInboundBudgetByNat(m);
     [...IB_NATS, '기타'].forEach(n => {
       ibBudgetYTD[n] = (ibBudgetYTD[n] || 0) + (bud[n] || 0);
@@ -2247,25 +2247,32 @@ function renderAll(weekKey) {
   const now = new Date();
   const curMonth = now.getMonth() + 1;
   const curYear = now.getFullYear();
-  const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
-  const nextYear = curMonth === 12 ? curYear + 1 : curYear;
+  const isLastWk = isLastWeekOfMonth(now);
+
+  // 01 당월: 마지막 주에는 +2개월로 전환 (예: 5월 말 → 7월)
+  const _cm_n = isLastWk ? curMonth + 2 : curMonth;
+  const cmMonth = _cm_n > 12 ? _cm_n - 12 : _cm_n;
+  const cmYear  = _cm_n > 12 ? curYear + 1 : curYear;
+  const cmYM       = `${cmYear}${String(cmMonth).padStart(2,'0')}`;
+  const cmLastYM   = `${cmYear-1}${String(cmMonth).padStart(2,'0')}`;
+  const cmWeekKey  = isLastWk ? 'all' : weekKey;
+
+  // 02 익월: cmMonth의 다음 달 (마지막 주 시 자동으로 +3, 평시 +1)
+  const _nm_n = cmMonth + 1;
+  const nextMonth = _nm_n > 12 ? _nm_n - 12 : _nm_n;
+  const nextYear  = _nm_n > 12 ? cmYear + 1 : cmYear;
+  const nextYM     = `${nextYear}${String(nextMonth).padStart(2,'0')}`;
+  const lastNextYM = `${nextYear-1}${String(nextMonth).padStart(2,'0')}`;
 
   const curYM = `${curYear}${String(curMonth).padStart(2,'0')}`;
   const lastYM = `${curYear-1}${String(curMonth).padStart(2,'0')}`;
-  const nextYM = `${nextYear}${String(nextMonth).padStart(2,'0')}`;
-  const lastNextYM = `${nextYear-1}${String(nextMonth).padStart(2,'0')}`;
 
-  // 마지막 주이면 "01 당월 예상실적"을 익월로 전환
-  const isLastWk = isLastWeekOfMonth(now);
-  const cmMonth = isLastWk ? nextMonth : curMonth;
-  const cmYear  = isLastWk ? nextYear : curYear;
-  const cmYM       = isLastWk ? nextYM : curYM;
-  const cmLastYM   = isLastWk ? lastNextYM : lastYM;
-  const cmWeekKey  = isLastWk ? 'all' : weekKey;
+  // 누계: 마지막 주에는 +2, 12를 넘지 않도록 capping
+  const ytdEndMonth = isLastWk ? Math.min(curMonth + 2, 12) : curMonth;
 
   document.getElementById('current-month-label').innerHTML = `(${cmYear}.${String(cmMonth).padStart(2,'0')}.01 ~ ${cmYear}.${String(cmMonth).padStart(2,'0')}.${new Date(cmYear, cmMonth, 0).getDate()})`;
   document.getElementById('next-month-label').innerHTML = `(${nextYear}.${String(nextMonth).padStart(2,'0')}.01 ~ ${nextYear}.${String(nextMonth).padStart(2,'0')}.${new Date(nextYear, nextMonth, 0).getDate()})`;
-  document.getElementById('ytd-label').innerHTML = `(${curYear}.01.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
+  document.getElementById('ytd-label').innerHTML = `(${curYear}.01.01 ~ ${curYear}.${String(ytdEndMonth).padStart(2,'0')}.${new Date(curYear, ytdEndMonth, 0).getDate()})`;
   const _sumLbl = document.getElementById('summary-label');
   if (_sumLbl) _sumLbl.innerHTML = `(세그먼트 요약)`;
 
