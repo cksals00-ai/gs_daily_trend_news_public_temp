@@ -22,6 +22,34 @@ RAW_DIR = PROJECT_DIR / "data" / "raw_db"
 OUTPUT_PATH = PROJECT_DIR / "data" / "same_month_booking.json"
 DOCS_PATH = PROJECT_DIR / "docs" / "data" / "same_month_booking.json"
 DAILY_BOOKING_PATH = PROJECT_DIR / "data" / "daily_booking.json"
+RM_FCST_PATH = PROJECT_DIR / "data" / "rm_fcst.json"
+
+# rm_fcst.json 사업장명 → same_month by_property canon명(daily_booking 기준)
+RM_FCST_TO_CANON = {
+    "01.벨비발디": "소노벨 비발디파크",
+    "02.캄비발디": "소노캄 비발디파크",
+    "03.펫비발디": "소노펫 비발디파크",
+    "04.펠리체비발디": "소노펠리체 비발디파크",
+    "05.빌리지비발디": "소노펠리체빌리지 비발디파크",
+    "06.양평": "소노벨 양평",
+    "07.델피노": "델피노",
+    "08.쏠비치양양": "쏠비치 양양",
+    "09.쏠비치삼척": "쏠비치 삼척",
+    "10.소노벨단양": "소노벨 단양",
+    "11.소노캄경주": "소노캄 경주",
+    "12.소노벨청송": "소노벨 청송",
+    "13.소노벨천안": "소노벨 천안",
+    "14.소노벨변산": "소노벨 변산",
+    "15.소노캄여수": "소노캄 여수",
+    "16.소노캄거제": "소노캄 거제",
+    "17.쏠비치진도": "쏠비치 진도",
+    "18.소노벨제주": "소노벨 제주",
+    "19.소노캄제주": "소노캄 제주",
+    "20.소노캄고양": "소노캄 고양",
+    "21.소노문해운대": "소노문 해운대",
+    "22.쏠비치남해": "쏠비치 남해",
+    "23.르네블루": "르네블루",
+}
 
 # ── 권역 매핑 (parse_raw_db.PROPERTY_REGION / 페이지 region 칩과 동일 기준) ──
 PROPERTY_REGION = {
@@ -85,31 +113,48 @@ def find_types_with_retransmit(year_dir):
     return result
 
 
-# ── budget 로드: daily_booking.json 의 budget_rns (2026년만 존재) ──
-def load_budget():
-    """returns (budget_by_prop[canon][month] = rn,
-                budget_gs[month] = grand_total_rn,
-                canon_names: set)"""
-    budget_by_prop = defaultdict(dict)
-    budget_gs = {}
+# ── canon 정답지: daily_booking.json 사업장명 (raw 매핑용) ──
+def load_canon_names():
     canon = set()
     if not DAILY_BOOKING_PATH.exists():
-        print("⚠ daily_booking.json 없음 — budget 없이 진행", file=sys.stderr)
-        return budget_by_prop, budget_gs, canon
+        return canon
     data = json.load(open(DAILY_BOOKING_PATH, encoding='utf-8'))
     for md in data.get("months_detail", []):
-        mm = str(md.get("month", "")).zfill(2)
-        if not mm.isdigit():
-            continue
         for p in md.get("properties", []):
             name = p.get("name", "")
-            rn = p.get("budget_rns", 0) or 0
-            if name == "Grand Total":
-                budget_gs[mm] = rn
-            elif name:
-                budget_by_prop[name][mm] = rn
+            if name and name != "Grand Total":
                 canon.add(name)
-    return budget_by_prop, budget_gs, canon
+    return canon
+
+
+# ── budget 로드: rm_fcst.json 의 OTA + G-OTA 세그먼트 budget만 ──
+def load_budget():
+    """OTA+G-OTA 세그먼트 budget을 rm_fcst.json에서 로드.
+    daily_booking의 budget_rns(전 채널 합산)는 세그먼트 카드에 부적합.
+    returns (budget_by_prop[canon][MM] = ota+gota rn,
+             budget_gs[MM] = grand_total ota+gota rn)"""
+    budget_by_prop = defaultdict(dict)
+    budget_gs = defaultdict(int)
+    if not RM_FCST_PATH.exists():
+        print("⚠ rm_fcst.json 없음 — budget 없이 진행", file=sys.stderr)
+        return budget_by_prop, budget_gs
+    data = json.load(open(RM_FCST_PATH, encoding='utf-8'))
+    for rm_name, months in data.get("properties", {}).items():
+        canon = RM_FCST_TO_CANON.get(rm_name)
+        if not canon:
+            continue
+        for ym, node in months.items():  # ym = "2026-05"
+            if not ym.startswith("2026-"):
+                continue
+            mm = ym.split("-")[1]
+            seg = node.get("segments", {})
+            ota = seg.get("OTA", {}).get("rm_budget_rn", 0) or 0
+            gota = seg.get("G-OTA", {}).get("rm_budget_rn", 0) or 0
+            rn = ota + gota
+            if rn:
+                budget_by_prop[canon][mm] = rn
+                budget_gs[mm] += rn
+    return budget_by_prop, budget_gs
 
 
 def build_alias_map(canon):
@@ -227,7 +272,8 @@ def _ratios(total, same, budget_rn):
 
 
 def main():
-    budget_by_prop, budget_gs, canon_names = load_budget()
+    canon_names = load_canon_names()
+    budget_by_prop, budget_gs = load_budget()
     to_canon = build_alias_map(canon_names)
 
     agg = defaultdict(int)  # (canon, stay_month, booking_month) -> rn
@@ -284,7 +330,7 @@ def main():
     result_json = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "description": "Start 달성률 (OTA+G-OTA): 투숙월 시작 전 사전예약(advance_rn) 목표(budget) 대비",
-        "budget_source": "daily_booking",
+        "budget_source": "rm_fcst (OTA+G-OTA segments)",
         "by_year": by_year,
         "by_property": by_property,
     }
