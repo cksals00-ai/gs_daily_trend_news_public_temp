@@ -234,16 +234,33 @@ a{color:inherit;text-decoration:none}
       <span class="sec-head-meta"><span class="tag tag-gold">소노캄여수 품의서 양식</span></span>
     </div>
     <div class="sec-body">
-      <p style="color:var(--ink-muted);font-size:12px;margin-bottom:14px;line-height:1.7">요금표 엑셀을 업로드하면 시즌별 배분가·할인율·부대시설 GAP을 자동 계산하여 <strong style="color:var(--gold-bright)">품의서 미리보기</strong>와 <strong style="color:var(--gold-bright)">엑셀/HTML</strong>을 생성합니다. 처음이라면 아래 업로드 양식을 받아 작성하세요.</p>
+      <p style="color:var(--ink-muted);font-size:12px;margin-bottom:14px;line-height:1.7">요금표 엑셀을 업로드하면 시즌별 배분가·할인율·부대시설 GAP을 자동 계산하여 <strong style="color:var(--gold-bright)">품의서 미리보기</strong>와 <strong style="color:var(--gold-bright)">엑셀/HTML</strong>을 생성합니다. <br>👉 <strong style="color:var(--gold-bright)">원본 프로모션 요금표(상품안 시트)</strong>도 자동 인식 — 시트명에 "상품안"이 들어있으면 [배분가 정리] 모드로 동작합니다.</p>
       <div class="btn-group" style="margin-bottom:16px">
         <a class="btn btn-info" href="품의기획_요금표_업로드양식.xlsx" download>📋 업로드 양식 다운로드</a>
       </div>
       <div class="upload-zone" id="pb-upload-zone" onclick="document.getElementById('pb-file').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pbHandleDrop(event)">
         <div class="upload-icon">📊</div><div class="upload-text">요금표 엑셀(.xlsx)을 드래그하거나 클릭하여 업로드</div>
-        <div class="upload-sub">상품별 시트 · 부대시설 · 객실요금(시즌×타입, 천원)</div>
+        <div class="upload-sub">상품안 시트(원본 프로모션) · 또는 업로드 양식</div>
       </div>
       <input type="file" id="pb-file" accept=".xlsx,.xls" style="display:none" onchange="pbHandleFile(this.files[0])">
       <div class="upload-status" id="pb-status"></div>
+
+      <!-- 상품안(원본 프로모션) 포맷용 옵션 패널 -->
+      <div id="pb-sangpum-controls" style="display:none;margin-top:14px;padding:12px 14px;background:rgba(201,160,99,0.08);border:1px solid rgba(201,160,99,0.35);border-radius:6px">
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:12px">
+          <span style="font-weight:700;color:var(--gold-bright)">📐 상품안 옵션</span>
+          <span style="color:var(--ink-muted);font-size:11px">원본 프로모션 요금표(.xlsx) 자동 인식</span>
+          <span style="margin-left:auto">
+            <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin-right:14px">
+              <input type="radio" name="pb-keytype" value="unnamed" checked onchange="pbReparse()"> 회원 = <b>무기명</b> 기준
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="radio" name="pb-keytype" value="named" onchange="pbReparse()"> 회원 = <b>기명</b> 기준
+            </label>
+          </span>
+        </div>
+        <div id="pb-season-map" style="margin-top:10px"></div>
+      </div>
 
       <div id="pb-result" style="display:none;margin-top:18px">
         <div class="btn-group" style="margin-bottom:14px">
@@ -1486,6 +1503,10 @@ function copyHtmlSourceCode(){
    요금표 업로드 → 품의서 자동생성 (소노캄여수 양식)
    ════════════════════════════════════════════════════════════ */
 let pbData = null; // {common, products:[{info, addons, seasons, addonDetail}]}
+let pbWb = null;       // 원본 workbook 보관 (상품안 모드에서 옵션 변경 시 재파싱)
+let pbFileName = '';   // 업로드 파일명
+let pbMode = 'legacy'; // 'legacy' | 'sangpum'
+let pbSeasonMap = {};  // 상품안 모드 시즌명 사용자 매핑: { 'sheet|origLabel': 'mapped' }
 
 /* ── 숫자/범위 포맷 (단위: 천원) ── */
 function pbFmt(n){ if(n==null||isNaN(n)) return ''; return Number.isInteger(n)? String(n) : String(Math.round(n*10)/10); }
@@ -1497,20 +1518,74 @@ const pbEsc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;
 function pbHandleDrop(e){ e.preventDefault(); e.currentTarget.classList.remove('dragover'); if(e.dataTransfer.files.length) pbHandleFile(e.dataTransfer.files[0]); }
 function pbHandleFile(file){
   if(!file) return;
+  pbFileName = file.name;
+  pbSeasonMap = {};
   const r=new FileReader();
   r.onload=ev=>{
     try{
       const wb=XLSX.read(ev.target.result,{type:'array'});
-      pbData=pbParseWorkbook(wb);
-      if(!pbData.products.length){ pbStatus('⚠️ 상품 시트를 찾지 못했습니다. 업로드 양식을 확인하세요.', true); return; }
-      pbData.products.forEach(p=>pbComputeProduct(p));
-      pbStatus('✅ '+file.name+' — 상품 '+pbData.products.length+'개 파싱 완료', false);
-      document.getElementById('pb-result').style.display='';
-      pbRenderPreview();
-      document.getElementById('pb-result').scrollIntoView({behavior:'smooth',block:'nearest'});
+      pbWb = wb;
+      const isSangPum = wb.SheetNames.some(n=>/상품안/.test(n));
+      pbMode = isSangPum ? 'sangpum' : 'legacy';
+      pbRunParse();
     }catch(err){ console.error(err); pbStatus('파싱 오류: '+err.message, true); }
   };
   r.readAsArrayBuffer(file);
+}
+/* 옵션 변경 시 재파싱 (원본 wb 재사용) */
+function pbReparse(){ if(!pbWb) return; pbRunParse(); }
+function pbRunParse(){
+  try{
+    if(pbMode==='sangpum'){
+      const keyType = (document.querySelector('input[name="pb-keytype"]:checked')||{}).value || 'unnamed';
+      pbData = pbParseSangPumAn(pbWb, {keyType, seasonMap: pbSeasonMap});
+    } else {
+      pbData = pbParseWorkbook(pbWb);
+    }
+    if(!pbData.products.length){ pbStatus('⚠️ 상품 시트를 찾지 못했습니다. 업로드 양식을 확인하세요.', true); return; }
+    pbData.products.forEach(p=>pbComputeProduct(p));
+    const tag = pbMode==='sangpum' ? '[배분가 정리]' : '[업로드 양식]';
+    pbStatus('✅ '+pbFileName+' · '+tag+' — 상품 '+pbData.products.length+'개 파싱 완료', false);
+    document.getElementById('pb-sangpum-controls').style.display = pbMode==='sangpum' ? '' : 'none';
+    if(pbMode==='sangpum') pbRenderSeasonMap();
+    document.getElementById('pb-result').style.display='';
+    pbRenderPreview();
+    document.getElementById('pb-result').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(err){ console.error(err); pbStatus('파싱 오류: '+err.message, true); }
+}
+/* 시즌 매핑 UI: 시트별 원본 시즌 라벨을 사용자 라벨로 매핑 (재파싱) */
+function pbRenderSeasonMap(){
+  const el = document.getElementById('pb-season-map'); if(!el) return;
+  if(!pbData || !pbData.products.length || !pbData.products[0]._seasonRawByTag){ el.innerHTML=''; return; }
+  const raws = pbData.products[0]._seasonRawByTag;
+  const tags = Object.keys(raws);
+  if(!tags.length){ el.innerHTML=''; return; }
+  let html = '<div style="font-size:11px;color:var(--ink-muted);margin-bottom:6px">시즌명 매핑 — 날짜·비표준 라벨을 원하는 시즌명으로 변경 후 [적용]을 누르세요.</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:14px">';
+  tags.forEach(tag=>{
+    html += '<div style="min-width:220px;padding:8px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:5px">';
+    html += '<div style="font-weight:700;font-size:11px;color:#374151;margin-bottom:5px">📅 '+pbEsc(tag)+' 시트</div>';
+    raws[tag].forEach(r=>{
+      const key = tag+'|'+r.raw;
+      const cur = pbSeasonMap[key] != null ? pbSeasonMap[key] : r.raw;
+      const dateMark = r.isDate ? ' <span style="color:#d97706;font-size:10px">(날짜)</span>' : '';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px">';
+      html += '<span style="color:#6b7280;min-width:55px">'+pbEsc(r.raw)+dateMark+'</span>';
+      html += '<span style="color:#9ca3af">→</span>';
+      html += '<input type="text" data-map-key="'+pbEsc(key)+'" value="'+pbEsc(cur)+'" style="flex:1;padding:3px 6px;font-size:11px;border:1px solid #d1d5db;border-radius:3px;min-width:80px">';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="margin-top:8px"><button class="btn btn-info" style="font-size:11px;padding:4px 10px" onclick="pbApplySeasonMap()">↻ 시즌 매핑 적용</button></div>';
+  el.innerHTML = html;
+}
+function pbApplySeasonMap(){
+  document.querySelectorAll('#pb-season-map input[data-map-key]').forEach(inp=>{
+    pbSeasonMap[inp.dataset.mapKey] = inp.value.trim();
+  });
+  pbReparse();
 }
 function pbStatus(msg, isErr){
   const s=document.getElementById('pb-status');
@@ -1558,8 +1633,211 @@ function pbParseWorkbook(wb){
   return {common, products};
 }
 
+/* ════════════════════════════════════════════════════════════
+   원본 프로모션(상품안 시트) 파서 — "배분가 정리" 모드
+   ════════════════════════════════════════════════════════════ */
+/* 헬퍼: A=1, B=2, ... Z=26, AA=27 ... */
+function pbColLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+function pbCell(ws, row, col){ return ws[pbColLetter(col)+row]; }
+function pbCellNum(ws, row, col){ const c=pbCell(ws,row,col); if(!c) return 0; const v=+c.v; return isNaN(v)?0:v; }
+function pbCellStr(ws, row, col){ const c=pbCell(ws,row,col); if(!c) return ''; return String(c.v).trim(); }
+function pbCellSeason(ws, row, col){
+  const c=pbCell(ws,row,col); if(!c) return null;
+  if(c.t==='s') return {raw:String(c.v).trim(), isDate:false};
+  if(c.t==='n'){
+    if(c.w && /[\/\-]/.test(c.w) && !/^[\d,.]+$/.test(c.w)) return {raw:c.w.trim(), isDate:true};
+    return {raw:String(c.v), isDate:false};
+  }
+  if(c.v instanceof Date){ const d=c.v; return {raw:(d.getMonth()+1)+'/'+d.getDate(), isDate:true}; }
+  return {raw:String(c.v).trim(), isDate:false};
+}
+
+function pbParseSangPumAn(wb, opts){
+  opts = opts || {};
+  const keyType = opts.keyType || 'unnamed'; // 'unnamed' = 무기명(J/Y), 'named' = 기명(I/W)
+  const seasonMap = opts.seasonMap || {};
+  const common = {};
+
+  // 1) 갑지 시트에서 공통 정보 추출 (시트명 공백 변형 허용)
+  const gjName = wb.SheetNames.find(n=>/^갑지\s*$/.test(n));
+  let bizName = '';
+  let pumKusungLines = [];
+  if(gjName){
+    const ws = wb.Sheets[gjName];
+    const range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    for(let r=range.s.r+1; r<=range.e.r+1; r++){
+      const b = pbCellStr(ws, r, 2);   // B열
+      const d = pbCellStr(ws, r, 4);   // D열
+      if(/^■/.test(b)){
+        const m = b.match(/■\s*([^0-9월]+?(?:벨|캄|벨지|호스|비치|펠리체|델피노)\s*[^\s0-9]+)/);
+        if(m) bizName = m[1].trim();
+      }
+      if(b==='판매채널' && d) common['판매채널']=d;
+      if(b==='판매기간' && d) common['판매기간']=d;
+      if(b==='투숙기간' && d) common['투숙기간']=d;
+      if(b==='기준인원' && d) common['기준인원']=d;
+      if(b==='할인권' && d) common['할인권']=d;
+      if(b==='주중혜택' && d) common['주중혜택']=d;
+      if(b==='상품구성' && d) pumKusungLines.push(d);
+      else if(!b && d && /^상품\s*[①②③④]/.test(d)) pumKusungLines.push(d);
+    }
+  }
+
+  // 2) 상품안_* 시트들 (자연 순서)
+  const sangSheets = wb.SheetNames.filter(n=>/상품안/.test(n));
+  if(!sangSheets.length) return {common, products:[]};
+
+  // 첫 시트에서 상품 개수 판단 (Row 6 (Excel): C42=상품 ①, C51=상품 ②, ...)
+  const firstWs = wb.Sheets[sangSheets[0]];
+  // 상품 컬럼 자동 탐색 (Excel Row 6, 컬럼 30~70 스캔)
+  const productCols = [];
+  for(let c=30; c<=70; c++){
+    const v = pbCellStr(firstWs, 6, c);
+    if(/^상품\s*[①②③④⑤]/.test(v)) productCols.push(c);
+  }
+  if(!productCols.length){ productCols.push(42, 51); }
+
+  // 부대 정상가 항목명 (Row 8, cols 12~15 → 조식/오션/레전드/웰컴)
+  const addonNames = [12,13,14,15].map(c=>pbCellStr(firstWs, 8, c));
+
+  // 상품별 부대 배분가 컬럼 페어
+  //   조식=29, 오션=31, 레전드①=33, 레전드②=35, 웰컴①=37, 웰컴②=39
+  function buildAddonCfgForProduct(pIdx){
+    if(pIdx===0){
+      return [
+        {name: addonNames[0]||'조식뷔페',  normalCols:[12], allocCols:[29]},
+        {name: addonNames[1]||'오션플레이', normalCols:[13], allocCols:[31]},
+        {name: (addonNames[2]||'레전드')+'+'+(addonNames[3]||'웰컴티'), normalCols:[14,15], allocCols:[33,37]}
+      ];
+    }
+    // 상품②+ : 조식 제외
+    return [
+      {name: addonNames[1]||'오션플레이', normalCols:[13], allocCols:[31]},
+      {name: (addonNames[2]||'레전드')+'+'+(addonNames[3]||'웰컴티'), normalCols:[14,15], allocCols:[35,39]}
+    ];
+  }
+
+  // 회원/FIT 컬럼 매핑 (1-indexed Excel cols)
+  // 정상가: 기명 I=9 / 무기명 J=10 / FIT K=11
+  // 배분가: 기명 W=23 / 무기명 Y=25 / FIT AA=27
+  const colMemNormal = keyType==='named' ? 9  : 10;
+  const colFitNormal = 11;
+  const colMemAlloc  = keyType==='named' ? 23 : 25;
+  const colFitAlloc  = 27;
+  // 판매가: 상품N 시작 컬럼 = productCols[N]; 기명/무기명/FIT 오프셋 0/1/2
+  function saleColMem(pCol){ return pCol + (keyType==='named'?0:1); }
+  function saleColFit(pCol){ return pCol + 2; }
+
+  // 시트명 → 태그
+  function sheetTag(sn){
+    let t = sn.replace(/^상품안[_\s]*/, '').trim();
+    const m = t.match(/^(\d+)/);
+    if(m) return m[1]+'월';
+    return t || sn;
+  }
+  // 표준 라벨 단축
+  function shortLabel(s){
+    if(/^주중$/.test(s)) return '주중';
+    if(/^금요일$/.test(s)) return '금';
+    if(/^토요일$/.test(s)) return '토';
+    if(/^일요일$/.test(s)) return '일';
+    return s;
+  }
+  function applyMap(s, tag){
+    const k = tag+'|'+s;
+    return seasonMap[k] != null ? seasonMap[k] : s;
+  }
+  function withSheetSuffix(label, tag){
+    if(/성수기$/.test(tag)) return label.replace(/\s/g,'');
+    if(/\([^)]+\)$/.test(label)) return label;
+    return label+'\n('+tag+')';
+  }
+
+  // 시트별 원본 시즌 라벨 수집 (UI용)
+  const seasonRawByTag = {};
+
+  // 상품 누적 컨테이너
+  const products = productCols.map((pCol,pIdx)=>{
+    const productName = '상품 '+['①','②','③','④','⑤'][pIdx];
+    const info = Object.assign({}, common, {
+      '상품명': productName,
+      '사업장': bizName || (common['사업장']||''),
+      '수수료': '11%',
+      '상품구성': pumKusungLines.filter(s=>s.indexOf(productName.replace(/\s/g,''))===0 || s.indexOf(productName)===0).join('\n') || pumKusungLines.join('\n'),
+      '비고': [common['기준인원']?('기준인원: '+common['기준인원']):'', common['할인권']?('할인권: '+common['할인권']):'', common['주중혜택']||''].filter(Boolean).join(' / ')
+    });
+    return { info, isSangPumAn:true, keyType, addons:[], rooms:[], bySheet:[] };
+  });
+
+  sangSheets.forEach(sn=>{
+    const ws = wb.Sheets[sn];
+    const tag = sheetTag(sn);
+    if(!seasonRawByTag[tag]) seasonRawByTag[tag] = [];
+    const seenRaws = new Set();
+    const range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+
+    let dong='', type='', view='';
+    const perProd = productCols.map(()=>({rooms:[], addonsPicked:null}));
+    const perProdAddonCfg = productCols.map((_,pIdx)=>buildAddonCfgForProduct(pIdx));
+
+    // 데이터 시작: Excel Row 9
+    for(let row=9; row<=range.e.r+1; row++){
+      // 캐리포워드
+      const dC = pbCellStr(ws, row, 4); if(dC) dong = dC.replace(/\s+/g,'').trim();
+      const eC = pbCellStr(ws, row, 5); if(eC) type = eC;
+      const fC = pbCellStr(ws, row, 6); if(fC) view = fC;
+
+      const seasonObj = pbCellSeason(ws, row, 8); // H열
+      if(!seasonObj) continue;
+      // 정상가 회원이 없으면 데이터 행 아님
+      const nwRaw = pbCellNum(ws, row, colMemNormal);
+      if(!nwRaw) continue;
+
+      const rawDisplay = seasonObj.raw;
+      if(!seenRaws.has(rawDisplay)){
+        seenRaws.add(rawDisplay);
+        seasonRawByTag[tag].push({raw: rawDisplay, isDate: seasonObj.isDate});
+      }
+      const mapped = applyMap(rawDisplay, tag);
+      const finalSeason = withSheetSuffix(shortLabel(mapped), tag);
+
+      const nw = Math.round(nwRaw/1000);
+      const nf = Math.round(pbCellNum(ws, row, colFitNormal)/1000);
+      const aw = Math.round(pbCellNum(ws, row, colMemAlloc)/1000);
+      const af = Math.round(pbCellNum(ws, row, colFitAlloc)/1000);
+
+      productCols.forEach((pCol,pIdx)=>{
+        const pp = perProd[pIdx];
+        pp.rooms.push({season: finalSeason, sheetTag: tag, type, view, dong, nw, nf, aw, af});
+        if(!pp.addonsPicked){
+          const items = perProdAddonCfg[pIdx].map(cfg=>{
+            const normVal = cfg.normalCols.reduce((s,c)=>s+pbCellNum(ws,row,c), 0);
+            const allocVal = cfg.allocCols.reduce((s,c)=>s+pbCellNum(ws,row,c), 0);
+            const n = Math.round(normVal/1000);
+            const a = Math.round(allocVal/1000);
+            return {name: cfg.name, nw:n, nf:n, aw:a, af:a};
+          });
+          pp.addonsPicked = items;
+        }
+      });
+    }
+
+    perProd.forEach((pp,pIdx)=>{
+      if(pp.rooms.length){
+        products[pIdx].rooms.push(...pp.rooms);
+        products[pIdx].bySheet.push({tag, addons: pp.addonsPicked||[]});
+      }
+    });
+  });
+
+  products.forEach(p=>{ p._seasonRawByTag = seasonRawByTag; });
+  const filled = products.filter(p=>p.rooms.length);
+  return {common, products: filled};
+}
+
 /* ── 상품 계산 (GAP=FIT−회원, 판매가=객실+부대) ── */
 function pbComputeProduct(p){
+  if(p.isSangPumAn) return pbComputeSangPumAn(p);
   const A=p.addons;
   const anw=A.reduce((s,x)=>s+x.nw,0), anf=A.reduce((s,x)=>s+x.nf,0);
   const aaw=A.reduce((s,x)=>s+x.aw,0), aaf=A.reduce((s,x)=>s+x.af,0);
@@ -1597,6 +1875,62 @@ function pbComputeProduct(p){
   return p;
 }
 
+/* 상품안 모드 전용 계산: 시즌마다 sheetTag에 맞는 부대를 더해 판매가 계산 */
+function pbComputeSangPumAn(p){
+  const addonsByTag = {};
+  p.bySheet.forEach(s=>{ addonsByTag[s.tag] = s.addons || []; });
+  // 시즌 그룹 (순서 보존)
+  const order=[], byS={};
+  p.rooms.forEach(rm=>{ if(!byS[rm.season]){byS[rm.season]=[]; order.push(rm.season);} byS[rm.season].push(rm); });
+  const mnmx=arr=>[Math.min(...arr),Math.max(...arr)];
+  const pct=(num,den)=> den ? Math.round((1-num/den)*100) : 0;
+
+  p.seasons = order.map(s=>{
+    const rs = byS[s];
+    const tag = rs[0].sheetTag;
+    const A = addonsByTag[tag] || [];
+    const anw = A.reduce((x,a)=>x+a.nw,0), anf = anw; // 부대 회원=FIT
+    const aaw = A.reduce((x,a)=>x+a.aw,0), aaf = aaw;
+
+    const nMemArr=rs.map(r=>r.nw), nFitArr=rs.map(r=>r.nf);
+    const aMemArr=rs.map(r=>r.aw), aFitArr=rs.map(r=>r.af);
+    const nGapArr=rs.map(r=>r.nf-r.nw), aGapArr=rs.map(r=>r.af-r.aw);
+    const drMem = rs.map(r=>pct(r.aw,r.nw)), drFit = rs.map(r=>pct(r.af,r.nf));
+
+    const spNw=rs.map(r=>r.nw+anw), spNf=rs.map(r=>r.nf+anf);
+    const spAw=rs.map(r=>r.aw+aaw), spAf=rs.map(r=>r.af+aaf);
+    const spNgap=spNf.map((v,i)=>v-spNw[i]), spAgap=spAf.map((v,i)=>v-spAw[i]);
+    const spDrMem=rs.map((r,i)=>pct(spAw[i], spNw[i])), spDrFit=rs.map((r,i)=>pct(spAf[i], spNf[i]));
+
+    return {
+      season:s, sheetTag:tag,
+      room:{ nMem:mnmx(nMemArr), nFit:mnmx(nFitArr), nGap:mnmx(nGapArr),
+             aMem:mnmx(aMemArr), aFit:mnmx(aFitArr), aGap:mnmx(aGapArr),
+             drMem:mnmx(drMem), drFit:mnmx(drFit) },
+      addon:{ nMem:anw, nFit:anf, nGap:0, aMem:aaw, aFit:aaf, aGap:0,
+              drMem:pct(aaw,anw), drFit:pct(aaf,anf) },
+      sale:{ nMem:mnmx(spNw), nFit:mnmx(spNf), nGap:mnmx(spNgap),
+             aMem:mnmx(spAw), aFit:mnmx(spAf), aGap:mnmx(spAgap),
+             drMem:mnmx(spDrMem), drFit:mnmx(spDrFit) }
+    };
+  });
+
+  // 부대 detail by sheet
+  p.addonDetailBySheet = p.bySheet.map(s=>{
+    const items = (s.addons||[]).map(a=>({
+      name:a.name, nMem:a.nw, nFit:a.nf, nGap:0, aMem:a.aw, aFit:a.af, aGap:0,
+      drMem:pct(a.aw,a.nw), drFit:pct(a.af,a.nf)
+    }));
+    const tnw = items.reduce((x,it)=>x+it.nMem,0), tnf = items.reduce((x,it)=>x+it.nFit,0);
+    const taw = items.reduce((x,it)=>x+it.aMem,0), taf = items.reduce((x,it)=>x+it.aFit,0);
+    return { tag:s.tag, items, total:{
+      nMem:tnw, nFit:tnf, nGap:0, aMem:taw, aFit:taf, aGap:0,
+      drMem:pct(taw,tnw), drFit:pct(taf,tnf)
+    }};
+  });
+  return p;
+}
+
 /* ── 미리보기/HTML 본문 생성 (gs-proposal-yeosu.html 양식) ── */
 function pbInfoRows(info){
   const order=['상품명','사업장','판매채널','판매기간','투숙기간','상품구성','비고'];
@@ -1631,7 +1965,40 @@ function pbAllocTable(p){
     +'<tr><th>회원</th><th>FIT</th><th>GAP</th><th>회원</th><th>FIT</th><th>GAP</th><th>회원</th><th>FIT</th><th>GAP</th></tr>'
     +'</thead><tbody>'+body+'</tbody></table>';
 }
+/* 상품안 모드: 시트(월/성수기)별 부대 상세 — 컬럼 합집합으로 통일 */
+function pbAddonDetailTableBySheet(p){
+  const sheets = p.addonDetailBySheet || [];
+  const itemNames = [];
+  sheets.forEach(s=>s.items.forEach(it=>{ if(itemNames.indexOf(it.name)<0) itemNames.push(it.name); }));
+  let h1='<tr><th rowspan="2">시즌</th><th rowspan="2">구분</th>';
+  itemNames.forEach(n=>h1+='<th colspan="3">'+pbEsc(n)+'</th>');
+  h1+='<th colspan="3">합계</th></tr><tr>';
+  for(let i=0;i<itemNames.length+1;i++) h1+='<th>회원</th><th>FIT</th><th>GAP</th>';
+  h1+='</tr>';
+  let body='';
+  sheets.forEach(s=>{
+    const map={}; s.items.forEach(it=>{ map[it.name]=it; });
+    const t=s.total;
+    body+='<tr><td rowspan="3" class="pb-season">'+pbEsc(s.tag)+'</td><td class="pb-lbl">정상가</td>';
+    itemNames.forEach(n=>{ const it=map[n]; body += it
+      ? '<td>'+pbFmt(it.nMem)+'</td><td>'+pbFmt(it.nFit)+'</td><td>'+pbFmt(it.nGap)+'</td>'
+      : '<td></td><td></td><td></td>'; });
+    body+='<td>'+pbFmt(t.nMem)+'</td><td>'+pbFmt(t.nFit)+'</td><td>'+pbFmt(t.nGap)+'</td></tr>';
+    body+='<tr style="background:#fff8e1"><td class="pb-lbl pb-alloc">배분가</td>';
+    itemNames.forEach(n=>{ const it=map[n]; body += it
+      ? '<td class="pb-alloc">'+pbFmt(it.aMem)+'</td><td class="pb-alloc">'+pbFmt(it.aFit)+'</td><td class="pb-alloc">'+pbFmt(it.aGap)+'</td>'
+      : '<td class="pb-alloc"></td><td class="pb-alloc"></td><td class="pb-alloc"></td>'; });
+    body+='<td class="pb-alloc">'+pbFmt(t.aMem)+'</td><td class="pb-alloc">'+pbFmt(t.aFit)+'</td><td class="pb-alloc">'+pbFmt(t.aGap)+'</td></tr>';
+    body+='<tr style="background:#f0f4ff"><td class="pb-lbl pb-disc">할인율</td>';
+    itemNames.forEach(n=>{ const it=map[n]; body += it
+      ? '<td class="pb-disc">'+it.drMem+'%</td><td class="pb-disc">'+it.drFit+'%</td><td class="pb-disc"></td>'
+      : '<td class="pb-disc"></td><td class="pb-disc"></td><td class="pb-disc"></td>'; });
+    body+='<td class="pb-disc">'+t.drMem+'%</td><td class="pb-disc">'+t.drFit+'%</td><td class="pb-disc"></td></tr>';
+  });
+  return '<table class="pb-t"><thead>'+h1+'</thead><tbody>'+body+'</tbody></table>';
+}
 function pbAddonDetailTable(p){
+  if(p.isSangPumAn) return pbAddonDetailTableBySheet(p);
   const ad=p.addonDetail, tot=p.addonTotal;
   let h1='<tr><th rowspan="2">시즌</th><th rowspan="2">구분</th>';
   ad.forEach(a=>h1+='<th colspan="3">'+pbEsc(a.name)+'</th>');
@@ -1756,13 +2123,30 @@ function pbExportExcel(){
     push('');
     // 4. 부대시설 상세
     push('4. 부대시설 상세내용');
-    const adHdr=['','시즌','구분']; p.addonDetail.forEach(a=>{adHdr.push(a.name,'','');}); adHdr.push('합계','','');
-    push(...adHdr);
-    const sub=['','','']; for(let i=0;i<p.addonDetail.length+1;i++) sub.push('회원','FIT','GAP'); push(...sub);
-    const tot=p.addonTotal;
-    const rN=['','전시즌','정상가']; p.addonDetail.forEach(a=>rN.push(a.nMem,a.nFit,a.nGap)); rN.push(tot.nMem,tot.nFit,tot.nGap); push(...rN);
-    const rA=['','','배분가']; p.addonDetail.forEach(a=>rA.push(a.aMem,a.aFit,a.aGap)); rA.push(tot.aMem,tot.aFit,tot.aGap); push(...rA);
-    const rD=['','','할인율']; p.addonDetail.forEach(a=>rD.push(a.drMem+'%',a.drFit+'%','')); rD.push(tot.drMem+'%',tot.drFit+'%',''); push(...rD);
+    if(p.isSangPumAn){
+      // 시트(월/성수기)별로 표기 — 컬럼은 모든 시트의 부대 항목 합집합
+      const sheets = p.addonDetailBySheet || [];
+      const itemNames = [];
+      sheets.forEach(s=>s.items.forEach(it=>{ if(itemNames.indexOf(it.name)<0) itemNames.push(it.name); }));
+      const adHdr=['','시즌','구분']; itemNames.forEach(n=>{adHdr.push(n,'','');}); adHdr.push('합계','','');
+      push(...adHdr);
+      const sub=['','','']; for(let i=0;i<itemNames.length+1;i++) sub.push('회원','FIT','GAP'); push(...sub);
+      sheets.forEach(s=>{
+        const map={}; s.items.forEach(it=>{ map[it.name]=it; });
+        const t=s.total;
+        const rN=['',s.tag,'정상가']; itemNames.forEach(n=>{ const it=map[n]; if(it) rN.push(it.nMem,it.nFit,it.nGap); else rN.push('','',''); }); rN.push(t.nMem,t.nFit,t.nGap); push(...rN);
+        const rA=['','','배분가']; itemNames.forEach(n=>{ const it=map[n]; if(it) rA.push(it.aMem,it.aFit,it.aGap); else rA.push('','',''); }); rA.push(t.aMem,t.aFit,t.aGap); push(...rA);
+        const rD=['','','할인율']; itemNames.forEach(n=>{ const it=map[n]; if(it) rD.push(it.drMem+'%',it.drFit+'%',''); else rD.push('','',''); }); rD.push(t.drMem+'%',t.drFit+'%',''); push(...rD);
+      });
+    } else {
+      const adHdr=['','시즌','구분']; p.addonDetail.forEach(a=>{adHdr.push(a.name,'','');}); adHdr.push('합계','','');
+      push(...adHdr);
+      const sub=['','','']; for(let i=0;i<p.addonDetail.length+1;i++) sub.push('회원','FIT','GAP'); push(...sub);
+      const tot=p.addonTotal;
+      const rN=['','전시즌','정상가']; p.addonDetail.forEach(a=>rN.push(a.nMem,a.nFit,a.nGap)); rN.push(tot.nMem,tot.nFit,tot.nGap); push(...rN);
+      const rA=['','','배분가']; p.addonDetail.forEach(a=>rA.push(a.aMem,a.aFit,a.aGap)); rA.push(tot.aMem,tot.aFit,tot.aGap); push(...rA);
+      const rD=['','','할인율']; p.addonDetail.forEach(a=>rD.push(a.drMem+'%',a.drFit+'%','')); rD.push(tot.drMem+'%',tot.drFit+'%',''); push(...rD);
+    }
     push('');
     // 5. 판매 & 홍보 일정
     push('5. 판매 & 홍보 일정');
