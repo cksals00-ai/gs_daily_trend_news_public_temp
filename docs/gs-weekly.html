@@ -212,7 +212,7 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <button id="export-btn" class="confirm-btn secondary" onclick="exportSnapshots()" title="weekly_snapshots.json 파일 내보내기">JSON 내보내기</button>
       <button id="ppt-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
       <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="요약/당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
-      <button id="rm-fcst-btn" class="confirm-btn secondary" onclick="exportRMFcst()" title="RM FCST 정리 엑셀(사업장별 총괄/세그먼트별 상세) 최신본 다운로드" style="margin-left:0;">RM FCST 엑셀</button>
+      <a id="rm-fcst-btn" class="confirm-btn secondary" href="data/RM_FCST_정리.xlsx" download="RM_FCST_정리.xlsx" title="RM FCST 정리 엑셀(사업장별 총괄/세그먼트별 상세) 다운로드" style="margin-left:0;text-decoration:none;">RM FCST 정리</a>
     </div>
 
     <!-- Snapshot Banner -->
@@ -478,6 +478,13 @@ function getWeeksOfMonth(year, month) {
     d.setDate(d.getDate() + 1);
   }
   return weeks;
+}
+
+// 기준일이 해당 월의 마지막 주(마지막 7일 이내)인지 판단.
+// 예: 5/28 → 5월(31일) 마지막 7일(25~31) 이내이므로 true.
+function isLastWeekOfMonth(refDate) {
+  const lastDay = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
+  return refDate.getDate() >= lastDay - 6;
 }
 
 // Convert a weekKey ("8-14") under a given year/month into snapshot key "YYYY-MM-WN".
@@ -877,78 +884,6 @@ window.exportExcel = function() {
   } catch (e) {
     console.error('[excel export] error:', e);
     if (typeof toast === 'function') toast('엑셀 다운로드 실패: ' + e.message, 'error');
-  }
-};
-
-// ===== RM FCST 정리 엑셀 (rm_fcst.json → SheetJS, 최신본) =====
-window.exportRMFcst = async function() {
-  if (typeof XLSX === 'undefined') {
-    toast('SheetJS(xlsx) 라이브러리 로드 실패 — 네트워크를 확인하세요', 'error');
-    return;
-  }
-  try {
-    const res = await fetch('data/rm_fcst.json?_=' + Date.now());
-    if (!res.ok) throw new Error('rm_fcst.json 로드 실패 (' + res.status + ')');
-    const d = await res.json();
-    const props = d.properties || {};
-    const month = (d._months_covered && d._months_covered[0]) || '';
-    const ratio = (b, f) => (!b ? 0 : Math.round(f / b * 1000) / 10);
-
-    // 1) 사업장별 총괄
-    const overview = [
-      ['RM FCST - ' + month],
-      ['사업장', '예산 RN', '예산 ADR', '예산 매출(백만)', 'FCST RN', 'FCST ADR', 'FCST 매출(백만)', 'FCST/예산'],
-    ];
-    Object.keys(props).forEach(name => {
-      const m = props[name][month];
-      if (!m) return;
-      overview.push([name, m.rm_budget_rn, m.rm_budget_adr, m.rm_budget_rev_mil,
-        m.rm_fcst_rn, m.rm_fcst_adr, m.rm_fcst_rev_mil, ratio(m.rm_budget_rn, m.rm_fcst_rn)]);
-    });
-
-    // 2) 세그먼트별 상세
-    const SEG_ORDER = ['OTA', 'G-OTA', 'Inbound'];
-    const seg = [
-      ['RM FCST 세그먼트별 - ' + month],
-      ['사업장', '세그먼트', '예산 RN', '예산 ADR', '예산 매출(백만)', 'FCST RN', 'FCST ADR', 'FCST 매출(백만)', 'FCST/예산', '차이 RN'],
-    ];
-    Object.keys(props).forEach(name => {
-      const m = props[name][month];
-      if (!m || !m.segments) return;
-      SEG_ORDER.forEach(sk => {
-        const s = m.segments[sk];
-        if (!s) return;
-        seg.push([name, sk, s.rm_budget_rn, s.rm_budget_adr, s.rm_budget_rev_mil,
-          s.rm_fcst_rn, s.rm_fcst_adr, s.rm_fcst_rev_mil,
-          ratio(s.rm_budget_rn, s.rm_fcst_rn), (s.rm_fcst_rn || 0) - (s.rm_budget_rn || 0)]);
-      });
-    });
-
-    // 3) 메타정보
-    const meta = [
-      ['소스 PDF', d._source_pdf || ''],
-      ['추출일시', d._extracted_at || ''],
-      ['스냅샷일자', d._snapshot_date || ''],
-      ['대상월', month],
-      ['비고', 'OTA/G-OTA/Inbound 세그먼트 Forecast / 단위: RN=실, ADR=천원, 매출=백만원, VAT제외'],
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const wsO = XLSX.utils.aoa_to_sheet(overview);
-    wsO['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, wsO, '사업장별 총괄');
-    const wsS = XLSX.utils.aoa_to_sheet(seg);
-    wsS['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, wsS, '세그먼트별 상세');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(meta), '메타정보');
-
-    const tag = (d._snapshot_date || month).replace(/[.\-]/g, '.');
-    const filename = `RM_FCST_파싱결과_${tag}.xlsx`;
-    XLSX.writeFile(wb, filename);
-    if (typeof toast === 'function') toast(`RM FCST 엑셀 다운로드 완료 — ${filename}`, 'success');
-  } catch (e) {
-    console.error('[rm fcst export] error:', e);
-    if (typeof toast === 'function') toast('RM FCST 엑셀 다운로드 실패: ' + e.message, 'error');
   }
 };
 
@@ -1699,32 +1634,40 @@ function buildSummaryTable(weekKey) {
   const table = document.getElementById('summary-table');
   if (!table) return;
   const now = new Date();
-  const curMonth = now.getMonth() + 1;
+  const actualMonth = now.getMonth() + 1;
   const curYear = now.getFullYear();
-  const curYM = `${curYear}${String(curMonth).padStart(2,'0')}`;
-  const lastYM = `${curYear-1}${String(curMonth).padStart(2,'0')}`;
+  const isLastWk = isLastWeekOfMonth(now);
+
+  // 마지막 주이면 "당월 예상실적"을 익월로 전환해서 표시
+  const monMonth = isLastWk ? (actualMonth === 12 ? 1 : actualMonth + 1) : actualMonth;
+  const monYear  = isLastWk && actualMonth === 12 ? curYear + 1 : curYear;
+  const monYM     = `${monYear}${String(monMonth).padStart(2,'0')}`;
+  const monLastYM = `${monYear-1}${String(monMonth).padStart(2,'0')}`;
+
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
   const useWeek = weekKey !== 'all';
+  // 익월 전환 시에는 주차 필터가 무의미하므로 전체월 OTB 사용
+  const monUseWeek = useWeek && !isLastWk;
   const segs = ['OTA', 'G-OTA', 'Inbound'];
 
-  // 당월
+  // 당월(마지막 주이면 익월)
   const monBud = {}, monOTB = {}, monLast = {};
   segs.forEach(seg => {
-    monBud[seg] = getSegmentBudget(curMonth, seg);
-    if (useWeek) {
-      monOTB[seg]  = sumArr(filterDailyByWeek(getDailySegmentData(curYM, seg), weekKey));
-      monLast[seg] = sumArr(filterDailyByWeek(getDailySegmentData(lastYM, seg), weekKey));
+    monBud[seg] = getSegmentBudget(monMonth, seg);
+    if (monUseWeek) {
+      monOTB[seg]  = sumArr(filterDailyByWeek(getDailySegmentData(monYM, seg), weekKey));
+      monLast[seg] = sumArr(filterDailyByWeek(getDailySegmentData(monLastYM, seg), weekKey));
     } else {
-      monOTB[seg]  = getSegmentOTB(seg, curYM);
-      monLast[seg] = isSamePeriod ? getYoYAdjustedSegment(seg, lastYM) : getSegmentOTB(seg, lastYM);
+      monOTB[seg]  = getSegmentOTB(seg, monYM);
+      monLast[seg] = isSamePeriod ? getYoYAdjustedSegment(seg, monLastYM) : getSegmentOTB(seg, monLastYM);
     }
   });
 
-  // 누계
+  // 누계 (항상 실제 당월 기준 유지)
   const ytdBud = {}, ytdAct = {}, ytdLast = {};
   segs.forEach(seg => { ytdBud[seg] = 0; ytdAct[seg] = 0; ytdLast[seg] = 0; });
-  for (let m = 1; m <= curMonth; m++) {
+  for (let m = 1; m <= actualMonth; m++) {
     const ym  = `${curYear}${String(m).padStart(2,'0')}`;
     const lym = `${curYear-1}${String(m).padStart(2,'0')}`;
     segs.forEach(seg => {
@@ -1763,9 +1706,9 @@ function buildSummaryTable(weekKey) {
   let html = `<thead>
     <tr>
       <th rowspan="2" style="min-width:120px;">구분</th>
-      <th colspan="4" class="month-header">${curMonth}월 예상실적</th>
+      <th colspan="4" class="month-header">${monMonth}월 예상실적</th>
       <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
-      <th colspan="4" class="month-header">누계 (1~${curMonth}월)</th>
+      <th colspan="4" class="month-header">누계 (1~${actualMonth}월)</th>
       <th colspan="3" class="month-header">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(${spLabel})</span> 비교</th>
     </tr>
     <tr>
@@ -2307,7 +2250,15 @@ function renderAll(weekKey) {
   const nextYM = `${nextYear}${String(nextMonth).padStart(2,'0')}`;
   const lastNextYM = `${nextYear-1}${String(nextMonth).padStart(2,'0')}`;
 
-  document.getElementById('current-month-label').innerHTML = `(${curYear}.${String(curMonth).padStart(2,'0')}.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
+  // 마지막 주이면 "01 당월 예상실적"을 익월로 전환
+  const isLastWk = isLastWeekOfMonth(now);
+  const cmMonth = isLastWk ? nextMonth : curMonth;
+  const cmYear  = isLastWk ? nextYear : curYear;
+  const cmYM       = isLastWk ? nextYM : curYM;
+  const cmLastYM   = isLastWk ? lastNextYM : lastYM;
+  const cmWeekKey  = isLastWk ? 'all' : weekKey;
+
+  document.getElementById('current-month-label').innerHTML = `(${cmYear}.${String(cmMonth).padStart(2,'0')}.01 ~ ${cmYear}.${String(cmMonth).padStart(2,'0')}.${new Date(cmYear, cmMonth, 0).getDate()})`;
   document.getElementById('next-month-label').innerHTML = `(${nextYear}.${String(nextMonth).padStart(2,'0')}.01 ~ ${nextYear}.${String(nextMonth).padStart(2,'0')}.${new Date(nextYear, nextMonth, 0).getDate()})`;
   document.getElementById('ytd-label').innerHTML = `(${curYear}.01.01 ~ ${curYear}.${String(curMonth).padStart(2,'0')}.${new Date(curYear, curMonth, 0).getDate()})`;
   const _sumLbl = document.getElementById('summary-label');
@@ -2315,7 +2266,7 @@ function renderAll(weekKey) {
 
   // Build tables
   buildSummaryTable(weekKey);
-  buildMonthTable('current-month-table', curMonth, curYM, lastYM, weekKey);
+  buildMonthTable('current-month-table', cmMonth, cmYM, cmLastYM, cmWeekKey);
   buildMonthTable('next-month-table', nextMonth, nextYM, lastNextYM, 'all');
   buildYTDTable(weekKey);
 
