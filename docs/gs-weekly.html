@@ -1651,14 +1651,14 @@ function buildSummaryTable(weekKey) {
   const curYear = now.getFullYear();
   const isLastWk = isLastWeekOfMonth(now);
 
-  // 마지막 주이면 "당월 예상실적"을 +2개월로 전환 (예: 5월 말 → 7월)
-  const _mm_n = isLastWk ? actualMonth + 2 : actualMonth;
+  // 마지막 주이면 "당월 예상실적"을 +1개월로 전환 (예: 5월 말 → 6월)
+  const _mm_n = isLastWk ? actualMonth + 1 : actualMonth;
   const monMonth = _mm_n > 12 ? _mm_n - 12 : _mm_n;
   const monYear  = _mm_n > 12 ? curYear + 1 : curYear;
   const monYM     = `${monYear}${String(monMonth).padStart(2,'0')}`;
   const monLastYM = `${monYear-1}${String(monMonth).padStart(2,'0')}`;
-  // 누계도 +2 (12를 넘지 않도록 capping)
-  const ytdEndMonth = isLastWk ? Math.min(actualMonth + 2, 12) : actualMonth;
+  // 누계도 +1 (12를 넘지 않도록 capping)
+  const ytdEndMonth = isLastWk ? Math.min(actualMonth + 1, 12) : actualMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
@@ -1922,9 +1922,9 @@ function buildYTDTable(weekKey) {
   const now = new Date();
   const curMonth = now.getMonth() + 1;
   const curYear = now.getFullYear();
-  // 누계도 +2 (12를 넘지 않도록 capping)
+  // 누계도 +1 (12를 넘지 않도록 capping)
   const isLastWk = isLastWeekOfMonth(now);
-  const ytdEndMonth = isLastWk ? Math.min(curMonth + 2, 12) : curMonth;
+  const ytdEndMonth = isLastWk ? Math.min(curMonth + 1, 12) : curMonth;
 
   const isSamePeriod = YEAR_MODE === 'samePeriod';
   const spLabel = isSamePeriod ? '동기간' : '마감';
@@ -2262,15 +2262,15 @@ function renderAll(weekKey) {
   const curYear = now.getFullYear();
   const isLastWk = isLastWeekOfMonth(now);
 
-  // 01 당월: 마지막 주에는 +2개월로 전환 (예: 5월 말 → 7월)
-  const _cm_n = isLastWk ? curMonth + 2 : curMonth;
+  // 01 당월: 마지막 주에는 +1개월로 전환 (예: 5월 말 → 6월)
+  const _cm_n = isLastWk ? curMonth + 1 : curMonth;
   const cmMonth = _cm_n > 12 ? _cm_n - 12 : _cm_n;
   const cmYear  = _cm_n > 12 ? curYear + 1 : curYear;
   const cmYM       = `${cmYear}${String(cmMonth).padStart(2,'0')}`;
   const cmLastYM   = `${cmYear-1}${String(cmMonth).padStart(2,'0')}`;
   const cmWeekKey  = isLastWk ? 'all' : weekKey;
 
-  // 02 익월: cmMonth의 다음 달 (마지막 주 시 자동으로 +3, 평시 +1)
+  // 02 익월: cmMonth의 다음 달 (마지막 주 시 자동으로 +2, 평시 +1)
   const _nm_n = cmMonth + 1;
   const nextMonth = _nm_n > 12 ? _nm_n - 12 : _nm_n;
   const nextYear  = _nm_n > 12 ? cmYear + 1 : cmYear;
@@ -2280,8 +2280,8 @@ function renderAll(weekKey) {
   const curYM = `${curYear}${String(curMonth).padStart(2,'0')}`;
   const lastYM = `${curYear-1}${String(curMonth).padStart(2,'0')}`;
 
-  // 누계: 마지막 주에는 +2, 12를 넘지 않도록 capping
-  const ytdEndMonth = isLastWk ? Math.min(curMonth + 2, 12) : curMonth;
+  // 누계: 마지막 주에는 +1, 12를 넘지 않도록 capping
+  const ytdEndMonth = isLastWk ? Math.min(curMonth + 1, 12) : curMonth;
 
   document.getElementById('current-month-label').innerHTML = `(${cmYear}.${String(cmMonth).padStart(2,'0')}.01 ~ ${cmYear}.${String(cmMonth).padStart(2,'0')}.${new Date(cmYear, cmMonth, 0).getDate()})`;
   document.getElementById('next-month-label').innerHTML = `(${nextYear}.${String(nextMonth).padStart(2,'0')}.01 ~ ${nextYear}.${String(nextMonth).padStart(2,'0')}.${new Date(nextYear, nextMonth, 0).getDate()})`;
