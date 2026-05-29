@@ -100,10 +100,10 @@ echo "  시작 : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  PWD  : $(pwd)"
 echo "  Py   : $(python3 --version 2>&1)"
 
-# ── [1/8] 입력 파일 확인 ─────────────────────────────────────
-CURRENT_STAGE="1/8 check_inputs"
+# ── [1/12] 입력 파일 확인 ─────────────────────────────────────
+CURRENT_STAGE="1/12 check_inputs"
 echo ""
-echo -e "${BOLD}[1/8] 입력 파일 확인...${NC}"
+echo -e "${BOLD}[1/12] 입력 파일 확인...${NC}"
 
 REF_FILE="docs/data/db_aggregated.json"
 NEW_TXT=0
@@ -129,33 +129,37 @@ PALAT_ROOM=$(find data/palatium_rooma -maxdepth 1 -name '*객실*.xlsx' 2>/dev/n
 [ -n "$PALAT_BIZ"  ] && echo "  ✓ 팔라티움 사업계획     : $(basename "$PALAT_BIZ")"
 [ -n "$PALAT_ROOM" ] && echo "  ✓ 팔라티움 객실 현황    : $(basename "$PALAT_ROOM")"
 
-# ── [2/9] 팔라티움 객실 가용성 ───────────────────────────────
+# ── [2/12] 팔라티움 객실 가용성 ───────────────────────────────
 # parse_palatium_db.py 가 palatium_room_availability.json 을 읽으므로 선행 실행
-run_if_input "2/9 parse_palatium_rooms" \
+run_if_input "2/12 parse_palatium_rooms" \
     "scripts/parse_palatium_rooms.py" \
     "data/palatium_rooma" "*객실*.xlsx"
 
-# ── [3/9] 온북 파싱 (느림 — 전체 출력) ───────────────────────
+# ── [3/12] 온북 파싱 (느림 — 전체 출력) ───────────────────────
 # parse_raw_db.py 는 종료 직전 parse_palatium_db.py 도 호출하지만,
-# 실패 시 logger.warning 만 띄우고 silent 이므로 아래 [4/9] 에서 명시 재실행한다.
-run_streaming "3/9 parse_raw_db" "scripts/parse_raw_db.py"
+# 실패 시 logger.warning 만 띄우고 silent 이므로 아래 [4/12] 에서 명시 재실행한다.
+run_streaming "3/12 parse_raw_db" "scripts/parse_raw_db.py"
 
-# ── [4/9] 팔라티움 예약 DB (명시적 실행, 에러 시 중단) ─────
+# ── [4/12] 팔라티움 예약 DB (명시적 실행, 에러 시 중단) ─────
 # data/palatium_db/예약정보조회*.xlsx 있을 때만 실행
-run_if_input "4/9 parse_palatium_db" \
+run_if_input "4/12 parse_palatium_db" \
     "scripts/parse_palatium_db.py" \
     "data/palatium_db" "예약정보조회*.xlsx"
 
-# ── [5/9] ~ [8/9] 후속 집계 ──────────────────────────────────
-run_quick "5/9 compare_and_update"          "scripts/compare_and_update.py"
-run_quick "6/9 generate_otb_data"           "scripts/generate_otb_data.py"
-run_quick "7/9 generate_insights"           "scripts/generate_insights.py"
-run_quick "8/10 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
-run_quick "9/11 parse_campaign86"           "scripts/parse_campaign86.py"
-run_quick "10/11 generate_chat_index"       "scripts/generate_chat_index.py"
+# ── [5/12] 동월 대비 예약 비율 ────────────────────────────────
+# db_aggregated.json (3/12), rm_fcst.json, raw_db 27번 txt 필요
+run_quick "5/12 build_same_month_ratio"     "scripts/build_same_month_ratio.py"
 
-# ── [11/11] HTML 빌드 ──────────────────────────────────────────
-run_quick "11/11 build"                     "scripts/build.py"
+# ── [6/12] ~ [12/12] 후속 집계 ───────────────────────────────
+run_quick "6/12 compare_and_update"         "scripts/compare_and_update.py"
+run_quick "7/12 generate_otb_data"          "scripts/generate_otb_data.py"
+run_quick "8/12 generate_insights"          "scripts/generate_insights.py"
+run_quick "9/12 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
+run_quick "10/12 parse_campaign86"          "scripts/parse_campaign86.py"
+run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
+
+# ── [12/12] HTML 빌드 ──────────────────────────────────────────
+run_quick "12/12 build"                     "scripts/build.py"
 
 # ── Git 커밋 & 푸시 ─────────────────────────────────────────
 CURRENT_STAGE="git"
