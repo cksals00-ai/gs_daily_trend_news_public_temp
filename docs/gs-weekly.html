@@ -995,6 +995,8 @@ window.exportPPT = function() {
 
     function dataCell(text, cellInfo) {
       const opts = { fontSize: 9 };
+      // 숫자는 오른쪽 정렬 (숫자, +/- 숫자, 퍼센트)
+      if (text && /^[+\-\d,%]/.test(text.trim())) { opts.align = 'right'; }
       if (cellInfo) {
         if (cellInfo.isTotalRow) { opts.bold = true; opts.fill = { color:'F5F5F5' }; }
         if (cellInfo.isSegRow) { opts.bold = true; opts.underline = true; }
@@ -1132,9 +1134,9 @@ window.exportPPT = function() {
       ];
       const btmHeaderRow2 = [
         hdrCell('목표'), hdrCell('OTB'), hdrCell('증감'), hdrCell('달성률'),
-        hdrCell('전년'), hdrCell('증감'), hdrCell('증감률'),
+        hdrCell('전년\n(동기간)'), hdrCell('증감'), hdrCell('증감률'),
         hdrCell('목표'), hdrCell('OTB'), hdrCell('증감'), hdrCell('달성률'),
-        hdrCell('전년'), hdrCell('증감'), hdrCell('증감률'),
+        hdrCell('전년\n(동기간)'), hdrCell('증감'), hdrCell('증감률'),
       ];
 
       const btmDataRows = [];
@@ -1234,9 +1236,9 @@ window.exportPPT = function() {
       ];
       const ovBtmH2 = [
         hdrCell('목표'), hdrCell('OTB'), hdrCell('증감'), hdrCell('달성률'),
-        hdrCell('전년'), hdrCell('증감'), hdrCell('증감률'),
+        hdrCell('전년\n(동기간)'), hdrCell('증감'), hdrCell('증감률'),
         hdrCell('목표'), hdrCell('OTB'), hdrCell('증감'), hdrCell('달성률'),
-        hdrCell('전년'), hdrCell('증감'), hdrCell('증감률'),
+        hdrCell('전년\n(동기간)'), hdrCell('증감'), hdrCell('증감률'),
       ];
       const ovSites = [
         { name: '소노펠리체CC 괌', channels: ['회원','홈페이지','여행사','일본'] },
