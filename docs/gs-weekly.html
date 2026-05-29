@@ -909,6 +909,16 @@ window.exportPPT = function() {
     toast('PptxGenJS 라이브러리 로드 실패 — 네트워크를 확인하세요', 'error');
     return;
   }
+  // PPT 하단테이블 헤더가 '전년(동기간)' 이므로 데이터도 동기간으로 강제 렌더.
+  // 종료 시 원래 모드로 복구.
+  const _origYearMode = YEAR_MODE;
+  const _activeWeekChip = document.querySelector('.week-chip.active');
+  const _ppWeekKey = _activeWeekChip ? _activeWeekChip.dataset.week : 'all';
+  const _modeChanged = (_origYearMode !== 'samePeriod');
+  if (_modeChanged) {
+    YEAR_MODE = 'samePeriod';
+    try { renderAll(_ppWeekKey); } catch(e) { console.warn('[PPT] samePeriod 재렌더 실패', e); }
+  }
   try {
     const pres = new PptxGenJS();
     // A4 Landscape — 템플릿 원본 슬라이드 사이즈
@@ -925,10 +935,17 @@ window.exportPPT = function() {
     const BORDER_T = { type:'solid', pt:1.0, color:'999999' };
     const baseDate = OTB_DATA?.meta?.baseDate || new Date().toISOString().slice(0,10);
     const now = new Date();
-    const curMonth = now.getMonth() + 1;
-    const curYear = now.getFullYear();
+    // renderAll 과 동일한 시프트 로직 — 마지막 주이면 +1개월 (예: 5월 말 → 6월 실적)
+    const _actualMonth = now.getMonth() + 1;
+    const _actualYear  = now.getFullYear();
+    const _isLastWk = (typeof isLastWeekOfMonth === 'function') ? isLastWeekOfMonth(now) : false;
+    const _cmN = _isLastWk ? _actualMonth + 1 : _actualMonth;
+    const curMonth = _cmN > 12 ? _cmN - 12 : _cmN;
+    const curYear  = _cmN > 12 ? _actualYear + 1 : _actualYear;
     const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
-    const mm2 = String(curMonth).padStart(2,'0');
+    const mm2 = String(curMonth).padStart(2,'0');           // 당월(cmMonth) 2자리
+    const ytdEndMonth = _isLastWk ? Math.min(_actualMonth + 1, 12) : _actualMonth;
+    const ytdMm2 = String(ytdEndMonth).padStart(2,'0');     // 누계 끝월 2자리
 
     // 날짜 포맷: "2026. 5. 29"
     const [_dy, _dm, _dd] = baseDate.split('-');
@@ -1085,7 +1102,7 @@ window.exportPPT = function() {
       const topHeaderRow1 = [
         hdrCell('구  분', { rowspan: 2 }),
         hdrCell(`당월 예상실적 (${mm2}.01~${mm2}.말일)`, { colspan: 7 }),
-        hdrCell(`누계 실적 (01.01~${mm2}.말일)`, { colspan: 7 }),
+        hdrCell(`누계 실적 (01.01~${ytdMm2}.말일)`, { colspan: 7 }),
       ];
       const topHeaderRow2 = [
         hdrCell('목표'), hdrCell('Forecast'), hdrCell('증감'), hdrCell('달성률'),
@@ -1200,8 +1217,8 @@ window.exportPPT = function() {
       // 상단: 당월 예상실적 + 누계 (15컬럼)
       const ovTopH1 = [
         hdrCell('구  분', { rowspan: 2 }),
-        hdrCell(`당월 예상실적 (${mm2}.01~${mm2}.31)`, { colspan: 7 }),
-        hdrCell(`누계 실적 (01.01~${mm2}.말일)`, { colspan: 7 }),
+        hdrCell(`당월 예상실적 (${mm2}.01~${mm2}.말일)`, { colspan: 7 }),
+        hdrCell(`누계 실적 (01.01~${ytdMm2}.말일)`, { colspan: 7 }),
       ];
       const ovTopH2 = [
         hdrCell('목표'), hdrCell('Forecast'), hdrCell('증감'), hdrCell('달성률'),
@@ -1337,6 +1354,12 @@ window.exportPPT = function() {
   } catch (e) {
     console.error('PPT 내보내기 실패:', e);
     toast('PPT 내보내기 실패: ' + e.message, 'error');
+  } finally {
+    // YEAR_MODE 원복 (PPT 직후 화면이 동기간으로 바뀐 채 유지되지 않도록)
+    if (_modeChanged) {
+      YEAR_MODE = _origYearMode;
+      try { renderAll(_ppWeekKey); } catch(e) { console.warn('[PPT] YEAR_MODE 복구 재렌더 실패', e); }
+    }
   }
 };
 
