@@ -909,16 +909,11 @@ window.exportPPT = function() {
     toast('PptxGenJS 라이브러리 로드 실패 — 네트워크를 확인하세요', 'error');
     return;
   }
-  // PPT 하단테이블 헤더가 '전년(동기간)' 이므로 데이터도 동기간으로 강제 렌더.
-  // 종료 시 원래 모드로 복구.
+  // 모드 전환 유틸 (상단테이블=화면 모드 그대로, 하단테이블='전년(동기간)' 헤더 일치를 위해 동기간 강제)
   const _origYearMode = YEAR_MODE;
   const _activeWeekChip = document.querySelector('.week-chip.active');
   const _ppWeekKey = _activeWeekChip ? _activeWeekChip.dataset.week : 'all';
   const _modeChanged = (_origYearMode !== 'samePeriod');
-  if (_modeChanged) {
-    YEAR_MODE = 'samePeriod';
-    try { renderAll(_ppWeekKey); } catch(e) { console.warn('[PPT] samePeriod 재렌더 실패', e); }
-  }
   try {
     const pres = new PptxGenJS();
     // A4 Landscape — 템플릿 원본 슬라이드 사이즈
@@ -1098,7 +1093,7 @@ window.exportPPT = function() {
       // === 상단 테이블: 당월 예상실적 + 누계 실적 (15컬럼) ===
       // summary-table 에서 읽음 — 당월 컬럼은 RM FCST (current-month-table 의 OTB 아님).
       // 한 행에 [라벨 + 당월7(목표/RM FCST/증감/달성률/전년/증감/증감률) + 누계7(목표/실적/증감/달성률/전년/증감/증감률)] = 15셀.
-      const cmData = readDOMTable('current-month-table');   // 하단 채널 분해용으로 계속 사용
+      // 상단테이블 헤더는 그냥 '전년' (모드 표기 없음) → 화면 YEAR_MODE 그대로 읽음 (사용자가 보는 숫자와 일치).
       const sumData = readDOMTable('summary-table');
 
       const topHeaderRow1 = [
@@ -1144,6 +1139,13 @@ window.exportPPT = function() {
       });
 
       // === 하단 테이블: 당월 + 익월 채널별 상세 ===
+      // 하단 헤더가 '전년(동기간)' 이므로 데이터도 동기간으로 강제 — 여기서 모드 전환 후 재렌더.
+      // 상단(summary-table)은 이미 위에서 화면 모드 그대로 읽었으니 영향 없음.
+      if (_modeChanged) {
+        YEAR_MODE = 'samePeriod';
+        try { renderAll(_ppWeekKey); } catch(e) { console.warn('[PPT] samePeriod 재렌더 실패', e); }
+      }
+      const cmData = readDOMTable('current-month-table');
       const nmData = readDOMTable('next-month-table');
       const btmHeaderRow1 = [
         hdrCell('구  분', { rowspan: 2 }),
@@ -1199,6 +1201,12 @@ window.exportPPT = function() {
       });
 
       addPageNum(slide, 2);
+
+      // 하단테이블 데이터 캡처 완료 — YEAR_MODE 즉시 원복 (이후 슬라이드/화면 영향 차단)
+      if (_modeChanged && YEAR_MODE !== _origYearMode) {
+        YEAR_MODE = _origYearMode;
+        try { renderAll(_ppWeekKey); } catch(e) { console.warn('[PPT] YEAR_MODE 복구 재렌더 실패', e); }
+      }
     })();
 
     // ============ SLIDE 3: 해외 영업 ============
@@ -1712,14 +1720,16 @@ function buildSummaryTable(weekKey) {
   });
 
   // 누계 (마지막 주이면 익월까지 합산)
+  // 마감월(m < actualMonth) = OTB(온북), 미마감월(m >= actualMonth) = RM FCST
   const ytdBud = {}, ytdAct = {}, ytdLast = {};
   segs.forEach(seg => { ytdBud[seg] = 0; ytdAct[seg] = 0; ytdLast[seg] = 0; });
   for (let m = 1; m <= ytdEndMonth; m++) {
     const ym  = `${curYear}${String(m).padStart(2,'0')}`;
     const lym = `${curYear-1}${String(m).padStart(2,'0')}`;
+    const isClosedMonth = m < actualMonth;
     segs.forEach(seg => {
       ytdBud[seg]  += getSegmentBudget(m, seg);
-      ytdAct[seg]  += getSegmentOTB(seg, ym);
+      ytdAct[seg]  += isClosedMonth ? getSegmentOTB(seg, ym) : getRmFcstSegment(m, seg);
       ytdLast[seg] += isSamePeriod ? getYoYAdjustedSegment(seg, lym) : getSegmentOTB(seg, lym);
     });
   }
@@ -1978,16 +1988,18 @@ function buildYTDTable(weekKey) {
   </thead><tbody>`;
 
   // Accumulate YTD
+  // 마감월(m < curMonth) = OTB(온북), 미마감월(m >= curMonth) = RM FCST
   const segs = ['OTA', 'G-OTA', 'Inbound'];
   const ytdBudget = {}, ytdActual = {}, ytdLast = {};
   segs.forEach(seg => { ytdBudget[seg] = 0; ytdActual[seg] = 0; ytdLast[seg] = 0; });
 
   for (let m = 1; m <= ytdEndMonth; m++) {
+    const isClosedMonth = m < curMonth;
     segs.forEach(seg => {
       ytdBudget[seg] += getSegmentBudget(m, seg);
       const ym = String(curYear) + String(m).padStart(2,'0');
       const lym = String(curYear-1) + String(m).padStart(2,'0');
-      ytdActual[seg] += getSegmentOTB(seg, ym);
+      ytdActual[seg] += isClosedMonth ? getSegmentOTB(seg, ym) : getRmFcstSegment(m, seg);
       if (isSamePeriod) {
         // yoy_adjusted: 과거월=풀마감, 현재월=동기간, 미래월=0 이미 반영됨
         ytdLast[seg] += getYoYAdjustedSegment(seg, lym);
