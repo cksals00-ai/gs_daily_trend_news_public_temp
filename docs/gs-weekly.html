@@ -1096,8 +1096,10 @@ window.exportPPT = function() {
       });
 
       // === 상단 테이블: 당월 예상실적 + 누계 실적 (15컬럼) ===
-      const cmData = readDOMTable('current-month-table');
-      const ytdData = readDOMTable('ytd-table');
+      // summary-table 에서 읽음 — 당월 컬럼은 RM FCST (current-month-table 의 OTB 아님).
+      // 한 행에 [라벨 + 당월7(목표/RM FCST/증감/달성률/전년/증감/증감률) + 누계7(목표/실적/증감/달성률/전년/증감/증감률)] = 15셀.
+      const cmData = readDOMTable('current-month-table');   // 하단 채널 분해용으로 계속 사용
+      const sumData = readDOMTable('summary-table');
 
       const topHeaderRow1 = [
         hdrCell('구  분', { rowspan: 2 }),
@@ -1114,9 +1116,8 @@ window.exportPPT = function() {
       const topDataRows = [];
       const segNames = ['합계', 'OTA', 'G-OTA', 'Inbound'];
       segNames.forEach(segName => {
-        const cmRow = cmData.rows.find(r => r[0] && r[0].text === segName);
-        const ytdRow = ytdData.rows.find(r => r[0] && r[0].text === segName);
-        if (!cmRow || !ytdRow) return;
+        const sumRow = sumData.rows.find(r => r[0] && r[0].text === segName);
+        if (!sumRow) return;
         const isTotal = segName === '합계';
         const isSeg = !isTotal;
         const label = cellOpt(segName, {
@@ -1129,7 +1130,7 @@ window.exportPPT = function() {
           const ci = Object.assign({}, c, { isTotalRow: isTotal, isSegRow: isSeg && !isTotal });
           return dataCell(c.text, ci);
         });
-        topDataRows.push([label, ...makeCells(cmRow), ...makeCells(ytdRow)]);
+        topDataRows.push([label, ...makeCells(sumRow)]);
       });
 
       const topRows = [topHeaderRow1, topHeaderRow2, ...topDataRows];
