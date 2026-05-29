@@ -128,6 +128,11 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
 .smr-yoy{font-family:var(--mono);font-size:9px;margin-top:2px;}
 .smr-yoy.pos{color:var(--positive);}
 .smr-yoy.neg{color:var(--negative);}
+.smr-close-row{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:4px;padding-top:3px;border-top:1px dotted var(--rule);}
+.smr-close-label{display:inline-block;min-width:30px;text-align:right;margin-right:4px;color:var(--ink-faint);}
+.smr-close-val{color:var(--ink-muted);font-weight:600;}
+.smr-share-row{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:1px;}
+.smr-share-val{color:var(--gold);font-weight:600;}
 .smr-cell{cursor:pointer;}
 .smr-cell:hover{background:var(--bg-soft);}
 .smr-cell.selected{border-color:var(--gold-bright);background:rgba(201,160,99,0.16);box-shadow:inset 0 0 0 1px var(--gold-bright);}
@@ -296,7 +301,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
         <div class="smr-drill-body" id="smr-drill-body" style="display:none;">
           <div class="table-wrap">
             <table class="pivot" id="smr-prop-table">
-              <thead><tr><th>사업장</th><th>사전예약</th><th>목표(budget)</th><th>Start 달성률</th><th>전년</th></tr></thead>
+              <thead><tr><th>사업장</th><th>사전예약</th><th>목표(budget)</th><th>Start 달성률</th><th>전년</th><th>마감실적</th><th>비중</th></tr></thead>
               <tbody id="smr-prop-tbody"></tbody>
             </table>
           </div>
@@ -962,9 +967,21 @@ function renderSmrGrid() {
     html += '<div class="smr-month">' + m + '월</div>';
 
     if (tyD) {
-      html += '<div class="smr-val">' + tyD.start_ratio.toFixed(1) + '<span style="font-size:9px;color:var(--ink-faint)">%</span></div>';
-      const denom = tyD.budget_rn ? tyD.budget_rn : tyD.total_rn;
-      html += '<div class="smr-rn">' + tyD.advance_rn.toLocaleString('ko-KR') + ' / ' + denom.toLocaleString('ko-KR') + '</div>';
+      if (tyD.start_ratio == null) {
+        html += '<div class="smr-val smr-year-val pending" style="font-size:10px;">(목표 미입력)</div>';
+        html += '<div class="smr-rn">advance ' + tyD.advance_rn.toLocaleString('ko-KR') + '</div>';
+      } else {
+        html += '<div class="smr-val">' + tyD.start_ratio.toFixed(1) + '<span style="font-size:9px;color:var(--ink-faint)">%</span></div>';
+        const denom = tyD.budget_rn ? tyD.budget_rn : tyD.total_rn;
+        html += '<div class="smr-rn">' + tyD.advance_rn.toLocaleString('ko-KR') + ' / ' + denom.toLocaleString('ko-KR') + '</div>';
+      }
+      if (tyD.closing_rn) {
+        html += '<div class="smr-close-row"><span class="smr-close-label">마감</span><span class="smr-close-val">' + tyD.closing_rn.toLocaleString('ko-KR') + '</span></div>';
+        if (tyD.advance_rn > 0) {
+          const share = (tyD.advance_rn / tyD.closing_rn * 100).toFixed(1);
+          html += '<div class="smr-share-row"><span class="smr-close-label">비중</span><span class="smr-share-val">' + share + '%</span></div>';
+        }
+      }
     } else {
       html += '<div class="smr-val smr-year-val pending">(예정)</div>';
     }
@@ -1005,7 +1022,7 @@ function renderSmrDrill() {
   const mm = String(selectedSmrMonth).padStart(2, '0');
 
   const rows = [];
-  let totAdv = 0, totBud = 0, totTotal = 0, hasBudget = false;
+  let totAdv = 0, totBud = 0, totTotal = 0, totClosing = 0, hasBudget = false;
   Object.keys(smrData.by_property).forEach(name => {
     const node = smrData.by_property[name];
     if (activeRegion !== '전체' && node.region !== activeRegion) return;
@@ -1016,34 +1033,40 @@ function renderSmrDrill() {
     totAdv += tyM.advance_rn;
     totTotal += tyM.total_rn;
     if (tyM.budget_rn) { totBud += tyM.budget_rn; hasBudget = true; }
+    if (tyM.closing_rn) totClosing += tyM.closing_rn;
   });
-  rows.sort((a, b) => b.tyM.start_ratio - a.tyM.start_ratio);
+  rows.sort((a, b) => (b.tyM.start_ratio || 0) - (a.tyM.start_ratio || 0));
 
   let html = '';
   rows.forEach(r => {
     const t = r.tyM;
     const budCell = t.budget_rn ? t.budget_rn.toLocaleString('ko-KR') : '—';
+    const ratioCell = t.start_ratio != null ? t.start_ratio.toFixed(1) + '%' : '(미입력)';
     let lyCell = '—';
-    if (r.lyM && r.lyM.start_ratio > 0) {
+    if (r.lyM && r.lyM.start_ratio != null && r.lyM.start_ratio > 0) {
       lyCell = r.lyM.start_ratio.toFixed(1) + '%';
-      // pp 차이는 분모 기준(목표 vs 실적)이 같을 때만
-      if (!!t.budget_rn === !!r.lyM.budget_rn) {
+      if (t.start_ratio != null && !!t.budget_rn === !!r.lyM.budget_rn) {
         const diff = t.start_ratio - r.lyM.start_ratio;
         const c = diff >= 0 ? 'net-pos' : 'net-neg';
         const s = diff >= 0 ? '+' : '';
         lyCell += ' <span class="' + c + '">(' + s + diff.toFixed(1) + 'p)</span>';
       }
     }
+    const closingCell = t.closing_rn ? t.closing_rn.toLocaleString('ko-KR') : '—';
+    const shareCell = (t.closing_rn && t.advance_rn > 0) ? (t.advance_rn / t.closing_rn * 100).toFixed(1) + '%' : '—';
     html += '<tr><td>' + r.name + '</td><td>' + t.advance_rn.toLocaleString('ko-KR') + '</td><td>' + budCell +
-            '</td><td class="this-year">' + t.start_ratio.toFixed(1) + '%</td><td>' + lyCell + '</td></tr>';
+            '</td><td class="this-year">' + ratioCell + '</td><td>' + lyCell +
+            '</td><td>' + closingCell + '</td><td>' + shareCell + '</td></tr>';
   });
 
   if (rows.length) {
     const totRatio = (hasBudget && totBud > 0) ? (totAdv / totBud * 100) : (totTotal > 0 ? totAdv / totTotal * 100 : 0);
+    const totShare = (totClosing > 0 && totAdv > 0) ? (totAdv / totClosing * 100).toFixed(1) + '%' : '—';
     html += '<tr class="total-row"><td>합계</td><td>' + totAdv.toLocaleString('ko-KR') + '</td><td>' +
-            (hasBudget ? totBud.toLocaleString('ko-KR') : '—') + '</td><td>' + totRatio.toFixed(1) + '%</td><td>—</td></tr>';
+            (hasBudget ? totBud.toLocaleString('ko-KR') : '—') + '</td><td>' + totRatio.toFixed(1) + '%</td><td>—</td>' +
+            '<td>' + (totClosing > 0 ? totClosing.toLocaleString('ko-KR') : '—') + '</td><td>' + totShare + '</td></tr>';
   } else {
-    html = '<tr><td colspan="5" style="text-align:center;color:var(--ink-faint);">데이터 없음</td></tr>';
+    html = '<tr><td colspan="7" style="text-align:center;color:var(--ink-faint);">데이터 없음</td></tr>';
   }
   tbody.innerHTML = html;
 }

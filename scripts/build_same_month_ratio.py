@@ -23,6 +23,7 @@ OUTPUT_PATH = PROJECT_DIR / "data" / "same_month_booking.json"
 DOCS_PATH = PROJECT_DIR / "docs" / "data" / "same_month_booking.json"
 DAILY_BOOKING_PATH = PROJECT_DIR / "data" / "daily_booking.json"
 RM_FCST_PATH = PROJECT_DIR / "data" / "rm_fcst.json"
+DB_AGG_PATH = PROJECT_DIR / "docs" / "data" / "db_aggregated.json"
 
 # rm_fcst.json 사업장명 → same_month by_property canon명(daily_booking 기준)
 RM_FCST_TO_CANON = {
@@ -157,6 +158,27 @@ def load_budget():
     return budget_by_prop, budget_gs
 
 
+def load_closing(to_canon):
+    """db_aggregated.json → 월별 마감(또는 OTB) RN."""
+    closing_gs = {}
+    closing_prop = defaultdict(lambda: defaultdict(int))
+    if not DB_AGG_PATH.exists():
+        print("⚠ db_aggregated.json 없음 — closing_rn 생략", file=sys.stderr)
+        return closing_gs, closing_prop
+    db = json.load(open(DB_AGG_PATH, encoding='utf-8'))
+    for sm, node in (db.get("monthly_total") or {}).items():
+        rn = (node or {}).get("booking_rn", 0) or 0
+        if rn:
+            closing_gs[sm] = rn
+    for raw_name, months in (db.get("by_property") or {}).items():
+        canon = to_canon(raw_name)
+        for sm, node in (months or {}).items():
+            rn = (node or {}).get("booking_rn", 0) or 0
+            if rn:
+                closing_prop[canon][sm] += rn
+    return closing_gs, dict(closing_prop)
+
+
 def build_alias_map(canon):
     """raw 정규화 사업장명 → budget 정답지(canon) 매핑.
     이름이 다른 케이스는 명시적으로, 나머지는 공백 무시 매칭."""
@@ -249,12 +271,14 @@ def process_file(filepath, to_canon, min_month=None, max_month=None):
     return result
 
 
-def _ratios(total, same, budget_rn):
+def _ratios(total, same, budget_rn, is_unstarted=False):
     advance = total - same
     if advance < 0:
         advance = 0
     if budget_rn:
         start_ratio = round(advance / budget_rn * 100, 1)
+    elif is_unstarted:
+        start_ratio = None  # 미래월 + 목표 미입력 → 비교 불가
     elif total > 0:
         start_ratio = round(advance / total * 100, 1)
     else:
@@ -275,6 +299,8 @@ def main():
     canon_names = load_canon_names()
     budget_by_prop, budget_gs = load_budget()
     to_canon = build_alias_map(canon_names)
+    closing_gs, closing_prop = load_closing(to_canon)
+    cur_ym = datetime.now().strftime("%Y%m")
 
     agg = defaultdict(int)  # (canon, stay_month, booking_month) -> rn
     year_dirs = sorted([d for d in RAW_DIR.iterdir() if d.is_dir() and d.name.isdigit()])
@@ -316,14 +342,21 @@ def main():
     for sm in sorted(gs_total.keys()):
         year, month = sm[:4], sm[4:6]
         budget_rn = budget_gs.get(month, 0) if year == "2026" else 0
-        by_year.setdefault(year, {})[month] = _ratios(gs_total[sm], gs_same.get(sm, 0), budget_rn)
+        rec = _ratios(gs_total[sm], gs_same.get(sm, 0), budget_rn, is_unstarted=(sm > cur_ym))
+        crn = closing_gs.get(sm, 0)
+        if crn:
+            rec["closing_rn"] = crn
+        by_year.setdefault(year, {})[month] = rec
 
     # by_property
     by_property = {}
     for (canon, sm), total in prop_total.items():
         year, month = sm[:4], sm[4:6]
         budget_rn = budget_by_prop.get(canon, {}).get(month, 0) if year == "2026" else 0
-        rec = _ratios(total, prop_same.get((canon, sm), 0), budget_rn)
+        rec = _ratios(total, prop_same.get((canon, sm), 0), budget_rn, is_unstarted=(sm > cur_ym))
+        crn = closing_prop.get(canon, {}).get(sm, 0)
+        if crn:
+            rec["closing_rn"] = crn
         node = by_property.setdefault(canon, {"region": get_region(canon)})
         node.setdefault(year, {})[month] = rec
 
@@ -348,9 +381,13 @@ def main():
         for month in sorted(by_year[year].keys()):
             d = by_year[year][month]
             b = d.get("budget_rn", 0)
+            sr = d['start_ratio']
+            sr_str = f"{sr}%" if sr is not None else "(목표 미입력)"
+            crn = d.get("closing_rn", 0)
+            crn_str = f"  closing={crn:,}" if crn else ""
             print(f"  {month}월: advance {d['advance_rn']:,} / "
                   f"{'budget '+format(b,',') if b else 'total '+format(d['total_rn'],',')} "
-                  f"= Start {d['start_ratio']}%", file=sys.stderr)
+                  f"= Start {sr_str}{crn_str}", file=sys.stderr)
 
 
 if __name__ == "__main__":
