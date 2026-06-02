@@ -922,10 +922,11 @@ def get_seg_fcst(seg_fcst_data, display_name, ym, seg, p_total_fcst=None, month_
 def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_daily=None, yoy_adjusted=None):
     """진정한 동기간 기준으로 LY 데이터 생성 (stay_date_daily 일별 데이터 기반).
 
-    동기간 규칙:
+    동기간 규칙 (RM Revenue Meeting '동기간'과 동일 — 전년 같은 날짜까지의 OTB):
     - 과거월 (< 현재월): 풀 마감값 (전체 일수 합산)
-    - 현재월 (= 현재월): 1일 ~ 오늘 날짜까지만 합산
-    - 미래월 (> 현재월): yoy_adjusted 투숙일 기준 동기간 데이터 사용
+    - 현재월·미래월 (>= 현재월): yoy_adjusted(예약일 cutoff = 기준일) 동기간 OTB 사용.
+      ※ 현재월을 stay_date[:오늘] 로 자르면 forward 투숙월이 과소집계되어 RM 동기간과
+        크게 어긋나므로, 현재월도 미래월과 동일하게 예약일 cutoff 기준을 사용한다.
 
     stay_date_daily: db_aggregated의 stay_date_daily 섹션.
       {month_key: {days: [...], segments: {seg: {net_rn: [...], net_rev: [...]}}}}
@@ -971,13 +972,11 @@ def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_dail
                 sp_rn = full_rn
                 sp_rev = full_rev
                 ratio = 1.0
-            elif month_idx == cur_month:
-                # 현재월: 1일~오늘까지만
-                sp_rn = sum(net_rn_arr[:cur_day])
-                sp_rev = sum(net_rev_arr[:cur_day])
-                ratio = sp_rn / full_rn if full_rn > 0 else 0.0
             else:
-                # 미래월: yoy_adjusted에서 투숙일 기준 동기간 데이터 사용
+                # 현재월·미래월: yoy_adjusted(예약일 cutoff = 기준일) 동기간 OTB 사용.
+                #   RM Revenue Meeting의 '동기간'과 동일 기준 — 전년 같은 날짜(기준일)까지
+                #   예약일자 기준으로 잡힌 OTB. stay_date[:cur_day] 슬라이싱은 forward 투숙월에서
+                #   "그 시점까지 실제 투숙한 객실"만 세어 크게 과소집계되므로 사용하지 않는다.
                 _yoy_seg_m = _yoy_ly.get("by_segment", {}).get(seg, {}).get(mk_25, {})
                 sp_rn = _yoy_seg_m.get("booking_rn", 0)
                 sp_rev = _yoy_seg_m.get("booking_rev_m", 0.0)
@@ -1017,12 +1016,9 @@ def build_ly_same_period_adjusted(db_bp, db_bps, db_seg, now_kst, stay_date_dail
                         # 과거월: 풀 마감 (ratio=1.0이므로 원본 그대로)
                         sp_rn = full_rn
                         sp_rev = full_rev
-                    elif month_idx == cur_month:
-                        # 현재월: 비율 적용
-                        sp_rn = round(full_rn * ratio)
-                        sp_rev = round(full_rev * ratio, 2)
                     else:
-                        # 미래월: yoy_adjusted가 있으면 직접 사용, 없으면 비율 적용
+                        # 현재월·미래월: yoy_adjusted(예약일 cutoff) 동기간이 있으면 직접 사용,
+                        #   없으면 세그먼트 동기간 비율로 비례 배분
                         _yoy_ps_m = _yoy_ly.get("by_property_segment", {}).get(prop_name, {}).get(seg, {}).get(mk_25, {})
                         if _yoy_ps_m:
                             sp_rn = _yoy_ps_m.get("booking_rn", 0)
@@ -2423,7 +2419,7 @@ def main():
     cur_day = now_kst.day
     cur_month = now_kst.month
     print(f"  동기간 보정 (stay_date_daily + yoy_adjusted 기반): 사업장 수={len(adj_by_prop)}, 세그먼트 수={len(adj_by_segment)}, prop_seg={len(adj_by_prop_seg)}")
-    print(f"  동기간 규칙: 과거월=풀마감, 현재월(~{cur_month}월 {cur_day}일)=동기간, 미래월=yoy_adjusted 투숙일기준")
+    print(f"  동기간 규칙: 과거월=풀마감, 현재월·미래월(>={cur_month}월)=yoy_adjusted 예약일 cutoff(기준일 {cur_month}/{cur_day}) 동기간 OTB")
 
     # 사업장별 리드타임 분포
     lead_time_by_prop = db.get("lead_time_by_property", {})
@@ -2623,8 +2619,8 @@ def main():
             "todayDate":    today_date,
             "yoyBaseDate":  yoy_base_date,
             "dataSource":   "온북 DB + 사업계획 Budget",
-            "samePeriodBasis": "stay_date_daily",
-            "samePeriodRule": f"과거월=풀마감, 현재월({cur_month}월 1~{cur_day}일)=동기간, 미래월=0",
+            "samePeriodBasis": "yoy_adjusted(예약일 cutoff)",
+            "samePeriodRule": f"과거월=풀마감, 현재월·미래월(>={cur_month}월)=yoy_adjusted 예약일 cutoff(기준일 {cur_month}/{cur_day}) 동기간 OTB",
         },
         "filters": {
             "months": [{"value": 0, "label": "전체"}] + [

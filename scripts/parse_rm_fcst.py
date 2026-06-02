@@ -67,6 +67,116 @@ NAME_MAP = {
 # Regions in older PDFs may use slightly different naming
 REGION_NAMES = {"비발디", "한국중부", "아시아퍼시픽", "한국남부", "한중국부"}
 
+# ── 동기간(전년/25년) OTB 추출용 ───────────────────────────────────────────
+# 월별 요약 페이지 하단의 "● Segment별 전년대비 OTB 현황 (R/N)" → 두 번째 표
+# (홈페이지 / OTA / G-OTA / 제휴사 / (일반)기타 / Comp) 의 사업장별 25년 OTB 컬럼.
+# pypdfium2는 이 표를 컬럼-스크램블해서 읽으므로 pdfplumber layout 모드를 사용.
+SEG_TABLE_NAME_MAP = {
+    "벨 비발디파크":     "01.벨비발디",
+    "캄 비발디파크":     "02.캄비발디",
+    "펫 비발디파크":     "03.펫비발디",
+    "소노펠리체 비발디":  "04.펠리체비발디",
+    "소노빌리지 비발디":  "05.빌리지비발디",
+    "소노벨 양평":       "06.양평",
+    "델피노":           "07.델피노",
+    "쏠비치 양양":       "08.쏠비치양양",
+    "쏠비치 삼척":       "09.쏠비치삼척",
+    "소노벨 단양":       "10.소노벨단양",
+    "소노캄 경주":       "11.소노캄경주",
+    "소노벨 청송":       "12.소노벨청송",
+    "소노벨 천안":       "13.소노벨천안",
+    "소노벨 변산":       "14.소노벨변산",
+    "소노캄 여수":       "15.소노캄여수",
+    "소노캄 거제":       "16.소노캄거제",
+    "쏠비치 진도":       "17.쏠비치진도",
+    "소노벨 제주":       "18.소노벨제주",
+    "소노캄 제주":       "19.소노캄제주",
+    "소노캄 고양":       "20.소노캄고양",
+    "소노문 해운대":      "21.소노문해운대",
+    "쏠비치 남해":       "22.쏠비치남해",
+    "르네블루":         "23.르네블루",
+}
+_SEG_NAMES_BY_LEN = sorted(SEG_TABLE_NAME_MAP, key=len, reverse=True)
+# 두 번째 표 컬럼 순서: [홈페이지, OTA, G-OTA, 제휴사, (일반)기타, Comp]
+_SEG_TABLE_COL_IDX = {"OTA": 1, "G-OTA": 2}
+
+
+def _nfc(s: str) -> str:
+    import unicodedata
+    return unicodedata.normalize("NFC", s)
+
+
+def _parse_25_token(tok: str):
+    """25년(동기간) 셀 토큰을 int로. '-' (신규 사업장 등)는 None."""
+    tok = tok.strip()
+    if tok in ("-", ""):
+        return None
+    try:
+        return int(tok.replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _parse_seg_table_row(line: str):
+    """두 번째 Segment OTB 표의 한 행을 파싱.
+    각 컬럼 셀은 '<사업장명> <26년> <25년> <증감율>' 형태로, 사업장명이 컬럼마다 반복됨.
+    Returns: (canonical_name, {seg: ly25_rn or None}) 또는 None.
+    """
+    line = _nfc(line).strip()
+    name = next((d for d in _SEG_NAMES_BY_LEN if line.startswith(d)), None)
+    if not name:
+        return None
+    parts = [p.strip() for p in line.split(name) if p.strip()]
+    cols = [p.split() for p in parts]
+    out = {}
+    for seg, idx in _SEG_TABLE_COL_IDX.items():
+        if len(cols) > idx and len(cols[idx]) >= 2:
+            out[seg] = _parse_25_token(cols[idx][1])  # [0]=26년, [1]=25년
+        else:
+            out[seg] = None
+    return SEG_TABLE_NAME_MAP[name], out
+
+
+def extract_same_period(pdf_path: Path) -> dict:
+    """월별 요약 페이지에서 사업장별 OTA/G-OTA 동기간(25년) OTB(R/N)를 추출.
+    Returns: {month_int: {canonical_name: {"OTA": rn, "G-OTA": rn}}}.
+    pdfplumber 미설치/구형 PDF 등으로 실패하면 빈 dict 반환(파이프라인 비차단).
+    """
+    try:
+        import pdfplumber
+    except Exception:
+        return {}
+
+    result: dict[int, dict] = {}
+    try:
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            for page in pdf.pages:
+                txt = page.extract_text(layout=True) or ""
+                txt = _nfc(txt)
+                mm = re.search(r"\[(\d+)월\]", txt)
+                if not mm:
+                    continue
+                month = int(mm.group(1))
+                lines = txt.split("\n")
+                # 두 번째 표(홈페이지/OTA/G-OTA/...) 헤더 위치 탐색
+                hidx = next(
+                    (i for i, l in enumerate(lines)
+                     if "홈페이지" in l and "OTA" in l and "G-OTA" in l),
+                    None,
+                )
+                if hidx is None:
+                    continue
+                month_map = result.setdefault(month, {})
+                for l in lines[hidx + 1:]:
+                    parsed = _parse_seg_table_row(l)
+                    if parsed:
+                        canon, segs = parsed
+                        month_map[canon] = segs
+    except Exception as e:
+        warnings.warn(f"extract_same_period failed: {e}")
+        return {}
+    return result
+
 
 def find_latest_pdf() -> Path:
     pdfs = sorted(PDF_DIR.glob("Revenue Meeting_*.pdf"))
@@ -304,6 +414,25 @@ def parse(pdf_path: Path) -> dict:
             unmapped.append(nm)
             continue
         properties.setdefault(canonical, {})[ym] = record
+
+    # 동기간(전년/25년) OTB 병합: 월별 요약 페이지의 OTA/G-OTA 25년 컬럼 →
+    # properties[canonical][ym]["segments"][seg]["ly_same_period_rn"]
+    same_period = extract_same_period(pdf_path)  # {month_int: {canonical: {seg: rn}}}
+    sp_merged = 0
+    for mo, prop_map in same_period.items():
+        sec = next((i for i, (_y, m) in enumerate(months_with_year) if m == mo), None)
+        if sec is None:
+            continue
+        cy, _ = months_with_year[sec]
+        ym = f"{cy}-{mo:02d}"
+        for canon, segs in prop_map.items():
+            prop_ym = properties.setdefault(canon, {}).setdefault(ym, {})
+            seg_block = prop_ym.setdefault("segments", {})
+            for seg, rn in segs.items():
+                if rn is None:
+                    continue
+                seg_block.setdefault(seg, {})["ly_same_period_rn"] = rn
+                sp_merged += 1
 
     # Validation
     val = {}
