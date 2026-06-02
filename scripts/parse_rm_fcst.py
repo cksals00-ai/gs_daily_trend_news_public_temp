@@ -429,9 +429,9 @@ def parse(pdf_path: Path) -> dict:
             prop_ym = properties.setdefault(canon, {}).setdefault(ym, {})
             seg_block = prop_ym.setdefault("segments", {})
             for seg, rn in segs.items():
-                if rn is None:
-                    continue
-                seg_block.setdefault(seg, {})["ly_same_period_rn"] = rn
+                # RM 표에 사업장 행이 존재 → '-'(동기간 LY 없음)는 0으로 기록.
+                # (DB 폴백을 막고 PDF 원본값과 일치시킴. 미존재 사업장만 키 부재→DB 폴백)
+                seg_block.setdefault(seg, {})["ly_same_period_rn"] = rn if rn is not None else 0
                 sp_merged += 1
 
     # Validation
@@ -447,11 +447,21 @@ def parse(pdf_path: Path) -> dict:
             sum(p[ym]["segments"].get(s, {}).get("rm_fcst_rev_mil", 0) for s in ("OTA", "G-OTA", "Inbound"))
             for p in properties.values() if ym in p
         )
+        sum_ly_ota = sum(
+            p[ym]["segments"].get("OTA", {}).get("ly_same_period_rn", 0)
+            for p in properties.values() if ym in p
+        )
+        sum_ly_gota = sum(
+            p[ym]["segments"].get("G-OTA", {}).get("ly_same_period_rn", 0)
+            for p in properties.values() if ym in p
+        )
         val[ym] = {
             "sum_property_grand_rn":  sum_grand_rn,
             "sum_property_grand_rev": sum_grand_rev,
             "sum_property_seg_rn":    sum_seg_rn,
             "sum_property_seg_rev":   sum_seg_rev,
+            "sum_ly_same_period_ota_rn":  sum_ly_ota,
+            "sum_ly_same_period_gota_rn": sum_ly_gota,
         }
 
     return {
@@ -461,7 +471,9 @@ def parse(pdf_path: Path) -> dict:
         "_months_covered":  [f"{cy}-{mo:02d}" for cy, mo in months_with_year],
         "_units":           {"rn": "실 (rooms)", "rev_mil": "백만원 (million KRW)"},
         "_field_meaning":   ("rm_fcst_rn / rm_fcst_rev_mil = Revenue Meeting Forecast (Grand Total). "
-                             "segments[OTA|G-OTA|Inbound] = same-PDF per-segment Budget+Forecast cells (no distribution)."),
+                             "segments[OTA|G-OTA|Inbound] = same-PDF per-segment Budget+Forecast cells (no distribution). "
+                             "segments[OTA|G-OTA].ly_same_period_rn = 전년(25년) 동기간 OTB R/N "
+                             "(월별 요약 페이지 'Segment별 전년대비 OTB 현황' 표의 25년 컬럼)."),
         "_validation":      {**val, "unmapped_pdf_names": sorted(set(unmapped))},
         "regions":          regions,
         "properties":       properties,

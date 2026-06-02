@@ -1114,23 +1114,36 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
     rows = []
     for sheet_name, display_name, region, db_props in PROPERTY_DEFS:
         month_data = {}
+
+        def _rm_ly_same_period(seg, m):
+            """RM PDF 동기간(전년/25년) OTB R/N (OTA·G-OTA만 존재). 없으면 None.
+            rm_fcst.json: properties[display_name]["2026-MM"]["segments"][seg]["ly_same_period_rn"].
+            """
+            ym = f"2026-{m:02d}"
+            sb = rm_fcst_props.get(display_name, {}).get(ym, {}).get("segments", {})
+            return sb.get(seg, {}).get("ly_same_period_rn")
+
+        def _db_seg_ly(seg, mk_25):
+            """온북 DB 동기간 보정 LY (adj_by_prop_seg 우선, 없으면 풀년 db_bps)."""
+            v = 0
+            if adj_by_prop_seg:
+                for pname in db_props:
+                    v += adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+            else:
+                for pname in db_props:
+                    v += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+            return v
+
         # ── bottom-up: 세그별 last_rn 먼저 계산하여 합계 행에 사용 ──
-        # adj_by_prop_seg에 동기간 보정 반영됨 (과거=풀마감, 현재=동기간, 미래=0)
+        # OTA·G-OTA: RM PDF 동기간(25년) 우선. 그 외(Inbound): 온북 DB 동기간 보정.
         seg_last_rn_by_month = {}  # {m: sum of segment last_rn}
         if db_bps is not None and seg_budgets is not None:
             for m in months:
                 mk_25 = f"2025{m:02d}"
                 seg_sum = 0
                 for seg in BUDGET_SEGMENT_KEYS:
-                    s_ly_rn = 0
-                    if adj_by_prop_seg:
-                        for pname in db_props:
-                            ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
-                            s_ly_rn += ps_m.get("booking_rn", 0)
-                    else:
-                        for pname in db_props:
-                            s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
-                    seg_sum += s_ly_rn
+                    rm_ly = _rm_ly_same_period(seg, m)
+                    seg_sum += rm_ly if rm_ly is not None else _db_seg_ly(seg, mk_25)
                 seg_last_rn_by_month[m] = seg_sum
 
         for m in months:
@@ -1235,17 +1248,11 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
                     mk_25 = f"2025{m:02d}"
                     bud_label = BUDGET_MONTH_LABEL[m - 1]
                     s_act_rn = 0
-                    s_ly_rn = 0
                     for pname in db_props:
                         s_act_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_26, {}).get("booking_rn", 0)
-                    # LY: 동기간 보정 (adj_by_prop_seg에 과거=풀마감, 현재=동기간, 미래=0 반영됨)
-                    if adj_by_prop_seg:
-                        for pname in db_props:
-                            ps_m = adj_by_prop_seg.get(pname, {}).get(seg, {}).get(mk_25, {})
-                            s_ly_rn += ps_m.get("booking_rn", 0)
-                    else:
-                        for pname in db_props:
-                            s_ly_rn += db_bps.get(pname, {}).get(seg, {}).get(mk_25, {}).get("booking_rn", 0)
+                    # LY(동기간): OTA·G-OTA는 RM PDF 25년 OTB 우선, 그 외는 온북 DB 동기간 보정.
+                    rm_ly = _rm_ly_same_period(seg, m)
+                    s_ly_rn = rm_ly if rm_ly is not None else _db_seg_ly(seg, mk_25)
                     # LY 풀마감: 동기간 보정 없이 db_bps에서 직접 합산
                     s_ly_full_rn = 0
                     for pname in db_props:
