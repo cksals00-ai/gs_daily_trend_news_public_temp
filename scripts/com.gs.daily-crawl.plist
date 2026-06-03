@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- 서비스 식별자 -->
+  <key>Label</key>
+  <string>com.gs.daily-crawl</string>
+
+  <!-- 실행: host_daily_crawl.sh (크롤 → 빌드 → push) -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/chanminpark/Desktop/gs_daily_trend_news_public_temp/scripts/host_daily_crawl.sh</string>
+  </array>
+
+  <!-- 매일 05:00 (KST, 호스트 로컬타임) 실행 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>   <integer>5</integer>
+    <key>Minute</key> <integer>0</integer>
+  </dict>
+
+  <!-- 작업 디렉터리 -->
+  <key>WorkingDirectory</key>
+  <string>/Users/chanminpark/Desktop/gs_daily_trend_news_public_temp</string>
+
+  <!-- launchd 자체 stdout/stderr (스크립트 내부는 logs/host_daily_crawl.log 에 별도 기록) -->
+  <key>StandardOutPath</key>
+  <string>/Users/chanminpark/Desktop/gs_daily_trend_news_public_temp/logs/launchd_crawl.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/chanminpark/Desktop/gs_daily_trend_news_public_temp/logs/launchd_crawl.err.log</string>
+
+  <!-- 환경변수: python3(framework)·git·ssh 가 PATH 에 있어야 함 -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Library/Frameworks/Python.framework/Versions/3.12/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key>
+    <string>ko_KR.UTF-8</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+    <key>HOME</key>
+    <string>/Users/chanminpark</string>
+  </dict>
+
+  <!-- 잠자기로 05:00 을 놓쳤다면 깨어날 때 1회 실행 -->
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
