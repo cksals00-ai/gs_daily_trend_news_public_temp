@@ -25,7 +25,7 @@
 
 set -o pipefail
 
-PROJECT_ROOT="$HOME/Desktop/gs_daily_trend_news_public_temp"
+PROJECT_ROOT="$HOME/Projects/gs_daily_trend_news_public_temp"
 LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/host_daily_crawl.log"
 STATUS_FILE="$PROJECT_ROOT/_host_crawl_status.json"

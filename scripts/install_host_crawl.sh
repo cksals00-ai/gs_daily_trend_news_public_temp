@@ -8,7 +8,7 @@
 # ============================================================================
 set -e
 
-PROJECT_ROOT="$HOME/Desktop/gs_daily_trend_news_public_temp"
+PROJECT_ROOT="$HOME/Projects/gs_daily_trend_news_public_temp"
 LABEL="com.gs.daily-crawl"
 SRC_PLIST="$PROJECT_ROOT/scripts/$LABEL.plist"
 DEST_PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
