@@ -197,11 +197,14 @@ def extract_pages(pdf_path: Path) -> list[str]:
     return out
 
 
-# Match segment row at line start (no FIT/Group prefix in pypdfium2 output)
+# Match segment row. pypdfium2 sometimes prepends column-scramble junk to the
+# row (e.g. "dn OTA 1,930 ..."), so we search anywhere in the line instead of
+# anchoring at the start. G-OTA is checked first and the OTA pattern uses a
+# negative lookbehind so "G-OTA" never matches the bare-OTA pattern.
 SEG_PATTERNS = {
-    "OTA":     re.compile(r"^OTA\s+\d"),
-    "G-OTA":   re.compile(r"^G-OTA\s+\d"),
-    "Inbound": re.compile(r"^Inbound\s+\d"),
+    "G-OTA":   re.compile(r"\bG-OTA\s+\d"),
+    "OTA":     re.compile(r"(?<![\w-])OTA\s+\d"),
+    "Inbound": re.compile(r"\bInbound\s+\d"),
 }
 
 NUM_TOKEN = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?%?")
@@ -294,7 +297,7 @@ def parse_property_page(page_text: str) -> dict | None:
     segments: dict[str, dict] = {}
     for line in lines:
         for seg_name, pat in SEG_PATTERNS.items():
-            if pat.match(line):
+            if pat.search(line):
                 nums = _parse_10_tokens(line)
                 if nums:
                     segments[seg_name] = _to_rec(nums)
