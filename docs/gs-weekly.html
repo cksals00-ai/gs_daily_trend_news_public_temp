@@ -1481,6 +1481,24 @@ function getInboundBudgetByNat(monthIdx) {
   return groups;
 }
 
+// 국가별 분해(인바운드)를 세그먼트 OTB 합계에 정합시킨다.
+// 분해는 inbound_enriched(회원 매핑) 기반이라 세그먼트 OTB(온북, 권위값)와 어긋날 수 있어,
+// 4개국은 비율을 유지하며 스케일하고 기타가 잔여를 흡수해 합이 target과 정확히 일치하게 한다.
+function reconcileInboundNat(groups, target) {
+  const out = {};
+  const named = IB_NATS.reduce((s, n) => s + (groups[n] || 0), 0);
+  const sum = named + (groups['기타'] || 0);
+  if (sum > 0 && target > 0) {
+    const ratio = target / sum;
+    IB_NATS.forEach(n => out[n] = Math.round((groups[n] || 0) * ratio));
+    out['기타'] = Math.max(0, target - IB_NATS.reduce((s, n) => s + out[n], 0));
+  } else {
+    IB_NATS.forEach(n => out[n] = groups[n] || 0);
+    out['기타'] = target > 0 ? target : (groups['기타'] || 0);
+  }
+  return out;
+}
+
 function getDailySegmentData(yearMonth, segName) {
   if (inSnapshot() && ACTIVE_SNAPSHOT_DATA.daily?.[yearMonth]?.[segName]) {
     return ACTIVE_SNAPSHOT_DATA.daily[yearMonth][segName];
@@ -1879,17 +1897,12 @@ function buildMonthTable(tableId, monthNum, yearMonth, lastYearMonth, weekKey) {
     chLast['GOTA_기타'] = lastData['G-OTA'] - GOTA_CHANNELS.reduce((s,c) => s + getChannelOTB(c, lastYearMonth), 0);
   }
 
-  // Inbound by nationality — 동기간: 세그먼트 비율 적용
-  const ibNatOTB = getInboundByNat(yearMonth);
-  let ibNatLast = getInboundByNat(lastYearMonth);
-  if (isSamePeriod && !useWeek) {
-    const lyFullIB = getSegmentOTB('Inbound', lastYearMonth) || 1;
-    const ibRatio = lyFullIB > 0 ? lastData['Inbound'] / lyFullIB : 0;
-    const adjusted = {};
-    for (const [k, v] of Object.entries(ibNatLast)) { adjusted[k] = Math.round(v * ibRatio); }
-    ibNatLast = adjusted;
-  }
-  const ibNatBudget = getInboundBudgetByNat(monthNum - 1);
+  // Inbound by nationality — 국가 분해를 세그먼트 OTB 합계에 정합시킨다.
+  // (분해는 회원 매핑 기반이라 권위값인 세그먼트 OTB와 어긋나므로 OTB/전년 모두 target에 맞춰 보정)
+  const ibNatOTB = reconcileInboundNat(getInboundByNat(yearMonth), otbData['Inbound']);
+  const ibNatLast = reconcileInboundNat(getInboundByNat(lastYearMonth), lastData['Inbound']);
+  const ibNatBudgetRaw = getInboundBudgetByNat(monthNum - 1);
+  const ibNatBudget = reconcileInboundNat(ibNatBudgetRaw, budgets['Inbound']);
 
   // Recalculate OTA_기타 for weekly (approximate)
   if (useWeek) {
