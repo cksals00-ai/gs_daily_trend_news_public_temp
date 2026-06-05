@@ -104,7 +104,7 @@ PROPERTY_DEFS = [
     ("소노문 해운대",                     "21.소노문해운대",  "south",   ["소노문 해운대"]),
     ("쏠비치 남해",                       "22.쏠비치남해",    "south",   ["쏠비치 남해"]),
     ("르네블루 바이 쏠비치",              "23.르네블루",      "central", ["르네블루"]),
-    ("팔라티움 해운대",                   "25.팔라티움",      "south",   []),  # 온북 DB 미포함 — daily_booking.json에서 보정
+    ("팔라티움 해운대 by sonofelice 해운대",                   "25.팔라티움 해운대 by sonofelice",      "south",   []),  # 온북 DB 미포함 — daily_booking.json에서 보정
 ]
 
 BUDGET_GRAND_TOTAL_ROWS = [26, 50, 74, 98, 122, 146, 170, 194, 218, 242, 266, 290]
@@ -2194,7 +2194,7 @@ def get_today_summary_by_month(db, now_kst, stay_month):
 
 
 def load_daily_booking():
-    """daily_booking.json에서 팔라티움 등 온북 DB 미포함 사업장 데이터 로드.
+    """daily_booking.json에서 팔라티움 해운대 by sonofelice 등 온북 DB 미포함 사업장 데이터 로드.
     Returns: {display_name: {month_idx: {budget_rns, actual_rns, ly_actual, daily_change, ...}}}
     """
     if not DAILY_BOOKING_JSON.exists():
@@ -2209,8 +2209,8 @@ def load_daily_booking():
     for _, dn, _, _ in PROPERTY_DEFS:
         if dn in no_db_names:
             # daily_booking에서의 이름 매핑
-            if "팔라티움" in dn:
-                display_map["팔라티움 해운대"] = dn
+            if "팔라티움 해운대 by sonofelice" in dn:
+                display_map["팔라티움 해운대 by sonofelice 해운대"] = dn
     result = {}
     for md in data.get("months_detail", []):
         month_idx = md.get("month", 0)
@@ -2289,7 +2289,7 @@ def overlay_daily_booking(all_months, daily_bk, now_kst):
             prop["today_cancel"] = max(-today_net, 0)
 
             # FCST: OTB 그대로 사용 (LY pickup 데이터 부재 — 일별 외삽 폭주 방지)
-            #   팔라티움 등 daily_booking 사업장은 LY OTB 동기간 데이터가 없어
+            #   팔라티움 해운대 by sonofelice 등 daily_booking 사업장은 LY OTB 동기간 데이터가 없어
             #   pickup_ratio 추정 불가. act_rn(현재 OTB)을 보수적으로 FCST로 사용.
             if m_idx > 0:
                 fcst_rn = act_rn
@@ -2598,7 +2598,7 @@ def main():
                     seg_summary["today_cancel_rev"]  = round((cd_entry.get("rev", 0.0) or 0) * 1_000_000)
                 seg_summary["today_net_rev"]     = seg_summary["today_booking_rev"] - seg_summary["today_cancel_rev"]
 
-    # ── 온북 DB 미포함 사업장(팔라티움 등) daily_booking.json 보정 ──
+    # ── 온북 DB 미포함 사업장(팔라티움 해운대 by sonofelice 등) daily_booking.json 보정 ──
     print("Daily Booking 보정 (온북 DB 미포함 사업장)...")
     daily_bk = load_daily_booking()
     if daily_bk:

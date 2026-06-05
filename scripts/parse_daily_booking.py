@@ -58,7 +58,7 @@ PROPERTY_ORDER = [
     {"name": "쏠비치 남해",                    "region": "south"},
     {"name": "파나크 영덕",                    "region": "south"},
     {"name": "르네블루",                       "region": "south"},
-    {"name": "팔라티움 해운대",                 "region": "south"},
+    {"name": "팔라티움 해운대 by sonofelice 해운대",                 "region": "south"},
 ]
 
 

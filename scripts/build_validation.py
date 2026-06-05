@@ -45,7 +45,7 @@ EXCEL_DIR = DATA_DIR / "검증"
 
 # ── PROPERTY_DEFS (compare_and_update.py와 동일, 정답지) ──
 # (excel_col, excel_label, code, [db_property_names], region)
-# excel_col=None ⇒ Excel 미포함 (팔라티움 등)
+# excel_col=None ⇒ Excel 미포함 (팔라티움 해운대 by sonofelice 등)
 PROPERTY_DEFS = [
     (6,  "비발디(벨)",     "01.벨비발디",      "vivaldi", ["소노벨 비발디파크", "소노문 비발디파크"]),
     (9,  "비발디(캄)",     "02.캄비발디",      "vivaldi", ["소노캄 비발디파크"]),
@@ -71,7 +71,7 @@ PROPERTY_DEFS = [
     (75, "해운대",         "21.소노문해운대",  "south",   ["소노문 해운대"]),
     (78, "남해",           "22.쏠비치남해",    "south",   ["쏠비치 남해"]),
     (81, "르네블루",       "23.르네블루",      "central", ["르네블루"]),
-    (None, None,           "25.팔라티움",      "south",   []),  # Excel 미포함
+    (None, None,           "25.팔라티움 해운대 by sonofelice",      "south",   []),  # Excel 미포함
 ]
 
 # ── 기본 비교 세그먼트: OTA + G-OTA + Inbound ──
@@ -259,7 +259,7 @@ def attach_occ(prop_records: list) -> None:
         "21.소노문해운대":  "소노문 해운대",
         "22.쏠비치남해":    "쏠비치 남해",
         "23.르네블루":      "르네블루",
-        "25.팔라티움":      "팔라티움 해운대",
+        "25.팔라티움 해운대 by sonofelice":      "팔라티움 해운대 by sonofelice 해운대",
     }
 
     # months_detail → {month_key: {prop_name: {occ_actual, occ_budget, ...}}}

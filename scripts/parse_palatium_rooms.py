@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-팔라티움 해운대 가용객실수 파서
+팔라티움 해운대 by sonofelice 해운대 가용객실수 파서
 ================================
 data/palatium_rooma/ 폴더의 "사용가능 객실 현황*.xlsx" 파일들을 파싱하여
 일별/월별 OCC(점유율)를 계산합니다.
@@ -26,7 +26,7 @@ data/palatium_rooma/ 폴더의 "사용가능 객실 현황*.xlsx" 파일들을 �
 산출:
   - data/palatium_room_availability.json (일별/월별)
   - docs/data/palatium_room_availability.json (동기화)
-  - docs/data/occ_data.json 의 "25.팔라티움" 엔트리 갱신
+  - docs/data/occ_data.json 의 "25.팔라티움 해운대 by sonofelice" 엔트리 갱신
 
 © 2026 GS팀
 """
@@ -52,7 +52,7 @@ DATA_DIR = ROOT / "data"
 DOCS_DATA_DIR = ROOT / "docs" / "data"
 ROOM_DIR = DATA_DIR / "palatium_rooma"
 
-PALATIUM_KEY = "25.팔라티움"
+PALATIUM_KEY = "25.팔라티움 해운대 by sonofelice"
 
 
 def _to_int(v):
@@ -241,7 +241,7 @@ def main():
     monthly_sorted = dict(sorted(monthly.items()))
     result = {
         "_generated": latest_sales_date,
-        "_property": "팔라티움 해운대",
+        "_property": "팔라티움 해운대 by sonofelice 해운대",
         "_property_key": PALATIUM_KEY,
         "_source_files": [f.name for f in files],
         "_note": "OCC(%) = Sold Rooms / Inventory Rooms × 100. Inventory = Total - Out of Order.",
@@ -263,7 +263,7 @@ def main():
     )
     logger.info(f"✓ 동기화: {out2}")
 
-    # occ_data.json 갱신 — 25.팔라티움 엔트리만 덮어쓰기
+    # occ_data.json 갱신 — 25.팔라티움 해운대 by sonofelice 엔트리만 덮어쓰기
     occ_path = DOCS_DATA_DIR / "occ_data.json"
     if not occ_path.exists():
         logger.warning(f"occ_data.json 없음: {occ_path}")
@@ -291,7 +291,7 @@ def main():
 
     # 요약 출력
     logger.info("")
-    logger.info("월별 팔라티움 OCC 요약:")
+    logger.info("월별 팔라티움 해운대 by sonofelice OCC 요약:")
     for ym, m in monthly_sorted.items():
         logger.info(
             f"  {ym}: OCC={m['occ']:.1f}% "

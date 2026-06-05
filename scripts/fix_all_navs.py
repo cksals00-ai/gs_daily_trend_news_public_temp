@@ -12,7 +12,7 @@ CORRECT_NAV_LINKS = """      <a class="gsn-item" href="https://cksals00-ai.githu
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 현황 리포트</a>"""
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 해운대 by sonofelice 현황 리포트</a>"""
 
 CORRECT_SCRIPT = """<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.indexOf('index.html')!==-1||h.match(/gs_daily_trend_news_public_temp\\/?$/)||h.match(/gs_daily_trend_news_public_temp\\/?#/));else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium')!==-1;if(hit)a.classList.add('active');});})();</script>"""
 

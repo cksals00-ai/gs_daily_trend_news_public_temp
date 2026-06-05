@@ -81,7 +81,7 @@ SITE_MAP = {
     '소노캄 거제': '거제', '쏠비치 진도': '진도', '소노벨 제주': '벨제주',
     '소노캄 제주': '캄제주', '소노캄 고양': '고양', '소노문 해운대': '해운대',
     '쏠비치 남해': '남해', '파나크 영덕': None, '르네블루': '르네블루',
-    '팔라티움 해운대': '해운대',
+    '팔라티움 해운대 by sonofelice 해운대': '해운대',
 }
 
 def match_promotions(property_name: str, promotions: list, month_key: str) -> list:

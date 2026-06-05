@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-팔라티움 해운대 예약 DB(xlsx) → daily_booking.json 반영
+팔라티움 해운대 by sonofelice 해운대 예약 DB(xlsx) → daily_booking.json 반영
 =========================================================
 data/palatium_db/예약정보조회*.xlsx 파일을 파싱하여
-팔라티움 사업장의 RNs, OCC, Budget, 당일변동 등을 산출하고
-daily_booking.json에 팔라티움 데이터를 추가/갱신합니다.
+팔라티움 해운대 by sonofelice 사업장의 RNs, OCC, Budget, 당일변동 등을 산출하고
+daily_booking.json에 팔라티움 해운대 by sonofelice 데이터를 추가/갱신합니다.
 
 Budget 출처: data/palatium_db/*사업계획*.xlsx (요약 시트)
 OCC 출처:    data/palatium_room_availability.json (parse_palatium_rooms.py 산출)
@@ -36,7 +36,7 @@ DAILY_BOOKING_JSON = DATA_DIR / "daily_booking.json"
 DOCS_DAILY_BOOKING = DOCS_DATA_DIR / "daily_booking.json"
 ROOM_AVAIL_JSON = DATA_DIR / "palatium_room_availability.json"
 
-PROPERTY_NAME = "팔라티움 해운대"
+PROPERTY_NAME = "팔라티움 해운대 by sonofelice 해운대"
 REGION = "south"
 TOTAL_ROOMS = 201  # 기본 객실수 (room_availability 없을 때 폴백)
 
@@ -255,7 +255,7 @@ def build_daily_occ(month: int, year: int, daily_avail: dict) -> list:
 
 
 def update_daily_booking(reservations, budget, room_monthly, room_daily):
-    """daily_booking.json에 팔라티움 데이터를 추가/갱신."""
+    """daily_booking.json에 팔라티움 해운대 by sonofelice 데이터를 추가/갱신."""
     # 기존 daily_booking.json 로드 (없으면 새로 생성)
     if DAILY_BOOKING_JSON.exists():
         data = json.loads(DAILY_BOOKING_JSON.read_text(encoding="utf-8"))
@@ -278,7 +278,7 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
     data["meta"]["source"] = "Daily_Booking_Report"
     data["meta"]["property_count"] = 25  # 기존 값 유지
 
-    # months_detail에서 팔라티움 엔트리 추가/갱신
+    # months_detail에서 팔라티움 해운대 by sonofelice 엔트리 추가/갱신
     for month_key in target_months:
         m = int(month_key.split("-")[1])
         days_in_month = calendar.monthrange(year, m)[1]
@@ -298,7 +298,7 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
             }
             data.setdefault("months_detail", []).append(md_entry)
 
-        # 팔라티움 프로퍼티 찾기/생성
+        # 팔라티움 해운대 by sonofelice 프로퍼티 찾기/생성
         prop_entry = None
         for p in md_entry.get("properties", []):
             if p.get("name") == PROPERTY_NAME:
@@ -371,7 +371,7 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
 
 def main():
     log.info("=" * 60)
-    log.info("팔라티움 DB 파싱 시작")
+    log.info("팔라티움 해운대 by sonofelice DB 파싱 시작")
     log.info("=" * 60)
 
     # 1. xlsx 파일 찾기
@@ -426,7 +426,7 @@ def main():
                 log.info(f"  [{mk}] actual={p['actual_rns']}, budget={p['budget_rns']}, ach={p['budget_achievement']}%, occ={p['occ_actual']}%")
 
     log.info("=" * 60)
-    log.info("✅ 팔라티움 DB 파싱 완료")
+    log.info("✅ 팔라티움 해운대 by sonofelice DB 파싱 완료")
     log.info("=" * 60)
     return True
 
