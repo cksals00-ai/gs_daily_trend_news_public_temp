@@ -2955,8 +2955,116 @@ function buildWeeklyTab(){
 }
 /* WEEKLY_REPORT_INJECT_END */
 
+/* ──────────────────────────────────────────────────────────────
+   주간회의 첨부 PDF 자동 노출 (WEEKLY PDF ATTACHMENTS)
+   · 폴더: docs/data/weekly_pdf/  (서빙 경로 data/weekly_pdf/)
+   · 파일명 규칙: 시장동향_YYYY-MM-DD.pdf / 실적마감_YYYY-MM-DD.pdf
+     (YYYY-MM-DD = 해당 주의 "월요일" 날짜)
+   · 동작: 주간 탭 렌더 시 최근 8주를 HEAD 프로브 → 파일이 존재하는
+     가장 최신 주차의 PDF를 주간 리포트와 같은 형식(.section 카드 리스트)으로 표시.
+   · 이 블록은 WEEKLY_REPORT_INJECT 마커 "밖"에 있으므로, 매주 주간리포트
+     에이전트가 WEEKLY_REPORT_HTML을 통째로 재작성해도 영향받지 않음.
+   ────────────────────────────────────────────────────────────── */
+(function(){
+  if (typeof buildWeeklyTab !== 'function') return;
+  var _origBuildWeeklyTab = buildWeeklyTab;
 
+  var PDF_DIR = 'data/weekly_pdf/';
+  var WEEKS_BACK = 8;               // 최근 N주까지 거슬러 탐색
+  var TYPES = [
+    { key: '시장동향', icon: '🌐', label: '시장동향',  desc: '관광통계 · 해외여행객 · 시장동향' },
+    { key: '실적마감', icon: '📊', label: '실적 · 마감', desc: '목표 · 실적 · 달성률 마감 데이터' }
+  ];
 
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+  function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function mondayOf(d){
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - ((x.getDay()+6)%7)); // 0=월
+    return x;
+  }
+  function rangeLabel(mon){
+    var thu = new Date(mon); thu.setDate(thu.getDate()+3);
+    return (mon.getMonth()+1)+'.'+pad(mon.getDate())+'(월) ~ '+(thu.getMonth()+1)+'.'+pad(thu.getDate())+'(목)';
+  }
+  function probe(url){
+    return fetch(url, {method:'HEAD'}).then(function(r){ return r.ok; }).catch(function(){ return false; });
+  }
+  function findLatest(){
+    var mon = mondayOf(new Date());
+    var chain = Promise.resolve(null);
+    for (var w = 0; w < WEEKS_BACK; w++){
+      (function(m){
+        chain = chain.then(function(hit){
+          if (hit) return hit;
+          var key = ymd(m);
+          return Promise.all(TYPES.map(function(t){
+            var url = PDF_DIR + t.key + '_' + key + '.pdf';
+            return probe(url).then(function(ok){ return ok ? {type:t, url:url} : null; });
+          })).then(function(res){
+            var items = res.filter(Boolean);
+            return items.length ? { mon:m, items:items } : null;
+          });
+        });
+      })(new Date(mon));
+      mon.setDate(mon.getDate() - 7);
+    }
+    return chain;
+  }
+  function headerHTML(extra){
+    return '<span class="section-num">ATTACHMENT</span>'
+      + '<h2 class="section-title"><span class="st-icon">📎</span> 주간회의 첨부자료'
+      + '<span style="font-size:11px;font-weight:600;color:var(--ink-faint)"> · ' + extra + '</span></h2>';
+  }
+  function rowHTML(item){
+    var brd = 'var(--rule-strong,rgba(255,255,255,.12))', bg = 'var(--bg-soft,rgba(255,255,255,.03))';
+    return '<a href="' + item.url + '" target="_blank" rel="noopener" '
+      + 'style="display:flex;align-items:center;gap:13px;padding:13px 16px;border:1px solid '+brd+';border-radius:9px;text-decoration:none;background:'+bg+';transition:all .2s" '
+      + 'onmouseover="this.style.borderColor=\'var(--gold-bright)\';this.style.background=\'var(--bg-hover)\'" '
+      + 'onmouseout="this.style.borderColor=\''+brd+'\';this.style.background=\''+bg+'\'">'
+      + '<span style="font-size:22px;line-height:1">' + item.type.icon + '</span>'
+      + '<span style="flex:1;min-width:0">'
+        + '<span style="display:block;font-size:13.5px;font-weight:700;color:var(--ink)">' + item.type.label + '</span>'
+        + '<span style="display:block;font-size:11px;color:var(--ink-muted);margin-top:2px">' + item.type.desc + '</span>'
+      + '</span>'
+      + '<span style="font-size:11.5px;font-weight:700;color:var(--gold-bright);white-space:nowrap">PDF 열기 ↗</span>'
+      + '</a>';
+  }
+
+  buildWeeklyTab = function(){
+    _origBuildWeeklyTab();
+    var wrap = document.querySelector('#tab-weekly .content-wrap');
+    if (!wrap || document.getElementById('weeklyPdfAttach')) return;
+
+    var sec = document.createElement('section');
+    sec.className = 'section';
+    sec.id = 'weeklyPdfAttach';
+    sec.style.marginBottom = '24px';
+    sec.innerHTML = headerHTML('원본 PDF')
+      + '<div style="font-size:12px;color:var(--ink-muted)">첨부 PDF 확인 중…</div>';
+
+    // KPI 헤더(첫 .section) 바로 아래에 배치
+    var firstSec = wrap.querySelector('.section');
+    if (firstSec && firstSec.nextSibling) wrap.insertBefore(sec, firstSec.nextSibling);
+    else if (firstSec) wrap.appendChild(sec);
+    else wrap.insertBefore(sec, wrap.firstChild);
+
+    findLatest().then(function(week){
+      if (!week){
+        sec.innerHTML = headerHTML('원본 PDF')
+          + '<div style="font-size:12px;color:var(--ink-muted);line-height:1.8">'
+          + '첨부된 PDF가 없습니다. <code>docs/data/weekly_pdf/</code>에 '
+          + '<code>시장동향_YYYY-MM-DD.pdf</code> · <code>실적마감_YYYY-MM-DD.pdf</code>'
+          + ' (해당 주 <strong>월요일</strong> 날짜)를 추가하세요.</div>';
+        return;
+      }
+      sec.innerHTML = headerHTML(rangeLabel(week.mon) + ' · 원본 PDF')
+        + '<div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">'
+        + week.items.map(rowHTML).join('') + '</div>';
+    });
+  };
+  window.buildWeeklyTab = buildWeeklyTab;
+})();
 
 function switchPeriod(type) {
   if (type === 'weekly') { buildWeeklyTab(); return; }
