@@ -43,9 +43,13 @@ REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "data" / "sosaup_ratio.json"
 RM_FCST = REPO / "data" / "rm_fcst.json"
 
-# 소스 엑셀 기본 경로 — 전년도(고정) 비율 원천. 레포에 영구 저장(data/sources/, gitignore).
-# 전년도 기준이므로 재추출은 전년 데이터 정정 시에만 필요. 새 파일은 CLI 인자로 교체.
-SRC_DEFAULT = str(REPO / "data" / "sources" / "소사업_전년비율_소스_2025.xlsx")
+# 소스 엑셀 기본 경로(호스트 업로드). 새 파일은 CLI 인자로 교체.
+SRC_DEFAULT = (
+    "/Users/chanminpark/Library/Application Support/Claude/local-agent-mode-sessions/"
+    "852d5fe0-a528-4111-974c-0863d79e6a91/e344eb12-9182-4d99-8439-b85d8e581c42/agent/"
+    "local_ditto_e344eb12-9182-4d99-8439-b85d8e581c42/uploads/"
+    "d08238c0-_______________5______________________260602_12.xlsx"
+)
 
 SEGS = ["OTA", "G-OTA", "Inbound"]
 CHAN = {"인바운드": "Inbound", "국내OTA": "OTA", "해외OTA": "G-OTA"}
@@ -237,18 +241,19 @@ def main():
     rev_idx = _block_index(rev_ws)
     rn_idx = _block_index(rn_ws)
 
-    # 전년 비율은 전년도(고정) 기준이므로 **연중 12개월 전체**를 산출한다.
-    # → 마감월(온북)·미마감월(FCST) 어느 달이든 소사업 누적 계산이 가능.
+    # 예측 대상월 = rm_fcst 가 커버하는 월 전체(당월·익월·익익월). 전년 = -1년 동월.
     rm = json.loads(RM_FCST.read_text(encoding="utf-8"))
-    # 대상 연도 = rm_fcst 커버 월의 연도(예: 2026). 없으면 현재 연도.
-    base_year = None
+    covered = []
     for arr in rm.get("_months_covered", []):
-        s = f"{int(arr[0])}-{int(arr[1]):02d}" if isinstance(arr, (list, tuple)) else str(arr)
-        base_year = int(s.split("-")[0])
-        break
-    if base_year is None:
-        base_year = datetime.now().year
-    covered = [f"{base_year}-{m:02d}" for m in range(1, 13)]
+        # _months_covered 형식이 [[y,m],...] 또는 ["YYYY-MM",...] 일 수 있어 정규화
+        if isinstance(arr, (list, tuple)) and len(arr) == 2:
+            covered.append(f"{int(arr[0])}-{int(arr[1]):02d}")
+        elif isinstance(arr, str):
+            covered.append(arr)
+    if not covered:
+        # 폴백: properties 의 첫 사업장 키들
+        any_prop = next(iter(rm["properties"].values()))
+        covered = sorted(any_prop.keys())
 
     by_month = {}
     for fym in covered:
