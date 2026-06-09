@@ -213,6 +213,8 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <button id="ppt-btn" class="confirm-btn secondary" onclick="exportPPT()" title="현재 표시된 표를 .pptx로 다운로드" style="margin-left:0;">PPT 다운로드</button>
       <button id="excel-btn" class="confirm-btn secondary" onclick="exportExcel()" title="요약/당월/익월/누계 테이블을 .xlsx로 다운로드" style="margin-left:0;">엑셀 다운로드</button>
       <a id="rm-fcst-btn" class="confirm-btn secondary" href="data/RM_FCST_정리.xlsx" download="RM_FCST_정리.xlsx" title="RM FCST 정리 엑셀(사업장별 총괄/세그먼트별 상세) 다운로드" style="margin-left:0;text-decoration:none;">RM FCST 정리 <span id="rm-fcst-month-label"></span></a>
+      <a id="sosaup-btn" class="confirm-btn secondary" href="data/소사업_예상매출.xlsx" download="소사업_예상매출.xlsx" title="소사업(객실 외, GS) 예상 매출 — RM FCST 객실수 × 전년 실당소사업 비율(VAT제외)" style="margin-left:0;text-decoration:none;">소사업 예상 매출 <span id="sosaup-month-label"></span></a>
+      <a id="sales-fcst-ppt-btn" class="confirm-btn secondary" href="data/세일즈마케팅_예상매출현황.pptx" download="세일즈마케팅_예상매출현황.pptx" title="세일즈마케팅 예상매출현황 (GS Forecast = 객실+소사업 총매출, 당월·누계)" style="margin-left:0;text-decoration:none;">예상매출현황 PPT <span id="sales-fcst-ppt-month-label"></span></a>
     </div>
 
     <!-- Snapshot Banner -->
@@ -455,6 +457,17 @@ async function init() {
         const _fname = `RM_FCST_정리_${_curYr}_${String(_curMon).padStart(2,'0')}.xlsx`;
         _a.setAttribute('download', _fname);
       }
+      // 소사업 예상 매출 링크: 동일하게 당월 라벨/파일명 동적 표기.
+      // 엑셀(data/소사업_예상매출.xlsx)도 당월 rm_fcst 기준으로 생성됨(scripts/build_rm_fcst_excel.py).
+      const _sl = document.getElementById('sosaup-month-label');
+      if (_sl) _sl.textContent = `(${_curMon}월)`;
+      const _sa = document.getElementById('sosaup-btn');
+      if (_sa) _sa.setAttribute('download', `소사업_예상매출_${_curYr}_${String(_curMon).padStart(2,'0')}.xlsx`);
+      // 세일즈마케팅 예상매출현황 PPT (GS Forecast=객실+소사업 총매출)
+      const _pl = document.getElementById('sales-fcst-ppt-month-label');
+      if (_pl) _pl.textContent = `(${_curMon}월)`;
+      const _pa = document.getElementById('sales-fcst-ppt-btn');
+      if (_pa) _pa.setAttribute('download', `세일즈마케팅_예상매출현황_${_curYr}_${String(_curMon).padStart(2,'0')}.pptx`);
     })();
     buildWeekSlicer();
     renderAll('all');
