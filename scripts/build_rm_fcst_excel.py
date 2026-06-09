@@ -66,7 +66,7 @@ def _style_header(ws, row, ncol):
         cell.border = BORDER
 
 
-def build_sosaup_workbook(props, target, sos, sos_meta, d):
+def build_sosaup_workbook(props, target, sos, sos_meta, d, series):
     """소사업 예상매출 독립 엑셀 생성 (data/ + docs/data 동기화).
 
     소사업 매출(백만, VAT제외) = FCST 객실수 × 비율(천원/실) / 1000.
@@ -133,7 +133,33 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d):
                 ws2.cell(row=r, column=i, value=v)
             r += 1
 
-    # ── 시트3: 메타정보 ──
+    # ── 시트3: 월별 누적 (마감월=온북 / 당월=RM FCST) ──
+    ws4 = wb.create_sheet("월별 누적")
+    ws4["A1"] = f"소사업 월별 누적 - {target} (마감월=온북 실적, 당월=RM FCST / 백만, VAT제외)"
+    ws4["A1"].font = TITLE_FONT
+    hdr4 = ["월", "객실수 기준", "OTA", "G-OTA", "Inbound", "소사업(백만)", "누계(백만)"]
+    for i, h in enumerate(hdr4, 1):
+        ws4.cell(row=2, column=i, value=h)
+    _style_header(ws4, 2, len(hdr4))
+    r = 3
+    run = 0.0
+    for it in series:
+        run += it["total"]
+        vals = [f"{it['month']}월", "온북" if it["closed"] else "RM FCST",
+                round(it["seg"]["OTA"], 1), round(it["seg"]["G-OTA"], 1),
+                round(it["seg"]["Inbound"], 1), round(it["total"], 1), round(run, 1)]
+        for i, v in enumerate(vals, 1):
+            ws4.cell(row=r, column=i, value=v)
+        r += 1
+    cumv = ["누계", "",
+            round(sum(it["seg"]["OTA"] for it in series), 1),
+            round(sum(it["seg"]["G-OTA"] for it in series), 1),
+            round(sum(it["seg"]["Inbound"] for it in series), 1),
+            round(sum(it["total"] for it in series), 1), round(run, 1)]
+    for i, v in enumerate(cumv, 1):
+        ws4.cell(row=r, column=i, value=v).font = BOLD
+
+    # ── 시트4: 메타정보 ──
     ws3 = wb.create_sheet("메타정보")
     meta = [
         ("대상월", target),
@@ -166,6 +192,16 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d):
     ws2.column_dimensions["A"].width = 16
     ws2.column_dimensions["D"].width = 18
     ws2.column_dimensions["E"].width = 15
+    for col in range(3, 8):
+        for rc in ws4.iter_rows(min_row=3, min_col=col, max_col=col):
+            for cell in rc:
+                if isinstance(cell.value, (int, float)):
+                    cell.alignment = RIGHT
+                    cell.number_format = "#,##0.0"
+    ws4.column_dimensions["A"].width = 7
+    ws4.column_dimensions["B"].width = 11
+    ws4.column_dimensions["F"].width = 13
+    ws4.column_dimensions["G"].width = 13
     ws3.column_dimensions["A"].width = 14
     ws3.column_dimensions["B"].width = 60
 
@@ -174,13 +210,55 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d):
     return round(sum(grand.values()), 1)
 
 
-def build_sales_pptx(props, target, sos):
+OTB_JSON = REPO / "docs" / "data" / "otb_data.json"
+
+
+def compute_monthly_sosaup(target, sos_all, props):
+    """월별 소사업 누적 — 마감월=온북(rns_actual), 당월(미마감)=RM FCST.
+
+    소사업_seg(월) = Σ사업장 객실수 × 전년비율(해당 월) / 1000  [백만, VAT제외]
+    반환: (series, cum, cur)
+      series = [{"month": m, "closed": bool, "seg": {OTA,G-OTA,Inbound}, "total": v}, ...]
+      cum    = {seg: 누계백만},  cur = {seg: 당월백만}
+    otb_data.json 없으면 당월(FCST)만 계산해 반환.
+    """
+    year, cur_m = int(target.split("-")[0]), int(target.split("-")[1])
+    try:
+        otb = json.loads(OTB_JSON.read_text(encoding="utf-8")).get("allMonths", {})
+    except Exception:
+        otb = {}
+    series, cum, cur = [], {s: 0.0 for s in SEGS}, {s: 0.0 for s in SEGS}
+    for m in range(1, cur_m + 1):
+        ym = f"{year}-{m:02d}"
+        ratios = sos_all.get(ym, {}).get("ratios", {})
+        closed = m < cur_m
+        bps = otb.get(str(m), {}).get("byPropertySegment", {})
+        seg_tot = {s: 0.0 for s in SEGS}
+        for seg in SEGS:
+            for row in bps.get(seg, []):
+                prop = row.get("name")
+                if prop not in props:
+                    continue
+                rn = (row.get("rns_actual") or 0) if closed else (row.get("rm_fcst_rn") or 0)
+                seg_tot[seg] += rn * ratios.get(prop, {}).get(seg, 0) / 1000.0
+        series.append({"month": m, "closed": closed, "seg": seg_tot,
+                       "total": sum(seg_tot.values())})
+        for s in SEGS:
+            cum[s] += seg_tot[s]
+        if m == cur_m:
+            cur = dict(seg_tot)
+    return series, cum, cur
+
+
+def build_sales_pptx(target, cur_seg, cum_seg):
     """세일즈마케팅 예상매출현황 PPT 재생성.
 
-    템플릿(객실-only)에서 시작 → GS Forecast = 객실 + 소사업(총매출)으로 당월·누계 갱신,
-    증감/달성률/증감률을 템플릿의 목표·전년(이미 총매출 기준) 대비 재계산.
+    템플릿(객실-only)에서 시작 → GS Forecast = 객실 + 소사업(총매출):
+      당월 = 객실 + 당월 소사업(미마감=FCST 객실수 기준),
+      누계 = 객실 + 누계 소사업(마감월=온북 / 당월=FCST, Σ월별).
+    증감/달성률/증감률은 템플릿의 목표·전년(이미 총매출 기준) 대비 재계산.
     매번 템플릿에서 시작하므로 이중가산 없음. python-pptx 미설치 시 건너뜀.
-    반환: GS 소사업 합계(백만) 또는 None(건너뜀).
+    반환: (당월 GS 소사업, 누계 GS 소사업) 백만 또는 None.
     """
     if not TEMPLATE_PPT.exists():
         return None
@@ -191,16 +269,13 @@ def build_sales_pptx(props, target, sos):
         print("⚠ python-pptx 미설치 — 예상매출현황 PPT 건너뜀 (xlsx만 생성)")
         return None
 
-    # 세그먼트별 GS 소사업(백만) = Σ 사업장 (FCST 객실수 × 비율 / 1000), 정수 반올림
-    seg_sos = {}
-    for seg in SEGS:
-        tot = sum((props[p].get(target, {}).get("segments", {}).get(seg, {}).get("rm_fcst_rn", 0) or 0)
-                  * sos.get(p, {}).get(seg, 0) for p in props if p in sos)
-        seg_sos[seg] = round(tot / 1000)
-    gs_sos = sum(seg_sos.values())
-    # 표 행/컬럼 매핑 (GS=7, OTA=8, GOTA=9, Inbound=10)
-    add = {7: gs_sos, 8: seg_sos["OTA"], 9: seg_sos["G-OTA"], 10: seg_sos["Inbound"]}
-    # (목표, FC, 증감, 달성, 전년, 전년증감, 증감률) — 당월 / 누계
+    cur = {s: round(cur_seg.get(s, 0)) for s in SEGS}
+    cum = {s: round(cum_seg.get(s, 0)) for s in SEGS}
+    cur_gs, cum_gs = sum(cur.values()), sum(cum.values())
+    # 행(GS=7, OTA=8, GOTA=9, Inbound=10) → (당월 가산, 누계 가산)
+    add = {7: (cur_gs, cum_gs), 8: (cur["OTA"], cum["OTA"]),
+           9: (cur["G-OTA"], cum["G-OTA"]), 10: (cur["Inbound"], cum["Inbound"])}
+    # (목표, FC, 증감, 달성, 전년, 전년증감, 증감률) — [당월, 누계]
     BLK = [(2, 4, 6, 7, 8, 10, 11), (13, 15, 17, 18, 19, 21, 22)]
 
     prs = Presentation(str(TEMPLATE_PPT))
@@ -216,19 +291,19 @@ def build_sales_pptx(props, target, sos):
     def put(ri, ci, val, pct=False):
         par = tbl.cell(ri, ci).text_frame.paragraphs[0]
         if not par.runs:
-            continue_run = par.add_run()
+            par.add_run()
         run = par.runs[0]
         run.text = f"{val:,.0f}%" if pct else f"{val:,.0f}"
         run.font.color.rgb = RGBColor(0xFF, 0, 0) if val < 0 else RGBColor(0, 0, 0)
         for extra in par.runs[1:]:
             extra._r.getparent().remove(extra._r)
 
-    for ri, a in add.items():
-        for c_tgt, c_fc, c_diff, c_ach, c_ly, c_lyd, c_lyr in BLK:
+    for ri, adds in add.items():
+        for bi, (c_tgt, c_fc, c_diff, c_ach, c_ly, c_lyd, c_lyr) in enumerate(BLK):
             fc0 = num(ri, c_fc)
             if fc0 is None:
                 continue
-            fc = fc0 + a
+            fc = fc0 + adds[bi]
             put(ri, c_fc, fc)
             tgt = num(ri, c_tgt)
             ly = num(ri, c_ly)
@@ -241,7 +316,7 @@ def build_sales_pptx(props, target, sos):
 
     prs.save(str(OUT_PPT))
     prs.save(str(DOCS_OUT_PPT))
-    return gs_sos
+    return cur_gs, cum_gs
 
 
 def main():
@@ -257,10 +332,11 @@ def main():
     # 비율(천원/실, VAT제외)은 scripts/build_sosaup_ratio.py 가 소사업 엑셀에서 추출.
     # 소사업 매출(백만) = FCST RN × 비율 / 1000.
     sos_path = REPO / "data" / "sosaup_ratio.json"
-    sos, sos_meta = {}, {}
+    sos, sos_meta, sos_all = {}, {}, {}
     if sos_path.exists():
         sj = json.loads(sos_path.read_text(encoding="utf-8"))
-        blk = sj.get("by_month", {}).get(target, {})
+        sos_all = sj.get("by_month", {})
+        blk = sos_all.get(target, {})
         sos = blk.get("ratios", {})
         sos_meta = {"ref": blk.get("ref_year_month", ""),
                     "fallback": blk.get("fallback_month", ""),
@@ -417,14 +493,17 @@ def main():
 
     # 소사업 예상매출 독립 파일 (비율 데이터가 있을 때만)
     if has_sos:
-        total = build_sosaup_workbook(props, target, sos, sos_meta, d)
-        print(f"✓ 소사업_예상매출.xlsx 생성 (대상월={target}, 합계={total:,.1f}백만 VAT제외)")
+        # 월별 누적: 마감월=온북(otb rns_actual) / 당월=RM FCST × 전년비율
+        series, cum_seg, cur_seg = compute_monthly_sosaup(target, sos_all, props)
+        total = build_sosaup_workbook(props, target, sos, sos_meta, d, series)
+        print(f"✓ 소사업_예상매출.xlsx 생성 (대상월={target}, 당월={total:,.1f} / 누계={sum(cum_seg.values()):,.0f}백만 VAT제외)")
         print(f"  → {OUT_SOS}")
         print(f"  → {DOCS_OUT_SOS}")
-        # 세일즈마케팅 예상매출현황 PPT (템플릿 + 소사업 가산 = 총매출)
-        gs_sos = build_sales_pptx(props, target, sos)
-        if gs_sos is not None:
-            print(f"✓ 세일즈마케팅_예상매출현황.pptx 생성 (GS 소사업 +{gs_sos:,}백만 → 총매출)")
+        # 세일즈마케팅 예상매출현황 PPT (템플릿 + 소사업: 당월=FCST, 누계=온북+FCST)
+        res = build_sales_pptx(target, cur_seg, cum_seg)
+        if res is not None:
+            cur_gs, cum_gs = res
+            print(f"✓ 세일즈마케팅_예상매출현황.pptx 생성 (GS 소사업 당월+{cur_gs:,} / 누계+{cum_gs:,}백만 → 총매출)")
             print(f"  → {OUT_PPT}")
             print(f"  → {DOCS_OUT_PPT}")
 
