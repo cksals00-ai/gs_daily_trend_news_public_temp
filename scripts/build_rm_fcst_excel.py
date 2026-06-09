@@ -314,6 +314,21 @@ def build_sales_pptx(target, cur_seg, cum_seg):
                 put(ri, c_lyd, fc - ly)
                 put(ri, c_lyr, round((fc - ly) / ly * 100) if ly else 0, pct=True)
 
+    # 기간 라벨을 대상월로 동적 변경 (템플릿은 고정, 월만 교체).
+    import calendar
+    yy, mm = int(target.split("-")[0]), int(target.split("-")[1])
+    last = calendar.monthrange(yy, mm)[1]
+
+    def set_label(ri, ci, text):
+        par = tbl.cell(ri, ci).text_frame.paragraphs[0]
+        if par.runs:
+            par.runs[0].text = text
+            for ex in par.runs[1:]:
+                ex._r.getparent().remove(ex._r)
+
+    set_label(0, 2, f"당월 예상실적 ({mm:02d}.01~{mm:02d}.{last:02d})")
+    set_label(0, 13, f"누계 실적 (01.01~{mm:02d}.{last:02d})")
+
     prs.save(str(OUT_PPT))
     prs.save(str(DOCS_OUT_PPT))
     return cur_gs, cum_gs
