@@ -442,16 +442,17 @@ async function init() {
     }
     document.getElementById('sidebar-refresh').textContent = OTB_DATA.meta?.refreshTime || '—';
     document.getElementById('base-date-display').textContent = OTB_DATA.meta?.baseDate || '—';
-    // RM FCST 정리 링크: 다음달(curMonth+1) 라벨 동적 표기 (예: 5월에 보면 (6월))
+    // RM FCST 정리 링크: 당월 라벨 동적 표기 (예: 6월에 보면 (6월)).
+    // 엑셀(data/RM_FCST_정리.xlsx)도 당월 rm_fcst 기준으로 생성됨(scripts/build_rm_fcst_excel.py).
     (function setRmFcstMonthLabel() {
       const _n = new Date();
-      const _nextMon = (_n.getMonth() + 1) % 12 + 1;
-      const _nextYr  = _n.getMonth() + 1 === 12 ? _n.getFullYear() + 1 : _n.getFullYear();
+      const _curMon = _n.getMonth() + 1;
+      const _curYr  = _n.getFullYear();
       const _lbl = document.getElementById('rm-fcst-month-label');
-      if (_lbl) _lbl.textContent = `(${_nextMon}월)`;
+      if (_lbl) _lbl.textContent = `(${_curMon}월)`;
       const _a = document.getElementById('rm-fcst-btn');
       if (_a) {
-        const _fname = `RM_FCST_정리_${_nextYr}_${String(_nextMon).padStart(2,'0')}.xlsx`;
+        const _fname = `RM_FCST_정리_${_curYr}_${String(_curMon).padStart(2,'0')}.xlsx`;
         _a.setAttribute('download', _fname);
       }
     })();
