@@ -239,6 +239,49 @@ def detect_file_type(filename):
     return None
 
 
+def _prev_month(ym):
+    """'YYYYMM' → 직전월 'YYYYMM'. 빈 값이면 None."""
+    if not ym or len(ym) < 6:
+        return None
+    y, m = int(ym[:4]), int(ym[4:6])
+    m -= 1
+    if m == 0:
+        y, m = y - 1, 12
+    return f"{y}{m:02d}"
+
+
+def _snapshot_min_stay_month(snapshots, file_type, min_rows=500):
+    """스냅샷 파일들이 실제 보유한 최소 stay_month(판매일자[:6]) 반환.
+    live 스냅샷은 마감된 과거월을 더 이상 보유하지 않으므로, 재전송 파일이
+    '스냅샷 최소월의 직전월'까지 커버해야 누락(예: 4월)이 생기지 않는다.
+    소수 잡음월을 무시하려 min_rows 이상인 월만 후보로 본다."""
+    encodings = ['cp949', 'euc-kr', 'utf-8']
+    counts = defaultdict(int)
+    for fp in snapshots:
+        for enc in encodings:
+            try:
+                with open(fp, 'r', encoding=enc) as f:
+                    header = f.readline().split(';')
+                    col_map = {h.strip(): i for i, h in enumerate(header)}
+                    idx = col_map.get('판매일자', col_map.get('입실일자', -1))
+                    if idx < 0:
+                        break
+                    for line in f:
+                        parts = line.split(';')
+                        if idx >= len(parts):
+                            continue
+                        d = parts[idx].strip()
+                        if len(d) >= 6 and d[:6].isdigit() and d[:6] >= '202601':
+                            counts[d[:6]] += 1
+                break  # 인코딩 성공 → 다음 파일로
+            except (UnicodeDecodeError, LookupError):
+                continue
+    valid = [ym for ym, c in counts.items() if c >= min_rows]
+    if valid:
+        return min(valid)
+    return min(counts) if counts else None
+
+
 def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None,
                          cancel_daily_agg=None, pickup_daily_agg=None,
                          lead_time_agg=None, cancel_lead_agg=None,
@@ -1417,12 +1460,16 @@ def main():
 
         if retrans and snapshots:
             # 재전송 + 최신 스냅샷이 공존: 월별 분리 (예약/취소 모두 동일 규칙)
+            # 경계 = 스냅샷이 실제 보유한 최소 stay_month (마감된 과거월은 live 스냅샷에서 빠지므로
+            # 재전송이 그 직전월까지 커버해야 누락 없음). 정적 하드코딩 시 매월 stale → 4월 누락 버그 재발.
+            snap_min = _snapshot_min_stay_month(snapshots, ft)
+            retrans_max = _prev_month(snap_min) if snap_min else None
             for fp in retrans:
-                file_month_filter[fp] = (None, '202603')
-                logger.info(f"  재전송: ≤202603 한정 파싱: {fp.name}")
+                file_month_filter[fp] = (None, retrans_max)
+                logger.info(f"  재전송: ≤{retrans_max} 한정 파싱: {fp.name}")
             for fp in snapshots:
-                file_month_filter[fp] = ('202604', None)
-                logger.info(f"  누적스냅샷: ≥202604 한정 파싱: {fp.name}")
+                file_month_filter[fp] = (snap_min, None)
+                logger.info(f"  누적스냅샷: ≥{snap_min} 한정 파싱: {fp.name}")
 
     # 체크포인트 복원
     checkpoint = None
