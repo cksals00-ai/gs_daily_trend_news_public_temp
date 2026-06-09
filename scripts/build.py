@@ -3107,6 +3107,24 @@ def main():
         except Exception as e:
             logger.warning(f"✗ rm_fcst.json 동기화 실패: {e}")
 
+    # ── RM FCST 정리/소사업 예상매출 재생성 ──
+    # rm_fcst.json(Revenue Meeting) 갱신 시 RM_FCST_정리.xlsx · 소사업_예상매출.xlsx ·
+    # 세일즈마케팅_예상매출현황.pptx 를 자동 재계산(소사업 = FCST 객실수 × 전년 실당소사업 비율).
+    # scripts/build_sosaup_ratio.py 가 만든 data/sosaup_ratio.json 비율을 사용.
+    rmx_script = Path(__file__).resolve().parent / "build_rm_fcst_excel.py"
+    if rmx_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(rmx_script)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ build_rm_fcst_excel 완료 (RM FCST 정리·소사업 재생성)")
+            else:
+                logger.warning(f"✗ build_rm_fcst_excel 실패: {result.stderr.strip()[:300]}")
+        except Exception as e:
+            logger.warning(f"✗ build_rm_fcst_excel 실행 오류: {e}")
+
     # ── 해외사업장 데이터 파싱 (overseas_data.json) ──
     overseas_script = Path(__file__).resolve().parent / "parse_overseas.py"
     if overseas_script.exists():

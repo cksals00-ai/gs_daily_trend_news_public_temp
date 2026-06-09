@@ -30,6 +30,10 @@ OUT = REPO / "data" / "RM_FCST_정리.xlsx"
 DOCS_OUT = REPO / "docs" / "data" / "RM_FCST_정리.xlsx"
 OUT_SOS = REPO / "data" / "소사업_예상매출.xlsx"
 DOCS_OUT_SOS = REPO / "docs" / "data" / "소사업_예상매출.xlsx"
+# 세일즈마케팅 예상매출현황 PPT: 템플릿(객실-only, 마케팅팀 제공)에서 시작 → 소사업 가산.
+TEMPLATE_PPT = REPO / "data" / "templates" / "세일즈마케팅_예상매출현황_template.pptx"
+OUT_PPT = REPO / "data" / "세일즈마케팅_예상매출현황.pptx"
+DOCS_OUT_PPT = REPO / "docs" / "data" / "세일즈마케팅_예상매출현황.pptx"
 
 SEGS = ["OTA", "G-OTA", "Inbound"]
 REGION_LABELS = {
@@ -168,6 +172,76 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d):
     wb.save(OUT_SOS)
     wb.save(DOCS_OUT_SOS)
     return round(sum(grand.values()), 1)
+
+
+def build_sales_pptx(props, target, sos):
+    """세일즈마케팅 예상매출현황 PPT 재생성.
+
+    템플릿(객실-only)에서 시작 → GS Forecast = 객실 + 소사업(총매출)으로 당월·누계 갱신,
+    증감/달성률/증감률을 템플릿의 목표·전년(이미 총매출 기준) 대비 재계산.
+    매번 템플릿에서 시작하므로 이중가산 없음. python-pptx 미설치 시 건너뜀.
+    반환: GS 소사업 합계(백만) 또는 None(건너뜀).
+    """
+    if not TEMPLATE_PPT.exists():
+        return None
+    try:
+        from pptx import Presentation
+        from pptx.dml.color import RGBColor
+    except ImportError:
+        print("⚠ python-pptx 미설치 — 예상매출현황 PPT 건너뜀 (xlsx만 생성)")
+        return None
+
+    # 세그먼트별 GS 소사업(백만) = Σ 사업장 (FCST 객실수 × 비율 / 1000), 정수 반올림
+    seg_sos = {}
+    for seg in SEGS:
+        tot = sum((props[p].get(target, {}).get("segments", {}).get(seg, {}).get("rm_fcst_rn", 0) or 0)
+                  * sos.get(p, {}).get(seg, 0) for p in props if p in sos)
+        seg_sos[seg] = round(tot / 1000)
+    gs_sos = sum(seg_sos.values())
+    # 표 행/컬럼 매핑 (GS=7, OTA=8, GOTA=9, Inbound=10)
+    add = {7: gs_sos, 8: seg_sos["OTA"], 9: seg_sos["G-OTA"], 10: seg_sos["Inbound"]}
+    # (목표, FC, 증감, 달성, 전년, 전년증감, 증감률) — 당월 / 누계
+    BLK = [(2, 4, 6, 7, 8, 10, 11), (13, 15, 17, 18, 19, 21, 22)]
+
+    prs = Presentation(str(TEMPLATE_PPT))
+    tbl = [sh for sh in prs.slides[0].shapes if sh.has_table][0].table
+
+    def num(ri, ci):
+        t = tbl.cell(ri, ci).text.replace(",", "").replace("%", "").strip()
+        try:
+            return float(t)
+        except ValueError:
+            return None
+
+    def put(ri, ci, val, pct=False):
+        par = tbl.cell(ri, ci).text_frame.paragraphs[0]
+        if not par.runs:
+            continue_run = par.add_run()
+        run = par.runs[0]
+        run.text = f"{val:,.0f}%" if pct else f"{val:,.0f}"
+        run.font.color.rgb = RGBColor(0xFF, 0, 0) if val < 0 else RGBColor(0, 0, 0)
+        for extra in par.runs[1:]:
+            extra._r.getparent().remove(extra._r)
+
+    for ri, a in add.items():
+        for c_tgt, c_fc, c_diff, c_ach, c_ly, c_lyd, c_lyr in BLK:
+            fc0 = num(ri, c_fc)
+            if fc0 is None:
+                continue
+            fc = fc0 + a
+            put(ri, c_fc, fc)
+            tgt = num(ri, c_tgt)
+            ly = num(ri, c_ly)
+            if tgt is not None:
+                put(ri, c_diff, fc - tgt)
+                put(ri, c_ach, round(fc / tgt * 100) if tgt else 0, pct=True)
+            if ly is not None:
+                put(ri, c_lyd, fc - ly)
+                put(ri, c_lyr, round((fc - ly) / ly * 100) if ly else 0, pct=True)
+
+    prs.save(str(OUT_PPT))
+    prs.save(str(DOCS_OUT_PPT))
+    return gs_sos
 
 
 def main():
@@ -347,6 +421,12 @@ def main():
         print(f"✓ 소사업_예상매출.xlsx 생성 (대상월={target}, 합계={total:,.1f}백만 VAT제외)")
         print(f"  → {OUT_SOS}")
         print(f"  → {DOCS_OUT_SOS}")
+        # 세일즈마케팅 예상매출현황 PPT (템플릿 + 소사업 가산 = 총매출)
+        gs_sos = build_sales_pptx(props, target, sos)
+        if gs_sos is not None:
+            print(f"✓ 세일즈마케팅_예상매출현황.pptx 생성 (GS 소사업 +{gs_sos:,}백만 → 총매출)")
+            print(f"  → {OUT_PPT}")
+            print(f"  → {DOCS_OUT_PPT}")
 
 
 if __name__ == "__main__":
