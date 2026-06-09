@@ -1013,13 +1013,11 @@ window.exportPPT = function() {
         if (cellInfo.isTotalRow) { opts.bold = true; opts.fill = { color:'F5F5F5' }; }
         if (cellInfo.isSegRow) { opts.bold = true; opts.underline = true; }
         if (cellInfo.isSub) { opts.align = 'left'; opts.margin = [2,4,2,14]; }
+        // 색상은 화면 td 클래스(val-neg)를 그대로 따른다:
+        //  · 달성률 <100 → val-neg(빨강), >=100 → 검정
+        //  · 증감/증감률 → 음수만 val-neg(빨강), 양수는 검정
+        // (과거 휴리스틱 "부호없는 %<100 무조건 빨강"이 양수 증감률 39.8%·27.6% 등을 잘못 빨강 처리했음)
         if (cellInfo.isNeg) { opts.color = 'FF0000'; }
-        if (text && text.includes('%') && !cellInfo.isNeg) {
-          const pVal = parseFloat(text);
-          if (!isNaN(pVal) && pVal < 100 && !text.startsWith('+') && !text.startsWith('-')) {
-            opts.color = 'FF0000';
-          }
-        }
         if (text && /^-[\d,]/.test(text)) { opts.color = 'FF0000'; }
       }
       return cellOpt(text, opts);
@@ -1693,7 +1691,7 @@ function buildPerfRow(label, budget, otb, lastYear, isSubRow, isTotalRow, isSegR
     <td class="${budgetCellCls}" ${budgetTitle}>${fmtN(budget)}</td>
     <td>${fmtN(otb)}</td>
     <td class="${colorClass(diff_bud)}">${diffSign(diff_bud)}</td>
-    <td class="${ach >= 100 ? 'val-pos' : ach >= 80 ? 'val-warn' : 'val-neg'}">${fmtP(ach)}</td>
+    <td class="${ach >= 100 ? 'val-pos' : 'val-neg'}">${fmtP(ach)}</td>
     <td>${fmtN(lastYear)}</td>
     <td class="${colorClass(diff_ly)}">${diffSign(diff_ly)}</td>
     <td class="${colorClass(yoy)}">${fmtP(yoy)}</td>
@@ -1768,7 +1766,7 @@ function buildSummaryTable(weekKey) {
       <td>${fmtN(budget)}</td>
       <td>${fmtN(actual)}</td>
       <td class="${colorClass(diff_bud)}">${diffSign(diff_bud)}</td>
-      <td class="${ach >= 100 ? 'val-pos' : ach >= 80 ? 'val-warn' : 'val-neg'}">${fmtP(ach)}</td>
+      <td class="${ach >= 100 ? 'val-pos' : 'val-neg'}">${fmtP(ach)}</td>
       <td>${fmtN(lastYear)}</td>
       <td class="${colorClass(diff_ly)}">${diffSign(diff_ly)}</td>
       <td class="${colorClass(yoy)}">${fmtP(yoy)}</td>`;
