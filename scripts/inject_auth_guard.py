@@ -36,6 +36,7 @@ PAGE_ROLES: dict[str, str] = {
     "sales-guide.html":                 "sales",
     "gs-request.html":                  "sales",
     "gs-proposal.html":                 "sales",
+    "rate-converter.html":              "sales",
     "inbound-nationality-keyin-sales.html": "sales",
     "channel-mapping.html":             "sales",
 
