@@ -628,11 +628,27 @@ function parseMonths(q) {
     if (f.length) return { result: f, label: y + "년 하반기" };
   }
 
-  // "YYYY년 M~M월"
-  const rng = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월?\s*[~\-부터]\s*(\d{1,2})\s*월/);
+  // 범위 확장 헬퍼: (y1,m1)~(y2,m2) 사이 모든 월을 inclusive로 펼침 (연도 경계 포함)
+  const expandMonths = (y1,m1,y2,m2) => {
+    let a=y1*12+(m1-1), b=y2*12+(m2-1); if(a>b)[a,b]=[b,a];
+    const r=[];
+    for(let t=a;t<=b;t++){ const k=String(Math.floor(t/12))+String(t%12+1).padStart(2,"0"); if(all.includes(k))r.push(k); }
+    return r;
+  };
+
+  // "YYYY년 M월 ~ YYYY년 M월" (연도 교차 범위)
+  const rngX = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월?\s*(?:부터|에서|~|–|—|-)\s*(\d{4})\s*년\s*(\d{1,2})\s*월/);
+  if (rngX) {
+    const [,y1,m1,y2,m2] = rngX;
+    const r = expandMonths(+y1,+m1,+y2,+m2);
+    if (r.length) return { result: r, label: `${y1}년 ${m1}월~${y2}년 ${m2}월` };
+  }
+
+  // "YYYY년 M~M월" / "YYYY년 M월부터 M월까지" (동일 연도 범위)
+  const rng = q.match(/(\d{4})\s*년\s*(\d{1,2})\s*월?\s*(?:부터|에서|~|–|—|-)\s*(\d{1,2})\s*월/);
   if (rng) {
-    const [,y,m1,m2] = rng; const r = [];
-    for (let m=parseInt(m1);m<=parseInt(m2);m++) { const k=y+String(m).padStart(2,"0"); if(all.includes(k))r.push(k); }
+    const [,y,m1,m2] = rng;
+    const r = expandMonths(+y,+m1,+y,+m2);
     if (r.length) return { result: r, label: `${y}년 ${m1}~${m2}월` };
   }
 
