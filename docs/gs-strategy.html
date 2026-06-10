@@ -127,6 +127,13 @@ table.dt .num{font-variant-numeric:tabular-nums}
 table.dt .pos{color:var(--positive);font-weight:700}
 table.dt .neg{color:var(--negative);font-weight:700}
 table.dt .gold{color:var(--gold-bright);font-weight:700}
+table.dt .prog{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+table.dt .prog .bar{display:inline-block;width:46px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden;flex:none}
+table.dt .prog .bar i{display:block;height:100%;background:var(--gold);border-radius:3px}
+table.dt .prog .bar i.over{background:var(--positive)}
+table.dt .ltbar{display:flex;height:13px;width:200px;border-radius:3px;overflow:hidden;margin-left:auto}
+table.dt .ltbar span{display:block;height:100%}
+.metric-slicer{display:flex;gap:6px}
 
 /* === BADGES === */
 .bdg{display:inline-block;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.05em}
@@ -356,13 +363,17 @@ table.dt .gold{color:var(--gold-bright);font-weight:700}
       <div class="card">
         <div class="card-h">
           <div class="h-title">사업장별 실적</div>
-          <div class="h-meta">선택 월 기준 · 달성률 내림차순</div>
+          <div class="metric-slicer" id="metric-slicer">
+            <button class="chip active" data-metric="rns">객실수</button>
+            <button class="chip" data-metric="adr">ADR</button>
+            <button class="chip" data-metric="rev">매출</button>
+            <button class="chip" data-metric="lt">리드타임</button>
+          </div>
+          <div class="h-meta" id="prop-tbl-meta">선택 월 기준 · 실적 내림차순</div>
         </div>
         <div class="tbl-wrap">
           <table class="dt" id="tbl-property">
-            <thead><tr>
-              <th>사업장</th><th>Budget</th><th>Actual</th><th>달성률</th><th>FCST</th><th>FCST 달성</th><th>YoY%</th><th>ADR</th><th>REV(억)</th>
-            </tr></thead>
+            <thead></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -532,6 +543,7 @@ table.dt .gold{color:var(--gold-bright);font-weight:700}
   // ========== STATE ==========
   const state = {
     month: 0,        // 0 = 전체, 1~12 = 해당 월
+    metric: 'rns',   // rns | adr | rev | lt — 사업장별 실적표 지표 슬라이서
     propFilter: 'ALL',
     data: {
       otb: null,
@@ -548,6 +560,7 @@ table.dt .gold{color:var(--gold-bright);font-weight:700}
   const fmtNum = (n) => (n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR');
   const fmtPct = (n,p=1) => (n==null||isNaN(n))?'—':(n.toFixed(p)+'%');
   const fmtPp  = (n,p=1) => (n==null||isNaN(n))?'—':((n>=0?'+':'')+n.toFixed(p)+'pp');
+  const fmtSignPct = (n,p=1) => (n==null||isNaN(n))?'—':((n>=0?'+':'')+n.toFixed(p)+'%');
   const fmtMoney = (won) => {
     if(won==null||isNaN(won))return'—';
     const eok = won/1e8;
@@ -873,29 +886,74 @@ table.dt .gold{color:var(--gold-bright);font-weight:700}
     });
   }
 
+  // 지표별 필드 매핑 (객실수/ADR/매출 동일 구조)
+  const PROP_METRICS = {
+    rns: { label:'객실수', meta:'단위 실(R/N)', fmt:fmtNum,
+           budget:'rns_budget', actual:'rns_actual', ach:'rns_achievement',
+           last:'rns_last', full:'ly_full_rn', yoy:'rns_yoy',
+           fcst:'rns_fcst', fcstAch:'fcst_achievement' },
+    adr: { label:'ADR', meta:'단위 원', fmt:fmtNum,
+           budget:'adr_budget', actual:'adr_actual', ach:null, // 달성률 자동계산(실적/목표)
+           last:'adr_last', full:'ly_full_adr', yoy:'adr_yoy',
+           fcst:'adr_fcst', fcstAch:'adr_fcst_achievement' },
+    rev: { label:'매출', meta:'단위 억원', fmt:fmtMoney,
+           budget:'rev_budget', actual:'rev_actual', ach:'rev_achievement',
+           last:'rev_last', full:'ly_full_rev', yoy:'rev_yoy',
+           fcst:'rev_fcst', fcstAch:'rev_fcst_achievement' },
+  };
+
   function renderPropertyTable(){
     const props = currentPropList();
-    if(!props||props.length===0){ $('#tbl-property tbody').innerHTML=''; return;}
-    // 달성률 내림차순
-    const sorted = props.slice().sort((a,b)=>(b.rns_achievement||0)-(a.rns_achievement||0));
+    const slicer = $('#metric-slicer');
+    const thead = $('#tbl-property thead');
     const tb = $('#tbl-property tbody');
+    // 슬라이서 active 동기화 + 클릭 바인딩(덮어쓰기 무해)
+    if(slicer){
+      $$('.chip', slicer).forEach(c=>c.classList.toggle('active', c.dataset.metric===state.metric));
+      slicer.onclick = (e)=>{ const b=e.target.closest('.chip'); if(!b)return;
+        state.metric=b.dataset.metric; renderPropertyTable(); };
+    }
+    if(!props||props.length===0){ thead.innerHTML=''; tb.innerHTML=''; return; }
+
+    const M = PROP_METRICS[state.metric];
+    if(!M){
+      // 아직 미구현 지표(adr/rev/lt) — placeholder
+      const names={adr:'ADR',rev:'매출',lt:'리드타임'};
+      thead.innerHTML = '<tr><th>안내</th></tr>';
+      tb.innerHTML = `<tr><td class="muted">${names[state.metric]||state.metric} 지표는 다음 단계에서 적용 예정입니다.</td></tr>`;
+      const meta=$('#prop-tbl-meta'); if(meta) meta.textContent='준비 중';
+      return;
+    }
+
+    const meta=$('#prop-tbl-meta'); if(meta) meta.textContent=`${M.label} · ${M.meta} · 실적 내림차순`;
+    thead.innerHTML = `<tr>
+      <th>사업장</th><th>목표</th><th>실적</th><th>달성률</th>
+      <th>전년동기</th><th>YoY</th><th>전년마감</th><th>마감대비 진행률</th><th>예상</th><th>예상달성</th>
+    </tr>`;
+    const sorted = props.slice().sort((a,b)=>(b[M.actual]||0)-(a[M.actual]||0));
     tb.innerHTML = sorted.map(p=>{
-      const ach = p.rns_achievement||0;
-      const fa = p.fcst_achievement||0;
-      const yoy = p.rns_yoy;
+      const bud=p[M.budget], act=p[M.actual], last=p[M.last], full=p[M.full];
+      const ach = M.ach ? (p[M.ach]||0) : (bud>0 ? act/bud*100 : 0);
+      const yoy = p[M.yoy];
+      const fcst = p[M.fcst];
+      const fa = p[M.fcstAch]||0;
+      const prog = (full>0) ? act/full*100 : null;
       const achCls = ach>=100?'pos':(ach<70?'neg':'gold');
       const faCls = fa>=100?'pos':(fa<70?'neg':'gold');
-      const yoyCls = yoy>=0?'pos':'neg';
+      const yoyCls = (yoy==null)?'':(yoy>=0?'pos':'neg');
+      const progW = prog==null?0:Math.min(prog,100);
+      const progOver = (prog!=null && prog>100)?'over':'';
       return `<tr>
         <td>${p.name}</td>
-        <td>${fmtNum(p.rns_budget)}</td>
-        <td>${fmtNum(p.rns_actual)}</td>
+        <td>${M.fmt(bud)}</td>
+        <td>${M.fmt(act)}</td>
         <td class="${achCls}">${fmtPct(ach)}</td>
-        <td>${fmtNum(p.rns_fcst)}</td>
+        <td>${M.fmt(last)}</td>
+        <td class="${yoyCls}">${fmtSignPct(yoy)}</td>
+        <td>${M.fmt(full)}</td>
+        <td><span class="prog"><span class="bar"><i class="${progOver}" style="width:${progW}%"></i></span>${prog==null?'—':prog.toFixed(0)+'%'}</span></td>
+        <td>${M.fmt(fcst)}</td>
         <td class="${faCls}">${fmtPct(fa)}</td>
-        <td class="${yoyCls}">${fmtPp(yoy||0)}</td>
-        <td>${fmtNum(p.adr_actual)}</td>
-        <td>${fmtMoney(p.rev_actual)}</td>
       </tr>`;
     }).join('');
   }
