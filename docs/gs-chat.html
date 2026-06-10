@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .pv-table td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
 .pv-table tbody tr:hover{background:var(--glass)}
 .pv-table tr.row-total td{background:rgba(212,167,74,.06);color:var(--gold2);font-weight:600;border-top:1px solid rgba(212,167,74,.2)}
+.pv-table tr.row-subtotal td{background:rgba(212,167,74,.025);color:var(--gold2);font-weight:600;border-top:1px solid rgba(212,167,74,.1)}
 .pv-table td.pos{color:var(--mint)}
 .pv-table td.neg{color:var(--rose)}
 .pv-count{font-size:11px;color:var(--ink4);margin-top:6px}
@@ -1229,6 +1230,44 @@ function buildCompareChartSVG(labels, byLabel, months, colors) {
 // 결과 표시 (테이블 + 인사이트 + 차트 + 다운로드)
 // ═══════════════════════════════════════════════
 
+// ── 합계 계산: 그룹(사업장/세그먼트/채널/국적)별 소계 + 전체 합계 ──
+// 여러 그룹이 섞인 결과(예: OTA·G-OTA 동시 조회)는 그룹별 소계를 따로 내고
+// 마지막에 전체 합계를 붙인다. 그룹이 1개뿐이면 소계는 생략하고 합계만.
+const GROUP_DIMS = ["사업장","세그먼트","채널","국적"];
+function computeTotals(rows, cols) {
+  const groupCols = cols.filter(c => GROUP_DIMS.includes(c));
+  const out = [];
+  let gRN = 0, gRev = 0;
+  if (groupCols.length) {
+    const groups = [], map = {};
+    rows.forEach(r => {
+      const key = groupCols.map(c => r[c]).join("¦");
+      if (!map[key]) { map[key] = { labels: Object.fromEntries(groupCols.map(c => [c, r[c]])), RN: 0, Rev: 0 }; groups.push(map[key]); }
+      map[key].RN += r.RN || 0; map[key].Rev += r["매출(백만원)"] || 0;
+    });
+    groups.forEach(g => { gRN += g.RN; gRev += g.Rev; });
+    if (groups.length > 1) groups.forEach(g => out.push({ kind: "sub", labels: g.labels, RN: g.RN, Rev: g.Rev }));
+  } else {
+    rows.forEach(r => { gRN += r.RN || 0; gRev += r["매출(백만원)"] || 0; });
+  }
+  if (rows.length > 1) out.push({ kind: "grand", labels: {}, RN: gRN, Rev: gRev });
+  return { totals: out, groupCols };
+}
+function totalRowHTML(t, cols, groupCols) {
+  const tADR = t.RN > 0 ? Math.round(t.Rev * 1000000 / t.RN / 1000) : 0;
+  const lastG = groupCols[groupCols.length - 1];
+  let h = `<tr class="${t.kind === "grand" ? "row-total" : "row-subtotal"}">`;
+  cols.forEach((c, i) => {
+    if (c === "RN") h += `<td class="num">${fmt(t.RN)}</td>`;
+    else if (c === "ADR(천원)") h += `<td class="num">${fmt(tADR)}</td>`;
+    else if (c === "매출(백만원)") h += `<td class="num">${fmt(Math.round(t.Rev * 100) / 100)}</td>`;
+    else if (t.kind === "grand") h += i === 0 ? "<td>합계</td>" : "<td>-</td>";
+    else if (c in t.labels) h += `<td>${esc(String(t.labels[c]))}${c === lastG ? " 소계" : ""}</td>`;
+    else h += "<td>-</td>";
+  });
+  return h + "</tr>";
+}
+
 function showResultMsg(result) {
   const { rows, cols, filename, summary } = result;
   const numCols = new Set(["RN","ADR(천원)","매출(백만원)","연도","월","목표_RN","FCST_RN","LY_RN","LY_ADR","LY_매출","YoY(%)","점유비(%)"]);
@@ -1250,21 +1289,9 @@ function showResultMsg(result) {
     html += '</tr>';
   });
 
-  // 합계
-  if (rows.length > 1) {
-    let tRN=0, tRev=0;
-    rows.forEach(r => { tRN+=r.RN||0; tRev+=r["매출(백만원)"]||0; });
-    const tADR = tRN>0 ? Math.round(tRev*1000000/tRN/1000) : 0;
-    html += '<tr class="row-total">';
-    cols.forEach((c,i) => {
-      if (i===0) html+='<td>합계</td>';
-      else if (c==="RN") html+=`<td class="num">${fmt(tRN)}</td>`;
-      else if (c==="ADR(천원)") html+=`<td class="num">${fmt(tADR)}</td>`;
-      else if (c==="매출(백만원)") html+=`<td class="num">${fmt(Math.round(tRev*100)/100)}</td>`;
-      else html+='<td>-</td>';
-    });
-    html += '</tr>';
-  }
+  // 합계 (그룹별 소계 + 전체 합계)
+  const { totals, groupCols } = computeTotals(rows, cols);
+  totals.forEach(t => { html += totalRowHTML(t, cols, groupCols); });
   html += '</tbody></table></div>';
   html += `<div class="pv-count">${esc(summary)} — ${rows.length}건</div>`;
 
@@ -1398,6 +1425,22 @@ function buildTrendChart(result) {
 function buildExcel(result) {
   const wb = XLSX.utils.book_new();
   const sd = result.rows.map(r => { const o={}; result.cols.forEach(c=>{o[c]=r[c]!=null?r[c]:null;}); return o; });
+  // 소계/합계 행 추가 (화면 표와 동일)
+  const { totals, groupCols } = computeTotals(result.rows, result.cols);
+  const lastG = groupCols[groupCols.length - 1];
+  totals.forEach(t => {
+    const o = {};
+    const tADR = t.RN > 0 ? Math.round(t.Rev * 1000000 / t.RN / 1000) : 0;
+    result.cols.forEach((c, i) => {
+      if (c === "RN") o[c] = t.RN;
+      else if (c === "ADR(천원)") o[c] = tADR;
+      else if (c === "매출(백만원)") o[c] = Math.round(t.Rev * 100) / 100;
+      else if (t.kind === "grand") o[c] = i === 0 ? "합계" : null;
+      else if (c in t.labels) o[c] = String(t.labels[c]) + (c === lastG ? " 소계" : "");
+      else o[c] = null;
+    });
+    sd.push(o);
+  });
   const ws = XLSX.utils.json_to_sheet(sd);
   ws["!cols"] = result.cols.map(c => ({wch: Math.max(c.length+4, 12)}));
   XLSX.utils.book_append_sheet(wb, ws, "실적데이터");
