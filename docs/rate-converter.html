@@ -162,7 +162,7 @@ const ITEM_ORDER=['조식뷔페','오션월드','스노위곤돌라','음료','�
 // 헤더밴드: '객실'과 '부대'가 같이 있는 라벨행
 function detectBand(ws){
   const NC=ncols(ws);
-  for(let r=1;r<=12 && r<=ws.rowCount;r++){
+  for(let r=1;r<=28 && r<=ws.rowCount;r++){
     let hasRoom=false,hasFac=false;
     for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)); if(v==='객실')hasRoom=true; if(v.indexOf('부대')>=0)hasFac=true;}
     if(hasRoom&&hasFac) return r;
@@ -191,8 +191,12 @@ function parseSheet(ws){
   // 시즌 / 기간 열
   let season=0; const perCands=[];
   for(let r=1;r<=grp;r++)for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)).replace(/\s/g,''); if(v==='시즌'&&!season)season=c; if(v==='기간'&&perCands.indexOf(c)<0)perCands.push(c);}
+  // 기간 컬럼: '기간' 라벨 우선, 없으면 시즌 왼쪽에서 날짜형 데이터가 있는 열을 탐색
+  const isDate=t=>/\d\s*[\/.]\s*\d/.test(t)||/\d\s*~\s*\d/.test(t);
+  const tryDateCol=c=>{for(let r=sub+1;r<=Math.min(sub+30,ws.rowCount);r++){if(isDate(clean(cellVal(ws,r,c))))return true;}return false;};
   let per=0;
-  for(const c of perCands){ for(let r=sub+1;r<=Math.min(sub+24,ws.rowCount);r++){ if(/\d\s*\/\s*\d/.test(clean(cellVal(ws,r,c)))){per=c;break;} } if(per)break; }
+  for(const c of perCands){ if(tryDateCol(c)){per=c;break;} }
+  if(!per){ const lim=season>1?season:NC+1; for(let c=1;c<lim;c++){ if(tryDateCol(c)){per=c;break;} } }
   if(!per) per=perCands.length?perCands[perCands.length-1]:0;
   return {grp,sub,NC,nRoom:roomCols(nBlk[0]),aRoom:roomCols(aBlk[0]),nFac:facCols(nBlk[1]),aFac:facCols(aBlk[1]),season,per,dataStart:sub+1};
 }
@@ -285,9 +289,11 @@ async function convert(){
     allRows=allRows.concat(extractRows(ws,ctx,ws.name));
   });
   if(!allRows.length){$('status').innerHTML='<span class="warn">추출된 데이터가 없어요. 시트 구조를 확인해주세요.</span>';return;}
-  // 행별 오션기준 부대 합산 (조식 제외) + FIT 별칭
+  // 행별 메인 부대 합산: 오션기준(조식 별도). 단 조식 외 부대가 없으면 조식 포함.
   allRows.forEach(r=>{
-    const keys=Object.keys(r.facA).filter(k=>k!=='조식뷔페' && r.facA[k]!=null);
+    const dist=Object.keys(r.facA).filter(k=>r.facA[k]!=null);
+    const others=dist.filter(k=>k!=='조식뷔페');
+    const keys=others.length?others:dist;
     r.facn=keys.reduce((t,k)=>t+(r.facN[k]||0),0);
     r.faca=keys.reduce((t,k)=>t+(r.facA[k]||0),0);
     r.fn_=r.fit;
