@@ -902,6 +902,37 @@ table.dt .ltbar span{display:block;height:100%}
            fcst:'rev_fcst', fcstAch:'rev_fcst_achievement' },
   };
 
+  // 리드타임 버킷 (예약일→투숙일): 임박(빨강) → 여유(파랑)
+  const LT_BUCKETS = [
+    {k:'same_day', l:'당일',   c:'#c0392b'},
+    {k:'1_3d',     l:'1-3일',  c:'#e67e22'},
+    {k:'4_7d',     l:'4-7일',  c:'#d4a017'},
+    {k:'1_2w',     l:'1-2주',  c:'#c9a063'},
+    {k:'2_4w',     l:'2-4주',  c:'#7f9c6c'},
+    {k:'1_2m',     l:'1-2개월',c:'#5a8aa0'},
+    {k:'2m_plus',  l:'2개월+', c:'#4a6fa5'},
+  ];
+
+  function renderLeadTimeTable(props, thead, tb){
+    const meta=$('#prop-tbl-meta');
+    if(meta) meta.innerHTML = '예약 리드타임 분포 · '+LT_BUCKETS.map(b=>
+      `<span style="display:inline-block;width:9px;height:9px;background:${b.c};border-radius:2px;margin:0 3px 0 8px;vertical-align:middle"></span>${b.l}`).join('');
+    thead.innerHTML = `<tr><th>사업장</th><th>평균 리드타임</th><th style="text-align:left">예약 시점 분포 (예약일→투숙일)</th></tr>`;
+    const sorted = props.slice().sort((a,b)=>(b.avg_lead_time||0)-(a.avg_lead_time||0));
+    tb.innerHTML = sorted.map(p=>{
+      const lt = p.lead_time||{};
+      const total = LT_BUCKETS.reduce((s,b)=>s+(lt[b.k]||0),0);
+      const avg = p.avg_lead_time;
+      const bar = total>0 ? LT_BUCKETS.map(b=>{ const c=lt[b.k]||0; if(!c)return '';
+        const w=c/total*100; return `<span title="${b.l}: ${fmtNum(c)}실 (${w.toFixed(0)}%)" style="width:${w}%;background:${b.c}"></span>`; }).join('') : '';
+      return `<tr>
+        <td>${p.name}</td>
+        <td>${avg==null?'—':avg.toFixed(1)+'일'}</td>
+        <td style="text-align:left">${total>0?`<div class="ltbar">${bar}</div>`:'<span class="muted" style="padding:0;display:inline">데이터 없음</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+
   function renderPropertyTable(){
     const props = currentPropList();
     const slicer = $('#metric-slicer');
@@ -915,12 +946,12 @@ table.dt .ltbar span{display:block;height:100%}
     }
     if(!props||props.length===0){ thead.innerHTML=''; tb.innerHTML=''; return; }
 
+    if(state.metric==='lt'){ renderLeadTimeTable(props, thead, tb); return; }
+
     const M = PROP_METRICS[state.metric];
     if(!M){
-      // 아직 미구현 지표(adr/rev/lt) — placeholder
-      const names={adr:'ADR',rev:'매출',lt:'리드타임'};
       thead.innerHTML = '<tr><th>안내</th></tr>';
-      tb.innerHTML = `<tr><td class="muted">${names[state.metric]||state.metric} 지표는 다음 단계에서 적용 예정입니다.</td></tr>`;
+      tb.innerHTML = `<tr><td class="muted">${state.metric} 지표는 준비 중입니다.</td></tr>`;
       const meta=$('#prop-tbl-meta'); if(meta) meta.textContent='준비 중';
       return;
     }
