@@ -3079,6 +3079,24 @@ def main():
         except Exception as e:
             logger.warning(f"✗ docs/data 동기화 실패: {e}")
 
+    # ── docs/data/db_aggregated.json.gz 생성 (브라우저 DecompressionStream 로더용) ──
+    # docs/data/db_aggregated.json(82MB)은 git/Pages에서 추적 제외하고, 압축본(.gz, ~12MB)만 배포.
+    # docs/js/agg-loader.js 가 fetch를 가로채 .json.gz → gzip 해제로 투명 로드한다.
+    if docs_agg_path.exists():
+        import gzip as _gzip
+        import shutil as _shutil
+        gz_path = Path(str(docs_agg_path) + ".gz")
+        try:
+            with open(docs_agg_path, "rb") as _f_in, \
+                 _gzip.open(gz_path, "wb", compresslevel=9) as _f_out:
+                _shutil.copyfileobj(_f_in, _f_out)
+            logger.info(
+                f"✓ docs/data/db_aggregated.json.gz 생성 "
+                f"({docs_agg_path.stat().st_size:,} → {gz_path.stat().st_size:,} bytes)"
+            )
+        except Exception as e:
+            logger.warning(f"✗ db_aggregated.json.gz 생성 실패: {e}")
+
     # ── docs/data/package_series_trend.json 동기화 ──
     # 프론트엔드(product-detail.html)가 by_category·by_year_ranking 등을 fetch하므로,
     # parse_package_trend.py가 생성한 원본(data/)을 항상 docs/data/에 동기화해야 함
