@@ -483,25 +483,106 @@ def parse(pdf_path: Path) -> dict:
     }
 
 
+def _snap_date(pdf_path: Path) -> str:
+    """Robust YYYY.MM.DD from filename (ignores trailing _suffix like _르네블루추가)."""
+    m = re.search(r"(\d{4}\.\d{2}\.\d{2})", pdf_path.name)
+    return m.group(1) if m else pdf_path.stem.split("_")[-1]
+
+
+def accumulate(snap: dict, snap_date: str, existing: dict) -> dict:
+    """Merge a freshly-parsed PDF snapshot into the accumulated store.
+
+    - `_snapshots[snap_date]` keeps every PDF's full parse (history archive).
+    - top-level `properties`/`regions` are rebuilt as a flat latest-per-month
+      view (later snapshot wins for an overlapping month) so existing consumers
+      keep the same schema.
+    - `_month_sources[ym]` records which snapshot supplied each month.
+    """
+    snapshots = dict(existing.get("_snapshots", {}))
+    snapshots[snap_date] = {
+        "_source_pdf":     snap["_source_pdf"],
+        "_extracted_at":   snap["_extracted_at"],
+        "_months_covered": snap["_months_covered"],
+        "_validation":     snap["_validation"],
+        "regions":         snap["regions"],
+        "properties":      snap["properties"],
+    }
+
+    flat_props: dict = {}
+    flat_regions: dict = {}
+    flat_val: dict = {}
+    month_sources: dict = {}
+    # Lexical sort of "YYYY.MM.DD" == chronological → latest snapshot wins per ym.
+    for sd in sorted(snapshots):
+        s = snapshots[sd]
+        for canon, months in s["properties"].items():
+            for ym, rec in months.items():
+                flat_props.setdefault(canon, {})[ym] = rec
+                month_sources[ym] = sd
+        for rname, months in s["regions"].items():
+            for ym, rec in months.items():
+                flat_regions.setdefault(rname, {})[ym] = rec
+        for ym, v in s["_validation"].items():
+            if ym == "unmapped_pdf_names":
+                continue
+            flat_val[ym] = v
+
+    months_covered = sorted({ym for p in flat_props.values() for ym in p})
+    return {
+        "_source_pdf":      snap["_source_pdf"],
+        "_extracted_at":    snap["_extracted_at"],
+        "_snapshot_date":   snap_date,
+        "_months_covered":  months_covered,
+        "_month_sources":   dict(sorted(month_sources.items())),
+        "_units":           snap["_units"],
+        "_field_meaning":   snap["_field_meaning"],
+        "_validation":      {**flat_val, "unmapped_pdf_names": snap["_validation"].get("unmapped_pdf_names", [])},
+        "regions":          flat_regions,
+        "properties":       flat_props,
+        "_snapshots":       snapshots,
+    }
+
+
 def main() -> int:
     pdf = find_latest_pdf()
     print(f"Latest PDF: {pdf.name}")
-    out = parse(pdf)
+    snap = parse(pdf)
+    snap_date = _snap_date(pdf)
+
+    existing = {}
+    if OUT_PATH.exists():
+        try:
+            existing = json.loads(OUT_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"  WARNING: could not read existing {OUT_PATH.name} ({e}); starting fresh")
+
+    prev_months = set(existing.get("_months_covered", []))
+    out = accumulate(snap, snap_date, existing)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Wrote {OUT_PATH.relative_to(REPO_ROOT)} ({len(out['properties'])} properties × {len(out['regions'])} regions)")
+    print(f"Wrote {OUT_PATH.relative_to(REPO_ROOT)} "
+          f"({len(out['properties'])} properties × {len(out['regions'])} regions, "
+          f"{len(out['_snapshots'])} snapshots)")
 
+    # docs/ copy is client-served: ship the flat view only (drop the history archive).
+    docs_out = {k: v for k, v in out.items() if k != "_snapshots"}
     DOCS_OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    DOCS_OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Wrote {DOCS_OUT_PATH.relative_to(REPO_ROOT)}")
+    DOCS_OUT_PATH.write_text(json.dumps(docs_out, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Wrote {DOCS_OUT_PATH.relative_to(REPO_ROOT)} (flat view, no archive)")
 
-    print("\nValidation by month:")
+    new_months = [m for m in out["_months_covered"] if m not in prev_months]
+    print(f"\nSnapshot {snap_date} covers: {', '.join(snap['_months_covered'])}")
+    print(f"Accumulated months: {', '.join(out['_months_covered'])}"
+          + (f"  (+new: {', '.join(new_months)})" if new_months else ""))
+
+    print("\nValidation by month (flat latest view):")
     for ym, v in out["_validation"].items():
         if ym == "unmapped_pdf_names":
             continue
         print(f"  {ym}: grand_rn={v['sum_property_grand_rn']:,}  grand_rev={v['sum_property_grand_rev']:,}M  "
-              f"seg(O+G+I)_rn={v['sum_property_seg_rn']:,}  seg(O+G+I)_rev={v['sum_property_seg_rev']:,}M")
+              f"seg(O+G+I)_rn={v['sum_property_seg_rn']:,}  seg(O+G+I)_rev={v['sum_property_seg_rev']:,}M  "
+              f"[{out['_month_sources'].get(ym, '?')}]")
 
     if out["_validation"]["unmapped_pdf_names"]:
         print(f"  WARNING: unmapped: {out['_validation']['unmapped_pdf_names']}")

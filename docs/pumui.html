@@ -272,7 +272,19 @@ const PROPERTIES = [
 
 const GS_SEGMENTS = ['OTA','G-OTA','Inbound'];
 const ALL_SEGMENTS = ['OTA','G-OTA','Inbound','D멤버스','FIT','GSA','H/U','네트웍스 일반단체','단체COMP','법인주중(회원사)','비회원COMP','연간계약사','인바운드COMP','일반단체','임차','자사 패키지','제휴사PKG','학생단체','할인권 예약부일반','회원PKG'];
-const AVAIL_MONTHS = [4,5,6,7]; // months we have RM data for
+let AVAIL_MONTHS = []; // months we have RM data for — derived from rm_fcst.json at load
+// rm_fcst.json._months_covered (["2026-06",...]) → [6,7,8]. Fallback: scan properties keys.
+function deriveAvailMonths(fcst){
+  if(!fcst) return [];
+  let yms = Array.isArray(fcst._months_covered) ? fcst._months_covered.slice() : [];
+  if(!yms.length){
+    const set = new Set();
+    Object.values(fcst.properties||{}).forEach(p=>Object.keys(p).forEach(k=>set.add(k)));
+    yms = [...set];
+  }
+  const months = [...new Set(yms.map(ym=>parseInt(String(ym).split('-')[1],10)).filter(m=>!isNaN(m)))];
+  return months.sort((a,b)=>a-b);
+}
 
 let DATA = {otb:null, db:null, occ:null, fcst:null, daily:null};
 let selectedProps = new Set();
@@ -295,6 +307,8 @@ async function loadData(){
 }
 
 function initUI(){
+  AVAIL_MONTHS = deriveAvailMonths(DATA.fcst);
+  console.log('AVAIL_MONTHS:', AVAIL_MONTHS);
   // Property list
   const propList = document.getElementById('prop-list');
   PROPERTIES.forEach(p=>{
