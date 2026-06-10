@@ -552,6 +552,24 @@ input, button, select, table, th, td {
   -webkit-overflow-scrolling: touch;
   position: relative;
 }
+.metric-slicer{display:flex;gap:6px;flex-wrap:wrap}
+.metric-slicer .pchip{padding:4px 10px;border-radius:4px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink-muted);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:.15s;letter-spacing:.03em}
+.metric-slicer .pchip:hover{background:var(--bg-soft);color:var(--ink)}
+.metric-slicer .pchip.active{background:rgba(232,162,86,0.18);border-color:#e8a256;color:#e8a256}
+#pivot-table[data-show="rns"] :is(.grp-adr,.grp-rev,.grp-lt){display:none}
+#pivot-table[data-show="adr"] :is(.grp-rns,.grp-rev,.grp-lt){display:none}
+#pivot-table[data-show="rev"] :is(.grp-rns,.grp-adr,.grp-lt){display:none}
+#pivot-table[data-show="lt"] :is(.grp-rns,.grp-adr,.grp-rev){display:none}
+#pivot-table[data-show="rns"] tbody td:nth-child(n+17){display:none}
+#pivot-table[data-show="adr"] tbody td:nth-child(n+3):nth-child(-n+16){display:none}
+#pivot-table[data-show="adr"] tbody td:nth-child(n+31){display:none}
+#pivot-table[data-show="rev"] tbody td:nth-child(n+3):nth-child(-n+30){display:none}
+#pivot-table[data-show="rev"] tbody td:nth-child(n+45){display:none}
+#pivot-table[data-show="lt"] tbody td:nth-child(n+3):nth-child(-n+44){display:none}
+table.pivot .progbar{display:inline-flex;align-items:center;gap:4px;justify-content:flex-end}
+table.pivot .progbar .pb{display:inline-block;width:38px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden;flex:none}
+table.pivot .progbar .pb i{display:block;height:100%;background:#e8a256;border-radius:3px}
+table.pivot .progbar .pb i.over{background:#5cb874}
 table.pivot {
   width: 100%;
   border-collapse: separate;
@@ -1050,51 +1068,52 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
     <div class="table-card">
       <div class="table-card-header">
         <span class="table-card-title">영업장별 OTB 현황 (피벗)</span>
+        <div class="metric-slicer" id="pivot-slicer">
+          <button class="pchip active" data-metric="rns">객실수</button>
+          <button class="pchip" data-metric="adr">ADR</button>
+          <button class="pchip" data-metric="rev">매출</button>
+          <button class="pchip" data-metric="lt">리드타임</button>
+          <button class="pchip" data-metric="all">전체</button>
+        </div>
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);" id="table-filter-label">전체 월 · 전체 세그</span>
       </div>
       <div class="table-wrap">
-        <table class="pivot" id="pivot-table">
+        <table class="pivot" id="pivot-table" data-show="rns">
           <thead>
             <!-- Row 1: 대분류 -->
             <tr>
               <th rowspan="3" style="text-align:left;min-width:120px;">구분</th>
               <th rowspan="3" style="min-width:60px;">권역</th>
-              <th colspan="12" class="group-header" style="border-left:1px solid var(--rule-strong);">객실수 (RNS)</th>
-              <th colspan="12" class="group-header" style="border-left:1px solid var(--rule-strong);">ADR (평균단가)</th>
-              <th colspan="12" class="group-header" style="border-left:1px solid var(--rule-strong);">매출 (REV)</th>
-              <th colspan="8" class="group-header" style="border-left:1px solid var(--rule-strong);background:rgba(120,200,120,0.08);">리드타임 (RN)</th>
+              <th colspan="14" class="group-header grp-rns" style="border-left:1px solid var(--rule-strong);">객실수 (RNS)</th>
+              <th colspan="14" class="group-header grp-adr" style="border-left:1px solid var(--rule-strong);">ADR (평균단가)</th>
+              <th colspan="14" class="group-header grp-rev" style="border-left:1px solid var(--rule-strong);">매출 (REV)</th>
+              <th colspan="8" class="group-header grp-lt" style="border-left:1px solid var(--rule-strong);background:rgba(120,200,120,0.08);">리드타임 (RN)</th>
             </tr>
             <!-- Row 2: 누적/당일 구분 -->
             <tr>
-              <th colspan="9" class="group-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
-              <th colspan="3" class="group-header pickup-date-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
-              <th colspan="9" class="group-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
-              <th colspan="3" class="group-header pickup-date-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
-              <th colspan="9" class="group-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
-              <th colspan="3" class="group-header pickup-date-header" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
-              <th rowspan="2" class="border-left-group" style="background:rgba(120,200,120,0.05);">평균</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">당일</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">1-3일</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">4-7일</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">1-2주</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">2-4주</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">1-2월</th>
-              <th rowspan="2" style="background:rgba(120,200,120,0.05);">2월+</th>
+              <th colspan="11" class="group-header grp-rns" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
+              <th colspan="3" class="group-header pickup-date-header grp-rns" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
+              <th colspan="11" class="group-header grp-adr" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
+              <th colspan="3" class="group-header pickup-date-header grp-adr" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
+              <th colspan="11" class="group-header grp-rev" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">누적</th>
+              <th colspan="3" class="group-header pickup-date-header grp-rev" style="border-left:1px solid var(--rule-strong);font-size:10px;font-weight:600;">전일</th>
+              <th rowspan="2" class="border-left-group grp-lt" style="background:rgba(120,200,120,0.05);">평균</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">당일</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">1-3일</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">4-7일</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">1-2주</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">2-4주</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">1-2월</th>
+              <th rowspan="2" class="grp-lt" style="background:rgba(120,200,120,0.05);">2월+</th>
             </tr>
             <!-- Row 3: 세부 컬럼명 -->
             <tr>
-              <!-- 객실수 누적 9 (RM FCST + 달성률 추가) -->
-              <th class="border-left-group">목표</th><th>실적</th><th>달성률</th><th style="color:#e8a256;">RM FCST</th><th style="color:#e8a256;">달성률</th><th>FCST</th><th>달성률</th><th>전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th>전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
-              <!-- 객실수 당일 3 -->
-              <th class="border-left-group">예약</th><th>취소</th><th>증가</th>
-              <!-- ADR 누적 9 (RM FCST + 달성률 추가) -->
-              <th class="border-left-group">목표</th><th>실적</th><th>달성률</th><th style="color:#e8a256;">RM FCST</th><th style="color:#e8a256;">달성률</th><th>FCST</th><th>달성률</th><th>전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th>전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
-              <!-- ADR 당일 3 -->
-              <th class="border-left-group">예약ADR</th><th>취소ADR</th><th>순증ADR</th>
-              <!-- 매출 누적 9 (RM FCST + 달성률 추가) -->
-              <th class="border-left-group">목표</th><th>실적</th><th>달성률</th><th style="color:#e8a256;">RM FCST</th><th style="color:#e8a256;">달성률</th><th>FCST</th><th>달성률</th><th>전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th>전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th>
-              <!-- 매출 당일 3 -->
-              <th class="border-left-group">예약</th><th>취소</th><th>순증</th>
+              <th class="border-left-group grp-rns">목표</th><th class="grp-rns">실적</th><th class="grp-rns">달성률</th><th class="grp-rns" style="color:#e8a256;">RM FCST</th><th class="grp-rns" style="color:#e8a256;">달성률</th><th class="grp-rns">FCST</th><th class="grp-rns">달성률</th><th class="grp-rns">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-rns">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-rns" style="color:#7fb3d5;">전년마감</th><th class="grp-rns" style="color:#7fb3d5;">마감진행</th>
+              <th class="border-left-group grp-rns">예약</th><th class="grp-rns">취소</th><th class="grp-rns">증가</th>
+              <th class="border-left-group grp-adr">목표</th><th class="grp-adr">실적</th><th class="grp-adr">달성률</th><th class="grp-adr" style="color:#e8a256;">RM FCST</th><th class="grp-adr" style="color:#e8a256;">달성률</th><th class="grp-adr">FCST</th><th class="grp-adr">달성률</th><th class="grp-adr">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-adr">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-adr" style="color:#7fb3d5;">전년마감</th><th class="grp-adr" style="color:#7fb3d5;">마감진행</th>
+              <th class="border-left-group grp-adr">예약ADR</th><th class="grp-adr">취소ADR</th><th class="grp-adr">순증ADR</th>
+              <th class="border-left-group grp-rev">목표</th><th class="grp-rev">실적</th><th class="grp-rev">달성률</th><th class="grp-rev" style="color:#e8a256;">RM FCST</th><th class="grp-rev" style="color:#e8a256;">달성률</th><th class="grp-rev">FCST</th><th class="grp-rev">달성률</th><th class="grp-rev">전년 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-rev">전년(동기간)비 <span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span></th><th class="grp-rev" style="color:#7fb3d5;">전년마감</th><th class="grp-rev" style="color:#7fb3d5;">마감진행</th>
+              <th class="border-left-group grp-rev">예약</th><th class="grp-rev">취소</th><th class="grp-rev">순증</th>
             </tr>
           </thead>
           <tbody id="pivot-tbody">
@@ -1444,12 +1463,28 @@ function ltCell(lt, bucket, borderLeft) {
   return `<td class="${cls}" style="${bg}">${fmt.num(v)}</td>`;
 }
 
+function bindPivotSlicer(){
+  var sl=document.getElementById('pivot-slicer');
+  if(!sl||sl._bound) return; sl._bound=1;
+  sl.addEventListener('click', function(e){
+    var b=e.target.closest('.pchip'); if(!b) return;
+    sl.querySelectorAll('.pchip').forEach(function(c){ c.classList.toggle('active', c===b); });
+    var t=document.getElementById('pivot-table'); if(t) t.dataset.show=b.dataset.metric;
+  });
+}
+bindPivotSlicer();
+document.addEventListener('DOMContentLoaded', bindPivotSlicer);
 function renderPivot(data) {
   const tbody = document.getElementById('pivot-tbody');
   if (!tbody) return;
 
-  const props = data.byProperty;
+  const props = data.byProperty.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
   let rows = '';
+  function progCell(act, full){
+    if(act==null||full==null||full<=0) return '—';
+    const pct=act/full*100, w=Math.min(pct,100).toFixed(0), over=pct>100?'over':'';
+    return `<span class="progbar"><span class="pb"><i class="${over}" style="width:${w}%"></i></span>${pct.toFixed(0)}%</span>`;
+  }
 
   function fmtAdr(v) {
     if (v == null) return '—';
@@ -1509,6 +1544,8 @@ function renderPivot(data) {
       <td><span class="ach-pill ${achClass(p.fcst_achievement)}">${fmt.pct(p.fcst_achievement)}%</span></td>
       <td>${fmt.num(p.rns_last)}</td>
       <td class="${yoyCls(rnsYoy)}">${fmtYoy(rnsYoy)}</td>
+      <td>${fmt.num(p.ly_full_rn)}</td>
+      <td>${progCell(p.rns_actual, p.ly_full_rn)}</td>
       <!-- 객실수 당일 3 -->
       <td class="border-left-group net-pos">+${fmt.num(p.today_booking)}</td>
       <td class="net-neg">-${fmt.num(p.today_cancel)}</td>
@@ -1523,6 +1560,8 @@ function renderPivot(data) {
       <td><span class="ach-pill ${achClass(p.adr_fcst_achievement)}">${fmt.pct(p.adr_fcst_achievement)}%</span></td>
       <td>${fmtAdr(p.adr_last)}</td>
       <td class="${yoyCls(p.adr_yoy)}">${fmtYoy(p.adr_yoy)}</td>
+      <td>${fmtAdr(p.ly_full_adr)}</td>
+      <td>${progCell(p.adr_actual, p.ly_full_adr)}</td>
       <!-- ADR 당일 3 -->
       <td class="border-left-group">${fmtAdr(adrBook)}</td>
       <td>${fmtAdr(adrCanc)}</td>
@@ -1537,6 +1576,8 @@ function renderPivot(data) {
       <td><span class="ach-pill ${achClass(p.rev_fcst_achievement)}">${fmt.pct(p.rev_fcst_achievement)}%</span></td>
       <td>${fmt.won100m(p.rev_last)}</td>
       <td class="${yoyCls(p.rev_yoy)}">${fmtYoy(p.rev_yoy)}</td>
+      <td>${fmt.won100m(p.ly_full_rev)}</td>
+      <td>${progCell(p.rev_actual, p.ly_full_rev)}</td>
       <!-- 매출 당일 3 -->
       <td class="border-left-group net-pos">+${fmt.won100m(p.today_booking_rev)}</td>
       <td class="net-neg">-${fmt.won100m(p.today_cancel_rev)}</td>
@@ -1584,6 +1625,8 @@ function renderPivot(data) {
     <td><span class="ach-pill ${achClass(tot.fcst_achievement)}">${fmt.pct(tot.fcst_achievement)}%</span></td>
     <td>${fmt.num(tot.rns_last)}</td>
     <td class="${yoyCls(totRnsYoy)}">${fmtYoy(totRnsYoy)}</td>
+    <td>${fmt.num(tot.ly_full_rn)}</td>
+    <td>${progCell(tot.rns_actual, tot.ly_full_rn)}</td>
     <!-- 객실수 당일 3 -->
     <td class="border-left-group net-pos">+${fmt.num(tot.today_booking)}</td>
     <td class="net-neg">-${fmt.num(tot.today_cancel)}</td>
@@ -1598,6 +1641,8 @@ function renderPivot(data) {
     <td><span class="ach-pill ${achClass(tot.adr_fcst_achievement)}">${fmt.pct(tot.adr_fcst_achievement)}%</span></td>
     <td>${fmtAdr(tot.adr_last)}</td>
     <td class="${yoyCls(tot.adr_yoy)}">${fmtYoy(tot.adr_yoy)}</td>
+    <td>${fmtAdr(tot.ly_full_adr)}</td>
+    <td>${progCell(tot.adr_actual, tot.ly_full_adr)}</td>
     <!-- ADR 당일 3 -->
     <td class="border-left-group">${fmtAdr(totAdrBook)}</td>
     <td>${fmtAdr(totAdrCanc)}</td>
@@ -1612,6 +1657,8 @@ function renderPivot(data) {
     <td><span class="ach-pill ${achClass(tot.rev_fcst_achievement)}">${fmt.pct(tot.rev_fcst_achievement)}%</span></td>
     <td>${fmt.won100m(tot.rev_last)}</td>
     <td class="${yoyCls(tot.rev_yoy)}">${fmtYoy(tot.rev_yoy)}</td>
+    <td>${fmt.won100m(tot.ly_full_rev)}</td>
+    <td>${progCell(tot.rev_actual, tot.ly_full_rev)}</td>
     <!-- 매출 당일 3 -->
     <td class="border-left-group net-pos">+${fmt.won100m(tot.today_booking_rev)}</td>
     <td class="net-neg">-${fmt.won100m(tot.today_cancel_rev)}</td>
@@ -1867,7 +1914,8 @@ function summaryFromProps(props) {
     'rns_budget','rns_actual','rns_last','rns_fcst',
     'rev_budget','rev_actual','rev_last','rev_fcst',
     'today_booking','today_cancel','today_net',
-    'today_booking_rev','today_cancel_rev','today_net_rev'
+    'today_booking_rev','today_cancel_rev','today_net_rev',
+    'ly_full_rn','ly_full_rev'
   ];
   sumKeys.forEach(k => { s[k] = 0; });
   for (const p of props) {
@@ -1880,6 +1928,7 @@ function summaryFromProps(props) {
   s.rev_fcst_achievement = s.rev_budget > 0 ? +(s.rev_fcst / s.rev_budget * 100).toFixed(1) : 0;
   s.adr_actual = s.rns_actual > 0 ? Math.round(s.rev_actual / s.rns_actual) : 0;
   s.adr_budget = s.rns_budget > 0 ? Math.round(s.rev_budget / s.rns_budget) : 0;
+  s.ly_full_adr = s.ly_full_rn > 0 ? Math.round(s.ly_full_rev / s.ly_full_rn) : 0;
   s.adr_last   = s.rns_last > 0 ? Math.round(s.rev_last / s.rns_last) : null;
   s.adr_fcst   = s.rns_fcst > 0 ? Math.round(s.rev_fcst / s.rns_fcst) : 0;
   s.adr_fcst_achievement = s.adr_budget > 0 ? +(s.adr_fcst / s.adr_budget * 100).toFixed(1) : 0;
