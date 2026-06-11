@@ -210,8 +210,8 @@ function extractRows(ws,ctx,biz){
     const s=clean(cellVal(ws,r,ctx.season));
     if(mn==null||!s) continue;
     const facN={},facA={};
-    for(const it in ctx.nFac){const v=num(cellVal(ws,r,ctx.nFac[it])); if(v!=null)facN[it]=v;}
-    for(const it in ctx.aFac){const v=num(cellVal(ws,r,ctx.aFac[it])); if(v!=null)facA[it]=v;}
+    for(const it in ctx.nFac){const v=num(cellVal(ws,r,ctx.nFac[it])); if(v!=null&&v>0)facN[it]=v;}
+    for(const it in ctx.aFac){const v=num(cellVal(ws,r,ctx.aFac[it])); if(v!=null&&v>0)facA[it]=v;}
     rows.push({biz, period, season:s, mn, fit:num(cellVal(ws,r,ctx.nRoom.fit)), am:num(cellVal(ws,r,ctx.aRoom.mem)), af:num(cellVal(ws,r,ctx.aRoom.fit)), facN, facA});
   }
   return rows;
@@ -298,7 +298,19 @@ async function convert(){
     r.faca=keys.reduce((t,k)=>t+(r.facA[k]||0),0);
     r.fn_=r.fit;
   });
+  // 구분(West/East·A동/BC동·리조트/빌라)이 '기간' 칸에 잡힌 경우: 날짜형이 아니면
+  // 한 사업장으로 보고 기간을 통합 → 전체 행을 한 MIN~MAX 블록으로 병합
+  const dl=p=>/\d\s*[\/.]\s*\d/.test(p)||/\d\s*~\s*\d/.test(p);
+  const perVals=[...new Set(allRows.map(r=>r.period).filter(Boolean))];
+  const periodMerged = perVals.length>1 && perVals.every(p=>!dl(p));
+  if(periodMerged){ const lbl=($('stay').value||'전체'); allRows.forEach(r=>r.period=lbl); }
   const G=group(allRows);
+  // 부대가 사업장 공유값일 때: 그룹 내 결측(0/빈) 부대를 비결측값으로 채움(분할 표기 합산 대비)
+  for(const it of G.values()){
+    const fnv=it.map(x=>x.facn).filter(v=>v>0), fav=it.map(x=>x.faca).filter(v=>v>0);
+    const repN=fnv.length?Math.max(...fnv):0, repA=fav.length?Math.max(...fav):0;
+    it.forEach(x=>{ if(!(x.facn>0))x.facn=repN; if(!(x.faca>0))x.faca=repA; });
+  }
 
   const out=new ExcelJS.Workbook();
   const ws=out.addWorksheet(($('chan').value||'품의').slice(0,28));
