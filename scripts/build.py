@@ -2875,7 +2875,7 @@ def build_data_freshness(
     comp_analysis = load_json(comp_analysis_path)
     if comp_analysis and comp_analysis.get("generated_at"):
         comp_ts = comp_analysis.get("generated_at", "")
-        comp_note = "팔라티움 해운대 by sonofelice 크롤"
+        comp_note = "권역별 OTA 가격 분석"
         comp_fb = _file_mtime_kst(comp_analysis_path)
     else:
         comp_ts = (comp_data or {}).get("_updated_at", "")

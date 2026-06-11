@@ -114,6 +114,28 @@ else
   log "    ⚠ raw_db 27/28 txt 없음 — 기획전 실적 스킵 (기존 데이터 유지)"
 fi
 
+# ── [6.5] 권역별 가격 분석 재생성 (경쟁사 금액 크롤 CSV → competitor_analysis.json) ──
+#   sono-competitor-crawler 레포의 최신 sono_competitor_prices CSV를 읽어
+#   GS 매출 리포트·freshness 가 소비하는 권역별 가격 분석 JSON을 생성한다.
+#   best-effort: 실패해도 기존 competitor_analysis.json 유지하고 빌드 계속.
+CRAWLER_ROOT="$HOME/Projects/sono-competitor-crawler"
+CRAWLER_PY="$CRAWLER_ROOT/venv/bin/python"
+log "--- [build] competitor_analysis (권역별 가격 분석) ---"
+write_status "competitor_analysis" "running" 0
+if [ -x "$CRAWLER_PY" ] && [ -f "$CRAWLER_ROOT/build_competitor_analysis.py" ]; then
+  if ( cd "$CRAWLER_ROOT" && "$CRAWLER_PY" build_competitor_analysis.py \
+        --out "$PROJECT_ROOT/docs/data/competitor_analysis.json" \
+        --out "$PROJECT_ROOT/data/competitor_analysis.json" ) >>"$LOG_FILE" 2>&1; then
+    log "    ✅ competitor_analysis 완료"
+    write_status "competitor_analysis" "done" 0
+  else
+    log "    ⚠ competitor_analysis 실패 — 기존 데이터 유지하고 계속"
+    write_status "competitor_analysis" "soft_fail" 1
+  fi
+else
+  log "    ⚠ crawler venv/스크립트 없음 — 스킵 (기존 competitor_analysis.json 유지)"
+fi
+
 # ── [7] HTML 빌드 (필수) ──────────────────────────────────────────────────
 run_fatal "build" "scripts/build.py"
 
