@@ -155,16 +155,19 @@ function normItem(h){
   if(/액티/.test(h))return '액티비티';
   if(/수영|사우나/.test(h))return '수영장&사우나';
   if(/인피니티/.test(h))return '인피니티풀';
+  if(/레전드/.test(h))return '레전드';
+  if(/웰컴/.test(h))return '웰컴티';
+  if(/워터/.test(h))return '워터파크';
   return null;
 }
-const ITEM_ORDER=['조식뷔페','오션월드','스노위곤돌라','음료','액티비티','수영장&사우나','인피니티풀'];
+const ITEM_ORDER=['조식뷔페','오션월드','스노위곤돌라','음료','액티비티','수영장&사우나','인피니티풀','레전드','웰컴티','워터파크'];
 
 // 헤더밴드: '객실'과 '부대'가 같이 있는 라벨행
 function detectBand(ws){
   const NC=ncols(ws);
   for(let r=1;r<=28 && r<=ws.rowCount;r++){
     let hasRoom=false,hasFac=false;
-    for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)); if(v==='객실')hasRoom=true; if(v.indexOf('부대')>=0)hasFac=true;}
+    for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)).replace(/\s/g,''); if(v==='객실')hasRoom=true; if(v.indexOf('부대')>=0)hasFac=true;}
     if(hasRoom&&hasFac) return r;
   }
   return 0;
@@ -176,7 +179,7 @@ function parseSheet(ws){
   const sub=grp+1;
   // 병합셀은 ExcelJS가 모든 칸에 마스터값을 반환 → 라벨 run을 첫 칸으로 접음(값 변화 시작점만)
   const groups=[]; let prevLbl='';
-  for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,grp,c));
+  for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,grp,c)).replace(/\s/g,'');
     const tag = v==='객실'?'객실':(v.indexOf('부대')>=0?'부대':'');
     if(tag && v!==prevLbl) groups.push([tag,c]);
     prevLbl=v;}
@@ -186,8 +189,9 @@ function parseSheet(ws){
   for(let i=0;i<groups.length-1;i++){ if(groups[i][0]==='객실'&&groups[i+1][0]==='부대') priced.push([groups[i][1],groups[i+1][1]]); }
   if(!priced.length) return null;
   const nBlk=priced[0], aBlk=priced[priced.length-1];
-  const roomCols=start=>{const o={mem:null,fit:null}; const end=nextStart(start); for(let c=start;c<end;c++){const s=clean(cellVal(ws,sub,c)); if(s==='무기명'&&o.mem==null)o.mem=c; else if(s==='FIT'&&o.fit==null)o.fit=c;} return o;};
+  const roomCols=start=>{const o={mem:null,fit:null}; const end=nextStart(start); for(let c=start;c<end;c++){const s=clean(cellVal(ws,sub,c)).replace(/\s/g,''); if(s==='무기명'&&o.mem==null)o.mem=c; else if(s==='FIT'&&o.fit==null)o.fit=c;} return o;};
   const facCols=start=>{const o={}; const end=nextStart(start); for(let c=start;c<end;c++){const it=normItem(clean(cellVal(ws,sub,c))); if(it&&o[it]==null)o[it]=c;} return o;};
+  const facColList=start=>{const a=[]; const end=nextStart(start); for(let c=start;c<end;c++){if(normItem(clean(cellVal(ws,sub,c))))a.push(c);} return a;};
   // 시즌 / 기간 열
   let season=0; const perCands=[];
   for(let r=1;r<=grp;r++)for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)).replace(/\s/g,''); if(v==='시즌'&&!season)season=c; if(v==='기간'&&perCands.indexOf(c)<0)perCands.push(c);}
@@ -198,7 +202,7 @@ function parseSheet(ws){
   for(const c of perCands){ if(tryDateCol(c)){per=c;break;} }
   if(!per){ const lim=season>1?season:NC+1; for(let c=1;c<lim;c++){ if(tryDateCol(c)){per=c;break;} } }
   if(!per) per=perCands.length?perCands[perCands.length-1]:0;
-  return {grp,sub,NC,nRoom:roomCols(nBlk[0]),aRoom:roomCols(aBlk[0]),nFac:facCols(nBlk[1]),aFac:facCols(aBlk[1]),season,per,dataStart:sub+1};
+  return {grp,sub,NC,nRoom:roomCols(nBlk[0]),aRoom:roomCols(aBlk[0]),nFac:facCols(nBlk[1]),aFac:facCols(aBlk[1]),nFacList:facColList(nBlk[1]),aFacList:facColList(aBlk[1]),season,per,dataStart:sub+1};
 }
 
 function extractRows(ws,ctx,biz){
@@ -207,12 +211,16 @@ function extractRows(ws,ctx,biz){
     const mn=num(cellVal(ws,r,ctx.nRoom.mem));
     const pv=ctx.per?clean(cellVal(ws,r,ctx.per)):'';
     if(pv && /\d/.test(pv))period=pv.replace(/\s+/g,' ');
-    const s=clean(cellVal(ws,r,ctx.season));
+    let sv=cellVal(ws,r,ctx.season);
+    const s=(sv instanceof Date)?((sv.getMonth()+1)+'/'+sv.getDate()):clean(sv);
     if(mn==null||!s) continue;
     const facN={},facA={};
     for(const it in ctx.nFac){const v=num(cellVal(ws,r,ctx.nFac[it])); if(v!=null&&v>0)facN[it]=v;}
     for(const it in ctx.aFac){const v=num(cellVal(ws,r,ctx.aFac[it])); if(v!=null&&v>0)facA[it]=v;}
-    rows.push({biz, period, season:s, mn, fit:num(cellVal(ws,r,ctx.nRoom.fit)), am:num(cellVal(ws,r,ctx.aRoom.mem)), af:num(cellVal(ws,r,ctx.aRoom.fit)), facN, facA});
+    // 부대 합계(전 항목): 중복 포함 모든 부대 컬럼 합산 (레전드①②·웰컴티①② 등)
+    const sumCols=cols=>(cols||[]).reduce((t,c)=>{const v=num(cellVal(ws,r,c));return t+((v!=null&&v>0)?v:0);},0);
+    const facNsum=sumCols(ctx.nFacList), facAsum=sumCols(ctx.aFacList);
+    rows.push({biz, period, season:s, mn, fit:num(cellVal(ws,r,ctx.nRoom.fit)), am:num(cellVal(ws,r,ctx.aRoom.mem)), af:num(cellVal(ws,r,ctx.aRoom.fit)), facN, facA, facNsum, facAsum});
   }
   return rows;
 }
@@ -262,7 +270,7 @@ function renderSummary(){
 // ---- 공통 수치 포맷 ----
 const K=1000;
 const f1=v=>Math.round(v/K).toLocaleString();
-const frng=a=>{a=a.filter(v=>v!=null);const lo=Math.min(...a),hi=Math.max(...a);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi);};
+const frng=a=>{a=a.filter(v=>v!=null&&!isNaN(v));if(!a.length)return '-';const lo=Math.min(...a),hi=Math.max(...a);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi);};
 const fpct=(nm,nM,am,aM)=>{if(!nm||!nM)return '-';let d1=Math.round(Math.abs((am-nm)/nm)*100),d2=Math.round(Math.abs((aM-nM)/nM)*100);let lo=Math.min(d1,d2),hi=Math.max(d1,d2);return lo===hi?lo+'%':lo+'%~'+hi+'%';};
 const rng2=(lo,hi)=>lo===hi?f1(lo):f1(lo)+'~'+f1(hi);
 
@@ -367,6 +375,8 @@ async function convert(){
 
   // ---- 부대시설_상세 시트 ----
   buildFacDetail(out, allRows);
+  // ---- 품의 양식(회원동반) 배분가표 (복붙용, 시즌만 통합) ----
+  buildPumuiForm(out, allRows);
 
   // 미리보기
   let ph='<table><tr><th>기간</th><th>시즌</th><th>객실배분 회원/FIT</th><th>부대배분</th><th>판매배분 회원/FIT</th></tr>';
@@ -428,6 +438,59 @@ function buildFacDetail(out, allRows){
   ws.mergeCells('A'+r+':I'+r);
   put('A'+r,'※ '+(noDist.length?noDist.join('·')+'는 배분 미적용으로 합계 제외 / ':'')+'부대 배분 합계 = '+sumItems.join('+')+' 기준 / 금·하이·골드·스페셜 시즌은 별도(요청 시 컬럼 추가)',{sz:9,al:lft,bd:false});
   ws.getColumn('A').width=14; ['B','C','D','E','F','G','H','I'].forEach(c=>ws.getColumn(c).width=9.5);
+  ws.views=[{showGridLines:false}];
+}
+
+// 품의 양식(회원동반) 배분가표 — 시즌만 통합, 4열 병합 그리드(B~AM)로 복붙 정합
+function buildPumuiForm(out, allRows){
+  const ws=out.addWorksheet('품의양식_배분가');
+  const st=styler(ws); const put=st.put;
+  const blk=(c1,c2,row,val,o)=>{ws.mergeCells(c1+row+':'+c2+row);put(c1+row,val,o||{});};
+  const RB=[['D','G'],['H','K'],['L','O']],FB=[['P','S'],['T','W'],['X','AA']],SB=[['AB','AE'],['AF','AI'],['AJ','AM']];
+  const hb={b:true,fill:'FFD9D9D9'};
+  // 시즌만 그룹 (기간·West/East·객실타입 모두 합쳐 MIN~MAX)
+  const GS=new Map(); allRows.forEach(r=>{if(!GS.has(r.season))GS.set(r.season,[]);GS.get(r.season).push(r);});
+  let r=2;
+  ws.mergeCells('B'+r+':AM'+r);put('B'+r,'4. 배분가  [단위: 천원, %]',{b:true,al:st.lft,bd:false});
+  r=3;
+  ws.mergeCells('B'+r+':B'+(r+1));put('B'+r,'시즌',hb);
+  ws.mergeCells('C'+r+':C'+(r+1));put('C'+r,'구분',hb);
+  ws.mergeCells('D'+r+':O'+r);put('D'+r,'객실',hb);
+  ws.mergeCells('P'+r+':AA'+r);put('P'+r,'부대',hb);
+  ws.mergeCells('AB'+r+':AM'+r);put('AB'+r,'판매가',hb);
+  const h2=r+1;
+  [['D','G'],['H','K'],['L','O'],['P','S'],['T','W'],['X','AA'],['AB','AE'],['AF','AI'],['AJ','AM']]
+    .forEach((b,i)=>blk(b[0],b[1],h2,['회원','FIT','GAP','회원','FIT','GAP','회원','FIT','GAP'][i],hb));
+  r=h2+1;
+  const mm=a=>{a=a.filter(v=>v!=null&&!isNaN(v));return [Math.min(...a),Math.max(...a)];};
+  for(const [s,it] of GS.entries()){
+    const sStart=r;
+    const mn=it.map(x=>x.mn),fit=it.map(x=>x.fit),am=it.map(x=>x.am),af=it.map(x=>x.af),fn=it.map(x=>x.facNsum),fa=it.map(x=>x.facAsum);
+    const gNn=it.map(x=>x.fit-x.mn),gNa=it.map(x=>x.af-x.am);
+    const sNn=it.map(x=>x.mn+x.facNsum),sFn=it.map(x=>x.fit+x.facNsum),sNa=it.map(x=>x.am+x.facAsum),sFa=it.map(x=>x.af+x.facAsum);
+    // 정상가
+    put('C'+r,'정상가');
+    blk(RB[0][0],RB[0][1],r,frng(mn));blk(RB[1][0],RB[1][1],r,frng(fit));blk(RB[2][0],RB[2][1],r,frng(gNn));
+    blk(FB[0][0],FB[0][1],r,frng(fn));blk(FB[1][0],FB[1][1],r,frng(fn));blk(FB[2][0],FB[2][1],r,0);
+    blk(SB[0][0],SB[0][1],r,frng(sNn));blk(SB[1][0],SB[1][1],r,frng(sFn));blk(SB[2][0],SB[2][1],r,frng(gNn));
+    r++;
+    // 배분가
+    put('C'+r,'배분가');
+    blk(RB[0][0],RB[0][1],r,frng(am));blk(RB[1][0],RB[1][1],r,frng(af));blk(RB[2][0],RB[2][1],r,frng(gNa));
+    blk(FB[0][0],FB[0][1],r,frng(fa));blk(FB[1][0],FB[1][1],r,frng(fa));blk(FB[2][0],FB[2][1],r,0);
+    blk(SB[0][0],SB[0][1],r,frng(sNa));blk(SB[1][0],SB[1][1],r,frng(sFa));blk(SB[2][0],SB[2][1],r,frng(gNa));
+    r++;
+    // 할인율
+    const [mnL,mnH]=mm(mn),[amL,amH]=mm(am),[fiL,fiH]=mm(fit),[afL,afH]=mm(af),[fnL,fnH]=mm(fn),[faL,faH]=mm(fa),[sNnL,sNnH]=mm(sNn),[sNaL,sNaH]=mm(sNa),[sFnL,sFnH]=mm(sFn),[sFaL,sFaH]=mm(sFa);
+    put('C'+r,'할인율');
+    blk(RB[0][0],RB[0][1],r,fpct(mnL,mnH,amL,amH));blk(RB[1][0],RB[1][1],r,fpct(fiL,fiH,afL,afH));blk(RB[2][0],RB[2][1],r,'-');
+    blk(FB[0][0],FB[0][1],r,fpct(fnL,fnH,faL,faH));blk(FB[1][0],FB[1][1],r,fpct(fnL,fnH,faL,faH));blk(FB[2][0],FB[2][1],r,'-');
+    blk(SB[0][0],SB[0][1],r,fpct(sNnL,sNnH,sNaL,sNaH));blk(SB[1][0],SB[1][1],r,fpct(sFnL,sFnH,sFaL,sFaH));blk(SB[2][0],SB[2][1],r,'-');
+    r++;
+    ws.mergeCells('B'+sStart+':B'+(r-1));put('B'+sStart,s,{fill:'FFF2F2F2'});
+  }
+  ws.getColumn('A').width=2; ws.getColumn('B').width=8; ws.getColumn('C').width=7;
+  for(let c=4;c<=39;c++) ws.getColumn(c).width=3.2;
   ws.views=[{showGridLines:false}];
 }
 

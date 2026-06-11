@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root {
   --bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;
@@ -1202,140 +1203,99 @@ function renderYokumPreview(data, filename){
   </div>`;
 }
 
-function addToExcelDownload(){
+// 품의 양식(회원동반) 템플릿을 base로 로드해 값만 주입한 ExcelJS 워크북 반환
+async function buildPumuiWorkbook(months, yk, fd){
+    yk = yk || {};
+    // 템플릿(품의 양식 회원동반)을 base로 로드 → 병합·레이아웃 100% 보존, 값만 주입
+    const resp = await fetch('data/pumui_template.xlsx');
+    if(!resp.ok) throw new Error('template HTTP '+resp.status);
+    const buf = await resp.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws = wb.getWorksheet('품의 양식(회원동반)');
+    if(!ws) throw new Error('시트(품의 양식(회원동반)) 없음');
+
+    const setV = (addr,v)=>{ if(v!==undefined && v!==null && v!=='') ws.getCell(addr).value = v; };
+    const pct = v => (v!=null&&!isNaN(v)) ? v/100 : null;   // % → 분수(템플릿 서식이 % 표시)
+    const num = v => (v!=null&&!isNaN(v)) ? v : null;
+    const revU = v => (v!=null&&!isNaN(v)) ? Math.round(v) : null; // 백만원
+
+    // ── 2. Forecast (당월=months[0]@12행, 익월=months[1]@18행) ──
+    // RM/GS 각 목표·OTB·진행률·FCST·증감·달성률 열
+    const RM = ['D','G','J','M','P','S'];
+    const GS = ['V','Y','AB','AE','AH','AK'];
+    const put6 = (cols, r, vals) => vals.forEach((v,i)=>setV(cols[i]+r, v));
+    const fillBlock = (m, base) => {
+      if(!m) return;
+      // OCC
+      put6(RM, base, [pct(m.t_bud_occ_avg),pct(m.t_otb_occ_avg),pct(m.t_occ_ach),pct(m.t_fcst_occ),pct(m.t_occ_f_diff),pct(m.t_occ_f_ach)]);
+      put6(GS, base, [pct(m.gs_occ_bud),pct(m.gs_occ_otb),pct(m.gs_occ_ach),pct(m.gs_occ_fcst),pct(m.gs_occ_f_diff),pct(m.gs_occ_f_ach)]);
+      // RNs
+      put6(RM, base+1, [num(m.t_bud_rn),num(m.t_otb_rn),pct(m.t_rn_ach),num(m.t_fcst_rn),num(m.t_fcst_diff_rn),pct(m.t_fcst_ach_rn)]);
+      put6(GS, base+1, [num(m.gs_bud_rn),num(m.gs_otb_rn),pct(m.gs_rn_ach),num(m.gs_fcst_rn),num(m.gs_fcst_diff_rn),pct(m.gs_fcst_ach_rn)]);
+      // ADR
+      put6(RM, base+2, [num(m.t_adr_bud),num(m.t_adr_otb),pct(m.t_adr_ach),num(m.t_adr_fcst),num(m.t_adr_f_diff),pct(m.t_adr_f_ach)]);
+      put6(GS, base+2, [num(m.gs_adr_bud),num(m.gs_adr_otb),pct(m.gs_adr_ach),num(m.gs_adr_fcst),num(m.gs_adr_f_diff),pct(m.gs_adr_f_ach)]);
+      // REV (백만)
+      put6(RM, base+3, [revU(m.t_rev_bud),revU(m.t_rev_otb),pct(m.t_rev_ach),revU(m.t_rev_fcst),revU(m.t_rev_f_diff),pct(m.t_rev_f_ach)]);
+      put6(GS, base+3, [revU(m.gs_rev_bud),revU(m.gs_rev_otb),pct(m.gs_rev_ach),revU(m.gs_rev_fcst),revU(m.gs_rev_f_diff),pct(m.gs_rev_f_ach)]);
+    };
+    fillBlock(months[0], 12);
+    fillBlock(months[1], 18);
+
+    // ── 3. 상품 운영(안) (D25 상품명은 비움) ──
+    setV('D26', fd.property); setV('D27', fd.channel);
+    setV('D28', fd.salePeriod); setV('D29', fd.stayPeriod);
+    setV('D30', fd.product); setV('D31', fd.productNote);
+
+    // ── 4. 배분가 — 주중 행(정상가36/배분가37/할인율38), 객실=D/H · 판매가=AB/AF ──
+    const rkK = mm => { if(!mm) return null; const a=Math.round(mm.min/1000), b=Math.round(mm.max/1000); return a===b?a.toLocaleString('ko-KR'):`${a.toLocaleString('ko-KR')}~${b.toLocaleString('ko-KR')}`; };
+    setV('D36', rkK(yk.room?.regUnnamed));  setV('H36', rkK(yk.room?.regFit));
+    setV('D37', rkK(yk.room?.distUnnamed)); setV('H37', rkK(yk.room?.distFit));
+    setV('D38', yk.room?.discUnnamed);      setV('H38', yk.room?.discFit);
+    setV('AB36', rkK(yk.sell?.unnamed));    setV('AF36', rkK(yk.sell?.fit));   // 판매가(배분가 없음)
+    setV('AB38', yk.sell?.discUnnamed);     setV('AF38', yk.sell?.discFit);
+
+    // 수수료 / KPI
+    setV('D48', yk.commission); setV('D49', yk.kpi);
+
+    // ── 5. 부대시설 상세 — 주중 회원 열(정상가54/배분가55/할인율56) ──
+    const fK = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : null;
+    const facD2 = (reg,dist) => (typeof reg==='number'&&typeof dist==='number'&&reg>0) ? Math.round((1-dist/reg)*100)+'%' : null;
+    const yFac = yk.fac||{}, yFacD = yk.facD||{};
+    [['D','오션'],['M','조식'],['V','석식'],['AE','레전드']].forEach(([col,key])=>{
+      setV(col+'54', fK(yFac[key]));
+      setV(col+'55', fK(yFacD[key]));
+      setV(col+'56', facD2(yFac[key], yFacD[key]));
+    });
+
+    return wb;
+}
+
+async function addToExcelDownload(){
   if(!lastMonthData.length){showFormMsg('먼저 Forecast 테이블을 생성해주세요','error');return;}
+  if(typeof ExcelJS==='undefined'){showFormMsg('엑셀 라이브러리 로딩 실패 — 새로고침 후 재시도','error');return;}
 
-  const wb = XLSX.utils.book_new();
-  const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
-  const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join('+') : selPropsArr[0].label;
-  const segsArr = [...selectedSegs];
-
-  // Forecast sheet — 수동 빌드 (셀 서식 적용)
-  const header1 = ['월','항목','전체 (RM)','','','','','','GS ('+segsArr.join('+')+')','','','','',''];
-  const otbLabel = '현재OTB'+(DATA.otb&&DATA.otb.meta&&DATA.otb.meta.baseDate?'('+DATA.otb.meta.baseDate.slice(5).replace('-','/')+')':'');
-  const header2 = ['','','목표',otbLabel,'진행률','FCST','증감','달성률','목표',otbLabel,'진행률','FCST','증감','달성률'];
-  const aoa = [header1, header2];
-
-  const revUnit = v => (v!=null&&!isNaN(v)) ? Math.round(v) : null; // 백만원
-
-  lastMonthData.forEach(d=>{
-    // OCC
-    aoa.push([d.month+'월','OCC',
-      d.t_bud_occ_avg!=null?d.t_bud_occ_avg/100:null, d.t_otb_occ_avg!=null?d.t_otb_occ_avg/100:null,
-      d.t_occ_ach!=null?d.t_occ_ach/100:null,
-      d.t_fcst_occ!=null?d.t_fcst_occ/100:null,
-      d.t_occ_f_diff!=null?d.t_occ_f_diff/100:null,
-      d.t_occ_f_ach!=null?d.t_occ_f_ach/100:null,
-      d.gs_occ_bud!=null?d.gs_occ_bud/100:null, d.gs_occ_otb!=null?d.gs_occ_otb/100:null,
-      d.gs_occ_ach!=null?d.gs_occ_ach/100:null,
-      d.gs_occ_fcst!=null?d.gs_occ_fcst/100:null,
-      d.gs_occ_f_diff!=null?d.gs_occ_f_diff/100:null,
-      d.gs_occ_f_ach!=null?d.gs_occ_f_ach/100:null]);
-    // RNs
-    aoa.push(['','RNs',
-      d.t_bud_rn||null, d.t_otb_rn||null, d.t_rn_ach!=null?d.t_rn_ach/100:null,
-      d.t_fcst_rn||null, d.t_fcst_diff_rn, d.t_fcst_ach_rn!=null?d.t_fcst_ach_rn/100:null,
-      d.gs_bud_rn||null, d.gs_otb_rn||null, d.gs_rn_ach!=null?d.gs_rn_ach/100:null,
-      d.gs_fcst_rn||null, d.gs_fcst_diff_rn, d.gs_fcst_ach_rn!=null?d.gs_fcst_ach_rn/100:null]);
-    // ADR
-    aoa.push(['','ADR',
-      d.t_adr_bud||null, d.t_adr_otb||null, d.t_adr_ach!=null?d.t_adr_ach/100:null,
-      d.t_adr_fcst||null, d.t_adr_f_diff, d.t_adr_f_ach!=null?d.t_adr_f_ach/100:null,
-      d.gs_adr_bud||null, d.gs_adr_otb||null, d.gs_adr_ach!=null?d.gs_adr_ach/100:null,
-      d.gs_adr_fcst||null, d.gs_adr_f_diff, d.gs_adr_f_ach!=null?d.gs_adr_f_ach/100:null]);
-    // REV
-    aoa.push(['','REV',
-      revUnit(d.t_rev_bud), revUnit(d.t_rev_otb), d.t_rev_ach!=null?d.t_rev_ach/100:null,
-      revUnit(d.t_rev_fcst), revUnit(d.t_rev_f_diff), d.t_rev_f_ach!=null?d.t_rev_f_ach/100:null,
-      revUnit(d.gs_rev_bud), revUnit(d.gs_rev_otb), d.gs_rev_ach!=null?d.gs_rev_ach/100:null,
-      revUnit(d.gs_rev_fcst), revUnit(d.gs_rev_f_diff), d.gs_rev_f_ach!=null?d.gs_rev_f_ach/100:null]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // 셀 서식 적용
-  const pctFmt = '0.0%';
-  const numFmt = '#,##0';
-  const diffPctFmt = '+0.0%p;-0.0%p;0.0%p';
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for(let R=2; R<=range.e.r; R++){
-    const rowType = aoa[R]?.[1]; // OCC, RNs, ADR, REV
-    for(let C=2; C<=13; C++){
-      const addr = XLSX.utils.encode_cell({r:R,c:C});
-      if(!ws[addr]) continue;
-      const colIdx = (C-2)%6; // 0=목표,1=OTB,2=진행률,3=FCST,4=증감,5=달성률
-      if(rowType==='OCC'){
-        if(colIdx===4) ws[addr].z = '+0.0%p;-0.0%p;0.0%p';
-        else ws[addr].z = pctFmt;
-      } else if(rowType==='RNs'){
-        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
-        else ws[addr].z = numFmt;
-      } else if(rowType==='ADR'){
-        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
-        else ws[addr].z = numFmt;
-      } else if(rowType==='REV'){
-        if(colIdx===2||colIdx===5) ws[addr].z = pctFmt;
-        else ws[addr].z = '#,##0';
-      }
-    }
-  }
-  ws['!cols']=[{wch:6},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8}];
-  // 헤더 병합
-  ws['!merges']=[
-    {s:{r:0,c:2},e:{r:0,c:7}}, // 전체 (RM)
-    {s:{r:0,c:8},e:{r:0,c:13}}, // GS
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
-
-  // 기획전 상세 sheet
   const fd=getFormData();
-  const yk = uploadedYokumRendered || {};
-  const rkK = mm => { if(!mm) return '—'; const a=Math.round(mm.min/1000), b=Math.round(mm.max/1000); return a===b?a.toLocaleString('ko-KR'):`${a.toLocaleString('ko-KR')}~${b.toLocaleString('ko-KR')}`; };
-  const fK = v => typeof v==='number' ? Math.round(v/1000).toLocaleString('ko-KR') : '—';
-  const facD2 = (reg,dist) => (reg&&dist&&reg>0) ? Math.round((1-dist/reg)*100)+'%' : '—';
-  const yFac = yk.fac||{}, yFacD = yk.facD||{};
-  const detailRows=[
-    ['3. 내 용'],
-    ['구 분','내 용'],
-    ['사업장',fd.property],
-    ['채 널',fd.channel],
-    ['판매일자',fd.salePeriod],
-    ['투숙일자',fd.stayPeriod],
-    ['상 품',fd.product],
-    ['상품 비고',fd.productNote],
-    [],
-    ['객실 [단위:천원]','','회원(무기명)','FIT'],
-    ['','정상가',rkK(yk.room?.regUnnamed),rkK(yk.room?.regFit)],
-    ['','배분가',rkK(yk.room?.distUnnamed),rkK(yk.room?.distFit)],
-    ['','할인율',yk.room?.discUnnamed||'—',yk.room?.discFit||'—'],
-    [],
-    ['배분적부가기준비율',yk.ratio||'—'],
-    [],
-    ['식음/액티 [단위:천원]','','조식','오션','석식','레전드','비고'],
-    ['','정상가',fK(yFac.조식),fK(yFac.오션),fK(yFac.석식),fK(yFac.레전드),yk.facNote||''],
-    ['','배분가',fK(yFacD.조식),fK(yFacD.오션),fK(yFacD.석식),fK(yFacD.레전드),''],
-    ['','할인율',facD2(yFac.조식,yFacD.조식),facD2(yFac.오션,yFacD.오션),facD2(yFac.석식,yFacD.석식),facD2(yFac.레전드,yFacD.레전드),''],
-    [],
-    ['패키지 (객실+부대) [단위:천원]','','회원(무기명)','FIT'],
-    ['','정상가',rkK(yk.pkg?.regUnnamed),rkK(yk.pkg?.regFit)],
-    ['','배분가',rkK(yk.pkg?.distUnnamed),rkK(yk.pkg?.distFit)],
-    ['','할인율',yk.pkg?.discUnnamed||'—',yk.pkg?.discFit||'—'],
-    [],
-    ['판매가 [단위:천원]','','회원(무기명)','FIT'],
-    ['','정상가',rkK(yk.sell?.unnamed),rkK(yk.sell?.fit)],
-    ['','할인율',yk.sell?.discUnnamed||'—',yk.sell?.discFit||'—'],
-    [],
-    ['수수료',yk.commission||''],
-    ['KPI',yk.kpi||'']
-  ];
-  const ws2=XLSX.utils.aoa_to_sheet(detailRows);
-  ws2['!cols']=[{wch:18},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws2,'기획전상세');
+  const months = lastMonthData;
+  if(months.length>2) showFormMsg('월 3개 이상 선택됨 — 양식상 당월/익월 2개월만 반영됩니다','error');
 
-  const fname=`품의서_${fd.property||propLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
-  XLSX.writeFile(wb,fname);
-  showFormMsg('엑셀 다운로드 완료','success');
-  setTimeout(()=>showFormMsg('',''),2000);
+  try{
+    const wb = await buildPumuiWorkbook(months, uploadedYokumRendered, fd);
+    const outBuf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([outBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`품의서_${fd.property||'품의'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    showFormMsg('엑셀 다운로드 완료','success');
+    setTimeout(()=>showFormMsg('',''),2500);
+  }catch(err){
+    console.error('[pumui export]', err);
+    showFormMsg('엑셀 생성 실패: '+err.message,'error');
+  }
 }
 
 // Restore saved Apps Script URL
