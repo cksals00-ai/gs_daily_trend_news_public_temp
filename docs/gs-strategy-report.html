@@ -794,7 +794,7 @@
     <!-- ══════ 운영-3. 자동화 로직 점검 ══════ -->
     <section class="card" id="sec-automation">
       <h2><span class="num">3</span> 자동화 로직 점검</h2>
-      <div class="sub">데이터 입력 → 파싱 → 출력 → 리포트 반영 전 단계 점검 <span style="font-family:var(--mono);font-size:11px;color:var(--gold-bright);margin-left:8px">점검기간: 2026-06-01 ~ 06-06</span></div>
+      <div class="sub">데이터 입력 → 파싱 → 출력 → 리포트 반영 전 단계 점검 <span style="font-family:var(--mono);font-size:11px;color:var(--gold-bright);margin-left:8px">점검기간: 2026-06-07 ~ 06-13</span></div>
 
       <!-- 긴급 점검 사항 -->
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
@@ -803,7 +803,7 @@
             <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--positive);background:rgba(76,175,111,0.15);padding:2px 7px;border-radius:3px">✅ RESOLVED</span>
             <span style="font-size:13px;font-weight:700;color:var(--ink)">기획전 실적 업데이트 지연 — 해소</span>
           </div>
-          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 6/6 기준 데이터 신선도 정상(db_aggregated·otb_data 06:04 갱신) — 잔여 제약은 GitHub push 차단(호스트 일괄 처리)으로 데이터 정확성과 무관.</div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 6/13 기준 데이터 신선도 정상(db_aggregated·otb_data 06:04 갱신, RM FCST는 Revenue Meeting_2026.06.08.pdf 스냅샷 반영) — 잔여 제약은 GitHub push 차단(호스트 일괄 처리)으로 데이터 정확성과 무관.</div>
         </div>
         <div style="border-left:4px solid var(--negative);background:var(--negative-bg);padding:12px 16px;border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1035,6 +1035,19 @@
       <h2><span class="num">4</span> 변경이력</h2>
       <div class="sub">시스템 업데이트 및 수정 내역</div>
       <div style="display:flex;flex-direction:column;gap:14px" id="changelog-list">
+        <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-06-07 ~ 13</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:var(--bg-soft);padding:2px 6px;border-radius:3px">v3.2</span>
+          </div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">데이터 최신화</b> — RM FCST(<b>Revenue Meeting_2026.06.08.pdf 스냅샷</b>)·Daily Booking·온북 DB 반영. 6월 FCST 189,159실/3,480억, 7월 254,006실/5,616억, <b>8월 신규 274,643실/6,525억</b>(Grand Total). 6월 온북 58,448실(Budget 73,340 · 달성 79.7%) — 전주比 +6,113실(71.4→79.7%) 픽업 진행</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">상반기 패턴</b> — 1·2·4·5월 Budget 초과(107.5%·112.1%·111.6%·106.8%) · 3월 92.4% · 7월 33.9%·8월 8.2%로 여름 성수기 선행관리 구간 본격 진입 · 연간 온북 450,122실(달성 51.1%·YoY +23.6%)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">RM FCST → 매출·소사업·PPT 全자동 체인 완성</b> — 소사업 예상매출 자동화(<code>소사업_예상매출.xlsx</code> · 월별 누적 7,506) + 세일즈마케팅 PPT 기간라벨 동적화(GS 누계 106,488 · 커밋 77f2702) + RM FCST 정리 엑셀 당월 재생성. Revenue Meeting 갱신 → rm_fcst.json → build.py 자동 호출 全단계 자동</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>OTB 영업장별 피벗 지표 슬라이서 + 전년마감/진행률/예상 컬럼 · gs-strategy 리드타임 탭(평균 리드타임 + 7구간 분포) 신규 · 요금표→품의 배분가 변환기 페이지 추가</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>뉴스 수집 297건(신규 112) · 활성 스케줄 8건 가동(yanolja-monitor 비활성 전환) · 구축리포트 리포트 인벤토리 52건으로 갱신</li>
+          </ul>
+        </div>
         <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-06-01 ~ 06</span>
