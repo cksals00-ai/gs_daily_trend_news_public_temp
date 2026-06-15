@@ -827,6 +827,36 @@ def render_competitor_cards(comp_data: dict) -> str:
     return "\n".join(cards)
 
 
+def render_competitor_summary(comp_data: dict) -> str:
+    """권역별 요약 카드 4개 — collect_gs_monitor가 계산한 summary_by_region 기반."""
+    summary = comp_data.get("summary_by_region", {})
+    regions = [
+        ("vivaldi", "🍷 비발디 권역", "#e57373"),
+        ("central", "🏔️ 중부 권역", "#5a9fc4"),
+        ("south", "🌊 남부 권역", "#4caf6f"),
+        ("apac", "🌏 APAC 권역", "#b89dd9"),
+    ]
+    cards = []
+    for key, label, color in regions:
+        s = summary.get(key, {})
+        cnt = int(s.get("count", 0))
+        if cnt == 0:
+            line_color, line = "var(--ink-faint)", "추적 중 없음"
+        else:
+            avg = int(s.get("avg_discount", 0))
+            brand = escape_html(str(s.get("threat", "")).replace(" 등 1개사", ""))
+            word = "최대" if cnt == 1 else "평균"
+            line_color = "var(--negative)" if avg >= 30 else ("var(--warning)" if avg >= 20 else "var(--ink-faint)")
+            line = f"{word} 할인 {avg}% · {brand}"
+        cards.append(f'''
+    <div style="background:var(--bg-card);border:1px solid var(--rule);border-top:3px solid {color};border-radius:4px;padding:14px 16px;">
+      <div style="font-family:'Pretendard Variable','Noto Sans KR',sans-serif;font-size:11px;letter-spacing:0.15em;color:var(--ink-muted);margin-bottom:6px;font-weight:700;">{label}</div>
+      <div style="font-family:'Pretendard Variable','Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:var(--ink);margin-bottom:4px;">{cnt}<span style="font-size:13px;color:var(--ink-muted);font-weight:600;margin-left:3px;">개사 추적 중</span></div>
+      <div style="font-family:'Pretendard Variable','Noto Sans KR',sans-serif;font-size:12px;color:{line_color};font-weight:700;">{line}</div>
+    </div>''')
+    return "\n".join(cards)
+
+
 def inject_competitor_section(html: str, comp_data: dict) -> str:
     cards = render_competitor_cards(comp_data)
     pattern = re.compile(
@@ -839,7 +869,17 @@ def inject_competitor_section(html: str, comp_data: dict) -> str:
     )
     if n > 0:
         logger.info(f"✓ 경쟁사 카드 주입: {len(comp_data.get('competitors', []))}개")
-    
+
+    # 권역별 요약 카드 주입 (COMP_SUMMARY 마커 사이)
+    summary_html = render_competitor_summary(comp_data)
+    sum_pat = re.compile(r'(<!-- COMP_SUMMARY_START -->)(.*?)(<!-- COMP_SUMMARY_END -->)', re.DOTALL)
+    new_html, sn = sum_pat.subn(
+        lambda m: m.group(1) + "\n" + summary_html + "\n" + m.group(3),
+        new_html, count=1
+    )
+    if sn > 0:
+        logger.info("✓ 경쟁사 권역요약 카드 주입: 4개 권역")
+
     comps = comp_data.get("competitors", [])
     if comps:
         avg = sum(c.get("discount_pct", 0) for c in comps) / len(comps)
