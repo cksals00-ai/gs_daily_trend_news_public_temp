@@ -6,6 +6,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>프로모션 요금표 → 품의 배분가(안) 변환 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{--bg:#0f1722;--card:#16202e;--line:#2a3a4f;--ink:#e7eef7;--mut:#9fb2c9;--accent:#1F4E79;--accent2:#2f6fb0;--ok:#37c98b;--warn:#e0b341;}
@@ -97,10 +98,22 @@
 
 <script>
 const $=id=>document.getElementById(id);
-function cellVal(ws,r,c){let v=ws.getRow(r).getCell(c).value; if(v&&typeof v==='object'){if('result'in v)return v.result; if('richText'in v)return v.richText.map(t=>t.text).join(''); if('text'in v)return v.text; if(v instanceof Date)return v;} return v;}
+// ── 입력 읽기: SheetJS(빠름). 출력 서식: ExcelJS. ──
+// 병합 인덱스: SheetJS는 병합 내 비-마스터 칸이 비어있어, ExcelJS처럼 마스터값을 반환하도록 매핑
+function mIndex(ws){
+  if(ws.__mi) return ws.__mi;
+  const mi={}; (ws['!merges']||[]).forEach(m=>{ for(let r=m.s.r;r<=m.e.r;r++)for(let c=m.s.c;c<=m.e.c;c++){ if(r!==m.s.r||c!==m.s.c) mi[r+':'+c]=m.s.r+':'+m.s.c; } });
+  Object.defineProperty(ws,'__mi',{value:mi,enumerable:false,configurable:true}); return mi;
+}
+function cellVal(ws,r,c){ // r,c 1-indexed
+  let rr=r-1, cc=c-1; const m=mIndex(ws)[rr+':'+cc]; if(m){const p=m.split(':');rr=+p[0];cc=+p[1];}
+  const cell=ws[XLSX.utils.encode_cell({r:rr,c:cc})]; return cell?cell.v:null;
+}
 function num(v){return (typeof v==='number')?v:null;}
 function clean(s){return (s==null?'':String(s)).replace(/\n/g,' ').trim();}
-function ncols(ws){return Math.max(ws.columnCount||1, ws.actualColumnCount||1, 1);}
+function dimRange(ws){return ws['!ref']?XLSX.utils.decode_range(ws['!ref']):{s:{r:0,c:0},e:{r:0,c:0}};}
+function ncols(ws){return dimRange(ws).e.c+1;}
+function nrows(ws){return dimRange(ws).e.r+1;}
 
 let WB=null, PRICE_SHEETS=[];
 
@@ -114,9 +127,11 @@ $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 async function loadFile(f){
   $('fileinfo').textContent='읽는 중… '+f.name;
   const buf=await f.arrayBuffer();
-  WB=new ExcelJS.Workbook();
-  try{await WB.xlsx.load(buf);}catch(err){$('fileinfo').innerHTML='<span class="warn">읽기 실패: '+err.message+'</span>';return;}
-  PRICE_SHEETS=WB.worksheets.filter(ws=>!!detectBand(ws));
+  let wb;
+  try{ wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,cellStyles:false,cellNF:false}); }
+  catch(err){$('fileinfo').innerHTML='<span class="warn">읽기 실패: '+err.message+'</span>';return;}
+  WB=wb;
+  PRICE_SHEETS=wb.SheetNames.map(nm=>({name:nm, ws:wb.Sheets[nm]})).filter(s=>!!detectBand(s.ws));
   if(!PRICE_SHEETS.length){
     $('fileinfo').innerHTML='<span class="warn">가격 시트(객실/부대 헤더 밴드)를 찾지 못했어요.</span> 시트 구조를 확인해주세요.';
     return;
@@ -124,7 +139,7 @@ async function loadFile(f){
   $('fileinfo').innerHTML='<span class="ok">불러옴:</span> '+f.name+' · 가격시트 '+PRICE_SHEETS.length+'개';
   $('resultcard').style.display='block';
   buildSheetPick();
-  extractMeta(PRICE_SHEETS[0]);
+  extractMeta(PRICE_SHEETS[0].ws);
   $('convert').disabled=false;
   $('autoflag').textContent = PRICE_SHEETS.length>1 ? PRICE_SHEETS.length+'개 시트 감지' : '자동감지 OK';
   $('autostat').innerHTML='<span class="ok">✓ 자동 감지 완료</span> — 기본정보 확인 후 <b>변환 &amp; 다운로드</b>.';
@@ -134,7 +149,7 @@ async function loadFile(f){
 function buildSheetPick(){
   if(PRICE_SHEETS.length<=1){ $('sheetpick').innerHTML=''; return; }
   let h='<div style="margin-bottom:4px">통합할 시트 선택 (체크된 시트를 전체 통합 MIN~MAX):</div><div class="shbox">';
-  PRICE_SHEETS.forEach((ws,i)=>{ h+='<label><input type="checkbox" class="shpick" value="'+i+'" checked> '+ws.name+'</label>'; });
+  PRICE_SHEETS.forEach((s,i)=>{ h+='<label><input type="checkbox" class="shpick" value="'+i+'" checked> '+s.name+'</label>'; });
   h+='</div>';
   $('sheetpick').innerHTML=h;
   [...document.querySelectorAll('.shpick')].forEach(c=>c.addEventListener('change',renderSummary));
@@ -165,7 +180,7 @@ const ITEM_ORDER=['조식뷔페','오션월드','스노위곤돌라','음료','�
 // 헤더밴드: '객실'과 '부대'가 같이 있는 라벨행
 function detectBand(ws){
   const NC=ncols(ws);
-  for(let r=1;r<=28 && r<=ws.rowCount;r++){
+  for(let r=1;r<=28 && r<=nrows(ws);r++){
     let hasRoom=false,hasFac=false;
     for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)).replace(/\s/g,''); if(v==='객실')hasRoom=true; if(v.indexOf('부대')>=0)hasFac=true;}
     if(hasRoom&&hasFac) return r;
@@ -197,7 +212,7 @@ function parseSheet(ws){
   for(let r=1;r<=grp;r++)for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c)).replace(/\s/g,''); if(v==='시즌'&&!season)season=c; if(v==='기간'&&perCands.indexOf(c)<0)perCands.push(c);}
   // 기간 컬럼: '기간' 라벨 우선, 없으면 시즌 왼쪽에서 날짜형 데이터가 있는 열을 탐색
   const isDate=t=>/\d\s*[\/.]\s*\d/.test(t)||/\d\s*~\s*\d/.test(t);
-  const tryDateCol=c=>{for(let r=sub+1;r<=Math.min(sub+30,ws.rowCount);r++){if(isDate(clean(cellVal(ws,r,c))))return true;}return false;};
+  const tryDateCol=c=>{for(let r=sub+1;r<=Math.min(sub+30,nrows(ws));r++){if(isDate(clean(cellVal(ws,r,c))))return true;}return false;};
   let per=0;
   for(const c of perCands){ if(tryDateCol(c)){per=c;break;} }
   if(!per){ const lim=season>1?season:NC+1; for(let c=1;c<lim;c++){ if(tryDateCol(c)){per=c;break;} } }
@@ -207,7 +222,7 @@ function parseSheet(ws){
 
 function extractRows(ws,ctx,biz){
   const rows=[]; let period='';
-  for(let r=ctx.dataStart;r<=ws.rowCount;r++){
+  for(let r=ctx.dataStart;r<=nrows(ws);r++){
     const mn=num(cellVal(ws,r,ctx.nRoom.mem));
     const pv=ctx.per?clean(cellVal(ws,r,ctx.per)):'';
     if(pv && /\d/.test(pv))period=pv.replace(/\s+/g,' ');
@@ -228,7 +243,7 @@ function extractRows(ws,ctx,biz){
 // ---- 메타 자동 추출 ----
 function txtAround(ws,label){
   const NC=ncols(ws);
-  for(let r=1;r<=Math.min(18,ws.rowCount);r++){
+  for(let r=1;r<=Math.min(18,nrows(ws));r++){
     for(let c=1;c<=NC;c++){const v=clean(cellVal(ws,r,c));
       if(v && v.replace(/\s/g,'').indexOf(label)>=0){
         let parts=[];for(let cc=c+1;cc<=NC;cc++){const w=clean(cellVal(ws,r,cc));if(w&&w!==v)parts.push(w);}
@@ -244,7 +259,7 @@ function bizFromTitle(ws){
 }
 function findFee(ws){
   const NC=ncols(ws);
-  for(let r=1;r<=Math.min(ws.rowCount,40);r++){for(let c=1;c<=NC;c++){
+  for(let r=1;r<=Math.min(nrows(ws),40);r++){for(let c=1;c<=NC;c++){
     const v=clean(cellVal(ws,r,c));let m=v.match(/\((\d{1,2}(?:\.\d)?)\s*%\)/);
     if(m)return m[1];
     if(/수수료/.test(v)){m=v.match(/(\d{1,2}(?:\.\d)?)\s*%/);if(m)return m[1];
@@ -290,11 +305,11 @@ async function convert(){
   $('status').textContent='변환 중…';
   const sheets=selectedSheets();
   let allRows=[]; const usedNames=[]; const skipNames=[];
-  sheets.forEach(ws=>{
-    const ctx=parseSheet(ws);
-    if(!ctx||ctx.nRoom.mem==null||ctx.aRoom.mem==null){ skipNames.push(ws.name); return; }
-    usedNames.push(ws.name);
-    allRows=allRows.concat(extractRows(ws,ctx,ws.name));
+  sheets.forEach(s=>{
+    const ctx=parseSheet(s.ws);
+    if(!ctx||ctx.nRoom.mem==null||ctx.aRoom.mem==null){ skipNames.push(s.name); return; }
+    usedNames.push(s.name);
+    allRows=allRows.concat(extractRows(s.ws,ctx,s.name));
   });
   if(!allRows.length){$('status').innerHTML='<span class="warn">추출된 데이터가 없어요. 시트 구조를 확인해주세요.</span>';return;}
   // 행별 메인 부대 합산: 오션기준(조식 별도). 단 조식 외 부대가 없으면 조식 포함.
