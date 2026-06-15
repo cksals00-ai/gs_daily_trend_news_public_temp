@@ -780,7 +780,10 @@ def render_competitor_cards(comp_data: dict) -> str:
         r_color = region_colors.get(region, "#8a8a8a")
         r_label = region_labels.get(region, region)
         t_label, t_color, t_bg = threat_styles.get(threat, ("-", "#8a8a8a", "#f0f0f0"))
-        
+        # 할인율%가 없는(0) 프로모션은 '0%' 대신 '특가'로 표기
+        disc_html = (f'{discount}<span style="font-size:13px;font-weight:700;">%</span>'
+                     if discount else '<span style="font-size:15px;font-weight:800;">특가</span>')
+
         cards.append(f'''
     <a href="{link}" target="_blank" rel="noopener noreferrer" 
        style="text-decoration:none;color:inherit;display:block;background:var(--bg-card);border:1px solid var(--rule);border-left:3px solid {r_color};border-radius:0 4px 4px 0;padding:16px 18px;transition:all 0.2s;"
@@ -794,8 +797,8 @@ def render_competitor_cards(comp_data: dict) -> str:
         </div>
         <!-- 할인율 박스 (의미 명확하게) -->
         <div style="text-align:center;background:rgba(229,115,115,0.12);border:1px solid rgba(229,115,115,0.4);padding:6px 10px;border-radius:4px;min-width:80px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--negative);letter-spacing:0.1em;font-weight:700;margin-bottom:2px;">최대 할인율</div>
-          <div style="font-family:'Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:var(--negative);line-height:1;">{discount}<span style="font-size:13px;font-weight:700;">%</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--negative);letter-spacing:0.1em;font-weight:700;margin-bottom:2px;">{'최대 할인율' if discount else '프로모션'}</div>
+          <div style="font-family:'Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:var(--negative);line-height:1;">{disc_html}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;background:{t_bg};color:{t_color};border-radius:2px;font-weight:700;margin-top:4px;display:inline-block;">{t_label}</div>
         </div>
       </div>
