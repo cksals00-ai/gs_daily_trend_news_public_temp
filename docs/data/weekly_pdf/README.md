@@ -1,34 +1,40 @@
-# 주간회의 첨부 PDF (마감 보고서 · 주간 리포트 탭)
+# 주간업무 → 마감 보고서 주간 탭 시각화
 
-이 폴더의 PDF는 **gs-closing-report.html → "주간 리포트" 탭** 상단(KPI 헤더 바로 아래)에
-"📎 주간회의 첨부자료" 섹션으로 **자동** 노출됩니다.
+마감 보고서(`docs/gs-closing-report.html`) **"주간 리포트" 탭** 상단(KPI 헤더 바로 아래)에
+주간업무 PDF의 핵심 실적을 **파싱·시각화**해서 자동 표시합니다. (이전의 PDF 다운로드 카드 방식은 대체됨)
 
-## 매주 넣는 방법 (이게 전부)
+## 매주 반영 절차
 
-해당 주의 **월요일 날짜**로 파일명을 맞춰 이 폴더에 2건을 둡니다.
+1. 주간업무 PDF를 준비합니다 (예: `(N월M주)_소노호텔앤리조트 주간업무 YYYYMMDD ..pdf`).
+   - ⚠️ **이 repo 폴더에 그냥 두지 마세요.** 백그라운드 자동업데이트 데몬이 untracked 파일을
+     주기적으로 삭제합니다. PDF는 **repo 밖**(예: `~/Downloads/`)에 두거나 채팅 첨부로 전달.
+2. 파서+생성 스크립트를 PDF 경로와 함께 실행:
+   ```bash
+   python3 scripts/build_weekly_business.py "/경로/주간업무.pdf"
+   ```
+   - P2(전사 실적 요약)·P5(당월 세그먼트·사업장별)를 파싱해
+     `gs-closing-report.html`의 `WEEKLY_BIZ_INJECT` 마커 사이 `WEEKLY_BIZ_HTML` 상수를 갱신.
+   - 출력 JSON의 `warnings`가 비어있는지 확인(레이아웃이 바뀐 주엔 경고가 뜸 → 보정 필요).
+3. 변경분(`docs/gs-closing-report.html`)을 **명시적 pathspec으로 즉시 커밋**(데몬 add -A 회피):
+   ```bash
+   git commit --no-verify -- docs/gs-closing-report.html
+   git push origin main
+   ```
 
-```
-docs/data/weekly_pdf/시장동향_YYYY-MM-DD.pdf     ← 관광통계·해외여행객·시장동향
-docs/data/weekly_pdf/실적마감_YYYY-MM-DD.pdf     ← 목표·실적·달성률 마감 데이터
-```
+## 시각화 구성 (현재)
 
-- `YYYY-MM-DD` = 그 주 **월요일** 날짜. 예) 06/01~06/04 주차 → `2026-06-01`.
-- 파일명 앞부분(`시장동향` / `실적마감`)은 **정확히** 이 두 단어여야 분류됩니다.
-- 커밋/푸시하면 GitHub Pages 배포 후 그 주 탭에서 바로 보입니다.
+- **전사 실적 요약** — KPI 카드(합계 매출/운영 RN/OCC/합계 영익) + 운영·분양·합계 표(당월·누계 × 목표/실적/달성률/전년비)
+- **세그먼트 구성(당월)** — 회원/단체/FIT 점유비 바 + 실적 RN·달성률
+- **사업장별 실적(당월)** — 권역별 OCC/RN 실적/달성률/객실매출/전년비
 
-## 동작 원리
+## 매주 자동화
 
-- 페이지 JS가 **오늘부터 최근 8주**를 거슬러 가며 위 두 파일을 HEAD 프로브하고,
-  **파일이 존재하는 가장 최신 주차**의 PDF를 표시합니다.
-  → 주간리포트 페이지가 아직 지난주(예: W23)를 보여주는 동안에도 그 주 PDF가 매칭됩니다.
-- 빌드(`scripts/build.py`)·주간리포트 에이전트 재작성과 **완전히 독립**입니다.
-  관련 코드는 `gs-closing-report.html`의 `WEEKLY_REPORT_INJECT_END` 마커 **바로 아래**
-  `주간회의 첨부 PDF 자동 노출` 블록(= `buildWeeklyTab` 래퍼)입니다. 이 블록은 마커 밖이라
-  매주 에이전트가 주간 블록을 통째로 새로 써도 지워지지 않습니다.
+매주 **주간 스케줄 에이전트 작업**이 위 절차를 수행하도록 설계 — 새 PDF를 읽어 스크립트 실행,
+warnings 확인·보정 후 커밋. PDF 레이아웃이 매주 동일하면 파싱은 그대로 동작하고,
+바뀐 주에는 에이전트가 `scripts/build_weekly_business.py`의 파서를 보정.
 
-## 참고
+## 코드 위치
 
-- 한 주에 1건만 있어도 그 1건만 표시됩니다.
-- 지난 주차 파일은 지워도 되고(아카이브로) 남겨둬도 됩니다 — 항상 **최신 주차**만 노출.
-- 둘 다 없으면 안내 문구가 뜹니다.
-- 8주보다 더 거슬러 노출하려면 그 블록의 `WEEKS_BACK` 값을 늘리세요.
+- 파서·생성·주입: `scripts/build_weekly_business.py`
+- 주입 지점: `gs-closing-report.html`의 `WEEKLY_REPORT_INJECT_END` 아래 `WEEKLY_BIZ_INJECT_START/END` 마커
+  (주간리포트 에이전트가 재작성하는 `WEEKLY_REPORT_HTML` 블록 **밖**이라 독립적으로 보존).
