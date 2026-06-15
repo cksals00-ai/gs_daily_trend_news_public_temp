@@ -845,9 +845,12 @@ def render_competitor_summary(comp_data: dict) -> str:
         else:
             avg = int(s.get("avg_discount", 0))
             brand = escape_html(str(s.get("threat", "")).replace(" 등 1개사", ""))
-            word = "최대" if cnt == 1 else "평균"
             line_color = "var(--negative)" if avg >= 30 else ("var(--warning)" if avg >= 20 else "var(--ink-faint)")
-            line = f"{word} 할인 {avg}% · {brand}"
+            if avg > 0:
+                word = "최대" if cnt == 1 else "평균"
+                line = f"{word} 할인 {avg}% · {brand}"
+            else:
+                line = f"{brand} · 특가 진행"
         cards.append(f'''
     <div style="background:var(--bg-card);border:1px solid var(--rule);border-top:3px solid {color};border-radius:4px;padding:14px 16px;">
       <div style="font-family:'Pretendard Variable','Noto Sans KR',sans-serif;font-size:11px;letter-spacing:0.15em;color:var(--ink-muted);margin-bottom:6px;font-weight:700;">{label}</div>
