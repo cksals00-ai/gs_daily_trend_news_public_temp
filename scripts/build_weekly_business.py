@@ -140,6 +140,56 @@ def parse_p5_segment_subtotals(text):
     return [{"name": names[i], **r} for i, r in enumerate(res[:3])]
 
 
+# ── P7: 해외 실적 (매출 백만원 요약행) ────────────────────────────────
+P7_ROWS = ["미주합계", "하와이계", "망길라오계", "탈로포포계", "하이퐁합계"]
+P7_INDENT = {"하와이계", "망길라오계", "탈로포포계"}  # 미주합계 하위
+
+def parse_p7_overseas(text):
+    numtok = re.compile(rf'^{NUM}(억|%p|%)?$')
+    out = []
+    for ln in text.splitlines():
+        ln = ln.strip()
+        toks = ln.split()
+        if not toks or toks[0] not in P7_ROWS:
+            continue
+        label = toks[0]
+        vals = [t for t in toks[1:] if numtok.match(t)]
+        if len(vals) < 14:
+            continue
+        f = [_f(v) for v in vals[:14]]
+        out.append({
+            "label": label, "indent": label in P7_INDENT,
+            "m": {"budget": f[0], "actual": f[1], "ach": f[3], "yoy_pct": f[6]},
+            "c": {"budget": f[7], "actual": f[8], "ach": f[10], "yoy_pct": f[13]},
+        })
+    return out
+
+
+# ── P8~24: 부서·사업장별 정성 주간업무 (구분 / 전주 주요사항 / 금주 계획) ──
+QUAL_PAGES = range(8, 25)  # 1-based, P8~P24
+
+def _clean(s):
+    return re.sub(r'\s+', ' ', (s or '').replace('\n', ' ')).strip()
+
+def parse_qualitative(pages):
+    items = []
+    for pi in QUAL_PAGES:
+        if pi > len(pages):
+            break
+        for tb in pages[pi - 1].extract_tables():
+            if not tb or len(tb[0]) != 3:
+                continue
+            for r in tb:
+                dept = _clean(r[0]); prev = _clean(r[1]); plan = _clean(r[2])
+                if dept == "구분":
+                    continue
+                if not (prev or plan):
+                    continue
+                items.append({"page": pi, "dept": dept, "prev": prev, "plan": plan})
+            break  # 페이지당 첫 3열 표만
+    return items
+
+
 def parse_pdf(pdf_path):
     import pdfplumber
     pdf = pdfplumber.open(pdf_path)
@@ -165,6 +215,23 @@ def parse_pdf(pdf_path):
         data["segment"] = parse_p5_segment_subtotals(p5.extract_text() or "")
         if len(data["segment"]) < 3:
             data["warnings"].append("P5 세그먼트 소계 파싱 부족")
+
+    # P6 (누계) 세그먼트
+    if len(pages) > 5:
+        data["segment_cumul"] = parse_p5_segment_subtotals(pages[5].extract_text() or "")
+        if len(data["segment_cumul"]) < 3:
+            data["warnings"].append("P6 누계 세그먼트 파싱 부족")
+
+    # P7 해외
+    if len(pages) > 6:
+        data["overseas"] = parse_p7_overseas(pages[6].extract_text() or "")
+        if len(data["overseas"]) < 3:
+            data["warnings"].append(f"P7 해외 파싱 {len(data['overseas'])}행")
+
+    # P8~24 정성 주간업무
+    data["qualitative"] = parse_qualitative(pages)
+    if len(data["qualitative"]) < 5:
+        data["warnings"].append(f"P8~24 정성 파싱 {len(data['qualitative'])}건")
     return data
 
 
@@ -271,9 +338,10 @@ def gen_html(data, week_label):
         '</section>'
     )
 
-    # ── Section B: 세그먼트 구성 (당월) ──
+    # ── Section B: 세그먼트 구성 (당월 + 누계) ──
     if seg:
         seg_colors = {"회원": "#c9a063", "단체": "#5a9fc4", "FIT": "#4ecdc4"}
+        cumul = {s["name"]: s for s in data.get("segment_cumul", [])}
         total_rns = sum((s["rns_act"] or 0) for s in seg) or 1
         bar = ""
         for s in seg:
@@ -282,19 +350,25 @@ def gen_html(data, week_label):
                 w, seg_colors.get(s["name"], "#888"), s["name"], s["name"] if w > 8 else "")
         rows = ""
         for s in seg:
+            c = cumul.get(s["name"], {})
             rows += (
                 '<tr><td style="font-weight:700;color:%s">%s</td>'
+                '<td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
                 '<td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td></tr>' % (
                     seg_colors.get(s["name"], "var(--ink)"), s["name"],
-                    _rns(s["rns_act"]), _pct(s["share_act"]), _ach_tag(s["rns_ach"]))
+                    _rns(s["rns_act"]), _pct(s["share_act"]), _ach_tag(s["rns_ach"]),
+                    _rns(c.get("rns_act")), _pct(c.get("share_act")), _ach_tag(c.get("rns_ach")))
             )
         parts.append(
             '<section class="section" style="margin-bottom:24px">'
             '<span class="section-num">SEGMENT</span>'
-            '<h2 class="section-title"><span class="st-icon">🧩</span> 세그먼트 구성 (당월 객실 RN)</h2>'
+            '<h2 class="section-title"><span class="st-icon">🧩</span> 세그먼트 구성 (객실 RN)</h2>'
+            '<div style="font-size:11px;color:var(--ink-muted);margin-bottom:8px">당월 점유비</div>'
             '<div style="display:flex;height:30px;border-radius:6px;overflow:hidden;margin-bottom:14px">' + bar + '</div>'
             '<div class="table-wrap"><table class="full-table">'
-            '<thead><tr><th>세그먼트</th><th>실적 RN</th><th>점유비</th><th>달성률</th></tr></thead>'
+            '<thead><tr><th rowspan="2">세그먼트</th><th class="group-header" colspan="3">당월</th><th class="group-header" colspan="3">누계</th></tr>'
+            '<tr><th class="sub-header">실적 RN</th><th class="sub-header">점유비</th><th class="sub-header">달성률</th>'
+            '<th class="sub-header">실적 RN</th><th class="sub-header">점유비</th><th class="sub-header">달성률</th></tr></thead>'
             '<tbody>' + rows + '</tbody></table></div>'
             '<p style="font-size:11px;color:var(--ink-faint);margin-top:8px">※ 회원(기명·무기명·Staff·기타) / 단체(G·E-Mice·Inbound) / FIT(홈페이지·OTA·G-OTA·제휴·기타) 소계 기준.</p>'
             '</section>'
@@ -333,7 +407,72 @@ def gen_html(data, week_label):
             '</section>'
         )
 
+    # ── Section D: 해외 실적 (미주·괌·하이퐁) ──
+    ovs = data.get("overseas", [])
+    if ovs:
+        rows = ""
+        for o in ovs:
+            name = ("&nbsp;&nbsp;└ " + o["label"]) if o["indent"] else o["label"]
+            wt = "400" if o["indent"] else "700"
+            rows += (
+                '<tr><td style="font-weight:%s;%s">%s</td>'
+                '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
+                '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td></tr>' % (
+                    wt, ("" if o["indent"] else "color:var(--gold-bright)"), name,
+                    _mil(o["m"]["budget"]), _mil(o["m"]["actual"]), _ach_tag(o["m"]["ach"]), _yoy_tag(o["m"]["yoy_pct"]),
+                    _mil(o["c"]["budget"]), _mil(o["c"]["actual"]), _ach_tag(o["c"]["ach"]), _yoy_tag(o["c"]["yoy_pct"]))
+            )
+        parts.append(
+            '<section class="section" style="margin-bottom:24px">'
+            '<span class="section-num">OVERSEAS</span>'
+            '<h2 class="section-title"><span class="st-icon">🌏</span> 해외 실적'
+            '<span style="font-size:11px;font-weight:600;color:var(--ink-faint)"> · 매출 백만원 · 미주(하와이·괌)·하이퐁</span></h2>'
+            '<div class="table-wrap"><table class="full-table">'
+            '<thead><tr><th rowspan="2">거점</th><th class="group-header" colspan="4">당월 예상</th><th class="group-header" colspan="4">누계</th></tr>'
+            '<tr><th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th>'
+            '<th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th></tr></thead>'
+            '<tbody>' + rows + '</tbody></table></div>'
+            '<p style="font-size:11px;color:var(--ink-faint);margin-top:8px">※ 매출 합계(객실+식음+골프 등) 단위=백만원. 미주합계 = 하와이+망길라오+탈로포포. 환율 06.11 매매기준율 적용.</p>'
+            '</section>'
+        )
+
+    # ── Section E: 부서·사업장별 주간업무 (정성, 전주 실적 / 금주 계획) ──
+    qual = data.get("qualitative", [])
+    if qual:
+        def _bullets(txt):
+            if not txt: return '<span style="color:var(--ink-faint)">–</span>'
+            t = re.sub(r'\s+(?=\d+\.\s)', '\n', txt)            # " 1. " 앞 줄바꿈
+            t = re.sub(r'(?=[①-⑩·])', '\n', t)                  # 불릿/원숫자 앞 줄바꿈
+            items = [x.strip(' ·').strip() for x in t.split('\n') if x.strip(' ·').strip()]
+            if not items: return _h(txt)
+            return '<ul style="margin:0;padding-left:16px;line-height:1.7">' + \
+                   "".join('<li>%s</li>' % _h(x) for x in items) + '</ul>'
+        cards = ""
+        for q in qual:
+            cards += (
+                '<div style="border:1px solid var(--rule,rgba(255,255,255,.08));border-radius:9px;padding:13px 15px;margin-bottom:10px">'
+                '<div style="font-weight:700;color:var(--gold-bright);font-size:13px;margin-bottom:9px">%s</div>'
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px;color:var(--ink-soft)">'
+                '<div><div style="font-size:10.5px;font-weight:700;color:var(--ink-muted);letter-spacing:.04em;margin-bottom:5px">전주 주요사항</div>%s</div>'
+                '<div><div style="font-size:10.5px;font-weight:700;color:var(--ink-muted);letter-spacing:.04em;margin-bottom:5px">금주 계획</div>%s</div>'
+                '</div></div>' % (_h(q["dept"]), _bullets(q["prev"]), _bullets(q["plan"]))
+            )
+        parts.append(
+            '<section class="section" style="margin-bottom:24px">'
+            '<span class="section-num">WEEKLY TASKS</span>'
+            '<h2 class="section-title"><span class="st-icon">🗂️</span> 부서·사업장별 주간업무'
+            '<span style="font-size:11px;font-weight:600;color:var(--ink-faint)"> · 전주 실적 / 금주 계획 · ' + str(len(qual)) + '건</span></h2>'
+            '<details><summary style="cursor:pointer;color:var(--gold-bright);font-size:12.5px;font-weight:700;margin-bottom:12px">▸ 펼쳐보기 (' + str(len(qual)) + '개 부서·사업장)</summary>'
+            '<div style="margin-top:12px">' + cards + '</div></details>'
+            '<p style="font-size:11px;color:var(--ink-faint);margin-top:8px">※ 주간업무 보고서 원문 자동 추출 — 일부 항목은 정렬이 다를 수 있음.</p>'
+            '</section>'
+        )
+
     return "\n".join(parts)
+
+
+def _h(s):
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _esc_tpl(s):
