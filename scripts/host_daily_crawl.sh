@@ -11,6 +11,7 @@
 #   4) generate_insights.py   — KPI → 인사이트 (로컬)
 #   5) gen_sdd_by_prop.py     — 사업장별 SDD (로컬, optional)
 #   6) generate_campaign_performance.py — raw_db 27/28 txt 있을 때만
+#   6.7) generate_campaign_data.py — 구글시트 기획전 동기화 (published CSV 직접 fetch, Chrome 불필요)
 #   7) build.py               — HTML 전체 빌드
 #   8) git add data/ docs/ → commit → push (rebase 재시도 포함)
 #
@@ -135,6 +136,13 @@ if [ -x "$CRAWLER_PY" ] && [ -f "$CRAWLER_ROOT/build_competitor_analysis.py" ]; 
 else
   log "    ⚠ crawler venv/스크립트 없음 — 스킵 (기존 competitor_analysis.json 유지)"
 fi
+
+# ── [6.7] 기획전 시트 동기화 (구글시트 published CSV 직접 fetch — Chrome 불필요) ──
+#   "GS 채널 판매 보고" publish-to-web 시트를 urllib로 직접 받아
+#   기획전 패키지코드(86XXXXXX)·이벤트를 docs/data/campaign_data.json 에 동기화.
+#   호스트는 풀 네트워크라 무인 fetch 가능. fetch 실패 시 스크립트가 쓰기 전에
+#   중단되어 기존 campaign_data.json 이 그대로 보존됨 → best-effort(run_crawl).
+run_crawl "campaign_data_sync" "scripts/generate_campaign_data.py"
 
 # ── [7] HTML 빌드 (필수) ──────────────────────────────────────────────────
 run_fatal "build" "scripts/build.py"
