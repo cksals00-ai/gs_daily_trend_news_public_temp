@@ -13,12 +13,12 @@
 #   6) git: lock 정리 → 커밋 → pull(--no-rebase --autostash, 생성파일 충돌 자동 --ours)
 #      → push (push 거부 시 재시도)
 #
-# 사용법:
-#   cd ~/Projects/gs_daily_trend_news_public_temp     # (또는 ~/Desktop/...)
-#   ./scripts/update_daily_booking.sh                 # 평소: 이것만 치면 됨
-#   ./scripts/update_daily_booking.sh --force         # 같은/과거 PDF라도 강제 재빌드
-#   ./scripts/update_daily_booking.sh --no-push       # 커밋만, 푸시 생략
-#   ./scripts/update_daily_booking.sh /경로/특정.pdf  # 특정 PDF 명시 지정
+# 사용법 (daily_update.sh 와 같은 방식 — repo 루트에서 실행):
+#   cd ~/Desktop/gs_daily_trend_news_public_temp     # (= ~/Projects/... 심볼릭)
+#   ./update_daily_booking.sh                        # 평소: 이것만 치면 됨
+#   ./update_daily_booking.sh --force                # 같은/과거 PDF라도 강제 재빌드
+#   ./update_daily_booking.sh --no-push              # 커밋만, 푸시 생략
+#   ./update_daily_booking.sh /경로/특정.pdf         # 특정 PDF 명시 지정
 #
 # 입력 PDF 위치: data/Daily Booking Report PDF/Daily Booking Report_YYYY.MM.DD.pdf
 # 멱등성: 같은 PDF를 두 번 돌려도 안전 (두 번째는 "이미 반영됨" 으로 스킵).
@@ -53,7 +53,7 @@ warn() { echo -e "${YELLOW}⚠ ${NC} $*"; }
 die()  { echo -e "\n${RED}❌ 실패: $*${NC}\n   위 출력에서 원인 확인 후 재실행하세요." >&2; exit 1; }
 
 # ── 리포지토리 루트로 이동 ───────────────────────────────────
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || die "리포지토리 경로 확인 실패"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || die "리포지토리 경로 확인 실패"
 cd "$REPO" || die "cd $REPO 실패"
 
 PARSER="scripts/parse_daily_booking.py"
