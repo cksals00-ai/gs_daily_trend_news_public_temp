@@ -766,13 +766,25 @@ def render_competitor_cards(comp_data: dict) -> str:
         "low": ("🟢 LOW", "#2d7a3f", "#e8f3eb"),
     }
 
+    def camp_row(c):
+        ct = escape_html(str(c.get("title", "")))
+        cp = escape_html(str(c.get("period", "")))
+        cd = c.get("discount_pct", 0)
+        badge = (f'<span style="color:var(--negative);font-weight:800;">-{cd}%</span>'
+                 if cd else '<span style="color:var(--ink-faint);font-weight:700;">특가</span>')
+        return f'''
+        <div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px dashed var(--rule);font-size:12px;">
+          <span style="flex:1;min-width:0;color:var(--ink-soft);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🎁 {ct}</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--ink-faint);white-space:nowrap;font-size:11px;">{cp}</span>
+          <span style="min-width:44px;text-align:right;white-space:nowrap;">{badge}</span>
+        </div>'''
+
     rows = []
     for comp in competitors:
         brand = escape_html(comp.get("brand", ""))
         title = escape_html(comp.get("title", ""))
         period = escape_html(comp.get("period", ""))
         discount = comp.get("discount_pct", 0)
-        detail = escape_html(comp.get("detail", ""))
         link = comp.get("link", "#")
         region = comp.get("region", "general")
         threat = comp.get("threat_level", "low")
@@ -784,6 +796,7 @@ def render_competitor_cards(comp_data: dict) -> str:
         pmax = comp.get("price_max")
         pcount = comp.get("promo_count", 0) or 0
         otas = comp.get("ota_promos") or []
+        campaigns = comp.get("campaigns") or []
 
         disc_txt = f"-{discount}%" if discount else "특가"
         if pmin and pmax:
@@ -793,6 +806,25 @@ def render_competitor_cards(comp_data: dict) -> str:
             price_txt = "—"
             count_txt = "공식 캠페인"
 
+        camp_section = ""
+        if campaigns:
+            HEAD_N = 5
+            shown = "".join(camp_row(c) for c in campaigns[:HEAD_N])
+            rest = campaigns[HEAD_N:]
+            more = ""
+            if rest:
+                more_rows = "".join(camp_row(c) for c in rest)
+                more = f'''
+        <details style="margin-top:2px;">
+          <summary style="list-style:none;cursor:pointer;font-size:11.5px;color:var(--gold);font-weight:800;padding:7px 0;">＋ 더보기 ({len(rest)}개)</summary>{more_rows}
+        </details>'''
+            camp_section = f'''
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;">자사몰 프로모션 · {len(campaigns)}개</span>
+          <a href="{link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:11px;color:var(--gold);font-weight:800;text-decoration:none;">🔗 자사몰 바로가기 ↗</a>
+        </div>{shown}{more}'''
+
+        ota_section = ""
         if otas:
             ota_rows = []
             for o in otas:
@@ -802,33 +834,28 @@ def render_competitor_cards(comp_data: dict) -> str:
                 omax = int(o.get("max", 0))
                 samp = escape_html(str(o.get("sample", "")))
                 ota_rows.append(f'''
-        <div style="display:flex;gap:12px;align-items:baseline;padding:7px 0;border-top:1px dashed var(--rule);font-size:12px;">
-          <span style="min-width:165px;color:var(--ink);font-weight:700;">📡 {ota}</span>
+        <div style="display:flex;gap:12px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--rule);font-size:12px;">
+          <span style="min-width:160px;color:var(--ink);font-weight:700;">📡 {ota}</span>
           <span style="color:var(--negative);font-weight:700;white-space:nowrap;">특가 {oc:,}건</span>
           <span style="font-family:'JetBrains Mono',monospace;color:var(--ink-muted);white-space:nowrap;">₩{omin:,}~{omax:,}</span>
           <span style="flex:1;min-width:0;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{samp}</span>
         </div>''')
-            depth_html = f'''
-      <div style="padding:2px 16px 12px 46px;background:var(--bg-soft);">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;padding:8px 0 2px;">OTA 채널별 특가 · {len(otas)}개 채널</div>{''.join(ota_rows)}
-      </div>'''
-            caret = "▾"
-        else:
-            depth_html = f'''
-      <div style="padding:8px 16px 12px 46px;background:var(--bg-soft);font-size:12px;color:var(--ink-muted);">
-        💡 {detail or '공식 홈페이지 프로모션'} &nbsp;·&nbsp; <a href="{link}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-weight:700;">자사 사이트 ↗</a>
-      </div>'''
-            caret = "▸"
+            ota_section = f'''
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;padding:12px 0 0;">OTA 채널별 특가 · {len(otas)}개 채널</div>{"".join(ota_rows)}'''
+
+        depth_html = f'''
+      <div style="padding:2px 16px 12px 44px;background:var(--bg-soft);">{camp_section}{ota_section}</div>'''
 
         rows.append(f'''
     <details style="border:1px solid var(--rule);border-left:3px solid {r_color};border-radius:0 4px 4px 0;background:var(--bg-card);overflow:hidden;">
       <summary style="list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span style="font-family:'Noto Sans KR',sans-serif;font-size:10.5px;letter-spacing:0.06em;color:{r_color};font-weight:800;min-width:42px;">● {r_label}</span>
         <span style="font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:800;color:var(--ink);min-width:108px;">{brand}</span>
-        <span style="flex:1;min-width:200px;font-size:12.5px;color:var(--ink-soft);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🎯 {title} <span style="color:var(--ink-faint);font-weight:500;">· {period}</span></span>
+        <span style="flex:1;min-width:170px;font-size:12.5px;color:var(--ink-soft);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🎯 {title} <span style="color:var(--ink-faint);font-weight:500;">· {period}</span></span>
         <span style="background:{t_bg};color:{t_color};font-weight:800;font-size:12px;padding:3px 9px;border-radius:4px;white-space:nowrap;">{disc_txt}</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-muted);white-space:nowrap;">{price_txt} <span style="color:var(--ink-faint);">· {count_txt}</span></span>
-        <span style="color:var(--ink-faint);font-size:11px;min-width:10px;">{caret}</span>
+        <a href="{link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:11px;color:var(--gold);font-weight:800;text-decoration:none;white-space:nowrap;">🔗 자사몰 ↗</a>
+        <span style="color:var(--ink-faint);font-size:11px;min-width:10px;">▾</span>
       </summary>{depth_html}
     </details>''')
     return "\n".join(rows)

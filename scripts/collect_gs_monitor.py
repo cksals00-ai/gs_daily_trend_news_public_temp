@@ -240,6 +240,8 @@ def normalize_competitor(raw: dict, source_url: str = "") -> dict:
             out[k] = int(v)
     if isinstance(raw.get("ota_promos"), list):
         out["ota_promos"] = raw["ota_promos"]
+    if isinstance(raw.get("campaigns"), list):
+        out["campaigns"] = raw["campaigns"]
     return out
 
 
