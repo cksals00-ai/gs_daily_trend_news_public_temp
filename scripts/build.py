@@ -831,8 +831,7 @@ def render_competitor_cards(comp_data: dict) -> str:
         <span style="color:var(--ink-faint);font-size:11px;min-width:10px;">{caret}</span>
       </summary>{depth_html}
     </details>''')
-    return "
-".join(rows)
+    return "\n".join(rows)
 
 
 def render_competitor_summary(comp_data: dict) -> str:
