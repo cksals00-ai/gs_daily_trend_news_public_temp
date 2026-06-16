@@ -179,10 +179,17 @@ def extract_same_period(pdf_path: Path) -> dict:
 
 
 def find_latest_pdf() -> Path:
-    pdfs = sorted(PDF_DIR.glob("Revenue Meeting_*.pdf"))
-    if not pdfs:
+    # 파일명 변형(공백형 "Revenue Meeting_" / 언더스코어형 "Revenue_Meeting_") 모두 수집.
+    # 정렬 기준은 파일명에 박힌 날짜(YYYY.MM.DD) — 사전식==시간순. 날짜 없는 파일은 제외.
+    cands = []
+    for p in PDF_DIR.glob("*.pdf"):
+        m = re.search(r"(\d{4}\.\d{2}\.\d{2})", p.name)
+        if m:
+            cands.append((m.group(1), p.name, p))
+    if not cands:
         sys.exit(f"No Revenue Meeting PDFs found in {PDF_DIR}")
-    return pdfs[-1]
+    cands.sort()  # (date, name) 사전식 — 최신이 마지막
+    return cands[-1][2]
 
 
 def extract_pages(pdf_path: Path) -> list[str]:
@@ -544,8 +551,15 @@ def accumulate(snap: dict, snap_date: str, existing: dict) -> dict:
 
 
 def main() -> int:
-    pdf = find_latest_pdf()
-    print(f"Latest PDF: {pdf.name}")
+    # 인자로 PDF 경로를 주면 그 파일을 파싱(공백 포함 파일명 안전). 없으면 최신 자동 탐지.
+    if len(sys.argv) > 1 and sys.argv[1] not in ("-h", "--help"):
+        pdf = Path(sys.argv[1])
+        if not pdf.is_file():
+            sys.exit(f"PDF not found: {pdf}")
+        print(f"Explicit PDF: {pdf.name}")
+    else:
+        pdf = find_latest_pdf()
+        print(f"Latest PDF: {pdf.name}")
     snap = parse(pdf)
     snap_date = _snap_date(pdf)
 
