@@ -150,8 +150,8 @@ log "[2/6] 파싱: parse_rm_fcst.py \"$(basename "$PDF")\""
 python3 "$PARSER" "$PDF" || die "파싱 실패 ($PARSER) — unmapped 사업장/테이블 구조 변경 의심"
 [ -f "$DATA_JSON" ] || die "$DATA_JSON 가 생성되지 않았습니다"
 
-# 핵심 수치 출력 + 검증
-read -r SRC_PDF SNAP_DATE RN6 REV6 RN7 REV7 RN8 REV8 SEGCSV <<EOF
+# 핵심 수치 출력 + 검증 (소스 PDF 명에 공백이 있으므로 탭 구분으로 안전하게 읽음)
+IFS=$'\t' read -r SRC_PDF SNAP_DATE RN6 REV6 RN7 REV7 RN8 REV8 SEGCSV <<EOF
 $(python3 - "$DATA_JSON" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -167,11 +167,10 @@ def g(ym):
     return (tot(ym, "rm_fcst_rn") if ym else 0, tot(ym, "rm_fcst_rev_mil") if ym else 0)
 (rn6, rev6), (rn7, rev7), (rn8, rev8) = g(m[0]), g(m[1]), g(m[2])
 # 세그먼트 합(첫 월): OTA/G-OTA/Inbound RN
-segs = []
-for s in ("OTA", "G-OTA", "Inbound"):
-    segs.append(f"{s}={seg(m[0], s, 'rm_fcst_rn')}")
-print(d.get("_source_pdf", "?"), d.get("_snapshot_date", "?"),
-      rn6, rev6, rn7, rev7, rn8, rev8, "/".join(segs))
+segs = "/".join(f"{s}={seg(m[0], s, 'rm_fcst_rn')}" for s in ("OTA", "G-OTA", "Inbound"))
+print("\t".join(str(x) for x in (
+    d.get("_source_pdf", "?"), d.get("_snapshot_date", "?"),
+    rn6, rev6, rn7, rev7, rn8, rev8, segs)))
 PY
 )
 EOF
