@@ -756,8 +756,8 @@ def _LEGACY_inject_property_matrix(html: str, prop_data: dict) -> str:
 def render_competitor_cards(comp_data: dict) -> str:
     competitors = comp_data.get("competitors", [])
     if not competitors:
-        return '<div style="padding:40px;text-align:center;color:var(--ink-faint);grid-column:1/-1;">경쟁사 데이터 없음</div>'
-    
+        return '<div style="padding:40px;text-align:center;color:var(--ink-faint);">경쟁사 데이터 없음</div>'
+
     region_colors = {"vivaldi": "#a83e4f", "central": "#2c5f7c", "south": "#2d7a3f", "apac": "#5c4a7c"}
     region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC"}
     threat_styles = {
@@ -765,14 +765,13 @@ def render_competitor_cards(comp_data: dict) -> str:
         "medium": ("🟡 MED", "#c9772c", "#faf0e3"),
         "low": ("🟢 LOW", "#2d7a3f", "#e8f3eb"),
     }
-    
-    cards = []
+
+    rows = []
     for comp in competitors:
         brand = escape_html(comp.get("brand", ""))
         title = escape_html(comp.get("title", ""))
         period = escape_html(comp.get("period", ""))
         discount = comp.get("discount_pct", 0)
-        channel = escape_html(comp.get("channel", ""))
         detail = escape_html(comp.get("detail", ""))
         link = comp.get("link", "#")
         region = comp.get("region", "general")
@@ -780,51 +779,60 @@ def render_competitor_cards(comp_data: dict) -> str:
         r_color = region_colors.get(region, "#8a8a8a")
         r_label = region_labels.get(region, region)
         t_label, t_color, t_bg = threat_styles.get(threat, ("-", "#8a8a8a", "#f0f0f0"))
-        # 할인율%가 없는(0) 프로모션은 '0%' 대신 '특가'로 표기
-        disc_html = (f'{discount}<span style="font-size:13px;font-weight:700;">%</span>'
-                     if discount else '<span style="font-size:15px;font-weight:800;">특가</span>')
 
-        cards.append(f'''
-    <a href="{link}" target="_blank" rel="noopener noreferrer" 
-       style="text-decoration:none;color:inherit;display:block;background:var(--bg-card);border:1px solid var(--rule);border-left:3px solid {r_color};border-radius:0 4px 4px 0;padding:16px 18px;transition:all 0.2s;"
-       onmouseover="this.style.boxShadow='0 8px 18px rgba(0,0,0,0.4)';this.style.transform='translateY(-2px)'" 
-       onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
-      <!-- 헤더: 권역 + 브랜드 + 할인율 -->
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:10px;">
-        <div style="flex:1;">
-          <div style="font-family:'Noto Sans KR',sans-serif;font-size:11px;letter-spacing:0.1em;color:{r_color};font-weight:800;margin-bottom:3px;">● {r_label}</div>
-          <div style="font-family:'Noto Sans KR',sans-serif;font-size:17px;font-weight:800;color:var(--ink);line-height:1.3;">{brand}</div>
-        </div>
-        <!-- 할인율 박스 (의미 명확하게) -->
-        <div style="text-align:center;background:rgba(229,115,115,0.12);border:1px solid rgba(229,115,115,0.4);padding:6px 10px;border-radius:4px;min-width:80px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--negative);letter-spacing:0.1em;font-weight:700;margin-bottom:2px;">{'최대 할인율' if discount else '프로모션'}</div>
-          <div style="font-family:'Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:var(--negative);line-height:1;">{disc_html}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;background:{t_bg};color:{t_color};border-radius:2px;font-weight:700;margin-top:4px;display:inline-block;">{t_label}</div>
-        </div>
-      </div>
-      
-      <!-- 프로모션 제목 -->
-      <div style="font-family:'Noto Sans KR',sans-serif;font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:10px;font-weight:600;">
-        🎯 {title}
-      </div>
-      
-      <!-- 기간 -->
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-muted);margin-bottom:8px;font-weight:700;">
-        📅 {period}
-      </div>
-      
-      <!-- 상세 내용 -->
-      <div style="font-family:'Noto Sans KR',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-soft);border-radius:3px;margin-bottom:8px;font-weight:500;">
-        💡 {detail}
-      </div>
-      
-      <!-- 푸터: 채널 + 링크 -->
-      <div style="display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);padding-top:8px;border-top:1px dashed var(--rule);font-weight:700;">
-        <span>📡 {channel}</span>
-        <span style="color:var(--gold);font-weight:800;">🔗 자사 사이트 ↗</span>
-      </div>
-    </a>''')
-    return "\n".join(cards)
+        pmin = comp.get("price_min")
+        pmax = comp.get("price_max")
+        pcount = comp.get("promo_count", 0) or 0
+        otas = comp.get("ota_promos") or []
+
+        disc_txt = f"-{discount}%" if discount else "특가"
+        if pmin and pmax:
+            price_txt = f"₩{pmin:,}~{pmax:,}"
+            count_txt = f"특가 {pcount:,}건"
+        else:
+            price_txt = "—"
+            count_txt = "공식 캠페인"
+
+        if otas:
+            ota_rows = []
+            for o in otas:
+                ota = escape_html(str(o.get("ota", "")))
+                oc = int(o.get("count", 0))
+                omin = int(o.get("min", 0))
+                omax = int(o.get("max", 0))
+                samp = escape_html(str(o.get("sample", "")))
+                ota_rows.append(f'''
+        <div style="display:flex;gap:12px;align-items:baseline;padding:7px 0;border-top:1px dashed var(--rule);font-size:12px;">
+          <span style="min-width:165px;color:var(--ink);font-weight:700;">📡 {ota}</span>
+          <span style="color:var(--negative);font-weight:700;white-space:nowrap;">특가 {oc:,}건</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--ink-muted);white-space:nowrap;">₩{omin:,}~{omax:,}</span>
+          <span style="flex:1;min-width:0;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{samp}</span>
+        </div>''')
+            depth_html = f'''
+      <div style="padding:2px 16px 12px 46px;background:var(--bg-soft);">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;padding:8px 0 2px;">OTA 채널별 특가 · {len(otas)}개 채널</div>{''.join(ota_rows)}
+      </div>'''
+            caret = "▾"
+        else:
+            depth_html = f'''
+      <div style="padding:8px 16px 12px 46px;background:var(--bg-soft);font-size:12px;color:var(--ink-muted);">
+        💡 {detail or '공식 홈페이지 프로모션'} &nbsp;·&nbsp; <a href="{link}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-weight:700;">자사 사이트 ↗</a>
+      </div>'''
+            caret = "▸"
+
+        rows.append(f'''
+    <details style="border:1px solid var(--rule);border-left:3px solid {r_color};border-radius:0 4px 4px 0;background:var(--bg-card);overflow:hidden;">
+      <summary style="list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-family:'Noto Sans KR',sans-serif;font-size:10.5px;letter-spacing:0.06em;color:{r_color};font-weight:800;min-width:42px;">● {r_label}</span>
+        <span style="font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:800;color:var(--ink);min-width:108px;">{brand}</span>
+        <span style="flex:1;min-width:200px;font-size:12.5px;color:var(--ink-soft);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🎯 {title} <span style="color:var(--ink-faint);font-weight:500;">· {period}</span></span>
+        <span style="background:{t_bg};color:{t_color};font-weight:800;font-size:12px;padding:3px 9px;border-radius:4px;white-space:nowrap;">{disc_txt}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-muted);white-space:nowrap;">{price_txt} <span style="color:var(--ink-faint);">· {count_txt}</span></span>
+        <span style="color:var(--ink-faint);font-size:11px;min-width:10px;">{caret}</span>
+      </summary>{depth_html}
+    </details>''')
+    return "
+".join(rows)
 
 
 def render_competitor_summary(comp_data: dict) -> str:

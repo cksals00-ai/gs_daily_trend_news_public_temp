@@ -223,7 +223,7 @@ def normalize_competitor(raw: dict, source_url: str = "") -> dict:
     # 상세
     detail = raw.get("detail") or raw.get("description") or raw.get("summary") or raw.get("note") or ""
     
-    return {
+    out = {
         "brand": str(brand).strip(),
         "region": region,
         "title": str(title).strip()[:120],
@@ -234,6 +234,13 @@ def normalize_competitor(raw: dict, source_url: str = "") -> dict:
         "link": str(link),
         "threat_level": threat,
     }
+    for k in ("price_min", "price_max", "promo_count", "campaign_count"):
+        v = raw.get(k)
+        if isinstance(v, (int, float)):
+            out[k] = int(v)
+    if isinstance(raw.get("ota_promos"), list):
+        out["ota_promos"] = raw["ota_promos"]
+    return out
 
 
 def main():
