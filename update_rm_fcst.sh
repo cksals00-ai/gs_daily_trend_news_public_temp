@@ -90,22 +90,23 @@ cleanup_locks
 # rm_fcst.json 에서 안정적 시그니처(휘발성 _extracted_at 제외) 추출:
 #   "<source_pdf>|<snapshot_date>|YM:grand_rn:grand_rev,..." 형태.
 # stdin 으로 json 을 받아 한 줄 출력. 파싱 실패 시 빈 줄.
+# (heredoc 가 아니라 python3 -c 사용 — heredoc 는 stdin 을 가로채 파이프 입력을 못 읽음)
 rm_signature() {
-    python3 - <<'PY'
+    python3 -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
 except Exception:
-    print(""); raise SystemExit
+    print(""); sys.exit()
 props = d.get("properties", {})
 months = sorted({ym for p in props.values() for ym in p})
 parts = []
 for ym in months:
     rn  = sum(p[ym].get("rm_fcst_rn", 0)      for p in props.values() if ym in p)
     rev = sum(p[ym].get("rm_fcst_rev_mil", 0) for p in props.values() if ym in p)
-    parts.append(f"{ym}:{rn}:{rev}")
-print(f"{d.get('_source_pdf','')}|{d.get('_snapshot_date','')}|" + ",".join(parts))
-PY
+    parts.append("%s:%d:%d" % (ym, rn, rev))
+print("%s|%s|%s" % (d.get("_source_pdf",""), d.get("_snapshot_date",""), ",".join(parts)))
+'
 }
 
 # =============================================================================
