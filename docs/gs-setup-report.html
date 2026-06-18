@@ -124,10 +124,10 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
     <h1 class="mh-title">GS 구축 현황 리포트</h1>
     <p class="mh-sub">SONO GS팀 자동화 시스템 — 스케줄러 · 파이프라인 · 리포트 인벤토리 · 자동화 커버리지</p>
     <div class="mh-meta">
-      <span>기준 시각 <b>2026-06-13 06:05 KST</b></span>
+      <span>기준 시각 <b>2026-06-18 11:47 KST</b></span>
       <span>갱신 주기 <b>주 1회 (매주 토 06:00)</b></span>
       <span>생성 <b>weekly-setup-strategy</b></span>
-      <span>구축 타임라인 <b>2026-06-13</b></span>
+      <span>구축 타임라인 <b>2026-06-18</b></span>
       <span>저장소 <b>cksals00-ai/gs_daily_trend_news_public_temp</b></span>
     </div>
   </div>
@@ -150,7 +150,7 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
     <div class="kpi gold">
       <div class="k-lbl">데이터 파이프라인</div>
       <div class="k-val">정상</div>
-      <div class="k-note">최근 자동 커밋 2026-06-13 05:02</div>
+      <div class="k-note">최근 자동 커밋 2026-06-18 11:47</div>
     </div>
     <div class="kpi warn">
       <div class="k-lbl">자동화 커버리지</div>
@@ -320,8 +320,8 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
       </table>
     </div>
     <p class="note">
-      활성 일별 체인(02:05 트렌드 → 04:02 경쟁사 → 05:03 RM FCST·Booking → 06:02 액션캘린더)이 정상 가동 중이며 각 태스크가 종료 시 자체 빌드·푸시를 수행한다.
-      <code style="font-family:var(--mono);color:var(--gold-bright)">daily-db-update-build</code> 는 비활성 상태이나, DB 갱신·빌드 기능은 <code style="font-family:var(--mono);color:var(--gold-bright)">rm-fcst-booking-update</code> 및 GitHub Actions 일일 빌드로 대체 커버된다.
+      활성 일별 체인(02:05 트렌드 → 04:02 경쟁사 → 05:03 RM FCST·Booking → 06:02 액션캘린더)은 정상 가동하나, 2026-06-16 이후 샌드박스 4종(트렌드·경쟁사·RM FCST·액션캘린더)은 <b>검증 전용으로 전환</b>해 락 오염·실패·미푸시 누적을 제거했다. 실제 빌드·커밋·푸시는 호스트 <code style="font-family:var(--mono);color:var(--gold-bright)">host_daily_crawl.sh</code>(05:00 launchd)가 전담하며, git 단계에 충돌 자동해소(fetch→merge→data/docs <code>--ours</code>→재push)를 내장해 아침 push 충돌을 영구 해결했다.
+      <code style="font-family:var(--mono);color:var(--gold-bright)">daily-db-update-build</code> 는 비활성 상태이나, DB 갱신·빌드 기능은 호스트 일일 크롤 및 GitHub Actions 일일 빌드로 대체 커버된다.
     </p>
   </section>
 
@@ -341,11 +341,11 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
           <code>docs/</code> 만 변경 시 Python 스킵(deploy-only), push 3회 재시도 + rebase 안전망 내장.
         </div>
       </div>
-      <div class="card l-warn">
-        <div class="c-h">🔁 자동 커밋 체인 — <span class="pill warn">커밋 정상 · 푸시 차단</span></div>
+      <div class="card l-pos">
+        <div class="c-h">🔁 자동 커밋 체인 — <span class="pill on">커밋·푸시 정상화</span></div>
         <div class="c-b">
-          최근 자동 커밋: <code>host crawl 2026-06-13 05:02 KST</code>. 로컬 <b>origin/main 대비 8 ahead</b> (미푸시 · 본 주간커밋 포함 시 9 ahead).<br>
-          일별 스케줄 태스크는 빌드·커밋까지 정상 수행하나, 샌드박스 네트워크가 GitHub 를 차단해 <code>git push</code> 는 호스트 맥에서 일괄 처리.<br>
+          최근 자동 커밋: <code>daily update 2026-06-18 11:47 KST</code>. 로컬 <b>origin/main 0 ahead</b> (완전 동기화).<br>
+          2026-06-18 <code>host_daily_crawl.sh</code> git 단계에 충돌 자동해소(fetch→merge→data/docs <code>--ours</code>→재push)를 내장해, 샌드박스 미푸시 누적·아침 push 충돌을 영구 해결. 샌드박스 4종은 검증 전용, 푸시는 호스트가 전담.<br>
           커밋 메시지에 <code>[skip ci]</code> 포함 시 full-build 생략, 배포만 수행.
         </div>
       </div>
@@ -359,8 +359,9 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
       <div class="card l-info">
         <div class="c-h">📦 데이터 신선도 — <span class="pill done">최신</span></div>
         <div class="c-b">
-          <code>db_aggregated.json</code> 2026-06-13 06:05 · <code>otb_data.json</code> 2026-06-13 06:05 · <code>daily_booking.json</code> 2026-06-13 05:03 (report_date 2026-06-11 · 25개 사업장 · 6/7/8월).<br>
-          <code>rm_fcst.json</code> 2026-06-10 (<b>Revenue Meeting_2026.06.08.pdf 스냅샷 — 신규 PDF 반영</b> · 6/7/8월 커버) · 뉴스 <code>news_latest.json</code> 297건(신규 112) · 경쟁사 모니터링(팔라티움 해운대 by sonofelice) 일 1회.
+          <code>db_aggregated.json(.gz)</code> 2026-06-18 07:59 · <code>otb_data.json</code> 2026-06-18 07:59 · <code>daily_booking.json</code> 2026-06-18 07:58 (report_date 2026-06-18 · 25개 사업장 · 6/7/8월).<br>
+          <code>rm_fcst.json</code> 2026-06-17 (<b>Revenue Meeting_2026.06.16.pdf 스냅샷 — 신규 PDF 반영</b> · 6/7/8월 커버 · 첫월 온북 191,837실 35,169백만원) · 뉴스 <code>news_latest.json</code> 333건(신규 18) · 경쟁사 모니터링(팔라티움 해운대 by sonofelice) 일 1회.<br>
+          <span class="dim"><code>db_aggregated.json</code>(82MB)은 2026-06-10부터 <code>.json.gz</code>(13MB)만 배포 — <code>agg-loader.js</code> 가 fetch 를 가로채 <code>DecompressionStream</code> 으로 해제.</span>
         </div>
       </div>
     </div>
@@ -368,11 +369,11 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
       <table>
         <thead><tr><th>최근 자동 커밋 (main)</th><th>일시 (KST)</th><th class="c">유형</th></tr></thead>
         <tbody>
-          <tr><td>rm-fcst + booking update 2026-06-12 20:07 <span class="dim">(8 ahead·미푸시)</span></td><td class="mono">06-12 20:07</td><td class="c"><span class="pill on">AUTO</span></td></tr>
-          <tr><td>host crawl 2026-06-13 05:02</td><td class="mono">06-13 05:02</td><td class="c"><span class="pill on">AUTO</span></td></tr>
-          <tr><td>trend regional update 2026-06-13 02:07</td><td class="mono">06-13 02:07</td><td class="c"><span class="pill on">AUTO</span></td></tr>
-          <tr><td>fix(gs-map): 경쟁사 크롤링 KPI 하드코딩 제거 → freshness 실제 반영</td><td class="mono">06-11 15:39</td><td class="c"><span class="pill done">MANUAL</span></td></tr>
-          <tr><td>feat: 경쟁사 권역별 가격 분석 데일리 복구 + freshness 라벨 수정</td><td class="mono">06-11 10:11</td><td class="c"><span class="pill done">MANUAL</span></td></tr>
+          <tr><td>daily update 2026-06-18 11:47 <span class="dim">(0 ahead·동기화)</span></td><td class="mono">06-18 11:47</td><td class="c"><span class="pill on">AUTO</span></td></tr>
+          <tr><td>chore(host-crawl): git push 단계 안전 자동화 (fetch→merge→ours→재push)</td><td class="mono">06-18 12:58</td><td class="c"><span class="pill done">MANUAL</span></td></tr>
+          <tr><td>host crawl 2026-06-18 05:02</td><td class="mono">06-18 05:02</td><td class="c"><span class="pill on">AUTO</span></td></tr>
+          <tr><td>chore(daily-booking): 2026-06-17 부킹 리포트 반영 (GT 온북 180,476 · 달성 84.2%)</td><td class="mono">06-17 18:18</td><td class="c"><span class="pill done">MANUAL</span></td></tr>
+          <tr><td>chore(rm-fcst): 2026.06.16 RM FCST 반영 (첫월 온북 191,837실 35,169백만원)</td><td class="mono">06-17 09:18</td><td class="c"><span class="pill done">MANUAL</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -541,15 +542,18 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
     <div class="sec-h">
       <span class="sec-num">6</span>
       <span class="sec-t">구축 타임라인</span>
-      <span class="sec-d">날짜별 주요 구축·변경 이력 · git 커밋 기준 (2026-04-21 ~ 06-13)</span>
+      <span class="sec-d">날짜별 주요 구축·변경 이력 · git 커밋 기준 (2026-04-21 ~ 06-18)</span>
     </div>
     <div class="card l-info" style="margin-bottom:14px">
-      <div class="c-h">⭐ 금주 핵심 구축 (2026-06-09~10) — RM FCST → 매출·소사업·PPT 全자동 체인</div>
+      <div class="c-h">⭐ 최근 핵심 구축 (2026-06-10 ~ 06-18) — 운영 자동화·배포 안정화</div>
       <div class="c-b">
-        <b>소사업 예상매출 자동화</b> (<code>소사업_예상매출.xlsx</code>): 객실수(마감월=온북실적 / 당월=RM FCST) × 전년 비율(고정) → 소사업 매출 산출, 1월~당월 누적(<code>월별 누적</code> 시트, 누계 <b>7,506</b>).<br>
-        <b>세일즈마케팅 PPT 기간라벨 동적화</b> (<code>build_sales_pptx</code>, 커밋 <code>77f2702</code>): 표 헤더를 대상월 기준 자동 생성(당월 MM.01~MM.末 / 누계 01.01~MM.末), <code>calendar.monthrange</code>로 월말일 처리, 템플릿 고정·월만 교체(GS 누계 <b>106,488</b>).<br>
-        <b>RM FCST 정리 엑셀 당월 재생성</b> (<code>build_rm_fcst_excel.py</code>): <code>rm_fcst.json</code> 최신 PDF(Revenue Meeting 2026.06.08) 기준 매월 재생성 — 구버전 방치 버그 해결.<br>
-        <span class="dim">전체 흐름: Revenue Meeting 갱신 → <code>rm_fcst.json</code> → <code>build.py</code>가 <code>build_rm_fcst_excel.py</code> 자동 호출 → 객실수·소사업·누적·PPT 기간라벨까지 全자동.</span>
+        <b>06-18 · host 크롤 git 자동화</b> (<code>host_daily_crawl.sh</code>, 커밋 <code>e40ed22</code>): git push 단계에 충돌 자동해소(fetch→merge→data/docs <code>--ours</code>→재push)를 내장 — 샌드박스 미푸시 누적·아침 push 충돌을 영구 해결, <code>origin/main</code> 완전 동기화.<br>
+        <b>06-16~17 · 터미널 운영 스크립트 신설</b>: <code>update_rm_fcst.sh</code>(커밋 <code>666cf84</code>)·<code>update_daily_booking.sh</code>(커밋 <code>3c1cceb</code>) — 최신 PDF 자동탐지→파싱→<code>build.py</code>→소유 파일만 커밋·push, 회귀가드(과거 PDF 거부)·멱등·unmerged 자동정리.<br>
+        <b>06-16 · 샌드박스 스케줄 4종 검증 전용 전환</b> (<code>f925592</code>): 트렌드·경쟁사·RM FCST·액션캘린더를 검증 전용으로 돌려 락 오염·실패·미푸시 누적 제거(실제 빌드·push는 호스트 전담). <b>트렌드리포트 정리</b>: Daily Booking 메뉴·섹션 제거(<code>9425ee4</code>) + CURRENT PROMOTIONS 자사몰 프로모션 리스트 전환.<br>
+        <b>06-15 · 마감 리포트 주간업무 시각화</b> (<code>d807116</code>·<code>8c0d150</code>): 주간업무 PDF 파싱→주간 탭 실적 시각화(전사/세그먼트/사업장별) + 누계 세그먼트·해외(미주/괌/하이퐁) 정성 섹션, 다운로드 카드 대체.<br>
+        <b>06-11 · 경쟁사 freshness 데일리 복구</b> (<code>c929e42</code>·<code>acfa3d5</code>): 권역별 가격 분석 매일 재생성 + KPI 하드코딩 제거 → freshness 실제 반영.<br>
+        <b>06-10 · db_aggregated gzip 압축</b> (<code>55ad258</code>·<code>f996ae4</code>): 82MB→<code>.json.gz</code>(13MB)만 배포 + 전 페이지 <code>agg-loader.js</code>(<code>DecompressionStream</code>) — fetch 누락 5개 페이지 404 복구. <b>gs-chat 기간범위 질의 버그 수정</b>(<code>776ef2a</code>).<br>
+        <span class="dim">앞선 06-09~10 RM FCST→매출·소사업·세일즈 PPT 全자동 체인(<code>77f2702</code>)은 아래 타임라인 참조. 매일 온북·팔라티움·RM FCST 데이터 갱신 지속, 권역 Macro 카드 자동화는 진행 중.</span>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -584,6 +588,10 @@ footer{border-top:1px solid var(--rule);margin-top:40px;padding:20px 0;text-alig
           <tr><td class="mono">05-20</td><td class="c"><span class="pill done">인프라</span></td><td>팔라티움 standalone 리포트 · <code>daily_update.sh</code> 수동 파이프라인 · strategy-report 자동화 점검 섹션</td></tr>
           <tr class="cat-row"><td colspan="3">● 2026-05 下旬 ~ 06 — 최근 구축 로그 <span class="dim">(git 커밋 기준 자동 생성 · build_setup_timeline.py)</span></td></tr>
           <!-- AUTO-TIMELINE:START -->
+          <tr><td class="mono">06-18</td><td class="c"><span class="pill off">변경</span></td><td>git push 단계 안전 자동화 (fetch→merge→ours→재push)</td></tr>
+          <tr><td class="mono">06-17</td><td class="c"><span class="pill on">기능</span></td><td>add update_rm_fcst.sh daily runner + explicit-PDF parse support · rm_signature via python3 -c so idempotency skip actually works · tab-delimit metric extraction (source PDF name has spaces); own otb.html · 2026-06-17 부킹 리포트 반영 (GT 온북 180476, 달성 84.2%) [skip ci] · 2026.06.16 RM FCST 반영 (2026-06, 2026-07, 2026-08 / 첫월 온북 191837실 35169백만원) [skip ci] <span class="dim">외 2건</span></td></tr>
+          <tr><td class="mono">06-16</td><td class="c"><span class="pill on">기능</span></td><td>트렌드리포트에서 Daily Booking 메뉴·섹션 제거 · CURRENT PROMOTIONS 자사몰 프로모션 전체+더보기+링크 렌더 반영 · update_daily_booking.sh 강화 — 회귀가드(과거PDF거부)+unmerged 자동정리+push 재시도 [skip ci] · 구글시트 기획전 동기화(generate_campaign_data.py)를 호스트 일일잡에 추가 · CURRENT PROMOTIONS 리스트 전환 + 최대-최소 판매가 + OTA 채널 뎁스 <span class="dim">외 7건</span></td></tr>
+          <tr><td class="mono">06-15</td><td class="c"><span class="pill on">기능</span></td><td>CURRENT PROMOTIONS 중부(하이원)·남부(켄싱턴) 권역 채움 + 요약 0% 표기 개선 · CURRENT PROMOTIONS 권역요약 카드도 자동 갱신 (summary_by_region 주입) · 파서/생성기 확장 복원 — P6 누계세그먼트·P7 해외·P8~24 정성 섹션 생성 로직 · 주간업무 시각화 확장 — 누계 세그먼트·해외(미주/괌/하이퐁)·부서별 정성 주간업무(P6/P7/P8~24) · 주간업무 PDF 파싱→주간 탭 실적 시각화 섹션(전사/세그먼트/사업장별), 다운로드 카드 대체 <span class="dim">외 3건</span></td></tr>
           <tr><td class="mono">06-11</td><td class="c"><span class="pill on">기능</span></td><td>경쟁사 권역별 가격 분석 데일리 복구 + freshness 라벨 수정 · 사업장 내 구분(West/East·동) 통합 + 결측 부대 처리 · 경쟁사 크롤링 KPI 하드코딩 제거 → freshness 실제 반영 · 피벗 컬럼 비례 확대 + 진행률 열/막대 확장</td></tr>
           <tr><td class="mono">06-10</td><td class="c"><span class="pill on">기능</span></td><td>영업장별 OTB 피벗에 지표 슬라이서 + 전년마감/마감진행률 컬럼 · 리드타임 탭 추가 — 평균 리드타임 + 7구간 분포 스택바 · 사업장별 실적표 지표 슬라이서 + 전년마감/진행률/예상 컬럼 · 부대시설_상세 시트 + 다중 시트 통합 + 블록 기반 파서 · 요금표 변환기 카드·링크 추가 <span class="dim">외 8건</span></td></tr>
           <tr><td class="mono">06-09</td><td class="c"><span class="pill on">기능</span></td><td>소사업/예상매출현황 자동 재생성 — build.py 파이프라인 배선 · 소사업(객실 외) 예상매출 추가 — RM FCST 정리/주간보고 다운로드 · RM FCST 2026.06.08 반영 · RM FCST 정리 엑셀 당월(2026-06) 재생성 + 버튼 라벨 당월화 · 주간보고 표 색상 규칙 정정 (달성률&lt;100 빨강, 증감/증감률 음수만) <span class="dim">외 2건</span></td></tr>
