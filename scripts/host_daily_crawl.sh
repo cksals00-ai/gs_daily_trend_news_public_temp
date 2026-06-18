@@ -13,7 +13,7 @@
 #   6) generate_campaign_performance.py — raw_db 27/28 txt 있을 때만
 #   6.7) generate_campaign_data.py — 구글시트 기획전 동기화 (published CSV 직접 fetch, Chrome 불필요)
 #   7) build.py               — HTML 전체 빌드
-#   8) git add data/ docs/ → commit → push (rebase 재시도 포함)
+#   8) git add data/ docs/ → commit → fetch·merge(산출물 --ours 자동해소)·push 재시도
 #
 # 원칙:
 #   - 더미 데이터 절대 금지: 크롤러 실패 시 기존 JSON 그대로 유지 (덮어쓰지 않음)
@@ -147,16 +147,19 @@ run_crawl "campaign_data_sync" "scripts/generate_campaign_data.py"
 # ── [7] HTML 빌드 (필수) ──────────────────────────────────────────────────
 run_fatal "build" "scripts/build.py"
 
-# ── [8] git commit + push ─────────────────────────────────────────────────
+# ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
 log "--- [git] commit + push ---"
 write_status "git" "running" 0
-rm -f "$PROJECT_ROOT/.git/index.lock" "$PROJECT_ROOT/.git/HEAD.lock" 2>>"$LOG_FILE"
+cleanup_locks() { rm -f "$PROJECT_ROOT/.git/index.lock" "$PROJECT_ROOT/.git/HEAD.lock" 2>>"$LOG_FILE"; }
+cleanup_locks
 
 # 크롤·빌드 산출물만 스테이징 (입력 xlsx/txt·로그는 .gitignore 가 거름)
 git add data/ docs/ >>"$LOG_FILE" 2>&1
 
 if git diff --cached --quiet; then
-  log "    ℹ 변경사항 없음 — 커밋/푸시 스킵"
+  log "    ℹ 변경사항 없음 — 커밋 스킵 (원격 fast-forward 만 확인)"
+  git fetch origin main >>"$LOG_FILE" 2>&1 || true
+  git merge --ff-only origin/main >>"$LOG_FILE" 2>&1 || true
   write_status "done" "no_changes" 0
   log "=== host_daily_crawl 종료 (변경 없음) ==="
   exit 0
@@ -165,23 +168,64 @@ fi
 DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
 git commit -m "chore(auto): host crawl ${DATE_KST} KST [skip ci]" >>"$LOG_FILE" 2>&1
 
-# push (실패 시 rebase -X theirs 재시도 — 산출물 충돌은 방금 빌드한 로컬본 우선)
+# 충돌 자동해소: 산출물(data/·docs/)은 방금 빌드한 로컬본(--ours) 우선.
+#   data/·docs/ 밖(소스코드 등) 충돌은 사람이 봐야 하므로 merge abort 후 중단(데이터 손실 방지).
+resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要)
+  local U BAD
+  U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
+  [ -z "$U" ] && return 0
+  BAD="$(printf '%s\n' "$U" | grep -vE '^(data|docs)/' || true)"
+  if [ -n "$BAD" ]; then
+    log "    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:"
+    printf '%s\n' "$BAD" | sed 's/^/        /' | tee -a "$LOG_FILE" >/dev/null
+    git merge --abort >>"$LOG_FILE" 2>&1 || true
+    return 2
+  fi
+  printf '%s\n' "$U" | while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    git checkout --ours -- "$f" >>"$LOG_FILE" 2>&1 || true
+    git add -- "$f" >>"$LOG_FILE" 2>&1 || true
+    log "    충돌→ours(로컬 빌드본): $f"
+  done
+  if ! git commit --no-edit >>"$LOG_FILE" 2>&1; then
+    log "    ⚠ merge 커밋 실패 — merge abort"
+    git merge --abort >>"$LOG_FILE" 2>&1 || true
+    return 2
+  fi
+  return 0
+}
+
+# push 재시도: 거부되면 fetch→merge(--no-edit)→충돌 자동해소→재push (최대 3회)
 PUSH_OK=0
-for i in 1 2 3; do
+for attempt in 1 2 3; do
+  cleanup_locks
   if git push origin main >>"$LOG_FILE" 2>&1; then
     PUSH_OK=1
     break
   fi
-  log "    ⚠ push 시도 $i 실패 — origin 갱신 후 재시도"
-  if ! git pull --rebase -X theirs origin main >>"$LOG_FILE" 2>&1; then
-    log "    ⚠ rebase 충돌 자동해소 실패 — abort"
-    git rebase --abort >>"$LOG_FILE" 2>&1 || true
+  log "    ⚠ push 시도 $attempt 실패 — origin fetch 후 merge 재시도"
+  if ! git fetch origin main >>"$LOG_FILE" 2>&1; then
+    log "    ⚠ fetch 실패(네트워크?) — 다음 시도"
+    continue
+  fi
+  if git merge --no-edit origin/main >>"$LOG_FILE" 2>&1; then
+    log "    ✅ merge 클린 — 재push"
+  else
+    resolve_generated_conflicts; rc=$?
+    if [ "$rc" -eq 2 ]; then
+      log "    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요 (로컬 커밋은 보존됨)"
+      write_status "git_push" "merge_conflict" 1
+      log "=== host_daily_crawl 종료 (merge 충돌) ==="
+      exit 1
+    fi
+    log "    ✅ 충돌 자동해소 완료 — 재push"
   fi
 done
 
 if [ "$PUSH_OK" -ne 1 ]; then
-  log "    ❌ git push 최종 실패"
+  log "    ❌ git push 최종 실패 (3회) — 로컬 커밋은 보존됨, 다음 05:00 실행에서 재시도"
   write_status "git_push" "error" 1
+  log "=== host_daily_crawl 종료 (push 실패) ==="
   exit 1
 fi
 
@@ -190,7 +234,7 @@ git fetch origin >>"$LOG_FILE" 2>&1
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 if [ "$LOCAL" != "$REMOTE" ]; then
-  log "    ❌ 푸시 후 로컬($LOCAL) != 리모트($REMOTE)"
+  log "    ⚠ 푸시 후 로컬($LOCAL) != 리모트($REMOTE) — origin 이 더 앞섬(다른 세션). 다음 실행에서 정리됨"
   write_status "git_push" "out_of_sync" 1
   exit 1
 fi
