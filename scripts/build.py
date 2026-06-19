@@ -624,6 +624,209 @@ def inject_weekly_onbook(html: str, db_agg: dict) -> str:
     return html
 
 
+# ─────────────────────────────────────────────
+# 권역별 Macro 카드 자동 주입
+#   A. 온북 픽업(주간 WoW)   ← db_aggregated
+#   B. 예산 달성률(동기간 YoY) ← otb_data.byProperty
+#   D. 경쟁 할인 지수          ← competitors.summary_by_region
+# 모두 매 빌드 갱신. 수기/고정값 없음.
+# ─────────────────────────────────────────────
+_REGION_LABELS = {
+    "vivaldi": "🍷 비발디 권역",
+    "central": "🏔️ 중부 권역",
+    "south":   "🌊 남부 권역",
+    "apac":    "🌏 APAC 권역",
+}
+_MACRO_REGIONS = ("vivaldi", "central", "south", "apac")
+
+
+def _accum_week(weekly: dict, d_str: str, rn: float):
+    """예약일(YYYYMMDD) 기준 ISO 주차에 net rn 누적. 라벨=해당 주 월요일."""
+    try:
+        dt = datetime.strptime(d_str[:8], "%Y%m%d")
+    except ValueError:
+        return
+    iso = dt.isocalendar()
+    wk_key = f"{iso[0]}W{iso[1]:02d}"
+    mon = dt - timedelta(days=dt.weekday())
+    if wk_key not in weekly:
+        weekly[wk_key] = {"l": f"{mon.month}/{mon.day}", "rn": 0}
+    weekly[wk_key]["rn"] += rn
+
+
+def build_region_pickup_trend(db_agg: dict, base_date: str = "") -> dict:
+    """db_aggregated → 권역별 주간 순온북(픽업) 추이.
+    예약일 기준 주간 net pickup(예약−취소)을 권역 내 전 사업장·STAY_MONTHS 합산.
+    현재(미완료) 주차는 제외, 최근 8개 완료주차만 반환.
+    반환: { region: {"weeks":[{"w":label,"rn":n}...], "last":n, "prev":n, "wow":pct|None} }
+    """
+    pickup_pm = db_agg.get("pickup_daily_by_property_month", {})
+    cancel_pm = db_agg.get("cancel_daily_by_property_month", {})
+    stay_keys = [m.replace("-", "") for m in STAY_MONTHS]
+
+    # 현재(미완료) ISO 주차 — base_date 가 속한 주는 집계에서 제외
+    cur_wk_key = None
+    try:
+        bd = datetime.strptime((base_date or "")[:10], "%Y-%m-%d")
+        iso = bd.isocalendar()
+        cur_wk_key = f"{iso[0]}W{iso[1]:02d}"
+    except Exception:
+        cur_wk_key = None
+
+    region_props = {k: [] for k in _MACRO_REGIONS}
+    for disp, region, db_props in _PROP_REGION_MAP:
+        region_props.setdefault(region, []).extend(db_props)
+
+    out = {}
+    for region in _MACRO_REGIONS:
+        weekly = {}
+        for dbp in region_props.get(region, []):
+            for sm in stay_keys:
+                for d, v in pickup_pm.get(dbp, {}).get(sm, {}).items():
+                    _accum_week(weekly, d, v.get("rn", 0))
+                for d, v in cancel_pm.get(dbp, {}).get(sm, {}).items():
+                    _accum_week(weekly, d, -v.get("rn", 0))
+        items = [(k, x) for k, x in sorted(weekly.items()) if k != cur_wk_key]
+        weeks = [{"w": x["l"], "rn": int(round(x["rn"]))} for _, x in items][-8:]
+        last = weeks[-1]["rn"] if weeks else 0
+        prev = weeks[-2]["rn"] if len(weeks) >= 2 else 0
+        # 직전주가 양수일 때만 % 의미 있음(음수=순취소 기준이면 % 왜곡 → 절대증감 사용)
+        wow = round((last - prev) / prev * 100, 1) if prev > 0 else None
+        out[region] = {"weeks": weeks, "last": last, "prev": prev, "wow": wow}
+    return out
+
+
+def build_region_otb_agg(otb_data: dict) -> dict:
+    """otb_data.byProperty(region 태그) → 권역별 누계 집계(달성률·동기간YoY)."""
+    agg = {k: {"actual": 0.0, "budget": 0.0, "last": 0.0, "fcst": 0.0} for k in _MACRO_REGIONS}
+    for p in (otb_data or {}).get("byProperty", []):
+        r = p.get("region")
+        if r not in agg:
+            continue
+        agg[r]["actual"] += p.get("rns_actual", 0) or 0
+        agg[r]["budget"] += p.get("rns_budget", 0) or 0
+        agg[r]["last"]   += p.get("rns_last", 0) or 0
+        agg[r]["fcst"]   += p.get("rns_fcst", 0) or 0
+    out = {}
+    for r, a in agg.items():
+        ach = round(100 * a["actual"] / a["budget"], 1) if a["budget"] else 0.0
+        yoy = round(100 * (a["actual"] - a["last"]) / a["last"], 1) if a["last"] else 0.0
+        out[r] = {**a, "ach": ach, "yoy": yoy}
+    return out
+
+
+def render_macro_cards(region: str, otb_agg: dict, comp_summary: dict, pickup: dict) -> str:
+    """권역 1개의 Macro 카드 3장(온북픽업·달성률·경쟁할인) HTML."""
+    cards = []
+
+    # ── A. 온북 픽업 (주간 WoW) ──
+    pk = pickup.get(region, {})
+    weeks = pk.get("weeks", [])
+    last = pk.get("last", 0)
+    prev = pk.get("prev", 0)
+    wow = pk.get("wow")
+    delta = last - prev
+    if wow is not None:
+        cls = "down" if wow >= 0 else "up"   # down=초록(호재), up=빨강(악재)
+        arrow = "▲" if wow >= 0 else "▼"
+        delta_html = f'<span class="trend-now-delta {cls}">{arrow} WoW {wow:+.1f}%</span>'
+    elif len(weeks) >= 2:
+        # 직전주가 0 이하라 % 무의미 → 절대 증감(실)으로 표기
+        cls = "down" if delta >= 0 else "up"
+        arrow = "▲" if delta >= 0 else "▼"
+        delta_html = f'<span class="trend-now-delta {cls}">{arrow} WoW {delta:+,}실</span>'
+    else:
+        delta_html = '<span class="trend-now-delta flat">— WoW</span>'
+    inflection = f'● 최근 완료주 {weeks[-1]["w"]}' if weeks else '● 데이터 없음'
+    cards.append(
+        '    <div class="trend-card">\n'
+        '      <div class="trend-card-header"><div class="trend-card-title">🔄 온북 픽업 (주간)</div><div class="trend-card-source">온북 DB</div></div>\n'
+        f'      <div class="trend-now"><div class="trend-now-value">{last:,}<span class="unit">실</span></div>{delta_html}</div>\n'
+        '      <div class="trend-timeline"><div class="trend-timeline-label"><span>최근 8주 순예약</span>'
+        f'<span class="trend-timeline-inflection">{inflection}</span></div>'
+        f'<div style="height:52px;position:relative;"><canvas id="macroPickup_{region}"></canvas></div></div>\n'
+        '      <div class="trend-context"><div class="trend-context-label">🕐 데이터 · 자동</div>'
+        f'<div class="trend-context-text">투숙 {MONTH_LABELS.get(STAY_MONTHS[0], STAY_MONTHS[0])}~{MONTH_LABELS.get(STAY_MONTHS[-1], STAY_MONTHS[-1])} 대상 권역 전 사업장 주간 순예약(예약−취소) · 직전 완료주 <strong>{prev:,}실</strong> 대비</div></div>\n'
+        '    </div>'
+    )
+
+    # ── B. 예산 달성률 (동기간 YoY) ──
+    oa = otb_agg.get(region, {})
+    ach = oa.get("ach", 0.0)
+    yoy = oa.get("yoy", 0.0)
+    ycls = "down" if yoy >= 0 else "up"
+    yarrow = "▲" if yoy >= 0 else "▼"
+    cards.append(
+        '    <div class="trend-card">\n'
+        '      <div class="trend-card-header"><div class="trend-card-title">🎯 예산 달성률</div><div class="trend-card-source">온북 DB · Budget</div></div>\n'
+        f'      <div class="trend-now"><div class="trend-now-value">{ach:.1f}<span class="unit">%</span></div>'
+        f'<span class="trend-now-delta {ycls}">{yarrow} 동기간 YoY {yoy:+.1f}%</span></div>\n'
+        '      <div class="trend-context"><div class="trend-context-label">🕐 데이터 · 자동</div>'
+        f'<div class="trend-context-text">누계 실적 <strong>{oa.get("actual",0):,.0f}실</strong> / 예산 {oa.get("budget",0):,.0f}실 · 전년 동기 {oa.get("last",0):,.0f}실</div></div>\n'
+        '    </div>'
+    )
+
+    # ── D. 경쟁 할인 지수 ──
+    cs = (comp_summary or {}).get(region, {})
+    disc = cs.get("avg_discount", 0) or 0
+    cnt = cs.get("count", 0) or 0
+    top = cs.get("top_threat", "—")
+    threat_txt = cs.get("threat", "")
+    if disc >= 30:
+        dcls, dnote = "up", "▲ 고강도 할인"
+    elif cnt:
+        dcls, dnote = "flat", f"● 경쟁 {cnt}사"
+    else:
+        dcls, dnote = "flat", "관측 없음"
+    sub = threat_txt or (f"{cnt}개사 관측" if cnt else "관측 경쟁사 없음")
+    cards.append(
+        '    <div class="trend-card">\n'
+        '      <div class="trend-card-header"><div class="trend-card-title">🏆 경쟁 할인 지수</div><div class="trend-card-source">GS Monitor</div></div>\n'
+        f'      <div class="trend-now"><div class="trend-now-value">{disc}<span class="unit">%</span></div>'
+        f'<span class="trend-now-delta {dcls}">{dnote}</span></div>\n'
+        '      <div class="trend-context"><div class="trend-context-label">🕐 데이터 · 자동</div>'
+        f'<div class="trend-context-text">최대 위협 <strong>{escape_html(str(top))}</strong> · {escape_html(str(sub))}</div></div>\n'
+        '    </div>'
+    )
+
+    return "\n".join(cards)
+
+
+def inject_macro_section(html: str, otb_data: dict, comp_data: dict, db_agg: dict) -> str:
+    """권역별 Macro 카드(MACRO_INJECT 마커) 자동 주입 + 온북픽업 미니차트 데이터 주입."""
+    base_date = (otb_data or {}).get("meta", {}).get("baseDate", "")
+    otb_agg = build_region_otb_agg(otb_data)
+    comp_summary = (comp_data or {}).get("summary_by_region", {})
+    pickup = build_region_pickup_trend(db_agg, base_date)
+
+    updated = 0
+    for region in _MACRO_REGIONS:
+        cards_html = render_macro_cards(region, otb_agg, comp_summary, pickup)
+        pattern = re.compile(
+            f'(<!-- MACRO_INJECT_START_{region} -->)(.*?)(<!-- MACRO_INJECT_END_{region} -->)',
+            re.DOTALL,
+        )
+        new_html, n = pattern.subn(
+            lambda m: m.group(1) + "\n" + cards_html + "\n    " + m.group(3),
+            html, count=1,
+        )
+        if n > 0:
+            html = new_html
+            updated += 1
+
+    # 온북픽업 미니차트 데이터 주입 (JS const)
+    chart_data = {r: [w["rn"] for w in pickup.get(r, {}).get("weeks", [])] for r in _MACRO_REGIONS}
+    replacement = f"const MACRO_PICKUP_TREND = {json.dumps(chart_data, ensure_ascii=False)};"
+    pat = re.compile(r'const MACRO_PICKUP_TREND = \{.*?\};', re.DOTALL)
+    if pat.search(html):
+        html = pat.sub(replacement, html, count=1)
+    else:
+        html = html.replace("/*__MACRO_PICKUP__*/", replacement)
+
+    logger.info(f"✓ Macro 카드 주입: {updated}개 권역 (온북픽업·달성률·경쟁할인)")
+    return html
+
+
 def inject_signal_cards(html: str, prop_data: dict) -> str:
     """
     BI 자동 수집 데이터로 사업장 신호등 카드 자동 생성
@@ -2348,6 +2551,8 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     if agg_data:
         html = inject_weekly_onbook(html, agg_data)
     html = inject_competitor_section(html, comp_data)
+    if otb_data and agg_data:
+        html = inject_macro_section(html, otb_data, comp_data, agg_data)
     html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     if otb_data:
         rm_fcst_data = load_json(DOCS_DIR / "data" / "rm_fcst.json")
