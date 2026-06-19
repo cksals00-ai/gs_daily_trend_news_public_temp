@@ -206,8 +206,110 @@ def classify_v4(series_name: str) -> str:
     return '기타'
 
 
-def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
-    """type 27/28 파일 파싱 → agg[시리즈][YYYYMM] 집계 + prop_agg[사업장][시리즈][YYYYMM] 집계"""
+# ─── 연박 보강 분류 (박수 / 패키지분류코드명 / 연속 OTA 체인) ───
+# 다박(2박+) 승격이 허용되는 "누수" 베이스 카테고리.
+# 올인클루시브·조식·워터풀·시즌·액티비티는 박수와 무관하게 상품 정체성을 유지.
+_PROMOTE_FROM = {'기타', '룸온니/프로모션', '세일/기획전'}
+
+
+def classify_v4_ctx(series_name, nights=0, pkg_class_name='', is_ota_chain=False):
+    """문맥(박수·패키지분류코드명·연속 OTA)을 반영한 분류.
+
+    우선순위:
+      1) 패키지분류코드명에 '연박' → 연박/투나잇 (명시적 연박 프로모션, Blue Coast 연박 등)
+      2) 이름기반 분류(base)가 누수버킷(기타/룸온니/세일)이고
+         박수>=2 또는 연속 OTA 체인 → 연박/투나잇
+      3) 그 외(올인·조식·워터풀·시즌·액티비티)는 base 유지
+    """
+    if pkg_class_name and '연박' in pkg_class_name:
+        return '연박/투나잇'
+    base = classify_v4(series_name)
+    if base in _PROMOTE_FROM:
+        try:
+            n = int(str(nights).strip() or 0)
+        except (TypeError, ValueError):
+            n = 0
+        if n >= 2 or is_ota_chain:
+            return '연박/투나잇'
+    return base
+
+
+_chain_cache: dict = {}
+
+
+def ota_chain_nights(raw_db_dir, years):
+    """OTA(변경예약집계코드 53/72) 패키지86 '1박' 행 중 연속숙박 체인에 속한 '밤'을 식별.
+
+    OTA는 다박 예약을 1박씩 쪼개 별도 KEY_RSV_NO로 들여보낸다(같은 예약정보·연속 날짜).
+    같은 (이용자명, 영업장명, 객실타입, 회원명) 그룹에서 한 행의 퇴실일자가
+    다른 행의 입실일자와 일치하면(=연속) 두 밤 모두 연박으로 본다.
+
+    반환: set of (이용자, 영업장, 객실타입, 회원명, 입실YYYYMMDD)
+    예약(27/43)·취소(28/44) 행을 모두 포함해 픽업/취소 분류가 대칭이 되도록 함.
+    """
+    key = (str(raw_db_dir), tuple(sorted(str(y) for y in years)))
+    if key in _chain_cache:
+        return _chain_cache[key]
+    groups = defaultdict(list)  # gid -> [(입실, 퇴실), ...]
+    base = Path(raw_db_dir)
+    for year in years:
+        ydir = base / str(year)
+        if not ydir.exists():
+            continue
+        for fname in sorted(os.listdir(ydir)):
+            if not (fname.startswith('27.') or fname.startswith('43.')
+                    or fname.startswith('28.') or fname.startswith('44.')):
+                continue
+            try:
+                with open(ydir / fname, encoding='cp949', errors='replace') as f:
+                    lines = f.read().splitlines()
+            except Exception:
+                continue
+            if not lines:
+                continue
+            col = {h.strip(): i for i, h in enumerate(lines[0].split(';'))}
+            i_mem = col.get('회원번호', 5); i_code = col.get('변경예약집계코드', 12)
+            i_user = col.get('이용자명', 7); i_prop = col.get('영업장명', 3)
+            i_rt = col.get('객실타입', 8); i_name = col.get('회원명', 6)
+            i_n = col.get('박수', 27); i_in = col.get('입실일자', 33); i_out = col.get('퇴실일자', 34)
+            need = max(i_mem, i_code, i_user, i_prop, i_rt, i_name, i_n, i_in, i_out)
+            for line in lines[1:]:
+                p = line.split(';')
+                if len(p) <= need:
+                    continue
+                if not p[i_mem].strip().startswith('86'):
+                    continue
+                if p[i_code].strip() not in ('53', '72'):   # OTA만
+                    continue
+                if p[i_n].strip() != '1':                    # 1박 행만 (2박+ 는 박수규칙이 처리)
+                    continue
+                ci = p[i_in].strip()[:8]; co = p[i_out].strip()[:8]
+                if len(ci) != 8 or len(co) != 8:
+                    continue
+                gid = (p[i_user].strip(), p[i_prop].strip(), p[i_rt].strip(), p[i_name].strip())
+                groups[gid].append((ci, co))
+    chain = set()
+    for gid, items in groups.items():
+        if len(items) < 2:
+            continue
+        checkins = {ci for ci, co in items}
+        checkouts = {co for ci, co in items}
+        for ci, co in set(items):
+            # 이 밤의 퇴실이 같은 그룹의 다른 입실이거나(뒤로 연속),
+            # 이 밤의 입실이 같은 그룹의 다른 퇴실이면(앞과 연속) 체인 소속.
+            if co in checkins or ci in checkouts:
+                chain.add((gid[0], gid[1], gid[2], gid[3], ci))
+    _chain_cache[key] = chain
+    return chain
+
+
+def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict,
+               cat_agg: dict = None, prop_cat_agg: dict = None, chain_set: set = None):
+    """type 27/28 파일 파싱 → agg[시리즈][YYYYMM] 집계 + prop_agg[사업장][시리즈][YYYYMM] 집계.
+
+    cat_agg/prop_cat_agg 가 주어지면 행 단위 문맥분류(박수·패키지분류·연속OTA)로
+    카테고리 집계도 함께 누적한다(상품 구분 롤업용). 시리즈 집계는 이름기반 그대로 유지.
+    """
     try:
         with open(fpath, encoding='cp949', errors='replace') as f:
             lines = f.readlines()
@@ -228,9 +330,21 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
     idx_rate = col.get('1박객실료', 26)
     idx_seg_code = col.get('변경예약집계코드')
     idx_prop = col.get('변경사업장명', 4)  # 사업장명 추가
+    # 문맥분류용 컬럼
+    idx_nights = col.get('박수', 27)
+    idx_pkgcls = col.get('패키지분류코드명', 56)
+    idx_prop3 = col.get('영업장명', 3)      # 체인 gid 매칭은 영업장명(원본) 기준
+    idx_rt = col.get('객실타입', 8)
+    idx_user = col.get('이용자명', 7)
+    idx_checkin = col.get('입실일자', 33)
+    do_cat = cat_agg is not None and prop_cat_agg is not None
+    chain_set = chain_set or set()
 
     # GS 채널만 집계 (OTA + G-OTA + Inbound)
     GS_CODES = {'A4', 'A5', '53', '72', '58'}
+
+    def _new_month():
+        return {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}
 
     count = 0
     for line in lines[1:]:
@@ -269,7 +383,7 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
             prop_name = parts[idx_prop].strip()
         prop_name = prop_name if prop_name else '미분류'
 
-        # 전체 집계
+        # 전체 집계 (시리즈 기준 — 이름기반)
         m = agg[series][yyyymm]
         if is_cancel:
             m['cancel_rn'] += rn
@@ -278,10 +392,7 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
             m['booking_rn'] += rn
             m['booking_rev'] += rate
 
-        # 사업장별 집계
-        def new_month():
-            return {'booking_rn': 0, 'booking_rev': 0, 'cancel_rn': 0, 'cancel_rev': 0}
-
+        # 사업장별 집계 (시리즈 기준)
         m_prop = prop_agg[prop_name][series][yyyymm]
         if is_cancel:
             m_prop['cancel_rn'] += rn
@@ -289,6 +400,30 @@ def parse_file(fpath: Path, is_cancel: bool, agg: dict, prop_agg: dict):
         else:
             m_prop['booking_rn'] += rn
             m_prop['booking_rev'] += rate
+
+        # 카테고리 집계 (행 단위 문맥분류 — 박수/패키지분류/연속OTA 반영)
+        if do_cat:
+            nights = parts[idx_nights].strip() if 0 <= idx_nights < len(parts) else ''
+            pkgcls = parts[idx_pkgcls].strip() if 0 <= idx_pkgcls < len(parts) else ''
+            is_chain = False
+            if (0 <= idx_user < len(parts) and 0 <= idx_prop3 < len(parts)
+                    and 0 <= idx_rt < len(parts) and 0 <= idx_checkin < len(parts)):
+                gid_key = (parts[idx_user].strip(), parts[idx_prop3].strip(),
+                           parts[idx_rt].strip(), parts[idx_mem_name].strip(),
+                           parts[idx_checkin].strip()[:8])
+                is_chain = gid_key in chain_set
+            cat = classify_v4_ctx(series, nights, pkgcls, is_chain)
+            # 카테고리 net 클램핑은 (cat, series, month) 최소단위로 유지
+            # (원본 by_category와 동일하게 시리즈별 max(0, booking-cancel) 후 합산).
+            mc = cat_agg.setdefault(cat, {}).setdefault(series, defaultdict(_new_month))[yyyymm]
+            mcp = (prop_cat_agg.setdefault(prop_name, {}).setdefault(cat, {})
+                   .setdefault(series, defaultdict(_new_month))[yyyymm])
+            if is_cancel:
+                mc['cancel_rn'] += rn; mc['cancel_rev'] += rate
+                mcp['cancel_rn'] += rn; mcp['cancel_rev'] += rate
+            else:
+                mc['booking_rn'] += rn; mc['booking_rev'] += rate
+                mcp['booking_rn'] += rn; mcp['booking_rev'] += rate
 
         count += 1
 
@@ -305,6 +440,13 @@ def main():
     agg = defaultdict(lambda: defaultdict(new_month))
     # prop_name → series → yyyymm → {booking_rn, booking_rev, cancel_rn, cancel_rev}
     prop_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(new_month)))
+    # 카테고리 롤업(행 단위 문맥분류): cat → yyyymm → {...}, prop → cat → yyyymm → {...}
+    cat_agg = {}
+    prop_cat_agg = {}
+
+    # 연속 OTA 체인 사전계산 (박수=1 쪼개기 → 연박 식별)
+    chain_set = ota_chain_nights(RAW_DB_DIR, years)
+    logger.info(f"연속 OTA 체인 밤 수: {len(chain_set):,}")
 
     total_rows = 0
     for year in years:
@@ -314,15 +456,43 @@ def main():
             continue
         for fname in sorted(os.listdir(year_dir)):
             if fname.startswith('27.'):
-                n = parse_file(year_dir / fname, is_cancel=False, agg=agg, prop_agg=prop_agg)
+                n = parse_file(year_dir / fname, is_cancel=False, agg=agg, prop_agg=prop_agg,
+                               cat_agg=cat_agg, prop_cat_agg=prop_cat_agg, chain_set=chain_set)
                 logger.info(f"  {year}/{fname[:40]}: {n:,}행")
                 total_rows += n
             elif fname.startswith('28.'):
-                n = parse_file(year_dir / fname, is_cancel=True, agg=agg, prop_agg=prop_agg)
+                n = parse_file(year_dir / fname, is_cancel=True, agg=agg, prop_agg=prop_agg,
+                               cat_agg=cat_agg, prop_cat_agg=prop_cat_agg, chain_set=chain_set)
                 logger.info(f"  {year}/{fname[:40]} (취소): {n:,}행")
                 total_rows += n
 
     logger.info(f"총 파싱 행 수: {total_rows:,}")
+
+    # 카테고리별 연도 net (문맥분류 기준, 시리즈별 클램핑) — 헬퍼
+    # series_months = {series: {yyyymm: {...}}}
+    def _cat_year_net(series_months, year):
+        rn = rev = 0
+        for months in series_months.values():
+            for ym, m in months.items():
+                if ym.startswith(year):
+                    rn += max(0, m['booking_rn'] - m['cancel_rn'])
+                    rev += max(0, m['booking_rev'] - m['cancel_rev'])
+        return rn, rev
+
+    # 카테고리별 연도×월 net (시리즈별 클램핑 후 합산) — 헬퍼
+    def _cat_by_year(series_months):
+        by_yr = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev_won': 0}))
+        for months in series_months.values():
+            for yyyymm, m in months.items():
+                slot = by_yr[yyyymm[:4]][yyyymm]
+                slot['rn'] += max(0, m['booking_rn'] - m['cancel_rn'])
+                slot['rev_won'] += max(0, m['booking_rev'] - m['cancel_rev'])
+        out = {}
+        for yr, mss in by_yr.items():
+            out[yr] = {ym: {'rn': d['rn'], 'rev': round(d['rev_won'] / 1_000_000, 1),
+                            'adr': round(d['rev_won'] / d['rn'] / 1000) if d['rn'] > 0 else 0}
+                       for ym, d in sorted(mss.items())}
+        return out
 
     # 시리즈별 합계
     series_totals = {}
@@ -351,127 +521,52 @@ def main():
             by_year[yyyymm[:4]][yyyymm] = {'rn': net_rn, 'rev': net_rev_m, 'adr': adr}
         by_series[series] = {yr: dict(months) for yr, months in by_year.items()}
 
-    # by_year_ranking: 연도별 TOP 20 (카테고리 기준 합산)
+    # by_year_ranking: 연도별 TOP 20 (카테고리 기준 — 행단위 문맥분류, 시리즈별 클램핑)
     by_year_ranking = {}
     for year in years:
-        cat_totals = defaultdict(lambda: {'rn': 0, 'rev_won': 0})
-        for series, months in agg.items():
-            cat = classify_v4(series)
-            yr_rn = sum(
-                max(0, m['booking_rn'] - m['cancel_rn'])
-                for ym, m in months.items() if ym.startswith(year)
-            )
-            yr_rev_won = sum(
-                max(0, m['booking_rev'] - m['cancel_rev'])
-                for ym, m in months.items() if ym.startswith(year)
-            )
-            if yr_rn > 0:
-                cat_totals[cat]['rn'] += yr_rn
-                cat_totals[cat]['rev_won'] += yr_rev_won
         ranking = []
-        for cat, v in cat_totals.items():
-            ranking.append({
-                'name': cat,
-                'category': cat,
-                'rn': v['rn'],
-                'rev': round(v['rev_won'] / 1_000_000, 1),
-                'adr': round(v['rev_won'] / v['rn'] / 1000) if v['rn'] > 0 else 0,
-            })
+        for cat, series_months in cat_agg.items():
+            yr_rn, yr_rev_won = _cat_year_net(series_months, year)
+            if yr_rn > 0:
+                ranking.append({
+                    'name': cat, 'category': cat, 'rn': yr_rn,
+                    'rev': round(yr_rev_won / 1_000_000, 1),
+                    'adr': round(yr_rev_won / yr_rn / 1000) if yr_rn > 0 else 0,
+                })
         ranking.sort(key=lambda x: x['rn'], reverse=True)
         by_year_ranking[year] = ranking[:20]
 
-    # top_series에 category 필드 추가
+    # top_series에 category 필드 추가 (시리즈 단위 — 이름기반 유지)
     top_series_out = []
     for s in top_names:
         cat = classify_v4(s)
         top_series_out.append({'name': s, 'category': cat, **series_totals[s]})
 
-    # by_category: 카테고리별 연도×월 집계
-    cat_agg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev_won': 0}))
-    for series, months in agg.items():
-        cat = classify_v4(series)
-        for yyyymm, m in months.items():
-            net_rn = max(0, m['booking_rn'] - m['cancel_rn'])
-            net_rev_won = max(0, m['booking_rev'] - m['cancel_rev'])
-            cat_agg[cat][yyyymm]['rn'] += net_rn
-            cat_agg[cat][yyyymm]['rev_won'] += net_rev_won
+    # by_category: 카테고리별 연도×월 집계 (행단위 문맥분류, 시리즈별 클램핑)
+    by_category = {cat: _cat_by_year(series_months) for cat, series_months in cat_agg.items()}
 
-    by_category = {}
-    for cat, months in cat_agg.items():
-        by_yr = defaultdict(dict)
-        for yyyymm in sorted(months):
-            net_rn = months[yyyymm]['rn']
-            net_rev_won = months[yyyymm]['rev_won']
-            by_yr[yyyymm[:4]][yyyymm] = {
-                'rn': net_rn,
-                'rev': round(net_rev_won / 1_000_000, 1),
-                'adr': round(net_rev_won / net_rn / 1000) if net_rn > 0 else 0,
-            }
-        by_category[cat] = {yr: dict(ms) for yr, ms in by_yr.items()}
-
-    # by_year_ranking은 이미 카테고리 기준으로 합산되어 category 필드 포함됨
-
-    # by_property: 사업장별 상품계열 집계
+    # by_property: 사업장별 카테고리 집계 (행단위 문맥분류, 시리즈별 클램핑)
     by_property = {}
-    for prop_name, series_months in prop_agg.items():
-        prop_data = {'by_category': {}, 'by_year_ranking': {}}
-
-        # 사업장별 카테고리 집계
-        prop_cat_agg = defaultdict(lambda: defaultdict(lambda: {'rn': 0, 'rev_won': 0}))
-        for series, months in series_months.items():
-            cat = classify_v4(series)
-            for yyyymm, m in months.items():
-                net_rn = max(0, m['booking_rn'] - m['cancel_rn'])
-                net_rev_won = max(0, m['booking_rev'] - m['cancel_rev'])
-                prop_cat_agg[cat][yyyymm]['rn'] += net_rn
-                prop_cat_agg[cat][yyyymm]['rev_won'] += net_rev_won
-
-        # 사업장별 by_category 포맷
-        prop_by_category = {}
-        for cat, months in prop_cat_agg.items():
-            by_yr = defaultdict(dict)
-            for yyyymm in sorted(months):
-                net_rn = months[yyyymm]['rn']
-                net_rev_won = months[yyyymm]['rev_won']
-                by_yr[yyyymm[:4]][yyyymm] = {
-                    'rn': net_rn,
-                    'rev': round(net_rev_won / 1_000_000, 1),
-                    'adr': round(net_rev_won / net_rn / 1000) if net_rn > 0 else 0,
-                }
-            prop_by_category[cat] = {yr: dict(ms) for yr, ms in by_yr.items()}
-
-        # 사업장별 by_year_ranking (카테고리 기준)
+    for prop_name, cats in prop_cat_agg.items():
+        prop_by_category = {cat: _cat_by_year(series_months) for cat, series_months in cats.items()}
         prop_by_year_ranking = {}
         for year in years:
-            prop_year_cat_totals = defaultdict(lambda: {'rn': 0, 'rev_won': 0})
-            for series, months in series_months.items():
-                cat = classify_v4(series)
-                yr_rn = sum(
-                    max(0, m['booking_rn'] - m['cancel_rn'])
-                    for ym, m in months.items() if ym.startswith(year)
-                )
-                yr_rev_won = sum(
-                    max(0, m['booking_rev'] - m['cancel_rev'])
-                    for ym, m in months.items() if ym.startswith(year)
-                )
-                if yr_rn > 0:
-                    prop_year_cat_totals[cat]['rn'] += yr_rn
-                    prop_year_cat_totals[cat]['rev_won'] += yr_rev_won
             ranking = []
-            for cat, v in prop_year_cat_totals.items():
-                ranking.append({
-                    'name': cat,
-                    'category': cat,
-                    'rn': v['rn'],
-                    'rev': round(v['rev_won'] / 1_000_000, 1),
-                    'adr': round(v['rev_won'] / v['rn'] / 1000) if v['rn'] > 0 else 0,
-                })
+            for cat, series_months in cats.items():
+                yr_rn, yr_rev_won = _cat_year_net(series_months, year)
+                if yr_rn > 0:
+                    ranking.append({
+                        'name': cat, 'category': cat, 'rn': yr_rn,
+                        'rev': round(yr_rev_won / 1_000_000, 1),
+                        'adr': round(yr_rev_won / yr_rn / 1000) if yr_rn > 0 else 0,
+                    })
             ranking.sort(key=lambda x: x['rn'], reverse=True)
             prop_by_year_ranking[year] = ranking[:20]
 
-        prop_data['by_category'] = prop_by_category
-        prop_data['by_year_ranking'] = prop_by_year_ranking
-        by_property[prop_name] = prop_data
+        by_property[prop_name] = {
+            'by_category': prop_by_category,
+            'by_year_ranking': prop_by_year_ranking,
+        }
 
     output = {
         'top_series': top_series_out,

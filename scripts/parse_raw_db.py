@@ -102,23 +102,33 @@ def classify_segment(code_num, code_name, agent_name, file_type):
 # 정규화/분류 로직은 scripts/parse_package_trend.py의 canonical 구현을 그대로 사용.
 try:
     # 같은 디렉토리이므로 sys.path가 이미 잡혀 있음 (run_*.py에서 진입할 때).
-    from parse_package_trend import normalize_series as _normalize_series, classify_v4 as _classify_v4
+    from parse_package_trend import (normalize_series as _normalize_series,
+                                     classify_v4 as _classify_v4,
+                                     classify_v4_ctx as _classify_v4_ctx,
+                                     ota_chain_nights as _ota_chain_nights)
 except ImportError:
     # 직접 실행되는 경로(scripts/ 외부)에서는 명시적으로 추가
     _scripts_dir = os.path.dirname(os.path.abspath(__file__))
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
-    from parse_package_trend import normalize_series as _normalize_series, classify_v4 as _classify_v4
+    from parse_package_trend import (normalize_series as _normalize_series,
+                                     classify_v4 as _classify_v4,
+                                     classify_v4_ctx as _classify_v4_ctx,
+                                     ota_chain_nights as _ota_chain_nights)
 
 
-def classify_product_category(member_num, member_name):
+def classify_product_category(member_num, member_name, nights=0, pkg_class_name='', is_ota_chain=False):
     """회원번호=86 패키지 행 → 9개 카테고리 (룸온니/프로모션, 연박/투나잇, …).
     회원번호 86으로 시작하지 않으면 None (=집계 제외).
+
+    nights(박수)/pkg_class_name(패키지분류코드명)/is_ota_chain(연속 OTA) 문맥으로
+    다박 예약을 '연박/투나잇'으로 보강한다(누수버킷 한정).
     """
     num = (member_num or "").strip()
     if not num.startswith("86"):
         return None
-    return _classify_v4(_normalize_series((member_name or "").strip()))
+    return _classify_v4_ctx(_normalize_series((member_name or "").strip()),
+                            nights, pkg_class_name, is_ota_chain)
 
 
 def extract_channel(agent_name, segment_code=""):
@@ -286,7 +296,8 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                          cancel_daily_agg=None, pickup_daily_agg=None,
                          lead_time_agg=None, cancel_lead_agg=None,
                          stay_date_agg=None, category_agg=None,
-                         pickup_channel_agg=None, cancel_channel_agg=None):
+                         pickup_channel_agg=None, cancel_channel_agg=None,
+                         chain_set=None):
     """
     단일 txt 파일 파싱 → 바로 agg 딕셔너리에 집계 (메모리 효율)
     agg 키: (사업장, 권역, 투숙월, 채널, 세그먼트, 타입)
@@ -324,6 +335,10 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                 idx_user = col_map.get('이용자명', -1)            # 예약자명
                 idx_rsv_status = col_map.get('예약상태', -1)      # 노쇼 필터
                 idx_category_name = col_map.get('변경예약집계코드명', -1)  # 상품카테고리명
+                idx_nights = col_map.get('박수', -1)                # 다박 승격용
+                idx_pkgcls = col_map.get('패키지분류코드명', -1)    # 연박 프로모션 태그
+                idx_roomtype = col_map.get('객실타입', -1)          # 연속 OTA 체인 gid
+                _chain = chain_set or set()
 
                 line_count = 0
                 ok_count = 0
@@ -422,7 +437,16 @@ def parse_and_aggregate(filepath, file_type, agg, min_month=None, max_month=None
                         if category_agg is not None and file_type == "27":
                             mem_num = parts[idx_member_num].strip() if 0 <= idx_member_num < plen else ''
                             mem_name = parts[idx_member].strip() if 0 <= idx_member < plen else ''
-                            cat_name = classify_product_category(mem_num, mem_name)
+                            nights = parts[idx_nights].strip() if 0 <= idx_nights < plen else ''
+                            pkgcls = parts[idx_pkgcls].strip() if 0 <= idx_pkgcls < plen else ''
+                            is_chain = False
+                            if (_chain and 0 <= idx_user < plen and 0 <= idx_prop < plen
+                                    and 0 <= idx_roomtype < plen and 0 <= idx_checkin < plen):
+                                gid_key = (parts[idx_user].strip(), parts[idx_prop].strip(),
+                                           parts[idx_roomtype].strip(), mem_name,
+                                           parts[idx_checkin].strip()[:8])
+                                is_chain = gid_key in _chain
+                            cat_name = classify_product_category(mem_num, mem_name, nights, pkgcls, is_chain)
                             if cat_name:  # 회원번호 86xx만 집계
                                 cat_key = (cat_name, prop_name, stay_month, btype)
                                 category_agg[cat_key]['rn'] += rn
@@ -1507,6 +1531,16 @@ def main():
 
     type_labels = {"27": "FIT예약", "28": "FIT취소", "43": "IB예약", "44": "IB취소"}
 
+    # 연속 OTA 체인 사전계산 (박수=1 쪼개기 → 연박 식별, 상품카테고리 보강용)
+    _years = sorted({p.name for p in RAW_DB_DIR.iterdir()
+                     if p.is_dir() and p.name.isdigit() and len(p.name) == 4})
+    try:
+        chain_set = _ota_chain_nights(RAW_DB_DIR, _years)
+        logger.info(f"연속 OTA 체인 밤 수: {len(chain_set):,}")
+    except Exception as e:
+        logger.warning(f"OTA 체인 사전계산 실패(스킵): {e}")
+        chain_set = set()
+
     for fi, fpath in enumerate(txt_files):
         if fi in done_indices:
             continue  # 이미 처리된 파일 스킵
@@ -1535,7 +1569,8 @@ def main():
                                          lead_time_agg=lead_time_agg, cancel_lead_agg=cancel_lead_agg,
                                          stay_date_agg=stay_date_agg, category_agg=category_agg,
                                          pickup_channel_agg=pickup_channel_agg,
-                                         cancel_channel_agg=cancel_channel_agg)
+                                         cancel_channel_agg=cancel_channel_agg,
+                                         chain_set=chain_set)
         total_rows += row_count
         done_indices.add(fi)
 

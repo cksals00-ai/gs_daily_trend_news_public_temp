@@ -184,6 +184,81 @@ def _classify_v4(series_name: str) -> str:
     return '기타'
 
 
+# ─── 연박 보강 분류 (parse_package_trend.classify_v4_ctx와 동일 규칙) ───
+# 다박(2박+) 승격이 허용되는 "누수" 베이스 카테고리.
+_PROMOTE_FROM = {'기타', '룸온니/프로모션', '세일/기획전'}
+
+
+def _classify_v4_ctx(series_name: str, nights=0, pkg_class_name: str = '',
+                     is_ota_chain: bool = False) -> str:
+    """박수·패키지분류코드명·연속 OTA 문맥 반영 분류 (누수버킷만 연박 승격)."""
+    if pkg_class_name and '연박' in pkg_class_name:
+        return '연박/투나잇'
+    base = _classify_v4(series_name)
+    if base in _PROMOTE_FROM:
+        try:
+            n = int(str(nights).strip() or 0)
+        except (TypeError, ValueError):
+            n = 0
+        if n >= 2 or is_ota_chain:
+            return '연박/투나잇'
+    return base
+
+
+def _ota_chain_nights(raw_db_dir: Path, years: list[str]) -> set:
+    """OTA(코드 53/72) 패키지86 '1박' 행 중 연속숙박 체인에 속한 '밤' 식별.
+    반환: set of (이용자, 영업장명, 객실타입, 회원명, 입실YYYYMMDD).
+    (parse_package_trend.ota_chain_nights와 동일 규칙 — self-contained 복제)
+    """
+    groups: dict = defaultdict(list)
+    for year in years:
+        ydir = Path(raw_db_dir) / str(year)
+        if not ydir.exists():
+            continue
+        for fname in sorted(os.listdir(ydir)):
+            if not (fname.startswith('27.') or fname.startswith('43.')
+                    or fname.startswith('28.') or fname.startswith('44.')):
+                continue
+            try:
+                with open(ydir / fname, encoding='cp949', errors='replace') as f:
+                    lines = f.read().splitlines()
+            except Exception:
+                continue
+            if not lines:
+                continue
+            col = {h.strip(): i for i, h in enumerate(lines[0].split(';'))}
+            i_mem = col.get('회원번호', 5); i_code = col.get('변경예약집계코드', 12)
+            i_user = col.get('이용자명', 7); i_prop = col.get('영업장명', 3)
+            i_rt = col.get('객실타입', 8); i_name = col.get('회원명', 6)
+            i_n = col.get('박수', 27); i_in = col.get('입실일자', 33); i_out = col.get('퇴실일자', 34)
+            need = max(i_mem, i_code, i_user, i_prop, i_rt, i_name, i_n, i_in, i_out)
+            for line in lines[1:]:
+                p = line.split(';')
+                if len(p) <= need:
+                    continue
+                if not p[i_mem].strip().startswith('86'):
+                    continue
+                if p[i_code].strip() not in ('53', '72'):
+                    continue
+                if p[i_n].strip() != '1':
+                    continue
+                ci = p[i_in].strip()[:8]; co = p[i_out].strip()[:8]
+                if len(ci) != 8 or len(co) != 8:
+                    continue
+                gid = (p[i_user].strip(), p[i_prop].strip(), p[i_rt].strip(), p[i_name].strip())
+                groups[gid].append((ci, co))
+    chain = set()
+    for gid, items in groups.items():
+        if len(items) < 2:
+            continue
+        checkins = {ci for ci, co in items}
+        checkouts = {co for ci, co in items}
+        for ci, co in set(items):
+            if co in checkins or ci in checkouts:
+                chain.add((gid[0], gid[1], gid[2], gid[3], ci))
+    return chain
+
+
 def parse_pkg_daily_by_category(raw_db_dir: Path, target_dates: set[str]) -> tuple[dict, dict]:
     """raw_db에서 패키지(회원번호=86) 행만 추출하여 상품카테고리별 일별 집계.
 
@@ -201,6 +276,10 @@ def parse_pkg_daily_by_category(raw_db_dir: Path, target_dates: set[str]) -> tup
 
     # 윈도우가 닿는 연도만 스캔 (this/prev/ly가 다른 연도일 수 있음)
     years = sorted({d[:4] for d in target_dates})
+
+    # 연속 OTA 체인 사전계산 (박수=1 쪼개기 → 연박 식별)
+    chain_set = _ota_chain_nights(raw_db_dir, years)
+    logger.info(f"  연속 OTA 체인 밤 수: {len(chain_set):,}")
 
     total_rows = 0
     for year in years:
@@ -224,6 +303,12 @@ def parse_pkg_daily_by_category(raw_db_dir: Path, target_dates: set[str]) -> tup
                     idx_rate = col.get('1박객실료', 26)
                     idx_pickup = col.get('최초입력일자', -1)
                     idx_cancel = col.get('취소일자', -1)
+                    idx_nights = col.get('박수', 27)
+                    idx_pkgcls = col.get('패키지분류코드명', 56)
+                    idx_prop3 = col.get('영업장명', 3)
+                    idx_rt = col.get('객실타입', 8)
+                    idx_user = col.get('이용자명', 7)
+                    idx_checkin = col.get('입실일자', 33)
                     n_cols = max(idx_mem, idx_mem_name, idx_rooms, idx_rate,
                                  idx_pickup, idx_cancel) + 1
 
@@ -251,7 +336,17 @@ def parse_pkg_daily_by_category(raw_db_dir: Path, target_dates: set[str]) -> tup
                             rn = 1
                         rev = int(rate * rn / 1.1)
 
-                        cat = _classify_v4(_normalize_series(parts[idx_mem_name].strip()))
+                        nights = parts[idx_nights].strip() if 0 <= idx_nights < len(parts) else ''
+                        pkgcls = parts[idx_pkgcls].strip() if 0 <= idx_pkgcls < len(parts) else ''
+                        is_chain = False
+                        if (chain_set and 0 <= idx_user < len(parts) and 0 <= idx_prop3 < len(parts)
+                                and 0 <= idx_rt < len(parts) and 0 <= idx_checkin < len(parts)):
+                            gid_key = (parts[idx_user].strip(), parts[idx_prop3].strip(),
+                                       parts[idx_rt].strip(), parts[idx_mem_name].strip(),
+                                       parts[idx_checkin].strip()[:8])
+                            is_chain = gid_key in chain_set
+                        cat = _classify_v4_ctx(_normalize_series(parts[idx_mem_name].strip()),
+                                               nights, pkgcls, is_chain)
 
                         # parse_raw_db.py와 동일 규칙:
                         # pickup_daily에는 27/43 + 28/44 모두 +로 누적 (예약접수일 기준)
