@@ -4,13 +4,14 @@
 <script src="./js/auth.js"></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>요금표 → 품의 배분가(안) 변환기 · GS 와이드 양식</title>
+<title>요금표 → 품의 배분가(안) AI 변환기 · GS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
-:root{--bg:#0f1722;--card:#16202e;--line:#2a3a4f;--ink:#e7eef7;--mut:#9fb2c9;--ac:#2f6fb0;--ok:#37c98b;--warn:#e0b341}
+:root{--bg:#0f1722;--card:#16202e;--line:#2a3a4f;--ink:#e7eef7;--mut:#9fb2c9;--ac:#2f6fb0;--ok:#37c98b;--warn:#e0b341;--bad:#e57373}
 *{box-sizing:border-box}body{margin:0;font-family:'맑은 고딕',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
 header{background:linear-gradient(90deg,#1F4E79,#2f6fb0);padding:16px 22px}h1{margin:0;font-size:17px}header p{margin:4px 0 0;color:#d6e6f7;font-size:12px}
-.wrap{max-width:880px;margin:0 auto;padding:16px 20px}
+.wrap{max-width:900px;margin:0 auto;padding:16px 20px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
 .card h2{margin:0 0 10px;font-size:13px;color:#cfe0f3}.step{display:inline-block;background:var(--ac);color:#fff;border-radius:999px;width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;margin-right:6px}
 label{display:block;font-size:11px;color:var(--mut);margin:8px 0 3px}
@@ -19,149 +20,257 @@ select,input[type=text],input[type=number]{width:100%;background:#0e1722;border:
 .drop{border:2px dashed var(--ac);border-radius:10px;padding:20px;text-align:center;color:var(--mut);cursor:pointer;background:#0e1722}.drop.hot{background:#13243a;border-color:var(--ok)}
 button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:bold;cursor:pointer}
 button.go{background:var(--ok);width:100%;padding:13px;font-size:14px;margin-top:6px}button:disabled{opacity:.45;cursor:not-allowed}
-.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);margin-top:6px}.chk input{width:auto}
 .mut{color:var(--mut);font-size:11px;line-height:1.6}details{margin-top:8px}summary{cursor:pointer;font-size:12px;color:#cfe0f3}
-.ok{color:var(--ok)}.warn{color:var(--warn)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.banner{border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:1.6}
+.banner.warn{background:rgba(224,179,65,.12);border:1px solid rgba(224,179,65,.4);color:#f0d58a}
+table{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}th,td{border:1px solid var(--line);padding:3px 5px;text-align:center}th{background:#0e1722;color:#cfe0f3}
+.pill{font-size:10px;padding:2px 7px;border-radius:5px;background:#0e1722;border:1px solid var(--line);color:var(--mut);margin-left:6px}
+.linkish{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:11px;padding:4px 9px}
 </style></head><body>
-<header><h1>요금표 → 품의 배분가(안) 변환기</h1><p>GS 와이드 양식 출력 (4.배분가 + 5.부대 상세) · 자동감지 + 고정 기준 적용</p></header>
+<header><h1>요금표 → 품의 배분가(안) AI 변환기</h1><p>요금표 양식이 매번 달라도 AI가 읽어 GS 와이드 양식(4.배분가 + 5.부대 상세)으로 변환합니다.</p></header>
 <div class="wrap">
+
+ <div id="cfgBanner" class="banner warn" style="display:none">
+   ⚠ 변환 서버(Worker) 주소가 설정되지 않았습니다. 관리자가 아래 <b>⚙ 서버 설정</b>에서 Worker URL을 입력해야 변환이 동작합니다.
+ </div>
+
  <div class="card"><h2><span class="step">1</span>요금표 업로드</h2>
-  <div id="drop" class="drop">xlsx 파일을 끌어다 놓거나 클릭</div><input id="file" type="file" accept=".xlsx" style="display:none"/>
+  <div id="drop" class="drop">xlsx 파일을 끌어다 놓거나 클릭 — 채널/사업장 무관, 양식 달라도 OK</div>
+  <input id="file" type="file" accept=".xlsx,.xls" style="display:none"/>
   <div id="finfo" class="mut" style="margin-top:8px"></div></div>
- <div class="card" id="cfg" style="display:none"><h2><span class="step">2</span>설정</h2>
-  <div class="row"><div><label>가격 시트</label><select id="sheet"></select></div><div><label>데이터 시작 행(자동)</label><input id="startRow" type="number" min="1" value="1"/></div></div>
-  <div class="row3"><div><label>사업장</label><input id="biz" type="text"/></div><div><label>채널</label><input id="chan" type="text"/></div><div><label>수수료(%)</label><input id="fee" type="number" step="0.1" value="13"/></div></div>
-  <div class="row3"><div><label>인원수(부대 곱)</label><input id="pax" type="number" min="1" value="3"/></div>
-   <div class="chk"><input type="checkbox" id="facPer" checked/><label style="margin:0">부대 1인기준 → ×인원</label></div>
-   <div class="chk"><input type="checkbox" id="normSeason" checked/><label style="margin:0">시즌 정규화(①②·연휴)</label></div></div>
-  <div class="chk"><input type="checkbox" id="seasonOnly" checked/><label style="margin:0">시즌만 통합(날짜 구분 없이)</label></div>
-  <div id="autostat" style="margin:8px 0;font-size:12px"></div>
-  <button class="go" id="go" disabled>변환 &amp; 다운로드 (와이드 양식)</button>
+
+ <div class="card" id="cfg" style="display:none"><h2><span class="step">2</span>확인 & 변환</h2>
+  <div class="row"><div><label>요금표 시트</label><select id="sheet"></select></div>
+   <div><label>인원수(부대 기준, 보통 2~3)</label><input id="pax" type="number" min="1" value="3"/></div></div>
+  <div class="row3"><div><label>사업장(자동·수정가능)</label><input id="biz" type="text"/></div>
+   <div><label>채널(자동·수정가능)</label><input id="chan" type="text"/></div>
+   <div><label>수수료(%)</label><input id="fee" type="text" value="13"/></div></div>
+  <button class="go" id="go">AI 변환 &amp; 다운로드 (와이드 양식)</button>
   <div id="status" class="mut" style="margin-top:8px"></div>
-  <details id="adv"><summary>⚙ 컬럼 매핑 / 부대 상세 슬롯 (자동값 확인·수정)</summary>
-   <div class="row3">
-    <div><label>시즌 열</label><select id="m_season"></select></div>
-    <div><label>객실 무기명 정상</label><select id="m_nm"></select></div>
-    <div><label>객실 FIT 정상</label><select id="m_nf"></select></div></div>
-   <div class="row3">
-    <div><label>객실 무기명 배분</label><select id="m_am"></select></div>
-    <div><label>객실 FIT 배분</label><select id="m_af"></select></div><div></div></div>
-   <div class="row"><div><label>부대 정상 열(다중)</label><select id="m_fn" multiple size="5"></select></div>
-    <div><label>부대 배분 열(다중)</label><select id="m_fa" multiple size="5"></select></div></div>
-   <label>5.부대 상세 슬롯(최대 4개, 항목명 = 키워드)</label>
-   <div class="row4"><input id="s1" type="text" placeholder="오션"/><input id="s2" type="text" placeholder="조식"/><input id="s3" type="text" placeholder="곤돌라"/><input id="s4" type="text" placeholder="액티"/></div>
-  </details></div>
+  <details><summary>⚙ 서버 설정 (관리자)</summary>
+   <label>변환 서버(Cloudflare Worker) URL</label>
+   <input id="workerUrl" type="text" placeholder="https://gs-rate-converter.<계정>.workers.dev"/>
+   <div style="margin-top:8px"><button class="linkish" id="saveCfg">저장</button>
+    <span class="mut" id="cfgMsg" style="margin-left:8px"></span></div>
+   <div class="mut" style="margin-top:6px">로그인 토큰(sales 이상)으로 인증됩니다. 키는 서버에만 있으며 브라우저에 노출되지 않습니다.</div>
+  </details>
+ </div>
+
+ <div class="card" id="prev" style="display:none"><h2><span class="step">3</span>미리보기</h2>
+  <div id="caps" class="mut" style="margin-bottom:6px"></div>
+  <div id="preview"></div>
+  <div id="notes" class="mut" style="margin-top:8px"></div></div>
 </div>
+
 <script>
-const $=id=>document.getElementById(id);let WB,SHEET,NC=0,HEAD=[],BAND=1;
-const col=n=>{let s='';while(n>0){let m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
-function cv(ws,r,c){let v=ws.getRow(r).getCell(c).value;if(v&&typeof v==='object'){if('result'in v)return v.result;if('richText'in v)return v.richText.map(t=>t.text).join('');if('text'in v)return v.text}return v}
-const num=v=>typeof v==='number'?v:null;const cl=v=>(v==null?'':String(v)).replace(/\n/g,' ').trim();
+const $=id=>document.getElementById(id);
+const LS_URL='gsn_rate_worker_url';
+let WB=null;
+
+// ── 서버 URL ──
+function workerUrl(){ try{return localStorage.getItem(LS_URL)||'';}catch(_){return '';} }
+function refreshBanner(){ $('cfgBanner').style.display = workerUrl()? 'none':'block'; }
+$('workerUrl').value=workerUrl();
+$('saveCfg').onclick=()=>{ const v=$('workerUrl').value.trim(); try{localStorage.setItem(LS_URL,v);}catch(_){}
+  $('cfgMsg').textContent='저장됨'; refreshBanner(); };
+refreshBanner();
+
+// ── 업로드 ──
 $('drop').onclick=()=>$('file').click();
 $('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('hot')};
 $('drop').ondragleave=()=>$('drop').classList.remove('hot');
 $('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('hot');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
 $('file').onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
-async function load(f){$('finfo').textContent='읽는 중…';const b=await f.arrayBuffer();WB=new ExcelJS.Workbook();
- try{await WB.xlsx.load(b)}catch(e){$('finfo').innerHTML='<span class=warn>읽기 실패: '+e.message+'</span>';return}
- const sel=$('sheet');sel.innerHTML='';WB.worksheets.forEach(w=>{const o=document.createElement('option');o.value=w.name;o.textContent=w.name;sel.appendChild(o)});
- $('finfo').innerHTML='<span class=ok>불러옴</span> · 시트 '+WB.worksheets.length+'개';$('cfg').style.display='block';
- const pref=WB.worksheets.map(w=>w.name).find(n=>/올인|상품|카카오|조식|배분|요금|메이커스/.test(n))||WB.worksheets[WB.worksheets.length-1].name;
- sel.value=pref;sel.onchange=onSheet;onSheet()}
-function onSheet(){SHEET=WB.getWorksheet($('sheet').value);NC=Math.max(SHEET.columnCount||1,SHEET.actualColumnCount||1,1);band();heads();auto();meta()}
-function band(){let an=0,bR=1,bS=-1;for(let r=1;r<=Math.min(30,SHEET.rowCount);r++){let s=0,h=false;for(let c=1;c<=NC;c++){const v=cl(cv(SHEET,r,c));if(/정상가|정상\s*요금/.test(v))h=true;if(/무기명|FIT|배분가|조식|오션|곤돌라|시\s*즌|타\s*입/.test(v))s++}if(h&&!an)an=r;if(s>bS){bS=s;bR=r}}BAND=an||bR}
-function heads(){HEAD=[];const HR=[BAND,BAND+1,BAND+2].filter(r=>r<=SHEET.rowCount);for(let c=1;c<=NC;c++){let p=[];HR.forEach(r=>{const v=cl(cv(SHEET,r,c));if(v&&!/^■/.test(v))p.push(v)});HEAD[c]=[...new Set(p)].join(' / ')}}
-const find=re=>{for(let c=1;c<=NC;c++)if(re.test(HEAD[c]||''))return c;return 0};
-function opt(sel,ch){sel.innerHTML='';for(let c=1;c<=NC;c++){const o=document.createElement('option');o.value=c;o.textContent=col(c)+(HEAD[c]?': '+HEAD[c].slice(0,18):'');if(c===ch)o.selected=true;sel.appendChild(o)}}
-function optM(sel,arr){sel.innerHTML='';for(let c=1;c<=NC;c++){const o=document.createElement('option');o.value=c;o.textContent=col(c)+(HEAD[c]?': '+HEAD[c].slice(0,18):'');if(arr.includes(c))o.selected=true;sel.appendChild(o)}}
-let MAP={};
-function auto(){let aN=0,aA=0;[BAND,BAND+1,BAND+2].forEach(r=>{for(let c=1;c<=NC;c++){const v=cl(cv(SHEET,r,c));if(!aN&&/정상가|정상\s*요금/.test(v))aN=c;if(!aA&&/배분가/.test(v))aA=c}});if(!aN)aN=1;
- let mem=[],fit=[];for(let c=1;c<=NC;c++){const h=HEAD[c]||'';if(/무기명|오리지널\(무\)/.test(h))mem.push(c);if(/FIT/.test(h))fit.push(c)}
- const ge=(a,x)=>a.filter(c=>c>=x).sort((p,q)=>p-q)[0]||0;
- let nm=ge(mem,aN)||mem[0]||0,nf=ge(fit,aN)||fit[0]||0,am=aA?ge(mem,aA):0,af=aA?ge(fit,aA):0,season=find(/시\s*즌/);
- const facRe=/조식|뷔페|오션|곤돌라|음료|액티|인피니티|수영|스노위/;let fa=[];for(let c=1;c<=NC;c++){const h=HEAD[c]||'';if(facRe.test(h)&&!/할인율/.test(h))fa.push(c)}
- let fN=fa.filter(c=>!aA||c<aA),fA=fa.filter(c=>aA&&c>=aA);
- let sr=BAND+3;for(let r=BAND+1;r<=Math.min(BAND+8,SHEET.rowCount);r++){if(season&&cl(cv(SHEET,r,season))&&nm&&num(cv(SHEET,r,nm))!=null){sr=r;break}}
- $('startRow').value=sr;
- opt($('m_season'),season);opt($('m_nm'),nm);opt($('m_nf'),nf);opt($('m_am'),am);opt($('m_af'),af);optM($('m_fn'),fN);optM($('m_fa'),fA);
- const ok=nm&&nf&&am&&af&&season&&fN.length&&fA.length;
- $('autostat').innerHTML=ok?'<span class=ok>✓ 자동 감지 완료</span> — 설정 확인 후 변환':'<span class=warn>⚠ 일부 미감지</span> — ⚙에서 매핑 확인';
- if(!ok)$('adv').open=true;$('go').disabled=false;
- // default 부대 slot keywords from detected fac headers
- const names=fN.map(c=>(HEAD[c]||'').replace(/.*?(조식|오션|곤돌라|음료|액티|인피니티|수영).*/,'$1')).filter(Boolean);
- ['s1','s2','s3','s4'].forEach((id,i)=>{if(names[i]&&!$(id).value)$(id).value=names[i]})}
-function around(label){for(let r=1;r<=Math.min(18,SHEET.rowCount);r++)for(let c=1;c<=NC;c++){const v=cl(cv(SHEET,r,c));if(v&&v.replace(/\s/g,'').indexOf(label)>=0){let p=[];for(let cc=c+1;cc<=NC;cc++){const w=cl(cv(SHEET,r,cc));if(w&&w!==v)p.push(w)}if(p.length)return p[0].replace(/^[·:\s]+/,'')}}return''}
-function meta(){const s=(id,v)=>{if(v&&!$(id).value)$(id).value=v};
- for(let r=1;r<=6;r++)for(let c=1;c<=NC;c++){let v=cl(cv(SHEET,r,c));if(/^■/.test(v)){s('biz',v.replace(/^■\s*/,'').split(/\s*x\s*|인플루언서|프로모션|채널|진행|운영|\(/)[0].trim());break}}
- s('chan',around('판매채널')||around('채널'));
- for(let r=1;r<=20;r++)for(let c=1;c<=NC;c++){const v=cl(cv(SHEET,r,c));const m=v.match(/\((\d{1,2}(?:\.\d)?)\s*%\)/)||(/수수료/.test(v)?v.match(/(\d{1,2})\s*%/):null);if(m&&$('fee').value=='13'){$('fee').value=m[1];return}}}
-// ---- conversion ----
-const K=1000;const f1=v=>Math.round(v/K).toLocaleString();
-const rng=a=>{const lo=Math.min(...a),hi=Math.max(...a);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi)};
-const gap=p=>{const g=p.map(x=>x[0]-x[1]);const lo=Math.min(...g),hi=Math.max(...g);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi)};
-const pct=(n,a)=>{const nm=Math.min(...n),nM=Math.max(...n),am=Math.min(...a),aM=Math.max(...a);let d1=nm?Math.round(Math.abs((am-nm)/nm)*100):0,d2=nM?Math.round(Math.abs((aM-nM)/nM)*100):0;let lo=Math.min(d1,d2),hi=Math.max(d1,d2);return lo===hi?lo+'%':lo+'%~'+hi+'%'};
-function canon(s){s=String(s).replace(/\n/g,' ').replace(/\s/g,'');for(const b of['하이','골드','스페셜'])if(s.indexOf(b)===0)return b;if(s.indexOf('주중')===0)return'주중';if(s==='연휴')return'스페셜';if(['금요일','토요일','7/16'].includes(s))return s;return s}
-const SORD=['주중','금요일','토요일','7/16','하이','골드','스페셜'];
-function extract(){const cS=+$('m_season').value,cNm=+$('m_nm').value,cNf=+$('m_nf').value,cAm=+$('m_am').value,cAf=+$('m_af').value;
- const fN=[...$('m_fn').selectedOptions].map(o=>+o.value),fA=[...$('m_fa').selectedOptions].map(o=>+o.value);
- const sr=+$('startRow').value,pax=+$('pax').value,mult=$('facPer').checked?pax:1,norm=$('normSeason').checked;
- const slots=['s1','s2','s3','s4'].map(id=>$(id).value.trim()).filter(Boolean);
- let rows=[];
- for(let r=sr;r<=SHEET.rowCount;r++){let s=cl(cv(SHEET,r,cS));if(!s)continue;s=norm?canon(s):s.split(' ')[0];
-  const mn=num(cv(SHEET,r,cNm)),fnit=num(cv(SHEET,r,cNf)),am=num(cv(SHEET,r,cAm)),af=num(cv(SHEET,r,cAf));
-  if(mn==null||fnit==null||am==null||af==null)continue;
-  const fnv=fN.reduce((t,c)=>t+(num(cv(SHEET,r,c))||0),0)*mult, fav=fA.reduce((t,c)=>t+(num(cv(SHEET,r,c))||0),0)*mult;
-  // per-slot components
-  const comp={};slots.forEach(sl=>{const nc=fN.find(c=>(HEAD[c]||'').includes(sl)),ac=fA.find(c=>(HEAD[c]||'').includes(sl));comp[sl]=[(num(cv(SHEET,r,nc))||0)*mult,(num(cv(SHEET,r,ac))||0)*mult]});
-  rows.push({s,mn,fnit,am,af,fn:fnv,fa:fav,comp})}
- return{rows,slots}}
-function group(rows){const G=new Map();rows.forEach(r=>{if(!G.has(r.s))G.set(r.s,[]);G.get(r.s).push(r)});return new Map([...G.entries()].sort((a,b)=>(SORD.indexOf(a[0])+99*(SORD.indexOf(a[0])<0))-(SORD.indexOf(b[0])+99*(SORD.indexOf(b[0])<0))))}
-// ---- ExcelJS wide output ----
-const FN_='대명체 보통';const GREY={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F2F2'}};
-const Bd=(l,r,t,b)=>({left:l?{style:l}:undefined,right:r?{style:r}:undefined,top:t?{style:t}:undefined,bottom:b?{style:b}:undefined});
-function W(ws,row,c,span,val,o){o=o||{};if(span>1)ws.mergeCells(row,c,row,c+span-1);const cell=ws.getCell(row,c);cell.value=val;
- cell.font={name:FN_,size:o.sz||7,bold:!!o.b};if(o.grey)cell.fill=GREY;cell.alignment={horizontal:o.al||'right',vertical:'middle',wrapText:true};cell.border=o.bd||Bd('thin','thin','thin','thin');return cell}
-async function convert(){$('status').textContent='변환 중…';const {rows,slots}=extract();if(!rows.length){$('status').innerHTML='<span class=warn>데이터 추출 실패 — 매핑 확인</span>';return}
- const G=group(rows);const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('품의(양식)');
- ws.getColumn(1).width=2.6;ws.getColumn(2).width=6.6;ws.getColumn(3).width=7;for(let c=4;c<=39;c++)ws.getColumn(c).width=2.7;
- const biz=$('biz').value||'사업장',chan=$('chan').value||'채널',fee=$('fee').value,pax=$('pax').value;
- let r=2;W(ws,r,1,1,'4. 배분가  ·  '+biz+' x '+chan+' 프로모션 배분가(안)',{b:true,sz:10,al:'left',bd:Bd()});W(ws,r,36,4,'[단위: 천원]',{sz:9,bd:Bd()});r+=2;
- // header
- const grp=[[4,'객실'],[16,'부대'],[28,'판매가']];const H=r;
- W(ws,r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(ws,r,3,1,'구분',{sz:9,grey:true,al:'center'});
- grp.forEach(([c,n])=>W(ws,r,c,12,n,{sz:9,grey:true,al:'center'}));r++;
- ws.mergeCells(H,2,r,2);ws.mergeCells(H,3,r,3);
- [4,16,28].forEach(base=>['회원','FIT','GAP'].forEach((t,i)=>W(ws,r,base+i*4,4,t,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','thin','double')})));r++;
- ws.getRow(H).height=15.9;ws.getRow(H+1).height=15.9;
- for(const[s,it]of G){const s0=r;
-  const mn=it.map(x=>x.mn),fnit=it.map(x=>x.fnit),am=it.map(x=>x.am),af=it.map(x=>x.af),fcn=it.map(x=>x.fn),fca=it.map(x=>x.fa);
-  const gN=it.map(x=>[x.fnit,x.mn]),gA=it.map(x=>[x.af,x.am]);
-  const sMN=it.map(x=>x.mn+x.fn),sFN=it.map(x=>x.fnit+x.fn),sMA=it.map(x=>x.am+x.fa),sFA=it.map(x=>x.fnit&&x.af+x.fa);const sFA2=it.map(x=>x.af+x.fa);
-  const blocks=[['정상가',[rng(mn),rng(fnit),gap(gN),rng(fcn),rng(fcn),'0',rng(sMN),rng(sFN),gap(gN)]],
-   ['배분가',[rng(am),rng(af),gap(gA),rng(fca),rng(fca),'0',rng(sMA),rng(sFA2),gap(gA)]],
-   ['할인율',[pct(mn,am),pct(fnit,af),'-',pct(fcn,fca),pct(fcn,fca),'-',pct(sMN,sMA),pct(sFN,sFA2),'-']]];
-  blocks.forEach((bk,di)=>{const tb=di===0?'double':'hair',bb=di===2?'thin':'hair';
-   W(ws,r,3,1,bk[0],{sz:9,grey:true,al:'center',bd:Bd('thin','double',tb,bb)});
-   bk[1].forEach((v,j)=>W(ws,r,4+j*4,4,v,{bd:Bd(j===0?'double':'thin','thin',tb,bb)}));ws.getRow(r).height=15.9;r++});
-  W(ws,s0,2,1,s,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','double','thin')});ws.mergeCells(s0,2,r-1,2);}
- // ---- Section 5 부대 상세 ----
- r+=2;W(ws,r,1,1,'5. 부대시설 상세내용  (1인×'+pax+', 부대 회원=FIT)',{b:true,sz:10,al:'left',bd:Bd()});W(ws,r,34,4,'[단위: 천원]',{sz:9,bd:Bd()});r++;
- const sl=slots.slice(0,4);const H5=r;W(ws,r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(ws,r,3,1,'구분',{sz:9,grey:true,al:'center'});
- sl.forEach((nm,i)=>W(ws,r,4+i*9,9,nm+' '+pax+'인',{sz:9,grey:true,al:'center'}));r++;
- ws.mergeCells(H5,2,r,2);ws.mergeCells(H5,3,r,3);
- sl.forEach((_,i)=>['회원','FIT','GAP'].forEach((t,k)=>W(ws,r,4+i*9+k*3,3,t,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','thin','double')})));r++;
- ws.getRow(H5).height=15.9;ws.getRow(H5+1).height=15.9;
- // buckets 주중 / 주말(토)
- const bk={'주중':rows.filter(x=>x.s==='주중'),'주말':rows.filter(x=>x.s==='토요일')};
- for(const[bn,it]of Object.entries(bk)){const s0=r;
-  const blocks=['정상가','배분가','할인율'].map((lab,di)=>{const vals=[];sl.forEach(name=>{const n=it.map(x=>(x.comp[name]||[0,0])[0]),a=it.map(x=>(x.comp[name]||[0,0])[1]);
-    if(di===0)vals.push(rng(n),rng(n),'0');else if(di===1)vals.push(rng(a),rng(a),'0');else vals.push(pct(n,a),pct(n,a),'-')});return[lab,vals]});
-  blocks.forEach((bkr,di)=>{const tb=di===0?'double':'hair',bb=di===2?'thin':'hair';
-   W(ws,r,3,1,bkr[0],{sz:9,grey:true,al:'center',bd:Bd('thin','double',tb,bb)});
-   bkr[1].forEach((v,j)=>W(ws,r,4+j*3,3,v,{bd:Bd(j%3===0?'thin':'hair','thin',tb,bb)}));ws.getRow(r).height=15.9;r++});
-  W(ws,s0,2,1,bn,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','double','thin')});ws.mergeCells(s0,2,r-1,2);}
- ws.views=[{showGridLines:false}];
- const buf=await wb.xlsx.writeBuffer();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf]));a.download=biz+'_'+chan+'_품의_배분가(안).xlsx';a.click();
- $('status').innerHTML='<span class=ok>완료!</span> '+rows.length+'행 · 시즌 '+G.size+'개 → 다운로드';}
+
+async function load(f){
+  $('finfo').textContent='읽는 중… '+f.name;
+  let wb;
+  try{ const buf=await f.arrayBuffer(); wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true}); }
+  catch(e){ $('finfo').innerHTML='<span class=bad>읽기 실패: '+e.message+'</span>'; return; }
+  WB=wb;
+  const sel=$('sheet'); sel.innerHTML='';
+  wb.SheetNames.forEach(nm=>{ const o=document.createElement('option'); o.value=nm; o.textContent=nm; sel.appendChild(o); });
+  // 가격 시트 추정: 요금/상품/배분/카카오/올인 등 키워드, 없으면 가장 큰 시트
+  const pref=wb.SheetNames.find(n=>/요금|상품|배분|카카오|올인|메이커스|프로모/.test(n))
+    || wb.SheetNames.slice().sort((a,b)=>(rangeArea(wb.Sheets[b])-rangeArea(wb.Sheets[a])))[0];
+  sel.value=pref;
+  $('finfo').innerHTML='<span class=ok>불러옴</span> · 시트 '+wb.SheetNames.length+'개';
+  $('cfg').style.display='block';
+}
+function rangeArea(ws){ if(!ws||!ws['!ref'])return 0; const r=XLSX.utils.decode_range(ws['!ref']); return (r.e.r-r.s.r+1)*(r.e.c-r.s.c+1); }
+
+// ── 시트 → 텍스트 격자 (병합셀은 마스터값 채움) ──
+function sheetToGrid(ws){
+  if(!ws||!ws['!ref']) return '';
+  const r=XLSX.utils.decode_range(ws['!ref']);
+  const mval={}; (ws['!merges']||[]).forEach(m=>{ const c=ws[XLSX.utils.encode_cell({r:m.s.r,c:m.s.c})]; const v=c?c.v:null;
+    for(let R=m.s.r;R<=m.e.r;R++)for(let C=m.s.c;C<=m.e.c;C++) mval[R+','+C]=v; });
+  const maxR=Math.min(r.e.r, r.s.r+220), maxC=Math.min(r.e.c, 45);
+  const out=[];
+  for(let R=r.s.r;R<=maxR;R++){
+    const cells=[];
+    for(let C=r.s.c;C<=maxC;C++){
+      let v=null; const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
+      if(cell&&cell.v!=null&&String(cell.v).trim()!=='') v=cell.v;
+      else if(mval[R+','+C]!=null) v=mval[R+','+C];
+      if(v!=null&&String(v).trim()!=='') cells.push(XLSX.utils.encode_col(C)+'='+String(v).replace(/\s+/g,' ').trim());
+    }
+    if(cells.length) out.push('R'+(R+1)+' '+cells.join(' | '));
+  }
+  return out.join('\n');
+}
+
+// ── 변환 ──
 $('go').onclick=convert;
+async function convert(){
+  const url=workerUrl();
+  if(!url){ $('status').innerHTML='<span class=bad>서버 URL 미설정 — ⚙ 서버 설정에서 입력하세요.</span>'; return; }
+  if(!WB){ $('status').innerHTML='<span class=warn>요금표를 먼저 업로드하세요.</span>'; return; }
+  const ws=WB.Sheets[$('sheet').value];
+  const grid=sheetToGrid(ws);
+  if(grid.length<20){ $('status').innerHTML='<span class=warn>선택한 시트에서 읽을 내용이 없습니다.</span>'; return; }
+  const token=(window.GSNAuth&&GSNAuth.getToken())||'';
+  if(!token){ $('status').innerHTML='<span class=bad>로그인이 필요합니다.</span>'; return; }
+
+  $('go').disabled=true;
+  $('status').innerHTML='AI가 요금표를 분석 중… <span class=mut>(보통 10~30초)</span>';
+  const meta={ pax:parseInt($('pax').value||'3',10), biz:$('biz').value.trim(), channel:$('chan').value.trim(), feePct:$('fee').value.trim() };
+  let j;
+  try{
+    const r=await fetch(url,{ method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({ token, grid, meta }) });
+    j=await r.json();
+    if(!r.ok||!j.ok) throw new Error(j&&j.error?j.error:('HTTP '+r.status));
+  }catch(e){ $('status').innerHTML='<span class=bad>변환 실패: '+e.message+'</span>'; $('go').disabled=false; return; }
+
+  try{
+    const data=j.data;
+    // 메타: 사용자 입력 우선, 없으면 AI 추출
+    const m=data.meta||{};
+    const biz=$('biz').value.trim()||m.biz||'사업장';
+    const chan=$('chan').value.trim()||m.channel||'채널';
+    const fee=$('fee').value.trim()||m.feePct||'13';
+    const pax=parseInt($('pax').value||m.pax||'3',10);
+    await buildExcel(data, {biz,chan,fee,pax});
+    renderPreview(data, j.caps);
+    $('status').innerHTML='<span class=ok>완료!</span> 다운로드됨 · 행 '+(data.rows||[]).length+'개 / 부대 '+(data.facilityRows||[]).length+'개';
+  }catch(e){ $('status').innerHTML='<span class=bad>엑셀 생성 오류: '+e.message+'</span>'; }
+  $('go').disabled=false;
+}
+
+// ── 수식(결정론적) ──
+const K=1000;
+const f1=v=>Math.round(v/K).toLocaleString();
+const arrMM=a=>{a=a.filter(v=>v!=null&&!isNaN(v));return a.length?[Math.min(...a),Math.max(...a)]:[0,0];};
+const frng=a=>{a=a.filter(v=>v!=null&&!isNaN(v));if(!a.length)return '-';const lo=Math.min(...a),hi=Math.max(...a);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi);};
+const fpct=(n,a)=>{n=n.filter(v=>v);a=a.filter(v=>v);if(!n.length||!a.length)return '-';
+  const nLo=Math.min(...n),nHi=Math.max(...n),aLo=Math.min(...a),aHi=Math.max(...a);
+  let d1=nLo?Math.round(Math.abs((aLo-nLo)/nLo)*100):0,d2=nHi?Math.round(Math.abs((aHi-nHi)/nHi)*100):0;
+  const lo=Math.min(d1,d2),hi=Math.max(d1,d2);return lo===hi?lo+'%':lo+'%~'+hi+'%';};
+const SORD=['주중','금요일','토요일','7-16','하이','골드','스페셜'];
+function seasonOrder(s){const i=SORD.indexOf(s);return i<0?99:i;}
+
+// ── ExcelJS 와이드 출력 (4.배분가 + 5.부대 상세) ──
+async function buildExcel(data, opt){
+  const rows=(data.rows||[]).filter(r=>r&&r.roomMemberNormal!=null);
+  const facRows=(data.facilityRows||[]);
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('품의(양식)');
+  ws.getColumn(1).width=2.6;ws.getColumn(2).width=6.6;ws.getColumn(3).width=7;
+  for(let c=4;c<=39;c++) ws.getColumn(c).width=2.7;
+  const FN='맑은 고딕', GREY={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F2F2'}};
+  const Bd=(l,r,t,b)=>({left:l?{style:l}:undefined,right:r?{style:r}:undefined,top:t?{style:t}:undefined,bottom:b?{style:b}:undefined});
+  const W=(row,c,span,val,o)=>{o=o||{};if(span>1)ws.mergeCells(row,c,row,c+span-1);const cell=ws.getCell(row,c);cell.value=val;
+    cell.font={name:FN,size:o.sz||7,bold:!!o.b};if(o.grey)cell.fill=GREY;cell.alignment={horizontal:o.al||'right',vertical:'middle',wrapText:true};cell.border=o.bd||Bd('thin','thin','thin','thin');return cell;};
+
+  let r=2;
+  W(r,1,1,'4. 배분가  ·  '+opt.biz+' x '+opt.chan+' 프로모션 배분가(안)',{b:true,sz:10,al:'left',bd:Bd()});
+  W(r,36,4,'[단위: 천원]',{sz:9,bd:Bd()});r++;
+  W(r,1,1,'무기명 기준(회원=무기명) / 수수료 '+opt.fee+'% / '+opt.pax+'인 / 전 객실타입 MIN~MAX / GAP=FIT−회원',{sz:8,al:'left',bd:Bd()});r+=1;
+  // 헤더
+  const H=r;
+  W(r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(r,3,1,'구분',{sz:9,grey:true,al:'center'});
+  [[4,'객실'],[16,'부대'],[28,'판매가']].forEach(([c,n])=>W(r,c,12,n,{sz:9,grey:true,al:'center'}));r++;
+  ws.mergeCells(H,2,r,2);ws.mergeCells(H,3,r,3);
+  [4,16,28].forEach(base=>['회원','FIT','GAP'].forEach((t,i)=>W(r,base+i*4,4,t,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','thin','double')})));r++;
+  const RB=[[4,7],[8,11],[12,15]],FB=[[16,19],[20,23],[24,27]],SB=[[28,31],[32,35],[36,39]];
+  // 시즌 그룹
+  const G=new Map(); rows.forEach(x=>{const s=x.season||'기타';if(!G.has(s))G.set(s,[]);G.get(s).push(x);});
+  const seasons=[...G.keys()].sort((a,b)=>seasonOrder(a)-seasonOrder(b));
+  for(const s of seasons){
+    const it=G.get(s),s0=r;
+    const mn=it.map(x=>x.roomMemberNormal),fnit=it.map(x=>x.roomFitNormal),am=it.map(x=>x.roomMemberDist),af=it.map(x=>x.roomFitDist);
+    const fcn=it.map(x=>x.facNormalSum||0),fca=it.map(x=>x.facDistSum||0);
+    const gN=it.map(x=>x.roomFitNormal-x.roomMemberNormal),gA=it.map(x=>x.roomFitDist-x.roomMemberDist);
+    const sMN=it.map(x=>x.roomMemberNormal+(x.facNormalSum||0)),sFN=it.map(x=>x.roomFitNormal+(x.facNormalSum||0));
+    const sMA=it.map(x=>x.roomMemberDist+(x.facDistSum||0)),sFA=it.map(x=>x.roomFitDist+(x.facDistSum||0));
+    const blk=(c1c2,row,val,o)=>W(row,c1c2[0],c1c2[1]-c1c2[0]+1,val,o);
+    const lines=[
+      ['정상가',[frng(mn),frng(fnit),frng(gN)],[frng(fcn),frng(fcn),'0'],[frng(sMN),frng(sFN),frng(gN)]],
+      ['배분가',[frng(am),frng(af),frng(gA)],[frng(fca),frng(fca),'0'],[frng(sMA),frng(sFA),frng(gA)]],
+      ['할인율',[fpct(mn,am),fpct(fnit,af),'-'],[fpct(fcn,fca),fpct(fcn,fca),'-'],[fpct(sMN,sMA),fpct(sFN,sFA),'-']],
+    ];
+    lines.forEach((ln,di)=>{const tb=di===0?'double':'hair',bb=di===2?'thin':'hair';
+      W(r,3,1,ln[0],{sz:9,grey:true,al:'center',bd:Bd('thin','double',tb,bb)});
+      ln[1].forEach((v,j)=>blk(RB[j],r,v,{bd:Bd(j===0?'double':'thin','thin',tb,bb)}));
+      ln[2].forEach((v,j)=>blk(FB[j],r,v,{bd:Bd(j===0?'double':'thin','thin',tb,bb)}));
+      ln[3].forEach((v,j)=>blk(SB[j],r,v,{bd:Bd(j===0?'double':'thin','thin',tb,bb)}));
+      ws.getRow(r).height=15.9;r++;});
+    W(s0,2,1,s,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','double','thin')});ws.mergeCells(s0,2,r-1,2);
+  }
+
+  // ── 5. 부대시설 상세 ──
+  r+=2;
+  W(r,1,1,'5. 부대시설 상세내용  ('+opt.pax+'인 기준, 부대 회원=FIT)',{b:true,sz:10,al:'left',bd:Bd()});
+  W(r,34,4,'[단위: 천원]',{sz:9,bd:Bd()});r++;
+  // 슬롯(항목) 결정: 등장 순서, 최대 4
+  const slotNames=[]; facRows.forEach(x=>{ if(x.name&&slotNames.indexOf(x.name)<0&&slotNames.length<4) slotNames.push(x.name); });
+  const H5=r;
+  W(r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(r,3,1,'구분',{sz:9,grey:true,al:'center'});
+  slotNames.forEach((nm,i)=>W(r,4+i*9,9,nm,{sz:9,grey:true,al:'center'}));r++;
+  ws.mergeCells(H5,2,r,2);ws.mergeCells(H5,3,r,3);
+  slotNames.forEach((_,i)=>['회원','FIT','GAP'].forEach((t,k)=>W(r,4+i*9+k*3,3,t,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','thin','double')})));r++;
+  const buckets=['주중','주말'];
+  for(const bn of buckets){
+    const s0=r;
+    const lines=['정상가','배분가','할인율'].map((lab,di)=>{
+      const vals=[];
+      slotNames.forEach(name=>{
+        const sub=facRows.filter(x=>x.name===name && (x.bucket||'').replace(/\s/g,'').indexOf(bn)>=0);
+        const n=sub.map(x=>x.normal),a=sub.map(x=>x.dist);
+        if(di===0) vals.push(frng(n),frng(n),'0');
+        else if(di===1) vals.push(frng(a),frng(a),'0');
+        else vals.push(fpct(n,a),fpct(n,a),'-');
+      });
+      return [lab,vals];
+    });
+    lines.forEach((ln,di)=>{const tb=di===0?'double':'hair',bb=di===2?'thin':'hair';
+      W(r,3,1,ln[0],{sz:9,grey:true,al:'center',bd:Bd('thin','double',tb,bb)});
+      ln[1].forEach((v,j)=>W(r,4+j*3,3,v,{bd:Bd(j%3===0?'thin':'hair','thin',tb,bb)}));
+      ws.getRow(r).height=15.9;r++;});
+    W(s0,2,1,bn,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','double','thin')});ws.mergeCells(s0,2,r-1,2);
+  }
+  ws.views=[{showGridLines:false}];
+  const buf=await wb.xlsx.writeBuffer();
+  const fn=(opt.biz||'사업장')+'_'+(opt.chan||'채널')+'_품의_배분가(안).xlsx';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf]));a.download=fn;a.click();
+}
+
+function renderPreview(data, caps){
+  $('prev').style.display='block';
+  const G=new Map(); (data.rows||[]).forEach(x=>{const s=x.season||'기타';if(!G.has(s))G.set(s,[]);G.get(s).push(x);});
+  const seasons=[...G.keys()].sort((a,b)=>seasonOrder(a)-seasonOrder(b));
+  let h='<table><tr><th>시즌</th><th>객실 회원(정상→배분)</th><th>객실 FIT</th><th>부대(정상→배분)</th></tr>';
+  seasons.forEach(s=>{const it=G.get(s);
+    const f=a=>frng(a);
+    h+='<tr><td>'+s+'</td><td>'+f(it.map(x=>x.roomMemberNormal))+' → '+f(it.map(x=>x.roomMemberDist))
+     +'</td><td>'+f(it.map(x=>x.roomFitNormal))+' → '+f(it.map(x=>x.roomFitDist))
+     +'</td><td>'+f(it.map(x=>x.facNormalSum||0))+' → '+f(it.map(x=>x.facDistSum||0))+'</td></tr>';
+  });
+  h+='</table>';
+  $('preview').innerHTML=h;
+  if(caps) $('caps').innerHTML='사용량 — 오늘 '+caps.today+'/'+caps.dailyMax+'건 · 이번 달 $'+caps.monthSpendUsd+'/$'+caps.monthBudgetUsd+' <span class=pill>이번 변환 $'+caps.thisCallUsd+'</span>';
+  $('notes').textContent=data.notes?('AI 메모: '+data.notes):'';
+}
 </script></body></html>

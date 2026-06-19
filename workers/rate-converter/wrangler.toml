@@ -1,0 +1,24 @@
+name = "gs-rate-converter"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 사용량 카운터/예산 저장 (KV). 배포 전 아래 id 를 실제 네임스페이스 id 로 교체:
+#   wrangler kv namespace create LIMITS
+# 출력된 id 를 여기 붙여넣기.
+kv_namespaces = [
+  { binding = "LIMITS", id = "PASTE_KV_NAMESPACE_ID_HERE" }
+]
+
+[vars]
+# 모델 (기본 Opus 4.8)
+MODEL = "claude-opus-4-8"
+# 하루 변환 횟수 상한 (전체 합산)
+DAILY_MAX = "40"
+# 월 예산 상한 (USD). 초과 시 그 달 마감까지 차단.
+MONTHLY_BUDGET_USD = "20"
+# CORS 허용 오리진. GitHub Pages 주소로 바꾸면 더 안전 (예: "https://cksals00-ai.github.io")
+ALLOW_ORIGIN = "*"
+
+# ── 시크릿(코드/변수에 넣지 말 것) — 아래 두 개는 wrangler secret 으로 설정 ──
+#   wrangler secret put ANTHROPIC_API_KEY     ← Anthropic 콘솔에서 발급한 키
+#   wrangler secret put AUTH_SECRET            ← scripts/apps_script_auth.js 의 AUTH_SECRET 와 동일 값
