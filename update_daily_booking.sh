@@ -223,7 +223,7 @@ if git diff --cached --quiet -- "${COMMIT_PATHS[@]}"; then
     warn "스테이징된(소유) 변경 없음 — 커밋 생략"
 else
     git diff --cached --stat -- "${COMMIT_PATHS[@]}" | sed 's/^/    /'
-    git commit -m "chore(daily-booking): ${PDF_DATE} 부킹 리포트 반영 (GT 온북 ${GT_RNS}, 달성 ${GT_ACH}%) [skip ci]" \
+    git commit -m "chore(daily-booking): ${PDF_DATE} 부킹 리포트 반영 (GT 온북 ${GT_RNS}, 달성 ${GT_ACH}%)" \
         -- "${COMMIT_PATHS[@]}" || die "git commit 실패"
     COMMITTED=1
     ok "커밋 완료"
