@@ -200,8 +200,10 @@ def main():
     def pdt(s):
         try: return date.fromisoformat(s)
         except Exception: return None
-    wk_s, wk_e = date(2026, 6, 8), date(2026, 6, 14)
-    nx_s, nx_e = date(2026, 6, 15), date(2026, 6, 21)
+    # 금주/차주 캠페인 윈도우는 this_week 월요일 기준으로 동적 산출(Mon~Sun)
+    _wk_mon = datetime.strptime(wt["this_week"]["start"], "%Y%m%d").date()
+    wk_s, wk_e = _wk_mon, _wk_mon + timedelta(days=6)
+    nx_s, nx_e = _wk_mon + timedelta(days=7), _wk_mon + timedelta(days=13)
     this_camps = [d for d in det if pdt(d["판매시작"]) and pdt(d["판매종료"])
                   and pdt(d["판매시작"]) <= wk_e and pdt(d["판매종료"]) >= wk_s]
     next_camps = [d for d in det if pdt(d["판매시작"]) and nx_s <= pdt(d["판매시작"]) <= nx_e]
@@ -217,6 +219,17 @@ def main():
         return WD[datetime.strptime(ymd, "%Y%m%d").weekday()]
     this_lbl = f"{yy}.{mm}.{dd}({wd(wt['this_week']['start'])}) ~ {yy}.{ee_m}.{ee_d}({wd(wt['this_week']['end'])})"
     ly_lbl = f"{ly_s[:4]}.{ly_s[4:6]}.{ly_s[6:8]}({wd(ly_s)})~{ly_e[:4]}.{ly_e[4:6]}.{ly_e[6:8]}({wd(ly_e)})"
+
+    # 금주 평일(월~금) 중 데이터 미반영(end 다음날~금요일) 동적 산출 → D-1 수집 지연 안내문
+    _mon_dt = datetime.strptime(wt["this_week"]["start"], "%Y%m%d")
+    _fri_dt = _mon_dt + timedelta(days=4)
+    _end_dt = datetime.strptime(wt["this_week"]["end"], "%Y%m%d")
+    _miss = []
+    _d = _end_dt + timedelta(days=1)
+    while _d <= _fri_dt:
+        _miss.append(_d); _d += timedelta(days=1)
+    miss_note = ("·".join(f"{m.strftime('%m/%d')}({WD[m.weekday()]})" for m in _miss)
+                 + "은 예약데이터 미반영(D-1 수집 지연).") if _miss else "금주 평일 데이터 전량 반영."
 
     # KPI  (seg_rows tuple = (seg, b_rn, b_rev, a_rn, a_rev, l_rn, l_rev))
     a_rn = total_a_rn
@@ -245,7 +258,7 @@ def main():
   <span class="section-num">WEEKLY REPORT · {yy}-W{iso_week}</span>
   <h2 class="section-title"><span class="st-icon">🗓️</span> 주간 리포트 — {this_lbl}</h2>
   <div style="font-size:12px;color:var(--ink-muted);line-height:1.8;margin-bottom:18px">
-    · <strong style="color:var(--ink-soft)">집계 기준</strong> — 금주 {wd(wt['this_week']['start'])}~{wd(wt['this_week']['end'])}({mm}/{dd}~{ee_m}/{ee_d}) {days}일. 06/11(목)~06/12(금)은 예약데이터 미반영(D-1 수집 지연).<br>
+    · <strong style="color:var(--ink-soft)">집계 기준</strong> — 금주 {wd(wt['this_week']['start'])}~{wd(wt['this_week']['end'])}({mm}/{dd}~{ee_m}/{ee_d}) {days}일. {miss_note}<br>
     · <strong style="color:var(--ink-soft)">실적 정의</strong> — 예약파일 기준 순예약(Net = Pickup − Cancel), <strong>OTA·G-OTA·Inbound 3개 세그먼트만 합산</strong>.<br>
     · <strong style="color:var(--ink-soft)">전년 동기간</strong> — 요일 정렬 {ly_lbl} {days}일.<br>
     · <strong style="color:var(--ink-soft)">목표(Budget)</strong> — RM Revenue Meeting(2026.06.08) 월 Budget(OTA+G-OTA+Inbound)을 일할 환산(×{days}/30)한 금주 페이스 목표.
@@ -436,10 +449,10 @@ def main():
 <td style="text-align:left;font-family:var(--font);white-space:normal">{c.get("상품","협의중") or "협의중"}</td></tr>'''
     H.append(f'''<section class="section"><span class="section-num">SECTION 05</span>
 <h2 class="section-title"><span class="st-icon">🎯</span> 기획전 (액션플랜)</h2>
-<div class="card"><div class="card-header"><h3>금주 진행 기획전 ({len(this_camps)}건)</h3><span style="font-size:11px;color:var(--ink-muted)">판매기간이 금주(6/08~6/14)와 중첩</span></div>
+<div class="card"><div class="card-header"><h3>금주 진행 기획전 ({len(this_camps)}건)</h3><span style="font-size:11px;color:var(--ink-muted)">판매기간이 금주({wk_s.strftime("%-m/%d")}~{wk_e.strftime("%-m/%d")})와 중첩</span></div>
 <div class="card-body flush"><div class="table-wrap"><table class="full-table" style="min-width:900px"><thead><tr><th>사업장</th><th>채널</th><th>판매기간</th><th>투숙기간</th><th>상품</th></tr></thead><tbody>{"".join(camp_tr(c) for c in this_camps)}</tbody></table></div></div></div>
 <p style="font-size:11px;color:var(--ink-faint);margin:6px 0 18px">※ 금주 진행 기획전은 86 패키지코드 매핑 전으로 개별 측정실적 집계 전입니다. 측정 실적이 확보되는 항목(campaign_performance.json)만 별도 카드로 표기합니다.</p>
-<div class="card"><div class="card-header"><h3>차주 예정 기획전 ({len(next_camps)}건)</h3><span style="font-size:11px;color:var(--ink-muted)">판매 개시 6/15~6/21</span></div>
+<div class="card"><div class="card-header"><h3>차주 예정 기획전 ({len(next_camps)}건)</h3><span style="font-size:11px;color:var(--ink-muted)">판매 개시 {nx_s.strftime("%-m/%d")}~{nx_e.strftime("%-m/%d")}</span></div>
 <div class="card-body flush"><div class="table-wrap"><table class="full-table" style="min-width:900px"><thead><tr><th>사업장</th><th>채널</th><th>판매기간</th><th>투숙기간</th><th>상품</th></tr></thead><tbody>{"".join(camp_tr(c) for c in next_camps)}</tbody></table></div></div></div>
 </section>''')
 
@@ -487,7 +500,7 @@ def main():
     H.append(f'''<section class="section" style="margin-bottom:8px">
 <p style="font-size:11px;color:var(--ink-faint);line-height:1.8;border-top:1px solid var(--rule);padding-top:14px">
 데이터 출처 — db_aggregated.json(예약 일별 집계) · rm_fcst.json(RM Budget) · campaign_data.json / campaign_performance.json(기획전) · enriched_notes.json(자동 인사이트).
-RN·매출은 OTA·G-OTA·Inbound 3개 세그먼트 합산 기준이며, 금주는 {mm}/{dd}~{ee_m}/{ee_d}({wd(wt['this_week']['start'])}~{wd(wt['this_week']['end'])}) {days}일 — 06/11(목)~06/12(금)는 예약데이터 수집 지연으로 미반영.
+RN·매출은 OTA·G-OTA·Inbound 3개 세그먼트 합산 기준이며, 금주는 {mm}/{dd}~{ee_m}/{ee_d}({wd(wt['this_week']['start'])}~{wd(wt['this_week']['end'])}) {days}일 — {miss_note}
 자동 생성: 주간리포트 스케줄 작업(매주 토 10:00).</p></section>''')
 
     block = "const WEEKLY_REPORT_HTML = `\n" + "\n".join(H) + "\n`;"
