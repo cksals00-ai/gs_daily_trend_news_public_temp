@@ -161,21 +161,86 @@ run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
 # ── [12/12] HTML 빌드 ──────────────────────────────────────────
 run_quick "12/12 build"                     "scripts/build.py"
 
-# ── Git 커밋 & 푸시 ─────────────────────────────────────────
+# ── Git 커밋 & 푸시 (안전 자동화: 원격 발산 시 fetch→merge→산출물 자동해소→재push) ──
+#   scripts/host_daily_crawl.sh 의 git 단계와 동일 원칙:
+#   - 산출물(data/·docs/) 충돌 → 방금 빌드한 로컬본(--ours) 우선 자동해소
+#   - data/·docs/ 밖(손으로 쓴 소스·스크립트 등) 충돌 → merge abort 후 중단(수동 확인)
+#   - push 거부(다른 세션·호스트 크롤이 원격 선점) 시 fetch→merge→재push 최대 3회
 CURRENT_STAGE="git"
 print_header "Git 커밋 & 푸시"
 
 rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
 git add -A
 
+# 산출물 충돌 자동해소: data/·docs/ 는 --ours(로컬 빌드본), 그 외는 중단要
+resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要)
+    local U BAD
+    U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
+    [ -z "$U" ] && return 0
+    BAD="$(printf '%s\n' "$U" | grep -vE '^(data|docs)/' || true)"
+    if [ -n "$BAD" ]; then
+        echo -e "${RED}    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:${NC}"
+        printf '%s\n' "$BAD" | sed 's/^/        /'
+        git merge --abort 2>/dev/null || true
+        return 2
+    fi
+    printf '%s\n' "$U" | while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        git checkout --ours -- "$f" >/dev/null 2>&1 || true
+        git add -- "$f" >/dev/null 2>&1 || true
+        echo "    충돌→ours(로컬 빌드본): $f"
+    done
+    if ! git commit --no-edit >/dev/null 2>&1; then
+        echo -e "${RED}    ⚠ merge 커밋 실패 — merge abort${NC}"
+        git merge --abort 2>/dev/null || true
+        return 2
+    fi
+    return 0
+}
+
 if git diff --cached --quiet; then
     echo -e "${YELLOW}⚠ 변경사항 없음 — 커밋/푸시 스킵${NC}"
+    # 원격이 앞서 있으면 fast-forward 만 맞춰둠 (다음 실행 발산 예방)
+    git fetch origin main >/dev/null 2>&1 || true
+    git merge --ff-only origin/main >/dev/null 2>&1 || true
 else
     STAT=$(git diff --cached --stat | tail -1)
     DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
     # [skip ci] 로 GitHub Actions 이중 실행 방지
     git commit -m "chore(auto): daily update ${DATE_KST} KST [skip ci]"
-    git push origin main
+
+    # push 재시도: 거부되면 fetch→merge(--no-edit)→충돌 자동해소→재push (최대 3회)
+    PUSH_OK=0
+    for attempt in 1 2 3; do
+        rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
+        if git push origin main; then
+            PUSH_OK=1
+            break
+        fi
+        echo -e "${YELLOW}    ⚠ push 시도 ${attempt} 실패(원격 발산) — origin fetch 후 merge 재시도${NC}"
+        if ! git fetch origin main; then
+            echo -e "${YELLOW}    ⚠ fetch 실패(네트워크?) — 다음 시도${NC}"
+            continue
+        fi
+        if git merge --no-edit origin/main; then
+            echo -e "${GREEN}    ✅ merge 클린 — 재push${NC}"
+        else
+            # set -e + ERR trap 하에서 함수 반환값을 안전하게 받기 위해 if 로 가드
+            if resolve_generated_conflicts; then rc=0; else rc=$?; fi
+            if [ "$rc" -eq 2 ]; then
+                echo -e "${RED}    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요${NC}"
+                echo -e "${RED}       (방금 만든 로컬 커밋은 보존되어 있습니다)${NC}"
+                exit 1
+            fi
+            echo -e "${GREEN}    ✅ 산출물 충돌 자동해소 완료 — 재push${NC}"
+        fi
+    done
+
+    if [ "$PUSH_OK" -ne 1 ]; then
+        echo -e "${RED}    ❌ git push 최종 실패(3회) — 로컬 커밋은 보존됨, 잠시 후 재실행하세요${NC}"
+        exit 1
+    fi
+
     echo ""
     echo -e "${GREEN}✅ 푸시 완료 — GitHub Pages 배포 시작됨${NC}"
     echo "   $STAT"
