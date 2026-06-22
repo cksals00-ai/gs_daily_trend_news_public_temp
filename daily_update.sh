@@ -198,24 +198,14 @@ resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要
     return 0
 }
 
-if git diff --cached --quiet; then
-    echo -e "${YELLOW}⚠ 변경사항 없음 — 커밋/푸시 스킵${NC}"
-    # 원격이 앞서 있으면 fast-forward 만 맞춰둠 (다음 실행 발산 예방)
-    git fetch origin main >/dev/null 2>&1 || true
-    git merge --ff-only origin/main >/dev/null 2>&1 || true
-else
-    STAT=$(git diff --cached --stat | tail -1)
-    DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
-    # [skip ci] 로 GitHub Actions 이중 실행 방지
-    git commit -m "chore(auto): daily update ${DATE_KST} KST [skip ci]"
-
-    # push 재시도: 거부되면 fetch→merge(--no-edit)→충돌 자동해소→재push (최대 3회)
-    PUSH_OK=0
+# 안전 push: 거부되면 fetch→merge(--no-edit)→산출물 충돌 자동해소→재push (최대 3회)
+#   반환  0=push성공  1=3회 실패  2=소스충돌(중단要). 데이터 커밋·트리거 커밋 공용.
+safe_push() {
+    local attempt rc
     for attempt in 1 2 3; do
         rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
         if git push origin main; then
-            PUSH_OK=1
-            break
+            return 0
         fi
         echo -e "${YELLOW}    ⚠ push 시도 ${attempt} 실패(원격 발산) — origin fetch 후 merge 재시도${NC}"
         if ! git fetch origin main; then
@@ -227,23 +217,58 @@ else
         else
             # set -e + ERR trap 하에서 함수 반환값을 안전하게 받기 위해 if 로 가드
             if resolve_generated_conflicts; then rc=0; else rc=$?; fi
-            if [ "$rc" -eq 2 ]; then
-                echo -e "${RED}    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요${NC}"
-                echo -e "${RED}       (방금 만든 로컬 커밋은 보존되어 있습니다)${NC}"
-                exit 1
-            fi
+            [ "$rc" -eq 2 ] && return 2
             echo -e "${GREEN}    ✅ 산출물 충돌 자동해소 완료 — 재push${NC}"
         fi
     done
+    return 1
+}
 
-    if [ "$PUSH_OK" -ne 1 ]; then
+# 즉시 배포 트리거: 데이터 커밋엔 [skip ci]가 있어 push 배포가 스킵됨.
+#   docs/.deploy-trigger 를 갱신([skip ci] 없음)해 deploy.yml 의 docs/** push 트리거를
+#   즉시 발동 → 4h cron 안 기다리고 바로 GitHub Pages 빌드/배포. (실패해도 데이터는 이미
+#   반영됐으므로 경고만; 다음 cron·실행에서 배포됨.)
+trigger_deploy() {
+    local TRIG_TS
+    TRIG_TS=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')
+    printf 'deploy trigger\n%s\n' "$TRIG_TS" > docs/.deploy-trigger
+    git add docs/.deploy-trigger
+    git commit -m "chore(deploy): trigger Pages build ${TRIG_TS} (no skip-ci)" >/dev/null
+    if safe_push; then
+        echo -e "${GREEN}🚀 즉시 배포 트리거 완료 — GitHub Actions 빌드 시작됨${NC}"
+    else
+        echo -e "${YELLOW}⚠ 배포 트리거 push 실패 — 데이터는 이미 반영됨(다음 cron/실행에서 배포)${NC}"
+    fi
+}
+
+if git diff --cached --quiet; then
+    echo -e "${YELLOW}⚠ 변경사항 없음 — 커밋/푸시 스킵${NC}"
+    # 원격이 앞서 있으면 fast-forward 만 맞춰둠 (다음 실행 발산 예방)
+    git fetch origin main >/dev/null 2>&1 || true
+    git merge --ff-only origin/main >/dev/null 2>&1 || true
+else
+    STAT=$(git diff --cached --stat | tail -1)
+    DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
+    # [skip ci] 로 GitHub Actions 이중 실행 방지
+    git commit -m "chore(auto): daily update ${DATE_KST} KST [skip ci]"
+
+    if safe_push; then prc=0; else prc=$?; fi
+    if [ "$prc" -eq 2 ]; then
+        echo -e "${RED}    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요${NC}"
+        echo -e "${RED}       (방금 만든 로컬 커밋은 보존되어 있습니다)${NC}"
+        exit 1
+    fi
+    if [ "$prc" -ne 0 ]; then
         echo -e "${RED}    ❌ git push 최종 실패(3회) — 로컬 커밋은 보존됨, 잠시 후 재실행하세요${NC}"
         exit 1
     fi
 
     echo ""
-    echo -e "${GREEN}✅ 푸시 완료 — GitHub Pages 배포 시작됨${NC}"
+    echo -e "${GREEN}✅ 푸시 완료${NC}"
     echo "   $STAT"
+
+    # 데이터 push 성공 직후 즉시 배포 트리거
+    trigger_deploy
 fi
 
 print_header "완료: $(date '+%Y-%m-%d %H:%M:%S')"
