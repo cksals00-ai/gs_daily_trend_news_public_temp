@@ -1,21 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-주간업무(소노호텔앤리조트) PDF → 마감 보고서 '주간 리포트' 탭 시각화 섹션 생성/주입.
+세일즈마케팅 주간업무 PDF → 마감 보고서 '주간 리포트' 탭 시각화 섹션 생성/주입.
 
-· 입력: 주간업무 PDF (기본 docs/data/weekly_pdf/주간업무_YYYY-MM-DD.pdf, 인자로도 지정 가능)
-· 파싱: P2 전사 실적 요약 / P5 당월 세그먼트·사업장별 (pdfplumber)
+· 입력: '…주간업무….pdf' (기본: data/weekly report/ 드롭 폴더에서 최신본 자동 선택, 경로 인자도 가능)
+· 파싱: 세그먼트+사업장 표를 가진 '당월'·'누계' 페이지를 자동 탐지(find_segprop_pages) 후
+        텍스트 라인 단위로 OCC·RNs·ADR·객실매출(백만) 추출 — 페이지 인덱스 하드코딩 안 함.
 · 출력: docs/gs-closing-report.html 의 WEEKLY_BIZ_INJECT 마커 사이에 시각화 HTML 주입
         (WEEKLY_REPORT_INJECT 마커 밖이라 주간리포트 에이전트 재작성과 독립)
 
-매주 스케줄 에이전트가:  python3 scripts/build_weekly_business.py <PDF경로>  실행 후 결과 확인.
-레이아웃이 바뀐 주에는 파싱 경고를 내고 에이전트가 보정.
+매주:  python3 scripts/build_weekly_business.py   (드롭 폴더 최신 PDF 자동 사용)
+레이아웃이 바뀐 주에는 파싱 경고(warnings)를 내므로 확인 후 파서 보정.
 """
-import sys, os, re, json, glob, argparse
+import sys, os, re, json, glob, argparse, unicodedata
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HTML_PATH = os.path.join(ROOT, "docs", "gs-closing-report.html")
 PDF_DIR = os.path.join(ROOT, "docs", "data", "weekly_pdf")
+# 사용자 표준 드롭 폴더: 매주 주간업무/시장·트랜드 PDF를 여기에 둠(.gitignore 처리 → 데몬 안전).
+DROP_DIR = os.path.join(ROOT, "data", "weekly report")
+
+
+def find_latest_pdf():
+    """드롭 폴더(우선)·legacy weekly_pdf에서 가장 최근 '주간업무' PDF를 mtime 기준 자동 선택."""
+    cands = []
+    for d in (DROP_DIR, PDF_DIR):
+        if not os.path.isdir(d):
+            continue
+        for p in glob.glob(os.path.join(d, "*.pdf")):
+            # macOS는 파일명을 NFD로 저장 → NFC 정규화 후 부분일치 비교(한글 매칭 보장)
+            if "주간업무" in unicodedata.normalize("NFC", os.path.basename(p)):
+                cands.append(p)
+    if not cands:
+        return None
+    return max(cands, key=os.path.getmtime)
 
 NUM = r'-?[\d,]+(?:\.\d+)?'  # 숫자(콤마/소수/음수)
 
@@ -33,61 +51,47 @@ def _ints(line):
     return line.split()
 
 
-# ── P2: 전사 실적 요약 ────────────────────────────────────────────────
-# 각 지표행 = 라벨 + 14토큰 [당월: 목표,실적,증감,달성률,25실적,25증감,25증감률]
-#                          [누계: 목표,실적,달성차액,달성률,25실적,25증감,25증감률]
-P2_ROWS = [
-    ("oper", "occ",    "OCC"),
-    ("oper", "rns",    "RNs"),
-    ("oper", "rev",    "매출"),
-    ("oper", "profit", "영업이익"),
-    ("sale", "seat",   "구좌"),
-    ("sale", "fee",    "입회금"),
-    ("sale", "rev",    "매출"),
-    ("sale", "profit", "영업이익"),
-    ("tot",  "rev",    "매출"),
-    ("tot",  "profit", "영업이익"),
-]
+# ── 세그먼트/사업장 페이지 탐지 ───────────────────────────────────────
+# '세일즈마케팅 주간업무' PDF는 객실영업(OCC·RNs·ADR·객실매출) 중심 — 동일 레이아웃의
+# 세그먼트+사업장 표가 '당월' 페이지와 '누계' 페이지에 한 번씩 등장(문서 순서: 당월→누계).
+# 각 행은 텍스트 추출이 라인 단위로 깨끗해 표 구조 대신 텍스트 파싱이 견고함.
+_NUMTOK = re.compile(r'^-?[\d,]+(?:\.\d+)?(?:%p|%)?$')
 
-def parse_p2(text):
-    """P2 텍스트 → 전사 요약 dict."""
-    # 라벨 사이 공백 제거: 'O C C'→'OCC', 'R N s'→'RNs', '매 출'→'매출' 등
-    t = text
-    for a, b in [("O C C","OCC"),("R N s","RNs"),("매 출","매출"),
-                 ("영 업 이 익","영업이익"),("분 양","분양"),("구 좌","구좌"),
-                 ("입 회 금","입회금"),("구 분","구분")]:
-        t = t.replace(a, b)
-    lines = [l.strip() for l in t.splitlines() if l.strip()]
-    res = {}
-    numtok = re.compile(rf'^{NUM}(실|억|구좌|%p|%)?$')
-    # 행을 순서대로 매칭 (운영4 → 분양4 → 합계2). 라벨 앞 접두어(분양/합계)는 허용 —
-    # 라벨 토큰 위치를 찾아 그 "뒤" 숫자 토큰 14개를 취함.
-    seq = list(P2_ROWS)
-    si = 0
-    for ln in lines:
-        if si >= len(seq): break
-        grp, key, label = seq[si]
+def _nums_after(toks, start):
+    return [t for t in toks[start:] if _NUMTOK.match(t)]
+
+def find_segprop_pages(pages):
+    """세그먼트+사업장 표를 가진 페이지 인덱스(0-based)를 문서 순서로 반환 → [당월, 누계]."""
+    hits = []
+    for i, pg in enumerate(pages):
+        t = pg.extract_text() or ""
+        if ("Segment" in t and "Property" in t and "점유비" in t
+                and "소계" in t and "합계" in t):
+            hits.append(i)
+    return hits
+
+
+def parse_totals(text):
+    """사업장 표 맨 끝 '합계' 라인 → OCC/RNs/ADR/Rev 각 전년·목표·실적·증감·달성률.
+    페이지엔 세그먼트 합계(점유비 100%…)·사업장 합계(OCC%…) 둘 다 있어 '마지막' 합계(=사업장)를 취함."""
+    keys = ["py", "bud", "act", "diff", "ach"]
+    last = None
+    for ln in text.splitlines():
         toks = ln.split()
-        if label not in toks:
-            continue
-        idx = len(toks) - 1 - toks[::-1].index(label)  # 라벨의 마지막 출현 위치
-        vals = [tok for tok in toks[idx+1:] if numtok.match(tok)]
-        if len(vals) < 14:
-            continue
-        f = [_f(v) for v in vals[:14]]
-        res.setdefault(grp, {})[key] = {
-            "label": label,
-            "m": {"budget": f[0], "actual": f[1], "diff": f[2], "ach": f[3],
-                  "yoy_actual": f[4], "yoy_diff": f[5], "yoy_pct": f[6]},
-            "c": {"budget": f[7], "actual": f[8], "diff": f[9], "ach": f[10],
-                  "yoy_actual": f[11], "yoy_diff": f[12], "yoy_pct": f[13]},
-            "raw": vals[:14],
-        }
-        si += 1
-    return res
+        if toks and toks[0] == "합계":
+            nums = _nums_after(toks, 1)
+            if len(nums) >= 20:
+                last = nums
+    if not last:
+        return None
+    f = [_f(x) for x in last[:20]]
+    return {
+        "occ": dict(zip(keys, f[0:5])),  "rns": dict(zip(keys, f[5:10])),
+        "adr": dict(zip(keys, f[10:15])), "rev": dict(zip(keys, f[15:20])),
+    }
 
 
-# ── P5: 당월 사업장별 (권역 → 사업장: OCC/RNs/ADR/Rev × 전년·목표·실적·증감·달성률)
+# ── 사업장별 (권역 → 사업장: OCC/RNs/ADR/Rev × 전년·목표·실적·증감·달성률)
 REGIONS = {
     "아시아퍼시픽": ["고양","소노캄제주","소노벨제주"],
     "비발디":       ["소노캄","소노펫","소노펠리체","소노빌리지","양평"],
@@ -97,23 +101,24 @@ REGIONS = {
 ALL_PROPS = [p for ps in REGIONS.values() for p in ps]
 PROP_REGION = {p: r for r, ps in REGIONS.items() for p in ps}
 
-def parse_p5_property(table_rows):
-    """extract_tables()의 구조화 행에서 사업장행 파싱. 각 행: name + 20수치."""
+def parse_properties(text):
+    """사업장 표 텍스트 → {사업장명: {occ/rns/adr/rev}}. 각 라인: [권역접두] 사업장명 + 20수치."""
+    keys = ["py", "bud", "act", "diff", "ach"]
     out = {}
-    for r in table_rows:
-        cells = [(c or '').replace('\n',' ').strip() for c in r]
-        if len(cells) < 2: continue
-        name = cells[1].strip()
-        if name not in ALL_PROPS: continue
-        nums = [_f(c) for c in cells[2:] if c.strip() != '']
-        if len(nums) < 20: continue
-        occ, rns, adr, rev = nums[0:5], nums[5:10], nums[10:15], nums[15:20]
+    for ln in text.splitlines():
+        toks = ln.split()
+        ni = next((i for i, t in enumerate(toks) if t in ALL_PROPS), None)
+        if ni is None:
+            continue
+        name = toks[ni]
+        nums = _nums_after(toks, ni + 1)
+        if len(nums) < 20:
+            continue
+        f = [_f(x) for x in nums[:20]]
         out[name] = {
             "region": PROP_REGION[name],
-            "occ":  dict(zip(["py","bud","act","diff","ach"], occ)),
-            "rns":  dict(zip(["py","bud","act","diff","ach"], rns)),
-            "adr":  dict(zip(["py","bud","act","diff","ach"], adr)),
-            "rev":  dict(zip(["py","bud","act","diff","ach"], rev)),
+            "occ": dict(zip(keys, f[0:5])),  "rns": dict(zip(keys, f[5:10])),
+            "adr": dict(zip(keys, f[10:15])), "rev": dict(zip(keys, f[15:20])),
         }
     return out
 
@@ -123,20 +128,25 @@ SEGMENTS = {
     "FIT":  ["Hompage","OTA","G-OTA","Affiliate","Other"],
 }
 
-def parse_p5_segment_subtotals(text):
-    """세그먼트 소계행(회원/단체/FIT 소계)의 점유비·RNs·달성률 파싱."""
-    # 소계 행: '소계 43% 44% 42% -2%p 96% 76,427 95,165 79,295 -15,870 83% 176 ...'
+def parse_segments(text):
+    """세그먼트 소계행(회원/단체/FIT) → 점유비·RNs(전년/목표/실적/증감/달성률).
+    각 소계행 = [점유비5, RNs5, ADR5, Rev5]. 세그먼트 표가 사업장 표보다 먼저 나와
+    처음 3개 '소계'(회원→단체→FIT)를 취함(이후 소계는 권역 소계라 제외)."""
     res = []
-    for m in re.finditer(
-        r'소계\s+(\d+)%\s+(\d+)%\s+(\d+)%\s+(-?\d+)%p\s+(\d+)%\s+'
-        r'([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+(-?[\d,]+)\s+(\d+)%', text):
+    for ln in text.splitlines():
+        toks = ln.split()
+        if not toks or toks[0] != "소계":
+            continue
+        nums = _nums_after(toks, 1)
+        if len(nums) < 10:
+            continue
+        f = [_f(x) for x in nums[:20]]
         res.append({
-            "share_py": _f(m.group(1)), "share_bud": _f(m.group(2)), "share_act": _f(m.group(3)),
-            "rns_py": _f(m.group(6)), "rns_bud": _f(m.group(7)),
-            "rns_act": _f(m.group(8)), "rns_diff": _f(m.group(9)), "rns_ach": _f(m.group(10)),
+            "share_py": f[0], "share_bud": f[1], "share_act": f[2],
+            "rns_py": f[5], "rns_bud": f[6], "rns_act": f[7],
+            "rns_diff": f[8], "rns_ach": f[9],
         })
-    # 순서: 회원, 단체, FIT (등장 순)
-    names = list(SEGMENTS.keys())
+    names = list(SEGMENTS.keys())  # 회원, 단체, FIT
     return [{"name": names[i], **r} for i, r in enumerate(res[:3])]
 
 
@@ -194,44 +204,40 @@ def parse_pdf(pdf_path):
     import pdfplumber
     pdf = pdfplumber.open(pdf_path)
     pages = pdf.pages
-    data = {"n_pages": len(pages), "warnings": []}
+    data = {"n_pages": len(pages), "warnings": [],
+            "overall": {}, "property": {}, "segment": [], "segment_cumul": []}
 
-    # P2
-    p2_text = pages[1].extract_text() if len(pages) > 1 else ""
-    data["overall"] = parse_p2(p2_text or "")
-    if "tot" not in data["overall"]:
-        data["warnings"].append("P2 전사 합계 파싱 실패")
+    segprop = find_segprop_pages(pages)
+    if not segprop:
+        data["warnings"].append("세그먼트/사업장 페이지 미발견 — 레이아웃 변경 의심")
+    else:
+        cur_text = pages[segprop[0]].extract_text() or ""              # 당월
+        cum_text = pages[segprop[1]].extract_text() if len(segprop) > 1 else ""  # 누계
+        cum_text = cum_text or ""
+        data["pages_used"] = {"당월": segprop[0] + 1,
+                              "누계": (segprop[1] + 1 if len(segprop) > 1 else None)}
 
-    # P5 (당월) 사업장 + 세그먼트
-    if len(pages) > 4:
-        p5 = pages[4]
-        tbls = p5.extract_tables()
-        prop = {}
-        for tb in tbls:
-            prop.update(parse_p5_property(tb))
-        data["property"] = prop
-        if len(prop) < 15:
-            data["warnings"].append(f"P5 사업장 파싱 {len(prop)}개(예상 22개)")
-        data["segment"] = parse_p5_segment_subtotals(p5.extract_text() or "")
+        tot_m = parse_totals(cur_text)
+        tot_c = parse_totals(cum_text)
+        data["overall"] = {"m": tot_m, "c": tot_c} if tot_m else {}
+        if not tot_m:
+            data["warnings"].append("당월 전사 합계 파싱 실패")
+        if not tot_c:
+            data["warnings"].append("누계 전사 합계 파싱 실패")
+
+        data["property"] = parse_properties(cur_text)
+        if len(data["property"]) < 15:
+            data["warnings"].append(f"사업장 파싱 {len(data['property'])}개(예상 22개)")
+
+        data["segment"] = parse_segments(cur_text)
         if len(data["segment"]) < 3:
-            data["warnings"].append("P5 세그먼트 소계 파싱 부족")
-
-    # P6 (누계) 세그먼트
-    if len(pages) > 5:
-        data["segment_cumul"] = parse_p5_segment_subtotals(pages[5].extract_text() or "")
+            data["warnings"].append("당월 세그먼트 파싱 부족")
+        data["segment_cumul"] = parse_segments(cum_text)
         if len(data["segment_cumul"]) < 3:
-            data["warnings"].append("P6 누계 세그먼트 파싱 부족")
+            data["warnings"].append("누계 세그먼트 파싱 부족")
 
-    # P7 해외
-    if len(pages) > 6:
-        data["overseas"] = parse_p7_overseas(pages[6].extract_text() or "")
-        if len(data["overseas"]) < 3:
-            data["warnings"].append(f"P7 해외 파싱 {len(data['overseas'])}행")
-
-    # P8~24 정성 주간업무
+    # 부서·사업장별 정성 주간업무 (best-effort — 레이아웃에 따라 일부만 추출될 수 있음)
     data["qualitative"] = parse_qualitative(pages)
-    if len(data["qualitative"]) < 5:
-        data["warnings"].append(f"P8~24 정성 파싱 {len(data['qualitative'])}건")
     return data
 
 
@@ -257,86 +263,77 @@ def _yoy_tag(v, suffix="%"):
     cls = "tag-yoy-up" if v > 0 else ("tag-yoy-down" if v < 0 else "tag-yoy-flat")
     return '<span class="kpi-tag %s">%s</span>' % (cls, _yoy(v, suffix))
 
-_FMT = {"pct": _pct, "rns": _rns, "eok": _eok, "seat": _seat}
-
-# 전사 표 행 정의: (그룹표시, 키, 단위, yoy단위)
-_OVR_ROWS = [
-    ("운영", "oper", "occ",    "pct",  "%p"),
-    ("운영", "oper", "rns",    "rns",  "%"),
-    ("운영", "oper", "rev",    "eok",  "%"),
-    ("운영", "oper", "profit", "eok",  "%"),
-    ("분양", "sale", "seat",   "seat", "%"),
-    ("분양", "sale", "fee",    "eok",  "%"),
-    ("분양", "sale", "rev",    "eok",  "%"),
-    ("분양", "sale", "profit", "eok",  "%"),
-    ("합계", "tot",  "rev",    "eok",  "%"),
-    ("합계", "tot",  "profit", "eok",  "%"),
-]
-_LABEL = {"occ":"OCC","rns":"객실 RN","rev":"매출","profit":"영업이익","seat":"분양구좌","fee":"입회금"}
-
 def gen_html(data, week_label):
     ovr = data.get("overall", {})
     prop = data.get("property", {})
     seg = data.get("segment", [])
     parts = []
 
-    # ── Section A: 전사 실적 요약 ──
-    def kpi(label, val, sub, ach, yoy, yoy_suffix="%"):
-        return (
-            '<div class="kpi-card">'
-            '<div class="kpi-label">%s</div>'
-            '<div class="kpi-value">%s</div>'
-            '<div class="kpi-keywords">%s %s</div>'
-            '<div class="kpi-prev">%s</div>'
-            '</div>' % (label, val, _ach_tag(ach), _yoy_tag(yoy, yoy_suffix), sub)
-        )
-    cards = ""
-    if "tot" in ovr:
-        r = ovr["tot"]["rev"]["m"];  cards += kpi("합계 매출 (당월 예상)", _eok(r["actual"]), "목표 "+_eok(r["budget"]), r["ach"], r["yoy_pct"])
-    if "oper" in ovr:
-        r = ovr["oper"]["rns"]["m"]; cards += kpi("운영 객실 RN (당월)", _rns(r["actual"]), "목표 "+_rns(r["budget"]), r["ach"], r["yoy_pct"])
-        o = ovr["oper"]["occ"]["m"]; cards += kpi("운영 OCC (당월)", _pct(o["actual"]), "목표 "+_pct(o["budget"]), o["ach"], o["yoy_pct"], "%p")
-    if "tot" in ovr:
-        p = ovr["tot"]["profit"]["m"]; cards += kpi("합계 영업이익 (당월)", _eok(p["actual"]), "목표 "+_eok(p["budget"]), p["ach"], p["yoy_pct"])
+    # ── Section A: 전사 객실영업 요약 (OCC·RNs·ADR·객실매출) ──
+    def _yoy(metric, d):
+        py, act = d.get("py"), d.get("act")
+        if py is None or act is None:
+            return None
+        if metric == "occ":
+            return act - py                      # %p
+        return (act / py - 1.0) * 100.0 if py else None
 
-    body = ""
-    last_grp = None
-    for grp, gk, key, unit, ys in _OVR_ROWS:
-        if gk not in ovr or key not in ovr[gk]: continue
-        d = ovr[gk][key]; m = d["m"]; c = d["c"]; f = _FMT[unit]
-        grp_cell = ('<td rowspan="0" style="font-weight:700;color:var(--gold-bright);vertical-align:top">%s</td>' % grp) if grp != last_grp else ""
-        # rowspan 정확 계산은 생략하고 그룹 첫 행에만 라벨 표기
-        grp_td = ('<td style="font-weight:700;color:var(--gold-bright)">%s</td>' % grp) if grp != last_grp else '<td></td>'
-        last_grp = grp
-        body += (
-            '<tr>'
-            + grp_td +
-            '<td>%s</td>'
-            '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
-            '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
-            '</tr>' % (
-                _LABEL.get(key, key),
-                f(m["budget"]), f(m["actual"]), _ach_tag(m["ach"]), _yoy_tag(m["yoy_pct"], ys),
-                f(c["budget"]), f(c["actual"]), _ach_tag(c["ach"]), _yoy_tag(c["yoy_pct"], ys),
+    m = ovr.get("m")
+    c = ovr.get("c")
+    if m:
+        def kpi(label, val, sub, ach, yoy, yoy_suffix="%"):
+            return (
+                '<div class="kpi-card">'
+                '<div class="kpi-label">%s</div>'
+                '<div class="kpi-value">%s</div>'
+                '<div class="kpi-keywords">%s %s</div>'
+                '<div class="kpi-prev">%s</div>'
+                '</div>' % (label, val, _ach_tag(ach), _yoy_tag(yoy, yoy_suffix), sub)
             )
-        )
+        cards = ""
+        cards += kpi("객실매출 (당월·백만)", _mil(m["rev"]["act"]), "목표 "+_mil(m["rev"]["bud"]), m["rev"]["ach"], _yoy("rev", m["rev"]))
+        cards += kpi("운영 객실 RN (당월)",  _rns(m["rns"]["act"]), "목표 "+_rns(m["rns"]["bud"]), m["rns"]["ach"], _yoy("rns", m["rns"]))
+        cards += kpi("운영 OCC (당월)",       _pct(m["occ"]["act"]), "목표 "+_pct(m["occ"]["bud"]), m["occ"]["ach"], _yoy("occ", m["occ"]), "%p")
+        cards += kpi("ADR (당월·천원)",       _mil(m["adr"]["act"]), "목표 "+_mil(m["adr"]["bud"]), m["adr"]["ach"], _yoy("adr", m["adr"]))
 
-    parts.append(
-        '<section class="section" style="margin-bottom:24px">'
-        '<span class="section-num">WEEKLY BUSINESS · 주간업무 기준</span>'
-        '<h2 class="section-title"><span class="st-icon">🏢</span> 전사 실적 요약'
-        '<span style="font-size:11px;font-weight:600;color:var(--ink-faint)"> · ' + week_label + ' · 운영+분양</span></h2>'
-        '<div class="kpi-grid">' + cards + '</div>'
-        '<div class="table-wrap"><table class="full-table">'
-        '<thead><tr><th rowspan="2">구분</th><th rowspan="2">항목</th>'
-        '<th class="group-header" colspan="4">당월 (6월 예상)</th>'
-        '<th class="group-header" colspan="4">누계 (1~6월)</th></tr>'
-        '<tr><th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th>'
-        '<th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th></tr></thead>'
-        '<tbody>' + body + '</tbody></table></div>'
-        '<p style="font-size:11px;color:var(--ink-faint);margin-top:8px">※ 단위: 매출·영업이익·입회금=억원, 객실 RN=실, OCC=%p(전년비). 주간업무 보고서(당월 예상실적·누계실적) 기준.</p>'
-        '</section>'
-    )
+        # 표 행: (라벨, 키, 포맷, 전년비 단위)
+        rowdefs = [
+            ("OCC",            "occ", _pct, "%p"),
+            ("운영 객실 RN",   "rns", _rns, "%"),
+            ("ADR (천원)",     "adr", _mil, "%"),
+            ("객실매출 (백만)", "rev", _mil, "%"),
+        ]
+        body = ""
+        for lbl, k, f, ys in rowdefs:
+            dm = m.get(k, {})
+            dc = (c or {}).get(k, {})
+            body += (
+                '<tr><td>%s</td>'
+                '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
+                '<td>%s</td><td><strong style="color:var(--ink)">%s</strong></td><td>%s</td><td>%s</td>'
+                '</tr>' % (
+                    lbl,
+                    f(dm.get("bud")), f(dm.get("act")), _ach_tag(dm.get("ach")), _yoy_tag(_yoy(k, dm), ys),
+                    f(dc.get("bud")), f(dc.get("act")), _ach_tag(dc.get("ach")), _yoy_tag(_yoy(k, dc) if dc else None, ys),
+                )
+            )
+
+        parts.append(
+            '<section class="section" style="margin-bottom:24px">'
+            '<span class="section-num">WEEKLY BUSINESS · 주간업무 기준</span>'
+            '<h2 class="section-title"><span class="st-icon">🏢</span> 전사 객실영업 요약'
+            '<span style="font-size:11px;font-weight:600;color:var(--ink-faint)"> · ' + week_label + ' · 전 사업장 합계</span></h2>'
+            '<div class="kpi-grid">' + cards + '</div>'
+            '<div class="table-wrap"><table class="full-table">'
+            '<thead><tr><th rowspan="2">항목</th>'
+            '<th class="group-header" colspan="4">당월 (예상)</th>'
+            '<th class="group-header" colspan="4">누계</th></tr>'
+            '<tr><th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th>'
+            '<th class="sub-header">목표</th><th class="sub-header">실적</th><th class="sub-header">달성률</th><th class="sub-header">전년비</th></tr></thead>'
+            '<tbody>' + body + '</tbody></table></div>'
+            '<p style="font-size:11px;color:var(--ink-faint);margin-top:8px">※ 단위: 객실 RN=실, ADR=천원, 객실매출=백만원, OCC=%(전년비 %p). 전년비 = 실적 대비 전년 동기. 주간업무 보고서 전 사업장 합계(당월 예상·누계 실적) 기준.</p>'
+            '</section>'
+        )
 
     # ── Section B: 세그먼트 구성 (당월 + 누계) ──
     if seg:
@@ -504,39 +501,41 @@ if __name__ == "__main__":
     ap.add_argument("--dump", action="store_true", help="파싱 결과 JSON만 출력")
     args = ap.parse_args()
 
-    pdf_path = args.pdf
-    if not pdf_path:
-        cands = sorted(glob.glob(os.path.join(PDF_DIR, "주간업무_*.pdf")))
-        pdf_path = cands[-1] if cands else None
+    pdf_path = args.pdf or find_latest_pdf()
     if not pdf_path or not os.path.exists(pdf_path):
-        print(f"[ERR] PDF 없음: {pdf_path}", file=sys.stderr); sys.exit(2)
+        print(f"[ERR] 주간업무 PDF 없음 — '{DROP_DIR}'에 '…주간업무….pdf'를 두거나 경로 인자 지정.",
+              file=sys.stderr); sys.exit(2)
 
     data = parse_pdf(pdf_path)
     if args.dump:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         sys.exit(0)
 
-    # 주차 라벨: 파일명의 (N월M주) + 날짜(YYYYMMDD)
-    base = os.path.basename(pdf_path)
+    # 주차 라벨: 파일명의 (N월M주) + 날짜(YYYYMMDD 또는 YYMMDD)
+    base = unicodedata.normalize("NFC", os.path.basename(pdf_path))  # macOS NFD → NFC
     wm = re.search(r'(\d+월\s*\d+주)', base)
-    dm = re.search(r'(20\d{6})', base)
+    dm = re.search(r'(20\d{6})', base) or re.search(r'\b(\d{6})\b', base)
     label_bits = []
     if wm: label_bits.append(wm.group(1).replace(" ", "") + "차")
     if dm:
-        d = dm.group(1); label_bits.append(f"{d[:4]}.{d[4:6]}.{d[6:8]} 기준")
+        d = dm.group(1)
+        if len(d) == 6: d = "20" + d            # YYMMDD → YYYYMMDD
+        label_bits.append(f"{d[:4]}.{d[4:6]}.{d[6:8]} 기준")
     week_label = " · ".join(label_bits) if label_bits else "주간업무"
 
     if not data.get("overall"):
-        print(f"[ERR] 전사 실적 파싱 실패 — 레이아웃 변경 의심. PDF: {base}", file=sys.stderr)
+        print(f"[ERR] 전사 객실영업 합계 파싱 실패 — 레이아웃 변경 의심. PDF: {base}", file=sys.stderr)
         sys.exit(3)
 
     viz = gen_html(data, week_label)
     inject_html(HTML_PATH, viz)
     print(json.dumps({
         "ok": True, "pdf": base, "week_label": week_label,
-        "n_pages": data["n_pages"], "warnings": data["warnings"],
-        "overall_keys": list(data.get("overall", {}).keys()),
+        "n_pages": data["n_pages"], "pages_used": data.get("pages_used"),
+        "warnings": data["warnings"],
         "n_property": len(data.get("property", {})),
         "n_segment": len(data.get("segment", [])),
+        "n_segment_cumul": len(data.get("segment_cumul", [])),
+        "n_qualitative": len(data.get("qualitative", [])),
         "viz_bytes": len(viz),
     }, ensure_ascii=False))
