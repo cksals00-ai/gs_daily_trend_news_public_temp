@@ -511,9 +511,27 @@ function getWeeksOfMonth(year, month) {
   return weeks;
 }
 
+// ============================================================
+// [이번주 한정 오버라이드] 2026-06-23 주간회의 — 당월 초점을 7월로 이동
+// ------------------------------------------------------------
+// 평소엔 브라우저 날짜(=6월) 기준으로 6월을 당월로 렌더한다.
+// 이번주 회의는 7월을 당월로 봐야 하고, 6월은 아직 미마감(부분 온북)이므로
+// 누계에는 6월 온북이 아니라 6월 RM FCST 총합을 넣어야 한다.
+// → 6월 '마지막 주' 뷰를 강제하면 이 두 조건이 동시에 충족된다:
+//     · 당월(01·요약) = 7월 RM FCST
+//     · 익월(02)      = 8월 OTB
+//     · 누계(03)      = 1~5월 온북 + 6월 RM FCST + 7월 RM FCST (마감컷=6월 유지)
+//   (마감월 컷오프는 실제 당월=6월 그대로라서 6월·7월 모두 FCST로 잡힘)
+// 데이터는 rm_fcst.json 을 실시간으로 읽으므로, 오늘 저녁 RM FCST 갱신 후
+// 페이지를 새로고침하면 7월 숫자가 자동으로 갱신된다. (HTML 재빌드 불필요)
+// ★ 원복: 아래 WEEK_VIEW_OVERRIDE 를 false 로 바꾸면 평소(날짜 기준) 로직 복귀.
+const WEEK_VIEW_OVERRIDE = true;
+// ============================================================
+
 // 기준일이 해당 월의 마지막 주(마지막 7일 이내)인지 판단.
 // 예: 5/28 → 5월(31일) 마지막 7일(25~31) 이내이므로 true.
 function isLastWeekOfMonth(refDate) {
+  if (typeof WEEK_VIEW_OVERRIDE !== 'undefined' && WEEK_VIEW_OVERRIDE) return true; // [이번주 한정] 7월 뷰 강제
   const lastDay = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
   return refDate.getDate() >= lastDay - 6;
 }
@@ -2365,11 +2383,18 @@ function renderAll(weekKey) {
   buildMonthTable('next-month-table', nextMonth, nextYM, lastNextYM, 'all');
   buildYTDTable(weekKey);
 
+  // KPIs / Charts: 평소엔 실제 당월(curMonth=6월) 유지.
+  // [이번주 한정] WEEK_VIEW_OVERRIDE 시 당월 초점(cmMonth=7월) 기준으로 KPI·일별추이도 7월 표기.
+  const _ovr = (typeof WEEK_VIEW_OVERRIDE !== 'undefined' && WEEK_VIEW_OVERRIDE);
+  const kpiMonth  = _ovr ? cmMonth  : curMonth;
+  const kpiYM     = _ovr ? cmYM     : curYM;
+  const kpiLastYM = _ovr ? cmLastYM : lastYM;
+
   // KPIs
-  buildKPIs(curMonth, curYM);
+  buildKPIs(kpiMonth, kpiYM);
 
   // Charts
-  buildCharts(curMonth, curYM, lastYM);
+  buildCharts(kpiMonth, kpiYM, kpiLastYM);
 }
 
 // ===== INIT =====
