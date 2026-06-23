@@ -3113,6 +3113,28 @@ def main():
         except Exception as e:
             logger.warning(f"✗ rm_fcst.json 동기화 실패: {e}")
 
+    # ── RM FCST 추이(시점별 스냅샷) 갱신 ──
+    # fcst-trend.html("FCST 추이 분석")이 사용하는 docs/data/rm_fcst_trend.json 을 갱신.
+    # 투숙월 축은 스냅샷에 존재하는 월을 동적으로 읽어 자동 생성되므로, 새 RM PDF에
+    # 7·8·9월 등이 들어오면 코드 수정 없이 추이 화면에 자동으로 추가된다.
+    # 기본은 증분 모드: data/RM자료/의 신규 PDF(보통 1건, ~50초)만 파싱하고 나머지는
+    # 캐시 재사용(실패 PDF는 음성 캐시로 스킵). 전체 재구성은 `--rebuild` 로 별도 실행.
+    trend_script = Path(__file__).resolve().parent / "build_fcst_trend.py"
+    if trend_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(trend_script)],
+                capture_output=True, text=True, timeout=300,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ build_fcst_trend 완료 (FCST 추이 스냅샷 증분 갱신)")
+            else:
+                logger.warning(f"✗ build_fcst_trend 실패: {result.stderr.strip()[:300]}")
+        except subprocess.TimeoutExpired:
+            logger.warning(f"✗ build_fcst_trend 타임아웃(300s) — 추이 갱신 스킵, 기존 json 유지")
+        except Exception as e:
+            logger.warning(f"✗ build_fcst_trend 실행 오류: {e}")
+
     # ── RM FCST 정리/소사업 예상매출 재생성 ──
     # rm_fcst.json(Revenue Meeting) 갱신 시 RM_FCST_정리.xlsx · 소사업_예상매출.xlsx ·
     # 세일즈마케팅_예상매출현황.pptx 를 자동 재계산(소사업 = FCST 객실수 × 전년 실당소사업 비율).
