@@ -448,9 +448,9 @@ async function init() {
     // RM FCST 정리 링크: 당월 라벨 동적 표기 (예: 6월에 보면 (6월)).
     // 엑셀(data/RM_FCST_정리.xlsx)도 당월 rm_fcst 기준으로 생성됨(scripts/build_rm_fcst_excel.py).
     (function setRmFcstMonthLabel() {
-      const _n = new Date();
-      const _curMon = _n.getMonth() + 1;
-      const _curYr  = _n.getFullYear();
+      const _vym = viewYearMonth();              // [이번주 한정] 오버라이드 시 7월 라벨/파일명
+      const _curMon = _vym.month;
+      const _curYr  = _vym.year;
       const _lbl = document.getElementById('rm-fcst-month-label');
       if (_lbl) _lbl.textContent = `(${_curMon}월)`;
       const _a = document.getElementById('rm-fcst-btn');
@@ -526,6 +526,16 @@ function getWeeksOfMonth(year, month) {
 // 페이지를 새로고침하면 7월 숫자가 자동으로 갱신된다. (HTML 재빌드 불필요)
 // ★ 원복: 아래 WEEK_VIEW_OVERRIDE 를 false 로 바꾸면 평소(날짜 기준) 로직 복귀.
 const WEEK_VIEW_OVERRIDE = true;
+// 슬라이서·스냅샷·다운로드 라벨이 사용할 '뷰 기준' 연·월.
+// 평소엔 브라우저의 실제 연·월(6월). 오버라이드 시 +1개월(7월)로 통일.
+function viewYearMonth() {
+  const n = new Date();
+  let y = n.getFullYear(), m = n.getMonth() + 1;
+  if (typeof WEEK_VIEW_OVERRIDE !== 'undefined' && WEEK_VIEW_OVERRIDE) {
+    const _m = m + 1; if (_m > 12) { y += 1; m = _m - 12; } else { m = _m; }
+  }
+  return { year: y, month: m };
+}
 // ============================================================
 
 // 기준일이 해당 월의 마지막 주(마지막 7일 이내)인지 판단.
@@ -556,9 +566,7 @@ function weekLabelFor(year, month, weekKey) {
 
 function buildWeekSlicer() {
   const container = document.getElementById('week-chips');
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const { year, month } = viewYearMonth();   // [이번주 한정] 오버라이드 시 7월 주차로 표기
   const weeks = getWeeksOfMonth(year, month);
 
   let html = `<div class="week-chip active" data-week="all" onclick="selectWeek('all')">전체 (${month}월)</div>`;
@@ -582,7 +590,7 @@ function updateConfirmBtnState(weekKey) {
   } else {
     btn.disabled = false;
     const now = new Date();
-    const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+    const snapKey = snapshotKeyFor(viewYearMonth().year, viewYearMonth().month, weekKey);
     const exists = snapKey && SNAPSHOTS.snapshots[snapKey];
     btn.textContent = exists ? '↻ 재확정' : '✓ 확정';
     btn.title = exists ? '이미 확정된 주차입니다. 현재 데이터로 다시 저장합니다.' : '현재 데이터로 이 주차를 확정 저장합니다.';
@@ -594,7 +602,7 @@ window.selectWeek = function(weekKey) {
   document.querySelector(`.week-chip[data-week="${weekKey}"]`).classList.add('active');
 
   const now = new Date();
-  const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+  const snapKey = snapshotKeyFor(viewYearMonth().year, viewYearMonth().month, weekKey);
   if (snapKey && SNAPSHOTS.snapshots[snapKey]) {
     ACTIVE_SNAPSHOT_KEY = snapKey;
     ACTIVE_SNAPSHOT_DATA = SNAPSHOTS.snapshots[snapKey].data || null;
@@ -669,7 +677,7 @@ window.confirmCurrentWeek = function() {
   const weekKey = active ? active.dataset.week : null;
   if (!weekKey || weekKey === 'all') { toast('확정할 주차를 선택하세요', 'error'); return; }
   const now = new Date();
-  const snapKey = snapshotKeyFor(now.getFullYear(), now.getMonth()+1, weekKey);
+  const snapKey = snapshotKeyFor(viewYearMonth().year, viewYearMonth().month, weekKey);
   if (SNAPSHOTS.snapshots[snapKey]) {
     if (!confirm(`${snapKey} 은(는) 이미 확정되어 있습니다. 현재 데이터로 덮어쓰시겠습니까?`)) return;
   }
@@ -677,9 +685,7 @@ window.confirmCurrentWeek = function() {
 };
 
 function doConfirmWeek(weekKey) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const { year, month } = viewYearMonth();   // [이번주 한정] 오버라이드 시 7월 기준 확정
   const snapKey = snapshotKeyFor(year, month, weekKey);
   if (!snapKey) { toast('주차 키 생성 실패', 'error'); return; }
   // Temporarily exit snapshot mode so extracted data is from live sources

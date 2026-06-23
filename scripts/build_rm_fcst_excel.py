@@ -213,7 +213,7 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d, series):
 OTB_JSON = REPO / "docs" / "data" / "otb_data.json"
 
 
-def compute_monthly_sosaup(target, sos_all, props):
+def compute_monthly_sosaup(target, sos_all, props, closed_before=None):
     """월별 소사업 누적 — 마감월=온북(rns_actual), 당월(미마감)=RM FCST.
 
     소사업_seg(월) = Σ사업장 객실수 × 전년비율(해당 월) / 1000  [백만, VAT제외]
@@ -221,8 +221,12 @@ def compute_monthly_sosaup(target, sos_all, props):
       series = [{"month": m, "closed": bool, "seg": {OTA,G-OTA,Inbound}, "total": v}, ...]
       cum    = {seg: 누계백만},  cur = {seg: 당월백만}
     otb_data.json 없으면 당월(FCST)만 계산해 반환.
+    closed_before: 이 달 미만(m < closed_before)만 '마감(온북)'으로 본다. None이면 target월.
+      [이번주 한정] 익월 뷰에서는 실제 당월(예: 6월)도 미마감이므로 closed_before=6 로 호출.
     """
     year, cur_m = int(target.split("-")[0]), int(target.split("-")[1])
+    if closed_before is None:
+        closed_before = cur_m
     try:
         otb = json.loads(OTB_JSON.read_text(encoding="utf-8")).get("allMonths", {})
     except Exception:
@@ -231,7 +235,7 @@ def compute_monthly_sosaup(target, sos_all, props):
     for m in range(1, cur_m + 1):
         ym = f"{year}-{m:02d}"
         ratios = sos_all.get(ym, {}).get("ratios", {})
-        closed = m < cur_m
+        closed = m < closed_before
         bps = otb.get(str(m), {}).get("byPropertySegment", {})
         seg_tot = {s: 0.0 for s in SEGS}
         for seg in SEGS:
@@ -341,6 +345,21 @@ def main():
     covered = d.get("_months_covered", [])
 
     cur = datetime.now().strftime("%Y-%m")
+    # 누계 '마감월 컷오프'(이 달 미만만 온북). 평소엔 target월과 동일.
+    closed_before = None
+    # [이번주 한정 토글] data/rm_fcst_view_override.txt 에 'YYYY-MM' 한 줄이 있으면
+    # 그 달을 대상월로 강제(주간회의를 익월 기준으로 볼 때 사용). 파일 삭제 시 평소(now) 복귀.
+    # gs-weekly.html 의 WEEK_VIEW_OVERRIDE 와 짝을 이룸. (영구 롤오버 로직은 변경하지 않음)
+    # 이때 실제 당월(now)은 아직 미마감이므로 누계에서 온북이 아니라 RM FCST 로 잡아야 한다
+    # → closed_before = 실제 now 월. (예: 대상월=2026-07, now=6월 → 1~5월만 온북, 6·7월 FCST)
+    _ovr_path = REPO / "data" / "rm_fcst_view_override.txt"
+    if _ovr_path.exists():
+        _ovr = _ovr_path.read_text(encoding="utf-8").strip()
+        if _ovr in covered:
+            cur = _ovr
+            closed_before = datetime.now().month
+            print(f"⚠ [이번주 한정] 대상월 오버라이드 적용: {_ovr} "
+                  f"(누계 온북컷={closed_before}월 미만 / 원복: {_ovr_path} 삭제)")
     target = cur if cur in covered else (covered[0] if covered else cur)
 
     # 소사업(객실 외) 비율 로드 — 대상월 비율이 있으면 소사업 매출 컬럼 추가.
@@ -509,7 +528,7 @@ def main():
     # 소사업 예상매출 독립 파일 (비율 데이터가 있을 때만)
     if has_sos:
         # 월별 누적: 마감월=온북(otb rns_actual) / 당월=RM FCST × 전년비율
-        series, cum_seg, cur_seg = compute_monthly_sosaup(target, sos_all, props)
+        series, cum_seg, cur_seg = compute_monthly_sosaup(target, sos_all, props, closed_before)
         total = build_sosaup_workbook(props, target, sos, sos_meta, d, series)
         print(f"✓ 소사업_예상매출.xlsx 생성 (대상월={target}, 당월={total:,.1f} / 누계={sum(cum_seg.values()):,.0f}백만 VAT제외)")
         print(f"  → {OUT_SOS}")
