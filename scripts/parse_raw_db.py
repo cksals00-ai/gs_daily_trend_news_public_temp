@@ -260,6 +260,17 @@ def _prev_month(ym):
     return f"{y}{m:02d}"
 
 
+def _next_month(ym):
+    """'YYYYMM' → 다음월 'YYYYMM'. 빈 값이면 None."""
+    if not ym or len(ym) < 6:
+        return None
+    y, m = int(ym[:4]), int(ym[4:6])
+    m += 1
+    if m == 13:
+        y, m = y + 1, 1
+    return f"{y}{m:02d}"
+
+
 def _snapshot_min_stay_month(snapshots, file_type, min_rows=500):
     """스냅샷 파일들이 실제 보유한 최소 stay_month(판매일자[:6]) 반환.
     live 스냅샷은 마감된 과거월을 더 이상 보유하지 않으므로, 재전송 파일이
@@ -1465,6 +1476,18 @@ def main():
     # file → (min_month, max_month) 또는 'skip'
     file_month_filter = {}
 
+    # [복구가능 토글] data/raw_db_retrans_max_override.txt 에 'YYYYMM' 한 줄이 있으면
+    # 재전송이 그 달까지 커버하도록 경계를 강제(스냅샷은 그 다음달부터).
+    # 라이브 스냅샷이 마감월(예: 5월)을 비정상적으로 계속 보유해 휴리스틱이 미마감으로
+    # 오판할 때 사용. 스냅샷이 그 달을 자연 드롭하면 파일 삭제로 원복.
+    _retrans_override = None
+    _ovr_f = OUTPUT_DIR / "raw_db_retrans_max_override.txt"
+    if _ovr_f.exists():
+        _v = _ovr_f.read_text(encoding="utf-8").strip()
+        if re.fullmatch(r"\d{6}", _v):
+            _retrans_override = _v
+            logger.info(f"⚠ [토글] 재전송 경계 강제: ≤{_v} (스냅샷 ≥{_next_month(_v)}) / 원복: {_ovr_f} 삭제")
+
     for (folder, ft), fps in folder_type_files.items():
         folder_path = Path(folder)
         retrans = [fp for fp in fps if _is_retrans(fp)]
@@ -1488,6 +1511,10 @@ def main():
             # 재전송이 그 직전월까지 커버해야 누락 없음). 정적 하드코딩 시 매월 stale → 4월 누락 버그 재발.
             snap_min = _snapshot_min_stay_month(snapshots, ft)
             retrans_max = _prev_month(snap_min) if snap_min else None
+            if _retrans_override:
+                # 토글: 재전송이 override 월까지 커버, 스냅샷은 그 다음달부터
+                retrans_max = _retrans_override
+                snap_min = _next_month(_retrans_override)
             for fp in retrans:
                 file_month_filter[fp] = (None, retrans_max)
                 logger.info(f"  재전송: ≤{retrans_max} 한정 파싱: {fp.name}")
