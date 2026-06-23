@@ -104,7 +104,10 @@ PROPERTY_DEFS = [
     ("소노문 해운대",                     "21.소노문해운대",  "south",   ["소노문 해운대"]),
     ("쏠비치 남해",                       "22.쏠비치남해",    "south",   ["쏠비치 남해"]),
     ("르네블루 바이 쏠비치",              "23.르네블루",      "central", ["르네블루"]),
-    ("팔라티움 해운대 by sonofelice 해운대",                   "25.팔라티움 해운대 by sonofelice",      "south",   []),  # 온북 DB 미포함 — daily_booking.json에서 보정
+    # ("팔라티움 해운대 by sonofelice 해운대", "25.팔라티움 해운대 by sonofelice", "south", []),
+    #   ↑ 자사 사업장이나 GS 실적 리포트 목록에는 노출하지 않기로 함(2026-06-23).
+    #   PROPERTY_DEFS에서 제외하면 byProperty/summary 합계 양쪽에서 일관되게 빠지고,
+    #   load_daily_booking/overlay_daily_booking 보정 경로도 자동 비활성화됨.
 ]
 
 BUDGET_GRAND_TOTAL_ROWS = [26, 50, 74, 98, 122, 146, 170, 194, 218, 242, 266, 290]
