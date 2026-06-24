@@ -445,7 +445,7 @@ async function loadData() {
   tableCard.style.display = 'none';
 
   try {
-    const response = await fetch('data/db_aggregated.json');
+    const response = await fetch('data/db_aggregated.json?v=' + new Date().toISOString().slice(0,10));
     if (!response.ok) throw new Error('Failed to load db_aggregated.json');
 
     const data = await response.json();
@@ -490,7 +490,7 @@ async function loadData() {
 
     // Try to load overrides
     try {
-      const ovResp = await fetch('data/channel_mapping_overrides.json');
+      const ovResp = await fetch('data/channel_mapping_overrides.json?t=' + Date.now());
       if (ovResp.ok) {
         const ovData = await ovResp.json();
         overrides = ovData.channel_segment_overrides || {};

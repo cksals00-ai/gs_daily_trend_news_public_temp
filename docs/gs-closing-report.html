@@ -3129,10 +3129,11 @@ function switchPeriod(type) {
    INIT
    ══════════════════════════════════════ */
 Promise.all([
-  fetch('data/otb_data.json').then(r => r.json()),
-  fetch('data/package_series_trend.json').then(r => r.json()).catch(() => null),
-  fetch('data/db_aggregated.json').then(r => r.json()).catch(() => null),
-  fetch('data/inbound_kpi.json').then(r => r.json()).catch(() => null)
+  // 캐시버스터: 묵은 스냅샷 방지 (소형=매로드 최신 ?t, db_aggregated=일단위 ?v)
+  fetch('data/otb_data.json?t=' + Date.now()).then(r => r.json()),
+  fetch('data/package_series_trend.json?t=' + Date.now()).then(r => r.json()).catch(() => null),
+  fetch('data/db_aggregated.json?v=' + new Date().toISOString().slice(0,10)).then(r => r.json()).catch(() => null),
+  fetch('data/inbound_kpi.json?t=' + Date.now()).then(r => r.json()).catch(() => null)
 ])
   .then(([otbData, pkgData, dbData, ibKpiData]) => {
     DATA = otbData;

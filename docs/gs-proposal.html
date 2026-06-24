@@ -768,11 +768,14 @@ function buildPromoSearchPropDropdown(){
 async function loadForecastData(){
   if(fcstDataLoaded) return;
   const load = async(url)=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();}catch(e){console.warn('Load fail:',url,e);return null;}};
-  FCST_DATA.otb = await load('data/otb_data.json');
-  FCST_DATA.db = await load('data/db_aggregated.json');
-  FCST_DATA.occ = await load('data/occ_data.json');
-  FCST_DATA.fcst = await load('data/rm_fcst.json');
-  FCST_DATA.daily = await load('data/daily_booking.json');
+  // 캐시버스터: 묵은 OTB/부킹 스냅샷이 캐시로 박히는 문제 방지 (소형=매로드 최신, db_aggregated=일단위)
+  const cb = '?t=' + Date.now();
+  const cbDay = '?v=' + new Date().toISOString().slice(0,10);
+  FCST_DATA.otb = await load('data/otb_data.json' + cb);
+  FCST_DATA.db = await load('data/db_aggregated.json' + cbDay);
+  FCST_DATA.occ = await load('data/occ_data.json' + cb);
+  FCST_DATA.fcst = await load('data/rm_fcst.json' + cb);
+  FCST_DATA.daily = await load('data/daily_booking.json' + cb);
   fcstDataLoaded = true;
   console.log('FCST_DATA loaded:', {otb:!!FCST_DATA.otb, db:!!FCST_DATA.db, occ:!!FCST_DATA.occ, fcst:!!FCST_DATA.fcst, daily:!!FCST_DATA.daily});
 }

@@ -26,14 +26,14 @@ h1{font-size:11px;font-weight:700;letter-spacing:1px;color:#7c7cff;text-align:ce
 <script>
 var s=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
 var num=function(v){return Math.round(v).toLocaleString('en-US');};
-fetch('data/otb_data.json').then(function(r){return r.json();}).then(function(d){
+fetch('data/otb_data.json?t='+Date.now()).then(function(r){return r.json();}).then(function(d){
   var u=d.summary;
   s('rn',num(u.rns_actual));
   s('rev',(u.rev_actual/1e8).toFixed(0)+'억');
   s('adr',(u.adr_actual/1e4).toFixed(1)+'만');
   if(d.meta&&d.meta.refreshTime)s('ts',d.meta.refreshTime);
 }).catch(function(){});
-fetch('data/influencer_86code_performance.json').then(function(r){return r.json();}).then(function(d){
+fetch('data/influencer_86code_performance.json?t='+Date.now()).then(function(r){return r.json();}).then(function(d){
   var u=d.summary;
   s('irn',num(u.total_rn));
   s('irev',(u.total_rev_m/100).toFixed(0)+'억');
