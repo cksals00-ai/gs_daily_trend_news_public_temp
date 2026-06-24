@@ -23,6 +23,7 @@ RN = 객실수 (각 행이 1박 단위)
 """
 import os, re, json, sys, logging, glob
 import fs_utils  # macOS NFD→NFC 유니코드 정규화
+from datetime import datetime
 from pathlib import Path
 from collections import defaultdict, Counter
 
@@ -770,6 +771,12 @@ def main():
     logger.info(f'대상 파일 {len(specs)}개 — 연도별 스캔 시작')
     rows = list(iter_inbound_rows(specs))
     logger.info(f'전체 inbound 레코드: {len(rows):,}행')
+    # 가드: raw_db 43/44 파일 부재(예: 호스트 크롤 진행중)로 0건이면 기존 산출물을 보존하고
+    # 빈 파일로 덮어쓰지 않는다. (build.py 데일리 호출이 크롤 윈도우와 겹쳐 비우는 사고 방지)
+    if not specs or not rows:
+        logger.error(f'⚠ inbound 레코드 {len(rows)}건 / 파일 {len(specs)}개 — '
+                     f'원천 부재 추정. 기존 {OUTPUT_PATH.name} 보존, 덮어쓰지 않음.')
+        return
     master = build_master(rows)
     logger.info(f'87 master 거래처: {len(master)}개')
     keyin, unmappable = load_keyin_mappings()
@@ -787,7 +794,7 @@ def main():
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        'generated_at': '2026-05-04',
+        'generated_at': datetime.now().strftime('%Y-%m-%d'),
         'description': 'Inbound(변경예약집계코드=58) 거래처-국적 매핑 enriched 데이터 — 22~26년 통합',
         'years_covered': sorted({r['stay_year'] for r in rows}),
         'mapping_rule': {
