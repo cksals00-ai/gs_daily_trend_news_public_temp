@@ -297,11 +297,16 @@ document.getElementById('today-date').textContent = new Date().toLocaleDateStrin
 
 async function loadData(){
   const load=async(url)=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();}catch(e){console.warn('Load fail:',url,e);return null;}};
-  DATA.otb = await load('data/otb_data.json');
-  DATA.db = await load('data/db_aggregated.json');
-  DATA.occ = await load('data/occ_data.json');
-  DATA.fcst = await load('data/rm_fcst.json');
-  DATA.daily = await load('data/daily_booking.json');
+  // 캐시버스터: 매 로드마다 최신 산출물을 받아 'OTB 데이터가 며칠씩 묵는' 문제 방지.
+  //  - 소형 JSON(부킹/OTB/OCC/RM)은 ?t=now 로 항상 최신.
+  //  - db_aggregated(.gz ~13MB)는 ?v=YYYYMMDD 일단위 토큰 → 당일내 캐시·일 1회만 재다운로드.
+  const cb = '?t=' + Date.now();
+  const cbDay = '?v=' + new Date().toISOString().slice(0,10);
+  DATA.otb = await load('data/otb_data.json' + cb);
+  DATA.db = await load('data/db_aggregated.json' + cbDay);
+  DATA.occ = await load('data/occ_data.json' + cb);
+  DATA.fcst = await load('data/rm_fcst.json' + cb);
+  DATA.daily = await load('data/daily_booking.json' + cb);
   console.log('DATA loaded:', {otb:!!DATA.otb, db:!!DATA.db, occ:!!DATA.occ, fcst:!!DATA.fcst, daily:!!DATA.daily});
   if(DATA.occ) console.log('OCC props:', Object.keys(DATA.occ.properties||{}));
   initUI();
