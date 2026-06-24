@@ -5,7 +5,7 @@
 <script src="./js/auth.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>GS 실적 리포트 · SONO & TRINITY GS팀</title>
+<title>세일즈 KPI 현황 리포트 · SONO & TRINITY GS팀</title>
 
 <!-- PWA 메타태그 -->
 <meta name="theme-color" content="#1a1d23">
@@ -831,10 +831,10 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
   <div class="masthead-inner">
     <div class="logo-wrap">
       <div class="logo-mark">SONO &amp; TRINITY</div>
-      <div class="team-tag">GS팀 · OTB 현황</div>
+      <div class="team-tag">GS팀 · 세일즈 KPI</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
-      <span class="page-badge">📊 GS실적 · 당일현황</span>
+      <span class="page-badge">📊 세일즈 KPI · 담당자별</span>
       <a href="index.html" style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);padding:4px 10px;border-radius:3px;transition:color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-faint)'">← 트렌드 리포트</a>
     </div>
     <div class="masthead-right">
@@ -844,74 +844,34 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
   </div>
 </header>
 
-<!-- MOBILE SHEET TABS (visible < 860px) -->
-<nav class="mobile-sheet-tabs" id="mobile-sheet-tabs-nav">
-  <a href="otb.html" class="mobile-sheet-tab active">당일현황</a>
-  <a href="weekly-compare.html" class="mobile-sheet-tab">금주비교</a>
-  <a href="channel.html" class="mobile-sheet-tab">채널별</a>
-  <a href="stay-date.html" class="mobile-sheet-tab">투숙일기준</a>
-  <a href="booking-trend.html" class="mobile-sheet-tab">예약추이</a>
-  <a href="product-detail.html" class="mobile-sheet-tab">상품비교</a>
-  <a href="booking-status.html" class="mobile-sheet-tab">Booking Status</a>
-  <a href="manager-analysis.html" class="mobile-sheet-tab">담당자 분석</a>
-  <a href="property-report.html" class="mobile-sheet-tab">사업장별</a>
-</nav>
-<script>(function(){try{var nav=document.getElementById('mobile-sheet-tabs-nav');if(nav){var act=nav.querySelector('.mobile-sheet-tab.active');if(act){nav.scrollLeft=Math.max(0,act.offsetLeft-12);}}}catch(e){}})();</script>
 
 <!-- MOBILE FILTER BAR (visible < 860px) -->
 <div class="mobile-filter-bar" id="mobile-filter-bar">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">월:</span>
   <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
-  <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
-  <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <div id="mobile-seg1-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">담당자:</span>
+  <div id="mobile-manager-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
-<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
-  <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
-</div>
-
 <!-- ========== APP SHELL ========== -->
 <div class="app-shell">
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div>
-      <div class="filter-section-label">GS 실적 리포트</div>
-      <nav style="display:flex;flex-direction:column;gap:2px;">
-        <a href="otb.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;background:rgba(201,160,99,0.18);color:var(--gold-bright);text-decoration:none;">당일현황</a>
-        <a href="weekly-compare.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">금주비교</a>
-        <a href="channel.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">채널별</a>
-        <a href="stay-date.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">투숙일기준</a>
-        <a href="booking-trend.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">예약추이</a>
-        <a href="product-detail.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">상품비교</a>
-        <a href="booking-status.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">Booking Status</a>
-        <a href="manager-analysis.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">담당자 분석</a>
-        <a href="property-report.html" style="display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='var(--bg-soft)';this.style.color='var(--ink)'" onmouseout="this.style.background='';this.style.color='var(--ink-muted)'">사업장별 리포트</a>
-      </nav>
+      <div class="filter-section-label">세그먼트</div>
+      <div class="filter-chips" id="seg1-chips"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div>
+      <div class="filter-section-label">담당자 <span id="manager-seg-label" style="font-weight:400;opacity:0.6;"></span></div>
+      <div class="filter-chips" id="manager-chips"></div>
     </div>
     <div class="sidebar-divider"></div>
     <div>
       <div class="filter-section-label">투숙월</div>
       <div class="filter-chips" id="month-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">세그먼트</div>
-      <div class="filter-chips" id="seg-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div>
-      <div class="filter-section-label">권역</div>
-      <div class="filter-chips" id="region-chips"></div>
-    </div>
-    <div id="prop-filter-wrap" style="display:none;">
-      <div class="sidebar-divider"></div>
-      <div>
-        <div class="filter-section-label">사업장 <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
-        <div class="filter-chips prop-chips" id="prop-chips"></div>
-      </div>
     </div>
     <div class="refresh-info">
       <div class="refresh-label">LAST REFRESH</div>
@@ -925,8 +885,8 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
     <!-- PAGE HEADER -->
     <div class="page-header">
       <div class="page-title">
-        GS 실적 리포트
-        <span class="sub">ON THE BOOKS · DAILY SNAPSHOT</span>
+        세일즈 KPI 현황 리포트
+        <span class="sub">BY SALES MANAGER · ON THE BOOKS</span>
       </div>
       <div class="base-date-tag">
         기준일자 <strong id="base-date-display">—</strong>
@@ -1076,7 +1036,7 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
     <!-- PIVOT TABLE -->
     <div class="table-card">
       <div class="table-card-header">
-        <span class="table-card-title">영업장별 OTB 현황 (피벗)</span>
+        <span class="table-card-title">담당 영업장별 OTB 현황 (피벗)</span>
         <div class="metric-slicer" id="pivot-slicer">
           <button class="pchip active" data-metric="rns">객실수</button>
           <button class="pchip" data-metric="adr">ADR</button>
@@ -1156,9 +1116,10 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 // ─── STATE ───
 let rawData = null;
 let activeMonths = new Set([new Date().getMonth() + 1]);
-let activeSegs = new Set(['전체']);
-let activeRegion = '전체';
-let activeProps = new Set();  // empty = 전체 (no filter)
+let activeSeg = 'OTA';            // 1뎁스 세그먼트 (otb_data 세그 key)
+let activeManager = null;          // 2뎁스 담당자명
+let managerMap = null;             // sales_manager_map.json (세그→담당자→사업장 config)
+let allPropNames = [];             // otb_data 전체 사업장명 (props:'ALL' 해석용)
 let rmFcstSegments = null;  // rm_fcst.json per-segment RM FCST
 
 // ─── REGION MAPPING ───
@@ -1739,13 +1700,54 @@ function setText(id, html) {
 }
 
 // ─── FILTER UI ───
-function buildFilterChips(data) {
-  const monthContainer = document.getElementById('month-chips');
-  const segContainer   = document.getElementById('seg-chips');
-  const mMonthContainer = document.getElementById('mobile-month-chips');
-  const mSegContainer   = document.getElementById('mobile-seg-chips');
+const SEG_DEFS = [
+  { key: 'OTA',     label: 'OTA' },
+  { key: 'G-OTA',   label: 'GOTA' },
+  { key: 'Inbound', label: '인바운드' },
+];
 
-  [monthContainer, mMonthContainer].forEach(c => {
+function managersForSeg(seg) {
+  return (managerMap && managerMap[seg]) ? managerMap[seg] : [];
+}
+function resolveProps(mgr) {
+  if (!mgr) return [];
+  if (mgr.props === 'ALL' || mgr.props === '*') return allPropNames.slice();
+  return Array.isArray(mgr.props) ? mgr.props.slice() : [];
+}
+
+function buildFilterChips(data) {
+  // ─── 세그먼트(1뎁스) ───
+  const segC  = document.getElementById('seg1-chips');
+  const mSegC = document.getElementById('mobile-seg1-chips');
+  [segC, mSegC].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    SEG_DEFS.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (s.key === activeSeg ? ' active' : '');
+      btn.textContent = s.label;
+      btn.dataset.value = s.key;
+      btn.addEventListener('click', () => {
+        activeSeg = btn.dataset.value;
+        const mgrs = managersForSeg(activeSeg);
+        activeManager = mgrs.length ? mgrs[0].name : null;
+        document.querySelectorAll('#seg1-chips .chip, #mobile-seg1-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeSeg);
+        });
+        buildManagerChips(data);
+        applyFilters();
+      });
+      c.appendChild(btn);
+    });
+  });
+
+  // ─── 담당자(2뎁스) ───
+  buildManagerChips(data);
+
+  // ─── 투숙월 ───
+  const monthC  = document.getElementById('month-chips');
+  const mMonthC = document.getElementById('mobile-month-chips');
+  [monthC, mMonthC].forEach(c => {
     if (!c) return;
     c.innerHTML = '';
     data.filters.months.forEach(m => {
@@ -1756,7 +1758,6 @@ function buildFilterChips(data) {
       btn.addEventListener('click', () => {
         const v = parseInt(btn.dataset.value);
         if (v === 0) {
-          // "전체" 클릭 → 전체만 선택
           activeMonths = new Set([0]);
         } else {
           activeMonths.delete(0);
@@ -1775,126 +1776,29 @@ function buildFilterChips(data) {
       c.appendChild(btn);
     });
   });
-
-  const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
-  [segContainer, mSegContainer].forEach(c => {
-    if (!c) return;
-    c.innerHTML = '';
-
-    ALLOWED_SEGS.forEach(s => {
-      const btn = document.createElement('button');
-      btn.className = 'chip' + (activeSegs.has(s) ? ' active' : '');
-      btn.textContent = s;
-      btn.dataset.value = s;
-      btn.addEventListener('click', () => {
-        const v = btn.dataset.value;
-        if (v === '전체') {
-          activeSegs = new Set(['전체']);
-        } else {
-          activeSegs.delete('전체');
-          if (activeSegs.has(v)) {
-            activeSegs.delete(v);
-            if (activeSegs.size === 0) activeSegs.add('전체');
-          } else {
-            activeSegs.add(v);
-          }
-        }
-        document.querySelectorAll('#seg-chips .chip, #mobile-seg-chips .chip').forEach(b => {
-          b.classList.toggle('active', activeSegs.has(b.dataset.value));
-        });
-        applyFilters();
-      });
-      c.appendChild(btn);
-    });
-  });
-
-  // ─── 권역 칩 ───
-  const regionContainer = document.getElementById('region-chips');
-  const mRegionContainer = document.getElementById('mobile-region-chips');
-  [regionContainer, mRegionContainer].forEach(c => {
-    if (!c) return;
-    c.innerHTML = '';
-    REGION_DEFS.forEach(r => {
-      const btn = document.createElement('button');
-      btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
-      btn.textContent = r.label;
-      btn.dataset.value = r.key;
-      btn.addEventListener('click', () => {
-        activeRegion = btn.dataset.value;
-        activeProps = new Set();  // 권역 변경 시 사업장 선택 초기화
-        document.querySelectorAll('#region-chips .chip, #mobile-region-chips .chip').forEach(b => {
-          b.classList.toggle('active', b.dataset.value === activeRegion);
-        });
-        buildPropChips(data);
-        applyFilters();
-      });
-      c.appendChild(btn);
-    });
-  });
-
-  buildPropChips(data);
 }
 
-function buildPropChips(data) {
-  const propWrap = document.getElementById('prop-filter-wrap');
-  const mPropBar = document.getElementById('mobile-prop-bar');
-  const propContainer = document.getElementById('prop-chips');
-  const mPropContainer = document.getElementById('mobile-prop-chips');
-  const propLabel = document.getElementById('prop-region-label');
-
-  if (activeRegion === '전체') {
-    if (propWrap) propWrap.style.display = 'none';
-    if (mPropBar) mPropBar.style.display = 'none';
-    return;
-  }
-
-  if (propWrap) propWrap.style.display = '';
-  if (mPropBar) mPropBar.style.display = '';
-  if (propLabel) propLabel.textContent = '(' + (REGION_LABEL[activeRegion] || activeRegion) + ')';
-
-  // 해당 권역의 사업장 목록 가져오기
-  const allProps = (data.allMonths ? (data.allMonths['summary'] || data.allMonths['0'] || {}).byProperty : data.byProperty) || [];
-  const regionProps = allProps.filter(p => p.region === activeRegion);
-
-  [propContainer, mPropContainer].forEach(c => {
+function buildManagerChips(data) {
+  const mgrC  = document.getElementById('manager-chips');
+  const mMgrC = document.getElementById('mobile-manager-chips');
+  const segLabelEl = document.getElementById('manager-seg-label');
+  const segDef = SEG_DEFS.find(s => s.key === activeSeg);
+  if (segLabelEl) segLabelEl.textContent = segDef ? '(' + segDef.label + ')' : '';
+  const mgrs = managersForSeg(activeSeg);
+  if (activeManager == null && mgrs.length) activeManager = mgrs[0].name;
+  if (mgrs.length && !mgrs.some(m => m.name === activeManager)) activeManager = mgrs[0].name;
+  [mgrC, mMgrC].forEach(c => {
     if (!c) return;
     c.innerHTML = '';
-
-    // "전체" 칩
-    const allBtn = document.createElement('button');
-    allBtn.className = 'chip' + (activeProps.size === 0 ? ' active' : '');
-    allBtn.textContent = '전체';
-    allBtn.dataset.value = '__all__';
-    allBtn.addEventListener('click', () => {
-      activeProps = new Set();
-      document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
-        b.classList.toggle('active', b.dataset.value === '__all__');
-      });
-      applyFilters();
-    });
-    c.appendChild(allBtn);
-
-    regionProps.forEach(p => {
+    mgrs.forEach(mgr => {
       const btn = document.createElement('button');
-      // 사업장명에서 번호 접두어 제거 (예: "01.벨비발디" → "벨비발디")
-      const shortName = p.name.replace(/^\d+\./, '');
-      btn.className = 'chip' + (activeProps.has(p.name) ? ' active' : '');
-      btn.textContent = shortName;
-      btn.dataset.value = p.name;
+      btn.className = 'chip' + (mgr.name === activeManager ? ' active' : '');
+      btn.textContent = mgr.name;
+      btn.dataset.value = mgr.name;
       btn.addEventListener('click', () => {
-        const v = btn.dataset.value;
-        if (activeProps.has(v)) {
-          activeProps.delete(v);
-        } else {
-          activeProps.add(v);
-        }
-        // 아무것도 선택 안 되면 전체
-        document.querySelectorAll('#prop-chips .chip, #mobile-prop-chips .chip').forEach(b => {
-          if (b.dataset.value === '__all__') {
-            b.classList.toggle('active', activeProps.size === 0);
-          } else {
-            b.classList.toggle('active', activeProps.has(b.dataset.value));
-          }
+        activeManager = btn.dataset.value;
+        document.querySelectorAll('#manager-chips .chip, #mobile-manager-chips .chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === activeManager);
         });
         applyFilters();
       });
@@ -1902,6 +1806,8 @@ function buildPropChips(data) {
     });
   });
 }
+
+function buildPropChips() { /* 담당자 축 페이지 — 사용 안 함 */ }
 
 function summaryFromProps(props) {
   // byProperty 배열로부터 summary 재계산
@@ -1936,91 +1842,57 @@ function summaryFromProps(props) {
   return s;
 }
 
+function pickSnap() {
+  if (!rawData) return null;
+  if (!rawData.allMonths) return rawData;
+  const monthKeys = activeMonths.has(0) ? [0] : [...activeMonths];
+  if (monthKeys.length === 1) return rawData.allMonths[String(monthKeys[0])];
+  const snaps = monthKeys.map(k => rawData.allMonths[String(k)]).filter(Boolean);
+  if (!snaps.length) return null;
+  const snap = {
+    summary: mergeSegSummaries(snaps.map(s => s.summary).filter(Boolean)),
+    byProperty: mergeSegByProp(snaps.map(s => s.byProperty).filter(Boolean)),
+    segmentData: {}, byPropertySegment: {}
+  };
+  const allSegKeys = new Set();
+  snaps.forEach(s => { if (s.segmentData) Object.keys(s.segmentData).forEach(k => allSegKeys.add(k)); });
+  allSegKeys.forEach(seg => {
+    const segSums = snaps.map(s => s.segmentData && s.segmentData[seg]).filter(Boolean);
+    if (segSums.length) snap.segmentData[seg] = mergeSegSummaries(segSums);
+    const segProps = snaps.map(s => s.byPropertySegment && s.byPropertySegment[seg]).filter(Boolean);
+    if (segProps.length) snap.byPropertySegment[seg] = mergeSegByProp(segProps);
+  });
+  return snap;
+}
+
 function applyFilters() {
-  const monthLabel = activeMonths.has(0) ? '전체 월' : [...activeMonths].sort((a,b)=>a-b).map(m=>m+'월').join('+');
-  const segLabel   = activeSegs.has('전체') ? '전체 세그' : [...activeSegs].join('+');
-  let propLabel = '';
-  if (activeRegion !== '전체') {
-    const rLabel = REGION_LABEL[activeRegion] || activeRegion;
-    if (activeProps.size > 0) {
-      propLabel = ' · ' + [...activeProps].map(n => n.replace(/^\d+\./, '')).join('+');
-    } else {
-      propLabel = ' · ' + rLabel + ' 전체';
-    }
-  }
-  setText('table-filter-label', monthLabel + ' · ' + segLabel + propLabel);
-
   if (!rawData) return;
+  const seg = activeSeg;
+  const segDef = SEG_DEFS.find(s => s.key === seg);
+  const segLabel = segDef ? segDef.label : seg;
+  const mgrs = managersForSeg(seg);
+  const mgr = mgrs.find(m => m.name === activeManager) || mgrs[0] || null;
 
-  // allMonths 구조가 있으면 월별 필터링, 없으면 전체 데이터 사용
-  let snap = null;
-  if (rawData.allMonths) {
-    const monthKeys = activeMonths.has(0) ? [0] : [...activeMonths];
-    if (monthKeys.length === 1) {
-      snap = rawData.allMonths[String(monthKeys[0])];
-    } else {
-      // 복수 월 합산: 각 월 snap의 summary와 byProperty를 머지
-      const snaps = monthKeys.map(k => rawData.allMonths[String(k)]).filter(Boolean);
-      if (snaps.length > 0) {
-        snap = {
-          summary: mergeSegSummaries(snaps.map(s => s.summary).filter(Boolean)),
-          byProperty: mergeSegByProp(snaps.map(s => s.byProperty).filter(Boolean)),
-          segmentData: {},
-          byPropertySegment: {}
-        };
-        // 세그먼트별 데이터도 월 합산
-        const allSegKeys = new Set();
-        snaps.forEach(s => { if (s.segmentData) Object.keys(s.segmentData).forEach(k => allSegKeys.add(k)); });
-        allSegKeys.forEach(seg => {
-          const segSums = snaps.map(s => s.segmentData && s.segmentData[seg]).filter(Boolean);
-          if (segSums.length) snap.segmentData[seg] = mergeSegSummaries(segSums);
-          const segProps = snaps.map(s => s.byPropertySegment && s.byPropertySegment[seg]).filter(Boolean);
-          if (segProps.length) snap.byPropertySegment[seg] = mergeSegByProp(segProps);
-        });
-      }
-    }
-  } else {
-    snap = rawData;
-  }
+  const monthLabel = activeMonths.has(0) ? '전체 월' : [...activeMonths].sort((a,b)=>a-b).map(m=>m+'월').join('+');
+  setText('table-filter-label', monthLabel + ' · ' + segLabel + (mgr ? ' · ' + mgr.name : ''));
 
-  if (snap) {
-    let summary = snap.summary;
-    let byProp = snap.byProperty;
+  const snap = pickSnap();
+  if (!snap || !mgr) return;
 
-    if (!activeSegs.has('전체') && snap.segmentData && snap.byPropertySegment) {
-      const selectedSegs = [...activeSegs];
-      if (selectedSegs.length === 1) {
-        // 단일 세그먼트
-        const seg = selectedSegs[0];
-        if (snap.segmentData[seg]) summary = snap.segmentData[seg];
-        if (snap.byPropertySegment[seg]) byProp = snap.byPropertySegment[seg];
-      } else {
-        // 복수 세그먼트: 합산
-        summary = mergeSegSummaries(selectedSegs.map(s => snap.segmentData[s]).filter(Boolean));
-        byProp  = mergeSegByProp(selectedSegs.map(s => snap.byPropertySegment[s]).filter(Boolean));
-      }
-    }
+  const mgrProps = new Set(resolveProps(mgr));
+  let byProp = (snap.byPropertySegment && snap.byPropertySegment[seg]) ? snap.byPropertySegment[seg] : (snap.byProperty || []);
+  byProp = byProp.filter(p => mgrProps.has(p.name));
+  const summary = summaryFromProps(byProp);
 
-    // ─── 권역/사업장 필터 적용 ───
-    if (activeRegion !== '전체') {
-      if (activeProps.size > 0) {
-        // 개별 사업장 선택
-        byProp = byProp.filter(p => activeProps.has(p.name));
-      } else {
-        // 해당 권역 전체
-        byProp = byProp.filter(p => p.region === activeRegion);
-      }
-      // 필터된 사업장 기준으로 summary 재계산
-      summary = summaryFromProps(byProp);
-    }
+  const view = { ...rawData, summary, byProperty: byProp };
+  renderPivot(view);
+  updateKPIs(view);
 
-    const view = { ...rawData, summary, byProperty: byProp };
-    renderPivot(view);
-    updateKPIs(view);
-  }
-  // Chart도 권역/사업장 필터 반영
-  buildMonthlyChart(rawData, activeRegion, activeProps, activeSegs);
-  renderYoyPropertyTable();
+  // 월별 차트: 세그 + 담당자 담당 사업장 필터 (filterRegion 센티넬 '__mgr__')
+  buildMonthlyChart(rawData, '__mgr__', mgrProps, new Set([seg]));
+  // 차트 타이틀을 담당자 기준으로 덮어쓰기
+  const titleEl = document.getElementById('monthly-chart-title');
+  if (titleEl) titleEl.textContent = '월별 RNS 실적 vs 목표 vs 전년(동기간) — ' + segLabel + (mgr ? ' · ' + mgr.name : '');
 }
 
 
@@ -2150,6 +2022,17 @@ function renderYoyPropertyTable() {
 }
 
 // ─── MAIN LOAD ───
+async function loadManagerMap() {
+  try {
+    const res = await fetch('data/sales_manager_map.json?t=' + Date.now());
+    if (res.ok) managerMap = await res.json();
+  } catch (e) { console.error('manager map load failed:', e); }
+  if (!managerMap) managerMap = { 'OTA': [], 'G-OTA': [], 'Inbound': [] };
+  allPropNames = (rawData && rawData.byProperty ? rawData.byProperty : []).map(p => p.name);
+  const mgrs = managerMap[activeSeg] || [];
+  if (mgrs.length) activeManager = mgrs[0].name;
+}
+
 async function loadData() {
   try {
     // otb_data.json + rm_fcst_trend.json 병렬 fetch (RM FCST 열용)
@@ -2160,6 +2043,7 @@ async function loadData() {
     ]);
     if (!otbRes.ok) throw new Error('fetch failed: ' + otbRes.status);
     rawData = await otbRes.json();
+    await loadManagerMap();
     render(rawData);
   } catch (e) {
     console.error('OTB data load failed:', e);

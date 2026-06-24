@@ -3012,6 +3012,24 @@ def main():
     else:
         logger.info("  otb.html 없음 - 스킵")
 
+    # ── sales-kpi.html(세일즈 KPI 현황 리포트) 빌드 ──
+    # otb.html을 담당자 축으로 복제한 페이지. make_sales_kpi.py로 otb.html에서 재생성 후
+    # 공통 주입(외부링크·날짜 등) 적용. 매핑은 docs/data/sales_manager_map.json(config) 런타임 fetch.
+    try:
+        import subprocess as _sp
+        _sp.run(["python3", str(ROOT / "scripts" / "make_sales_kpi.py")], check=True)
+        logger.info("✓ sales-kpi.html 재생성 (make_sales_kpi.py)")
+    except Exception as e:
+        logger.warning(f"  sales-kpi.html 재생성 실패(스킵): {e}")
+    SALES_KPI_FILE = DOCS_DIR / "sales-kpi.html"
+    if SALES_KPI_FILE.exists():
+        sk_html = SALES_KPI_FILE.read_text(encoding="utf-8")
+        sk_html = _apply_common_injections(sk_html, notes, data, comp_data, weekly_data, now, otb_data=otb_data)
+        SALES_KPI_FILE.write_text(sk_html, encoding="utf-8")
+        logger.info(f"✓ sales-kpi.html 빌드 완료 ({len(sk_html):,} bytes)")
+    else:
+        logger.info("  sales-kpi.html 없음 - 스킵")
+
     # ── docs/data/db_aggregated.json에 net_daily·monthly_total 동기화 ──
     # 프론트엔드 JS가 docs/data/db_aggregated.json을 fetch하므로,
     # 원본(data/db_aggregated.json)의 net_daily·monthly_total을 항상 동기화해야 함
