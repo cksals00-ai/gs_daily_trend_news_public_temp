@@ -201,6 +201,10 @@ resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要
 
 # 안전 push: 거부되면 fetch→merge(--no-edit)→산출물 충돌 자동해소→재push (최대 3회)
 #   반환  0=push성공  1=3회 실패  2=소스충돌(중단要). 데이터 커밋·트리거 커밋 공용.
+#   부수효과: 이번 push에서 merge 커밋(= [skip ci] 없는 커밋)을 원격에 올렸으면
+#   DEPLOY_ALREADY_TRIGGERED=1 로 표시(deploy.yml push 트리거가 이미 발동됨).
+#   → 호출측이 trigger_deploy()의 추가 트리거 커밋을 생략해 중복 빌드를 막는다.
+DEPLOY_ALREADY_TRIGGERED=0
 safe_push() {
     local attempt rc
     for attempt in 1 2 3; do
@@ -221,6 +225,11 @@ safe_push() {
             [ "$rc" -eq 2 ] && return 2
             echo -e "${GREEN}    ✅ 산출물 충돌 자동해소 완료 — 재push${NC}"
         fi
+        # 여기 도달 = push 거부 후 발산을 merge 로 흡수한 경우. 발산 merge 는
+        # 항상 merge 커밋("Merge remote-tracking branch ...", [skip ci] 없음)을
+        # 만들고, 이게 다음 루프의 push 로 원격에 올라가면 deploy.yml 의 push
+        # 트리거가 발동한다. → 이미 빌드가 트리거되므로 플래그를 세운다.
+        DEPLOY_ALREADY_TRIGGERED=1
     done
     return 1
 }
@@ -253,6 +262,8 @@ else
     # [skip ci] 로 GitHub Actions 이중 실행 방지
     git commit -m "chore(auto): daily update ${DATE_KST} KST [skip ci]"
 
+    # 이번 데이터 push 한정으로 트리거 발동 여부 초기화
+    DEPLOY_ALREADY_TRIGGERED=0
     if safe_push; then prc=0; else prc=$?; fi
     if [ "$prc" -eq 2 ]; then
         echo -e "${RED}    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요${NC}"
@@ -268,8 +279,17 @@ else
     echo -e "${GREEN}✅ 푸시 완료${NC}"
     echo "   $STAT"
 
-    # 데이터 push 성공 직후 즉시 배포 트리거
-    trigger_deploy
+    # 데이터 push 성공 직후 즉시 배포 트리거 — 단, 중복 빌드 방지:
+    #   이번 실행에서 이미 merge 커밋([skip ci] 없음)이 원격에 push돼
+    #   deploy.yml 의 push 트리거가 발동됐다면(=빌드 #A) trigger_deploy 의
+    #   추가 트리거 커밋(=빌드 #B)을 생략해 같은 최종상태를 두 번 배포하지 않는다.
+    #   merge 없이 fast-forward(데이터 [skip ci] 커밋만)로 올라가 아무 빌드도
+    #   안 돈 경우에만 trigger_deploy 가 no-skip-ci 트리거 커밋을 올려 1빌드 보장.
+    if [ "$DEPLOY_ALREADY_TRIGGERED" -eq 1 ]; then
+        echo -e "${GREEN}🚀 이미 merge 커밋(no [skip ci])으로 빌드 트리거됨 — 트리거 커밋 생략 (중복 빌드 방지)${NC}"
+    else
+        trigger_deploy
+    fi
 fi
 
 print_header "완료: $(date '+%Y-%m-%d %H:%M:%S')"
