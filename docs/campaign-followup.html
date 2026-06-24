@@ -3,6 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
+<script src="./js/campaign_match.js" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>기획전 실적 팔로업 · SONO GS팀</title>
@@ -138,6 +139,23 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .cdetail td{background:var(--bg-deep);padding:0}
 .cdetail-inner{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px 22px}
 @media(max-width:760px){.cdetail-inner{grid-template-columns:1fr}.ctbl .hide-sm{display:none}}
+/* 유사 과거 실적 패널 */
+.simp{margin:0 18px 16px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:12px 15px}
+.simp-h{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--info);letter-spacing:.03em;margin-bottom:10px}
+.simp-h small{font-size:9px;color:var(--ink-faint);font-weight:600;margin-left:6px}
+.simp-bench{display:flex;gap:10px;margin-bottom:9px}
+.simp-bk{flex:1;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:8px 11px}
+.simp-bk .l{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;margin-bottom:3px}
+.simp-bk .v{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--ink)}.simp-bk .v i{font-size:.6em;color:var(--ink-faint);font-style:normal;margin:0 4px 0 1px}
+.simp-seg{display:flex;height:9px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-bottom:10px}.simp-seg i{display:inline-block;height:100%}
+.simp-list{display:flex;flex-direction:column;gap:8px}
+.simp-row{border-left:2px solid rgba(90,159,196,.45);padding:2px 0 2px 10px}
+.simp-name{font-size:12px;font-weight:700;color:var(--ink-soft);line-height:1.4;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.simp-tag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(201,160,99,.15);color:var(--gold-bright)}
+.simp-tag.product{background:rgba(90,159,196,.15);color:#9ec5dd}
+.simp-stat{font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-top:2px;font-weight:600}.simp-stat b{color:var(--positive);font-weight:800}
+.simp-yr{display:inline-block;background:rgba(255,255,255,.05);border-radius:4px;padding:0 6px;margin-right:3px;color:var(--ink-faint);font-size:10px}
+.simp-foot{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;margin-top:9px;padding-top:8px;border-top:1px solid var(--rule)}
 .empty{background:var(--bg-card);border:1px dashed var(--rule);border-radius:10px;padding:40px;text-align:center;color:var(--ink-faint)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:-4px 0 14px;font-weight:600}
 .legend span{display:flex;align-items:center;gap:5px}
@@ -322,6 +340,38 @@ function kpiMetric(ev){
   return {kr,km};
 }
 
+/* 예전 비슷한 상품/기획전의 실제 실적 (campaign_catalog.json 매칭) */
+function similarPanel(name, property, ev){
+  if(!window.CampaignMatch || !CampaignMatch.catalog) return '';
+  const qtext=[name, ev&&ev['상품'], ev&&ev['상품명'], ev&&ev['채널']].filter(Boolean).join(' ');
+  const opt={property:property, topN:6, minScore:0.2};
+  if(ev&&ev['투숙시작']) opt.months={start:String(ev['투숙시작']).replace(/-/g,''), end:String(ev['투숙종료']||'').replace(/-/g,'')};
+  const matches=CampaignMatch.findSimilar(qtext, opt);
+  if(!matches.length) return `<div class="simp"><div class="simp-h">📊 유사 과거 실적</div><div class="muted-note">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
+  const bm=CampaignMatch.benchmark(matches);
+  const segC=s=>SEG_COLORS[s]||({'대매점':'#c9a063','제휴':'#7a7e85'}[s])||'#6b7280';
+  const segT=bm.segMix.reduce((s,x)=>s+x[1],0)||1;
+  const segBar=bm.segMix.slice(0,6).map(([s,v])=>`<i style="width:${(v/segT*100).toFixed(1)}%;background:${segC(s)}" title="${esc(s)} ${fmtInt(v)}"></i>`).join('');
+  const rows=matches.map(m=>{
+    const yrs=Object.keys(m.by_year||{}).sort().map(y=>`<span class="simp-yr">'${y.slice(2)} ${fmtInt(m.by_year[y].rn)}</span>`).join('');
+    const seg1=m.segs&&m.segs[0]?m.segs[0][0]:'', ag1=m.agents&&m.agents[0]?m.agents[0][0]:'';
+    return `<div class="simp-row" title="유사도 ${(m.score*100).toFixed(0)}%">
+      <div class="simp-name">${m.same?'<b style="color:var(--positive)">●</b> ':''}${esc(m.name)}<span class="simp-tag ${m.type}">${m.type==='campaign'?'기획전':'상품'}</span></div>
+      <div class="simp-stat"><b>${fmtInt(m.rn)}</b>실 · ${fmtM(m.rev_m)}백만 · ${yrs} <span style="color:var(--ink-faint)">${esc(seg1)}${ag1?' · '+esc(ag1):''}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="simp">
+    <div class="simp-h">📊 유사 과거 실적 <small>상품명 기반 매칭 · 2025-26 DB</small></div>
+    <div class="simp-bench">
+      <div class="simp-bk"><span class="l">유사 ${bm.n}건 합산</span><span class="v">${fmtInt(bm.sumRn)}<i>실</i> · ${fmtM(bm.sumRev)}<i>백만</i></span></div>
+      <div class="simp-bk"><span class="l">건당 평균</span><span class="v">${fmtInt(bm.avgRn)}<i>실</i></span></div>
+    </div>
+    <div class="simp-seg">${segBar}</div>
+    <div class="simp-list">${rows}</div>
+    <div class="simp-foot">주요 채널: ${bm.topAgents.slice(0,4).map(a=>esc(a[0])).join(' · ')||'—'}</div>
+  </div>`;
+}
+
 function render(perf, camp, history){
   const byKey=perf.by_key||{};
   const dupCodes=(perf.meta||{}).duplicate_codes||{};
@@ -401,6 +451,7 @@ function render(perf, camp, history){
         <div class="bk"><div class="bk-title"><span class="lead">월별 투숙 RN 추이</span><small>투숙월 기준</small></div>${monthlyTrend(d.by_stay_month)}</div>
         <div class="bk"><div class="bk-title"><span class="lead">최근 픽업 추이</span><small>일별 스냅샷 증감</small></div>${pickupPanel(key,history)}</div>
       </div>
+      ${similarPanel(name, (ev&&(ev['사업장']||ev['구분']))||'', ev)}
     </section>`;
   }).join('');
   document.getElementById('cards').innerHTML=html;
@@ -411,6 +462,7 @@ function render(perf, camp, history){
     const [perf,camp] = await Promise.all([getJSON('campaign_performance.json'),getJSON('campaign_data.json')]);
     let history={snapshots:[]};
     try{ history=await getJSON('campaign_perf_history.json'); }catch(e){ /* 최초엔 없을 수 있음 */ }
+    if(window.CampaignMatch){ try{ await CampaignMatch.load(); }catch(e){ /* 카탈로그 없으면 유사분석 생략 */ } }
     document.getElementById('asof').textContent=todayKST();
     const n=Object.keys(perf.by_key||{}).length;
     document.getElementById('status').textContent=`✓ 기획전 ${n}건 · 스냅샷 ${ (history.snapshots||[]).length }일`;

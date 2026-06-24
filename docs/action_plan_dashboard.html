@@ -3,6 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
+<script src="./js/campaign_match.js" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>주간활동일지 · Action Plan 대시보드</title>
@@ -273,6 +274,27 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .seg-pill.seg-ota{background:rgba(201,160,99,.18);color:var(--gold-bright)}
 .seg-pill.seg-gota{background:rgba(90,159,196,.18);color:#9ec5dd}
 .seg-pill.seg-ib{background:rgba(168,146,200,.18);color:#c4b1d9}
+
+/* 유사 과거 실적 */
+.simperf{margin:10px 14px 4px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:11px 13px}
+.sp-head{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--info);letter-spacing:.03em;margin-bottom:9px;display:flex;align-items:baseline;gap:7px}
+.sp-sub{font-size:9px;color:var(--ink-faint);font-weight:600;letter-spacing:0}
+.sp-empty{font-size:11px;color:var(--ink-faint);font-style:italic}
+.sp-bench{display:flex;gap:10px;margin-bottom:8px}
+.sp-bench-k{flex:1;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:7px 10px}
+.sp-bk-l{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;margin-bottom:2px}
+.sp-bk-v{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--ink)}.sp-bk-v i{font-size:.6em;color:var(--ink-faint);font-style:normal;margin:0 4px 0 1px}
+.sp-segwrap{display:flex;height:8px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-bottom:9px}
+.sp-list{display:flex;flex-direction:column;gap:7px}
+.sp-row{border-left:2px solid rgba(90,159,196,.4);padding:2px 0 2px 9px}
+.sp-name{font-size:11.5px;font-weight:700;color:var(--ink-soft);line-height:1.35;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.sp-tag{font-family:var(--mono);font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:7px;background:rgba(201,160,99,.15);color:var(--gold-bright)}
+.sp-tag.product{background:rgba(90,159,196,.15);color:#9ec5dd}
+.sp-stat{font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-top:2px;font-weight:600}
+.sp-stat b{color:var(--positive);font-weight:800}
+.sp-yr{display:inline-block;background:rgba(255,255,255,.05);border-radius:4px;padding:0 5px;margin-right:3px;color:var(--ink-faint);font-size:9.5px}
+.sp-meta{color:var(--ink-faint)}
+.sp-foot{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);font-weight:600;margin-top:8px;padding-top:7px;border-top:1px solid var(--rule)}
 
 /* Calendar legend */
 .cal-legend{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--ink-muted);font-weight:600;font-family:var(--mono);padding:8px 14px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;margin-bottom:14px}
@@ -1301,7 +1323,46 @@ function renderEventDetail(ev){
       ${ev.actual?`<div class="ed-row"><span class="ed-label">패키지코드</span><span class="ed-val mono">${escapeHtml(ev.actual)}</span></div>`:''}
       ${ev.note?`<div class="ed-divider"></div><div class="ed-row"><span class="ed-label">비고</span><span class="ed-val" style="white-space:pre-wrap">${escapeHtml(ev.note)}</span></div>`:''}
     </div>
+    ${renderSimilarPerf(ev)}
   `;
+}
+
+/* ── 예전 비슷한 상품/기획전의 실제 실적 (campaign_catalog.json 매칭) ── */
+function renderSimilarPerf(ev){
+  if(!window.CampaignMatch || !CampaignMatch.catalog){
+    return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">분석 데이터 로딩 중…</div></div>`;
+  }
+  const qtext=[ev.title,ev.product,ev.channel].filter(Boolean).join(' ');
+  const matches=CampaignMatch.findSimilar(qtext,{property:ev.property,months:{start:ev.stayStart,end:ev.stayEnd},topN:5,minScore:0.2});
+  if(!matches.length){
+    return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
+  }
+  const bm=CampaignMatch.benchmark(matches);
+  const segColor=s=>({'OTA':'#8b5cf6','G-OTA':'#f59e0b','Inbound':'#06b6d4','회원':'#4caf6f','무기명':'#a892c8','D멤버스':'#5a9fc4','대매점':'#c9a063'}[s]||'#6b7280');
+  const fmt=n=>(n||0).toLocaleString('ko-KR');
+  const fmtM=n=>(n||0).toLocaleString('ko-KR',{maximumFractionDigits:0});
+  const segTotal=bm.segMix.reduce((s,x)=>s+x[1],0)||1;
+  const segBar=bm.segMix.slice(0,6).map(([s,v])=>`<span title="${s} ${fmt(v)}실" style="display:inline-block;height:8px;width:${(v/segTotal*100).toFixed(1)}%;background:${segColor(s)}"></span>`).join('');
+  const rows=matches.map(m=>{
+    const yrs=Object.keys(m.by_year||{}).sort();
+    const yhtml=yrs.map(y=>`<span class="sp-yr">${y.slice(2)}:${fmt(m.by_year[y].rn)}</span>`).join('');
+    const seg1=(m.segs&&m.segs[0])?m.segs[0][0]:'';
+    const ag1=(m.agents&&m.agents[0])?m.agents[0][0]:'';
+    return `<div class="sp-row" title="유사도 ${(m.score*100).toFixed(0)}% · ${escapeHtml(m.name)}">
+      <div class="sp-name">${m.same?'<b style="color:var(--positive)">●</b> ':''}${escapeHtml(m.name)}<span class="sp-tag ${m.type}">${m.type==='campaign'?'기획전':'상품'}</span></div>
+      <div class="sp-stat"><b>${fmt(m.rn)}</b>실 · ${fmtM(m.rev_m)}백만 · ${yhtml} <span class="sp-meta">${escapeHtml(seg1)}${ag1?' · '+escapeHtml(ag1):''}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="simperf">
+    <div class="sp-head">📊 유사 과거 실적 <span class="sp-sub">상품명 기반 매칭 · 2025-26 DB</span></div>
+    <div class="sp-bench">
+      <div class="sp-bench-k"><span class="sp-bk-l">유사 ${bm.n}건 합산</span><span class="sp-bk-v">${fmt(bm.sumRn)}<i>실</i> · ${fmtM(bm.sumRev)}<i>백만</i></span></div>
+      <div class="sp-bench-k"><span class="sp-bk-l">건당 평균</span><span class="sp-bk-v">${fmt(bm.avgRn)}<i>실</i></span></div>
+    </div>
+    <div class="sp-segwrap" title="유사 상품 세그 믹스">${segBar}</div>
+    <div class="sp-list">${rows}</div>
+    <div class="sp-foot">채널: ${bm.topAgents.slice(0,4).map(a=>escapeHtml(a[0])).join(' · ')||'—'}</div>
+  </div>`;
 }
 
 function renderEventCards(events){
@@ -1545,6 +1606,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     .then(()=>loadKpiData())
     .then(()=>loadCSV());
   loadOTBData();
+  // 유사 과거 실적 카탈로그 — 로드되면 선택된 기획전 상세 재렌더
+  if(window.CampaignMatch){ CampaignMatch.load().then(()=>{ if(selectedEventIdx!=null)render(); }).catch(()=>{}); }
 });
 </script>
 

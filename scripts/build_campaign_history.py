@@ -21,7 +21,7 @@ CLI: --years 2025,2026 (기본) | --years all
 """
 from __future__ import annotations
 import fs_utils  # macOS NFD→NFC
-import os, sys, json, glob, argparse, logging
+import os, sys, json, glob, argparse, logging, re, math
 from pathlib import Path
 from collections import defaultdict
 
@@ -34,6 +34,24 @@ logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 OUTPUT_JSON = PROJECT_DIR / "docs" / "data" / "campaign_history.json"
+CATALOG_JSON = PROJECT_DIR / "docs" / "data" / "campaign_catalog.json"
+
+# ── 유사도 매칭용 토크나이저 (JS campaign_match.js 와 동일 규칙 유지) ──
+_TOK_BRACKET = re.compile(r"[\[\(#<][^\]\)#>]*[\]\)#>]")          # [..] (..) #..# <..>
+_TOK_NOISE   = re.compile(r"\bg-?ota\d*\b|\bota\d*\b|\bg\d{1,2}\b|\b\d{2}y\b", re.I)
+_TOK_SPLIT   = re.compile(r"[^가-힣a-z0-9]+", re.I)
+STOPWORDS = set("pkg ota gota g15 ro hp cc 패키지 코드 전체 전체번호 상품 통합 정규 객실 룸 박 "
+                "nights night 2nights 전사 외 등 및 the and for".split())
+
+def tokenize(name: str):
+    s = (name or "").lower()
+    s = _TOK_BRACKET.sub(" ", s)
+    s = _TOK_NOISE.sub(" ", s)
+    out = []
+    for t in _TOK_SPLIT.split(s):
+        if len(t) >= 2 and t not in STOPWORDS and not t.isdigit():
+            out.append(t)
+    return out
 
 ALL_YEARS = ["2022", "2023", "2024", "2025", "2026"]
 PRODUCT_MIN_RN = 10        # by_product 보관 임계 (long tail 은 _tail 집계로만)
@@ -269,6 +287,66 @@ def main():
     logger.info(f"✓ 저장: {OUTPUT_JSON}")
     logger.info(f"  기획전(패키지분류) {len(camp_out)}개 / 상품계열 {len(prod_out)}개(+tail {len(prod_tail)}) / "
                 f"총 RN {total_rows:,}")
+
+    # ── 유사도 매칭용 카탈로그 (압축·토큰화) ──
+    build_catalog(camp_out, prod_out)
+
+
+def build_catalog(camp_out, prod_out):
+    """campaign_history 의 노드들을 유사도 매칭용으로 압축: 토큰 + idf + 핵심 실적."""
+    def mm_set(node):
+        return sorted({m[4:6] for m in node.get("by_stay_month", {}) if len(m) >= 6})
+    def top_dim(d, n=3):
+        return [[k, v["rn"]] for k, v in list(d.items())[:n] if k != "_tail"]
+
+    entries = []
+    for name, node in camp_out.items():
+        toks = tokenize(name)
+        if not toks:
+            continue
+        entries.append({
+            "name": name, "type": "campaign", "tokens": toks,
+            "rn": node["rn"], "rev_m": node["room_rev_m"], "adr": node["adr"],
+            "by_year": node["by_year"], "months": mm_set(node),
+            "prop": next(iter(node["by_property"]), ""),
+            "segs": top_dim(node["by_segment"]), "agents": top_dim(node["by_agent"]),
+        })
+    # 상품계열은 RN 상위 + 의미토큰 보유한 것만(노이즈 억제), 최대 300
+    prod_sorted = sorted(prod_out.items(), key=lambda kv: -kv[1]["rn"])
+    pc = 0
+    for name, node in prod_sorted:
+        if pc >= 300:
+            break
+        toks = tokenize(name)
+        if len(toks) < 1:
+            continue
+        entries.append({
+            "name": name, "type": "product", "tokens": toks,
+            "rn": node["rn"], "rev_m": node["room_rev_m"], "adr": node["adr"],
+            "by_year": node["by_year"], "months": mm_set(node),
+            "prop": next(iter(node["by_property"]), ""),
+            "segs": top_dim(node["by_segment"]), "agents": top_dim(node["by_agent"]),
+        })
+        pc += 1
+
+    # idf (엔트리 토큰 집합 기준)
+    N = len(entries)
+    df = defaultdict(int)
+    for e in entries:
+        for t in set(e["tokens"]):
+            df[t] += 1
+    idf = {t: round(math.log((N + 1) / (c + 1)) + 1.0, 4) for t, c in df.items()}
+
+    catalog = {
+        "meta": {"entries": N, "campaigns": sum(1 for e in entries if e["type"] == "campaign"),
+                 "products": sum(1 for e in entries if e["type"] == "product"),
+                 "default_idf": round(math.log(N + 1) + 1.0, 4),
+                 "note": "유사도 매칭용 토큰 카탈로그 / score=Σidf(공통토큰)/Σidf(질의토큰)+사업장·시즌 보정"},
+        "idf": idf,
+        "entries": entries,
+    }
+    CATALOG_JSON.write_text(json.dumps(catalog, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    logger.info(f"✓ 카탈로그: {CATALOG_JSON.name} ({N}엔트리, idf {len(idf)}토큰)")
 
 
 if __name__ == "__main__":
