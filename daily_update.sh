@@ -156,6 +156,7 @@ run_quick "7/12 generate_otb_data"          "scripts/generate_otb_data.py"
 run_quick "8/12 generate_insights"          "scripts/generate_insights.py"
 run_quick "9/12 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
 run_quick "10/12 parse_campaign86"          "scripts/parse_campaign86.py"
+run_quick "10b/12 campaign_history"         "scripts/build_campaign_history.py"
 run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
 
 # ── [12/12] HTML 빌드 ──────────────────────────────────────────

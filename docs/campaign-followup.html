@@ -110,6 +110,34 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .spark-bar{flex:1;background:rgba(90,159,196,.5);border-radius:1px;min-height:2px}
 .muted-note{font-size:11px;color:var(--ink-faint);font-style:italic;padding:6px 0}
 
+/* DB cube section */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.sec-head h2{font-size:15px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.sec-head h2::before{content:'';width:4px;height:16px;background:var(--info);border-radius:2px;display:inline-block}
+.sec-head .sec-desc{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600}
+.cube-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.cube-search{background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink);font-size:12px;padding:6px 10px;outline:none;min-width:220px;flex:1;max-width:340px}
+.cube-search:focus{border-color:var(--info)}
+.cube-sort{background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;color:var(--ink-muted);font-size:11px;font-weight:600;padding:6px 9px;outline:none;cursor:pointer}
+.cube-count{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;margin-left:auto}
+.ctbl{width:100%;border-collapse:collapse;font-size:12px}
+.ctbl th{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.06em;text-align:right;padding:7px 9px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;cursor:pointer;user-select:none}
+.ctbl th.l{text-align:left}
+.ctbl th:hover{color:var(--ink-soft)}
+.ctbl td{padding:8px 9px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);white-space:nowrap}
+.ctbl td.l{text-align:left;font-family:var(--sans);font-weight:600;color:var(--ink);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctbl tr.crow{cursor:pointer;transition:background .12s}
+.ctbl tr.crow:hover{background:rgba(255,255,255,.03)}
+.ctbl tr.crow.open{background:rgba(90,159,196,.08)}
+.ctbl .rnv{color:var(--positive);font-weight:700}
+.ctbl .rvv{color:var(--gold-bright);font-weight:700}
+.yoy{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
+.yoy.up{background:rgba(76,175,111,.15);color:var(--positive)}.yoy.down{background:rgba(229,115,115,.15);color:var(--negative)}.yoy.flat{background:rgba(122,126,133,.15);color:var(--ink-muted)}
+.segmini{display:inline-flex;height:9px;width:120px;border-radius:3px;overflow:hidden;vertical-align:middle;background:rgba(255,255,255,.05)}
+.segmini i{height:100%;display:inline-block}
+.cdetail td{background:var(--bg-deep);padding:0}
+.cdetail-inner{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px 22px}
+@media(max-width:760px){.cdetail-inner{grid-template-columns:1fr}.ctbl .hide-sm{display:none}}
 .empty{background:var(--bg-card);border:1px dashed var(--rule);border-radius:10px;padding:40px;text-align:center;color:var(--ink-faint)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:-4px 0 14px;font-weight:600}
 .legend span{display:flex;align-items:center;gap:5px}
@@ -164,6 +192,29 @@ footer{margin-top:40px;padding:18px 0;border-top:1px solid var(--rule);text-alig
 
   <div class="legend" id="legend"></div>
   <div class="sum-grid" id="summary"></div>
+
+  <!-- DB 큐브: 패키지분류 기준 기획전 실적 (코드등록 불필요) -->
+  <div class="sec-head">
+    <h2>DB 기획전 실적 <span style="font-size:11px;color:var(--ink-faint);font-weight:600">패키지분류 기준</span></h2>
+    <div class="sec-desc" id="cube-meta">—</div>
+  </div>
+  <div class="cube-tools" id="cube-tools" style="display:none">
+    <input class="cube-search" id="cube-search" type="text" placeholder="기획전명 검색 (예: 비발디, 얼리버드, 올인클루시브)">
+    <select class="cube-sort" id="cube-sort">
+      <option value="rn">정렬: RN ↓</option>
+      <option value="rev">정렬: 매출 ↓</option>
+      <option value="yoy">정렬: YoY 증감 ↓</option>
+      <option value="name">정렬: 이름</option>
+    </select>
+    <span class="cube-count" id="cube-count"></span>
+  </div>
+  <div id="cube-table"></div>
+
+  <!-- 시트 등록 기획전 (86코드 정밀매칭) -->
+  <div class="sec-head" style="margin-top:30px">
+    <h2 style="--ac:var(--gold)"><span style="width:4px;height:16px;background:var(--gold);border-radius:2px;display:inline-block;margin-right:-2px"></span>시트 등록 기획전 <span style="font-size:11px;color:var(--ink-faint);font-weight:600">86코드 정밀매칭</span></h2>
+    <div class="sec-desc">구글시트 Key 서브시트에 등록된 패키지코드 기준 · 세그/사업장/채널 합 정합</div>
+  </div>
   <div id="cards"></div>
 
   <footer>
@@ -367,6 +418,129 @@ function render(perf, camp, history){
     document.getElementById('status').textContent='✗ 로드 실패: '+e.message;
     document.getElementById('cards').innerHTML='<div class="empty">데이터 로드 실패: '+esc(e.message)+'</div>';
   }
+})();
+
+/* ───────────── DB 큐브: 패키지분류 기준 기획전 실적 ───────────── */
+(function(){
+  const SEGC={'OTA':'var(--ota)','G-OTA':'var(--gota)','Inbound':'var(--inbound)','회원':'var(--member)','무기명':'var(--anon)','D멤버스':'var(--dmem)','대매점':'#c9a063','제휴':'#7a7e85','임차':'#5a6068','미분류':'#4a4f57'};
+  const segColor=s=>SEGC[s]||'#6b7280';
+  let CUBE=null, ROWS=[], sortKey='rn', query='';
+
+  function yoyOf(node){
+    const y=node.by_year||{};
+    const a=y['2025'], b=y['2026'];
+    if(a&&b&&a.rn>0) return {pct:(b.rn-a.rn)/a.rn*100, a:a.rn, b:b.rn, both:true};
+    if(b&&!a) return {pct:null,a:0,b:b.rn,both:false,onlyNew:true};
+    if(a&&!b) return {pct:null,a:a.rn,b:0,both:false,onlyOld:true};
+    return {pct:null,both:false};
+  }
+  function segMini(by_segment, rn){
+    if(!rn) return '';
+    const ent=Object.entries(by_segment||{});
+    return '<span class="segmini">'+ent.map(([s,v])=>`<i style="width:${(v.rn/rn*100).toFixed(1)}%;background:${segColor(s)}" title="${esc(s)} ${fmtInt(v.rn)}실"></i>`).join('')+'</span>';
+  }
+  function barRowsCube(dim, rn, opts){
+    opts=opts||{};
+    const ent=Object.entries(dim||{}).filter(([k])=>k!=='_tail');
+    if(!ent.length) return '<div class="muted-note">데이터 없음</div>';
+    const max=Math.max(...ent.map(([,v])=>v.rn))||1;
+    const tail=(dim||{})._tail;
+    let html='<div class="bars">'+ent.map(([label,v])=>{
+      const w=(v.rn/max*100), pct=rn?(v.rn/rn*100):0;
+      const col=opts.seg?segColor(label):'linear-gradient(90deg,var(--gold),var(--gold-bright))';
+      const dot=opts.seg?`<span class="dot" style="background:${segColor(label)}"></span>`:'';
+      return `<div class="bar-row" title="${esc(label)} · RN ${fmtInt(v.rn)} · ${fmtM(v.rev_m)}백만"><div class="bar-label">${dot}${esc(label)}</div><div class="bar-wrap"><div class="bar-fill" style="width:${w.toFixed(1)}%;background:${col}"></div></div><div class="bar-val">${fmtInt(v.rn)}<span class="pct">${pct.toFixed(0)}%</span></div></div>`;
+    }).join('');
+    if(tail) html+=`<div class="bar-row" style="opacity:.6"><div class="bar-label">그 외 ${tail._count}개</div><div class="bar-wrap"></div><div class="bar-val">${fmtInt(tail.rn)}</div></div>`;
+    return html+'</div>';
+  }
+  function monthlyMini(byStay){
+    const ent=Object.entries(byStay||{}).filter(([m])=>/^\d{6}$/.test(m)).sort();
+    if(!ent.length) return '<div class="muted-note">월별 없음</div>';
+    const max=Math.max(...ent.map(([,v])=>v))||1;
+    return '<div class="mtrend">'+ent.map(([m,v])=>`<div class="mbar" title="${m}: ${fmtInt(v)}"><div class="mbar-cap">${fmtInt(v)}</div><div class="mbar-fill" style="height:${Math.max(2,v/max*72)}px"></div><div class="mbar-lab">${m.slice(2,4)}.${m.slice(4,6)}</div></div>`).join('')+'</div>';
+  }
+  function detailHTML(node){
+    const y=node.by_year||{};
+    const yrs=Object.keys(y).sort().map(yr=>`${yr}: ${fmtInt(y[yr].rn)}실 / ${fmtM(y[yr].rev_m)}백만`).join('　·　');
+    return `<div class="cdetail-inner">
+      <div class="bk"><div class="bk-title"><span class="lead">세그먼트</span><small>RN·점유</small></div>${barRowsCube(node.by_segment,node.rn,{seg:true})}</div>
+      <div class="bk"><div class="bk-title"><span class="lead">거래처(채널)</span><small>상위 ${'30'}+그외</small></div>${barRowsCube(node.by_agent,node.rn)}</div>
+      <div class="bk"><div class="bk-title"><span class="lead">사업장</span><small>RN·점유</small></div>${barRowsCube(node.by_property,node.rn)}</div>
+      <div class="bk" style="grid-column:1/-1"><div class="bk-title"><span class="lead">월별 투숙 RN</span><small>연도별 ${esc(yrs)}</small></div>${monthlyMini(node.by_stay_month)}</div>
+    </div>`;
+  }
+  function yoyChip(yy){
+    if(yy.both){
+      const cls=yy.pct>2?'up':(yy.pct<-2?'down':'flat');
+      return `<span class="yoy ${cls}" title="2025 ${fmtInt(yy.a)} → 2026 ${fmtInt(yy.b)}">${yy.pct>0?'+':''}${yy.pct.toFixed(0)}%</span>`;
+    }
+    if(yy.onlyNew) return `<span class="yoy flat" title="2026 신규">신규</span>`;
+    if(yy.onlyOld) return `<span class="yoy flat" title="2025만">'25</span>`;
+    return '<span class="yoy flat">—</span>';
+  }
+  function renderTable(){
+    let rows=ROWS.slice();
+    if(query){ const q=query.toLowerCase(); rows=rows.filter(r=>r.name.toLowerCase().includes(q)); }
+    rows.sort((a,b)=>{
+      if(sortKey==='name') return a.name<b.name?-1:1;
+      if(sortKey==='rev') return b.node.room_rev_m-a.node.room_rev_m;
+      if(sortKey==='yoy'){ const pa=a.yoy.pct==null?-999:a.yoy.pct, pb=b.yoy.pct==null?-999:b.yoy.pct; return pb-pa; }
+      return b.node.rn-a.node.rn;
+    });
+    document.getElementById('cube-count').textContent=`${rows.length}개 표시`;
+    if(!rows.length){ document.getElementById('cube-table').innerHTML='<div class="empty">검색 결과 없음</div>'; return; }
+    const body=rows.map((r,i)=>{
+      const n=r.node;
+      const top2=Object.entries(n.by_agent||{}).filter(([k])=>k!=='_tail').slice(0,2).map(([k])=>esc(k)).join(', ');
+      return `<tr class="crow" data-i="${r.idx}"><td class="l" title="${esc(r.name)}">${esc(r.name)}</td>
+        <td class="rnv">${fmtInt(n.rn)}</td><td class="rvv">${fmtM(n.room_rev_m)}</td>
+        <td>${yoyChip(r.yoy)}</td><td class="hide-sm">${segMini(n.by_segment,n.rn)}</td>
+        <td class="l hide-sm" style="color:var(--ink-muted);font-size:10.5px">${top2||'—'}</td></tr>`;
+    }).join('');
+    document.getElementById('cube-table').innerHTML=
+      `<table class="ctbl"><thead><tr>
+        <th class="l" data-k="name">기획전명</th><th data-k="rn">RN(실)</th><th data-k="rev">매출(백만)</th>
+        <th data-k="yoy">YoY</th><th class="hide-sm">세그mix</th><th class="l hide-sm">주요 거래처</th>
+      </tr></thead><tbody>${body}</tbody></table>`;
+    // sort header
+    document.querySelectorAll('.ctbl th[data-k]').forEach(th=>th.onclick=()=>{
+      const k=th.getAttribute('data-k'); sortKey=(k==='rev')?'rev':(k==='yoy')?'yoy':(k==='name')?'name':'rn';
+      document.getElementById('cube-sort').value=(sortKey==='rev')?'rev':(sortKey==='yoy')?'yoy':(sortKey==='name')?'name':'rn';
+      renderTable();
+    });
+    // expand
+    document.querySelectorAll('.ctbl tr.crow').forEach(tr=>tr.onclick=()=>{
+      const next=tr.nextElementSibling;
+      if(next&&next.classList.contains('cdetail')){ next.remove(); tr.classList.remove('open'); return; }
+      document.querySelectorAll('.ctbl tr.cdetail').forEach(d=>d.remove());
+      document.querySelectorAll('.ctbl tr.crow.open').forEach(o=>o.classList.remove('open'));
+      const idx=+tr.getAttribute('data-i'); const node=CUBE.by_campaign[ROWS.find(r=>r.idx===idx).name];
+      const det=document.createElement('tr'); det.className='cdetail';
+      det.innerHTML=`<td colspan="6">${detailHTML(node)}</td>`;
+      tr.after(det); tr.classList.add('open');
+    });
+  }
+  async function load(){
+    try{
+      const r=await fetch('data/campaign_history.json',{cache:'no-store'});
+      if(!r.ok) throw new Error('campaign_history.json '+r.status);
+      CUBE=await r.json();
+    }catch(e){
+      document.getElementById('cube-meta').textContent='큐브 미생성 (build_campaign_history.py 실행 필요)';
+      document.getElementById('cube-table').innerHTML=`<div class="empty">DB 기획전 큐브 없음 — <code>python3 scripts/build_campaign_history.py</code> 후 표시됩니다.<br><span style="font-size:11px">${esc(e.message)}</span></div>`;
+      return;
+    }
+    const m=CUBE.meta||{};
+    const segMix=Object.entries(CUBE.segments||{}).slice(0,4).map(([s,v])=>`${s} ${fmtInt(v.rn)}`).join(' · ');
+    document.getElementById('cube-meta').innerHTML=`연도 ${esc((m.years||[]).join('·'))} · 기획전 <strong style="color:var(--info)">${m.campaigns}</strong>개 · 집계 ${fmtInt(m.total_rows)}행 · 패키지분류 공란 ${fmtInt(m.rows_without_campaign)}행은 상품계열로만`;
+    ROWS=Object.keys(CUBE.by_campaign||{}).map((name,i)=>({idx:i,name,node:CUBE.by_campaign[name],yoy:yoyOf(CUBE.by_campaign[name])}));
+    document.getElementById('cube-tools').style.display='flex';
+    document.getElementById('cube-search').addEventListener('input',e=>{query=e.target.value.trim();renderTable();});
+    document.getElementById('cube-sort').addEventListener('change',e=>{sortKey=e.target.value;renderTable();});
+    renderTable();
+  }
+  load();
 })();
 </script>
 </body>

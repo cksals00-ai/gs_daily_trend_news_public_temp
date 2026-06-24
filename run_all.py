@@ -17,6 +17,8 @@ steps = [
     ("STEP5c", "parse_package_trend.py",            False),
     # 기획전 #196 실적 데이터 (campaign86_data.json) — 실패해도 파이프라인 계속
     ("STEP5d", "parse_campaign86.py",               True),
+    # 기획전·상품 실적 매핑 큐브 (회원명 백본, 패키지분류=기획전 / 2025-26) — campaign_history.json
+    ("STEP5e", "build_campaign_history.py",         True),
     ("STEP6",  "generate_insights.py",              False),
     ("STEP7",  "build_validation.py",               False),
     ("STEP8",  "build.py",                          False),
