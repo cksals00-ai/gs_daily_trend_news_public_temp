@@ -3,7 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
-<script src="./js/campaign_match.js?v=2" defer></script>
+<script src="./js/campaign_match.js?v=4" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>주간활동일지 · Action Plan 대시보드</title>
@@ -1338,8 +1338,12 @@ function renderSimilarPerf(ev){
   if(!window.CampaignMatch || !CampaignMatch.catalog){
     return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">분석 데이터 로딩 중…</div></div>`;
   }
-  const qtext=[ev.title,ev.product,ev.channel].filter(Boolean).join(' ');
-  const matches=CampaignMatch.findSimilar(qtext,{property:ev.property,months:{start:ev.stayStart,end:ev.stayEnd},topN:5,minScore:0.2});
+  // 상품 정체성만 질의 (채널 제외 → '협의중' 등 채널 오매칭 방지)
+  const qtext=[ev.title,ev.product].filter(Boolean).join(' ');
+  if(!qtext || CampaignMatch.isActivity(ev.title||ev.product||'')){
+    return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">활동성·미정 항목 — 실적 매칭 대상이 아닙니다.</div></div>`;
+  }
+  const matches=CampaignMatch.findSimilar(qtext,{property:ev.property,months:{start:ev.stayStart,end:ev.stayEnd},topN:5,minScore:0.3});
   if(!matches.length){
     return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
   }

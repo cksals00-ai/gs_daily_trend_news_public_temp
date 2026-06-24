@@ -3,7 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
-<script src="./js/campaign_match.js?v=2" defer></script>
+<script src="./js/campaign_match.js?v=4" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>기획전 실적 팔로업 · SONO GS팀</title>
@@ -349,8 +349,10 @@ function kpiMetric(ev){
 /* 예전 비슷한 상품/기획전 매칭 (campaign_catalog.json) */
 function simMatchesFor(name, property, ev){
   if(!window.CampaignMatch || !CampaignMatch.catalog) return [];
-  const qtext=[name, ev&&ev['상품'], ev&&ev['상품명'], ev&&ev['채널']].filter(Boolean).join(' ');
-  const opt={property:property, topN:6, minScore:0.2};
+  // 상품 정체성만 질의 (채널 제외). 활동성·미정 항목은 매칭 제외.
+  const qtext=[name, ev&&ev['상품'], ev&&ev['상품명']].filter(Boolean).join(' ');
+  if(!qtext || CampaignMatch.isActivity(name||qtext)) return [];
+  const opt={property:property, topN:6, minScore:0.3};
   if(ev&&ev['투숙시작']) opt.months={start:String(ev['투숙시작']).replace(/-/g,''), end:String(ev['투숙종료']||'').replace(/-/g,'')};
   return CampaignMatch.findSimilar(qtext, opt);
 }

@@ -15,6 +15,25 @@
   ('pkg ota gota g15 ro hp cc 패키지 코드 전체 전체번호 상품 통합 정규 객실 룸 박 ' +
    'nights night 2nights 전사 외 등 및 the and for').split(' ').forEach(function (w) { STOP[w] = 1; });
 
+  // 활동/미정 항목(부킹 실적 개념이 없는 마케팅 액션) — 매칭 대상에서 제외
+  var ACTIVITY = ('협의중 미정 tbd lms 발송 구좌 골드박스 메이커스 러쉬 라이브 메인노출 ' +
+    '카테고리 광고 메세지 메시지 동시판매 참여 빅세일 선착순 쿠폰 적립 노출 메인배너 단독노출').split(' ');
+  function isActivity(text) {
+    var t = (text || '').toLowerCase();
+    for (var i = 0; i < ACTIVITY.length; i++) { if (t.indexOf(ACTIVITY[i]) >= 0) return true; }
+    return false;
+  }
+
+  // idf 분포 55퍼센타일 = '구별력 있는 토큰' 임계 (단일 흔한토큰 매칭·제너릭 엔트리 억제용)
+  var _distinct = null;
+  function distinctThreshold() {
+    if (_distinct != null) return _distinct;
+    var vals = []; for (var k in CAT.idf) vals.push(CAT.idf[k]);
+    vals.sort(function (a, b) { return a - b; });
+    _distinct = vals.length ? vals[Math.floor(vals.length * 0.55)] : (CAT.meta.default_idf || 5);
+    return _distinct;
+  }
+
   function tokenize(name) {
     var s = (name || '').toLowerCase().replace(BR, ' ').replace(NOISE, ' ');
     var parts = s.split(SPLIT), out = [];
@@ -65,21 +84,27 @@
     var pTok = opts.property ? propTokens(opts.property) : [];
     var months = Array.isArray(opts.months) ? opts.months
       : (opts.months ? monthsFromRange(opts.months.start, opts.months.end) : []);
-    var topN = opts.topN || 5, minScore = opts.minScore == null ? 0.18 : opts.minScore;
+    var topN = opts.topN || 5, minScore = opts.minScore == null ? 0.30 : opts.minScore;
+    var D = distinctThreshold();
 
     var res = [];
     for (var i = 0; i < CAT.entries.length; i++) {
       var e = CAT.entries[i];
       if (opts.type && e.type !== opts.type) continue;
+      // 제너릭 엔트리(엔트리 최고 idf가 낮음 = 흔한 단어뿐) 억제
+      if (e._spec == null) { e._spec = 0; for (var z = 0; z < e.tokens.length; z++) { var iv = idf[e.tokens[z]] || dflt; if (iv > e._spec) e._spec = iv; } }
+      if (e._spec < D * 0.8) continue;
       var es = e._set || (e._set = e.tokens.reduce(function (a, t) { a[t] = 1; return a; }, {}));
-      var shared = 0, nShared = 0;
-      for (var t in qset) { if (es[t]) { shared += (idf[t] || dflt); nShared++; } }
+      var shared = 0, nShared = 0, soleTok = null;
+      for (var t in qset) { if (es[t]) { shared += (idf[t] || dflt); nShared++; soleTok = t; } }
       if (nShared === 0) continue;
+      // 사업장(거래) 일치 — 같은 사업장의 유사 기획전은 단일 이름토큰이어도 유효
+      var propMatch = false;
+      if (pTok.length && e.prop) { for (var p = 0; p < pTok.length; p++) { if (e.prop.indexOf(pTok[p]) >= 0) { propMatch = true; break; } } }
+      // 단일 공통토큰이면: 구별력 있는 토큰이거나 사업장 일치일 때만 인정 (흔한 토큰 1개 매칭 방지)
+      if (nShared === 1 && (idf[soleTok] || dflt) < D && !propMatch) continue;
       var score = shared / qw;                       // 질의 설명력 0..1
-      // 사업장 보정
-      if (pTok.length) {
-        for (var p = 0; p < pTok.length; p++) { if (e.prop && e.prop.indexOf(pTok[p]) >= 0) { score += 0.15; break; } }
-      }
+      if (propMatch) score += 0.20;                  // 같은 사업장 가중
       // 시즌(월) 보정
       if (months.length && e.months && e.months.length) {
         for (var mi = 0; mi < months.length; mi++) { if (e.months.indexOf(months[mi]) >= 0) { score += 0.10; break; } }
@@ -131,5 +156,6 @@
 
   global.CampaignMatch = { load: load, findSimilar: findSimilar, tokenize: tokenize,
     monthsFromRange: monthsFromRange, benchmark: benchmark, suggestKpi: suggestKpi,
+    isActivity: isActivity,
     get catalog() { return CAT; } };
 })(window);
