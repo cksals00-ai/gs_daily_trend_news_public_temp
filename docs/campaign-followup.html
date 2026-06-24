@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>기획전 실적 팔로업 · SONO GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--apac:#a892c8;--inbound:#06b6d4;--ota:#8b5cf6;--gota:#f59e0b;--member:#4caf6f;--anon:#a892c8;--dmem:#5a9fc4;--red:#ef4444;--green:#22c55e;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;--radius:7px}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px;font-weight:500;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-x:hidden}
+*,*::before,*::after{font-family:inherit}input,button,select{font-family:var(--sans)!important}
+
+/* GSN */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-size:13px;position:sticky;top:0;z-index:200;padding-top:env(safe-area-inset-top,0px)}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+
+/* Masthead */
+.mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:42px;z-index:190}
+.mast-logo{display:flex;align-items:baseline;gap:10px}.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent}.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:20px 18px 70px}
+.page-title{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:4px;font-weight:700}
+.page-title h1{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.page-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600;text-align:right;line-height:1.7}
+.page-meta strong{color:var(--gold-bright);font-weight:700}
+
+/* Summary strip */
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.sum-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:13px 15px;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--gold)}
+.sum-card.c2::before{background:var(--positive)}.sum-card.c3::before{background:var(--info)}.sum-card.c4::before{background:var(--warning)}
+.sum-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;margin-bottom:5px}
+.sum-value{font-family:var(--mono);font-size:23px;font-weight:800;color:var(--gold-bright);line-height:1.1}
+.sum-card.c2 .sum-value{color:var(--positive)}.sum-card.c3 .sum-value{color:var(--info)}.sum-card.c4 .sum-value{color:var(--warning)}
+.sum-unit{font-size:.5em;color:var(--ink-faint);font-weight:600;margin-left:3px}
+.sum-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px;font-weight:600}
+@media(max-width:760px){.sum-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Campaign card */
+.camp{background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.camp-head{padding:15px 18px;border-bottom:1px solid var(--rule);background:linear-gradient(180deg,rgba(201,160,99,.06),transparent)}
+.camp-head-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.camp-name{font-size:16px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.camp-sub{font-family:var(--mono);font-size:11px;color:var(--ink-muted);margin-top:3px;font-weight:600}
+.camp-codes{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+.badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;letter-spacing:.04em;white-space:nowrap}
+.badge.active{background:rgba(76,175,111,.15);color:var(--positive);border:1px solid rgba(76,175,111,.4)}
+.badge.upcoming{background:rgba(90,159,196,.15);color:var(--info);border:1px solid rgba(90,159,196,.4)}
+.badge.ended{background:rgba(122,126,133,.15);color:var(--ink-soft);border:1px solid rgba(122,126,133,.4)}
+.warn-note{margin-top:9px;font-size:11px;color:var(--warning);background:var(--warning-bg);border:1px solid rgba(232,162,86,.35);border-radius:5px;padding:6px 10px;font-weight:600;line-height:1.5}
+
+/* metric strip */
+.metric-row{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-bottom:1px solid var(--rule)}
+.metric{padding:13px 16px;border-right:1px solid var(--rule)}
+.metric:last-child{border-right:none}
+.metric-label{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;margin-bottom:5px}
+.metric-value{font-family:var(--mono);font-size:20px;font-weight:800;line-height:1.05}
+.metric-value .u{font-size:.5em;color:var(--ink-faint);font-weight:600;margin-left:2px}
+.metric.m-rn .metric-value{color:var(--positive)}
+.metric.m-rev .metric-value{color:var(--gold-bright)}
+.metric.m-adr .metric-value{color:var(--info)}
+.metric.m-cancel .metric-value{color:var(--negative)}
+.metric.m-ach .metric-value{color:var(--warning)}
+.metric-sub{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);margin-top:4px;font-weight:600}
+.metric-sub .pos{color:var(--positive)}.metric-sub .neg{color:var(--negative)}
+@media(max-width:760px){.metric-row{grid-template-columns:repeat(2,1fr)}.metric{border-bottom:1px solid var(--rule)}}
+
+/* breakdown panels */
+.camp-body{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:16px 22px}
+.camp-body.wide{grid-template-columns:1fr 1fr 1fr}
+.bk{min-width:0}
+.bk-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);letter-spacing:.05em;margin-bottom:9px;display:flex;align-items:center;gap:6px;justify-content:space-between}
+.bk-title .lead{display:flex;align-items:center;gap:6px}.bk-title .lead::before{content:'';width:3px;height:13px;background:var(--gold);border-radius:2px;display:inline-block}
+.bk-title small{font-size:9px;color:var(--ink-faint);font-weight:600;letter-spacing:0}
+.bars{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto}
+.bars::-webkit-scrollbar{width:6px}.bars::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+.bar-row{display:grid;grid-template-columns:96px 1fr auto;gap:8px;align-items:center;font-size:11px}
+.bar-label{color:var(--ink-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-wrap{background:rgba(255,255,255,.045);border-radius:3px;height:15px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));transition:width .4s}
+.bar-val{font-family:var(--mono);font-size:10px;color:var(--ink-muted);text-align:right;font-weight:700;white-space:nowrap}
+.bar-val .pct{color:var(--ink-faint);margin-left:5px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:1px;flex:none}
+
+/* monthly + pickup */
+.mtrend{display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:6px}
+.mbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.mbar-fill{width:100%;max-width:34px;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-radius:3px 3px 0 0;min-height:2px}
+.mbar-cap{font-family:var(--mono);font-size:9px;color:var(--ink-muted);font-weight:700}
+.mbar-lab{font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:600}
+.pickup-box{display:flex;gap:10px;flex-wrap:wrap}
+.pickup-stat{flex:1;min-width:120px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 12px}
+.pickup-stat .pl{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);font-weight:700;letter-spacing:.05em;margin-bottom:4px}
+.pickup-stat .pv{font-family:var(--mono);font-size:18px;font-weight:800}
+.pickup-stat .pv.pos{color:var(--positive)}.pickup-stat .pv.neg{color:var(--negative)}.pickup-stat .pv.flat{color:var(--ink-muted)}
+.spark{display:flex;align-items:flex-end;gap:2px;height:34px;margin-top:8px}
+.spark-bar{flex:1;background:rgba(90,159,196,.5);border-radius:1px;min-height:2px}
+.muted-note{font-size:11px;color:var(--ink-faint);font-style:italic;padding:6px 0}
+
+.empty{background:var(--bg-card);border:1px dashed var(--rule);border-radius:10px;padding:40px;text-align:center;color:var(--ink-faint)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:-4px 0 14px;font-weight:600}
+.legend span{display:flex;align-items:center;gap:5px}
+footer{margin-top:40px;padding:18px 0;border-top:1px solid var(--rule);text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+@media(max-width:760px){.camp-body,.camp-body.wide{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- GSN -->
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 해운대 by sonofelice 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/external-report.html" data-gsn="external-report">외부 리포트 분석</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='action')hit=h.indexOf('action_plan')!==-1||h.indexOf('campaign-followup')!==-1;if(hit)a.classList.add('active');});})();</script>
+
+<header class="mast">
+  <div class="mast-logo"><span class="mast-name">SONO &amp; TRINITY</span><span class="mast-sub">기획전 실적 팔로업</span></div>
+  <nav style="display:flex;gap:8px">
+    <a href="action_plan_dashboard.html" class="nav-btn">↗ Action Plan</a>
+    <a href="otb.html" class="nav-btn">↗ 실적</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="page-title">
+    <div>
+      <div class="eyebrow">CAMPAIGN PERFORMANCE · FOLLOW-UP</div>
+      <h1>기획전 실적 팔로업</h1>
+    </div>
+    <div class="page-meta">
+      데이터 기준 · <strong id="asof">—</strong><br>
+      <span id="status">⏳ 로딩 중...</span>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="sum-grid" id="summary"></div>
+  <div id="cards"></div>
+
+  <footer>
+    SONO GS팀 · 기획전 실적 팔로업 — 86XX 패키지코드 → DGNS 온북 매칭 · 세그먼트/사업장/채널 분해 합 = 누적 RN(정합)<br>
+    데이터: campaign_performance.json · campaign_data.json · campaign_perf_history.json (일별 스냅샷) — 파이프라인 재빌드 시 자동 갱신
+  </footer>
+</main>
+
+<script>
+const BASE = 'data/';
+const SEG_COLORS = {'OTA':'var(--ota)','G-OTA':'var(--gota)','Inbound':'var(--inbound)','회원':'var(--member)','무기명':'var(--anon)','D멤버스':'var(--dmem)'};
+const SEG_ORDER = ['회원','무기명','D멤버스','OTA','G-OTA','Inbound'];
+
+const fmtInt = n => (n||0).toLocaleString('ko-KR');
+const fmtM = n => (n||0).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function getJSON(f){ const r=await fetch(BASE+f,{cache:'no-store'}); if(!r.ok) throw new Error(f+' '+r.status); return r.json(); }
+
+function eventName(ev){
+  if(!ev) return null;
+  return (ev['노출영역']||ev['상품명']||ev['상품']||ev['채널']||'').trim()||null;
+}
+function todayKST(){ const d=new Date(Date.now()+9*3600*1000); return d.toISOString().slice(0,10); }
+function ymToday(){ return todayKST().slice(0,7).replace('-',''); }
+
+// 데이터(투숙월) 기준 진행상태
+function statusFromStayMonths(byStayMonth){
+  const months = Object.keys(byStayMonth||{}).filter(m=>/^\d{6}$/.test(m)).sort();
+  if(!months.length) return {code:'ended',label:'기간정보 없음'};
+  const t = ymToday(), lo=months[0], hi=months[months.length-1];
+  if(t < lo) return {code:'upcoming',label:'예정'};
+  if(t > hi) return {code:'ended',label:'종료'};
+  return {code:'active',label:'진행중'};
+}
+
+function num(v){ const n=parseFloat(String(v).replace(/[, ]/g,'')); return isFinite(n)?n:null; }
+
+function barRows(dim, opts){
+  opts=opts||{};
+  const entries=Object.entries(dim||{});
+  if(!entries.length) return '<div class="muted-note">데이터 없음</div>';
+  const total=entries.reduce((s,[,v])=>s+v.rn,0)||1;
+  const max=Math.max(...entries.map(([,v])=>v.rn))||1;
+  return '<div class="bars">'+entries.map(([label,v])=>{
+    const pct=(v.rn/total*100);
+    const w=(v.rn/max*100);
+    const color=opts.colorMap&&opts.colorMap[label]?opts.colorMap[label]:'linear-gradient(90deg,var(--gold),var(--gold-bright))';
+    const dot=opts.colorMap?`<span class="dot" style="background:${opts.colorMap[label]||'var(--ink-faint)'}"></span>`:'';
+    return `<div class="bar-row" title="${esc(label)} · RN ${fmtInt(v.rn)} · 매출 ${fmtM(v.rev_m)}백만 · 점유 ${pct.toFixed(1)}%">
+      <div class="bar-label">${dot}${esc(label)}</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${w.toFixed(1)}%;background:${color}"></div></div>
+      <div class="bar-val">${fmtInt(v.rn)}<span class="pct">${pct.toFixed(0)}%</span></div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function monthlyTrend(byStayMonth){
+  const entries=Object.entries(byStayMonth||{}).filter(([m])=>/^\d{6}$/.test(m)).sort((a,b)=>a[0]<b[0]?-1:1);
+  if(!entries.length) return '<div class="muted-note">월별 데이터 없음</div>';
+  const max=Math.max(...entries.map(([,v])=>v))||1;
+  return '<div class="mtrend">'+entries.map(([m,v])=>{
+    const h=(v/max*72);
+    const lab=m.slice(0,4).slice(2)+'.'+m.slice(4,6);
+    return `<div class="mbar" title="${m} · RN ${fmtInt(v)}"><div class="mbar-cap">${fmtInt(v)}</div><div class="mbar-fill" style="height:${Math.max(2,h)}px"></div><div class="mbar-lab">${lab}</div></div>`;
+  }).join('')+'</div>';
+}
+
+function pickupPanel(key, history){
+  const snaps=(history&&history.snapshots||[]).filter(s=>s.by_key&&s.by_key[key]).map(s=>({date:s.date,rn:s.by_key[key].rn}));
+  if(snaps.length<2){
+    return `<div class="muted-note">스냅샷 누적 중 (${snaps.length}일) — 일별 파이프라인이 누적되면 일·주 픽업 증감이 표시됩니다.</div>`;
+  }
+  const last=snaps[snaps.length-1], prev=snaps[snaps.length-2];
+  const dDay=last.rn-prev.rn;
+  // 7일 전(또는 그 이전 최근) 스냅샷
+  const target=new Date(last.date); target.setDate(target.getDate()-7);
+  const tStr=target.toISOString().slice(0,10);
+  let weekRef=null;
+  for(let i=snaps.length-1;i>=0;i--){ if(snaps[i].date<=tStr){ weekRef=snaps[i]; break; } }
+  const dWeek = weekRef ? last.rn-weekRef.rn : null;
+  const cls=v=> v>0?'pos':(v<0?'neg':'flat');
+  const sign=v=> (v>0?'+':'')+fmtInt(v);
+  const max=Math.max(...snaps.map(s=>s.rn))||1, min=Math.min(...snaps.map(s=>s.rn));
+  const spark='<div class="spark">'+snaps.slice(-14).map(s=>{const h=((s.rn-min)/(max-min||1)*30)+2;return `<div class="spark-bar" style="height:${h.toFixed(0)}px" title="${s.date}: ${fmtInt(s.rn)}실"></div>`;}).join('')+'</div>';
+  return `<div class="pickup-box">
+    <div class="pickup-stat"><div class="pl">일 증감 (전일 대비)</div><div class="pv ${cls(dDay)}">${sign(dDay)}<span class="u" style="font-size:.5em;color:var(--ink-faint)">실</span></div></div>
+    <div class="pickup-stat"><div class="pl">주 증감 (7일 대비)</div><div class="pv ${dWeek==null?'flat':cls(dWeek)}">${dWeek==null?'—':sign(dWeek)}<span class="u" style="font-size:.5em;color:var(--ink-faint)">실</span></div></div>
+    <div class="pickup-stat" style="flex:2"><div class="pl">누적 RN 추이 (최근 ${Math.min(14,snaps.length)}일 · ${esc(snaps[0].date)}→${esc(last.date)})</div>${spark}</div>
+  </div>`;
+}
+
+function dupNote(key, dupCodes){
+  if(!dupCodes) return '';
+  const others=new Set();
+  for(const code in dupCodes){ const ks=dupCodes[code]; if(ks.includes(key)) ks.forEach(k=>{if(k!==key)others.add(k);}); }
+  if(!others.size) return '';
+  return `<div class="warn-note">⚠ 패키지코드 중복등록: 동일 코드가 Key ${esc([key,...others].join('·'))} 에 함께 등록되어 있습니다. 본 실적은 <b>첫 등록 Key(${esc(key)})</b>에만 귀속됩니다(이중집계 방지). 시트에서 코드 귀속을 정리하면 더 정확해집니다.</div>`;
+}
+
+function kpiMetric(ev){
+  if(!ev) return null;
+  const kr=num(ev['KPI_RN']), km=num(ev['KPI_REV_M']);
+  return {kr,km};
+}
+
+function render(perf, camp, history){
+  const byKey=perf.by_key||{};
+  const dupCodes=(perf.meta||{}).duplicate_codes||{};
+  const events=camp.events||[];
+  // key → 대표 이벤트 (package_codes 보유 우선)
+  const evByKey={};
+  for(const ev of events){ const k=ev.key; if(!k)continue; if(!evByKey[k]) evByKey[k]=ev; if((ev.package_codes||[]).length && !(evByKey[k].package_codes||[]).length) evByKey[k]=ev; }
+
+  const keys=Object.keys(byKey).sort((a,b)=>byKey[b].rn-byKey[a].rn);
+
+  // 요약
+  const totRn=keys.reduce((s,k)=>s+byKey[k].rn,0);
+  const totRev=keys.reduce((s,k)=>s+byKey[k].rev_m,0);
+  let active=0,ended=0,upcoming=0;
+  keys.forEach(k=>{const st=statusFromStayMonths(byKey[k].by_stay_month).code; if(st==='active')active++;else if(st==='upcoming')upcoming++;else ended++;});
+  document.getElementById('summary').innerHTML=`
+    <div class="sum-card"><div class="sum-label">실적 적재 기획전</div><div class="sum-value">${keys.length}<span class="sum-unit">건</span></div><div class="sum-sub">진행 ${active} · 예정 ${upcoming} · 종료 ${ended}</div></div>
+    <div class="sum-card c2"><div class="sum-label">누적 RN</div><div class="sum-value">${fmtInt(totRn)}<span class="sum-unit">실</span></div><div class="sum-sub">유효 온북(취소 제외) 기준</div></div>
+    <div class="sum-card c3"><div class="sum-label">누적 매출</div><div class="sum-value">${fmtM(totRev)}<span class="sum-unit">백만</span></div><div class="sum-sub">객실료 합 · VAT 포함</div></div>
+    <div class="sum-card c4"><div class="sum-label">코드 매핑</div><div class="sum-value">${fmtInt((perf.meta||{}).total_codes||0)}<span class="sum-unit">개</span></div><div class="sum-sub">매칭행 ${fmtInt((perf.meta||{}).total_matched_rows||0)}</div></div>`;
+
+  document.getElementById('legend').innerHTML='세그먼트 색상: '+SEG_ORDER.map(s=>`<span><span class="dot" style="background:${SEG_COLORS[s]}"></span>${s}</span>`).join('');
+
+  if(!keys.length){ document.getElementById('cards').innerHTML='<div class="empty">실적이 적재된 기획전이 없습니다.<br>Key 서브시트에 패키지코드(86XX)를 발행하면 자동으로 표시됩니다.</div>'; return; }
+
+  const html=keys.map(key=>{
+    const d=byKey[key];
+    const ev=evByKey[key];
+    const name=eventName(ev)||('기획전 '+key);
+    const st=statusFromStayMonths(d.by_stay_month);
+    const sub=[ev&&ev['구분'],ev&&ev['사업장'],ev&&ev['채널']].filter(Boolean).map(esc).join(' · ');
+    const stayMonths=Object.keys(d.by_stay_month||{}).filter(m=>/^\d{6}$/.test(m)).sort();
+    const period=stayMonths.length?`투숙 ${stayMonths[0].slice(0,4)}.${stayMonths[0].slice(4)} ~ ${stayMonths[stayMonths.length-1].slice(0,4)}.${stayMonths[stayMonths.length-1].slice(4)}`:'';
+    const evPeriod=ev&&ev['투숙시작']?`등록기간 ${esc(ev['투숙시작'])}~${esc(ev['투숙종료']||'')}`:'';
+    const adrK=Math.round((d.adr||0)/1000);
+    const kpi=kpiMetric(ev);
+    // segment 정렬: SEG_ORDER 우선, 나머지 뒤
+    const segOrdered={}; const segSrc=d.by_segment||{};
+    SEG_ORDER.forEach(s=>{ if(segSrc[s]) segOrdered[s]=segSrc[s]; });
+    Object.keys(segSrc).forEach(s=>{ if(!(s in segOrdered)) segOrdered[s]=segSrc[s]; });
+
+    let achMetric='';
+    if(kpi && (kpi.kr || kpi.km)){
+      const rnPct = kpi.kr ? (d.rn/kpi.kr*100) : null;
+      const revPct = kpi.km ? (d.rev_m/kpi.km*100) : null;
+      const main = rnPct!=null?rnPct:revPct;
+      achMetric=`<div class="metric m-ach"><div class="metric-label">목표 달성률</div><div class="metric-value">${main.toFixed(0)}<span class="u">%</span></div><div class="metric-sub">목표 ${kpi.kr?fmtInt(kpi.kr)+'실':''}${kpi.kr&&kpi.km?' · ':''}${kpi.km?fmtM(kpi.km)+'백만':''}</div></div>`;
+    } else {
+      achMetric=`<div class="metric m-ach"><div class="metric-label">목표 달성률</div><div class="metric-value" style="color:var(--ink-faint)">—</div><div class="metric-sub">목표 미설정 (시트 KPI 입력 시)</div></div>`;
+    }
+
+    return `<section class="camp">
+      <div class="camp-head">
+        <div class="camp-head-top">
+          <div>
+            <div class="camp-name">${esc(name)}</div>
+            <div class="camp-sub">${sub||('Key '+esc(key))}</div>
+            <div class="camp-codes">Key ${esc(key)} · 패키지코드 ${fmtInt((d.package_codes||[]).length)}개 · ${esc(period)}${evPeriod?' · '+evPeriod:''}</div>
+          </div>
+          <span class="badge ${st.code}">${st.label}</span>
+        </div>
+        ${dupNote(key,dupCodes)}
+      </div>
+      <div class="metric-row">
+        <div class="metric m-rn"><div class="metric-label">누적 RN</div><div class="metric-value">${fmtInt(d.rn)}<span class="u">실</span></div><div class="metric-sub">취소 ${fmtInt(d.cancel_rn)}실</div></div>
+        <div class="metric m-rev"><div class="metric-label">누적 매출</div><div class="metric-value">${fmtM(d.rev_m)}<span class="u">백만</span></div><div class="metric-sub">객실료 합</div></div>
+        <div class="metric m-adr"><div class="metric-label">ADR</div><div class="metric-value">${fmtInt(adrK)}<span class="u">천원</span></div><div class="metric-sub">RN당 객실료</div></div>
+        <div class="metric m-cancel"><div class="metric-label">취소율</div><div class="metric-value">${(d.cancel_rate||0).toFixed(0)}<span class="u">%</span></div><div class="metric-sub">취소실/예약실</div></div>
+        ${achMetric}
+      </div>
+      <div class="camp-body wide">
+        <div class="bk"><div class="bk-title"><span class="lead">세그먼트 분해</span><small>RN · 점유</small></div>${barRows(segOrdered,{colorMap:SEG_COLORS})}</div>
+        <div class="bk"><div class="bk-title"><span class="lead">사업장 분해</span><small>RN · 점유</small></div>${barRows(d.by_property)}</div>
+        <div class="bk"><div class="bk-title"><span class="lead">채널(거래처) 분해</span><small>전 항목</small></div>${barRows(d.by_channel)}</div>
+      </div>
+      <div class="camp-body">
+        <div class="bk"><div class="bk-title"><span class="lead">월별 투숙 RN 추이</span><small>투숙월 기준</small></div>${monthlyTrend(d.by_stay_month)}</div>
+        <div class="bk"><div class="bk-title"><span class="lead">최근 픽업 추이</span><small>일별 스냅샷 증감</small></div>${pickupPanel(key,history)}</div>
+      </div>
+    </section>`;
+  }).join('');
+  document.getElementById('cards').innerHTML=html;
+}
+
+(async function(){
+  try{
+    const [perf,camp] = await Promise.all([getJSON('campaign_performance.json'),getJSON('campaign_data.json')]);
+    let history={snapshots:[]};
+    try{ history=await getJSON('campaign_perf_history.json'); }catch(e){ /* 최초엔 없을 수 있음 */ }
+    document.getElementById('asof').textContent=todayKST();
+    const n=Object.keys(perf.by_key||{}).length;
+    document.getElementById('status').textContent=`✓ 기획전 ${n}건 · 스냅샷 ${ (history.snapshots||[]).length }일`;
+    render(perf,camp,history);
+  }catch(e){
+    document.getElementById('status').textContent='✗ 로드 실패: '+e.message;
+    document.getElementById('cards').innerHTML='<div class="empty">데이터 로드 실패: '+esc(e.message)+'</div>';
+  }
+})();
+</script>
+</body>
+</html>

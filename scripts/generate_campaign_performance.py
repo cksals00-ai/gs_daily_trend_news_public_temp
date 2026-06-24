@@ -22,6 +22,10 @@ import os, json, sys, logging
 from pathlib import Path
 from collections import defaultdict
 
+# 세그먼트/채널/사업장 분류는 parse_campaign86 의 canonical 구현을 재사용
+# (변경예약집계코드 → 회원/무기명/D멤버스/OTA/G-OTA/Inbound; AGENT명 → 거래처; 사업장 정규화)
+from parse_campaign86 import classify_segment, extract_channel, normalize_property
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -95,7 +99,14 @@ def parse_db_file(fpath: Path, is_cancel: bool, code_to_key: dict[str, str], agg
     idx_stay_in = col.get("입실일자", 33)
     idx_rn = col.get("객실수", 28)
     idx_rate = col.get("1박객실료", 26)
+    idx_cprop = col.get("변경사업장명", -1)
     idx_prop = col.get("영업장명", 3)
+    idx_codenum = col.get("변경예약집계코드", -1)
+    idx_codename = col.get("변경예약집계코드명", -1)
+    idx_agent = col.get("AGENT명", -1)
+
+    def _cell(parts, i):
+        return parts[i].strip() if 0 <= i < len(parts) else ""
 
     matched = 0
     for line in lines[1:]:
@@ -127,10 +138,29 @@ def parse_db_file(fpath: Path, is_cancel: bool, code_to_key: dict[str, str], agg
             if sale_date and len(sale_date) >= 6:
                 ym = sale_date[:6]
                 bucket["by_sale_month"][ym] = bucket["by_sale_month"].get(ym, 0) + rn
+            if sale_date and len(sale_date) >= 8:
+                d8 = sale_date[:8]
+                bucket["by_stay_date"][d8] = bucket["by_stay_date"].get(d8, 0) + rn
             stay_in = parts[idx_stay_in].strip() if idx_stay_in < len(parts) else ""
             if stay_in and len(stay_in) >= 6:
                 ym = stay_in[:6]
                 bucket["by_stay_month"][ym] = bucket["by_stay_month"].get(ym, 0) + rn
+
+            # ── 세그먼트 / 사업장 / 채널 분해 (헤드라인 RN·매출과 동일 행에서 집계 → 합 정합) ──
+            code_num = _cell(parts, idx_codenum)
+            code_name = _cell(parts, idx_codename)
+            agent_name = _cell(parts, idx_agent)
+            cprop = _cell(parts, idx_cprop)
+            prop_raw = _cell(parts, idx_prop)
+
+            seg = classify_segment(code_num, code_name, agent_name)
+            prop = normalize_property(cprop) if cprop else normalize_property(prop_raw)
+            chan = extract_channel(agent_name)
+
+            for dim, label in (("by_segment", seg), ("by_property", prop), ("by_channel", chan)):
+                slot = bucket[dim].setdefault(label, {"rn": 0, "rev_won": 0})
+                slot["rn"] += rn
+                slot["rev_won"] += rate
         matched += 1
 
     return matched
@@ -217,6 +247,10 @@ def main():
             "cancel_rev": 0,
             "by_sale_month": {},
             "by_stay_month": {},
+            "by_stay_date": {},
+            "by_segment": {},
+            "by_property": {},
+            "by_channel": {},
         }
     agg: dict[str, dict] = defaultdict(new_bucket)
 
@@ -255,6 +289,17 @@ def main():
     # 주의: 27 데이터는 이미 취소된 건이 빠진 "현재 유효 예약" 상태.
     # 28(취소이력)을 차감하면 이중 차감이 되므로, rn/rev는 booking 그대로 사용.
     # 28은 cancel_rate(참고지표) / 동기간 비교용으로만 별도 유지.
+    def _sorted_dim(d):
+        # {label: {rn, rev_won}} → rn 내림차순 정렬 + rev_m 부가
+        out = {}
+        for label, v in sorted(d.items(), key=lambda kv: -kv[1]["rn"]):
+            out[label] = {
+                "rn": v["rn"],
+                "rev_won": v["rev_won"],
+                "rev_m": round(v["rev_won"] / 1_000_000, 2),
+            }
+        return out
+
     by_key: dict[str, dict] = {}
     for key, b in agg.items():
         rn = b["booking_rn"]
@@ -271,6 +316,10 @@ def main():
             "package_codes": key_to_codes.get(key, []),
             "by_sale_month": dict(sorted(b["by_sale_month"].items())),
             "by_stay_month": dict(sorted(b["by_stay_month"].items())),
+            "by_stay_date": dict(sorted(b["by_stay_date"].items())),
+            "by_segment": _sorted_dim(b["by_segment"]),
+            "by_property": _sorted_dim(b["by_property"]),
+            "by_channel": _sorted_dim(b["by_channel"]),
         }
 
     output = {
@@ -291,6 +340,31 @@ def main():
     logger.info(f"  실적 적재 Key: {len(by_key)}건 / 누적 RN: "
                 f"{sum(v['rn'] for v in by_key.values()):,} / 누적 매출: "
                 f"{sum(v['rev_m'] for v in by_key.values()):,.1f}백만")
+
+    # ── 일별 스냅샷 누적 (진짜 픽업 추이용) ──────────────────────────────
+    # raw_db 의 '판매일자'는 이 피드에서 투숙일자라 신규예약(픽업)을 알 수 없다.
+    # 대신 매일 파이프라인이 돌 때 Key별 누적 RN/매출 스냅샷을 history 에 1행씩 적재 →
+    # 프런트가 day-over-day 증감(일·주 픽업)을 계산한다. 동일 날짜 재실행은 갱신(멱등).
+    write_history(by_key)
+
+
+def write_history(by_key: dict[str, dict]):
+    from datetime import datetime, timezone, timedelta
+    hist_path = DOCS_DATA_DIR / "campaign_perf_history.json"
+    kst_today = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+    try:
+        hist = json.loads(hist_path.read_text(encoding="utf-8")) if hist_path.exists() else {"snapshots": []}
+    except Exception:
+        hist = {"snapshots": []}
+    snaps = [s for s in hist.get("snapshots", []) if s.get("date") != kst_today]  # 오늘자 중복 제거(멱등)
+    snaps.append({
+        "date": kst_today,
+        "by_key": {k: {"rn": v["rn"], "rev_m": v["rev_m"]} for k, v in by_key.items()},
+    })
+    snaps.sort(key=lambda s: s["date"])
+    snaps = snaps[-180:]  # 최근 180일만 보관
+    hist_path.write_text(json.dumps({"snapshots": snaps}, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info(f"✓ 스냅샷 누적: {hist_path.name} ({len(snaps)}일분, today={kst_today})")
 
 
 if __name__ == "__main__":
