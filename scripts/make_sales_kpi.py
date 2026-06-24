@@ -108,6 +108,101 @@ def main():
         html, label="pivot-title",
     )
 
+    # 6b) 동기간 대비 추이 표: 빌드 주입 정적표(전 사업장) → 클라이언트 렌더 컨테이너로 교체.
+    #     마커를 제거해 build.py의 inject_yoy_property_table가 sales-kpi엔 재주입하지 않도록 함.
+    html = must_sub(
+        r"<!-- YOY_PROP_TABLE_START -->.*?<!-- YOY_PROP_TABLE_END -->",
+        lambda m: '<div id="yoy-prop-table-container"></div>',
+        html, flags=re.DOTALL, label="yoy-table-container",
+    )
+    html = must_sub(
+        r'<span class="table-card-title">사업장별 4·5·6월 전년 동기간 대비 추이 \(동기간 보정\)</span>',
+        '<span class="table-card-title">담당 사업장별 전년 동기간 대비 추이 (동기간 보정)</span>',
+        html, label="yoy-table-title",
+    )
+
+    # 6c) renderYoyPropertyTable: 담당자 축(세그+담당 사업장)으로 필터해 클라이언트 렌더
+    new_yoy_fn = r'''function renderYoyPropertyTable() {
+  const container = document.getElementById('yoy-prop-table-container');
+  if (!container) return;
+  if (!rawData || !rawData.yoyTable) { container.innerHTML = ''; return; }
+
+  const seg = activeSeg;
+  const mgrs = managersForSeg(seg);
+  const mgr = mgrs.find(m => m.name === activeManager) || mgrs[0] || null;
+  if (!mgr) { container.innerHTML = ''; return; }
+  const mgrProps = new Set(resolveProps(mgr));
+  const segDef = SEG_DEFS.find(s => s.key === seg);
+  const segLabel = segDef ? segDef.label : seg;
+
+  const yoyTable = rawData.yoyTable;
+  const propRows = yoyTable.filter(r => !r.is_segment && mgrProps.has(r.name));
+  if (!propRows.length) { container.innerHTML = '<p style="font-family:monospace;font-size:11px;color:#888;">데이터 없음</p>'; return; }
+  const months = Object.keys(propRows[0].months || {}).sort((a,b) => +a - +b);
+
+  function arrow(yoy) {
+    if (yoy == null) return '<span style="color:#888;">—</span>';
+    const c = yoy >= 3 ? '#4caf89' : yoy <= -3 ? '#e05555' : '#b0a060';
+    const a = yoy >= 3 ? '▲' : yoy <= -3 ? '↓' : '→';
+    return `<span style="color:${c};font-weight:700;">${a} ${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}%</span>`;
+  }
+
+  let html = '<div style="overflow-x:auto;"><p style="font-family:monospace;font-size:10.5px;color:#888;margin-bottom:8px;">'
+    + '세그먼트: ' + segLabel + ' · 담당자: ' + mgr.name
+    + ' &nbsp;·&nbsp; ▲ 전년(동기간) 대비 개선 / → 유사 / ↓ 부진</p>';
+  html += '<table style="width:100%;border-collapse:collapse;font-family:var(--sans,sans-serif);"><thead><tr>';
+  html += '<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">사업장</th>';
+  for (const m of months) {
+    html += `<th style="padding:8px 10px;font-family:var(--mono,monospace);font-size:11px;font-weight:600;letter-spacing:0.08em;border-bottom:2px solid #555;text-align:left;">${m}월</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (const row of propRows) {
+    html += '<tr>';
+    html += `<td style="padding:8px 10px;border-bottom:1px solid #333;white-space:nowrap;"><span style="font-size:12px;font-weight:600;">${row.name}</span></td>`;
+    for (const m of months) {
+      let cell = '<td style="padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;">';
+      let actSum = 0, lastSum = 0, budSum = 0, rmSum = 0, hasData = false;
+      // 해당 세그먼트 sub-row(parent=사업장, name=세그)
+      const segRow = yoyTable.find(r => r.is_segment && r.parent === row.name && r.name === seg);
+      if (segRow && segRow.months && segRow.months[m]) {
+        const smd = segRow.months[m];
+        actSum += smd.act_rn || 0; lastSum += smd.last_rn || 0; budSum += smd.bud_rn || 0; hasData = true;
+      }
+      if (rmFcstSegments && rmFcstSegments[row.name]) {
+        const mKey = `2026-${String(m).padStart(2,'0')}`;
+        const mEntry = rmFcstSegments[row.name][mKey];
+        if (mEntry && mEntry.segments) {
+          const sd = mEntry.segments[seg];
+          if (sd && sd.rm_fcst_rn != null) rmSum += sd.rm_fcst_rn;
+        }
+      }
+      if (hasData) {
+        const yoy = lastSum > 0 ? ((actSum / lastSum - 1) * 100) : null;
+        cell += `<div style="font-size:12px;">${actSum.toLocaleString()}실</div>`;
+        cell += `<div style="font-size:11px;color:#888;">전년<span style="font-size:0.75em;opacity:0.55;font-weight:normal">(동기간)</span> ${lastSum.toLocaleString()}실</div>`;
+        cell += `<div style="font-size:12px;margin-top:3px;">${arrow(yoy)}</div>`;
+        if (rmSum > 0) {
+          const rmAch = budSum > 0 ? (rmSum / budSum * 100).toFixed(1) + '%' : '';
+          cell += `<div style="font-size:10px;color:#e8a256;margin-top:1px;">RM: ${rmSum.toLocaleString()}실${rmAch ? ' (' + rmAch + ')' : ''}</div>`;
+        }
+      } else {
+        cell += '—';
+      }
+      cell += '</td>';
+      html += cell;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}'''
+    html = must_sub(
+        r"function renderYoyPropertyTable\(\) \{.*?\n  container\.innerHTML = html;\n\}",
+        lambda m: new_yoy_fn,
+        html, flags=re.DOTALL, label="renderYoyPropertyTable",
+    )
+
     # 7) STATE 변수
     html = must_sub(
         r"let activeMonths = new Set\(\[new Date\(\)\.getMonth\(\) \+ 1\]\);\n"
@@ -292,6 +387,9 @@ function applyFilters() {
   // 차트 타이틀을 담당자 기준으로 덮어쓰기
   const titleEl = document.getElementById('monthly-chart-title');
   if (titleEl) titleEl.textContent = '월별 RNS 실적 vs 목표 vs 전년(동기간) — ' + segLabel + (mgr ? ' · ' + mgr.name : '');
+
+  // 동기간 대비 추이 표(담당 사업장만)
+  renderYoyPropertyTable();
 }
 '''
     html = must_sub(
