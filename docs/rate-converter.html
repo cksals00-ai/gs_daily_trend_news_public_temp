@@ -46,6 +46,8 @@ table{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}th,td{bo
   <div class="row3"><div><label>사업장(자동·수정가능)</label><input id="biz" type="text"/></div>
    <div><label>채널(자동·수정가능)</label><input id="chan" type="text"/></div>
    <div><label>수수료(%)</label><input id="fee" type="text" value="13"/></div></div>
+  <label>인원기준 (성인/소인 구체화 — '3인'처럼 뭉뚱그리지 말 것. 예: 성인2인 + 소인1인)</label>
+  <input id="paxBasis" type="text" value="성인2인 + 소인1인"/>
   <button class="go" id="go">AI 변환 &amp; 다운로드 (와이드 양식)</button>
   <div id="status" class="mut" style="margin-top:8px"></div>
   <details><summary>⚙ 서버 설정 (관리자)</summary>
@@ -135,7 +137,7 @@ async function convert(){
 
   $('go').disabled=true;
   $('status').innerHTML='AI가 요금표를 분석 중… <span class=mut>(보통 10~30초)</span>';
-  const meta={ pax:parseInt($('pax').value||'3',10), biz:$('biz').value.trim(), channel:$('chan').value.trim(), feePct:$('fee').value.trim() };
+  const meta={ pax:parseInt($('pax').value||'3',10), biz:$('biz').value.trim(), channel:$('chan').value.trim(), feePct:$('fee').value.trim(), paxBasis:$('paxBasis').value.trim() };
   let j;
   try{
     const r=await fetch(url,{ method:'POST', headers:{'content-type':'application/json'},
@@ -152,7 +154,8 @@ async function convert(){
     const chan=$('chan').value.trim()||m.channel||'채널';
     const fee=$('fee').value.trim()||m.feePct||'13';
     const pax=parseInt($('pax').value||m.pax||'3',10);
-    await buildExcel(data, {biz,chan,fee,pax});
+    const paxBasis=$('paxBasis').value.trim()||m.paxBasis||'성인2인 + 소인1인';
+    await buildExcel(data, {biz,chan,fee,pax,paxBasis});
     renderPreview(data, j.caps);
     $('status').innerHTML='<span class=ok>완료!</span> 다운로드됨 · 행 '+(data.rows||[]).length+'개 / 부대 '+(data.facilityRows||[]).length+'개';
   }catch(e){ $('status').innerHTML='<span class=bad>엑셀 생성 오류: '+e.message+'</span>'; }
@@ -187,7 +190,7 @@ async function buildExcel(data, opt){
   let r=2;
   W(r,1,1,'4. 배분가  ·  '+opt.biz+' x '+opt.chan+' 프로모션 배분가(안)',{b:true,sz:10,al:'left',bd:Bd()});
   W(r,36,4,'[단위: 천원]',{sz:9,bd:Bd()});r++;
-  W(r,1,1,'무기명 기준(회원=무기명) / 수수료 '+opt.fee+'% / '+opt.pax+'인 / 전 객실타입 MIN~MAX / GAP=FIT−회원',{sz:8,al:'left',bd:Bd()});r+=1;
+  W(r,1,1,'무기명 기준(회원=무기명) / 수수료 '+opt.fee+'% / 인원기준: '+opt.paxBasis+' / 전 객실타입 MIN~MAX / GAP=FIT−회원',{sz:8,al:'left',bd:Bd()});r+=1;
   // 헤더
   const H=r;
   W(r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(r,3,1,'구분',{sz:9,grey:true,al:'center'});
@@ -222,13 +225,16 @@ async function buildExcel(data, opt){
 
   // ── 5. 부대시설 상세 ──
   r+=2;
-  W(r,1,1,'5. 부대시설 상세내용  ('+opt.pax+'인 기준, 부대 회원=FIT)',{b:true,sz:10,al:'left',bd:Bd()});
+  W(r,1,1,'5. 부대시설 상세내용  (인원기준: '+opt.paxBasis+', 부대 회원=FIT / 정상가·배분·할인율 모두 동일 인원기준)',{b:true,sz:10,al:'left',bd:Bd()});
   W(r,34,4,'[단위: 천원]',{sz:9,bd:Bd()});r++;
-  // 슬롯(항목) 결정: 등장 순서, 최대 4
-  const slotNames=[]; facRows.forEach(x=>{ if(x.name&&slotNames.indexOf(x.name)<0&&slotNames.length<4) slotNames.push(x.name); });
+  // 슬롯(항목) 결정: 등장 순서, 최대 4. 항목별 기준인원(paxLabel)도 함께.
+  const slotNames=[], slotPax={};
+  facRows.forEach(x=>{ if(x.name&&slotNames.indexOf(x.name)<0&&slotNames.length<4) slotNames.push(x.name);
+    if(x.name&&!slotPax[x.name]&&x.paxLabel) slotPax[x.name]=x.paxLabel; });
+  const slotHdr=nm=>nm+(slotPax[nm]?'\n('+slotPax[nm]+')':' ('+opt.paxBasis+')');
   const H5=r;
   W(r,2,1,'시즌',{sz:9,grey:true,al:'center'});W(r,3,1,'구분',{sz:9,grey:true,al:'center'});
-  slotNames.forEach((nm,i)=>W(r,4+i*9,9,nm,{sz:9,grey:true,al:'center'}));r++;
+  slotNames.forEach((nm,i)=>W(r,4+i*9,9,slotHdr(nm),{sz:9,grey:true,al:'center'}));r++;
   ws.mergeCells(H5,2,r,2);ws.mergeCells(H5,3,r,3);
   slotNames.forEach((_,i)=>['회원','FIT','GAP'].forEach((t,k)=>W(r,4+i*9+k*3,3,t,{sz:9,grey:true,al:'center',bd:Bd('thin','thin','thin','double')})));r++;
   const buckets=['주중','주말'];

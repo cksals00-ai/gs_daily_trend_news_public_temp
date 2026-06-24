@@ -36,8 +36,9 @@ const OUTPUT_SCHEMA = {
         pax: { type: "integer", description: "부대 인원 기준 (보통 2 또는 3)" },
         stayPeriod: { type: "string", description: "투숙기간 문구" },
         productComposition: { type: "string", description: "상품구성 문구" },
+        paxBasis: { type: "string", description: "객실 배분가 인원기준을 성인/소인으로 구체화 (예: '성인2인 + 소인1인'). '3인'처럼 뭉뚱그리지 말 것. 모르면 사용자 입력값 사용." },
       },
-      required: ["biz", "channel", "feePct", "pax", "stayPeriod", "productComposition"],
+      required: ["biz", "channel", "feePct", "pax", "stayPeriod", "productComposition", "paxBasis"],
     },
     // 4. 배분가 원천: 시즌 × 객실라인 단위의 raw 행. 금액은 KRW 원(전체값, 천원 아님).
     rows: {
@@ -70,8 +71,9 @@ const OUTPUT_SCHEMA = {
           name: { type: "string", description: "부대 항목명" },
           normal: { type: "integer", description: "정상가, 원" },
           dist: { type: "integer", description: "배분가, 원" },
+          paxLabel: { type: "string", description: "이 부대 항목의 기준인원을 성인/소인으로 구체화 (예: '성인2인+소인1인', '2인', '성인1인'). 요금표에 적힌 인원 기준 그대로. 정상가·배분·할인율 모두 이 인원기준이 적용됨." },
         },
-        required: ["bucket", "name", "normal", "dist"],
+        required: ["bucket", "name", "normal", "dist", "paxLabel"],
       },
     },
     notes: { type: "string", description: "추출 시 주의/가정/누락 메모 (한국어, 짧게)" },
@@ -92,8 +94,9 @@ const SYSTEM_PROMPT = [
   "4) 시즌 라벨은 주중/금요일/토요일/7-16/하이/골드/스페셜 로 정규화. 연휴=스페셜. 애매하면 가장 가까운 값.",
   "5) 부대(조식/오션월드/곤돌라/음료/액티비티 등): rows 의 facNormalSum/facDistSum 은 '오션기준'(조식 별도)으로 합산하되, 조식 외 부대가 없으면 조식 포함. 부대는 회원=FIT 동일가.",
   "6) facilityRows: 부대 항목별로 주중/주말 각각 정상/배분을 1인 기준이 아니라 '표기 그대로' 넣되, 표가 1인기준이면 pax 를 곱한 값으로 넣습니다(meta.pax 도 같이 채움).",
-  "7) 시트에서 실제로 읽히는 값만 사용합니다. 추정·창작 금지. 없으면 0 또는 빈 문자열, notes 에 사유 기재.",
-  "8) 사업장/채널/수수료/투숙기간/상품구성은 시트 상단 제목·머리말에서 최대한 추출해 meta 에 채웁니다.",
+  "7) 인원기준은 반드시 성인/소인으로 구체화합니다. '3인 기준' 같은 뭉뚱그린 표기 금지 → meta.paxBasis 는 '성인2인 + 소인1인' 처럼, 각 부대 항목의 paxLabel 도 요금표에 적힌 인원기준(성인/소인) 그대로. 정상가·배분가·할인율 모두 동일 인원기준이 적용됨을 전제로 표기합니다.",
+  "8) 시트에서 실제로 읽히는 값만 사용합니다. 추정·창작 금지. 없으면 0 또는 빈 문자열, notes 에 사유 기재.",
+  "9) 사업장/채널/수수료/투숙기간/상품구성은 시트 상단 제목·머리말에서 최대한 추출해 meta 에 채웁니다.",
 ].join("\n");
 
 function corsHeaders(env) {
