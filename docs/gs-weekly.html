@@ -1519,19 +1519,17 @@ function getInboundBudgetByNat(monthIdx) {
 }
 
 // 국가별 분해(인바운드)를 세그먼트 OTB 합계에 정합시킨다.
-// 분해는 inbound_enriched(회원 매핑) 기반이라 세그먼트 OTB(온북, 권위값)와 어긋날 수 있어,
-// 4개국은 비율을 유지하며 스케일하고 기타가 잔여를 흡수해 합이 target과 정확히 일치하게 한다.
+// [원칙] 4개국(홍콩·대만·중국·베트남) = inbound_enriched 의 실제 거래처 국적 net 그대로(비율 스케일 금지).
+//   기타 = 세그먼트 OTB(target) − 4개국 실합 = 그 외 국적 + 국적미상/행사(예: '콩쿨대회' 등 EVENT 제외분) 잔여.
+//   → 명목 국적은 항상 실데이터, 비율 배분하지 않는다. target 없으면 원본 기타 유지.
 function reconcileInboundNat(groups, target) {
   const out = {};
-  const named = IB_NATS.reduce((s, n) => s + (groups[n] || 0), 0);
-  const sum = named + (groups['기타'] || 0);
-  if (sum > 0 && target > 0) {
-    const ratio = target / sum;
-    IB_NATS.forEach(n => out[n] = Math.round((groups[n] || 0) * ratio));
-    out['기타'] = Math.max(0, target - IB_NATS.reduce((s, n) => s + out[n], 0));
+  IB_NATS.forEach(n => out[n] = Math.round(groups[n] || 0));
+  const named = IB_NATS.reduce((s, n) => s + out[n], 0);
+  if (target > 0) {
+    out['기타'] = Math.max(0, Math.round(target) - named);
   } else {
-    IB_NATS.forEach(n => out[n] = groups[n] || 0);
-    out['기타'] = target > 0 ? target : (groups['기타'] || 0);
+    out['기타'] = Math.round(groups['기타'] || 0);
   }
   return out;
 }

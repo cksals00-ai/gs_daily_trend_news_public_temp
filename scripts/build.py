@@ -3157,6 +3157,23 @@ def main():
     # rm_fcst.json(Revenue Meeting) 갱신 시 RM_FCST_정리.xlsx · 소사업_예상매출.xlsx ·
     # 세일즈마케팅_예상매출현황.pptx 를 자동 재계산(소사업 = FCST 객실수 × 전년 실당소사업 비율).
     # scripts/build_sosaup_ratio.py 가 만든 data/sosaup_ratio.json 비율을 사용.
+    # ── 인바운드 국적 enrichment (inbound_enriched.json) 재생성 ──
+    # 거래처명 국적 매핑 기반 인바운드 국적 분해. 미등록 시 stale → 미래월(익월)이
+    # 국적 데이터 없이 전부 기타로 빠지는 문제 발생. 데일리 갱신으로 항상 최신 유지.
+    ibenr_script = Path(__file__).resolve().parent / "build_inbound_enriched.py"
+    if ibenr_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(ibenr_script)],
+                capture_output=True, text=True, timeout=180,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ build_inbound_enriched 완료 (인바운드 국적 enrichment 재생성)")
+            else:
+                logger.warning(f"✗ build_inbound_enriched 실패: {result.stderr.strip()[:300]}")
+        except Exception as e:
+            logger.warning(f"✗ build_inbound_enriched 실행 오류: {e}")
+
     rmx_script = Path(__file__).resolve().parent / "build_rm_fcst_excel.py"
     if rmx_script.exists():
         try:
