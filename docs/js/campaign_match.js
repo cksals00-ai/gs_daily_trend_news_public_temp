@@ -108,7 +108,28 @@
       sumRev: sumRev, avgRev: sumRev / matches.length, segMix: segArr, topAgents: agArr.slice(0, 5) };
   }
 
+  /* suggestKpi(matches) — 유사 매칭의 실적을 유사도 가중평균 → 추천 목표(RN·매출) + 범위 + 신뢰도 */
+  function suggestKpi(matches) {
+    if (!matches || !matches.length) return null;
+    var sw = 0, srn = 0, srev = 0, rns = [], adrs = [];
+    matches.forEach(function (m) {
+      var w = Math.max(m.score, 0.01);
+      sw += w; srn += w * m.rn; srev += w * m.rev_m;
+      rns.push(m.rn); if (m.adr) adrs.push(m.adr);
+    });
+    rns.sort(function (a, b) { return a - b; });
+    var rnHat = Math.round(srn / sw), revHat = Math.round((srev / sw) * 10) / 10;
+    var top = matches[0].score, n = matches.length;
+    var conf = (n >= 3 && top >= 0.45) ? 'high' : (n >= 2 && top >= 0.3) ? 'medium' : 'low';
+    return {
+      rn: rnHat, rev_m: revHat,
+      rnLow: rns[0], rnHigh: rns[rns.length - 1],
+      adr: adrs.length ? Math.round(adrs.reduce(function (a, b) { return a + b; }, 0) / adrs.length) : 0,
+      n: n, confidence: conf
+    };
+  }
+
   global.CampaignMatch = { load: load, findSimilar: findSimilar, tokenize: tokenize,
-    monthsFromRange: monthsFromRange, benchmark: benchmark,
+    monthsFromRange: monthsFromRange, benchmark: benchmark, suggestKpi: suggestKpi,
     get catalog() { return CAT; } };
 })(window);

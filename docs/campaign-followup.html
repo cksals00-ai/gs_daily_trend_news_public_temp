@@ -3,7 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
-<script src="./js/campaign_match.js" defer></script>
+<script src="./js/campaign_match.js?v=2" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>기획전 실적 팔로업 · SONO GS팀</title>
@@ -143,6 +143,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .simp{margin:0 18px 16px;background:var(--bg-deep);border:1px solid var(--rule);border-radius:8px;padding:12px 15px}
 .simp-h{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--info);letter-spacing:.03em;margin-bottom:10px}
 .simp-h small{font-size:9px;color:var(--ink-faint);font-weight:600;margin-left:6px}
+.simp-sug{background:linear-gradient(180deg,rgba(232,162,86,.12),rgba(232,162,86,.04));border:1px solid rgba(232,162,86,.35);border-radius:7px;padding:9px 12px;margin-bottom:10px}
+.simp-sug-l{font-family:var(--mono);font-size:10px;font-weight:800;color:var(--warning);letter-spacing:.03em;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.simp-sug-v{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--ink)}.simp-sug-v b{font-size:1.3em;font-weight:800;color:var(--warning)}.simp-sug-v i{font-size:.6em;color:var(--ink-faint);font-style:normal;margin:0 5px 0 1px}
+.simp-rng{font-size:10px;color:var(--ink-faint);font-weight:600;margin-left:6px}
+.simp-conf{font-size:9px;font-weight:700;padding:1px 6px;border-radius:7px}
+.simp-conf.high{background:rgba(76,175,111,.18);color:var(--positive)}.simp-conf.medium{background:rgba(90,159,196,.18);color:var(--info)}.simp-conf.low{background:rgba(122,126,133,.18);color:var(--ink-muted)}
 .simp-bench{display:flex;gap:10px;margin-bottom:9px}
 .simp-bk{flex:1;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:8px 11px}
 .simp-bk .l{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;margin-bottom:3px}
@@ -340,14 +346,17 @@ function kpiMetric(ev){
   return {kr,km};
 }
 
-/* 예전 비슷한 상품/기획전의 실제 실적 (campaign_catalog.json 매칭) */
-function similarPanel(name, property, ev){
-  if(!window.CampaignMatch || !CampaignMatch.catalog) return '';
+/* 예전 비슷한 상품/기획전 매칭 (campaign_catalog.json) */
+function simMatchesFor(name, property, ev){
+  if(!window.CampaignMatch || !CampaignMatch.catalog) return [];
   const qtext=[name, ev&&ev['상품'], ev&&ev['상품명'], ev&&ev['채널']].filter(Boolean).join(' ');
   const opt={property:property, topN:6, minScore:0.2};
   if(ev&&ev['투숙시작']) opt.months={start:String(ev['투숙시작']).replace(/-/g,''), end:String(ev['투숙종료']||'').replace(/-/g,'')};
-  const matches=CampaignMatch.findSimilar(qtext, opt);
-  if(!matches.length) return `<div class="simp"><div class="simp-h">📊 유사 과거 실적</div><div class="muted-note">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
+  return CampaignMatch.findSimilar(qtext, opt);
+}
+function similarPanel(matches, sug){
+  if(!window.CampaignMatch || !CampaignMatch.catalog) return '';
+  if(!matches || !matches.length) return `<div class="simp"><div class="simp-h">📊 유사 과거 실적</div><div class="muted-note">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
   const bm=CampaignMatch.benchmark(matches);
   const segC=s=>SEG_COLORS[s]||({'대매점':'#c9a063','제휴':'#7a7e85'}[s])||'#6b7280';
   const segT=bm.segMix.reduce((s,x)=>s+x[1],0)||1;
@@ -360,8 +369,15 @@ function similarPanel(name, property, ev){
       <div class="simp-stat"><b>${fmtInt(m.rn)}</b>실 · ${fmtM(m.rev_m)}백만 · ${yrs} <span style="color:var(--ink-faint)">${esc(seg1)}${ag1?' · '+esc(ag1):''}</span></div>
     </div>`;
   }).join('');
+  let sugHtml='';
+  if(sug){
+    const confKR={high:'높음',medium:'보통',low:'낮음'}[sug.confidence];
+    sugHtml=`<div class="simp-sug"><div class="simp-sug-l">💡 추천 목표 <span class="simp-conf ${sug.confidence}">신뢰도 ${confKR}</span></div>
+      <div class="simp-sug-v"><b>${fmtInt(sug.rn)}</b><i>실</i>${sug.rev_m?` · <b>${fmtM(sug.rev_m)}</b><i>백만</i>`:''} <span class="simp-rng">범위 ${fmtInt(sug.rnLow)}~${fmtInt(sug.rnHigh)}실 · 유사 ${sug.n}건</span></div></div>`;
+  }
   return `<div class="simp">
     <div class="simp-h">📊 유사 과거 실적 <small>상품명 기반 매칭 · 2025-26 DB</small></div>
+    ${sugHtml}
     <div class="simp-bench">
       <div class="simp-bk"><span class="l">유사 ${bm.n}건 합산</span><span class="v">${fmtInt(bm.sumRn)}<i>실</i> · ${fmtM(bm.sumRev)}<i>백만</i></span></div>
       <div class="simp-bk"><span class="l">건당 평균</span><span class="v">${fmtInt(bm.avgRn)}<i>실</i></span></div>
@@ -408,6 +424,9 @@ function render(perf, camp, history){
     const evPeriod=ev&&ev['투숙시작']?`등록기간 ${esc(ev['투숙시작'])}~${esc(ev['투숙종료']||'')}`:'';
     const adrK=Math.round((d.adr||0)/1000);
     const kpi=kpiMetric(ev);
+    // 유사 매칭 + 추천 목표 (한 번 계산 → 달성률 셀·패널 공용)
+    const simMatches=simMatchesFor(name, (ev&&(ev['사업장']||ev['구분']))||'', ev);
+    const sug=(simMatches.length&&window.CampaignMatch)?CampaignMatch.suggestKpi(simMatches):null;
     // segment 정렬: SEG_ORDER 우선, 나머지 뒤
     const segOrdered={}; const segSrc=d.by_segment||{};
     SEG_ORDER.forEach(s=>{ if(segSrc[s]) segOrdered[s]=segSrc[s]; });
@@ -419,6 +438,8 @@ function render(perf, camp, history){
       const revPct = kpi.km ? (d.rev_m/kpi.km*100) : null;
       const main = rnPct!=null?rnPct:revPct;
       achMetric=`<div class="metric m-ach"><div class="metric-label">목표 달성률</div><div class="metric-value">${main.toFixed(0)}<span class="u">%</span></div><div class="metric-sub">목표 ${kpi.kr?fmtInt(kpi.kr)+'실':''}${kpi.kr&&kpi.km?' · ':''}${kpi.km?fmtM(kpi.km)+'백만':''}</div></div>`;
+    } else if(sug){
+      achMetric=`<div class="metric m-ach"><div class="metric-label">추천 목표 <span style="font-size:.85em">💡</span></div><div class="metric-value">${fmtInt(sug.rn)}<span class="u">실</span></div><div class="metric-sub">유사 ${sug.n}건 기반 · 달성 ${sug.rn?(d.rn/sug.rn*100).toFixed(0):'—'}%</div></div>`;
     } else {
       achMetric=`<div class="metric m-ach"><div class="metric-label">목표 달성률</div><div class="metric-value" style="color:var(--ink-faint)">—</div><div class="metric-sub">목표 미설정 (시트 KPI 입력 시)</div></div>`;
     }
@@ -451,7 +472,7 @@ function render(perf, camp, history){
         <div class="bk"><div class="bk-title"><span class="lead">월별 투숙 RN 추이</span><small>투숙월 기준</small></div>${monthlyTrend(d.by_stay_month)}</div>
         <div class="bk"><div class="bk-title"><span class="lead">최근 픽업 추이</span><small>일별 스냅샷 증감</small></div>${pickupPanel(key,history)}</div>
       </div>
-      ${similarPanel(name, (ev&&(ev['사업장']||ev['구분']))||'', ev)}
+      ${similarPanel(simMatches, sug)}
     </section>`;
   }).join('');
   document.getElementById('cards').innerHTML=html;

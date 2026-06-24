@@ -3,7 +3,7 @@
 <head>
 <meta name="auth-required" content="executive">
 <script src="./js/auth.js"></script>
-<script src="./js/campaign_match.js" defer></script>
+<script src="./js/campaign_match.js?v=2" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>주간활동일지 · Action Plan 대시보드</title>
@@ -280,6 +280,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 .sp-head{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--info);letter-spacing:.03em;margin-bottom:9px;display:flex;align-items:baseline;gap:7px}
 .sp-sub{font-size:9px;color:var(--ink-faint);font-weight:600;letter-spacing:0}
 .sp-empty{font-size:11px;color:var(--ink-faint);font-style:italic}
+.sp-sug{background:linear-gradient(180deg,rgba(232,162,86,.12),rgba(232,162,86,.04));border:1px solid rgba(232,162,86,.35);border-radius:7px;padding:8px 11px;margin-bottom:9px}
+.sp-sug-l{font-family:var(--mono);font-size:9.5px;font-weight:800;color:var(--warning);letter-spacing:.03em;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.sp-sug-v{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink)}.sp-sug-v b{font-size:1.25em;font-weight:800;color:var(--warning)}.sp-sug-v i{font-size:.65em;color:var(--ink-faint);font-style:normal;margin:0 5px 0 1px}.sp-sug-v b.pos{color:var(--positive)}.sp-sug-v b.neg{color:var(--negative)}
+.sp-sug-rng{font-size:9.5px;color:var(--ink-faint);font-weight:600;margin-left:6px}
+.sp-conf{font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:7px}
+.sp-conf.high{background:rgba(76,175,111,.18);color:var(--positive)}.sp-conf.medium{background:rgba(90,159,196,.18);color:var(--info)}.sp-conf.low{background:rgba(122,126,133,.18);color:var(--ink-muted)}
 .sp-bench{display:flex;gap:10px;margin-bottom:8px}
 .sp-bench-k{flex:1;background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:7px 10px}
 .sp-bk-l{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);font-weight:700;margin-bottom:2px}
@@ -1338,9 +1344,25 @@ function renderSimilarPerf(ev){
     return `<div class="simperf"><div class="sp-head">📊 유사 과거 실적</div><div class="sp-empty">유사한 과거 상품을 찾지 못했습니다.</div></div>`;
   }
   const bm=CampaignMatch.benchmark(matches);
+  const sug=CampaignMatch.suggestKpi(matches);
   const segColor=s=>({'OTA':'#8b5cf6','G-OTA':'#f59e0b','Inbound':'#06b6d4','회원':'#4caf6f','무기명':'#a892c8','D멤버스':'#5a9fc4','대매점':'#c9a063'}[s]||'#6b7280');
   const fmt=n=>(n||0).toLocaleString('ko-KR');
   const fmtM=n=>(n||0).toLocaleString('ko-KR',{maximumFractionDigits:0});
+  // 추천 목표 / KPI 비교 배너
+  let sugHtml='';
+  if(sug){
+    const confKR={high:'높음',medium:'보통',low:'낮음'}[sug.confidence];
+    const hasKpi=ev.kpiRn||ev.kpiRev;
+    if(!hasKpi){
+      sugHtml=`<div class="sp-sug"><div class="sp-sug-l">💡 추천 목표 <span class="sp-conf ${sug.confidence}">신뢰도 ${confKR}</span></div>
+        <div class="sp-sug-v"><b>${fmt(sug.rn)}</b><i>실</i>${sug.rev_m?` · <b>${fmtM(sug.rev_m)}</b><i>백만</i>`:''} <span class="sp-sug-rng">범위 ${fmt(sug.rnLow)}~${fmt(sug.rnHigh)}실 · 유사 ${sug.n}건</span></div></div>`;
+    }else{
+      const kr=ev.kpiRn||0, gap=kr?Math.round((kr-sug.rn)/sug.rn*100):null;
+      const gapTxt=gap==null?'':`목표가 추천 대비 <b class="${gap>=0?'pos':'neg'}">${gap>0?'+':''}${gap}%</b>`;
+      sugHtml=`<div class="sp-sug"><div class="sp-sug-l">🎯 목표 vs 유사기반 추천</div>
+        <div class="sp-sug-v">목표 <b>${fmt(kr)}</b><i>실</i> · 추천 <b>${fmt(sug.rn)}</b><i>실</i> ${gapTxt}</div></div>`;
+    }
+  }
   const segTotal=bm.segMix.reduce((s,x)=>s+x[1],0)||1;
   const segBar=bm.segMix.slice(0,6).map(([s,v])=>`<span title="${s} ${fmt(v)}실" style="display:inline-block;height:8px;width:${(v/segTotal*100).toFixed(1)}%;background:${segColor(s)}"></span>`).join('');
   const rows=matches.map(m=>{
@@ -1355,6 +1377,7 @@ function renderSimilarPerf(ev){
   }).join('');
   return `<div class="simperf">
     <div class="sp-head">📊 유사 과거 실적 <span class="sp-sub">상품명 기반 매칭 · 2025-26 DB</span></div>
+    ${sugHtml}
     <div class="sp-bench">
       <div class="sp-bench-k"><span class="sp-bk-l">유사 ${bm.n}건 합산</span><span class="sp-bk-v">${fmt(bm.sumRn)}<i>실</i> · ${fmtM(bm.sumRev)}<i>백만</i></span></div>
       <div class="sp-bench-k"><span class="sp-bk-l">건당 평균</span><span class="sp-bk-v">${fmt(bm.avgRn)}<i>실</i></span></div>
