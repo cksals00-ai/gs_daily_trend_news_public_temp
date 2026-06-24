@@ -273,7 +273,21 @@ const CAN_EDIT = isEditable(TODAY);
 
 let otbRaw = {};
 let rmFcstData = {};          // RM FCST data from data/rm_fcst.json
+let rmMonthsCovered = [];     // rm_fcst.json._months_covered → [6,7,8] (동적 월 확장 소스)
 let rmTrendData = null;       // RM FCST trend data from data/rm_fcst_trend.json
+
+// rm_fcst.json._months_covered(["2026-06",...]) → [6,7,8]. 없으면 properties 키 스캔. (pumui.html 패턴)
+function deriveAvailMonths(fcst) {
+  if (!fcst) return [];
+  let yms = Array.isArray(fcst._months_covered) ? fcst._months_covered.slice() : [];
+  if (!yms.length) {
+    const set = new Set();
+    Object.values(fcst.properties || {}).forEach(p => Object.keys(p).forEach(k => set.add(k)));
+    yms = [...set];
+  }
+  const months = [...new Set(yms.map(ym => parseInt(String(ym).split('-')[1], 10)).filter(m => !isNaN(m)))];
+  return months.sort((a, b) => a - b);
+}
 let aiFcstData = null;        // AI FCST data from data/ai_fcst.json (CI + accuracy)
 let baseAdminData = {};       // 기존 admin_input.json 보존용 (export 시 머지)
 let propertyList = [];
@@ -419,6 +433,7 @@ async function loadFcstData() {
       if (rmResp.ok) {
         const rmData = await rmResp.json();
         rmFcstData = rmData.properties || {};
+        rmMonthsCovered = deriveAvailMonths(rmData);
         // Surface the source PDF + snapshot date in the explainer text
         const srcEl = document.getElementById('rm-fcst-source');
         if (srcEl && rmData._source_pdf) {
@@ -483,8 +498,10 @@ async function loadFcstData() {
       }
     }
 
+    // 월 탭 = OTB 월 ∪ RM FCST 커버 월 (동적). slice 캡 제거 → 새 월(9·10월 등) 자동 확장.
     const yoy0 = otbRaw.yoyTable?.[0];
-    const availMonths = yoy0 ? Object.keys(yoy0.months).map(Number).sort((a,b)=>a-b).slice(0,3) : [];
+    const otbMonths = yoy0 ? Object.keys(yoy0.months).map(Number) : [];
+    const availMonths = [...new Set([...otbMonths, ...rmMonthsCovered])].filter(m=>!isNaN(m)).sort((a,b)=>a-b);
 
     const tabC = document.getElementById('fcst-tabs');
     tabC.innerHTML = '';

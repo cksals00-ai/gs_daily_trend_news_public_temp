@@ -595,18 +595,33 @@ table.dt .ltbar span{display:block;height:100%}
   }
 
   async function loadAll(){
-    const [otb,targets,campaign,yoyCh,agSub] = await Promise.all([
+    const [otb,targets,campaign,yoyCh,agSub,rmFcst] = await Promise.all([
       loadJSON('data/otb_data.json'),
       loadJSON('data/strategy_targets.json'),
       loadJSON('data/campaign_data.json'),
       loadJSON('data/db_yoy_channel.json'),
       loadAggregatedSubset(),
+      loadJSON('data/rm_fcst.json'),
     ]);
     state.data.otb = otb;
     state.data.targets = targets;
     state.data.campaign = campaign;
     state.data.yoyCh = yoyCh;
     state.data.ag = agSub;
+    state.data.rmFcst = rmFcst;
+  }
+
+  // rm_fcst.json._months_covered(["2026-06",...]) → [6,7,8]. 없으면 properties 키 스캔. (pumui.html 패턴)
+  function deriveAvailMonths(fcst){
+    if(!fcst) return [];
+    let yms = Array.isArray(fcst._months_covered) ? fcst._months_covered.slice() : [];
+    if(!yms.length){
+      const set = new Set();
+      Object.values(fcst.properties||{}).forEach(p=>Object.keys(p).forEach(k=>set.add(k)));
+      yms = [...set];
+    }
+    const months = [...new Set(yms.map(ym=>parseInt(String(ym).split('-')[1],10)).filter(m=>!isNaN(m)))];
+    return months.sort((a,b)=>a-b);
   }
 
   // db_aggregated.json은 80MB로 크기 때문에 fetch 후 필요한 부분만 추출
@@ -641,9 +656,11 @@ table.dt .ltbar span{display:block;height:100%}
 
   // ========== FILTERS ==========
   function renderFilters(){
-    // 월 chips
+    // 월 chips — RM FCST 커버 월(rm_fcst.json._months_covered)을 동적 생성. 새 월 자동 확장.
     const chips = $('#month-chips');
-    const months = [{v:0,l:'전체'}, {v:5,l:'5월'},{v:6,l:'6월'},{v:7,l:'7월'},{v:8,l:'8월'},{v:9,l:'9월'},{v:10,l:'10월'},{v:11,l:'11월'},{v:12,l:'12월'}];
+    let mnums = deriveAvailMonths(state.data.rmFcst);
+    if(!mnums.length) mnums = [5,6,7,8,9,10,11,12];   // 폴백
+    const months = [{v:0,l:'전체'}].concat(mnums.map(m=>({v:m,l:m+'월'})));
     chips.innerHTML = months.map(m=>`<button class="chip${m.v===state.month?' active':''}" data-m="${m.v}">${m.l}</button>`).join('');
     chips.onclick = (e)=>{
       const b = e.target.closest('.chip'); if(!b)return;

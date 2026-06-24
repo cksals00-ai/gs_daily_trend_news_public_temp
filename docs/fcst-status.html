@@ -236,7 +236,24 @@ code{font-family:var(--mono);font-size:11.5px;background:var(--bg-soft);padding:
 /* ═══ CONSTANTS & STATE ═══ */
 const STORAGE_KEY = 'gs_fcst_input_v4';
 const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
-const MONTHS_DISPLAY = ['4월', '5월', '6월'];
+// RM FCST 커버 월(동적): 로드 시 rm_fcst.json._months_covered 로 갱신.
+// 하드코딩 금지 — RM 자료에 새 월(9·10월 등)이 들어오면 코드 수정 없이 자동 확장된다.
+let AVAIL_MONTHS = [4, 5, 6];                 // 숫자 월 배열 (로드 전 폴백)
+let MONTHS_DISPLAY = AVAIL_MONTHS.map(m => m + '월');
+
+// rm_fcst.json._months_covered(["2026-06",...]) → [6,7,8]. 없으면 properties 키 스캔. (pumui.html 패턴)
+function deriveAvailMonths(fcst) {
+  if (!fcst) return [4, 5, 6];
+  let yms = Array.isArray(fcst._months_covered) ? fcst._months_covered.slice() : [];
+  if (!yms.length) {
+    const set = new Set();
+    Object.values(fcst.properties || {}).forEach(p => Object.keys(p).forEach(k => set.add(k)));
+    yms = [...set];
+  }
+  const months = [...new Set(yms.map(ym => parseInt(String(ym).split('-')[1], 10)).filter(m => !isNaN(m)))];
+  months.sort((a, b) => a - b);
+  return months.length ? months : [4, 5, 6];
+}
 
 let otbData = {};
 let rmFcstData = {};
@@ -244,7 +261,7 @@ let fcstHistory = {};
 let propertyList = [];
 let uniqueProperties = [];
 let activeWeekKey = '';
-let activeMonth = '4';
+let activeMonth = String(AVAIL_MONTHS[0]);
 let activeRegion = '전체';  // 권역 필터
 let activeProps = new Set(); // 사업장 필터
 
@@ -337,6 +354,10 @@ async function loadData() {
       if (rmResp.ok) {
         const rmData = await rmResp.json();
         rmFcstData = rmData.properties || {};
+        // RM 커버 월을 동적으로 반영 (4·5·6 폴백 → 실제 covered months, 예: 6·7·8)
+        AVAIL_MONTHS = deriveAvailMonths(rmData);
+        MONTHS_DISPLAY = AVAIL_MONTHS.map(m => m + '월');
+        if (!AVAIL_MONTHS.map(String).includes(activeMonth)) activeMonth = String(AVAIL_MONTHS[0]);
       }
     } catch(e) {
       console.log('RM FCST not available');
@@ -499,7 +520,7 @@ function renderMatrix() {
   const filteredProps = getFilteredProperties();
   bodyRows.innerHTML = filteredProps.map(prop => {
     const cells = MONTHS_DISPLAY.map((m, i) => {
-      const month = String(4 + i);
+      const month = String(AVAIL_MONTHS[i]);
       let keyinValue = null;
       let totalRn = 0;
 
@@ -535,7 +556,7 @@ function renderMatrix() {
 function renderComparisonMonthSelector() {
   const container = document.getElementById('comp-month-selector');
   container.innerHTML = MONTHS_DISPLAY.map((label, i) => {
-    const month = String(4 + i);
+    const month = String(AVAIL_MONTHS[i]);
     const isActive = month === activeMonth;
     return `<button class="wtab${isActive ? ' active' : ''}" onclick="selectMonth('${month}')" style="font-size:11px;padding:5px 11px;">${label}</button>`;
   }).join('');

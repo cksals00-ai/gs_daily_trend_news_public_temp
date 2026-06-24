@@ -1258,11 +1258,23 @@ function propertyMatchesCampaign(propName, campProp){
   return stripped.indexOf(campProp) !== -1;
 }
 
-// 월 선택 chips
+// 월 선택 chips — RM FCST 추이(rm_fcst_trend.json) 최신 스냅샷이 커버하는 월을 동적 생성.
+// 하드코딩/롤링 금지: RM 자료에 새 월(9·10월 등)이 들어오면(어제 자동화: build_fcst_trend 증분)
+// 코드 수정 없이 추이 스냅샷에 월이 붙고 → 여기 칩도 자동 확장된다.
+function latestTrendMonths(){
+  const snaps = (DATA.fcstTrend && DATA.fcstTrend.snapshots) || [];
+  if (!snaps.length) return [];
+  const last = snaps[snaps.length - 1];
+  const set = new Set();
+  Object.values(last.properties || {}).forEach(p => Object.keys(p).forEach(k => set.add(k)));
+  return [...new Set([...set].map(ym => parseInt(String(ym).split('-')[1], 10)).filter(m => !isNaN(m)))].sort((a,b) => a - b);
+}
 function buildMonthChips(){
-  const now = new Date();
-  const cur = now.getMonth() + 1;
-  const months = [0,1,2].map(i => ((cur - 1 + i) % 12) + 1);
+  let months = latestTrendMonths();
+  if (!months.length){                       // 폴백: 데이터 없으면 당월+2개월 롤링
+    const cur = new Date().getMonth() + 1;
+    months = [0,1,2].map(i => ((cur - 1 + i) % 12) + 1);
+  }
   ['month-chips','month-chips-m'].forEach(id => {
     const host = document.getElementById(id);
     host.innerHTML = months.map(m => `<button class="chip" data-m="${m}">${m}월</button>`).join('');
