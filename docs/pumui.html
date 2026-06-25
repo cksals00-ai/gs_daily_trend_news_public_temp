@@ -223,6 +223,8 @@ input,button,select,table,th,td{font-family:var(--sans)!important;}
       <div class="form-actions">
         <input type="file" id="xlsx-upload" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(event)">
         <button class="btn-action" onclick="document.getElementById('xlsx-upload').click()">요금안 엑셀 업로드</button>
+        <input type="file" id="ai-yokum-upload" accept=".xlsx,.xls" style="display:none" onchange="handleAiYokumUpload(event)">
+        <button class="btn-action" onclick="document.getElementById('ai-yokum-upload').click()" title="요금표 양식 무관 — AI가 읽어 배분가/부대를 다중시즌으로 자동 추출">AI 요금표 변환(양식무관)</button>
         <button class="btn-action" onclick="addToExcelDownload()" style="opacity:0.7;">품의서 다운로드</button>
         <button class="btn-submit" id="btn-submit-sheet" onclick="submitToSheet()" style="display:none;">구글시트 제출</button>
       </div>
@@ -1274,6 +1276,12 @@ async function buildPumuiWorkbook(months, yk, fd){
       setV(col+'56', facD2(yFac[key], yFacD[key]));
     });
 
+    // ── AI 요금표 변환 결과가 있으면 다중시즌 배분가/부대를 덮어쓰기(양식 무관) ──
+    if (window.AI_ALLOC && typeof fillAiAllocIntoTemplate === 'function') {
+      try { fillAiAllocIntoTemplate(ws, window.AI_ALLOC); }
+      catch(e){ console.warn('[AI_ALLOC fill]', e); }
+    }
+
     return wb;
 }
 
@@ -1313,7 +1321,124 @@ async function addToExcelDownload(){
 loadData();
 </script>
 
+<!-- ============ AI 요금표 변환 (양식 무관) → 배분가/부대 다중시즌 자동채움 ============ -->
+<script>
+(function(){
+  const LS_URL='gsn_rate_worker_url';
+  const workerUrl=()=>{try{return localStorage.getItem(LS_URL)||'';}catch(_){return '';}};
+
+  // 시트 → 텍스트 격자 (병합셀 마스터값 채움) — rate-converter 와 동일 규약
+  function sheetToGrid(ws){
+    if(!ws||!ws['!ref']) return '';
+    const r=XLSX.utils.decode_range(ws['!ref']);
+    const mv={}; (ws['!merges']||[]).forEach(m=>{const c=ws[XLSX.utils.encode_cell({r:m.s.r,c:m.s.c})];const v=c?c.v:null;
+      for(let R=m.s.r;R<=m.e.r;R++)for(let C=m.s.c;C<=m.e.c;C++) mv[R+','+C]=v;});
+    const maxR=Math.min(r.e.r,r.s.r+220),maxC=Math.min(r.e.c,45),out=[];
+    for(let R=r.s.r;R<=maxR;R++){const cells=[];
+      for(let C=r.s.c;C<=maxC;C++){let v=null;const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
+        if(cell&&cell.v!=null&&String(cell.v).trim()!=='')v=cell.v; else if(mv[R+','+C]!=null)v=mv[R+','+C];
+        if(v!=null&&String(v).trim()!=='')cells.push(XLSX.utils.encode_col(C)+'='+String(v).replace(/\s+/g,' ').trim());}
+      if(cells.length)out.push('R'+(R+1)+' '+cells.join(' | '));}
+    return out.join('\n');
+  }
+
+  // 결정론적 포맷 (천원)
+  const K=1000, f1=v=>Math.round(v/K).toLocaleString('ko-KR');
+  const frng=a=>{a=a.filter(v=>v!=null&&!isNaN(v));if(!a.length)return '-';const lo=Math.min(...a),hi=Math.max(...a);return lo===hi?f1(lo):f1(lo)+'~'+f1(hi);};
+  const fpct=(n,a)=>{n=n.filter(v=>v);a=a.filter(v=>v);if(!n.length||!a.length)return '-';
+    const nLo=Math.min(...n),nHi=Math.max(...n),aLo=Math.min(...a),aHi=Math.max(...a);
+    let d1=nLo?Math.round(Math.abs((aLo-nLo)/nLo)*100):0,d2=nHi?Math.round(Math.abs((aHi-nHi)/nHi)*100):0;
+    const lo=Math.min(d1,d2),hi=Math.max(d1,d2);return lo===hi?lo+'%':lo+'%~'+hi+'%';};
+
+  // AI 시즌 → 템플릿 행(주중36/금39/토42/골드45). 그 외 시즌은 양식상 행이 없어 생략.
+  function seasonRow(s){s=(s||'').replace(/\s/g,'');
+    if(s.indexOf('주중')>=0)return 36; if(s.indexOf('금')>=0)return 39; if(s.indexOf('토')>=0)return 42; if(s.indexOf('골드')>=0)return 45; return 0;}
+
+  // 템플릿에 배분가(4)/부대(5) 다중시즌 주입. buildPumuiWorkbook 에서 호출.
+  window.fillAiAllocIntoTemplate=function(ws, data){
+    const set=(addr,v)=>{ if(v!==undefined&&v!==null&&v!=='') ws.getCell(addr).value=v; };
+    const rows=(data.rows||[]).filter(r=>r&&r.roomMemberNormal!=null);
+    // ── 4. 배분가 ── 객실 D/H/L · 부대 P/T/X · 판매가 AB/AF/AJ
+    const G=new Map(); rows.forEach(x=>{const b=seasonRow(x.season);if(!b)return;if(!G.has(b))G.set(b,[]);G.get(b).push(x);});
+    for(const [base,it] of G.entries()){
+      const mn=it.map(x=>x.roomMemberNormal),fnit=it.map(x=>x.roomFitNormal),am=it.map(x=>x.roomMemberDist),af=it.map(x=>x.roomFitDist);
+      const fcn=it.map(x=>x.facNormalSum||0),fca=it.map(x=>x.facDistSum||0);
+      const gN=it.map(x=>x.roomFitNormal-x.roomMemberNormal),gA=it.map(x=>x.roomFitDist-x.roomMemberDist);
+      const sMN=it.map(x=>x.roomMemberNormal+(x.facNormalSum||0)),sFN=it.map(x=>x.roomFitNormal+(x.facNormalSum||0));
+      const sMA=it.map(x=>x.roomMemberDist+(x.facDistSum||0)),sFA=it.map(x=>x.roomFitDist+(x.facDistSum||0));
+      // 정상가
+      set('D'+base,frng(mn));set('H'+base,frng(fnit));set('L'+base,frng(gN));
+      set('P'+base,frng(fcn));set('T'+base,frng(fcn));set('X'+base,'0');
+      set('AB'+base,frng(sMN));set('AF'+base,frng(sFN));set('AJ'+base,frng(gN));
+      // 배분가
+      const b2=base+1;
+      set('D'+b2,frng(am));set('H'+b2,frng(af));set('L'+b2,frng(gA));
+      set('P'+b2,frng(fca));set('T'+b2,frng(fca));set('X'+b2,'0');
+      set('AB'+b2,frng(sMA));set('AF'+b2,frng(sFA));set('AJ'+b2,frng(gA));
+      // 할인율
+      const b3=base+2;
+      set('D'+b3,fpct(mn,am));set('H'+b3,fpct(fnit,af));set('L'+b3,'-');
+      set('P'+b3,fpct(fcn,fca));set('T'+b3,fpct(fcn,fca));set('X'+b3,'-');
+      set('AB'+b3,fpct(sMN,sMA));set('AF'+b3,fpct(sFN,sFA));set('AJ'+b3,'-');
+    }
+    // ── 5. 부대시설 상세 ── 슬롯: 오션[D,G,J] 조식[M,P,S] 부대1[V,Y,AB] 부대2[AE,AH,AK]
+    const facRows=(data.facilityRows||[]);
+    const names=[]; facRows.forEach(x=>{if(x.name&&names.indexOf(x.name)<0)names.push(x.name);});
+    const oc=names.find(n=>/오션/.test(n)), js=names.find(n=>/조식|뷔페/.test(n));
+    const etc=names.filter(n=>n!==oc&&n!==js);
+    const slots=[ {nm:oc,cols:['D','G','J']}, {nm:js,cols:['M','P','S']},
+                  {nm:etc[0],cols:['V','Y','AB']}, {nm:etc[1],cols:['AE','AH','AK']} ];
+    const paxLabel={}; facRows.forEach(x=>{if(x.name&&!paxLabel[x.name]&&x.paxLabel)paxLabel[x.name]=x.paxLabel;});
+    // 헤더(R52)에 항목명+기준인원
+    slots.forEach(s=>{ if(!s.nm)return; set(s.cols[0].replace(/\d*/,'')+'52', s.nm+(paxLabel[s.nm]?'\n('+paxLabel[s.nm]+')':'')); });
+    [['주중',54],['주말',57]].forEach(([bk,base])=>{
+      slots.forEach(s=>{ if(!s.nm)return;
+        const sub=facRows.filter(x=>x.name===s.nm && (x.bucket||'').replace(/\s/g,'').indexOf(bk)>=0);
+        const n=sub.map(x=>x.normal),a=sub.map(x=>x.dist);
+        // 정상/배분/할인율 — 회원=FIT, GAP 0
+        set(s.cols[0]+base,frng(n)); set(s.cols[1]+base,frng(n)); set(s.cols[2]+base,'0');
+        set(s.cols[0]+(base+1),frng(a)); set(s.cols[1]+(base+1),frng(a)); set(s.cols[2]+(base+1),'0');
+        set(s.cols[0]+(base+2),fpct(n,a)); set(s.cols[1]+(base+2),fpct(n,a)); set(s.cols[2]+(base+2),'-');
+      });
+    });
+  };
+
+  // AI 업로드 핸들러
+  window.handleAiYokumUpload=async function(ev){
+    const file=ev.target.files&&ev.target.files[0]; if(!file)return; ev.target.value='';
+    const msg=(t,cls)=>{const m=document.getElementById('form-msg');if(m){m.textContent=t;m.style.color=cls==='err'?'#e57373':(cls==='ok'?'#37c98b':'');}};
+    const url=workerUrl();
+    if(!url){ msg('AI 변환 서버(Worker) URL 미설정 — rate-converter.html ⚙ 서버 설정에서 먼저 저장하세요.','err'); return; }
+    const token=(window.GSNAuth&&GSNAuth.getToken())||'';
+    if(!token){ msg('로그인이 필요합니다.','err'); return; }
+    msg('AI가 요금표를 분석 중… (10~30초)','');
+    let grid;
+    try{
+      const buf=await file.arrayBuffer(); const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true});
+      const pref=wb.SheetNames.find(n=>/요금|상품|배분|카카오|올인|메이커스|프로모/.test(n))
+        || wb.SheetNames.slice().sort((a,b)=>{const ar=w=>{const x=wb.Sheets[w];if(!x||!x['!ref'])return 0;const r=XLSX.utils.decode_range(x['!ref']);return (r.e.r-r.s.r+1)*(r.e.c-r.s.c+1);};return ar(b)-ar(a);})[0];
+      grid=sheetToGrid(wb.Sheets[pref]);
+    }catch(e){ msg('파일 읽기 실패: '+e.message,'err'); return; }
+    if(!grid||grid.length<20){ msg('시트에서 읽을 내용이 없습니다.','err'); return; }
+    const paxBasis=(document.getElementById('f-product-note')&&document.getElementById('f-product-note').value.trim())||'성인2인 + 소인1인';
+    let j;
+    try{
+      const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,grid,meta:{paxBasis}})});
+      j=await r.json(); if(!r.ok||!j.ok) throw new Error(j&&j.error?j.error:('HTTP '+r.status));
+    }catch(e){ msg('AI 변환 실패: '+e.message,'err'); return; }
+    window.AI_ALLOC=j.data;
+    if(!window.uploadedYokumRendered) window.uploadedYokumRendered={};  // 다운로드 흐름 통과용(빈 yk)
+    // 갑지 폼 자동입력
+    const m=j.data.meta||{}; const setI=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value&&v)el.value=v;};
+    setI('f-channel',m.channel); setI('f-stay-period',m.stayPeriod); setI('f-product',m.productComposition);
+    const dl=document.getElementById('btn-download'); // Forecast 생성 여부와 무관히 품의서 다운로드는 addToExcelDownload 가 검사
+    msg('AI 변환 완료 — 시즌 '+new Set((j.data.rows||[]).map(x=>x.season)).size+'개, 부대 '+(j.data.facilityRows||[]).length+'행. 이제 [품의서 다운로드].','ok');
+  };
+})();
+</script>
+
 <!-- ============ COPYRIGHT FOOTER ============ -->
 <footer style="background:#0a0a0a;color:rgba(255,255,255,0.5);text-align:center;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:0.08em;border-top:1px solid rgba(184,137,63,0.18);margin-top:0;"></footer>
+<script src="./js/menu-visibility.js"></script>
 </body>
 </html>
