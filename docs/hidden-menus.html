@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="admin">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숨김 메뉴 관리 · GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  --bg:#1a1d23; --bg-card:#252932; --bg-deep:#14171c;
+  --bg-soft:#2d3138; --bg-hover:#353a44;
+  --ink:#f5f5f7; --ink-soft:#e0e0e3; --ink-muted:#a8acb3; --ink-faint:#7a7e85;
+  --gold:#c9a063; --gold-bright:#e6b970;
+  --positive:#4caf6f; --positive-bg:#1f3a28;
+  --warning:#e8a256;  --warning-bg:#3d2e1a;
+  --negative:#e57373; --negative-bg:#3d1f1f;
+  --info:#5a9fc4;     --info-bg:#1a2e3d;
+  --rule:rgba(255,255,255,0.12); --rule-strong:rgba(255,255,255,0.22);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px;-webkit-font-smoothing:antialiased;word-break:keep-all;padding:0 0 80px;}
+.wrap{max-width:920px;margin:0 auto;padding:28px 20px;}
+header.page{border-bottom:1px solid var(--rule);padding-bottom:18px;margin-bottom:22px;}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--gold);text-transform:uppercase;}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:6px;}
+.lead{color:var(--ink-muted);font-size:13.5px;margin-top:8px;max-width:680px;}
+.admin-pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.1em;padding:2px 8px;border-radius:4px;background:var(--negative-bg);color:var(--negative);margin-left:8px;vertical-align:middle;}
+
+.count{font-family:var(--mono);font-size:12px;color:var(--ink-faint);margin-bottom:14px;}
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+.card.shown{border-color:rgba(90,159,196,.45);background:linear-gradient(180deg,rgba(90,159,196,.06),transparent);}
+.card .main{flex:1 1 360px;min-width:0;}
+.card .label{font-size:16px;font-weight:700;}
+.card .path{font-family:var(--mono);font-size:12px;color:var(--gold-bright);margin-top:3px;}
+.card .reason{color:var(--ink-muted);font-size:12.5px;margin-top:7px;}
+.card .state{font-family:var(--mono);font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 8px;border-radius:4px;margin-top:8px;display:inline-block;}
+.state.hidden{background:var(--bg-soft);color:var(--ink-faint);}
+.state.shown{background:var(--info-bg);color:var(--info);}
+.actions{display:flex;gap:8px;flex:0 0 auto;align-items:center;}
+.btn{font-family:var(--mono);font-size:12px;font-weight:700;padding:8px 14px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--bg-soft);color:var(--ink-soft);text-decoration:none;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--bg-hover);color:var(--ink);}
+.btn.open{border-color:rgba(201,160,99,.4);color:var(--gold-bright);}
+.btn.toggle.show{border-color:rgba(76,175,111,.5);color:var(--positive);}
+.btn.toggle.hide{border-color:rgba(229,115,115,.5);color:var(--negative);}
+
+.note{background:var(--bg-deep);border:1px solid var(--rule);border-radius:var(--radius);padding:16px 18px;margin-top:22px;font-size:13px;color:var(--ink-muted);line-height:1.75;}
+.note h3{font-size:13px;color:var(--ink-soft);margin-bottom:8px;font-family:var(--mono);letter-spacing:.04em;}
+.note code{font-family:var(--mono);font-size:12px;background:var(--bg-soft);padding:1px 6px;border-radius:4px;color:var(--gold-bright);}
+.note ul{margin:6px 0 0 18px;}
+.note li{margin-bottom:5px;}
+.empty{color:var(--ink-faint);font-style:italic;padding:24px;text-align:center;border:1px dashed var(--rule);border-radius:var(--radius);}
+</style>
+</head>
+<body>
+<!-- 이 페이지의 "열기" 링크 등은 숨김 처리에서 제외 -->
+<div class="wrap" data-keep-hidden-menu-visible>
+  <header class="page">
+    <div class="eyebrow">Dashboard Navigation</div>
+    <h1>숨김 메뉴 관리<span class="admin-pill">ADMIN ONLY</span></h1>
+    <p class="lead">메인 네비게이션에서 감춘(미사용) 메뉴 모음입니다. 페이지 파일은 보존되어 있어 아래 <b>열기</b>로 직접 접근할 수 있고, <b>다시 노출</b> 토글로 이 브라우저에서 메뉴를 임시로 되살릴 수 있습니다.</p>
+  </header>
+
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+
+  <div class="note">
+    <h3>다시 노출하는 방법</h3>
+    <ul>
+      <li><b>임시(이 브라우저만):</b> 각 항목의 <code>다시 노출</code> 토글 → 즉시 메뉴가 다시 보입니다. 설정은 <code>localStorage('gsn_menu_overrides')</code> 에 저장되며 이 기기/브라우저에만 적용됩니다.</li>
+      <li><b>영구(전체 사용자):</b> <code>docs/js/menu-visibility.js</code> 의 <code>GSN_HIDDEN_MENUS</code> 목록에서 해당 항목을 삭제한 뒤 배포하면 모든 사용자에게 다시 노출됩니다. 이 파일이 숨김 메뉴 정의의 단일 소스입니다.</li>
+    </ul>
+  </div>
+</div>
+
+<script src="./js/menu-visibility.js"></script>
+<script>
+(function(){
+  var LS='gsn_menu_overrides';
+  function readOv(){ try{return JSON.parse(localStorage.getItem(LS)||'{}')||{};}catch(e){return {};} }
+  function writeOv(o){ localStorage.setItem(LS, JSON.stringify(o)); }
+
+  function render(){
+    var menus = window.GSN_HIDDEN_MENUS || [];
+    var ov = readOv();
+    var list = document.getElementById('list');
+    var hiddenNow = menus.filter(function(m){ return ov[m.href] !== 'show'; }).length;
+    document.getElementById('count').textContent =
+      '정의된 숨김 메뉴 ' + menus.length + '개 · 현재 숨김 ' + hiddenNow + '개 · 임시 노출 ' + (menus.length - hiddenNow) + '개';
+
+    if(!menus.length){ list.innerHTML='<div class="empty">정의된 숨김 메뉴가 없습니다.</div>'; return; }
+    list.innerHTML='';
+    menus.forEach(function(m){
+      var shown = ov[m.href] === 'show';
+      var card = document.createElement('div');
+      card.className = 'card' + (shown ? ' shown' : '');
+      card.innerHTML =
+        '<div class="main">'
+        +   '<div class="label">'+ esc(m.label) +'</div>'
+        +   '<div class="path">'+ esc(m.href) +'</div>'
+        +   '<div class="reason">'+ esc(m.reason||'') +'</div>'
+        +   '<span class="state '+(shown?'shown':'hidden')+'">'+(shown?'임시 노출 중':'네비에서 숨김')+'</span>'
+        + '</div>'
+        + '<div class="actions">'
+        +   '<a class="btn open hidden-menu-link" href="'+ esc(m.href) +'" target="_blank" rel="noopener">열기 ↗</a>'
+        +   '<button class="btn toggle '+(shown?'hide':'show')+'" data-href="'+ esc(m.href) +'">'+(shown?'다시 숨김':'다시 노출')+'</button>'
+        + '</div>';
+      list.appendChild(card);
+    });
+    Array.prototype.forEach.call(list.querySelectorAll('.btn.toggle'), function(b){
+      b.addEventListener('click', function(){
+        var href=b.getAttribute('data-href'), o=readOv();
+        if(o[href]==='show'){ delete o[href]; } else { o[href]='show'; }
+        writeOv(o); render();
+      });
+    });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', render);
+  else render();
+})();
+</script>
+</body>
+</html>

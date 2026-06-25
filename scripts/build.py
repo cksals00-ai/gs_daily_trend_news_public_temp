@@ -3222,6 +3222,23 @@ def main():
     except Exception as e:
         logger.warning(f"✗ data_freshness.json 생성 실패: {e}")
 
+    # ── 숨김 메뉴 처리(menu-visibility.js) include 주입 ──
+    # 페이지 재생성(otb/sales-kpi 등) 후에도 include 가 유지되도록 마지막에 실행.
+    # GSN_HIDDEN_MENUS(docs/js/menu-visibility.js)가 미사용 메뉴를 네비에서 감춘다.
+    mv_script = Path(__file__).resolve().parent / "inject_menu_visibility.py"
+    if mv_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(mv_script)],
+                capture_output=True, text=True, timeout=60,
+            )
+            if result.returncode == 0:
+                logger.info(f"✓ menu-visibility include 주입 완료")
+            else:
+                logger.warning(f"✗ menu-visibility 주입 실패: {result.stderr.strip()}")
+        except Exception as e:
+            logger.warning(f"✗ menu-visibility 주입 오류: {e}")
+
     build_meta = now.strftime("Auto-Built %Y-%m-%d %H:%M KST")
     logger.info("=" * 60)
     logger.info(f"✓ 전체 빌드 완료 · {build_meta}")
