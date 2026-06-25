@@ -86,6 +86,18 @@ def _parse_ym(s):
     return s[:6] if len(s) >= 6 else None
 
 
+def _next_month(ym):
+    """'202605' → '202606' (재전송 범위 다음 달 = 스냅샷 시작 경계)."""
+    if not ym or len(ym) < 6:
+        return None
+    y, m = int(ym[:4]), int(ym[4:6])
+    if m >= 12:
+        y, m = y + 1, 1
+    else:
+        m += 1
+    return f"{y}{m:02d}"
+
+
 def classify_segment(code_num):
     num = (code_num or "").strip()
     if num in ("A4", "A5"): return "G-OTA"
@@ -311,13 +323,24 @@ def main():
         has_retransmit = find_types_with_retransmit(year_dir)
         txt_files = sorted(year_dir.glob("27*.txt"))
 
+        # ── 동적 경계: 재전송 파일이 커버하는 마지막 투숙월(ret_end) ──
+        # 하드코딩(f"{year}03") 금지: 재전송은 선언 범위 전체가 권위 데이터이므로
+        # 그 범위까지는 재전송이, 그 다음 달부터는 스냅샷이 채운다.
+        # 스냅샷은 마감(체크아웃 완료)월이 빠지므로, 03 고정 시 04월이
+        # 재전송(≤03)·스냅샷(≥05 실데이터) 사이 공백으로 통째로 누락됨.
+        ret_end_max = None
+        for fpath in txt_files:
+            ft, _rs, re_end = detect_month_filter(fpath.name)
+            if ft == 'retransmit' and re_end:
+                ret_end_max = max(ret_end_max, re_end) if ret_end_max else re_end
+
         for fpath in txt_files:
             ftype, ret_start, ret_end = detect_month_filter(fpath.name)
             min_month = max_month = None
             if ftype == 'retransmit':
-                max_month = min(ret_end, f"{year}03") if int(year) >= 2026 else ret_end
+                max_month = ret_end
             elif ftype == 'snapshot' and has_retransmit:
-                min_month = f"{year}04" if int(year) >= 2026 else None
+                min_month = _next_month(ret_end_max) if int(year) >= 2026 else None
 
             result = process_file(fpath, to_canon, min_month, max_month)
             for k, v in result.items():
