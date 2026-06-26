@@ -447,8 +447,10 @@ def parse(pdf_path: Path) -> dict:
     # Validation
     val = {}
     for ym in sorted({y for p in properties.values() for y in p}):
-        sum_grand_rn = sum(p[ym]["rm_fcst_rn"] for p in properties.values() if ym in p)
-        sum_grand_rev = sum(p[ym]["rm_fcst_rev_mil"] for p in properties.values() if ym in p)
+        # 동기간(LY) 병합으로 grand 없이 segments만 있는 ym 노드가 생길 수 있음 → .get 방어
+        # (해당 노드는 실제 FCST가 아닌 전년 동기간 데이터이므로 grand 합에 0 기여가 맞음)
+        sum_grand_rn = sum(p[ym].get("rm_fcst_rn", 0) for p in properties.values() if ym in p)
+        sum_grand_rev = sum(p[ym].get("rm_fcst_rev_mil", 0) for p in properties.values() if ym in p)
         sum_seg_rn = sum(
             sum(p[ym]["segments"].get(s, {}).get("rm_fcst_rn", 0) for s in ("OTA", "G-OTA", "Inbound"))
             for p in properties.values() if ym in p
