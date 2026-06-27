@@ -2912,6 +2912,25 @@ def main():
         except Exception as e:
             logger.warning(f"✗ patch_channel_daily 실행 오류: {e}")
 
+    # ── 마감월 보존(freeze): 2026 재전송 raw 삭제 등으로 마감월(특히 4월)이 손상/누락되면
+    #    직전 정상 baseline 에서 복원. parse_raw_db 가 매 실행 raw 전체 재계산(무보존)이라
+    #    재전송 소스가 사라지면 마감월이 통째로 빠지는 문제를 근본 차단. generate_otb_data
+    #    직전에 돌려 otb_data·.gz·동기화 모두 정상값을 쓰게 한다.
+    freeze_script = Path(__file__).resolve().parent / "freeze_closed_months.py"
+    if freeze_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(freeze_script)],
+                capture_output=True, text=True, timeout=180,
+            )
+            tail = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "OK"
+            if result.returncode == 0:
+                logger.info(f"✓ freeze_closed_months: {tail}")
+            else:
+                logger.warning(f"✗ freeze_closed_months 실패: {result.stderr.strip()[-200:]}")
+        except Exception as e:
+            logger.warning(f"✗ freeze_closed_months 실행 오류: {e}")
+
     agg_data = load_json(DATA_DIR / "db_aggregated.json")
     admin_data = load_json(DATA_DIR / "admin_input.json")
 
