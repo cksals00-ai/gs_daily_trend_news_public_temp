@@ -22,14 +22,18 @@ DROP_DIR = os.path.join(ROOT, "data", "weekly report")
 
 
 def find_latest_pdf():
-    """드롭 폴더(우선)·legacy weekly_pdf에서 가장 최근 '주간업무' PDF를 mtime 기준 자동 선택."""
+    """드롭 폴더(우선)·legacy weekly_pdf에서 가장 최근 '주간업무/주간회의' PDF를 mtime 기준 자동 선택."""
+    # 보고서명이 '주간업무'/'주간회의'로 혼용됨. '시장·트랜드' 조사 PDF는 제외.
+    INCLUDE = ("주간업무", "주간회의")
+    EXCLUDE = ("시장", "트랜드", "트렌드")
     cands = []
     for d in (DROP_DIR, PDF_DIR):
         if not os.path.isdir(d):
             continue
         for p in glob.glob(os.path.join(d, "*.pdf")):
             # macOS는 파일명을 NFD로 저장 → NFC 정규화 후 부분일치 비교(한글 매칭 보장)
-            if "주간업무" in unicodedata.normalize("NFC", os.path.basename(p)):
+            b = unicodedata.normalize("NFC", os.path.basename(p))
+            if any(k in b for k in INCLUDE) and not any(k in b for k in EXCLUDE):
                 cands.append(p)
     if not cands:
         return None
