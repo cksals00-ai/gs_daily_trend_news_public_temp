@@ -765,6 +765,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     {key:'otb',     label:'OTB 데이터',     url:'data/otb_data.json',         dateKey:'meta.refreshTime', card:1},
     {key:'booking', label:'Daily OCC',      url:'data/daily_booking.json',    dateKey:'meta.report_date', card:1},
     {key:'db',      label:'팔라티움 해운대 by sonofelice 온북',   url:'data/db_aggregated.json',    dateKey:'generated_at',     card:1},
+    // Card 1 워닝 전용: 마감월 재전송 소스 부재 시 source_warning 노출(보존값은 유지, 운영 알림만)
+    {key:'smr_warn', label:'마감월 소스', url:'data/same_month_booking.json', dateKey:null, card:1, warnOnly:true},
     // Card 3: 업데이트 일자 (수동/외부 업데이트 항목)
     {key:'rm_fcst', label:'RM FCST (PDF)',  url:'data/rm_fcst.json',          dateKey:'_extracted_at',    card:3},
     {key:'inbound', label:'인바운드 데이터', url:'data/inbound_enriched.json', dateKey:'generated_at',     card:3},
@@ -815,6 +817,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     fetch(c.url+'?t='+Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
+        if(c.warnOnly){
+          results[c.key] = { label:c.label, warn:(d && d.source_warning) || null, file:c.url.split('/').pop() };
+          return;
+        }
         var raw = extractRaw(d, c);
         results[c.key] = { label:c.label, ts:parseTS(raw), raw:raw, file:c.url.split('/').pop() };
       })
@@ -831,7 +837,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
 
   function render(){
     // === Card 1: 오늘 데이터 상태 (OTB / Daily OCC / 팔라티움 해운대 by sonofelice 온북) ===
-    var card1 = checks.filter(function(c){return c.card===1;});
+    var card1 = checks.filter(function(c){return c.card===1 && !c.warnOnly;});
     var okCount=0, badCount=0, rows1=[];
     card1.forEach(function(c){
       var r=results[c.key];
@@ -839,12 +845,23 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
       if(ok) okCount++; else badCount++;
       rows1.push({label:r.label, ok:ok, ts:r.ts});
     });
+    // 마감월 소스 부재 워닝(보존값 사용 중) — 있으면 카드 상단에 한 줄 노출
+    var srcWarn = results.smr_warn && results.smr_warn.warn;
     var sum1=document.getElementById('td-summary-1');
     sum1.innerHTML =
         '<div class="td-stat"><span class="td-num '+(okCount>0?'ok':'')+'">'+okCount+'</span><span class="td-lbl">정상</span></div>'
       + '<div class="td-stat"><span class="td-num '+(badCount>0?'bad':'')+'">'+badCount+'</span><span class="td-lbl">수동필요</span></div>';
-    setCardTone('td-card-1', badCount===0 ? 'ok' : (badCount<=1 ? 'warn' : 'bad'));
-    document.getElementById('td-list-1').innerHTML = rows1.map(function(r){
+    setCardTone('td-card-1', (badCount===0 && !srcWarn) ? 'ok' : ((badCount<=1) ? 'warn' : 'bad'));
+    var warnHtml = '';
+    if(srcWarn){
+      var mmTxt = (srcWarn.months||[]).map(function(m){return m.split('-')[1]+'월';}).join(', ');
+      warnHtml = '<div class="td-row" title="'+(srcWarn.message||'')+'">'
+        + '<span class="td-row-icon">⚠️</span>'
+        + '<span class="td-row-text">마감월 소스 부재 (보존값)</span>'
+        + '<span class="td-row-status warn">'+(mmTxt||'확인')+'</span>'
+      + '</div>';
+    }
+    document.getElementById('td-list-1').innerHTML = warnHtml + rows1.map(function(r){
       return '<div class="td-row">'
         + '<span class="td-row-icon">'+(r.ok?'✅':'❌')+'</span>'
         + '<span class="td-row-text">'+r.label+'</span>'

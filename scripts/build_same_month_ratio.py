@@ -426,6 +426,10 @@ def main():
 
     # by_year: 마감월은 raw 가 권위일 때만 신규값, 아니면 직전 산출물(불변 booking) 보존.
     by_year = {}
+    # 올해 마감월인데 raw(재전송) 소스가 없어 ledger 보존값으로 서빙된 월 목록.
+    # → 값은 보존되어 누락은 없지만, 재전송 파일을 raw_db 에 재공급해야 한다는 운영 워닝.
+    cur_year = cur_ym[:4]
+    preserved_closed = []
     fresh_sms = set(gs_total.keys())
     all_sms = set(fresh_sms) | {y + m for y, mm in ledger.items() for m in mm}
     for sm in sorted(all_sms):
@@ -438,6 +442,10 @@ def main():
             if lrec is None:
                 continue  # 마감월인데 raw 도 ledger 도 없음 → 스킵
             total, same = lrec.get("total_rn", 0), lrec.get("same_month_rn", 0)
+            # 올해 마감월(당월 이전)이 보존값으로 서빙됨 → 소스 부재 워닝 대상.
+            # (전년·전전년은 항상 ledger 가 정본이므로 워닝 제외)
+            if year == cur_year and sm < cur_ym:
+                preserved_closed.append(f"{year}-{month}")
         rec = _ratios(total, same, _target(year, month), is_unstarted=(sm > cur_ym))
         # closing 도 booking 과 같은 소스 결정: fresh→db_aggregated, 보존→ledger
         # (마감월 db_aggregated 가 재전송 삭제로 손상될 수 있어 ledger 우선이 안전)
@@ -482,6 +490,18 @@ def main():
         "by_property": by_property,
     }
 
+    # 마감월 소스 부재 워닝: 올해 마감월이 보존값(ledger)으로 서빙 중이면
+    # raw_db 에 해당 재전송 파일을 재공급해야 함을 영업기획 맵 상태창에 노출.
+    preserved_sorted = sorted(set(preserved_closed))
+    if preserved_sorted:
+        mm_list = ", ".join(f"{m.split('-')[1]}월" for m in preserved_sorted)
+        result_json["source_warning"] = {
+            "level": "warn",
+            "kind": "closed_month_source_missing",
+            "months": preserved_sorted,
+            "message": f"마감월 {mm_list} 재전송 소스 부재 — 보존값 사용 중. raw_db 재전송 파일 재공급 필요",
+        }
+
     for p in (OUTPUT_PATH, DOCS_PATH):
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(p, 'w', encoding='utf-8') as f:
@@ -489,6 +509,9 @@ def main():
 
     print(f"\n✅ {OUTPUT_PATH}", file=sys.stderr)
     print(f"✅ {DOCS_PATH}", file=sys.stderr)
+    if preserved_sorted:
+        print(f"⚠️  마감월 소스 부재(보존값 사용): {', '.join(preserved_sorted)} "
+              f"→ raw_db 재전송 파일 재공급 필요", file=sys.stderr)
 
     for year in sorted(by_year.keys()):
         print(f"\n{year}년 (GS):", file=sys.stderr)
