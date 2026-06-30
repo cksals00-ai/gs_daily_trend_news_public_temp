@@ -199,13 +199,16 @@ def gen_monthly_insights(month_label, m26, m25):
     
     if hojo:
         top3 = hojo[:3]
-        insights.append(f"호조 사업장: {', '.join(f'{p[\"name\"]}({fmt_pct(p[\"yoy_rn\"])})' for p in top3)} 등 {len(hojo)}개가 전년비 +5% 이상 달성했습니다.")
-    
+        hojo_str = ', '.join(f"{p['name']}({fmt_pct(p['yoy_rn'])})" for p in top3)
+        insights.append(f"호조 사업장: {hojo_str} 등 {len(hojo)}개가 전년비 +5% 이상 달성했습니다.")
+
     if bujin:
-        insights.append(f"부진 사업장: {', '.join(f'{p[\"name\"]}({fmt_pct(p[\"yoy_rn\"])})' for p in bujin[:3])} 등 {len(bujin)}개가 전년비 -5% 미만으로, 자사패키지·회원PKG 감소와 OTA 채널 이동이 주 원인입니다.")
-    
+        bujin_str = ', '.join(f"{p['name']}({fmt_pct(p['yoy_rn'])})" for p in bujin[:3])
+        insights.append(f"부진 사업장: {bujin_str} 등 {len(bujin)}개가 전년비 -5% 미만으로, 자사패키지·회원PKG 감소와 OTA 채널 이동이 주 원인입니다.")
+
     if growth_ch:
-        insights.append(f"채널: {', '.join(f'{c[\"name\"]}({fmt_pct(c[\"yoy_rn\"])})' for c in sorted(growth_ch, key=lambda x: x['yoy_rn'], reverse=True)[:3])}이 구조적 성장세를 보이며, 트립닷컴·아고다 중심의 G-OTA 채널 확대가 뚜렷합니다.")
+        gch_str = ', '.join(f"{c['name']}({fmt_pct(c['yoy_rn'])})" for c in sorted(growth_ch, key=lambda x: x['yoy_rn'], reverse=True)[:3])
+        insights.append(f"채널: {gch_str}이 구조적 성장세를 보이며, 트립닷컴·아고다 중심의 G-OTA 채널 확대가 뚜렷합니다.")
     
     return insights
 
