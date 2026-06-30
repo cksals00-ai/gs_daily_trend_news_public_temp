@@ -48,6 +48,21 @@ TARGETS = [
 TARGET_SET = {t[0] for t in TARGETS}
 LABEL = {t[0]: t[1] for t in TARGETS}
 
+# ─── 세그먼트 (변경예약집계코드 기준, parse_raw_db.classify_segment 동일) ───
+#   53/72 → OTA(온라인패키지·대매점),  A4/A5 → G-OTA,  58 → Inbound,  그 외 → 기타(회원·자사·단체)
+SEGMENTS = ["OTA", "G-OTA", "Inbound", "기타"]
+DEFAULT_SEGMENTS = ["OTA", "G-OTA"]  # 기본 = OTA+G-OTA
+
+def seg_bucket(cnum):
+    n = (cnum or "").strip()
+    if n in ("A4", "A5"):
+        return "G-OTA"
+    if n in ("53", "72"):
+        return "OTA"
+    if n == "58":
+        return "Inbound"
+    return "기타"
+
 # ───────────────────────── 파일 해소 (macOS NFD/NFC) ─────────────────────────
 def _nfc(s): return unicodedata.normalize("NFC", s)
 
@@ -128,7 +143,7 @@ def load_rows(files, staymon):
             rooms = int(g(irooms)) if g(irooms).isdigit() else 0
             rn = rooms if rooms > 0 else 1
             ent = g(ient)[:8]; can = g(ican)[:8]
-            rows.append(dict(prop=prop, rn=rn, is_cancel=is_cancel,
+            rows.append(dict(prop=prop, seg=seg_bucket(cn), rn=rn, is_cancel=is_cancel,
                              entry=ent if len(ent) == 8 else None,
                              cancel=can if (is_cancel and len(can) == 8) else None))
     return rows
@@ -440,47 +455,63 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
 
 # ───────────────────────── JSON (대시보드 HTML용) ─────────────────────────
 def build_payload(data_date, asof26, asof25, rows26, rows25):
+    """세그먼트(OTA/G-OTA/Inbound/기타)별로 분해해 payload 생성.
+    HTML이 선택된 세그를 합산해 표/총평을 재계산(기본 OTA+G-OTA)."""
     hi = datetime.strptime(asof26, "%Y%m%d")
     days26 = [(hi - timedelta(days=k)).strftime("%Y%m%d") for k in range(WINDOW_DAYS)][::-1]
     ordered = list(reversed(days26))  # 최근 → 과거
     def to25(d): return "2025" + d[4:]
     WD = "월화수목금토일"
+    def wdc(day): return WD[datetime.strptime(day, "%Y%m%d").weekday()]
 
-    new26, cxl26 = daily_newcancel(rows26)
-    new25, cxl25 = daily_newcancel(rows25)
-    nb26 = onbook_at(rows26, asof26); nb25 = onbook_at(rows25, asof25)
+    # 세그별 동기간 net 온북: {prop: {seg: net_rn}}
+    def onbook_seg(rows, cutoff):
+        out = defaultdict(lambda: defaultdict(int))
+        for r in rows:
+            if r["entry"] and r["entry"] <= cutoff:
+                out[r["prop"]][r["seg"]] += r["rn"]
+            if r["cancel"] and r["cancel"] <= cutoff:
+                out[r["prop"]][r["seg"]] -= r["rn"]
+        return out
+    # 세그별 일별 신규/취소: {(prop,seg,day): rn}
+    def daily_seg(rows):
+        new = defaultdict(int); cxl = defaultdict(int)
+        for r in rows:
+            if r["entry"]:  new[(r["prop"], r["seg"], r["entry"])] += r["rn"]
+            if r["cancel"]: cxl[(r["prop"], r["seg"], r["cancel"])] += r["rn"]
+        return new, cxl
 
-    summary = []
-    t26 = t25 = 0
-    for name, lab in TARGETS:
-        v26, v25 = nb26.get(name, 0), nb25.get(name, 0); gap = v26 - v25
-        t26 += v26; t25 += v25
-        summary.append({"name": name, "label": lab, "v26": v26, "v25": v25,
-                        "gap": gap, "yoy": (gap / v25 if v25 else 0.0)})
-    total = {"v26": t26, "v25": t25, "gap": t26 - t25, "yoy": ((t26 - t25) / t25 if t25 else 0.0)}
+    def segmap(d): return {s: d.get(s, 0) for s in SEGMENTS}
 
+    on26 = onbook_seg(rows26, asof26); on25 = onbook_seg(rows25, asof25)
+    new26, cxl26 = daily_seg(rows26); new25, cxl25 = daily_seg(rows25)
+
+    # 요약: 사업장별 세그별 온북 (HTML이 선택 세그 합산)
+    summary = [{"name": n, "label": l,
+                "on26": segmap(on26.get(n, {})), "on25": segmap(on25.get(n, {}))}
+               for n, l in TARGETS]
+
+    # 일별 픽업: per[prop][seg]=[신규,취소], per25=전년 동일자
     daily = []
     for day in ordered:
-        wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
         d25 = to25(day)
-        per = {name: [new26.get((name, day), 0), cxl26.get((name, day), 0)] for name, _ in TARGETS}
-        per25 = {name: [new25.get((name, d25), 0), cxl25.get((name, d25), 0)] for name, _ in TARGETS}
-        # per/per25[name]=[신규,취소], net=신규-취소. p25=전년 동일자(MMDD) 일별 픽업
-        daily.append({"d": day, "wd": wd, "d25": d25, "per": per, "per25": per25})
+        per   = {n: {s: [new26.get((n, s, day), 0), cxl26.get((n, s, day), 0)] for s in SEGMENTS} for n, _ in TARGETS}
+        per25 = {n: {s: [new25.get((n, s, d25), 0), cxl25.get((n, s, d25), 0)] for s in SEGMENTS} for n, _ in TARGETS}
+        daily.append({"d": day, "wd": wdc(day), "d25": d25, "per": per, "per25": per25})
 
+    # 누적 추이: per[prop][seg]=[온북26, 온북25]
     cumulative = []
     for day in ordered:
-        nb26d = onbook_at(rows26, day); nb25d = onbook_at(rows25, to25(day))
-        wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
-        cper = {name: [nb26d.get(name, 0), nb25d.get(name, 0)] for name, _ in TARGETS}
-        cumulative.append({"d": day, "wd": wd, "per": cper})  # per[name]=[온북26,온북25]
+        c26 = onbook_seg(rows26, day); c25 = onbook_seg(rows25, to25(day))
+        per = {n: {s: [c26.get(n, {}).get(s, 0), c25.get(n, {}).get(s, 0)] for s in SEGMENTS} for n, _ in TARGETS}
+        cumulative.append({"d": day, "wd": wdc(day), "per": per})
 
     return {
         "meta": {"data_date": data_date, "asof26": asof26, "asof25": asof25,
                  "window_days": WINDOW_DAYS,
+                 "segments": SEGMENTS, "default_segments": DEFAULT_SEGMENTS,
                  "targets": [{"name": n, "label": l} for n, l in TARGETS]},
-        "summary": summary, "total": total,
-        "daily": daily, "cumulative": cumulative,
+        "summary": summary, "daily": daily, "cumulative": cumulative,
     }
 
 

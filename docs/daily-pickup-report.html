@@ -53,6 +53,16 @@ a{color:inherit;text-decoration:none}
 
 .wrap{max-width:1400px;margin:0 auto;padding:8px 24px 60px}
 
+/* 세그먼트 필터 */
+.segbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 4px}
+.segbar-label{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.seg-chips{display:inline-flex;gap:6px;flex-wrap:wrap}
+.seg-chip{font-size:12.5px;font-weight:600;color:var(--ink3);background:var(--bg2);border:1px solid var(--rule);padding:5px 13px;border-radius:20px;cursor:pointer;transition:.13s;user-select:none}
+.seg-chip:hover{border-color:var(--rule2);color:var(--ink2)}
+.seg-chip.on{background:var(--gold-glow);border-color:var(--gold);color:var(--gold2)}
+.seg-chip.all{font-weight:700}
+.seg-chip.all.on{background:rgba(92,196,154,.12);border-color:var(--pos);color:var(--pos)}
+.seg-hint{font-size:11.5px;color:var(--ink4)}
 /* 총평 */
 .cmt{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:10px;padding:14px 18px;margin:14px 0 22px;color:var(--ink2);font-size:13.5px}
 .cmt b{color:var(--ink)}
@@ -120,7 +130,7 @@ tr.total td.lbl{color:var(--gold2)}
   <div class="mast-l">
     <div class="eyebrow">Daily Pickup Report</div>
     <h1>데일리 보고 리포트 — 7월 동기간 픽업</h1>
-    <div class="sub">전년대비 모니터링 6개 사업장 · 세그 구분없이 전체 RN · 일별 픽업(net) 관리</div>
+    <div class="sub">전년대비 모니터링 6개 사업장 · 세그먼트 선택(기본 OTA+G-OTA) · 일별 픽업(net) 관리</div>
   </div>
   <div class="mast-r">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
@@ -132,6 +142,13 @@ tr.total td.lbl{color:var(--gold2)}
 </header>
 
 <div class="wrap">
+  <!-- 세그먼트 필터 -->
+  <div class="segbar" id="segbar">
+    <span class="segbar-label">세그먼트</span>
+    <div class="seg-chips" id="segChips"></div>
+    <span class="seg-hint" id="segHint"></span>
+  </div>
+
   <div class="cmt" id="cmt">불러오는 중…</div>
 
   <!-- 요약 -->
@@ -154,33 +171,36 @@ tr.total td.lbl{color:var(--gold2)}
 
 <script src="./js/menu-visibility.js"></script>
 <script>
-const BASE='data/', NF=n=>Math.abs(n).toLocaleString('ko-KR');
+const BASE='data/', NF=n=>Math.abs(Math.round(n)).toLocaleString('ko-KR');
 const SIGN=n=>(n>0?'+':n<0?'−':'')+NF(n);
 const clsG=g=>g>0?'pos':g<0?'neg':'';
-let DATA=null;
+let DATA=null, SEL=null, SEGS=[];
 
-function md(d){return d.slice(4,6)+'/'+d.slice(6,8);}
-function net(pair){return pair[0]-pair[1];}
+const md=d=>d.slice(4,6)+'/'+d.slice(6,8);
+// 선택 세그 합산 헬퍼
+const onSel =rec=>SEGS.reduce((a,s)=>a+(SEL.has(s)?(rec[s]||0):0),0);                       // 온북(선택세그)
+const netSel=per=>SEGS.reduce((a,s)=>a+(SEL.has(s)?((per[s][0]||0)-(per[s][1]||0)):0),0);    // 일별 net(선택세그)
+const cumSel=per=>SEGS.reduce((a,s)=>{if(SEL.has(s)){a[0]+=per[s][0]||0;a[1]+=per[s][1]||0;}return a;},[0,0]); // [온북26,온북25]
+const segLabel=()=>SEL.size===SEGS.length?'전체 세그':SEGS.filter(s=>SEL.has(s)).join('+');
 
 async function load(){
   const r=await fetch(BASE+'july_pickup.json?t='+Date.now(),{cache:'no-store'});
   if(!r.ok) throw new Error('july_pickup.json '+r.status);
   DATA=await r.json();
+  SEGS=DATA.meta.segments; SEL=new Set(DATA.meta.default_segments);
   render();
 }
 
 function render(){
-  const m=DATA.meta, T=DATA.total;
-  // 기준일 / 다운로드 파일명
+  const m=DATA.meta;
   document.getElementById('basis').innerHTML=
     `기준일 <b>${md(m.asof26)}</b> (마지막 완전일)<br>vs 전년 <b>${md(m.asof25)}</b> · 스냅샷 ${md(m.data_date)}`;
   document.getElementById('dlBtn').setAttribute('download',`7월동기간_픽업_일자별관리_${m.data_date}.xlsx`);
   document.getElementById('dlBtn').href=BASE+'july_pickup.xlsx?t='+m.data_date;
-
-  // 갱신 여부 배지: 스냅샷 기준일(data_date)이 오늘이면 '금일 갱신', 아니면 '미반영(N일 전)'
+  // 갱신 여부 배지
   (function(){
-    const kst=new Date(Date.now()+9*3600*1000);                 // KST
-    const today=kst.toISOString().slice(0,10).replace(/-/g,'');  // YYYYMMDD
+    const kst=new Date(Date.now()+9*3600*1000);
+    const today=kst.toISOString().slice(0,10).replace(/-/g,'');
     const dd=m.data_date;
     const diff=Math.round((Date.UTC(+today.slice(0,4),+today.slice(4,6)-1,+today.slice(6,8))
                           -Date.UTC(+dd.slice(0,4),+dd.slice(4,6)-1,+dd.slice(6,8)))/86400000);
@@ -188,20 +208,48 @@ function render(){
     if(diff<=0){ el.className='fresh ok'; el.innerHTML=`<span class="dot"></span>금일 갱신 완료 · ${md(dd)} 온북 반영`; }
     else { el.className='fresh stale'; el.innerHTML=`<span class="dot"></span>금일(${md(today)}) 온북 미반영 · ${md(dd)} 기준(${diff}일 전)`; }
   })();
+  buildSegBar();
+  recompute();
+}
 
-  // 총평
-  const behind=DATA.summary.filter(s=>s.gap<0), ahead=DATA.summary.filter(s=>s.gap>=0);
-  const chip=(s)=>`<span class="chip ${s.gap<0?'neg':'pos'}">${s.label} ${SIGN(s.gap)}</span>`;
+function buildSegBar(){
+  const wrap=document.getElementById('segChips'); wrap.innerHTML='';
+  const all=document.createElement('div'); all.className='seg-chip all'; all.textContent='전체';
+  all.onclick=()=>{ SEL=new Set(SEGS); refreshSeg(); }; wrap.appendChild(all);
+  SEGS.forEach(s=>{
+    const c=document.createElement('div'); c.className='seg-chip'; c.dataset.seg=s; c.textContent=s;
+    c.onclick=()=>{ if(SEL.has(s)){ if(SEL.size>1) SEL.delete(s); } else SEL.add(s); refreshSeg(); };
+    wrap.appendChild(c);
+  });
+  refreshSegChips();
+}
+function refreshSegChips(){
+  document.querySelectorAll('#segChips .seg-chip').forEach(c=>{
+    if(c.classList.contains('all')) c.classList.toggle('on', SEL.size===SEGS.length);
+    else c.classList.toggle('on', SEL.has(c.dataset.seg));
+  });
+  document.getElementById('segHint').textContent =
+    SEL.size===SEGS.length ? '· 전체 세그 합산' : '· 기본 OTA+G-OTA · 칩 토글로 가감(전체=모두)';
+}
+function refreshSeg(){ refreshSegChips(); recompute(); }
+
+function recompute(){
+  const m=DATA.meta;
+  // 요약 + 총평 (선택 세그 합산)
+  let t26=0,t25=0;
+  const rows=DATA.summary.map(s=>{ const v26=onSel(s.on26),v25=onSel(s.on25),gap=v26-v25; t26+=v26;t25+=v25;
+    return {label:s.label,v26,v25,gap,yoy:v25?gap/v25:0}; });
+  const total={label:'합계 (6개)',v26:t26,v25:t25,gap:t26-t25,yoy:t25?(t26-t25)/t25:0};
+  const behind=rows.filter(r=>r.gap<0), ahead=rows.filter(r=>r.gap>=0);
+  const chip=r=>`<span class="chip ${r.gap<0?'neg':'pos'}">${r.label} ${SIGN(r.gap)}</span>`;
   document.getElementById('cmt').innerHTML=
-    `<b>6개 합계 동기간 온북 ${NF(T.v26)}실</b> (전년 ${NF(T.v25)}실, `+
-    `<span class="${clsG(T.gap)==='neg'?'chip neg':'chip pos'}">${SIGN(T.gap)}실 / ${(T.yoy*100).toFixed(1)}%</span>). `+
-    `전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
-    DATA.summary.map(chip).join(' ')+
-    `<br><span style="color:var(--ink3)">목표 = 세그 구분없이 전체 RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.</span>`;
-
-  // 요약 테이블
+    `<b>[${segLabel()}] 6개 합계 동기간 온북 ${NF(total.v26)}실</b> (전년 ${NF(total.v25)}실, `+
+    `<span class="chip ${total.gap<0?'neg':'pos'}">${SIGN(total.gap)}실 / ${(total.yoy*100).toFixed(1)}%</span>). `+
+    `전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+ rows.map(chip).join(' ')+
+    `<br><span style="color:var(--ink3)">목표 = 선택 세그(${segLabel()}) RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.</span>`;
+  // 요약표
   const sb=document.getElementById('sumBody'); sb.innerHTML='';
-  const row=(s,isT)=>{
+  const rowHtml=(s,isT)=>{
     const st=s.gap>0?'<span class="st pos">전년초과 ▲</span>':s.gap<0?'<span class="st neg">전년미달 ▼</span>':'<span class="st eq">동률</span>';
     const need=s.gap>=0?'유지·확대':`+${NF(s.gap)}실 필요`;
     return `<tr class="${isT?'total':''}"><td class="lbl">${s.label}</td>`+
@@ -211,11 +259,10 @@ function render(){
       `<td style="text-align:center">${st}</td>`+
       `<td class="${clsG(s.gap)}" style="text-align:center;font-weight:600">${need}</td></tr>`;
   };
-  DATA.summary.forEach(s=>sb.insertAdjacentHTML('beforeend',row(s,false)));
-  sb.insertAdjacentHTML('beforeend',row({label:'합계 (6개)',...DATA.total},true));
-
+  rows.forEach(s=>sb.insertAdjacentHTML('beforeend',rowHtml(s,false)));
+  sb.insertAdjacentHTML('beforeend',rowHtml(total,true));
   document.getElementById('trendUnit').textContent=
-    `최근 ${m.window_days}일 (${md(DATA.daily[DATA.daily.length-1].d)}~${md(DATA.daily[0].d)}, 위=최근) · 단위 실(RN)`;
+    `최근 ${m.window_days}일 (${md(DATA.daily[DATA.daily.length-1].d)}~${md(DATA.daily[0].d)}, 위=최근) · ${segLabel()} · 단위 실(RN)`;
   renderDaily(); renderCum();
 }
 
@@ -231,9 +278,9 @@ function renderDaily(){
     h+=`<tr><td class="lbl">${md(d.d)} (${d.wd})</td>`;
     let dsum=0,psum=0,dsum25=0;
     T.forEach(t=>{
-      const nv=net(d.per[t.name]); dsum+=nv; dsum25+=net(d.per25[t.name]);
+      const nv=netSel(d.per[t.name]); dsum+=nv; dsum25+=netSel(d.per25[t.name]);
       h+=`<td class="num grp">${NF(nv)}</td>`;
-      if(nx){const pv=net(nx.per[t.name]); psum+=pv; const dl=nv-pv;
+      if(nx){const pv=netSel(nx.per[t.name]); psum+=pv; const dl=nv-pv;
         h+=`<td class="delta ${clsG(dl)}">${SIGN(dl)}</td>`;}
       else h+='<td class="delta" style="color:var(--ink4)">–</td>';
     });
@@ -257,7 +304,7 @@ function renderCum(){
   C.forEach(c=>{
     h+=`<tr><td class="lbl">${md(c.d)} (${c.wd})</td>`;
     let s26=0,s25=0;
-    T.forEach(t=>{const v=c.per[t.name],g=v[0]-v[1]; s26+=v[0];s25+=v[1];
+    T.forEach(t=>{const v=cumSel(c.per[t.name]),g=v[0]-v[1]; s26+=v[0];s25+=v[1];
       h+=`<td class="num grp">${NF(v[0])}</td><td class="num">${NF(v[1])}</td><td class="num ${clsG(g)}">${SIGN(g)}</td>`;});
     const g=s26-s25;
     h+=`<td class="num grp" style="font-weight:700">${NF(s26)}</td><td class="num" style="font-weight:700">${NF(s25)}</td><td class="num ${clsG(g)}" style="font-weight:700">${SIGN(g)}</td>`;
@@ -265,8 +312,9 @@ function renderCum(){
   });
   document.getElementById('tblCum').innerHTML=h+'</tbody>';
   document.getElementById('footNote').innerHTML=
+    '※ 세그먼트: OTA(53/72·온라인패키지·대매점) · G-OTA(A4/A5) · Inbound(58) · 기타(회원·자사·단체). 기본 = OTA+G-OTA, 칩으로 가감.<br>'+
     '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 net = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
-    '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출 · 세그 구분없이 전체 RN. 갭(+)=전년초과, 갭(−)=전년미달.';
+    '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출. 갭(+)=전년초과, 갭(−)=전년미달. 엑셀 다운로드는 전체 세그 기준.';
 }
 
 function switchTab(v){
