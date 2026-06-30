@@ -190,6 +190,12 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
     WD = "월화수목금토일"
 
     wb = openpyxl.Workbook()
+    # 결정적 출력(같은 데이터 → 같은 바이트): 문서 타임스탬프를 기준일로 고정
+    _fixed = datetime.strptime(data_date, "%Y%m%d")
+    wb.properties.created = _fixed
+    wb.properties.modified = _fixed
+    wb.properties.creator = "build_july_pickup_tracker"
+    wb.properties.lastModifiedBy = "build_july_pickup_tracker"
 
     # 윈도우 날짜축 (최근 N완전일, 과거→최근)
     hi = datetime.strptime(asof26, "%Y%m%d")
