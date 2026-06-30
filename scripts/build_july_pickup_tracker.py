@@ -170,7 +170,7 @@ def daily_newcancel(rows):
     return new, cxl
 
 # ───────────────────────── 엑셀 (소노위크 보고 양식) ─────────────────────────
-def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
+def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA"):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -234,7 +234,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
 
     # 제목 (B2 병합, 14pt 중앙)
     ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=LASTC)
-    t = ws.cell(2, 2, "7월 동기간 픽업 일자별 관리 보고의 건"); t.font = F(14); t.alignment = cen
+    t = ws.cell(2, 2, f"7월 동기간 픽업 일자별 관리 보고의 건  〔{seg_label} 기준〕"); t.font = F(14); t.alignment = cen
     ws.row_dimensions[2].height = 24
     # 기준일 (우상단)
     dcell = ws.cell(3, LASTC, datetime.strptime(data_date, "%Y%m%d"))
@@ -245,7 +245,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
         f"          (소노캄 비발디파크 · 소노문 단양 · 소노벨 청송 · 소노캄 여수 · 소노캄 거제 · 쏠비치 진도)",
         f"2. 투숙일자 : 2026-07 (7월 투숙)",
         f"3. 기 준 일 : {d2k(asof26)}(마지막 완전일) vs 전년 {d2k(asof25)}  ·  스냅샷 {d2k(data_date)}",
-        f"4. 데이터 : raw_db(온라인영업팀) net 직접 산출 · 세그 구분없이 전체 RN · 이중계상 없음",
+        f"4. 데이터 : raw_db(온라인영업팀) net 직접 산출 · 세그먼트 {seg_label} 기준 RN · 이중계상 없음",
         f"5. 총 평",
     ]
     r = 4
@@ -259,7 +259,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
     cmt = (f'  6개 합계 동기간 온북 {tot26:,}실 (전년 {tot25:,}실, {"+" if gtot>=0 else "−"}{abs(gtot):,}실 / '
            f'{gtot/tot25*100:+.1f}%).  전년미달 {len(behind)}개({", ".join(behind) if behind else "없음"}), '
            f'전년초과 {len(ahead)}개({", ".join(ahead) if ahead else "없음"}).\n'
-           f'  목표 = 세그 구분없이 전체 RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.')
+           f'  목표 = {seg_label} 세그 RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.')
     ws.merge_cells(start_row=r, start_column=2, end_row=r + 1, end_column=LASTC)
     cc = ws.cell(r, 2, cmt); cc.font = F(10, color=RED); cc.alignment = Alignment(
         horizontal="left", vertical="center", wrap_text=True); cc.fill = ZFILL
@@ -271,7 +271,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
     r += 1  # 한 줄 띄움
 
     # 표 제목
-    ws.cell(r, 2, "6. 사업장별 7월 동기간 온북 (YoY)").font = F(11)
+    ws.cell(r, 2, f"6. 사업장별 7월 동기간 온북 (YoY) · {seg_label} 기준").font = F(11)
     unit = ws.cell(r, LASTC, "[단위 : 실]"); unit.font = F(9); unit.alignment = rgt
     r += 1
     # 2단 헤더
@@ -337,7 +337,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25):
     ws2.column_dimensions["B"].width = 14
     ws2.cell(2, 2, "일별 픽업 (7월 투숙 net = 신규−취소, 예약 유입일 기준) · 전일대비 Δ").font = F(13)
     ws2.merge_cells(start_row=2, start_column=2, end_row=2, end_column=2 + len(TARGETS) * 2 + 2)
-    ws2.cell(3, 2, f"최근 {WINDOW_DAYS}일({d2k(days26[0])}~{d2k(days26[-1])}, 위=최근) · 세그 구분없이 전체 RN · "
+    ws2.cell(3, 2, f"최근 {WINDOW_DAYS}일({d2k(days26[0])}~{d2k(days26[-1])}, 위=최근) · {seg_label} 기준 RN · "
                    "Δ=전일대비 net 증감 · 매일 재실행 시 완전일 1행씩 자동 연장").font = F(9, color="808080")
     top, sub = 5, 6
     hcell(ws2, top, 2, "예약 유입일"); ws2.merge_cells(start_row=top, start_column=2, end_row=sub, end_column=2)
@@ -542,7 +542,11 @@ def main():
     docs_data = PROJECT_DIR / "docs" / "data"
     docs_data.mkdir(parents=True, exist_ok=True)
     xlsx_docs = docs_data / "july_pickup.xlsx"
-    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26, rows25)
+    # 엑셀은 기본 세그(OTA+G-OTA) 기준 — 화면 기본 뷰와 동일. JSON은 전 세그 보존(화면 필터용).
+    xl_seg = set(DEFAULT_SEGMENTS); xl_label = "+".join(DEFAULT_SEGMENTS)
+    rows26_xl = [r for r in rows26 if r["seg"] in xl_seg]
+    rows25_xl = [r for r in rows25 if r["seg"] in xl_seg]
+    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label)
     payload = build_payload(data_date, asof26, asof25, rows26, rows25)
     json_docs = docs_data / "july_pickup.json"
     json.dump(payload, open(json_docs, "w", encoding="utf-8"), ensure_ascii=False)
