@@ -171,15 +171,15 @@ def daily_newcancel(rows):
 
 # ───────────────────────── 엑셀 (소노위크 보고 양식) ─────────────────────────
 def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA"):
+    """소노위크 보고 양식(간소화) — 개요/일별픽업(증감)/전년대비(누적)/상세. 설명문 제거."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    # ── 하우스 팔레트/서식 (템플릿 styles.xml에서 추출) ──
     FN_R = "대명체 보통"; FN_B = "대명체 굵게"
-    WHITE = "FFFFFF"; BLACK = "000000"; RED = "C00000"; BLUE = "1F4E78"; GREEN = "375623"
-    NF_NUM = r'_-* #,##0_-;\-* #,##0_-;_-* "-"_-;_-@_-'        # 회계(천단위, 0=대시)
-    NF_DELTA = r'_-* +#,##0_-;_-* \-#,##0_-;_-* "-"_-;_-@_-'   # 부호표시 증감
+    WHITE = "FFFFFF"; BLACK = "000000"; RED = "C00000"; GREEN = "375623"; GREY = "808080"
+    NF_NUM = r'_-* #,##0_-;\-* #,##0_-;_-* "-"_-;_-@_-'        # 회계(음수 -표기)
+    NF_GAP = r'_-* +#,##0_-;_-* \-#,##0_-;_-* "-"_-;_-@_-'     # 부호(+/-) 표기
     NF_PCT = '0.0%'
 
     def F(sz=10, bold=False, color=BLACK):
@@ -188,266 +188,162 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     cenw = Alignment(horizontal="center", vertical="center", wrap_text=True)
     rgt = Alignment(horizontal="right", vertical="center")
     lft = Alignment(horizontal="left", vertical="center")
-    HAIR = Side(style="hair", color=BLACK)
-    THIN = Side(style="thin", color=BLACK)
-    DBL = Side(style="double", color=BLACK)
+    HAIR = Side(style="hair", color=BLACK); DBL = Side(style="double", color=BLACK)
     box = Border(left=HAIR, right=HAIR, top=HAIR, bottom=HAIR)
-    HFILL = PatternFill("solid", fgColor=BLACK)     # 헤더 흑색
-    ZFILL = PatternFill("solid", fgColor="F2F2F2")  # 총평 박스 연회색
+    def topbox(top): return Border(left=HAIR, right=HAIR, top=top, bottom=HAIR)
+    HFILL = PatternFill("solid", fgColor=BLACK)
 
     def hcell(ws, r, c, v):
         cell = ws.cell(r, c, v); cell.font = F(10, color=WHITE); cell.fill = HFILL
-        cell.alignment = cenw; cell.border = box
-        return cell
-
-    def d2k(s):  # 20260629 → 06/29
-        return f"{s[4:6]}/{s[6:8]}"
+        cell.alignment = cenw; cell.border = box; return cell
+    def d2k(s): return f"{s[4:6]}/{s[6:8]}"
     WD = "월화수목금토일"
+    def wdc(day): return WD[datetime.strptime(day, "%Y%m%d").weekday()]
+    def clr(g): return GREEN if g > 0 else (RED if g < 0 else BLACK)
+
+    # 표시 라벨 (참고파일 기준): 데이터시트=full, 개요=short
+    DATA_LBL = {"소노캄 비발디파크": "소노캄 비발디파크", "소노문 단양": "소노벨 단양",
+                "소노벨 청송": "소노벨 청송", "소노캄 여수": "소노캄 여수",
+                "소노캄 거제": "소노캄 거제", "쏠비치 진도": "쏠비치 진도"}
+    GAEYO_LBL = dict(DATA_LBL, **{"소노캄 비발디파크": "소노캄 비발디"})
 
     wb = openpyxl.Workbook()
-    # 결정적 출력(같은 데이터 → 같은 바이트): 문서 타임스탬프를 기준일로 고정
     _fixed = datetime.strptime(data_date, "%Y%m%d")
-    wb.properties.created = _fixed
-    wb.properties.modified = _fixed
-    wb.properties.creator = "build_july_pickup_tracker"
-    wb.properties.lastModifiedBy = "build_july_pickup_tracker"
+    wb.properties.created = _fixed; wb.properties.modified = _fixed
+    wb.properties.creator = "build_july_pickup_tracker"; wb.properties.lastModifiedBy = "build_july_pickup_tracker"
 
-    # 윈도우 날짜축 (최근 N완전일, 과거→최근)
     hi = datetime.strptime(asof26, "%Y%m%d")
     days26 = [(hi - timedelta(days=k)).strftime("%Y%m%d") for k in range(WINDOW_DAYS)][::-1]
     def to25(d): return "2025" + d[4:]
-    ordered = list(reversed(days26))  # 최근 → 과거
+    desc = list(reversed(days26))  # 최근 → 과거
 
-    new26, cxl26 = daily_newcancel(rows26)
-    new25, cxl25 = daily_newcancel(rows25)
+    new26, cxl26 = daily_newcancel(rows26); new25, cxl25 = daily_newcancel(rows25)
     nb26 = onbook_at(rows26, asof26); nb25 = onbook_at(rows25, asof25)
     def net_of(new, cxl, name, day): return new.get((name, day), 0) - cxl.get((name, day), 0)
 
-    # ============================================================ 개요 ============
-    ws = wb.active; ws.title = "개요"
-    ws.sheet_view.showGridLines = False
-    LASTC = 9  # B..I (구분+2026+2025+갭+%+상태+필요)  → 컨텐츠 폭
-    ws.column_dimensions["A"].width = 1.2
-    ws.column_dimensions["B"].width = 22
-    for c in range(3, LASTC + 1):
-        ws.column_dimensions[get_column_letter(c)].width = 11
+    # ============================== 개요 ==============================
+    ws = wb.active; ws.title = "개요"; ws.sheet_view.showGridLines = False
+    LASTC = 9
+    ws.column_dimensions["A"].width = 1.2; ws.column_dimensions["B"].width = 16
+    for c, w in zip(range(3, 7), (9, 9, 9, 8)): ws.column_dimensions[get_column_letter(c)].width = w
+    ws.column_dimensions["G"].width = 12; ws.column_dimensions["H"].width = 6; ws.column_dimensions["I"].width = 8
 
-    # 제목 (B2 병합, 14pt 중앙)
     ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=LASTC)
-    t = ws.cell(2, 2, f"7월 동기간 픽업 일자별 관리 보고의 건  〔{seg_label} 기준〕"); t.font = F(14); t.alignment = cen
+    t = ws.cell(2, 2, "7월 동기간 比 일자별 픽업 현황"); t.font = F(14); t.alignment = cen
     ws.row_dimensions[2].height = 24
-    # 기준일 (우상단)
-    dcell = ws.cell(3, LASTC, datetime.strptime(data_date, "%Y%m%d"))
-    dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
-    # 번호 목차
-    metas = [
-        f"1. 대 상 : 7월 동기간 전년대비 모니터링 6개 사업장",
-        f"          (소노캄 비발디파크 · 소노문 단양 · 소노벨 청송 · 소노캄 여수 · 소노캄 거제 · 쏠비치 진도)",
-        f"2. 투숙일자 : 2026-07 (7월 투숙)",
-        f"3. 기 준 일 : {d2k(asof26)}(마지막 완전일) vs 전년 {d2k(asof25)}  ·  스냅샷 {d2k(data_date)}",
-        f"4. 데이터 : raw_db(온라인영업팀) net 직접 산출 · 세그먼트 {seg_label} 기준 RN · 이중계상 없음",
-        f"5. 총 평",
-    ]
-    r = 4
-    for m in metas:
-        ws.cell(r, 2, m).font = F(10); r += 1
-    # 총평 박스
-    tot26 = sum(nb26.get(n, 0) for n, _ in TARGETS); tot25 = sum(nb25.get(n, 0) for n, _ in TARGETS)
-    gtot = tot26 - tot25
-    behind = [LABEL[n] for n, _ in TARGETS if nb26.get(n, 0) - nb25.get(n, 0) < 0]
-    ahead = [LABEL[n] for n, _ in TARGETS if nb26.get(n, 0) - nb25.get(n, 0) >= 0]
-    cmt = (f'  6개 합계 동기간 온북 {tot26:,}실 (전년 {tot25:,}실, {"+" if gtot>=0 else "−"}{abs(gtot):,}실 / '
-           f'{gtot/tot25*100:+.1f}%).  전년미달 {len(behind)}개({", ".join(behind) if behind else "없음"}), '
-           f'전년초과 {len(ahead)}개({", ".join(ahead) if ahead else "없음"}).\n'
-           f'  목표 = {seg_label} 세그 RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.')
-    ws.merge_cells(start_row=r, start_column=2, end_row=r + 1, end_column=LASTC)
-    cc = ws.cell(r, 2, cmt); cc.font = F(10, color=RED); cc.alignment = Alignment(
-        horizontal="left", vertical="center", wrap_text=True); cc.fill = ZFILL
-    for rr in (r, r + 1):
-        for c in range(2, LASTC + 1):
-            ws.cell(rr, c).border = box
-    ws.row_dimensions[r].height = 22; ws.row_dimensions[r + 1].height = 22
-    r += 2
-    r += 1  # 한 줄 띄움
-
-    # 표 제목
-    ws.cell(r, 2, f"6. 사업장별 7월 동기간 온북 (YoY) · {seg_label} 기준").font = F(11)
-    unit = ws.cell(r, LASTC, "[단위 : 실]"); unit.font = F(9); unit.alignment = rgt
-    r += 1
-    # 2단 헤더
-    h1 = r; h2 = r + 1
-    hcell(ws, h1, 2, "구분"); ws.merge_cells(start_row=h1, start_column=2, end_row=h2, end_column=2)
-    hcell(ws, h1, 3, "동기간 온북"); ws.merge_cells(start_row=h1, start_column=3, end_row=h1, end_column=4)
-    hcell(ws, h1, 4, None)
-    hcell(ws, h1, 5, "전년 比"); ws.merge_cells(start_row=h1, start_column=5, end_row=h1, end_column=6)
-    hcell(ws, h1, 6, None)
-    hcell(ws, h1, 7, "상태"); ws.merge_cells(start_row=h1, start_column=7, end_row=h2, end_column=7)
-    hcell(ws, h1, 8, "목표(전년초과)"); ws.merge_cells(start_row=h1, start_column=8, end_row=h1, end_column=LASTC)
-    hcell(ws, h1, 9, None)
-    for c, lab in ((3, "2026"), (4, "2025"), (5, "갭(실)"), (6, "%")):
-        hcell(ws, h2, c, lab)
-    hcell(ws, h2, 8, "필요 픽업"); ws.merge_cells(start_row=h2, start_column=8, end_row=h2, end_column=LASTC)
-    hcell(ws, h2, 9, None)
-    rr = h2 + 1
-    for name, lab in TARGETS:
-        v26, v25 = nb26.get(name, 0), nb25.get(name, 0); gap = v26 - v25
-        yoy = (gap / v25) if v25 else 0.0
-        status = "전년초과 ▲" if gap > 0 else ("동률" if gap == 0 else "전년미달 ▼")
-        need = "유지·확대" if gap >= 0 else f"+{-gap:,}실"
-        clr = GREEN if gap > 0 else (RED if gap < 0 else BLACK)
-        cells = [
-            (2, lab, lft, None, F(10)),
-            (3, v26, rgt, NF_NUM, F(10)),
-            (4, v25, rgt, NF_NUM, F(10)),
-            (5, gap, rgt, NF_NUM, F(10, bold=True, color=clr)),
-            (6, yoy, rgt, NF_PCT, F(10, color=clr)),
-            (7, status, cen, None, F(10, bold=True, color=clr)),
-        ]
+    dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
+    ws.cell(4, 2, "- 사업장 : 캄 비발디, 단양, 청송, 여수, 거제, 진도").font = F(10)
+    ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
+    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY").font = F(10)
+    ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
+    ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
+    # 헤더
+    hcell(ws, 8, 2, "구분"); ws.merge_cells("B8:B9")
+    hcell(ws, 8, 3, "OTB"); ws.merge_cells("C8:D8"); hcell(ws, 8, 4, None)
+    hcell(ws, 8, 5, "전년 比"); ws.merge_cells("E8:F8"); hcell(ws, 8, 6, None)
+    hcell(ws, 8, 7, "상태"); ws.merge_cells("G8:G9")
+    hcell(ws, 8, 8, "비고"); ws.merge_cells("H8:I9"); hcell(ws, 8, 9, None)
+    for c, lab in ((3, "26Y"), (4, "25Y"), (5, "GAP"), (6, "%")): hcell(ws, 9, c, lab)
+    # 데이터
+    t26 = t25 = 0
+    for i, (name, _) in enumerate(TARGETS):
+        r = 10 + i; v26 = nb26.get(name, 0); v25 = nb25.get(name, 0); gap = v26 - v25
+        yoy = (gap / v25) if v25 else 0.0; t26 += v26; t25 += v25
+        st = "전년초과 ▲" if gap > 0 else ("동률" if gap == 0 else "전년미달 ▼")
+        bigo = "유지" if gap >= 0 else f"+{abs(gap):,}실"
+        cells = [(2, GAEYO_LBL[name], lft, None, F(10)),
+                 (3, v26, rgt, NF_NUM, F(10)), (4, v25, rgt, NF_NUM, F(10)),
+                 (5, gap, rgt, NF_GAP, F(10, bold=True, color=clr(gap))),
+                 (6, yoy, rgt, NF_PCT, F(10, color=clr(gap))),
+                 (7, st, cen, None, F(10, bold=True, color=clr(gap)))]
         for c, v, al, nf, ft in cells:
-            cell = ws.cell(rr, c, v); cell.alignment = al; cell.font = ft; cell.border = box
+            cell = ws.cell(r, c, v); cell.alignment = al; cell.font = ft; cell.border = box
             if nf: cell.number_format = nf
-        nc = ws.cell(rr, 8, need); nc.font = F(10, bold=(gap < 0), color=clr); nc.alignment = cen; nc.border = box
-        ws.merge_cells(start_row=rr, start_column=8, end_row=rr, end_column=LASTC)
-        ws.cell(rr, 9).border = box
-        rr += 1
-    # 합계 (이중 상단 테두리)
-    gy = (gtot / tot25) if tot25 else 0.0
-    clr = GREEN if gtot > 0 else RED
-    tvals = [(2, "합계 (6개)", lft, None), (3, tot26, rgt, NF_NUM), (4, tot25, rgt, NF_NUM),
-             (5, gtot, rgt, NF_NUM), (6, gy, rgt, NF_PCT),
-             (7, ("전년초과 ▲" if gtot > 0 else "전년미달 ▼"), cen, None)]
-    for c, v, al, nf in tvals:
-        cell = ws.cell(rr, c, v); cell.alignment = al
-        cell.font = F(10, bold=True, color=(clr if c in (5, 6, 7) else BLACK))
-        cell.border = Border(left=HAIR, right=HAIR, top=DBL, bottom=HAIR)
+        bc = ws.cell(r, 8, bigo); bc.font = F(10, bold=(gap < 0), color=clr(gap)); bc.alignment = cen; bc.border = box
+        ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=9); ws.cell(r, 9).border = box
+    # Total
+    r = 16; gt = t26 - t25; gy = (gt / t25) if t25 else 0.0
+    tv = [(2, "Total", lft, None), (3, t26, rgt, NF_NUM), (4, t25, rgt, NF_NUM),
+          (5, gt, rgt, NF_GAP), (6, gy, rgt, NF_PCT),
+          (7, ("전년초과 ▲" if gt > 0 else "전년미달 ▼"), cen, None)]
+    for c, v, al, nf in tv:
+        cell = ws.cell(r, c, v); cell.alignment = al
+        cell.font = F(10, bold=True, color=(clr(gt) if c in (5, 6, 7) else BLACK))
+        cell.border = topbox(DBL)
         if nf: cell.number_format = nf
-    nc = ws.cell(rr, 8, ("유지·확대" if gtot >= 0 else f"+{-gtot:,}실"))
-    nc.font = F(10, bold=True, color=clr); nc.alignment = cen
-    nc.border = Border(left=HAIR, right=HAIR, top=DBL, bottom=HAIR)
-    ws.merge_cells(start_row=rr, start_column=8, end_row=rr, end_column=LASTC)
-    ws.cell(rr, 9).border = Border(left=HAIR, right=HAIR, top=DBL, bottom=HAIR)
-    rr += 2
-    ws.cell(rr, 2, "※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 net = 신규(최초입력)−취소(취소일자), 이중계상 없음.").font = F(9, color="808080")
-    ws.cell(rr + 1, 2, "※ 갭(+)=전년초과(목표달성), 갭(−)=전년미달. 상세 추이는 [일별픽업]·[전년대비] 시트 참조.").font = F(9, color="808080")
+    bc = ws.cell(r, 8, ("유지" if gt >= 0 else f"+{abs(gt):,}실")); bc.font = F(10, bold=True, color=clr(gt))
+    bc.alignment = cen; bc.border = topbox(DBL)
+    ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=9); ws.cell(r, 9).border = topbox(DBL)
+    ws.cell(17, 2, "※ 투숙일 기준 30일 OTB 데이터").font = F(9, color=GREY)
 
-    # ====================================================== 일별 픽업(net·Δ) ======
-    ws2 = wb.create_sheet("일별픽업(net·Δ)")
-    ws2.sheet_view.showGridLines = False
-    ws2.column_dimensions["A"].width = 1.2
-    ws2.column_dimensions["B"].width = 14
-    ws2.cell(2, 2, "일별 픽업 (7월 투숙 net = 신규−취소, 예약 유입일 기준) · 전일대비 Δ").font = F(13)
-    ws2.merge_cells(start_row=2, start_column=2, end_row=2, end_column=2 + len(TARGETS) * 2 + 2)
-    ws2.cell(3, 2, f"최근 {WINDOW_DAYS}일({d2k(days26[0])}~{d2k(days26[-1])}, 위=최근) · {seg_label} 기준 RN · "
-                   "Δ=전일대비 net 증감 · 매일 재실행 시 완전일 1행씩 자동 연장").font = F(9, color="808080")
-    top, sub = 5, 6
-    hcell(ws2, top, 2, "예약 유입일"); ws2.merge_cells(start_row=top, start_column=2, end_row=sub, end_column=2)
-    col = 3; prop_cols = {}
-    for name, lab in TARGETS:
-        hcell(ws2, top, col, lab); ws2.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 1)
-        hcell(ws2, top, col + 1, None)
-        hcell(ws2, sub, col, "net"); hcell(ws2, sub, col + 1, "Δ")
-        ws2.column_dimensions[get_column_letter(col)].width = 8
-        ws2.column_dimensions[get_column_letter(col + 1)].width = 8
-        prop_cols[name] = col; col += 2
-    hcell(ws2, top, col, "6개 합계"); ws2.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 1)
-    hcell(ws2, top, col + 1, None); hcell(ws2, sub, col, "net"); hcell(ws2, sub, col + 1, "Δ")
-    ws2.column_dimensions[get_column_letter(col)].width = 9
-    ws2.column_dimensions[get_column_letter(col + 1)].width = 9
-    sum_col = col
-    rr = sub + 1
-    for di, day in enumerate(ordered):
-        wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
-        dc = ws2.cell(rr, 2, f"{d2k(day)} ({wd})"); dc.font = F(9); dc.alignment = cen; dc.border = box
-        nxt = ordered[di + 1] if di + 1 < len(ordered) else None
-        daysum = 0; psum = 0
-        for name, lab in TARGETS:
-            net = net_of(new26, cxl26, name, day); daysum += net
-            c = ws2.cell(rr, prop_cols[name], net); c.alignment = rgt; c.border = box
-            c.number_format = NF_NUM; c.font = F(9)
-            dcell = ws2.cell(rr, prop_cols[name] + 1); dcell.alignment = rgt; dcell.border = box
-            if nxt is not None:
-                delta = net - net_of(new26, cxl26, name, nxt); psum += net_of(new26, cxl26, name, nxt)
-                dcell.value = delta; dcell.number_format = NF_DELTA
-                dcell.font = F(9, color=(GREEN if delta > 0 else RED if delta < 0 else BLACK))
-            else:
-                dcell.value = "–"; dcell.font = F(9, color="808080"); dcell.alignment = cen
-        sc = ws2.cell(rr, sum_col, daysum); sc.alignment = rgt; sc.border = box
-        sc.number_format = NF_NUM; sc.font = F(9, bold=True)
-        sdc = ws2.cell(rr, sum_col + 1); sdc.alignment = rgt; sdc.border = box
-        if nxt is not None:
-            dl = daysum - psum; sdc.value = dl; sdc.number_format = NF_DELTA
-            sdc.font = F(9, bold=True, color=(GREEN if dl > 0 else RED if dl < 0 else BLACK))
-        else:
-            sdc.value = "–"; sdc.font = F(9, color="808080"); sdc.alignment = cen
-        rr += 1
-    ws2.freeze_panes = ws2.cell(sub + 1, 3).coordinate
+    # ===== 공용: 사업장별 3컬럼(26Y/25Y/GAP) 추이 시트 =====
+    def trend_sheet(title_text, sheet_name, value_fn):
+        ws = wb.create_sheet(sheet_name); ws.sheet_view.showGridLines = False
+        ws.column_dimensions["A"].width = 1.2; ws.column_dimensions["B"].width = 13
+        lastc = 2 + len(TARGETS) * 3 + 3
+        ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=lastc)
+        ws.cell(2, 2, title_text).font = F(13)
+        top, sub = 4, 5
+        hcell(ws, top, 2, "기준일" if "누적" in sheet_name else "예약일")
+        ws.merge_cells(start_row=top, start_column=2, end_row=sub, end_column=2)
+        col = 3; pc = {}
+        for name, _ in TARGETS:
+            hcell(ws, top, col, DATA_LBL[name]); ws.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 2)
+            hcell(ws, top, col + 1, None); hcell(ws, top, col + 2, None)
+            for j, lab in enumerate(("26Y", "25Y", "GAP")):
+                hcell(ws, sub, col + j, lab); ws.column_dimensions[get_column_letter(col + j)].width = 7.5
+            pc[name] = col; col += 3
+        hcell(ws, top, col, "Total"); ws.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 2)
+        hcell(ws, top, col + 1, None); hcell(ws, top, col + 2, None)
+        for j, lab in enumerate(("26Y", "25Y", "GAP")):
+            hcell(ws, sub, col + j, lab); ws.column_dimensions[get_column_letter(col + j)].width = 8
+        sc = col; rr = sub + 1
+        for day in desc:
+            ws.cell(rr, 2, f"{d2k(day)} ({wdc(day)})").font = F(9)
+            ws.cell(rr, 2).alignment = cen; ws.cell(rr, 2).border = box
+            s26 = s25 = 0
+            for name, _ in TARGETS:
+                v26, v25 = value_fn(name, day); g = v26 - v25; s26 += v26; s25 += v25
+                for j, (v, nf, isg) in enumerate([(v26, NF_NUM, 0), (v25, NF_NUM, 0), (g, NF_GAP, 1)]):
+                    cell = ws.cell(rr, pc[name] + j, v); cell.alignment = rgt; cell.border = box
+                    cell.number_format = nf; cell.font = F(9, color=(clr(g) if isg else BLACK))
+            g = s26 - s25
+            for j, (v, nf, isg) in enumerate([(s26, NF_NUM, 0), (s25, NF_NUM, 0), (g, NF_GAP, 1)]):
+                cell = ws.cell(rr, sc + j, v); cell.alignment = rgt; cell.border = box
+                cell.number_format = nf; cell.font = F(9, bold=True, color=(clr(g) if isg else BLACK))
+            rr += 1
+        ws.freeze_panes = ws.cell(sub + 1, 3).coordinate
 
-    # ===================================================== 전년대비(누적추이) =====
-    ws3 = wb.create_sheet("전년대비(누적추이)")
-    ws3.sheet_view.showGridLines = False
-    ws3.column_dimensions["A"].width = 1.2
-    ws3.column_dimensions["B"].width = 13
-    ws3.cell(2, 2, "전년 동기간 대비 누적 온북 추이 (일자별 cutoff) — 갭 좁혀지는지 추적").font = F(13)
-    ws3.merge_cells(start_row=2, start_column=2, end_row=2, end_column=2 + len(TARGETS) * 3 + 3)
-    ws3.cell(3, 2, f"각 행 = 해당일까지 누적 net 온북. '26(좌)/'25 동일MMDD(중)/갭(우). 최근 {WINDOW_DAYS}일.").font = F(9, color="808080")
-    top, sub = 5, 6
-    hcell(ws3, top, 2, "기준일"); ws3.merge_cells(start_row=top, start_column=2, end_row=sub, end_column=2)
-    col = 3; pc3 = {}
-    for name, lab in TARGETS:
-        hcell(ws3, top, col, lab); ws3.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 2)
-        hcell(ws3, top, col + 1, None); hcell(ws3, top, col + 2, None)
-        for j, t2 in enumerate(("'26", "'25", "갭")):
-            hcell(ws3, sub, col + j, t2)
-            ws3.column_dimensions[get_column_letter(col + j)].width = 7.5
-        pc3[name] = col; col += 3
-    hcell(ws3, top, col, "6개 합계"); ws3.merge_cells(start_row=top, start_column=col, end_row=top, end_column=col + 2)
-    hcell(ws3, top, col + 1, None); hcell(ws3, top, col + 2, None)
-    for j, t2 in enumerate(("'26", "'25", "갭")):
-        hcell(ws3, sub, col + j, t2); ws3.column_dimensions[get_column_letter(col + j)].width = 8
-    sc3 = col
-    rr = sub + 1
-    for day in ordered:
-        d25 = to25(day); nb26d = onbook_at(rows26, day); nb25d = onbook_at(rows25, d25)
-        wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
-        dc = ws3.cell(rr, 2, f"{d2k(day)} ({wd})"); dc.font = F(9); dc.alignment = cen; dc.border = box
-        st26 = st25 = 0
-        for name, lab in TARGETS:
-            v26 = nb26d.get(name, 0); v25 = nb25d.get(name, 0); gp = v26 - v25
-            st26 += v26; st25 += v25
-            for j, v in enumerate((v26, v25, gp)):
-                c = ws3.cell(rr, pc3[name] + j, v); c.alignment = rgt; c.border = box; c.number_format = NF_NUM
-                c.font = F(9, color=(GREEN if (j == 2 and gp > 0) else RED if (j == 2 and gp < 0) else BLACK),
-                           bold=(j == 2))
-        for j, v in enumerate((st26, st25, st26 - st25)):
-            c = ws3.cell(rr, sc3 + j, v); c.alignment = rgt; c.border = box; c.number_format = NF_NUM
-            c.font = F(9, bold=True, color=(GREEN if (j == 2 and st26 - st25 > 0) else RED if j == 2 else BLACK))
-        rr += 1
-    ws3.freeze_panes = ws3.cell(sub + 1, 3).coordinate
+    # 일별 픽업 (증감): 올해 일별 net vs 전년 동일자
+    trend_sheet("일별 픽업 (증감) — 7월 투숙, 전년 동기간 比", "일별픽업(증감)",
+                lambda name, day: (net_of(new26, cxl26, name, day), net_of(new25, cxl25, name, to25(day))))
+    # 전년대비 누적 온북 추이
+    nb_cache26 = {}; nb_cache25 = {}
+    def cum_fn(name, day):
+        if day not in nb_cache26: nb_cache26[day] = onbook_at(rows26, day)
+        d25 = to25(day)
+        if d25 not in nb_cache25: nb_cache25[d25] = onbook_at(rows25, d25)
+        return nb_cache26[day].get(name, 0), nb_cache25[d25].get(name, 0)
+    trend_sheet("전년 동기간 대비 누적 온북 추이 (일자별 cutoff)", "전년대비(누적추이)", cum_fn)
 
-    # ======================================================= 상세(신규·취소) ======
-    ws4 = wb.create_sheet("상세(신규·취소)")
-    ws4.sheet_view.showGridLines = False
+    # ============================== 상세 (오름차순) ==============================
+    ws4 = wb.create_sheet("상세(신규·취소)"); ws4.sheet_view.showGridLines = False
     ws4.column_dimensions["A"].width = 1.2
+    ws4.merge_cells("B2:G2")
     ws4.cell(2, 2, "일자×사업장 상세 — 신규 / 취소 / net / 당일 누적온북 (2026 7월 투숙)").font = F(13)
-    ws4.merge_cells(start_row=2, start_column=2, end_row=2, end_column=7)
-    hdr4 = [("예약 유입일", 16), ("사업장", 22), ("신규(+)", 10), ("취소(−)", 10), ("net", 9), ("당일 누적온북", 13)]
-    for i, (h, w) in enumerate(hdr4):
+    for i, (h, w) in enumerate([("예약 유입일", 16), ("사업장", 18), ("신규(+)", 10), ("취소(−)", 10), ("net", 9), ("당일 누적온북", 13)]):
         hcell(ws4, 4, 2 + i, h); ws4.column_dimensions[get_column_letter(2 + i)].width = w
     rr = 5
-    for day in ordered:
+    for day in days26:  # 과거 → 최근
         nbd = onbook_at(rows26, day)
-        wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
-        for name, lab in TARGETS:
+        for name, _ in TARGETS:
             nw = new26.get((name, day), 0); cx = cxl26.get((name, day), 0); net = nw - cx
-            row = [(f"{d2k(day)} ({wd})", cen, None, F(9)),
-                   (lab, lft, None, F(9)),
-                   (nw, rgt, NF_NUM, F(9)),
-                   (-cx, rgt, NF_NUM, F(9)),
-                   (net, rgt, NF_NUM, F(9, bold=True, color=(GREEN if net > 0 else RED if net < 0 else BLACK))),
-                   (nbd.get(name, 0), rgt, NF_NUM, F(9))]
+            row = [(f"{d2k(day)} ({wdc(day)})", cen, None, F(9)), (DATA_LBL[name], lft, None, F(9)),
+                   (nw, rgt, NF_NUM, F(9)), (-cx, rgt, NF_NUM, F(9)),
+                   (net, rgt, NF_NUM, F(9, bold=True, color=clr(net))), (nbd.get(name, 0), rgt, NF_NUM, F(9))]
             for i, (v, al, nf, ft) in enumerate(row):
-                c = ws4.cell(rr, 2 + i, v); c.alignment = al; c.font = ft; c.border = box
-                if nf: c.number_format = nf
+                cell = ws4.cell(rr, 2 + i, v); cell.alignment = al; cell.font = ft; cell.border = box
+                if nf: cell.number_format = nf
             rr += 1
     ws4.freeze_panes = "A5"
 
