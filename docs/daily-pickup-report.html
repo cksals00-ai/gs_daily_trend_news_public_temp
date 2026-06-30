@@ -130,7 +130,7 @@ tr.total td.lbl{color:var(--gold2)}
   <div class="mast-l">
     <div class="eyebrow">Daily Pickup Report</div>
     <h1>데일리 보고 리포트 — 7월 동기간 픽업</h1>
-    <div class="sub">전년대비 모니터링 6개 사업장 · 세그먼트 선택(기본 OTA+G-OTA) · 일별 픽업(net) 관리</div>
+    <div class="sub">전년대비 모니터링 6개 사업장 · 세그먼트 선택(기본 OTA+G-OTA) · 일별 픽업(증감) 관리</div>
   </div>
   <div class="mast-r">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
@@ -158,9 +158,9 @@ tr.total td.lbl{color:var(--gold2)}
   </tr></thead><tbody id="sumBody"><tr><td class="loading" colspan="7">불러오는 중…</td></tr></tbody></table></div>
 
   <!-- 추이 (탭) -->
-  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title" id="trendTitle">일별 픽업 (net · 전일대비 Δ)</div><div class="sec-unit" id="trendUnit"></div></div>
+  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title" id="trendTitle">일별 픽업 (증감 · 전년대비)</div><div class="sec-unit" id="trendUnit"></div></div>
   <div class="tabs">
-    <div class="tab on" data-v="daily" onclick="switchTab('daily')">일별 픽업 (net·Δ)</div>
+    <div class="tab on" data-v="daily" onclick="switchTab('daily')">일별 픽업 (증감)</div>
     <div class="tab" data-v="cum" onclick="switchTab('cum')">전년대비 누적추이</div>
   </div>
   <div class="tbl-wrap tbl-wide" id="dailyWrap"><table id="tblDaily"></table></div>
@@ -173,6 +173,7 @@ tr.total td.lbl{color:var(--gold2)}
 <script>
 const BASE='data/', NF=n=>Math.abs(Math.round(n)).toLocaleString('ko-KR');
 const SIGN=n=>(n>0?'+':n<0?'−':'')+NF(n);
+const NM=n=>(n<0?'−':'')+NF(n);              // 음수만 부호(일별 증감/온북 표시)
 const clsG=g=>g>0?'pos':g<0?'neg':'';
 let DATA=null, SEL=null, SEGS=[];
 
@@ -246,7 +247,7 @@ function recompute(){
     `<b>[${segLabel()}] 6개 합계 동기간 온북 ${NF(total.v26)}실</b> (전년 ${NF(total.v25)}실, `+
     `<span class="chip ${total.gap<0?'neg':'pos'}">${SIGN(total.gap)}실 / ${(total.yoy*100).toFixed(1)}%</span>). `+
     `전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+ rows.map(chip).join(' ')+
-    `<br><span style="color:var(--ink3)">목표 = 선택 세그(${segLabel()}) RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.</span>`;
+    `<br><span style="color:var(--ink3)">목표 = 선택 세그(${segLabel()}) RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) 증감 모니터링으로 갭 관리.</span>`;
   // 요약표
   const sb=document.getElementById('sumBody'); sb.innerHTML='';
   const rowHtml=(s,isT)=>{
@@ -267,30 +268,22 @@ function recompute(){
 }
 
 function renderDaily(){
+  // 일별 픽업 증감(net=신규−취소)을 전년 동일자(MMDD)와 비교: '26 / '25 / 전년비
   const T=DATA.meta.targets, D=DATA.daily;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">예약 유입일</th>';
-  T.forEach(t=>h+=`<th colspan="2" class="grp">${t.label}</th>`);
-  h+='<th colspan="4" class="grp">6개 합계 (전년대비)</th></tr><tr>';
-  T.forEach(()=>h+='<th class="grp">net</th><th>전일Δ</th>');
-  h+='<th class="grp">net·26</th><th>전일Δ</th><th>net·25</th><th>전년차</th></tr></thead><tbody>';
-  for(let i=0;i<D.length;i++){
-    const d=D[i], nx=D[i+1];
+  T.forEach(t=>h+=`<th colspan="3" class="grp">${t.label}</th>`);
+  h+='<th colspan="3" class="grp">6개 합계</th></tr><tr>';
+  T.forEach(()=>h+="<th class='grp'>'26</th><th>'25</th><th>전년비</th>");
+  h+="<th class='grp'>'26</th><th>'25</th><th>전년비</th></tr></thead><tbody>";
+  D.forEach(d=>{
     h+=`<tr><td class="lbl">${md(d.d)} (${d.wd})</td>`;
-    let dsum=0,psum=0,dsum25=0;
-    T.forEach(t=>{
-      const nv=netSel(d.per[t.name]); dsum+=nv; dsum25+=netSel(d.per25[t.name]);
-      h+=`<td class="num grp">${NF(nv)}</td>`;
-      if(nx){const pv=netSel(nx.per[t.name]); psum+=pv; const dl=nv-pv;
-        h+=`<td class="delta ${clsG(dl)}">${SIGN(dl)}</td>`;}
-      else h+='<td class="delta" style="color:var(--ink4)">–</td>';
-    });
-    const yoy=dsum-dsum25;
-    h+=`<td class="num grp" style="font-weight:700">${NF(dsum)}</td>`;
-    if(nx){const dl=dsum-psum; h+=`<td class="delta ${clsG(dl)}" style="font-weight:700">${SIGN(dl)}</td>`;}
-    else h+='<td class="delta" style="color:var(--ink4)">–</td>';
-    h+=`<td class="num">${NF(dsum25)}</td><td class="delta ${clsG(yoy)}" style="font-weight:700">${SIGN(yoy)}</td>`;
+    let s26=0,s25=0;
+    T.forEach(t=>{const v26=netSel(d.per[t.name]),v25=netSel(d.per25[t.name]),g=v26-v25; s26+=v26;s25+=v25;
+      h+=`<td class="num grp">${NM(v26)}</td><td class="num">${NM(v25)}</td><td class="num ${clsG(g)}">${SIGN(g)}</td>`;});
+    const g=s26-s25;
+    h+=`<td class="num grp" style="font-weight:700">${NM(s26)}</td><td class="num" style="font-weight:700">${NM(s25)}</td><td class="num ${clsG(g)}" style="font-weight:700">${SIGN(g)}</td>`;
     h+='</tr>';
-  }
+  });
   document.getElementById('tblDaily').innerHTML=h+'</tbody>';
 }
 
@@ -313,7 +306,7 @@ function renderCum(){
   document.getElementById('tblCum').innerHTML=h+'</tbody>';
   document.getElementById('footNote').innerHTML=
     '※ 세그먼트: OTA(53/72·온라인패키지·대매점) · G-OTA(A4/A5) · Inbound(58) · 기타(회원·자사·단체). 기본 = OTA+G-OTA, 칩으로 가감.<br>'+
-    '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 net = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
+    '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 증감 = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
     '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출. 갭(+)=전년초과, 갭(−)=전년미달. 엑셀 다운로드는 OTA+G-OTA 기준(화면 기본 뷰와 동일).';
 }
 
@@ -321,7 +314,7 @@ function switchTab(v){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
   document.getElementById('dailyWrap').classList.toggle('hide',v!=='daily');
   document.getElementById('cumWrap').classList.toggle('hide',v!=='cum');
-  document.getElementById('trendTitle').textContent=v==='daily'?'일별 픽업 (net · 전일대비 Δ)':'전년대비 누적 온북 추이';
+  document.getElementById('trendTitle').textContent=v==='daily'?'일별 픽업 (증감 · 전년대비)':'전년대비 누적 온북 추이';
 }
 
 load().catch(e=>{document.getElementById('cmt').innerHTML='데이터를 불러오지 못했습니다: '+e.message;});
