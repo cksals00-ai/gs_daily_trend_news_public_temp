@@ -347,7 +347,6 @@ def main():
     targets_gs = load_targets()          # 독립 목표 테이블(전 연도)
     ledger, ledger_prop = load_ledger()  # 직전 산출물(마감월 보존용)
     to_canon = build_alias_map(canon_names)
-    closing_gs, closing_prop = load_closing(to_canon)
     cur_ym = datetime.now().strftime("%Y%m")
     ret_end_by_year = {}                 # year -> 재전송 커버 마지막 투숙월(없으면 None)
 
@@ -447,9 +446,14 @@ def main():
             if year == cur_year and sm < cur_ym:
                 preserved_closed.append(f"{year}-{month}")
         rec = _ratios(total, same, _target(year, month), is_unstarted=(sm > cur_ym))
-        # closing 도 booking 과 같은 소스 결정: fresh→db_aggregated, 보존→ledger
-        # (마감월 db_aggregated 가 재전송 삭제로 손상될 수 있어 ledger 우선이 안전)
-        crn = closing_gs.get(sm, 0) if use_fresh else ((ledger.get(year) or {}).get(month, {}) or {}).get("closing_rn", 0)
+        # 마감 컬럼 = OTA+G-OTA 세그먼트만(전체채널 db_aggregated 미사용).
+        #  - 마감·진행월(sm <= cur_ym): 올해 OTA+G-OTA 마감/OTB = total
+        #  - 미래월(sm > cur_ym): 작년 동월 OTA+G-OTA 마감(벤치마크)
+        if sm > cur_ym:
+            ly = str(int(year) - 1)
+            crn = (by_year.get(ly, {}).get(month, {}) or {}).get("total_rn", 0)
+        else:
+            crn = total
         if crn:
             rec["closing_rn"] = crn
         by_year.setdefault(year, {})[month] = rec
@@ -464,7 +468,8 @@ def main():
         # 이 사업장이 가진 모든 (year, month): fresh + ledger
         ym_set = {(sm[:4], sm[4:6]) for (c, sm) in fresh_prop_sms if c == canon}
         ym_set |= {(y, m) for y, mm in led_node.items() if isinstance(mm, dict) and y.isdigit() for m in mm}
-        for (year, month) in ym_set:
+        # 작년 마감 참조(미래월)를 위해 연도 오름차순 순회 — 2025가 2026 미래월보다 먼저 채워져야 함.
+        for (year, month) in sorted(ym_set):
             sm = year + month
             use_fresh = ((canon, sm) in fresh_prop_sms) and _fresh_authoritative(sm)
             if use_fresh:
@@ -476,7 +481,12 @@ def main():
                 total, same = lrec.get("total_rn", 0), lrec.get("same_month_rn", 0)
             budget_rn = budget_by_prop.get(canon, {}).get(month, 0) if year == "2026" else 0
             rec = _ratios(total, same, budget_rn, is_unstarted=(sm > cur_ym))
-            crn = closing_prop.get(canon, {}).get(sm, 0) if use_fresh else ((led_node.get(year) or {}).get(month, {}) or {}).get("closing_rn", 0)
+            # 마감 = OTA+G-OTA: 마감·진행월=올해 total, 미래월=작년 동월 total
+            if sm > cur_ym:
+                ly = str(int(year) - 1)
+                crn = (by_property.get(canon, {}).get(ly, {}).get(month, {}) or {}).get("total_rn", 0)
+            else:
+                crn = total
             if crn:
                 rec["closing_rn"] = crn
             node = by_property.setdefault(canon, {"region": get_region(canon)})
