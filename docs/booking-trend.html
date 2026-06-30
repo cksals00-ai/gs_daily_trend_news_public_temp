@@ -979,8 +979,8 @@ function renderSmrGrid() {
       }
       if (tyD.closing_rn) {
         html += '<div class="smr-close-row"><span class="smr-close-label">마감</span><span class="smr-close-val">' + tyD.closing_rn.toLocaleString('ko-KR') + '</span></div>';
-        if (tyD.advance_rn > 0) {
-          const share = (tyD.advance_rn / tyD.closing_rn * 100).toFixed(1);
+        if (tyD.advance_rn > 0 && tyD.total_rn > 0) {
+          const share = (tyD.advance_rn / tyD.total_rn * 100).toFixed(1);
           html += '<div class="smr-share-row"><span class="smr-close-label">비중</span><span class="smr-share-val">' + share + '%</span></div>';
         }
       }
@@ -1055,7 +1055,7 @@ function renderSmrDrill() {
       }
     }
     const closingCell = t.closing_rn ? t.closing_rn.toLocaleString('ko-KR') : '—';
-    const shareCell = (t.closing_rn && t.advance_rn > 0) ? (t.advance_rn / t.closing_rn * 100).toFixed(1) + '%' : '—';
+    const shareCell = (t.total_rn && t.advance_rn > 0) ? (t.advance_rn / t.total_rn * 100).toFixed(1) + '%' : '—';
     html += '<tr><td>' + r.name + '</td><td>' + t.advance_rn.toLocaleString('ko-KR') + '</td><td>' + budCell +
             '</td><td class="this-year">' + ratioCell + '</td><td>' + lyCell +
             '</td><td>' + closingCell + '</td><td>' + shareCell + '</td></tr>';
@@ -1063,7 +1063,7 @@ function renderSmrDrill() {
 
   if (rows.length) {
     const totRatio = (hasBudget && totBud > 0) ? (totAdv / totBud * 100) : (totTotal > 0 ? totAdv / totTotal * 100 : 0);
-    const totShare = (totClosing > 0 && totAdv > 0) ? (totAdv / totClosing * 100).toFixed(1) + '%' : '—';
+    const totShare = (totTotal > 0 && totAdv > 0) ? (totAdv / totTotal * 100).toFixed(1) + '%' : '—';
     html += '<tr class="total-row"><td>합계</td><td>' + totAdv.toLocaleString('ko-KR') + '</td><td>' +
             (hasBudget ? totBud.toLocaleString('ko-KR') : '—') + '</td><td>' + totRatio.toFixed(1) + '%</td><td>—</td>' +
             '<td>' + (totClosing > 0 ? totClosing.toLocaleString('ko-KR') : '—') + '</td><td>' + totShare + '</td></tr>';
