@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데일리 보고 리포트 · 7월 동기간 픽업 · SONO GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  --bg:#0f1117;--bg2:#161921;--bg3:#1c1f2a;--bg4:#242836;
+  --ink:#f0f0f4;--ink2:#c8cad0;--ink3:#8b8f9a;--ink4:#5c6070;
+  --gold:#d4a74a;--gold2:#ecc06a;--gold-glow:rgba(212,167,74,.15);
+  --pos:#5cc49a;--pos-bg:rgba(92,196,154,.12);--neg:#e87a8a;--neg-bg:rgba(232,122,138,.12);
+  --rule:rgba(255,255,255,.08);--rule2:rgba(255,255,255,.14);
+  --sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:14px;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* GSN */
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-size:13px;position:sticky;top:0;z-index:200}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:.15s}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex}}
+
+/* Masthead */
+.mast{max-width:1400px;margin:0 auto;padding:26px 24px 10px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.mast-l{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase}
+.mast h1{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.mast .sub{color:var(--ink3);font-size:13px}
+.mast-r{display:flex;align-items:center;gap:10px}
+.basis{font-family:var(--mono);font-size:11px;color:var(--ink3);text-align:right;line-height:1.5}
+.basis b{color:var(--ink2)}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1206;font-weight:700;font-size:13px;padding:9px 16px;border-radius:9px;border:none;cursor:pointer;box-shadow:0 2px 12px var(--gold-glow);transition:.15s}
+.dl-btn:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(212,167,74,.3)}
+
+.wrap{max-width:1400px;margin:0 auto;padding:8px 24px 60px}
+
+/* 총평 */
+.cmt{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:10px;padding:14px 18px;margin:14px 0 22px;color:var(--ink2);font-size:13.5px}
+.cmt b{color:var(--ink)}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 8px;border-radius:20px;margin:0 2px}
+.chip.neg{background:var(--neg-bg);color:var(--neg)}.chip.pos{background:var(--pos-bg);color:var(--pos)}
+
+/* Section */
+.sec-head{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+.sec-bar{width:3px;height:16px;background:var(--gold);border-radius:2px}
+.sec-title{font-size:16px;font-weight:700}
+.sec-unit{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink4);letter-spacing:.05em}
+
+/* Tabs */
+.tabs{display:inline-flex;background:var(--bg2);border:1px solid var(--rule);border-radius:9px;padding:3px;margin:6px 0 4px}
+.tab{padding:6px 16px;font-size:13px;font-weight:600;color:var(--ink3);border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap}
+.tab.on{background:var(--bg4);color:var(--gold2)}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--bg2)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--rule)}
+thead th{background:#0c0e14;color:var(--ink2);font-weight:600;font-size:11.5px;letter-spacing:.02em;position:sticky;top:0;text-align:center;border-bottom:1px solid var(--rule2)}
+thead.l1 th{background:#090b10;color:var(--gold2);text-transform:uppercase;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em}
+th.lbl,td.lbl{text-align:left;font-weight:600;color:var(--ink)}
+tbody tr:hover{background:rgba(255,255,255,.025)}
+td.num{font-family:var(--mono);color:var(--ink2)}
+td.pos{color:var(--pos)}td.neg{color:var(--neg)}
+tr.total td{border-top:2px solid var(--rule2);font-weight:800;background:rgba(212,167,74,.05)}
+tr.total td.lbl{color:var(--gold2)}
+.delta{font-family:var(--mono);font-size:11.5px}
+.st{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block}
+.st.pos{background:var(--pos-bg);color:var(--pos)}.st.neg{background:var(--neg-bg);color:var(--neg)}.st.eq{background:rgba(255,255,255,.06);color:var(--ink3)}
+.grp{border-left:1px solid var(--rule2)}
+.note{color:var(--ink4);font-size:11.5px;margin-top:10px;line-height:1.6}
+.loading{padding:60px;text-align:center;color:var(--ink3)}
+.hide{display:none}
+</style>
+</head>
+<body>
+
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/external-report.html" data-gsn="external-report">외부 리포트 분석</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">☰</button>
+  </div>
+</nav>
+
+<header class="mast">
+  <div class="mast-l">
+    <div class="eyebrow">Daily Pickup Report</div>
+    <h1>데일리 보고 리포트 — 7월 동기간 픽업</h1>
+    <div class="sub">전년대비 모니터링 6개 사업장 · 세그 구분없이 전체 RN · 일별 픽업(net) 관리</div>
+  </div>
+  <div class="mast-r">
+    <div class="basis" id="basis">—</div>
+    <a class="dl-btn" id="dlBtn" href="data/july_pickup.xlsx" download="7월동기간_픽업_일자별관리.xlsx">⬇ 엑셀 다운로드</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="cmt" id="cmt">불러오는 중…</div>
+
+  <!-- 요약 -->
+  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title">사업장별 7월 동기간 온북 (YoY)</div><div class="sec-unit">단위 : 실(RN)</div></div>
+  <div class="tbl-wrap"><table id="tblSum"><thead><tr>
+    <th class="lbl">구분</th><th>2026 온북</th><th>2025 온북</th><th>갭(실)</th><th>전년比</th><th>상태</th><th>목표(전년초과)</th>
+  </tr></thead><tbody id="sumBody"><tr><td class="loading" colspan="7">불러오는 중…</td></tr></tbody></table></div>
+
+  <!-- 추이 (탭) -->
+  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title" id="trendTitle">일별 픽업 (net · 전일대비 Δ)</div><div class="sec-unit" id="trendUnit"></div></div>
+  <div class="tabs">
+    <div class="tab on" data-v="daily" onclick="switchTab('daily')">일별 픽업 (net·Δ)</div>
+    <div class="tab" data-v="cum" onclick="switchTab('cum')">전년대비 누적추이</div>
+  </div>
+  <div class="tbl-wrap" id="dailyWrap"><table id="tblDaily"></table></div>
+  <div class="tbl-wrap hide" id="cumWrap"><table id="tblCum"></table></div>
+
+  <div class="note" id="footNote"></div>
+</div>
+
+<script src="./js/menu-visibility.js"></script>
+<script>
+const BASE='data/', NF=n=>Math.abs(n).toLocaleString('ko-KR');
+const SIGN=n=>(n>0?'+':n<0?'−':'')+NF(n);
+const clsG=g=>g>0?'pos':g<0?'neg':'';
+let DATA=null;
+
+function md(d){return d.slice(4,6)+'/'+d.slice(6,8);}
+function net(pair){return pair[0]-pair[1];}
+
+async function load(){
+  const r=await fetch(BASE+'july_pickup.json?t='+Date.now(),{cache:'no-store'});
+  if(!r.ok) throw new Error('july_pickup.json '+r.status);
+  DATA=await r.json();
+  render();
+}
+
+function render(){
+  const m=DATA.meta, T=DATA.total;
+  // 기준일 / 다운로드 파일명
+  document.getElementById('basis').innerHTML=
+    `기준일 <b>${md(m.asof26)}</b> (마지막 완전일)<br>vs 전년 <b>${md(m.asof25)}</b> · 스냅샷 ${md(m.data_date)}`;
+  document.getElementById('dlBtn').setAttribute('download',`7월동기간_픽업_일자별관리_${m.data_date}.xlsx`);
+  document.getElementById('dlBtn').href=BASE+'july_pickup.xlsx?t='+m.data_date;
+
+  // 총평
+  const behind=DATA.summary.filter(s=>s.gap<0), ahead=DATA.summary.filter(s=>s.gap>=0);
+  const chip=(s)=>`<span class="chip ${s.gap<0?'neg':'pos'}">${s.label} ${SIGN(s.gap)}</span>`;
+  document.getElementById('cmt').innerHTML=
+    `<b>6개 합계 동기간 온북 ${NF(T.v26)}실</b> (전년 ${NF(T.v25)}실, `+
+    `<span class="${clsG(T.gap)==='neg'?'chip neg':'chip pos'}">${SIGN(T.gap)}실 / ${(T.yoy*100).toFixed(1)}%</span>). `+
+    `전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
+    DATA.summary.map(chip).join(' ')+
+    `<br><span style="color:var(--ink3)">목표 = 세그 구분없이 전체 RN을 전년 동기간 초과로 유지 · 일별 픽업(신규−취소) net 모니터링으로 갭 관리.</span>`;
+
+  // 요약 테이블
+  const sb=document.getElementById('sumBody'); sb.innerHTML='';
+  const row=(s,isT)=>{
+    const st=s.gap>0?'<span class="st pos">전년초과 ▲</span>':s.gap<0?'<span class="st neg">전년미달 ▼</span>':'<span class="st eq">동률</span>';
+    const need=s.gap>=0?'유지·확대':`+${NF(s.gap)}실 필요`;
+    return `<tr class="${isT?'total':''}"><td class="lbl">${s.label}</td>`+
+      `<td class="num">${NF(s.v26)}</td><td class="num">${NF(s.v25)}</td>`+
+      `<td class="num ${clsG(s.gap)}">${SIGN(s.gap)}</td>`+
+      `<td class="num ${clsG(s.gap)}">${(s.yoy*100).toFixed(1)}%</td>`+
+      `<td style="text-align:center">${st}</td>`+
+      `<td class="${clsG(s.gap)}" style="text-align:center;font-weight:600">${need}</td></tr>`;
+  };
+  DATA.summary.forEach(s=>sb.insertAdjacentHTML('beforeend',row(s,false)));
+  sb.insertAdjacentHTML('beforeend',row({label:'합계 (6개)',...DATA.total},true));
+
+  document.getElementById('trendUnit').textContent=
+    `최근 ${m.window_days}일 (${md(DATA.daily[DATA.daily.length-1].d)}~${md(DATA.daily[0].d)}, 위=최근) · 단위 실(RN)`;
+  renderDaily(); renderCum();
+}
+
+function renderDaily(){
+  const T=DATA.meta.targets, D=DATA.daily;
+  let h='<thead class="l1"><tr><th class="lbl" rowspan="2">예약 유입일</th>';
+  T.forEach(t=>h+=`<th colspan="2" class="grp">${t.label}</th>`);
+  h+='<th colspan="2" class="grp">6개 합계</th></tr><thead><tr>';
+  T.forEach(()=>h+='<th class="grp">net</th><th>Δ</th>');
+  h+='<th class="grp">net</th><th>Δ</th></tr></thead><tbody>';
+  for(let i=0;i<D.length;i++){
+    const d=D[i], nx=D[i+1];
+    h+=`<tr><td class="lbl">${md(d.d)} (${d.wd})</td>`;
+    let dsum=0,psum=0;
+    T.forEach(t=>{
+      const nv=net(d.per[t.name]); dsum+=nv;
+      h+=`<td class="num grp">${NF(nv)}</td>`;
+      if(nx){const pv=net(nx.per[t.name]); psum+=pv; const dl=nv-pv;
+        h+=`<td class="delta ${clsG(dl)}">${SIGN(dl)}</td>`;}
+      else h+='<td class="delta" style="color:var(--ink4)">–</td>';
+    });
+    h+=`<td class="num grp" style="font-weight:700">${NF(dsum)}</td>`;
+    if(nx){const dl=dsum-psum; h+=`<td class="delta ${clsG(dl)}" style="font-weight:700">${SIGN(dl)}</td>`;}
+    else h+='<td class="delta" style="color:var(--ink4)">–</td>';
+    h+='</tr>';
+  }
+  document.getElementById('tblDaily').innerHTML=h+'</tbody>';
+}
+
+function renderCum(){
+  const T=DATA.meta.targets, C=DATA.cumulative;
+  let h='<thead class="l1"><tr><th class="lbl" rowspan="2">기준일</th>';
+  T.forEach(t=>h+=`<th colspan="3" class="grp">${t.label}</th>`);
+  h+='<th colspan="3" class="grp">6개 합계</th></tr><thead><tr>';
+  T.forEach(()=>h+="<th class='grp'>'26</th><th>'25</th><th>갭</th>");
+  h+="<th class='grp'>'26</th><th>'25</th><th>갭</th></tr></thead><tbody>";
+  C.forEach(c=>{
+    h+=`<tr><td class="lbl">${md(c.d)} (${c.wd})</td>`;
+    let s26=0,s25=0;
+    T.forEach(t=>{const v=c.per[t.name],g=v[0]-v[1]; s26+=v[0];s25+=v[1];
+      h+=`<td class="num grp">${NF(v[0])}</td><td class="num">${NF(v[1])}</td><td class="num ${clsG(g)}">${SIGN(g)}</td>`;});
+    const g=s26-s25;
+    h+=`<td class="num grp" style="font-weight:700">${NF(s26)}</td><td class="num" style="font-weight:700">${NF(s25)}</td><td class="num ${clsG(g)}" style="font-weight:700">${SIGN(g)}</td>`;
+    h+='</tr>';
+  });
+  document.getElementById('tblCum').innerHTML=h+'</tbody>';
+  document.getElementById('footNote').innerHTML=
+    '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 net = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
+    '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출 · 세그 구분없이 전체 RN. 갭(+)=전년초과, 갭(−)=전년미달.';
+}
+
+function switchTab(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  document.getElementById('dailyWrap').classList.toggle('hide',v!=='daily');
+  document.getElementById('cumWrap').classList.toggle('hide',v!=='cum');
+  document.getElementById('trendTitle').textContent=v==='daily'?'일별 픽업 (net · 전일대비 Δ)':'전년대비 누적 온북 추이';
+}
+
+load().catch(e=>{document.getElementById('cmt').innerHTML='데이터를 불러오지 못했습니다: '+e.message;});
+</script>
+</body>
+</html>
