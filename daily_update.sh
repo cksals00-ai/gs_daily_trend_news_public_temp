@@ -153,6 +153,15 @@ run_quick "5/12 build_same_month_ratio"     "scripts/build_same_month_ratio.py"
 # ── [6/12] ~ [12/12] 후속 집계 ───────────────────────────────
 run_quick "6/12 compare_and_update"         "scripts/compare_and_update.py"
 run_quick "7/12 generate_otb_data"          "scripts/generate_otb_data.py"
+# 7b — 7월 동기간 픽업(데일리 보고 리포트): 온북 갱신과 함께 자동 갱신. raw_db 직접 net.
+#       Desktop 사본은 자동 파이프라인에선 생략(PICKUP_NO_DESKTOP). 산출물은 git add -A 로 함께 커밋/푸시.
+echo ""; echo -e "${BOLD}[7b/12 build_july_pickup]${NC}"
+if [ -f scripts/build_july_pickup_tracker.py ]; then
+    PICKUP_NO_DESKTOP=1 python3 scripts/build_july_pickup_tracker.py 2>&1 | tail -5
+    echo -e "  ${GREEN}✅ 완료${NC}"
+else
+    echo -e "  ${YELLOW}⚠ scripts/build_july_pickup_tracker.py 없음 — 스킵${NC}"
+fi
 run_quick "8/12 generate_insights"          "scripts/generate_insights.py"
 run_quick "9/12 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
 run_quick "10/12 parse_campaign86"          "scripts/parse_campaign86.py"

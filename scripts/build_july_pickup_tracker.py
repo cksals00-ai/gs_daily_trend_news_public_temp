@@ -447,6 +447,7 @@ def build_payload(data_date, asof26, asof25, rows26, rows25):
     WD = "월화수목금토일"
 
     new26, cxl26 = daily_newcancel(rows26)
+    new25, cxl25 = daily_newcancel(rows25)
     nb26 = onbook_at(rows26, asof26); nb25 = onbook_at(rows25, asof25)
 
     summary = []
@@ -461,8 +462,11 @@ def build_payload(data_date, asof26, asof25, rows26, rows25):
     daily = []
     for day in ordered:
         wd = WD[datetime.strptime(day, "%Y%m%d").weekday()]
+        d25 = to25(day)
         per = {name: [new26.get((name, day), 0), cxl26.get((name, day), 0)] for name, _ in TARGETS}
-        daily.append({"d": day, "wd": wd, "per": per})  # per[name]=[신규,취소], net=신규-취소
+        per25 = {name: [new25.get((name, d25), 0), cxl25.get((name, d25), 0)] for name, _ in TARGETS}
+        # per/per25[name]=[신규,취소], net=신규-취소. p25=전년 동일자(MMDD) 일별 픽업
+        daily.append({"d": day, "wd": wd, "d25": d25, "per": per, "per25": per25})
 
     cumulative = []
     for day in ordered:
@@ -513,12 +517,14 @@ def main():
     json.dump(payload, open(json_docs, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"\n대시보드 배포본 → {json_docs}\n               → {xlsx_docs}")
 
-    # 2) 사용자 로컬 사본 (Desktop, 날짜 파일명)
-    out_dir = Path(os.path.expanduser("~/Desktop"))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"7월동기간_픽업_일자별관리_{data_date}.xlsx"
-    shutil.copyfile(xlsx_docs, out_path)
-    print(f"로컬 사본       → {out_path}")
+    # 2) 사용자 로컬 사본 (Desktop, 날짜 파일명) — 자동 파이프라인(daily_update.sh)에선 생략
+    desk = Path(os.path.expanduser("~/Desktop"))
+    if os.environ.get("PICKUP_NO_DESKTOP"):
+        print("로컬 사본       → (PICKUP_NO_DESKTOP: 생략)")
+    elif desk.is_dir():
+        out_path = desk / f"7월동기간_픽업_일자별관리_{data_date}.xlsx"
+        shutil.copyfile(xlsx_docs, out_path)
+        print(f"로컬 사본       → {out_path}")
 
 if __name__ == "__main__":
     main()
