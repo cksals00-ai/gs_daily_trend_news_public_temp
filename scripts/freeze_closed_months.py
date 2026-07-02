@@ -129,6 +129,17 @@ def seed(good_path):
     print(f"✅ baseline 시드: {BASELINE} ({len(base)}개월)", file=sys.stderr)
 
 
+def _strip_daily(slice_):
+    """일자축(취소일자/입력일자 = YYYYMMDD) daily 필드를 슬라이스에서 제거.
+    freeze 의 extract/restore 는 period-key(YYYYMMDD)를 투숙월 슬라이스로 오인하므로,
+    cancel_daily/pickup_daily/net_daily/stay_date_daily 등 '일자축' 필드가 마감월 복원에
+    끌려들어가면 base_date(전일)의 당일픽업이 stale baseline 으로 덮여 과소·차원불일치가 된다.
+    이 필드들은 parse_raw_db 가 매 실행 raw 전체로 정확히 재계산하므로 freeze 보존 불필요.
+    (_month 접미사=투숙월축 필드는 마감월 보존이 유효하므로 유지)"""
+    return {k: v for k, v in (slice_ or {}).items()
+            if not ('daily' in k and not k.endswith('_month'))}
+
+
 def freeze_file(db_path, baseline, cur_ym, updated_baseline):
     """db_aggregated 파일 하나에 대해 마감월 동결/복원. updated_baseline 에 자가치유분 누적."""
     db = load_json(db_path)
@@ -141,10 +152,10 @@ def freeze_file(db_path, baseline, cur_ym, updated_baseline):
         # 마감월 booking_rn 은 상향 개정만 정상(late data). 라이브가 baseline 이상으로 완전할
         # 때만 갱신(자가치유), 더 낮으면(체크아웃 드롭·재전송 삭제 등 손실) baseline 복원.
         if rn >= MIN_HEALTHY and rn >= base_rn:
-            updated_baseline[sm] = extract_month(db, sm)
+            updated_baseline[sm] = _strip_daily(extract_month(db, sm))
             healed += 1
         elif baseline.get(sm):
-            restore_month(db, baseline[sm])
+            restore_month(db, _strip_daily(baseline[sm]))
             restored += 1
             print(f"  복원 {sm}: live booking_rn={rn:,} → baseline {base_rn:,}", file=sys.stderr)
     recompute_meta_months(db)
