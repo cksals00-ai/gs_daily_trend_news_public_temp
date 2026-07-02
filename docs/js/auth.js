@@ -297,6 +297,30 @@
           if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : 'FCST 로드 실패');
           return j;
         });
+    },
+
+    // 데일리 리포트 키인(admin_input) 저장 (GAS 백엔드) — saveFcst 와 동일 패턴
+    saveDaily: function (data) {
+      var t = readToken();
+      if (!t || !tokenIsValid(t)) return Promise.reject(new Error('인증이 만료되었습니다. 다시 로그인해주세요.'));
+      return fetch(getApiUrl() + '?action=save_admin', {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: t, data: data })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '데일리 키인 저장 실패');
+        return j;
+      });
+    },
+
+    // 데일리 리포트 키인(admin_input) 로드 (GAS 백엔드)
+    loadDaily: function () {
+      var t = readToken();
+      if (!t || !tokenIsValid(t)) return Promise.reject(new Error('인증이 만료되었습니다. 다시 로그인해주세요.'));
+      return fetch(getApiUrl() + '?action=load_admin&token=' + encodeURIComponent(t))
+        .then(function (r) { return r.json(); }).then(function (j) {
+          if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '데일리 키인 로드 실패');
+          return j;
+        });
     }
   };
   window.GSNAuth = GSNAuth;

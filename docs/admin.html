@@ -367,8 +367,8 @@ select option{background:var(--bg-deep);}
     <h1>관리자 입력 패널</h1>
     <p>
       데이터 기반 인사이트 제안에서 선택·편집하고, 전략카드를 직접 지정하세요.
-      <strong>「JSON 내보내기」</strong>로 <code>admin_input.json</code>을 다운로드 →
-      <code>data/</code> 폴더에 커밋하면 다음 빌드 시 반영됩니다.
+      <strong>「⬆ 반영」</strong> 버튼을 누르면 <code>admin_input</code> 키인이 서버로 즉시 반영됩니다.
+      (서버 저장이 불가한 경우 <code>admin_input.json</code> 다운로드로 자동 폴백됩니다.)
       <br><em style="color:var(--ink-faint);font-size:11px;">
       ※ build.py 실행 후 admin_suggestions.json이 생성되어야 자동 제안이 표시됩니다.</em>
     </p>
@@ -700,7 +700,7 @@ select option{background:var(--bg-deep);}
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
   </label>
   <button class="btn btn-secondary" onclick="saveToStorage()">💾 임시 저장</button>
-  <button class="btn btn-primary"   onclick="exportJSON()">⬇ JSON 내보내기</button>
+  <button class="btn btn-primary" id="btn-apply" onclick="pushToServer()">⬆ 반영</button>
 </div>
 
 <script>
@@ -1273,16 +1273,46 @@ function autoSave() {
 /* ══════════════════════════════════════════════
    EXPORT / IMPORT
 ══════════════════════════════════════════════ */
-function exportJSON() {
+// 서버로 즉시 반영 (GAS 백엔드). 실패 시 JSON 파일 다운로드로 폴백.
+async function pushToServer() {
+  const btn = document.getElementById('btn-apply');
+
+  if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) {
+    showToast('로그인이 필요합니다. 다시 로그인해주세요.', 'err');
+    setTimeout(() => GSNAuth.logout(), 1500);
+    return;
+  }
+
   const data = getFormData();
-  const json = JSON.stringify(data, null, 2);
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⬆ 반영 중…'; }
+
+  try {
+    const result = await GSNAuth.saveDaily(data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showToast('데일리 키인 반영 완료' + (result && result.message ? ` — ${result.message}` : ''));
+  } catch (e) {
+    const msg = (e && e.message) || '알 수 없는 오류';
+    if (msg.includes('action') || msg.includes('not found') || msg.includes('지원')) {
+      showToast('서버에서 save_admin을 아직 지원하지 않습니다 — JSON 다운로드로 폴백', 'err');
+    } else {
+      showToast('반영 실패: ' + msg + ' — JSON 다운로드로 폴백', 'err');
+    }
+    downloadJSON(data);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label || '⬆ 반영'; }
+  }
+}
+
+// 폴백: admin_input.json 파일 다운로드
+function downloadJSON(data) {
+  const json = JSON.stringify(data || getFormData(), null, 2);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   a.download = 'admin_input.json';
   a.click();
   URL.revokeObjectURL(a.href);
   localStorage.setItem(STORAGE_KEY, json);
-  showToast('admin_input.json 다운로드 — data/ 폴더에 저장 후 커밋하세요.');
 }
 
 function importJSON(e) {
