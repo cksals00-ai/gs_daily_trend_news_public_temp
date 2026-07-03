@@ -737,7 +737,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load suggestions
   await loadSuggestions();
+
+  // 서버에 저장된 최신 키인 반영 시도 (로컬 드래프트보다 최신일 때만)
+  await loadFromServer();
 });
+
+/* ══════════════════════════════════════════════
+   SERVER LOAD — GAS 에 저장된 최신 admin_input 반영
+   (백엔드 미지원/오류 시 조용히 무시 → 로컬 드래프트 유지)
+══════════════════════════════════════════════ */
+async function loadFromServer() {
+  try {
+    if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) return;
+    const result = await GSNAuth.loadDaily();
+    const serverData = result && result.data;
+    if (!serverData || typeof serverData !== 'object') return;
+
+    const local    = loadStorage();
+    const localTs  = local && local._updated_at ? Date.parse(local._updated_at) : 0;
+    const serverTs = serverData._updated_at ? Date.parse(serverData._updated_at) : 0;
+    if (!serverTs || serverTs < localTs) return; // 로컬 드래프트가 더 최신 → 유지
+
+    applyFormData(serverData, true);
+    syncHeadlinePreview();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serverData));
+    showToast('서버 최신 키인 반영' + (serverData._updated_by ? ` — ${serverData._updated_by}` : ''));
+  } catch (e) {
+    console.log('load_admin 미지원/오류:', e && e.message);
+  }
+}
 
 /* ══════════════════════════════════════════════
    SUGGESTIONS LOADER

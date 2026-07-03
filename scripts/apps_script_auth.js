@@ -22,11 +22,13 @@
  *     · 구글 로그인 전용 사용자는 빈칸으로 두면 됨
  *
  * 라우팅(쿼리 파라미터 `action`):
- *   GET  ?action=me        & token=...                    → 내 정보 + 권한
- *   GET  ?action=users     & token=...                    → 회원 목록 (admin)
- *   POST ?action=login     body: {email, password|google_id_token}
- *   POST ?action=users     & token=... body: {email, name, role, status, password?}
- *   POST ?action=delete    & token=... body: {email}      → soft delete (status=inactive)
+ *   GET  ?action=me         & token=...                   → 내 정보 + 권한
+ *   GET  ?action=users      & token=...                   → 회원 목록 (admin)
+ *   GET  ?action=load_admin & token=...                   → 데일리 키인(admin_input) 최신 로드
+ *   POST ?action=login      body: {email, password|google_id_token}
+ *   POST ?action=users      & token=... body: {email, name, role, status, password?}
+ *   POST ?action=delete     & token=... body: {email}     → soft delete (status=inactive)
+ *   POST ?action=save_admin body: {token, data}           → 데일리 키인(admin_input) 저장 (admin)
  *
  *  ※ Apps Script 는 응답 헤더(CORS) 제어가 제한적이라 token 은 query 또는 body 로 받음.
  */
@@ -332,15 +334,68 @@ function handleDeleteUser_(body, params) {
 }
 
 // ============================================================================
+// 데일리 키인(admin_input) 저장소  — docs/admin.html 「⬆ 반영」 대상
+// 단일 문서(최신 상태)를 ADMIN_INPUT 시트 2행(json 셀)에 덮어쓰기 저장.
+// ============================================================================
+const ADMIN_INPUT_SHEET   = 'ADMIN_INPUT';
+const ADMIN_INPUT_HEADERS = ['updated_at', 'updated_by', 'json'];
+const ADMIN_INPUT_MAX_LEN = 45000; // 시트 셀 한도(약 5만자) 여유
+
+function getAdminInputSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(ADMIN_INPUT_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(ADMIN_INPUT_SHEET);
+    sh.getRange(1, 1, 1, ADMIN_INPUT_HEADERS.length).setValues([ADMIN_INPUT_HEADERS]);
+    sh.getRange(1, 1, 1, ADMIN_INPUT_HEADERS.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function handleSaveAdmin_(body) {
+  const sh   = getSheet_();
+  const user = authedUser_(sh, body.token);
+  if (!user) return err_('인증이 만료되었습니다. 다시 로그인해주세요.', 'unauthorized');
+  if (user.role !== 'admin') return err_('권한이 없습니다(admin 전용).', 'forbidden');
+
+  const data = body.data;
+  if (data === undefined || data === null) return err_('data 가 비어 있습니다.', 'bad_request');
+
+  let json;
+  try { json = JSON.stringify(data); } catch (e) { return err_('data 직렬화 실패', 'bad_request'); }
+  if (json.length > ADMIN_INPUT_MAX_LEN) return err_('데이터가 너무 큽니다(> 45KB).', 'too_large');
+
+  const now = new Date().toISOString();
+  const ash = getAdminInputSheet_();
+  ash.getRange(2, 1, 1, ADMIN_INPUT_HEADERS.length).setValues([[now, user.email, json]]);
+  return ok_({ updated_at: now, updated_by: user.email });
+}
+
+function handleLoadAdmin_(params) {
+  const sh   = getSheet_();
+  const user = authedUser_(sh, params.token);
+  if (!user) return err_('인증이 만료되었습니다. 다시 로그인해주세요.', 'unauthorized');
+
+  const ash = getAdminInputSheet_();
+  if (ash.getLastRow() < 2) return ok_({ data: null });
+  const row = ash.getRange(2, 1, 1, ADMIN_INPUT_HEADERS.length).getValues()[0];
+  let data = null;
+  try { data = row[2] ? JSON.parse(row[2]) : null; } catch (e) { data = null; }
+  return ok_({ data: data, updated_at: row[0], updated_by: row[1] });
+}
+
+// ============================================================================
 // 엔트리포인트
 // ============================================================================
 function doGet(e) {
   try {
     const p = (e && e.parameter) || {};
     const action = String(p.action || 'me');
-    if (action === 'me')    return handleMe_(p);
-    if (action === 'users') return handleListUsers_(p);
-    if (action === 'ping')  return ok_({ pong: true });
+    if (action === 'me')         return handleMe_(p);
+    if (action === 'users')      return handleListUsers_(p);
+    if (action === 'load_admin') return handleLoadAdmin_(p);
+    if (action === 'ping')       return ok_({ pong: true });
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {
     return err_(e.toString(), 'internal');
@@ -357,9 +412,10 @@ function doPost(e) {
       if (e && e.postData && e.postData.contents) body = JSON.parse(e.postData.contents) || {};
     } catch (_) { body = {}; }
     const action = String(p.action || body.action || 'login');
-    if (action === 'login')  return handleLogin_(body);
-    if (action === 'users')  return handleUpsertUser_(body, p);
-    if (action === 'delete') return handleDeleteUser_(body, p);
+    if (action === 'login')      return handleLogin_(body);
+    if (action === 'users')      return handleUpsertUser_(body, p);
+    if (action === 'delete')     return handleDeleteUser_(body, p);
+    if (action === 'save_admin') return handleSaveAdmin_(body);
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {
     return err_(e.toString(), 'internal');
