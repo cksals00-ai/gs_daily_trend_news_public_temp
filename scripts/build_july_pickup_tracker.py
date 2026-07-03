@@ -50,14 +50,14 @@ LABEL = {t[0]: t[1] for t in TARGETS}
 
 # ─── 세그먼트 (변경예약집계코드 기준) ───
 #   53/72 → OTA(온라인패키지·대매점),  A4/A5 → G-OTA
-#   홈페이지(FIT 자체채널, 우리팀 비관리) = 34 D멤버스·73 자사패키지·90 FIT·50 네트웍스일반단체·GB 글로벌D멤버스·CP 제휴사PKG
+#   홈페이지(FIT 자체채널, GS 비관리) = 34 D멤버스·73 자사패키지·90 FIT·50 네트웍스일반단체·GB 글로벌D멤버스·CP 제휴사PKG
 #   58 → Inbound,  그 외(MP 회원PKG·57 일반단체·59 단체COMP) → 기타
 #   ※ 소노 Booking Status Report의 FIT = OTA + G-OTA + 홈페이지. 합계(FIT)가 PDF FIT과 얼추 일치.
 HOMEPAGE_CODES = {"34", "73", "90", "50", "GB", "CP"}
 SEGMENTS = ["OTA", "G-OTA", "홈페이지", "Inbound", "기타"]
-TEAM_SEGMENTS = ["OTA", "G-OTA"]        # 우리팀 관리
-FIT_SEGMENTS = ["OTA", "G-OTA", "홈페이지"]  # 합계(FIT) = 우리팀 + 홈페이지
-DEFAULT_SEGMENTS = FIT_SEGMENTS          # 기본 = FIT(우리팀+홈페이지)
+TEAM_SEGMENTS = ["OTA", "G-OTA"]        # GS 관리
+FIT_SEGMENTS = ["OTA", "G-OTA", "홈페이지"]  # 합계(FIT) = GS + 홈페이지
+DEFAULT_SEGMENTS = FIT_SEGMENTS          # 기본 = FIT(GS+홈페이지)
 
 def seg_bucket(cnum):
     n = (cnum or "").strip()
@@ -270,7 +270,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     new26, cxl26 = daily_newcancel(rows26); new25, cxl25 = daily_newcancel(rows25)
     nb26 = onbook_at(rows26, asof26); nb25 = onbook_at(rows25, asof25)
     def net_of(new, cxl, name, day): return new.get((name, day), 0) - cxl.get((name, day), 0)
-    # 세그별 동기간 온북 (rows는 FIT=OTA+G-OTA+홈페이지 필터본, r['seg']로 우리팀/홈피 분리)
+    # 세그별 동기간 온북 (rows는 FIT=OTA+G-OTA+홈페이지 필터본, r['seg']로 GS/홈피 분리)
     def onbook_seg(rows, cutoff, segs):
         net = defaultdict(int)
         for r in rows:
@@ -282,7 +282,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     tm26 = onbook_seg(rows26, asof26, TEAM_S); tm25 = onbook_seg(rows25, asof25, TEAM_S)
     hm26 = onbook_seg(rows26, asof26, HOME_S); hm25 = onbook_seg(rows25, asof25, HOME_S)
 
-    # ============================== 개요 (우리팀 / 홈페이지 / 합계 FIT [+ BSR]) ==============================
+    # ============================== 개요 (GS / 홈페이지 / 합계 FIT [+ BSR]) ==============================
     ws = wb.active; ws.title = "개요"; ws.sheet_view.showGridLines = False
     has_bsr = bool(bsr and bsr.get("fit26"))
     BSR_C = 12; STAT_C = 14 if has_bsr else 12  # BSR: L(FIT)·M(달성%),  상태: N or L
@@ -298,12 +298,12 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
     ws.cell(4, 2, "- 사업장 : 캄 비발디, 단양, 청송, 여수, 거제, 진도").font = F(10)
     ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
-    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = 우리팀(OTA+G-OTA) + 홈페이지(비관리)").font = F(10)
+    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 홈페이지(비관리)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
     ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
     # 2단 헤더
     hcell(ws, 8, 2, "구분"); ws.merge_cells("B8:B9")
-    hcell(ws, 8, 3, "우리팀 (OTA+G-OTA)"); ws.merge_cells("C8:E8"); hcell(ws, 8, 4, None); hcell(ws, 8, 5, None)
+    hcell(ws, 8, 3, "GS (OTA+G-OTA)"); ws.merge_cells("C8:E8"); hcell(ws, 8, 4, None); hcell(ws, 8, 5, None)
     hcell(ws, 8, 6, "홈페이지 (비관리)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
     hcell(ws, 8, 9, "합계 (FIT)"); ws.merge_cells("I8:K8"); hcell(ws, 8, 10, None); hcell(ws, 8, 11, None)
     if has_bsr:
@@ -355,7 +355,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
         bsr_cells(r, ft26, t_bsr, bold=True)
     sc = ws.cell(r, STAT_C, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
     sc.alignment = cen; sc.border = topbox(DBL)
-    note = "※ 투숙일 기준 30일 OTB · 홈페이지=자체채널(D멤버스·자사·FIT·제휴 등, 우리팀 비관리) · FIT=우리팀+홈페이지"
+    note = "※ 투숙일 기준 30일 OTB · 홈페이지=자체채널(D멤버스·자사·FIT·제휴 등, GS 비관리) · FIT=GS+홈페이지"
     if has_bsr:
         note += f" · BSR({bsr_lbl[5:-1]})=소노 Booking Status Report FIT(전채널·시점차로 우리 FIT가 다소 낮음)"
     ws.cell(17, 2, note).font = F(9, color=GREY)
