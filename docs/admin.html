@@ -747,10 +747,22 @@ document.addEventListener('DOMContentLoaded', async () => {
    (백엔드 미지원/오류 시 조용히 무시 → 로컬 드래프트 유지)
 ══════════════════════════════════════════════ */
 async function loadFromServer() {
+  if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) return;
+
+  // GAS 콜드스타트/유휴 후 첫 요청은 JSON 대신 HTML(리다이렉트 페이지)을 돌려줄 수 있어
+  // 파싱 오류가 나면 잠깐 뒤 재시도한다. (미지원/영구오류면 조용히 무시)
+  let result = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try { result = await GSNAuth.loadDaily(); break; }
+    catch (e) {
+      console.log(`load_admin 시도 ${attempt} 실패:`, e && e.message);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 700));
+    }
+  }
+  if (!result) return;
+
   try {
-    if (!GSNAuth.getToken() || !GSNAuth.tokenIsValid(GSNAuth.getToken())) return;
-    const result = await GSNAuth.loadDaily();
-    const serverData = result && result.data;
+    const serverData = result.data;
     if (!serverData || typeof serverData !== 'object') return;
 
     const local    = loadStorage();
@@ -763,7 +775,7 @@ async function loadFromServer() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serverData));
     showToast('서버 최신 키인 반영' + (serverData._updated_by ? ` — ${serverData._updated_by}` : ''));
   } catch (e) {
-    console.log('load_admin 미지원/오류:', e && e.message);
+    console.log('load_admin 적용 오류:', e && e.message);
   }
 }
 
