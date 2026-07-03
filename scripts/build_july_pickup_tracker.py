@@ -48,10 +48,16 @@ TARGETS = [
 TARGET_SET = {t[0] for t in TARGETS}
 LABEL = {t[0]: t[1] for t in TARGETS}
 
-# ─── 세그먼트 (변경예약집계코드 기준, parse_raw_db.classify_segment 동일) ───
-#   53/72 → OTA(온라인패키지·대매점),  A4/A5 → G-OTA,  58 → Inbound,  그 외 → 기타(회원·자사·단체)
-SEGMENTS = ["OTA", "G-OTA", "Inbound", "기타"]
-DEFAULT_SEGMENTS = ["OTA", "G-OTA"]  # 기본 = OTA+G-OTA
+# ─── 세그먼트 (변경예약집계코드 기준) ───
+#   53/72 → OTA(온라인패키지·대매점),  A4/A5 → G-OTA
+#   홈페이지(FIT 자체채널, 우리팀 비관리) = 34 D멤버스·73 자사패키지·90 FIT·50 네트웍스일반단체·GB 글로벌D멤버스·CP 제휴사PKG
+#   58 → Inbound,  그 외(MP 회원PKG·57 일반단체·59 단체COMP) → 기타
+#   ※ 소노 Booking Status Report의 FIT = OTA + G-OTA + 홈페이지. 합계(FIT)가 PDF FIT과 얼추 일치.
+HOMEPAGE_CODES = {"34", "73", "90", "50", "GB", "CP"}
+SEGMENTS = ["OTA", "G-OTA", "홈페이지", "Inbound", "기타"]
+TEAM_SEGMENTS = ["OTA", "G-OTA"]        # 우리팀 관리
+FIT_SEGMENTS = ["OTA", "G-OTA", "홈페이지"]  # 합계(FIT) = 우리팀 + 홈페이지
+DEFAULT_SEGMENTS = FIT_SEGMENTS          # 기본 = FIT(우리팀+홈페이지)
 
 def seg_bucket(cnum):
     n = (cnum or "").strip()
@@ -59,6 +65,8 @@ def seg_bucket(cnum):
         return "G-OTA"
     if n in ("53", "72"):
         return "OTA"
+    if n in HOMEPAGE_CODES:
+        return "홈페이지"
     if n == "58":
         return "Inbound"
     return "기타"
@@ -220,13 +228,24 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     new26, cxl26 = daily_newcancel(rows26); new25, cxl25 = daily_newcancel(rows25)
     nb26 = onbook_at(rows26, asof26); nb25 = onbook_at(rows25, asof25)
     def net_of(new, cxl, name, day): return new.get((name, day), 0) - cxl.get((name, day), 0)
+    # 세그별 동기간 온북 (rows는 FIT=OTA+G-OTA+홈페이지 필터본, r['seg']로 우리팀/홈피 분리)
+    def onbook_seg(rows, cutoff, segs):
+        net = defaultdict(int)
+        for r in rows:
+            if r.get("seg") not in segs: continue
+            if r["entry"] and r["entry"] <= cutoff: net[r["prop"]] += r["rn"]
+            if r["cancel"] and r["cancel"] <= cutoff: net[r["prop"]] -= r["rn"]
+        return net
+    TEAM_S = {"OTA", "G-OTA"}; HOME_S = {"홈페이지"}
+    tm26 = onbook_seg(rows26, asof26, TEAM_S); tm25 = onbook_seg(rows25, asof25, TEAM_S)
+    hm26 = onbook_seg(rows26, asof26, HOME_S); hm25 = onbook_seg(rows25, asof25, HOME_S)
 
-    # ============================== 개요 ==============================
+    # ============================== 개요 (우리팀 / 홈페이지 / 합계 FIT) ==============================
     ws = wb.active; ws.title = "개요"; ws.sheet_view.showGridLines = False
-    LASTC = 9
+    LASTC = 12  # B..L
     ws.column_dimensions["A"].width = 1.2; ws.column_dimensions["B"].width = 16
-    for c, w in zip(range(3, 7), (9, 9, 9, 8)): ws.column_dimensions[get_column_letter(c)].width = w
-    ws.column_dimensions["G"].width = 12; ws.column_dimensions["H"].width = 6; ws.column_dimensions["I"].width = 8
+    for c in range(3, 12): ws.column_dimensions[get_column_letter(c)].width = 8
+    ws.column_dimensions["L"].width = 12
 
     ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=LASTC)
     t = ws.cell(2, 2, "7월 동기간 比 일자별 픽업 현황"); t.font = F(14); t.alignment = cen
@@ -234,47 +253,48 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
     ws.cell(4, 2, "- 사업장 : 캄 비발디, 단양, 청송, 여수, 거제, 진도").font = F(10)
     ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
-    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY").font = F(10)
+    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = 우리팀(OTA+G-OTA) + 홈페이지(비관리)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
     ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
-    # 헤더
+    # 2단 헤더: 구분 | 우리팀[26Y/25Y/GAP] | 홈페이지[26Y/25Y/GAP] | 합계FIT[26Y/25Y/GAP] | 상태
+    VIOLET = "6A4FB0"
     hcell(ws, 8, 2, "구분"); ws.merge_cells("B8:B9")
-    hcell(ws, 8, 3, "OTB"); ws.merge_cells("C8:D8"); hcell(ws, 8, 4, None)
-    hcell(ws, 8, 5, "전년 比"); ws.merge_cells("E8:F8"); hcell(ws, 8, 6, None)
-    hcell(ws, 8, 7, "상태"); ws.merge_cells("G8:G9")
-    hcell(ws, 8, 8, "비고"); ws.merge_cells("H8:I9"); hcell(ws, 8, 9, None)
-    for c, lab in ((3, "26Y"), (4, "25Y"), (5, "GAP"), (6, "%")): hcell(ws, 9, c, lab)
-    # 데이터
-    t26 = t25 = 0
+    hcell(ws, 8, 3, "우리팀 (OTA+G-OTA)"); ws.merge_cells("C8:E8"); hcell(ws, 8, 4, None); hcell(ws, 8, 5, None)
+    hh = hcell(ws, 8, 6, "홈페이지 (비관리)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
+    hcell(ws, 8, 9, "합계 (FIT)"); ws.merge_cells("I8:K8"); hcell(ws, 8, 10, None); hcell(ws, 8, 11, None)
+    hcell(ws, 8, 12, "상태"); ws.merge_cells("L8:L9")
+    for base in (3, 6, 9):
+        for j, lab in enumerate(("26Y", "25Y", "GAP")): hcell(ws, 9, base + j, lab)
+
+    def grp3(r, base, v26, v25, bold=False, tint=False):
+        g = v26 - v25
+        vals = [(v26, NF_NUM, clr(0)), (v25, NF_NUM, clr(0)), (g, NF_GAP, clr(g))]
+        for j, (v, nf, col) in enumerate(vals):
+            cell = ws.cell(r, base + j, v); cell.alignment = rgt; cell.number_format = nf
+            cell.font = F(10, bold=(bold or j == 2), color=col)
+            cell.border = topbox(DBL) if bold else box
+            if tint: cell.fill = PatternFill("solid", fgColor="F0ECF9")
+        return g
+
+    t_tm26 = t_tm25 = t_hm26 = t_hm25 = 0
     for i, (name, _) in enumerate(TARGETS):
-        r = 10 + i; v26 = nb26.get(name, 0); v25 = nb25.get(name, 0); gap = v26 - v25
-        yoy = (gap / v25) if v25 else 0.0; t26 += v26; t25 += v25
-        st = "전년초과 ▲" if gap > 0 else ("동률" if gap == 0 else "전년미달 ▼")
-        bigo = "유지" if gap >= 0 else f"+{abs(gap):,}실"
-        cells = [(2, GAEYO_LBL[name], lft, None, F(10)),
-                 (3, v26, rgt, NF_NUM, F(10)), (4, v25, rgt, NF_NUM, F(10)),
-                 (5, gap, rgt, NF_GAP, F(10, bold=True, color=clr(gap))),
-                 (6, yoy, rgt, NF_PCT, F(10, color=clr(gap))),
-                 (7, st, cen, None, F(10, bold=True, color=clr(gap)))]
-        for c, v, al, nf, ft in cells:
-            cell = ws.cell(r, c, v); cell.alignment = al; cell.font = ft; cell.border = box
-            if nf: cell.number_format = nf
-        bc = ws.cell(r, 8, bigo); bc.font = F(10, bold=(gap < 0), color=clr(gap)); bc.alignment = cen; bc.border = box
-        ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=9); ws.cell(r, 9).border = box
+        r = 10 + i
+        a26, a25 = tm26.get(name, 0), tm25.get(name, 0)
+        h26, h25 = hm26.get(name, 0), hm25.get(name, 0)
+        f26, f25 = a26 + h26, a25 + h25; fg = f26 - f25
+        t_tm26 += a26; t_tm25 += a25; t_hm26 += h26; t_hm25 += h25
+        lc = ws.cell(r, 2, GAEYO_LBL[name]); lc.font = F(10); lc.alignment = lft; lc.border = box
+        grp3(r, 3, a26, a25); grp3(r, 6, h26, h25, tint=True); grp3(r, 9, f26, f25)
+        st = "전년초과 ▲" if fg > 0 else ("동률" if fg == 0 else "전년미달 ▼")
+        sc = ws.cell(r, 12, st); sc.font = F(10, bold=True, color=clr(fg)); sc.alignment = cen; sc.border = box
     # Total
-    r = 16; gt = t26 - t25; gy = (gt / t25) if t25 else 0.0
-    tv = [(2, "Total", lft, None), (3, t26, rgt, NF_NUM), (4, t25, rgt, NF_NUM),
-          (5, gt, rgt, NF_GAP), (6, gy, rgt, NF_PCT),
-          (7, ("전년초과 ▲" if gt > 0 else "전년미달 ▼"), cen, None)]
-    for c, v, al, nf in tv:
-        cell = ws.cell(r, c, v); cell.alignment = al
-        cell.font = F(10, bold=True, color=(clr(gt) if c in (5, 6, 7) else BLACK))
-        cell.border = topbox(DBL)
-        if nf: cell.number_format = nf
-    bc = ws.cell(r, 8, ("유지" if gt >= 0 else f"+{abs(gt):,}실")); bc.font = F(10, bold=True, color=clr(gt))
-    bc.alignment = cen; bc.border = topbox(DBL)
-    ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=9); ws.cell(r, 9).border = topbox(DBL)
-    ws.cell(17, 2, "※ 투숙일 기준 30일 OTB 데이터").font = F(9, color=GREY)
+    r = 16
+    ft26, ft25 = t_tm26 + t_hm26, t_tm25 + t_hm25; ftg = ft26 - ft25
+    lc = ws.cell(r, 2, "Total"); lc.font = F(10, bold=True); lc.alignment = lft; lc.border = topbox(DBL)
+    grp3(r, 3, t_tm26, t_tm25, bold=True); grp3(r, 6, t_hm26, t_hm25, bold=True, tint=True); grp3(r, 9, ft26, ft25, bold=True)
+    sc = ws.cell(r, 12, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
+    sc.alignment = cen; sc.border = topbox(DBL)
+    ws.cell(17, 2, "※ 투숙일 기준 30일 OTB · 홈페이지=자체채널(D멤버스·자사·FIT·제휴 등, 우리팀 비관리) · FIT는 소노 Booking Status Report FIT과 얼추 일치").font = F(9, color=GREY)
 
     # ===== 공용: 사업장별 3컬럼(26Y/25Y/GAP) 추이 시트 =====
     def trend_sheet(title_text, sheet_name, value_fn):
@@ -406,6 +426,7 @@ def build_payload(data_date, asof26, asof25, rows26, rows25):
         "meta": {"data_date": data_date, "asof26": asof26, "asof25": asof25,
                  "window_days": WINDOW_DAYS,
                  "segments": SEGMENTS, "default_segments": DEFAULT_SEGMENTS,
+                 "team_segments": TEAM_SEGMENTS, "home_segments": ["홈페이지"], "fit_segments": FIT_SEGMENTS,
                  "targets": [{"name": n, "label": l} for n, l in TARGETS]},
         "summary": summary, "daily": daily, "cumulative": cumulative,
     }
