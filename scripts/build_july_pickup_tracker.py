@@ -190,14 +190,17 @@ def load_rows(files, staymon):
             if prop not in TARGET_SET:
                 continue
             mn, un, cn = g(imn), g(iun), g(icn)
-            if mn and un and mn == un and cn != "58":  # 거래처 제거 (Inbound 58 예외)
+            seg = seg_bucket(cn)
+            # 거래처(회원명==이용자명) 제거는 '기타'(대매점·단체 phantom/할당행)에만 적용.
+            # FIT(OTA/G-OTA/홈페이지/제휴사/일반)·Inbound은 회원명==이용자명이 정상(D멤버스·법인·자사 등) → 유지.
+            if seg == "기타" and mn and un and mn == un:
                 continue
             if "매출조정" in mn or "매출조정" in un:
                 continue
             rooms = int(g(irooms)) if g(irooms).isdigit() else 0
             rn = rooms if rooms > 0 else 1
             ent = g(ient)[:8]; can = g(ican)[:8]
-            rows.append(dict(prop=prop, seg=seg_bucket(cn), rn=rn, is_cancel=is_cancel,
+            rows.append(dict(prop=prop, seg=seg, rn=rn, is_cancel=is_cancel,
                              entry=ent if len(ent) == 8 else None,
                              cancel=can if (is_cancel and len(can) == 8) else None))
     return rows
