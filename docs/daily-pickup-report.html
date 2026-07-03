@@ -139,7 +139,7 @@ thead.l1 th.bsr{color:var(--cyan)!important}
   <div class="mast-l">
     <div class="eyebrow">Daily Pickup Report</div>
     <h1>데일리 보고 리포트 — 7월 동기간 픽업</h1>
-    <div class="sub">전년대비 모니터링 6개 사업장 · GS(OTA+G-OTA) + 홈페이지 = 합계(FIT) · 일별 픽업(증감) 관리</div>
+    <div class="sub">전년대비 모니터링 6개 사업장 · GS(OTA+G-OTA) + 비관리(홈피·제휴·일반) = 합계(FIT) · 일별 픽업(증감) 관리</div>
   </div>
   <div class="mast-r">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
@@ -154,7 +154,7 @@ thead.l1 th.bsr{color:var(--cyan)!important}
   <div class="cmt" id="cmt">불러오는 중…</div>
 
   <!-- 요약: GS / 홈페이지 / 합계(FIT) -->
-  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title">사업장별 7월 동기간 온북 (YoY) — GS · 홈페이지 · 합계(FIT)</div><div class="sec-unit">단위 : 실(RN)</div></div>
+  <div class="sec-head"><div class="sec-bar"></div><div class="sec-title">사업장별 7월 동기간 온북 (YoY) — GS · 비관리 · 합계(FIT)</div><div class="sec-unit">단위 : 실(RN)</div></div>
   <div class="tbl-wrap tbl-wide"><table id="tblSum"><tbody><tr><td class="loading">불러오는 중…</td></tr></tbody></table></div>
 
   <!-- 추이 (탭) + 세그 필터 -->
@@ -253,7 +253,7 @@ function renderSummary(){
   const sub=g=>`<th class='grp${g}'>'26</th><th class='${g}'>'25</th><th class='${g}'>갭</th>`;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">구분</th>'+
     '<th colspan="3" class="grp">GS (OTA+G-OTA)</th>'+
-    '<th colspan="3" class="grp hp">홈페이지 (비관리)</th>'+
+    '<th colspan="3" class="grp hp">비관리 (홈피·제휴·일반)</th>'+
     '<th colspan="3" class="grp">합계 (FIT)</th>'+
     (BSR?`<th colspan="2" class="grp bsr">BSR (${md(bd)})</th>`:'')+
     '<th rowspan="2" class="grp">상태</th></tr><tr>'+ sub('') + sub(' hp') + sub('')+
@@ -289,11 +289,11 @@ function renderCmt(){
   document.getElementById('cmt').innerHTML=
     `<b>[합계 FIT] 6개 동기간 온북 ${NF(f26)}실</b> (전년 ${NF(f25)}실, `+
     `<span class="chip ${gap<0?'neg':'pos'}">${SIGN(gap)}실 / ${(gap/f25*100).toFixed(1)}%</span>) `+
-    `= GS ${NF(tm26)} + 홈페이지 ${NF(hm26)}. 전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
+    `= GS ${NF(tm26)} + 비관리 ${NF(hm26)}. 전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
     rows.map(chip).join(' ')+
     ((DATA.bsr&&DATA.bsr.fit26)?(()=>{const b=Object.values(DATA.bsr.fit26).reduce((a,v)=>a+v,0);
       return `<br><span style="color:var(--cyan)">BSR(전일 ${md(DATA.bsr.date)}) FIT 합계 ${NF(b)}실 대비 달성 ${(f26/b*100).toFixed(1)}%</span> <span style="color:var(--ink4)">(전채널·오후 기준 vs 우리 온라인팀·새벽 스냅샷 시점차)</span>`;})():'')+
-    `<br><span style="color:var(--ink3)">FIT = OTA+G-OTA(GS 관리) + 홈페이지(자체채널·비관리). 소노 Booking Status Report FIT 기준과 얼추 일치.</span>`;
+    `<br><span style="color:var(--ink3)">FIT = GS(OTA+G-OTA) + 비관리(홈페이지·제휴사·일반). 소노 Booking Status Report FIT 정의(영업자료 03일반)와 동일 분류.</span>`;
 }
 
 // 추이(일별·누적): 세그 필터(SEL) 적용
@@ -341,8 +341,8 @@ function renderCum(){
   });
   document.getElementById('tblCum').innerHTML=h+'</tbody>';
   document.getElementById('footNote').innerHTML=
-    '※ 세그먼트: OTA(53/72·온라인패키지·대매점) · G-OTA(A4/A5) · 홈페이지(FIT 자체채널·비관리: D멤버스34·자사73·FIT90·제휴CP 등) · Inbound(58) · 기타(회원PKG·일반단체·COMP).<br>'+
-    '※ 합계(FIT) = GS(OTA+G-OTA) + 홈페이지. 소노 Booking Status Report의 FIT 세그와 얼추 일치(우리 raw_db=온라인팀 부분집합·시점차 존재).<br>'+
+    '※ FIT(=영업자료 03일반) = OTA · G-OTA · 홈페이지(D멤버스·자사·FIT) · 제휴사 · 일반(세트권·카드대여·할인권 등). 비관리=홈피+제휴+일반. Inbound·회원·단체는 FIT 외.<br>'+
+    '※ 합계(FIT) = GS(OTA+G-OTA) + 비관리(홈피·제휴·일반). ⚠ 제휴사·일반 예약은 GS 온라인팀 raw_db엔 거의 없어(타팀 채널) BSR(전채널) 대비 미달(2026 ~90%·2025 ~76%).<br>'+
     '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 증감 = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
     '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출. 갭(+)=전년초과, 갭(−)=전년미달. 엑셀 다운로드는 OTA+G-OTA 기준(화면 기본 뷰와 동일).';
 }
