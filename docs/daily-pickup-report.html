@@ -105,6 +105,10 @@ th.hp{color:var(--violet)!important}
 td.hp{background:rgba(160,126,232,.07)}
 thead.l1 th.hp{color:var(--violet)!important}
 .seg-chip[data-seg="홈페이지"].on{background:rgba(160,126,232,.16);border-color:var(--violet);color:#c3aef0}
+/* BSR(전일 참고) 컬럼: 청록 틴트 */
+th.bsr{color:var(--cyan)!important}
+td.bsr{background:rgba(92,196,208,.08);color:var(--cyan);font-family:var(--mono)}
+thead.l1 th.bsr{color:var(--cyan)!important}
 .note{color:var(--ink4);font-size:11.5px;margin-top:10px;line-height:1.6}
 .loading{padding:60px;text-align:center;color:var(--ink3)}
 .hide{display:none}
@@ -241,29 +245,36 @@ function refreshSeg(){ refreshSegChips(); renderTrends(); }
 
 const NMn=v=>v<0?'−'+NF(v):NF(v);   // 음수만 부호
 
-// 요약: 사업장별 우리팀(OTA+G-OTA) / 홈페이지(비관리) / 합계(FIT), 각 '26/'25/갭
+// 요약: 사업장별 우리팀(OTA+G-OTA) / 홈페이지(비관리) / 합계(FIT) [+ BSR 전일], 각 '26/'25/갭
 function renderSummary(){
   const S=DATA.summary, tb=document.getElementById('tblSum');
+  const BSR=DATA.bsr, bd=BSR?BSR.date:null;
+  const bfitOf=n=>BSR&&BSR.fit26?(BSR.fit26[n]||0):0;
   const sub=g=>`<th class='grp${g}'>'26</th><th class='${g}'>'25</th><th class='${g}'>갭</th>`;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">구분</th>'+
     '<th colspan="3" class="grp">우리팀 (OTA+G-OTA)</th>'+
     '<th colspan="3" class="grp hp">홈페이지 (비관리)</th>'+
     '<th colspan="3" class="grp">합계 (FIT)</th>'+
-    '<th rowspan="2" class="grp">상태</th></tr><tr>'+ sub('') + sub(' hp') + sub('') + '</tr></thead><tbody>';
-  const line=(label,tm,hm,isT)=>{
+    (BSR?`<th colspan="2" class="grp bsr">BSR (${md(bd)})</th>`:'')+
+    '<th rowspan="2" class="grp">상태</th></tr><tr>'+ sub('') + sub(' hp') + sub('')+
+    (BSR?"<th class='grp bsr'>FIT</th><th class='bsr'>달성%</th>":'') +'</tr></thead><tbody>';
+  const line=(label,tm,hm,bfit,isT)=>{
     const f26=tm[0]+hm[0], f25=tm[1]+hm[1], fg=f26-f25, tg=tm[0]-tm[1], hg=hm[0]-hm[1];
     const st=fg>0?'<span class="st pos">전년초과 ▲</span>':fg<0?'<span class="st neg">전년미달 ▼</span>':'<span class="st eq">동률</span>';
     const bold=isT?' style="font-weight:700"':'';
+    let bsrHtml='';
+    if(BSR){ const ach=bfit?f26/bfit:null;
+      bsrHtml=`<td class="num bsr"${bold}>${bfit?NF(bfit):'—'}</td><td class="num bsr"${bold}>${ach!=null?(ach*100).toFixed(1)+'%':'—'}</td>`; }
     return `<tr class="${isT?'total':''}"><td class="lbl">${label}</td>`+
       `<td class="num"${bold}>${NMn(tm[0])}</td><td class="num"${bold}>${NMn(tm[1])}</td><td class="num ${clsG(tg)}"${bold}>${SIGN(tg)}</td>`+
       `<td class="num hp"${bold}>${NMn(hm[0])}</td><td class="num hp"${bold}>${NMn(hm[1])}</td><td class="num hp ${clsG(hg)}"${bold}>${SIGN(hg)}</td>`+
       `<td class="num" style="font-weight:700">${NMn(f26)}</td><td class="num" style="font-weight:700">${NMn(f25)}</td><td class="num ${clsG(fg)}" style="font-weight:700">${SIGN(fg)}</td>`+
-      `<td style="text-align:center">${st}</td></tr>`;
+      bsrHtml+`<td style="text-align:center">${st}</td></tr>`;
   };
-  let sT=[0,0], sH=[0,0];
-  S.forEach(s=>{ const tm=[grp(s.on26,TEAM),grp(s.on25,TEAM)], hm=[grp(s.on26,HOME),grp(s.on25,HOME)];
-    sT[0]+=tm[0];sT[1]+=tm[1];sH[0]+=hm[0];sH[1]+=hm[1]; h+=line(s.label,tm,hm,false); });
-  h+=line('합계 (6개)',sT,sH,true);
+  let sT=[0,0], sH=[0,0], sB=0;
+  S.forEach(s=>{ const tm=[grp(s.on26,TEAM),grp(s.on25,TEAM)], hm=[grp(s.on26,HOME),grp(s.on25,HOME)], bf=bfitOf(s.name);
+    sT[0]+=tm[0];sT[1]+=tm[1];sH[0]+=hm[0];sH[1]+=hm[1];sB+=bf; h+=line(s.label,tm,hm,bf,false); });
+  h+=line('합계 (6개)',sT,sH,sB,true);
   tb.innerHTML=h+'</tbody>';
 }
 
@@ -280,6 +291,8 @@ function renderCmt(){
     `<span class="chip ${gap<0?'neg':'pos'}">${SIGN(gap)}실 / ${(gap/f25*100).toFixed(1)}%</span>) `+
     `= 우리팀 ${NF(tm26)} + 홈페이지 ${NF(hm26)}. 전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
     rows.map(chip).join(' ')+
+    ((DATA.bsr&&DATA.bsr.fit26)?(()=>{const b=Object.values(DATA.bsr.fit26).reduce((a,v)=>a+v,0);
+      return `<br><span style="color:var(--cyan)">BSR(전일 ${md(DATA.bsr.date)}) FIT 합계 ${NF(b)}실 대비 달성 ${(f26/b*100).toFixed(1)}%</span> <span style="color:var(--ink4)">(전채널·오후 기준 vs 우리 온라인팀·새벽 스냅샷 시점차)</span>`;})():'')+
     `<br><span style="color:var(--ink3)">FIT = OTA+G-OTA(우리팀 관리) + 홈페이지(자체채널·비관리). 소노 Booking Status Report FIT 기준과 얼추 일치.</span>`;
 }
 

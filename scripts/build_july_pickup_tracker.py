@@ -89,6 +89,48 @@ def live_files(year):
 def retrans_files(year):
     return sorted(fp for fp, n in _list(year) if "재전송" in n)
 
+# BSR(Booking Status Report) PDF → 6개 사업장 FIT OTB(2026-07/2025-07). 로컬 실행 전용(pdfplumber).
+BSR_TAG = {"소노캄 비발디파크": "소노캄 비발디파크", "소노문 단양": "소노벨 단양",
+           "소노벨 청송": "소노벨 청송", "소노캄 여수": "소노캄 여수",
+           "소노캄 거제": "소노캄 거제", "쏠비치 진도": "쏠비치 진도"}
+
+def parse_bsr():
+    """최신 'Booking Status Report_YYYY.MM.DD.pdf'에서 6개 사업장 FIT OTB 추출.
+    실패(라이브러리/파일/파싱 불가) 시 None → 리포트는 BSR 컬럼 생략."""
+    try:
+        import pdfplumber
+    except ImportError:
+        return None
+    pdf_dir = PROJECT_DIR / "data" / "Daily Booking Report PDF"
+    if not pdf_dir.is_dir():
+        return None
+    def fdate(p):
+        m = re.search(r"(\d{4})\.(\d{2})\.(\d{2})", p.name)
+        return (m.group(1) + m.group(2) + m.group(3)) if m else "0"
+    cands = sorted(pdf_dir.glob("Booking Status Report_*.pdf"), key=fdate)
+    if not cands:
+        return None
+    pdf_path = cands[-1]; bsr_date = fdate(pdf_path)
+    # FIT OTB 세그먼트 행: '20YY년 07월' + 5개 콤마정수(Membership/Group/FIT/Comp/Total) + pct
+    rx = re.compile(r"(202[56])년 07월\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+\d+\.\d+%")
+    fit26, fit25 = {}, {}
+    try:
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            for pg in pdf.pages:
+                t = pg.extract_text() or ""
+                head = t.split("\n", 1)[0] if t else ""
+                for name, tag in BSR_TAG.items():
+                    if name in fit26 or f"[{tag}]" not in head:
+                        continue
+                    for m in rx.finditer(t):
+                        fit = int(m.group(4).replace(",", ""))  # 3rd of 5 = FIT
+                        (fit26 if m.group(1) == "2026" else fit25)[name] = fit
+    except Exception:
+        return None
+    if not fit26:
+        return None
+    return {"date": bsr_date, "fit26": fit26, "fit25": fit25}
+
 def snapshot_date():
     """최신 27 라이브 스냅샷 파일명에서 기준일(YYYYMMDD) 추출."""
     best = None
@@ -178,7 +220,7 @@ def daily_newcancel(rows):
     return new, cxl
 
 # ───────────────────────── 엑셀 (소노위크 보고 양식) ─────────────────────────
-def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA"):
+def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA", bsr=None):
     """소노위크 보고 양식(간소화) — 개요/일별픽업(증감)/전년대비(누적)/상세. 설명문 제거."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -240,12 +282,15 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     tm26 = onbook_seg(rows26, asof26, TEAM_S); tm25 = onbook_seg(rows25, asof25, TEAM_S)
     hm26 = onbook_seg(rows26, asof26, HOME_S); hm25 = onbook_seg(rows25, asof25, HOME_S)
 
-    # ============================== 개요 (우리팀 / 홈페이지 / 합계 FIT) ==============================
+    # ============================== 개요 (우리팀 / 홈페이지 / 합계 FIT [+ BSR]) ==============================
     ws = wb.active; ws.title = "개요"; ws.sheet_view.showGridLines = False
-    LASTC = 12  # B..L
+    has_bsr = bool(bsr and bsr.get("fit26"))
+    BSR_C = 12; STAT_C = 14 if has_bsr else 12  # BSR: L(FIT)·M(달성%),  상태: N or L
+    LASTC = STAT_C
+    bsr_lbl = f"BSR ({bsr['date'][4:6]}/{bsr['date'][6:8]})" if has_bsr else ""
     ws.column_dimensions["A"].width = 1.2; ws.column_dimensions["B"].width = 16
-    for c in range(3, 12): ws.column_dimensions[get_column_letter(c)].width = 8
-    ws.column_dimensions["L"].width = 12
+    for c in range(3, STAT_C): ws.column_dimensions[get_column_letter(c)].width = 8
+    ws.column_dimensions[get_column_letter(STAT_C)].width = 12
 
     ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=LASTC)
     t = ws.cell(2, 2, "7월 동기간 比 일자별 픽업 현황"); t.font = F(14); t.alignment = cen
@@ -256,27 +301,39 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = 우리팀(OTA+G-OTA) + 홈페이지(비관리)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
     ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
-    # 2단 헤더: 구분 | 우리팀[26Y/25Y/GAP] | 홈페이지[26Y/25Y/GAP] | 합계FIT[26Y/25Y/GAP] | 상태
-    VIOLET = "6A4FB0"
+    # 2단 헤더
     hcell(ws, 8, 2, "구분"); ws.merge_cells("B8:B9")
     hcell(ws, 8, 3, "우리팀 (OTA+G-OTA)"); ws.merge_cells("C8:E8"); hcell(ws, 8, 4, None); hcell(ws, 8, 5, None)
-    hh = hcell(ws, 8, 6, "홈페이지 (비관리)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
+    hcell(ws, 8, 6, "홈페이지 (비관리)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
     hcell(ws, 8, 9, "합계 (FIT)"); ws.merge_cells("I8:K8"); hcell(ws, 8, 10, None); hcell(ws, 8, 11, None)
-    hcell(ws, 8, 12, "상태"); ws.merge_cells("L8:L9")
+    if has_bsr:
+        hcell(ws, 8, BSR_C, bsr_lbl); ws.merge_cells(start_row=8, start_column=BSR_C, end_row=8, end_column=BSR_C + 1)
+        hcell(ws, 8, BSR_C + 1, None)
+        hcell(ws, 9, BSR_C, "FIT"); hcell(ws, 9, BSR_C + 1, "달성%")
+    hcell(ws, 8, STAT_C, "상태"); ws.merge_cells(start_row=8, start_column=STAT_C, end_row=9, end_column=STAT_C)
     for base in (3, 6, 9):
         for j, lab in enumerate(("26Y", "25Y", "GAP")): hcell(ws, 9, base + j, lab)
 
     def grp3(r, base, v26, v25, bold=False, tint=False):
         g = v26 - v25
-        vals = [(v26, NF_NUM, clr(0)), (v25, NF_NUM, clr(0)), (g, NF_GAP, clr(g))]
-        for j, (v, nf, col) in enumerate(vals):
+        for j, (v, nf, col) in enumerate([(v26, NF_NUM, clr(0)), (v25, NF_NUM, clr(0)), (g, NF_GAP, clr(g))]):
             cell = ws.cell(r, base + j, v); cell.alignment = rgt; cell.number_format = nf
             cell.font = F(10, bold=(bold or j == 2), color=col)
             cell.border = topbox(DBL) if bold else box
             if tint: cell.fill = PatternFill("solid", fgColor="F0ECF9")
         return g
 
-    t_tm26 = t_tm25 = t_hm26 = t_hm25 = 0
+    def bsr_cells(r, f26, bfit, bold=False):
+        bd = topbox(DBL) if bold else box
+        c1 = ws.cell(r, BSR_C, bfit if bfit else "—"); c1.alignment = rgt; c1.border = bd
+        c1.font = F(10, bold=bold, color="1F4E78")
+        if bfit: c1.number_format = NF_NUM
+        ach = (f26 / bfit) if bfit else None
+        c2 = ws.cell(r, BSR_C + 1, ach if ach is not None else "—"); c2.alignment = rgt; c2.border = bd
+        c2.font = F(10, bold=bold, color="1F4E78")
+        if ach is not None: c2.number_format = NF_PCT
+
+    t_tm26 = t_tm25 = t_hm26 = t_hm25 = t_bsr = 0
     for i, (name, _) in enumerate(TARGETS):
         r = 10 + i
         a26, a25 = tm26.get(name, 0), tm25.get(name, 0)
@@ -285,16 +342,23 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
         t_tm26 += a26; t_tm25 += a25; t_hm26 += h26; t_hm25 += h25
         lc = ws.cell(r, 2, GAEYO_LBL[name]); lc.font = F(10); lc.alignment = lft; lc.border = box
         grp3(r, 3, a26, a25); grp3(r, 6, h26, h25, tint=True); grp3(r, 9, f26, f25)
+        if has_bsr:
+            bfit = bsr["fit26"].get(name, 0); t_bsr += bfit; bsr_cells(r, f26, bfit)
         st = "전년초과 ▲" if fg > 0 else ("동률" if fg == 0 else "전년미달 ▼")
-        sc = ws.cell(r, 12, st); sc.font = F(10, bold=True, color=clr(fg)); sc.alignment = cen; sc.border = box
+        sc = ws.cell(r, STAT_C, st); sc.font = F(10, bold=True, color=clr(fg)); sc.alignment = cen; sc.border = box
     # Total
     r = 16
     ft26, ft25 = t_tm26 + t_hm26, t_tm25 + t_hm25; ftg = ft26 - ft25
     lc = ws.cell(r, 2, "Total"); lc.font = F(10, bold=True); lc.alignment = lft; lc.border = topbox(DBL)
     grp3(r, 3, t_tm26, t_tm25, bold=True); grp3(r, 6, t_hm26, t_hm25, bold=True, tint=True); grp3(r, 9, ft26, ft25, bold=True)
-    sc = ws.cell(r, 12, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
+    if has_bsr:
+        bsr_cells(r, ft26, t_bsr, bold=True)
+    sc = ws.cell(r, STAT_C, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
     sc.alignment = cen; sc.border = topbox(DBL)
-    ws.cell(17, 2, "※ 투숙일 기준 30일 OTB · 홈페이지=자체채널(D멤버스·자사·FIT·제휴 등, 우리팀 비관리) · FIT는 소노 Booking Status Report FIT과 얼추 일치").font = F(9, color=GREY)
+    note = "※ 투숙일 기준 30일 OTB · 홈페이지=자체채널(D멤버스·자사·FIT·제휴 등, 우리팀 비관리) · FIT=우리팀+홈페이지"
+    if has_bsr:
+        note += f" · BSR({bsr_lbl[5:-1]})=소노 Booking Status Report FIT(전채널·시점차로 우리 FIT가 다소 낮음)"
+    ws.cell(17, 2, note).font = F(9, color=GREY)
 
     # ===== 공용: 사업장별 3컬럼(26Y/25Y/GAP) 추이 시트 =====
     def trend_sheet(title_text, sheet_name, value_fn):
@@ -463,8 +527,15 @@ def main():
     xl_seg = set(DEFAULT_SEGMENTS); xl_label = "+".join(DEFAULT_SEGMENTS)
     rows26_xl = [r for r in rows26 if r["seg"] in xl_seg]
     rows25_xl = [r for r in rows25 if r["seg"] in xl_seg]
-    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label)
+    bsr = parse_bsr()   # 최신 BSR PDF의 FIT(전일) — 로컬 실행 시에만
+    if bsr:
+        print(f"BSR: {bsr['date']} FIT = " + ", ".join(f"{LABEL.get(k,k)}={v}" for k, v in bsr['fit26'].items()))
+    else:
+        print("BSR: PDF 없음/파싱불가 — BSR 컬럼 생략")
+    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label, bsr=bsr)
     payload = build_payload(data_date, asof26, asof25, rows26, rows25)
+    if bsr:
+        payload["bsr"] = bsr
     json_docs = docs_data / "july_pickup.json"
     json.dump(payload, open(json_docs, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"\n대시보드 배포본 → {json_docs}\n               → {xlsx_docs}")
