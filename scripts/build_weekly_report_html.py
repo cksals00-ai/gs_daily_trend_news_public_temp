@@ -95,6 +95,14 @@ def main():
     days = wt["this_week"]["days"]
     pf = days / 30.0  # 일할 환산 계수
 
+    # RM Budget 기준월 — 금주 종료일이 속한 월(월 전환기에도 자동 추종)
+    BUDGET_MONTH = f"{wt['this_week']['end'][:4]}-{wt['this_week']['end'][4:6]}"
+    # +60일(섹션6) 대상월 및 전년/전전년 stay-month (오늘 기준 자동 산출)
+    _p60 = date.today() + timedelta(days=60)
+    P60_MON = _p60.month
+    S6_LY = f"2025{P60_MON:02d}"   # 전년 동월 stay-month (예: 202509)
+    S6_LLY = f"2024{P60_MON:02d}"  # 전전년 동월 stay-month (예: 202409)
+
     pps = agg["pickup_daily_by_property_segment"]
     cps = agg["cancel_daily_by_property_segment"]
 
@@ -111,7 +119,7 @@ def main():
                     rn -= y["rn"]; rev -= y["rev"]
         return rn, rev  # rev = 백만원
 
-    def budget_prop(prop, month="2026-06", segs=SEGS):
+    def budget_prop(prop, month=BUDGET_MONTH, segs=SEGS):
         rk = DB2RM.get(prop)
         if not rk:
             return None, None
@@ -148,9 +156,9 @@ def main():
             ar, av = net_prop(prop, this_dates, (seg,))
             lr, lv = net_prop(prop, ly_dates, (seg,))
             a_rn += ar; a_rev += av; l_rn += lr; l_rev += lv
-        rk_b_rn = sum(rm["properties"].get(DB2RM[p], {}).get("2026-06", {}).get("segments", {})
+        rk_b_rn = sum(rm["properties"].get(DB2RM[p], {}).get(BUDGET_MONTH, {}).get("segments", {})
                       .get(seg, {}).get("rm_budget_rn", 0) for p in db_props if p in DB2RM)
-        rk_b_rev = sum(rm["properties"].get(DB2RM[p], {}).get("2026-06", {}).get("segments", {})
+        rk_b_rev = sum(rm["properties"].get(DB2RM[p], {}).get(BUDGET_MONTH, {}).get("segments", {})
                        .get(seg, {}).get("rm_budget_rev_mil", 0) for p in db_props if p in DB2RM)
         seg_rows.append((seg, rk_b_rn * pf, rk_b_rev * pf, a_rn, a_rev, l_rn, l_rev))
 
@@ -180,19 +188,19 @@ def main():
         return prn - crn, (prev - crev)
     s6 = []
     for prop in ordered:
-        r25, v25 = stay_net(prop, "202508")
-        r24, _ = stay_net(prop, "202408")
+        r25, v25 = stay_net(prop, S6_LY)
+        r24, _ = stay_net(prop, S6_LLY)
         s6.append((prop, r25, v25, r24, yoy_of(r25, r24)))
     s6.sort(key=lambda x: x[1], reverse=True)
     s6_tot_rn = sum(x[1] for x in s6); s6_tot_rev = sum(x[2] for x in s6)
 
-    # 상품 카테고리 (stay-month 2025.08)
+    # 상품 카테고리 (stay-month = +60일 전년 동월)
     bc = agg["product_detail"]["by_category"]
     def cat_rn(cat, ym):
         return bc.get(cat, {}).get(ym[:4], {}).get(ym, {}).get("rn", 0)
     pcat = {}
     for g, cats in PCAT_GROUPS.items():
-        pcat[g] = sum(cat_rn(c, "202508") for c in cats)
+        pcat[g] = sum(cat_rn(c, S6_LY) for c in cats)
     pcat_tot = sum(pcat.values())
 
     # ── 캠페인 (summer_detail) ──
@@ -458,6 +466,19 @@ def main():
 
     # ── 섹션 6 +60일 ──
     plus60 = (date.today() + timedelta(days=60))
+    ly_lbl = f"2025.{P60_MON:02d}"    # 전년 동월 라벨 (예: 2025.09)
+    lly_lbl = f"2024.{P60_MON:02d}"   # 전전년 동월 라벨 (예: 2024.09)
+    mon_lbl = f"{P60_MON}월"           # 동월 라벨 (예: 9월)
+    rm_p60_month = f"2026-{P60_MON:02d}"
+    rm_p60_budget = sum(rm["properties"].get(DB2RM[p], {}).get(rm_p60_month, {}).get("segments", {}).get(s, {}).get("rm_budget_rn", 0)
+                        for p in db_props if p in DB2RM for s in SEGS)
+    if rm_p60_budget > 0:
+        rm_bullet = (f'<li><strong>RM {rm_p60_month.replace("-", ".")} Budget 참고</strong> — RM 스냅샷이 {mon_lbl}까지 커버 → '
+                     f'{mon_lbl} OTA+G-OTA+Inbound Budget {fmt(rm_p60_budget)}실. 본 섹션의 사업장별 표는 전년 실적·전년비(24→25) 기준으로 '
+                     f'준비 우선순위를 제시합니다(전년도 목표 데이터 부재로 더미 목표 미생성).</li>')
+    else:
+        rm_bullet = (f'<li><strong>RM {rm_p60_month.replace("-", ".")} Budget 미커버</strong> — 현 RM 스냅샷이 {mon_lbl} 예산을 아직 포함하지 않습니다. '
+                     f'본 섹션의 사업장별 표는 전년 실적·전년비(24→25) 기준으로 준비 우선순위를 제시합니다(전년도 목표 데이터 부재로 더미 목표 미생성).</li>')
     # 전년 성장 둔화/역성장 (24→25 YoY 낮은 순, 운영 사업장만)
     slow = sorted([x for x in s6 if x[3] is not None and x[1] > 0], key=lambda x: x[4] if x[4] is not None else 999)[:5]
     nooper = [x[0] for x in s6 if x[3] == 0 or x[1] == 0]
@@ -477,18 +498,18 @@ def main():
     s6vis = s6[:10]; s6ext = s6[10:]
     slow_str = ", ".join(f"{x[0]}({('+' if x[4]>=0 else '')}{x[4]:.1f}%)" for x in slow if x[4] is not None)
     H.append(f'''<section class="section"><span class="section-num">SECTION 06</span>
-<h2 class="section-title"><span class="st-icon">📆</span> +60일 준비사항 <span style="font-size:11px;font-weight:600;color:var(--ink-faint)">· 기준일 +60일 = {plus60.strftime("%Y.%m.%d")} → 전년 동기간 2025년 8월</span></h2>
-<div class="insight-box" style="border-left-color:var(--info);margin-bottom:18px"><h3 style="color:var(--info)">+60일(8월) 준비 포인트</h3><ul>
-<li><strong>전년 성장 둔화·역성장</strong> — {slow_str} : 2024→2025 8월 성장세가 멈췄거나 약한 사업장으로, +60일 시점 선제 프로모션·요금 점검 필요.</li>
-<li><strong>전년 미운영/재가동 점검</strong> — {", ".join(nooper) if nooper else "해당 없음"} : 2025년 또는 2024년 8월 운영 실적이 없어 2026년 정상 운영 여부·채널 셋업 사전 확인 필요.</li>
-<li><strong>전년 8월 호조 카테고리</strong> — 룸온리 {fmt(pcat["룸온리"])}실({pcat["룸온리"]/pcat_tot*100:.0f}%) · 패키지 {fmt(pcat["패키지"])}실({pcat["패키지"]/pcat_tot*100:.0f}%) · 연박 {fmt(pcat["연박"])}실({pcat["연박"]/pcat_tot*100:.0f}%) 순. 룸온리·패키지 중심 상품 구성을 +60일 전 사전 세팅 권장.</li>
-<li><strong>RM 2026.08 Budget 참고</strong> — 금회 RM 스냅샷(2026.06.08)이 8월까지 커버 → 8월 OTA+G-OTA+Inbound Budget {fmt(sum(rm["properties"].get(DB2RM[p],{}).get("2026-08",{}).get("segments",{}).get(s,{}).get("rm_budget_rn",0) for p in db_props if p in DB2RM for s in SEGS))}실. 본 섹션의 사업장별 표는 전년 실적·전년비(24→25) 기준으로 준비 우선순위를 제시합니다(전년도 목표 데이터 부재로 더미 목표 미생성).</li>
+<h2 class="section-title"><span class="st-icon">📆</span> +60일 준비사항 <span style="font-size:11px;font-weight:600;color:var(--ink-faint)">· 기준일 +60일 = {plus60.strftime("%Y.%m.%d")} → 전년 동기간 2025년 {mon_lbl}</span></h2>
+<div class="insight-box" style="border-left-color:var(--info);margin-bottom:18px"><h3 style="color:var(--info)">+60일({mon_lbl}) 준비 포인트</h3><ul>
+<li><strong>전년 성장 둔화·역성장</strong> — {slow_str} : 2024→2025 {mon_lbl} 성장세가 멈췄거나 약한 사업장으로, +60일 시점 선제 프로모션·요금 점검 필요.</li>
+<li><strong>전년 미운영/재가동 점검</strong> — {", ".join(nooper) if nooper else "해당 없음"} : 2025년 또는 2024년 {mon_lbl} 운영 실적이 없어 2026년 정상 운영 여부·채널 셋업 사전 확인 필요.</li>
+<li><strong>전년 {mon_lbl} 호조 카테고리</strong> — 룸온리 {fmt(pcat["룸온리"])}실({pcat["룸온리"]/pcat_tot*100:.0f}%) · 패키지 {fmt(pcat["패키지"])}실({pcat["패키지"]/pcat_tot*100:.0f}%) · 연박 {fmt(pcat["연박"])}실({pcat["연박"]/pcat_tot*100:.0f}%) 순. 룸온리·패키지 중심 상품 구성을 +60일 전 사전 세팅 권장.</li>
+{rm_bullet}
 </ul></div>
-<h3 style="font-size:13px;color:var(--gold-bright);margin-bottom:10px">전년 동기간(2025.08) 사업장별 실적</h3>
-<div class="table-wrap"><table class="full-table" style="min-width:900px"><thead><tr><th>사업장</th><th>2025.08 실적 RN(실)</th><th>2025.08 매출(천원)</th><th>2024.08 실적 RN(실)</th><th>전년비(24→25)</th></tr></thead><tbody>
+<h3 style="font-size:13px;color:var(--gold-bright);margin-bottom:10px">전년 동기간({ly_lbl}) 사업장별 실적</h3>
+<div class="table-wrap"><table class="full-table" style="min-width:900px"><thead><tr><th>사업장</th><th>{ly_lbl} 실적 RN(실)</th><th>{ly_lbl} 매출(천원)</th><th>{lly_lbl} 실적 RN(실)</th><th>전년비(24→25)</th></tr></thead><tbody>
 {chr(10).join(s6_tr(r) for r in s6vis)}
 {chr(10).join(s6_tr(r, True) for r in s6ext)}
-<tr class="total-row"><td>합계</td><td>{fmt(s6_tot_rn)}</td><td>{fmt(s6_tot_rev*1000)}</td><td colspan="2" style="text-align:left">전년 동기간(8월) 전체 순예약 기준</td></tr>
+<tr class="total-row"><td>합계</td><td>{fmt(s6_tot_rn)}</td><td>{fmt(s6_tot_rev*1000)}</td><td colspan="2" style="text-align:left">전년 동기간({mon_lbl}) 전체 순예약 기준</td></tr>
 </tbody></table></div>
 {f'<button class="toggle-more" onclick="wkToggle(&#39;s6&#39;,this)">+ {len(s6ext)}개 사업장 더보기</button>' if s6ext else ''}
 <p style="font-size:11px;color:var(--ink-faint);margin-top:8px;line-height:1.7">
