@@ -29,10 +29,12 @@ permissions:
   pages: write
   id-token: write
 
-# 트리거별로 concurrency 분리 — push/schedule/dispatch가 서로 취소하지 않도록
+# 단일 "pages" 그룹으로 배포 직렬화 — push/schedule/dispatch 런이 겹쳐도
+# 서로 취소하지 않고 순차 대기(queue). GitHub Pages 동시 배포 충돌
+# ("Deployment failed, try again later.") 근본 해결. (Pages 공식 권장 패턴)
 concurrency:
-  group: "pages-${{ github.event_name }}"
-  cancel-in-progress: true
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
