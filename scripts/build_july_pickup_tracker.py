@@ -542,6 +542,13 @@ def main():
     build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label, bsr=None)  # 엑셀엔 BSR 미포함(화면만)
     payload = build_payload(data_date, asof26, asof25, rows26, rows25)
     if bsr:
+        # 날짜 정렬 비교: 우리 FIT를 BSR 날짜(≤asof) 시점으로 잘라 동일 시점끼리 대조.
+        # BSR PDF가 며칠 늦어도(주말 후 월요일=이틀전 등) 왜곡 없이 같은 as-of로 비교됨.
+        bsr_cut = min(bsr["date"], asof26)   # 우리 스냅샷이 못 미치는 미래일 방지
+        fit_rows26 = [r for r in rows26 if r["seg"] in FIT_SEGMENTS]
+        our_fit_at_bsr = onbook_at(fit_rows26, bsr_cut)
+        bsr["our_fit"] = {n: our_fit_at_bsr.get(n, 0) for n, _ in TARGETS}
+        bsr["our_cut"] = bsr_cut
         payload["bsr"] = bsr
     json_docs = docs_data / "july_pickup.json"
     json.dump(payload, open(json_docs, "w", encoding="utf-8"), ensure_ascii=False)
