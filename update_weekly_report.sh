@@ -97,16 +97,22 @@ if [ -n "$EXPLICIT_PDF" ]; then
     PDF="$EXPLICIT_PDF"
     ok "명시 지정: $(basename "$PDF")"
 else
-    # macOS 파일명은 NFD 저장 → Python 에서 NFC 정규화 후 '주간업무' 매칭, mtime 최신 1개.
+    # macOS 파일명은 NFD 저장 → Python 에서 NFC 정규화 후 매칭, mtime 최신 1개.
+    # 보고서명이 '주간업무'/'주간회의'로 혼용됨(둘 다 인식). '시장·트랜드' 조사 PDF는 제외.
     PDF="$(python3 - "$PDF_DIR" <<'PY'
 import sys, os, glob, unicodedata
 d = sys.argv[1]
-c = [p for p in glob.glob(os.path.join(d, "*.pdf"))
-     if "주간업무" in unicodedata.normalize("NFC", os.path.basename(p))]
+INC = ("주간업무", "주간회의")
+EXC = ("시장", "트랜드", "트렌드")
+c = []
+for p in glob.glob(os.path.join(d, "*.pdf")):
+    b = unicodedata.normalize("NFC", os.path.basename(p))
+    if any(k in b for k in INC) and not any(k in b for k in EXC):
+        c.append(p)
 print(max(c, key=os.path.getmtime) if c else "")
 PY
 )"
-    [ -n "$PDF" ] || die "주간업무 PDF를 찾지 못했습니다 ('$PDF_DIR/' 에 '…주간업무….pdf' 배치 필요)"
+    [ -n "$PDF" ] || die "주간업무/주간회의 PDF를 찾지 못했습니다 ('$PDF_DIR/' 에 '…주간업무/주간회의….pdf' 배치 필요)"
     ok "최신 PDF: $(basename "$PDF")"
 fi
 
