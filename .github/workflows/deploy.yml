@@ -202,13 +202,26 @@ jobs:
       - name: 🚀 Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: ⏳ 배포 재시도 대기 (Pages 일시 오류 "try again later" 대비)
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          echo "::warning::1차 Pages 배포 실패(일시 오류) — 30초 후 재시도합니다."
+          sleep 30
+
+      - name: 🔁 Deploy to GitHub Pages (재시도)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
 
       - name: ✅ Summary
         run: |
           MODE="${{ steps.mode.outputs.full == 'true' && 'full-build' || 'deploy-only' }}"
+          PAGE_URL="${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}"
           echo "## 🎉 배포 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **배포 시각**: $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M:%S') KST" >> $GITHUB_STEP_SUMMARY
-          echo "- **배포 URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **배포 URL**: $PAGE_URL" >> $GITHUB_STEP_SUMMARY
           echo "- **트리거**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **빌드 모드**: $MODE" >> $GITHUB_STEP_SUMMARY
