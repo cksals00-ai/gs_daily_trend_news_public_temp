@@ -81,10 +81,12 @@ read -r DATA_DATE ASOF26 ASOF25 NPROP V26 V25 GAP NBEHIND <<EOF
 $(python3 - "$DOCS_JSON" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
-m = d["meta"]; t = d["total"]; s = d["summary"]
-behind = sum(1 for x in s if x["gap"] < 0)
-print(m["data_date"], m["asof26"], m["asof25"], len(s),
-      t["v26"], t["v25"], t["gap"], behind)
+m = d["meta"]; s = d["summary"]; FIT = m.get("fit_segments", m["segments"])
+def sel(rec): return sum(rec.get(k, 0) for k in FIT)
+v26 = sum(sel(x["on26"]) for x in s)
+v25 = sum(sel(x["on25"]) for x in s)
+behind = sum(1 for x in s if sel(x["on26"]) - sel(x["on25"]) < 0)
+print(m["data_date"], m["asof26"], m["asof25"], len(s), v26, v25, v26 - v25, behind)
 PY
 )
 EOF
