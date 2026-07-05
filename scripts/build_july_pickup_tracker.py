@@ -61,8 +61,8 @@ INBOUND_CODES = {"54", "58", "A3", "A6", "A7"}                                  
 
 SEGMENTS = ["OTA", "G-OTA", "홈페이지", "제휴사", "일반", "Inbound", "기타"]
 TEAM_SEGMENTS = ["OTA", "G-OTA"]                                # GS 관리
-HOME_SEGMENTS = ["홈페이지", "제휴사", "일반"]                    # 비관리(자체채널)
-FIT_SEGMENTS = ["OTA", "G-OTA", "홈페이지", "제휴사", "일반"]     # 합계(FIT) = GS + 비관리
+HOME_SEGMENTS = ["홈페이지", "제휴사", "일반"]                    # 기타(자체채널)
+FIT_SEGMENTS = ["OTA", "G-OTA", "홈페이지", "제휴사", "일반"]     # 합계(FIT) = GS + 기타
 DEFAULT_SEGMENTS = FIT_SEGMENTS                                 # 기본 = FIT
 
 def seg_bucket(cnum):
@@ -305,13 +305,13 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
     ws.cell(4, 2, "- 사업장 : 캄 비발디, 단양, 청송, 여수, 거제, 진도").font = F(10)
     ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
-    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 비관리(홈페이지·제휴사·일반)").font = F(10)
+    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
     ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
     # 2단 헤더
     hcell(ws, 8, 2, "구분"); ws.merge_cells("B8:B9")
     hcell(ws, 8, 3, "GS (OTA+G-OTA)"); ws.merge_cells("C8:E8"); hcell(ws, 8, 4, None); hcell(ws, 8, 5, None)
-    hcell(ws, 8, 6, "비관리 (홈피·제휴·일반)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
+    hcell(ws, 8, 6, "기타 (홈피·제휴·일반)"); ws.merge_cells("F8:H8"); hcell(ws, 8, 7, None); hcell(ws, 8, 8, None)
     hcell(ws, 8, 9, "합계 (FIT)"); ws.merge_cells("I8:K8"); hcell(ws, 8, 10, None); hcell(ws, 8, 11, None)
     if has_bsr:
         hcell(ws, 8, BSR_C, bsr_lbl); ws.merge_cells(start_row=8, start_column=BSR_C, end_row=8, end_column=BSR_C + 1)
@@ -362,7 +362,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
         bsr_cells(r, ft26, t_bsr, bold=True)
     sc = ws.cell(r, STAT_C, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
     sc.alignment = cen; sc.border = topbox(DBL)
-    note = "※ FIT=영업자료(대) 03일반=GS(OTA+G-OTA)+비관리(홈페이지·제휴사·일반). 제휴사·일반 코드는 온라인팀 raw_db엔 거의 없어 BSR(전채널) 대비 미달"
+    note = "※ FIT=영업자료(대) 03일반=GS(OTA+G-OTA)+기타(홈페이지·제휴사·일반). 제휴사·일반 코드는 온라인팀 raw_db엔 거의 없어 BSR(전채널) 대비 미달"
     if has_bsr:
         note += f" · BSR({bsr_lbl[5:-1]})=소노 Booking Status Report FIT(전채널·시점차로 우리 FIT가 다소 낮음)"
     ws.cell(17, 2, note).font = F(9, color=GREY)
@@ -539,7 +539,7 @@ def main():
         print(f"BSR: {bsr['date']} FIT = " + ", ".join(f"{LABEL.get(k,k)}={v}" for k, v in bsr['fit26'].items()))
     else:
         print("BSR: PDF 없음/파싱불가 — BSR 컬럼 생략")
-    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label, bsr=bsr)
+    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label, bsr=None)  # 엑셀엔 BSR 미포함(화면만)
     payload = build_payload(data_date, asof26, asof25, rows26, rows25)
     if bsr:
         payload["bsr"] = bsr
