@@ -11537,6 +11537,27 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 })();
 </script>
 
+<script>
+/* 상단 TODAY'S INSIGHT — admin.html 「반영」된 데일리 키인을 우선 표시.
+   admin_input.json(headline, 없으면 selected_insights)이 있으면 build가 구운 값을 클라이언트에서 덮어씀.
+   반영값이 없으면 그대로 둠. admin.html 반영 → CI Step3.8(GAS→admin_input.json) → 이 화면 반영. */
+(function(){
+  fetch('data/admin_input.json?t=' + Date.now())
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d) return;
+      var text = (d.headline || '').trim();
+      if(!text){
+        var ins = Array.isArray(d.selected_insights) ? d.selected_insights : [];
+        text = ins.map(function(i){ return (i && i.text) || ''; }).filter(Boolean).join('  ·  ');
+      }
+      if(!text) return;
+      var el = document.querySelector('[data-tpl-headline]');
+      if(el) el.textContent = text;
+    })
+    .catch(function(){});
+})();
+</script>
 <script src="./js/menu-visibility.js"></script>
 </body>
 </html>
