@@ -385,6 +385,20 @@ function handleLoadAdmin_(params) {
   return ok_({ data: data, updated_at: row[0], updated_by: row[1] });
 }
 
+// 빌드 파이프라인용 읽기 전용 export (마스터 토큰 없이, 스크립트 속성 SYNC_KEY 로 게이트).
+// scripts/sync_admin_from_server.py 가 호출.
+function handleExportAdmin_(params) {
+  const key = String(params.key || '');
+  const expected = PropertiesService.getScriptProperties().getProperty('SYNC_KEY') || '';
+  if (!expected || key !== expected) return err_('unauthorized', 'unauthorized');
+  const ash = getAdminInputSheet_();
+  if (ash.getLastRow() < 2) return ok_({ data: null });
+  const row = ash.getRange(2, 1, 1, ADMIN_INPUT_HEADERS.length).getValues()[0];
+  let data = null;
+  try { data = row[2] ? JSON.parse(row[2]) : null; } catch (e) { data = null; }
+  return ok_({ data: data, updated_at: row[0], updated_by: row[1] });
+}
+
 // ============================================================================
 // 엔트리포인트
 // ============================================================================
@@ -395,6 +409,7 @@ function doGet(e) {
     if (action === 'me')         return handleMe_(p);
     if (action === 'users')      return handleListUsers_(p);
     if (action === 'load_admin') return handleLoadAdmin_(p);
+    if (action === 'export_admin') return handleExportAdmin_(p);
     if (action === 'ping')       return ok_({ pong: true });
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {

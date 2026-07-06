@@ -150,6 +150,17 @@ jobs:
           fi
           echo "::endgroup::"
 
+      - name: 🔗 [Step 3.8] 데일리 키인 서버동기화 (GAS → admin_input.json)
+        if: steps.mode.outputs.full == 'true'
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          ADMIN_SYNC_KEY: ${{ secrets.ADMIN_SYNC_KEY }}
+        run: |
+          echo "::group::admin 키인 서버동기화"
+          python scripts/sync_admin_from_server.py || echo "⚠ admin 서버동기화 실패 - 정적 admin_input.json 유지"
+          echo "::endgroup::"
+
       - name: 🔨 [Step 4] HTML 빌드 (모든 데이터 주입)
         if: steps.mode.outputs.full == 'true'
         timeout-minutes: 10
