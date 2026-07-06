@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>전체 세그 분석 자료 · GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{--bg:#1a1d23;--bg-card:#252932;--bg-deep:#14171c;--bg-soft:#2d3138;--bg-hover:#353a44;--ink:#f5f5f7;--ink-soft:#e0e0e3;--ink-muted:#a8acb3;--ink-faint:#7a7e85;--gold:#c9a063;--gold-bright:#e6b970;--positive:#4caf6f;--positive-bg:#1f3a28;--warning:#e8a256;--warning-bg:#3d2e1a;--negative:#e57373;--negative-bg:#3d1f1f;--info:#5a9fc4;--info-bg:#1a2e3d;--vivaldi:#d97a7a;--vivaldi-bg:#2e2228;--central:#6ba3c4;--central-bg:#1f2a35;--south:#6db58a;--south-bg:#1f2e28;--apac:#a892c8;--apac-bg:#252035;--rule:rgba(255,255,255,.12);--rule-strong:rgba(255,255,255,.22);--sans:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono','Pretendard Variable',Consolas,monospace;--radius:7px}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px;font-weight:500;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-x:hidden}
+*,*::before,*::after{font-family:inherit}input,button,textarea,select,table,th,td{font-family:var(--sans)!important}
+td,th{font-weight:600}th{font-weight:800}
+.mono{font-family:var(--mono)}
+
+.mast{background:var(--bg-deep);border-bottom:1px solid var(--rule-strong);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:42px;z-index:190}
+.mast-logo{display:flex;align-items:baseline;gap:10px}.mast-name{font-family:var(--mono);font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--gold-bright)}.mast-sub{font-size:12px;color:var(--ink-muted);font-weight:600}
+.mast-nav{display:flex;align-items:center;gap:8px}
+.nav-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-muted);text-decoration:none;letter-spacing:.1em;padding:6px 11px;border:1px solid var(--rule);border-radius:4px;transition:all .2s;background:transparent;cursor:pointer}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.container{max-width:1400px;margin:0 auto;padding:24px 28px 60px}
+.page-title{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--ink-faint);margin-bottom:6px;font-weight:700}
+.page-title h1{font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em}
+.page-title p{font-size:12.5px;color:var(--ink-muted);line-height:1.7}
+
+.toolbar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;position:sticky;top:96px;z-index:80;background:linear-gradient(var(--bg) 78%,rgba(26,29,35,0));padding:12px 0 14px;margin-bottom:6px}
+.seg-toggle{display:inline-flex;background:var(--bg-soft);border:1px solid var(--rule);border-radius:8px;padding:3px;gap:2px}
+.seg-toggle button{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-muted);background:transparent;border:none;border-radius:6px;padding:7px 18px;cursor:pointer;transition:all .15s}
+.seg-toggle button.active{background:rgba(201,160,99,.18);color:var(--gold-bright);box-shadow:inset 0 0 0 1px rgba(201,160,99,.5)}
+.jump{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.jump a{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-muted);text-decoration:none;padding:6px 11px;border:1px solid var(--rule);border-radius:5px}
+.jump a:hover{color:var(--gold);border-color:rgba(201,160,99,.5)}
+
+.section{margin-top:30px;scroll-margin-top:150px}
+.section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;padding-bottom:9px;border-bottom:2px solid var(--rule-strong)}
+.section-head h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.section-head .tag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--gold);padding:2px 8px;border:1px solid rgba(201,160,99,.35);border-radius:4px}
+.section-head .desc{font-size:11.5px;color:var(--ink-faint);margin-left:auto;font-weight:600}
+
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.summary-box{background:var(--bg-card);border:1px solid var(--rule);border-radius:7px;padding:13px 16px}
+.summary-box .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;color:var(--ink-faint);font-weight:700;margin-bottom:5px;text-transform:uppercase}
+.summary-box .val{font-family:var(--mono);font-size:21px;font-weight:800;color:var(--ink);line-height:1.1}
+.summary-box .val small{font-size:12px;color:var(--ink-muted);font-weight:700;margin-left:3px}
+.summary-box .sub{font-family:var(--mono);font-size:10.5px;font-weight:700;margin-top:4px;color:var(--ink-faint)}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:8px;margin-bottom:8px}
+table.gt{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:720px}
+table.gt th{text-align:right;padding:9px 11px;font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--ink-muted);white-space:nowrap;border-bottom:2px solid var(--rule-strong);background:var(--bg-deep);position:sticky;top:0;z-index:2}
+table.gt th.lft,table.gt td.lft{text-align:left}
+table.gt th.grp{border-left:1px solid var(--rule);color:var(--gold-bright)}
+table.gt td{padding:7px 11px;text-align:right;font-family:var(--mono);font-size:11.5px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.gt td.grp{border-left:1px solid var(--rule)}
+table.gt td.lft{font-family:var(--sans);font-weight:700}
+table.gt tr:hover td{background:var(--bg-hover)}
+table.gt .grouprow td{background:var(--bg-soft);font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.05em;color:var(--gold);text-transform:none}
+table.gt .subtotal td{background:rgba(201,160,99,.07);font-weight:800}
+table.gt .subtotal td.lft{color:var(--gold-bright)}
+table.gt .grand td{background:var(--bg-deep);font-weight:800;border-top:2px solid var(--rule-strong);border-bottom:none;font-size:12px;color:var(--ink)}
+table.gt .grand td.lft{color:var(--gold-bright)}
+table.gt .indent1 td.lft{padding-left:26px;font-weight:600}
+table.gt .indent2 td.lft{padding-left:44px;font-weight:500;color:var(--ink-soft)}
+table.gt .indent2 td.lft::before{content:"└ ";color:var(--ink-faint)}
+table.gt .muted td{color:var(--ink-faint)}
+table.gt .catrow td.lft{color:var(--info);font-weight:800}
+.tagpill{font-family:var(--mono);font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em;vertical-align:middle}
+.tagpill.ov{background:var(--info-bg);color:var(--info)}
+.tagpill.lo{background:var(--apac-bg);color:var(--apac)}
+
+.ach{font-family:var(--mono);font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:3px}
+.ach.g{background:var(--positive-bg);color:var(--positive)}
+.ach.y{background:var(--warning-bg);color:var(--warning)}
+.ach.r{background:var(--negative-bg);color:var(--negative)}
+.ach.n{background:var(--bg-soft);color:var(--ink-faint)}
+.pos{color:var(--positive)}.neg{color:var(--negative)}.flat{color:var(--ink-faint)}
+.dim{color:var(--ink-faint)}
+
+.note{font-size:10.5px;color:var(--ink-faint);line-height:1.7;margin-top:6px;font-weight:600}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700;margin:2px 0 12px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+#loading{padding:60px 0;text-align:center;color:var(--ink-muted);font-family:var(--mono);font-size:13px}
+#err{display:none;padding:20px;background:var(--negative-bg);color:var(--negative);border-radius:7px;font-size:13px;margin-top:20px}
+
+@media(max-width:820px){.container{padding:16px 12px 48px}.jump{margin-left:0;width:100%}.toolbar{top:90px}.mast-sub{display:none}}
+</style>
+</head>
+<body>
+<!-- ═══ GS NAVIGATOR ═══ -->
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:sticky;top:0;z-index:200;padding-top:env(safe-area-inset-top,0px)}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}.gsn-item:hover{background:#1a2232;color:#c9d1d9}.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:900px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}.gsn-links.open{display:flex}.gsn-item{padding:8px 12px}.gsn-item[style*="display:none"]{display:none!important}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+</style>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/booking-status.html" data-gsn="booking">Booking Status</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/fcst-trend.html" data-gsn="fcst-trend">FCST 추이</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-segment-analysis.html" data-gsn="segment-analysis">전체 세그 분석 자료</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/action_plan_dashboard.html" data-gsn="action">Action Plan</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 해운대 by sonofelice 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/external-report.html" data-gsn="external-report">외부 리포트 분석</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='booking')hit=h.indexOf('booking-status.html')!==-1;else if(k==='fcst-trend')hit=h.indexOf('fcst-trend.html')!==-1;else if(k==='segment-analysis')hit=h.indexOf('gs-segment-analysis.html')!==-1;else if(k==='action')hit=h.indexOf('action_plan')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;if(hit)a.classList.add('active');});})();</script>
+<header class="mast">
+  <div class="mast-logo"><span class="mast-name">SONO & TRINITY</span><span class="mast-sub">전체 세그 분석 자료</span></div>
+  <nav class="mast-nav">
+    <a href="fcst-trend.html" class="nav-btn">↗ FCST 추이</a>
+    <a href="otb.html" class="nav-btn">↗ GS 실적</a>
+    <a href="index.html" class="nav-btn">↗ 트렌드 리포트</a>
+  </nav>
+</header>
+
+<div class="container">
+  <div class="page-title">
+    <div class="eyebrow">SEGMENT · PROPERTY · OVERSEAS ANALYSIS</div>
+    <h1>전체 세그 분석 자료</h1>
+    <p id="subtitle">전 사업장 · 세그먼트 · 해외 상세 — 당월/익월 2개월 구조</p>
+  </div>
+
+  <div id="loading">데이터 불러오는 중…</div>
+  <div id="err"></div>
+
+  <div id="app" style="display:none">
+    <div class="toolbar">
+      <div class="seg-toggle" id="monthToggle"></div>
+      <div class="jump">
+        <a href="#sec-seg">세그먼트</a>
+        <a href="#sec-prop">사업장별</a>
+        <a href="#sec-ovs">해외 상세</a>
+        <a href="#sec-pnl">P&amp;L 요약</a>
+      </div>
+    </div>
+
+    <div class="section" id="sec-seg">
+      <div class="section-head"><h2>세그먼트 분석</h2><span class="tag" id="seg-mtag">—</span><span class="desc">회원 · 단체 · FIT / 점유비 · RNs · ADR · Rev · 달성률 · 전년비</span></div>
+      <div class="summary-row" id="seg-summary"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--positive)"></i>달성률 ≥100%</span>
+        <span><i class="dot" style="background:var(--warning)"></i>90~99%</span>
+        <span><i class="dot" style="background:var(--negative)"></i>&lt;90%</span>
+        <span>· 전년비 = 실적 ÷ 전년</span>
+      </div>
+      <div class="tbl-wrap" id="seg-tbl"></div>
+      <div class="note">점유비=세그 구성비(믹스), 증감은 %p. RNs=실(박), Rev=백만원, ADR=천원. COMP(무상)는 매출 미발생.</div>
+    </div>
+
+    <div class="section" id="sec-prop">
+      <div class="section-head"><h2>사업장별</h2><span class="tag" id="prop-mtag">—</span><span class="desc">권역별 · OCC · RNs · ADR · Rev · 달성률</span></div>
+      <div class="tbl-wrap" id="prop-tbl"></div>
+      <div class="note">권역: 아시아퍼시픽 · 비발디 · 한국중부 · 한국남부. OCC=점유율, RNs=실, Rev=백만원.</div>
+    </div>
+
+    <div class="section" id="sec-ovs">
+      <div class="section-head"><h2>해외 상세</h2><span class="tag">당월 + 누계</span><span class="desc" id="ovs-desc">미주(하와이) · 괌(망길라오·탈로포포) · 베트남(하이퐁)</span></div>
+      <div class="summary-row" id="ovs-summary"></div>
+      <div id="ovs-sections"></div>
+      <div class="note" id="ovs-note"></div>
+    </div>
+
+    <div class="section" id="sec-pnl">
+      <div class="section-head"><h2 id="pnl-title">P&amp;L 요약</h2><span class="tag">운영 · 분양 · 합계</span><span class="desc">목표 · 실적 · 달성률 · 전년비 (당월/누계)</span></div>
+      <div class="tbl-wrap" id="pnl-tbl"></div>
+      <div class="note">매출·영업이익=억원, RNs=실, 분양구좌=구좌, 입회금=억원. 당월(예상실적)/누계 병기.</div>
+    </div>
+
+    <p class="note" id="foot"></p>
+  </div>
+</div>
+
+<script>
+const D = {};
+const $ = s => document.querySelector(s);
+
+/* ── 포맷 헬퍼 ─────────────────────────────── */
+const nf = new Intl.NumberFormat('en-US');
+function num(v){ return (v===null||v===undefined||v==='')?'—':nf.format(v); }
+function pct(v){ return (v===null||v===undefined||v==='')?'—':v+'%'; }
+function ppt(v){ if(v===null||v===undefined||v==='')return '—'; const s=v>0?'+':''; return s+v+'%p'; }
+function achCls(v){ if(v===null||v===undefined)return 'n'; if(v>=100)return 'g'; if(v>=90)return 'y'; return 'r'; }
+function achBadge(v){ return `<span class="ach ${achCls(v)}">${pct(v)}</span>`; }
+function yoy(actual, ly){ if(actual===null||actual===undefined||ly===null||ly===undefined||ly===0)return {t:'—',c:'flat'};
+  const r = actual/ly*100; const c = r>100.5?'pos':(r<99.5?'neg':'flat'); return {t:r.toFixed(0)+'%', c}; }
+function deltaSpan(v,suffix){ if(v===null||v===undefined)return '<span class="dim">—</span>';
+  const c=v>0?'pos':(v<0?'neg':'flat'); const s=v>0?'+':''; return `<span class="${c}">${s}${nf.format(v)}${suffix||''}</span>`; }
+
+/* ── 세그먼트 테이블 ────────────────────────── */
+function renderSeg(mk){
+  const m = D.months[mk];
+  $('#seg-mtag').textContent = m.label + (m.role==='current'?' · 당월':' · 익월');
+  // 요약
+  const t = m.seg_total, occ = m.seg_occ||{};
+  const rev = t.rev||{}, adr=t.adr||{}, rns=t.rns||{};
+  $('#seg-summary').innerHTML = `
+    ${sBox('총 RNs', num(rns.실적)+'<small>실</small>', `달성률 ${pct(rns.달성률)} · 목표 ${num(rns.목표)}`)}
+    ${sBox('총 매출(Rev)', num(rev.실적)+'<small>백만</small>', `달성률 ${pct(rev.달성률)} · 전년비 ${yoy(rev.실적,rev.전년).t}`)}
+    ${sBox('평균 ADR', num(adr.실적)+'<small>천원</small>', `전년 ${num(adr.전년)} · ${deltaSpanText(adr.증감)}`)}
+    ${sBox('전체 점유율', pct(occ.실적), `목표 ${pct(occ.목표)} · 전년 ${pct(occ.전년)}`)}
+  `;
+  // 표
+  const head = `<thead><tr>
+    <th class="lft">세그먼트</th>
+    <th class="grp">점유비</th><th>전년</th><th>증감</th>
+    <th class="grp">RNs 실적</th><th>목표</th><th>전년비</th><th>달성률</th>
+    <th class="grp">ADR</th><th>전년</th>
+    <th class="grp">Rev 실적</th><th>전년비</th><th>달성률</th>
+  </tr></thead>`;
+  let rows = '', curGroup = null;
+  const groupLabel = {회원:'회원 (기명·무기명·Staff·Other)', 단체:'단체 (G-Mice·E-Mice·Inbound)', FIT:'FIT (홈페이지·OTA·G-OTA·Affiliate·Other)'};
+  m.segments.forEach(r=>{
+    if(r.group && r.group!==curGroup){ curGroup=r.group;
+      rows += `<tr class="grouprow"><td class="lft" colspan="13">${groupLabel[curGroup]||curGroup}</td></tr>`; }
+    rows += segRow(r, r.name==='소계');
+  });
+  rows += segRow(t, false, true); // 합계
+  $('#seg-tbl').innerHTML = `<table class="gt">${head}<tbody>${rows}</tbody></table>`;
+}
+function segRow(r, isSub, isGrand){
+  const occ=r.occ||{}, rns=r.rns||{}, adr=r.adr||{}, rev=r.rev||{};
+  const cls = isGrand?'grand':(isSub?'subtotal':'');
+  const nm = isGrand?'합계':(r.name==='COMP'?'COMP (무상)':(r.name==='소계'?'　소계':r.name));
+  const y1=yoy(rns.실적,rns.전년), y2=yoy(rev.실적,rev.전년);
+  return `<tr class="${cls}">
+    <td class="lft">${nm}</td>
+    <td class="grp">${pct(occ.실적)}</td><td class="dim">${pct(occ.전년)}</td><td>${ppt(occ.증감)}</td>
+    <td class="grp">${num(rns.실적)}</td><td class="dim">${num(rns.목표)}</td><td class="${y1.c}">${y1.t}</td><td>${achBadge(rns.달성률)}</td>
+    <td class="grp">${num(adr.실적)}</td><td class="dim">${num(adr.전년)}</td>
+    <td class="grp">${num(rev.실적)}</td><td class="${y2.c}">${y2.t}</td><td>${achBadge(rev.달성률)}</td>
+  </tr>`;
+}
+function deltaSpanText(v){ if(v===null||v===undefined)return '—'; const c=v>0?'pos':(v<0?'neg':'flat'); const s=v>0?'+':''; return `<span class="${c}">${s}${v}</span>`; }
+function sBox(l,v,sub){ return `<div class="summary-box"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${sub}</div></div>`; }
+
+/* ── 사업장 테이블 ──────────────────────────── */
+const REGION_LABEL = {아시아퍼시픽:'아시아퍼시픽',비발디:'비발디',한국중부:'한국중부',한국남부:'한국남부'};
+function renderProp(mk){
+  const m = D.months[mk];
+  $('#prop-mtag').textContent = m.label + (m.role==='current'?' · 당월':' · 익월');
+  const head = `<thead><tr>
+    <th class="lft">사업장</th>
+    <th class="grp">OCC</th><th>전년</th><th>증감</th>
+    <th class="grp">RNs 실적</th><th>목표</th><th>달성률</th>
+    <th class="grp">ADR</th><th>전년</th>
+    <th class="grp">Rev 실적</th><th>전년비</th><th>달성률</th>
+  </tr></thead>`;
+  let rows='', curR=null;
+  m.properties.forEach(r=>{
+    if(r.region && r.region!==curR){ curR=r.region;
+      rows += `<tr class="grouprow"><td class="lft" colspan="12">${REGION_LABEL[curR]||curR}</td></tr>`; }
+    rows += propRow(r, r.name==='소계');
+  });
+  rows += propRow(m.prop_total, false, true);
+  $('#prop-tbl').innerHTML = `<table class="gt">${head}<tbody>${rows}</tbody></table>`;
+}
+function propRow(r, isSub, isGrand){
+  const occ=r.occ||{}, rns=r.rns||{}, adr=r.adr||{}, rev=r.rev||{};
+  const cls = isGrand?'grand':(isSub?'subtotal':'');
+  const nm = isGrand?'전사 합계':(r.name==='소계'?'　소계':r.name);
+  const y2=yoy(rev.실적,rev.전년);
+  return `<tr class="${cls}">
+    <td class="lft">${nm}</td>
+    <td class="grp">${pct(occ.실적)}</td><td class="dim">${pct(occ.전년)}</td><td>${ppt(occ.증감)}</td>
+    <td class="grp">${num(rns.실적)}</td><td class="dim">${num(rns.목표)}</td><td>${achBadge(rns.달성률)}</td>
+    <td class="grp">${num(adr.실적)}</td><td class="dim">${num(adr.전년)}</td>
+    <td class="grp">${num(rev.실적)}</td><td class="${y2.c}">${y2.t}</td><td>${achBadge(rev.달성률)}</td>
+  </tr>`;
+}
+
+/* ── 해외 상세 ──────────────────────────────── */
+function indentClass(indent){ if(indent<44)return ''; if(indent<58)return 'indent1'; return 'indent2'; }
+const OVS_CAT = new Set(['골프','객실']);
+const OVS_HEAD = new Set(['하와이계','망길라오계','탈로포포계','하이퐁합계','미주합계']);
+function renderOverseas(){
+  const o = D.overseas;
+  const ru = o.rollup||{};
+  const am = ru['미주합계']||{cur:{}}, hp = ru['하이퐁합계']||{cur:{}};
+  $('#ovs-summary').innerHTML = `
+    ${sBox('미주 합계(하와이+괌)', num(am.cur.실적)+'<small>백만</small>', `달성률 ${pct(am.cur.달성률)} · 전년 ${num(am.cur.전년)}`)}
+    ${sBox('베트남 하이퐁 합계', num(hp.cur.실적)+'<small>백만</small>', `달성률 ${pct(hp.cur.달성률)} · 전년 ${num(hp.cur.전년)}`)}
+    ${sBox('기준', (D.meta.current_month||'').replace('-','.'), '당월 07.01~07.31 · 누계 01.01~07.31')}
+  `;
+  let html='';
+  o.sections.forEach(sec=>{
+    const head = `<thead><tr>
+      <th class="lft">항목</th>
+      <th class="grp">당월 목표</th><th>실적</th><th>달성률</th><th>전년</th><th>전년비</th>
+      <th class="grp">누계 목표</th><th>실적</th><th>달성률</th><th>전년</th><th>전년비</th>
+    </tr></thead>`;
+    let rows='';
+    sec.rows.forEach(r=>{
+      rows += ovsRow(r);
+    });
+    html += `<div style="margin-bottom:6px"><div class="section-head" style="border-bottom:1px solid var(--rule);margin-top:16px"><h2 style="font-size:13.5px;color:var(--gold-bright)">${sec.title}</h2></div>
+      <div class="tbl-wrap"><table class="gt">${head}<tbody>${rows}</tbody></table></div></div>`;
+  });
+  $('#ovs-sections').innerHTML = html;
+  $('#ovs-note').textContent = (o.fx_note?('※ '+o.fx_note+'  '):'') + '해외 매출=백만원, 골프 내장객=명, ADR=현지통화 환산. 그린피는 해외/로컬(현지) 방문객으로 구분.';
+}
+function ovsRow(r){
+  const cur=r.cur||{}, cum=r.cum||{};
+  let cls = OVS_HEAD.has(r.label) ? (r.label.endsWith('합계')?'grand':'subtotal') : indentClass(r.indent);
+  if(OVS_CAT.has(r.label)) cls += ' catrow';
+  const tag = r.tag==='해외'?'<span class="tagpill ov">해외</span>':(r.tag==='로컬'?'<span class="tagpill lo">로컬</span>':'');
+  const yc=yoy(cur.실적,cur.전년), ym=yoy(cum.실적,cum.전년);
+  const label = r.label.replace(/ /g,'') ;
+  return `<tr class="${cls}">
+    <td class="lft">${label}${tag}</td>
+    <td class="grp">${num(cur.목표)}</td><td>${num(cur.실적)}</td><td>${achBadge(cur.달성률)}</td><td class="dim">${num(cur.전년)}</td><td class="${yc.c}">${yc.t}</td>
+    <td class="grp">${num(cum.목표)}</td><td>${num(cum.실적)}</td><td>${achBadge(cum.달성률)}</td><td class="dim">${num(cum.전년)}</td><td class="${ym.c}">${ym.t}</td>
+  </tr>`;
+}
+
+/* ── P&L ────────────────────────────────────── */
+function renderPnl(){
+  if(!D.pnl){ $('#sec-pnl').style.display='none'; return; }
+  const mk = D.meta.pnl_month || '';
+  $('#pnl-title').textContent = (D.meta.pnl_label||'전월') + ' P&L 요약';
+  const head = `<thead><tr>
+    <th class="lft">구분</th><th class="lft">지표</th>
+    <th class="grp">당월 목표</th><th>실적</th><th>달성률</th><th>전년비</th>
+    <th class="grp">누계 실적</th><th>달성률</th><th>전년비</th>
+  </tr></thead>`;
+  let rows='', curSec=null;
+  const secLabel={운영:'운영',분양:'분양',합계:'합계'};
+  D.pnl.forEach(r=>{
+    const cur=r.cur||{}, cum=r.cum||{};
+    const yc=yoy(cur.실적,cur.전년), ym=yoy(cum.실적,cum.전년);
+    const first = r.section!==curSec; curSec=r.section;
+    const cls = r.section==='합계'?'subtotal':'';
+    rows += `<tr class="${cls}">
+      <td class="lft">${first?(secLabel[r.section]||r.section||''):''}</td>
+      <td class="lft">${r.name}</td>
+      <td class="grp">${num(cur.목표)}</td><td>${num(cur.실적)}</td><td>${achBadge(cur.달성률)}</td><td class="${yc.c}">${yc.t}</td>
+      <td class="grp">${num(cum.실적)}</td><td>${achBadge(cum.달성률)}</td><td class="${ym.c}">${ym.t}</td>
+    </tr>`;
+  });
+  $('#pnl-tbl').innerHTML = `<table class="gt" style="min-width:640px">${head}<tbody>${rows}</tbody></table>`;
+}
+
+/* ── 부팅 ───────────────────────────────────── */
+let curMonth = null;
+function switchMonth(mk){
+  curMonth = mk;
+  document.querySelectorAll('#monthToggle button').forEach(b=>b.classList.toggle('active', b.dataset.mk===mk));
+  renderSeg(mk); renderProp(mk);
+}
+async function boot(){
+  try{
+    const res = await fetch('data/exec_segment.json?t=' + Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    Object.assign(D, data);
+    // P&L 월 라벨 유추(전월)
+    const cm = D.meta.current_month;
+    if(cm){ const [y,mo]=cm.split('-').map(Number); const pm = mo===1?`${y-1}-12`:`${y}-${String(mo-1).padStart(2,'0')}`;
+      D.meta.pnl_month=pm; D.meta.pnl_label=`${parseInt(pm.slice(5))}월`; }
+    // 월 토글
+    const mks = Object.keys(D.months).sort();
+    $('#monthToggle').innerHTML = mks.map(mk=>{
+      const m=D.months[mk]; const role=m.role==='current'?'당월':'익월';
+      return `<button data-mk="${mk}">${m.label} · ${role}</button>`;
+    }).join('');
+    document.querySelectorAll('#monthToggle button').forEach(b=>b.onclick=()=>switchMonth(b.dataset.mk));
+    // 부제/푸터
+    $('#subtitle').textContent = `전 사업장 · 세그먼트 · 해외 상세 — ${D.months[mks[0]].label}(당월) + ${D.months[mks[1]]?D.months[mks[1]].label:''}(익월) 2개월 구조`;
+    $('#foot').textContent = `기준 리포트일 ${D.meta.report_date} · 생성 ${D.meta.generated_at} · 소스 ${D.meta.source_pdf}`;
+    renderOverseas(); renderPnl();
+    switchMonth(mks[0]);
+    $('#loading').style.display='none';
+    $('#app').style.display='block';
+  }catch(e){
+    $('#loading').style.display='none';
+    const el=$('#err'); el.style.display='block';
+    el.textContent = '데이터를 불러오지 못했습니다: ' + e.message + ' (docs/data/exec_segment.json)';
+  }
+}
+boot();
+</script>
+<script src="./js/menu-visibility.js"></script>
+</body>
+</html>
