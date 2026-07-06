@@ -30,6 +30,12 @@
       href: 'ly-product.html',
       label: '전년상품 (전년 동기간 상품)',
       reason: '미사용 — 전년 동기간 상품 비교.'
+    },
+    {
+      key: 'segment-analysis',
+      href: 'gs-segment-analysis.html',
+      label: '전체 세그 분석 자료',
+      reason: '대외비 · 관리자 전용 — 공개 네비/외부 대시보드 미노출. (직접 URL·관리자 열람만.)'
     }
   ];
 
