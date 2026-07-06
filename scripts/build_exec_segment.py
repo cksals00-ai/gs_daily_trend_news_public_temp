@@ -328,6 +328,78 @@ def parse_closing_segment(pdf):
     }
 
 
+def parse_closing_property_dashboard(pdf):
+    """마감 사업장 대시보드(사업장·달성률·YoY ×4열) → list[{name, ach, yoy}]."""
+    pi = None
+    for i, p in enumerate(pdf.pages):
+        ts = nfc(p.extract_text() or "").replace(" ", "")
+        if ts.count("달성률") >= 3 and ts.count("YoY") >= 3 and "사업장" in ts:
+            pi = i; break
+    if pi is None:
+        return None
+    ws = pdf.pages[pi].extract_words()
+    for w in ws:
+        w["text"] = nfc(w["text"])
+    SKIP = {"사업장", "달성률", "YoY", "목표", "실적", "신장률", "전년", "증감", "구분"}
+    out = []
+    for cl in cclusters(ws):
+        toks = sorted(cl, key=lambda w: w["x0"])
+        name = []
+        for t in toks:
+            s = t["text"]
+            if s in SKIP:
+                name = []; continue
+            mu = re.match(r"^(\d+)%$", s)       # 부호없는 % = 달성률
+            if mu:
+                nm = " ".join(name).strip(); name = []
+                if nm and len(nm) <= 14:
+                    out.append({"name": nm, "ach": int(mu.group(1)), "yoy": None, "_a": True})
+                continue
+            ms = re.match(r"^([+-]\d+)%$", s)    # 부호있는 % = YoY
+            if (ms or s == "-") and out and out[-1].get("_a"):
+                out[-1]["yoy"] = int(ms.group(1)) if ms else None
+                out[-1]["_a"] = False; continue
+            if re.match(r"^[가-힣A-Za-z&·]", s):
+                name.append(s)
+            else:
+                name = []
+    for b in out:
+        b.pop("_a", None)
+    # 중복 사업장(동일명) 첫값 채택
+    seen = {}
+    for b in out:
+        if b["name"] not in seen:
+            seen[b["name"]] = b
+    return list(seen.values())
+
+
+def parse_closing_overseas(pdf):
+    """마감 해외: 괌(망길라오+탈로포포) · 베트남(하이퐁) 당월 총매출 실적."""
+    def course_rev(needle, rowlabels):
+        for i, p in enumerate(pdf.pages):
+            ts = nfc(p.extract_text() or "").replace(" ", "")
+            if needle in ts and any(r in ts for r in rowlabels):
+                ws = p.extract_words()
+                for w in ws:
+                    w["text"] = nfc(w["text"])
+                for cl in cclusters(ws):
+                    labs = [w["text"] for w in cl if (w["x0"] + w["x1"]) / 2 < LABX]
+                    if any(r in "".join(labs) for r in rowlabels):
+                        b = cbind([w for w in cl if cisval(w["text"])])
+                        v = b.get(("cur", "실적"))
+                        if v is not None:
+                            return v
+        return None
+    mangi = course_rev("망길라오", ["총매출"])
+    talo = course_rev("탈로포포", ["총매출"])
+    haiphong = course_rev("하이퐁", ["매출액"])
+    guam = None
+    if mangi is not None or talo is not None:
+        guam = (mangi or 0) + (talo or 0)
+    return {"guam": guam, "vietnam": haiphong,
+            "detail": {"망길라오": mangi, "탈로포포": talo, "하이퐁": haiphong}}
+
+
 def parse_closing_headline(pdf, seg):
     """투숙률 합계(OCC) · 매출합계(Rev) 를 헤드라인 페이지에서 보강."""
     occ = rev = rev_ly = None
@@ -414,7 +486,7 @@ def build(src_dir, out_path):
                     mapping.append((base, "weekly(파싱실패)", mo)); continue
                 dk = date_key(base)
                 if mo not in forecast or dk >= forecast[mo][0]:
-                    forecast[mo] = (dk, data)
+                    forecast[mo] = (dk, data, f)  # 파일경로 보관(아젠다 추출용)
                 mapping.append((base, "예상", mo))
             else:  # closing
                 m = re.search(r"\(26\.(\d\d)\)", nfc(base))
@@ -423,9 +495,11 @@ def build(src_dir, out_path):
                 if not seg or mo is None:
                     mapping.append((base, "확정(파싱실패)", mo)); continue
                 head = parse_closing_headline(pdf, seg)
+                prop_dash = parse_closing_property_dashboard(pdf)
                 actual[mo] = {"segments": seg["segments"], "seg_total": seg["seg_total"],
                               "leaf_validated": seg["leaf_validated"], "headline": head,
-                              "comp_calc": seg["comp_calc"], "comp_parsed": seg["comp_parsed"]}
+                              "comp_calc": seg["comp_calc"], "comp_parsed": seg["comp_parsed"],
+                              "property_dash": prop_dash}
                 close_chain[mo] = (seg["total_rns"], seg["seg_total_cum"]["v"])
                 mapping.append((base, "확정", mo))
         except Exception as e:
@@ -456,6 +530,7 @@ def build(src_dir, out_path):
             tot = (ac["seg_total"] or {}).get("v")
             if tot is not None and gsum != tot:
                 warnings.append(f"[{mk}] 확정 세그 그룹+COMP({gsum}) != 합계({tot})")
+            entry["property_dash"] = ac.get("property_dash")   # 사업장 달성률/YoY
         else:
             entry["kind"] = "forecast"
             entry["segments"] = fc[1]["segments"]
@@ -478,6 +553,22 @@ def build(src_dir, out_path):
         else:
             entry["properties"] = None; entry["overseas"] = None; entry["prop_total"] = None
         months[mk] = entry
+
+    # ── 아젠다 추출(월별 최신 예상 리포트) ──
+    try:
+        import parse_agenda
+        for mo, fc in forecast.items():
+            mk = month_key(YEAR, mo)
+            if mk not in months:
+                continue
+            try:
+                apdf = pdfplumber.open(fc[2])
+                ag = parse_agenda.extract_agenda(apdf)
+                months[mk]["agenda"] = ag
+            except Exception as e:
+                logger.warning("아젠다 추출 실패 %s: %s", mk, e)
+    except Exception as e:
+        logger.warning("parse_agenda 임포트 실패: %s", e)
 
     insights = make_insights(months)
 
@@ -573,6 +664,31 @@ def make_insights(months):
             worst = min(gy, key=lambda x: x[1])
             best = max(gy, key=lambda x: x[1])
             outs.append({"type": "yoy", "text": f"{e['label']} 전년비 최고 {best[0]} {sign(best[1])}% · 최저 {worst[0]} {sign(worst[1])}%"})
+    # 4) 아젠다 인사이트(최신 아젠다 보유월)
+    agmk = [mk for mk in mks if months[mk].get("agenda")]
+    if agmk:
+        last = agmk[-1]
+        ag = months[last]["agenda"]
+        props = [b for b in ag if b["type"] == "property"]
+        theme_all = defaultdict(int)
+        active = []
+        for b in ag:
+            for it in b["items"]:
+                theme_all[it["theme"]] += 1
+            if b["items"]:
+                active.append((b["name"], len(b["items"])))
+        if active:
+            active.sort(key=lambda x: -x[1])
+            top = ", ".join(f"{n}({c})" for n, c in active[:3])
+            outs.append({"type": "agenda", "text": f"{months[last]['label']} 아젠다 최다: {top} — 사업장 {len(props)}곳·항목 {sum(c for _,c in active)}건"})
+        if theme_all:
+            tt = sorted(theme_all.items(), key=lambda x: -x[1])
+            outs.append({"type": "agenda", "text": f"{months[last]['label']} 아젠다 테마 집중: " + " · ".join(f"{k} {v}건" for k, v in tt[:3])})
+        # 매출/예상매출 언급 사업장
+        amt = [(b["name"], b["amounts"]) for b in ag if b.get("amounts") and b["type"] in ("property", "dept")]
+        if amt:
+            picks = "; ".join(f"{n} {'/'.join(a[:2])}" for n, a in amt[:3])
+            outs.append({"type": "agenda", "text": f"{months[last]['label']} 매출 파이프라인: {picks}"})
     return outs
 
 

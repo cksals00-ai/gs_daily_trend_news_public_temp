@@ -83,6 +83,26 @@ table.gt .grand td.lft{color:var(--gold-bright)}
 .chart-box .cs{font-size:10.5px;color:var(--ink-faint);margin-bottom:10px}
 .chart-box .cwrap{position:relative;height:260px}
 .note{font-size:10.5px;color:var(--ink-faint);line-height:1.7;margin-top:8px;font-weight:600}
+.agenda-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.acard{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px}
+.acard.dept{border-left:3px solid var(--info)}.acard.property{border-left:3px solid var(--gold)}.acard.overseas{border-left:3px solid var(--south)}
+.acard-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.acard-h .nm{font-weight:800;font-size:13.5px}
+.acard-h .tp{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:3px;background:var(--bg-soft);color:var(--ink-faint)}
+.acard-h .cnt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700}
+.amt{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:800;color:var(--positive);background:var(--positive-bg);padding:1px 6px;border-radius:3px;margin:0 3px 4px 0}
+.aitem{display:flex;gap:6px;align-items:baseline;padding:3px 0;font-size:11.5px;line-height:1.45;color:var(--ink-soft)}
+.aitem .ph{font-family:var(--mono);font-size:8px;font-weight:800;padding:1px 4px;border-radius:2px;flex-shrink:0;margin-top:1px}
+.aitem .ph.done{background:var(--info-bg);color:var(--info)}.aitem .ph.plan{background:var(--warning-bg);color:var(--warning)}
+.aitem .th{font-size:9px;color:var(--ink-faint);flex-shrink:0}
+.tdist{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px}
+.tchip{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:var(--bg-soft);color:var(--ink-muted)}
+table.hm{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;min-width:640px}
+table.hm th{position:sticky;top:0;background:var(--bg-deep);color:var(--ink-muted);font-size:10px;font-weight:800;padding:7px 8px;text-align:center;border-bottom:2px solid var(--rule-strong);z-index:2}
+table.hm th.lft,table.hm td.lft{text-align:left;position:sticky;left:0;background:var(--bg-card);z-index:1;font-family:var(--sans);font-weight:700;white-space:nowrap}
+table.hm td{padding:5px 8px;text-align:center;font-family:var(--mono);font-weight:700;border-bottom:1px solid var(--rule);border-left:1px solid var(--rule)}
+table.hm td .yo{font-size:8.5px;opacity:.7;display:block}
+table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{background:rgba(232,162,86,.18);color:#f0c088}table.hm td.r{background:rgba(229,115,115,.20);color:#f0a0a0}table.hm td.e{background:transparent;color:var(--ink-faint)}
 #loading{padding:60px 0;text-align:center;color:var(--ink-muted);font-family:var(--mono);font-size:13px}
 #err{display:none;padding:20px;background:var(--negative-bg);color:var(--negative);border-radius:7px;font-size:13px;margin-top:20px}
 .hidden{display:none!important}
@@ -174,6 +194,12 @@ table.gt .grand td.lft{color:var(--gold-bright)}
         <div id="ovs-sections"></div>
         <div class="note">해외 매출=백만원, 골프 내장객=명, 그린피는 해외/로컬(현지) 구분.</div>
       </div>
+      <div class="section" id="sec-agenda">
+        <div class="section-head"><h2>사업장 아젠다 분석</h2><span class="tag forecast" id="agenda-mtag">—</span><span class="desc">사업장·부서별 전주 실적/금주 계획 · 테마 분류 · 매출 파이프라인</span></div>
+        <div id="agenda-summary" class="summary-row"></div>
+        <div id="agenda-cards"></div>
+        <div class="note">전주 주요사항(실적)·금주 계획을 항목 단위로 추출, 키워드 규칙으로 테마 분류. 원문 헤드라인 보존(요약·창작 없음).</div>
+      </div>
     </div>
 
     <!-- ── 추이 분석 ── -->
@@ -189,7 +215,16 @@ table.gt .grand td.lft{color:var(--gold-bright)}
           <div class="chart-box"><div class="ct">사업장 권역 RN 추이</div><div class="cs">예상 리포트 보유월(4~7월)</div><div class="cwrap"><canvas id="c-prop"></canvas></div></div>
           <div class="chart-box"><div class="ct">해외 실적 추이</div><div class="cs">미주 · 괌 · 베트남 (백만원, 예상 보유월)</div><div class="cwrap"><canvas id="c-ovs"></canvas></div></div>
         </div>
-        <div class="note">확정(마감) 월과 예상(Forecast) 월을 하나의 축으로 이어 표시. 사업장·해외는 예상 리포트 보유 월에 한함.</div>
+        <div class="note">확정(마감) 월과 예상(Forecast) 월을 하나의 축으로 이어 표시. 사업장 권역 RN·해외 상세는 예상 리포트 보유월(4~7월) 기준.</div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>사업장 달성률 히트맵</h2><span class="tag actual">확정 1~5월</span><span class="desc">사업장별 매출 달성률(색) · 전년비(YoY). 마감 실적 기준</span></div>
+        <div class="tbl-wrap" id="heatmap"></div>
+        <div class="note">■ ≥100% ■ 90~99% ■ &lt;90%. 셀=달성률%, 소괄호=전년비. 확정(마감) 사업장 대시보드 기준(1~5월).</div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>아젠다 테마 추이</h2><span class="desc">월별 아젠다 항목 테마 분포(예상 리포트 보유월)</span></div>
+        <div class="chart-box full"><div class="cwrap"><canvas id="c-agenda"></canvas></div></div>
       </div>
     </div>
 
@@ -340,10 +375,71 @@ function renderTrend(){
   // overseas
   function ovsSeries(key){return D.mks.map(mk=>{const o=D.months[mk].overseas;if(!o)return null;const ru=o.rollup||{};if(key==='미주')return (ru['미주합계']||{}).cur?ru['미주합계'].cur.실적:null;if(key==='베트남')return (ru['하이퐁합계']||{}).cur?ru['하이퐁합계'].cur.실적:null;if(key==='괌'){const g=(o.sections||[]).find(s=>s.key==='guam');if(!g)return null;let sum=0,any=false;g.rows.forEach(r=>{if(['망길라오계','탈로포포계'].includes(r.label)&&r.cur&&r.cur.실적!=null){sum+=r.cur.실적;any=true;}});return any?sum:null;}return null;});}
   mkChart('c-ovs',{type:'line',data:{labels,datasets:[['미주','#6db58a'],['괌','#e6b970'],['베트남','#d97a7a']].map(([n,c])=>line(n,ovsSeries(n),c))},options:baseOpts()});
+  renderHeatmap();
+  renderAgendaTrend();
+}
+
+/* ── 아젠다 ── */
+const THEME_COL={'미디어·촬영':'#d97a7a','마케팅·프로모션':'#e6b970','식음':'#6db58a','행사·MICE':'#6ba3c4','시설·안전':'#a892c8','멤버십·영업':'#c9a063','디지털·시스템':'#5a9fc4','상품·패키지':'#8fbf9f','개발·운영검토':'#b08fc8','기타':'#7a7e85'};
+const TYPE_LAB={property:'사업장',dept:'부서',overseas:'해외',etc:'기타'};
+function renderAgenda(mk){
+  const m=D.months[mk],ag=m.agenda;
+  const sec=$('#sec-agenda');
+  if(!ag||!ag.length){sec.classList.add('hidden');return;}
+  sec.classList.remove('hidden');
+  $('#agenda-mtag').className='tag forecast';$('#agenda-mtag').textContent=m.label+' 아젠다';
+  // summary
+  const themeAll={};let totItems=0;const props=ag.filter(b=>b.type==='property');
+  ag.forEach(b=>b.items.forEach(it=>{themeAll[it.theme]=(themeAll[it.theme]||0)+1;totItems++;}));
+  const topThemes=Object.entries(themeAll).sort((a,b)=>b[1]-a[1]);
+  const active=ag.filter(b=>b.items.length).sort((a,b)=>b.items.length-a.items.length);
+  $('#agenda-summary').innerHTML=`
+    ${sBox('아젠다 항목',totItems+'<small>건</small>',`사업장 ${props.length}곳 · 블록 ${ag.length}개`)}
+    ${sBox('최다 사업장',active[0]?active[0].name:'—',active[0]?active[0].items.length+'건':'')}
+    ${sBox('집중 테마',topThemes[0]?topThemes[0][0]:'—',topThemes[0]?topThemes[0][1]+'건':'')}
+  `;
+  // cards: property first, then dept/overseas, sorted by item count
+  const order={property:0,overseas:1,dept:2,etc:3};
+  const sorted=ag.slice().sort((a,b)=>(order[a.type]-order[b.type])||(b.items.length-a.items.length));
+  $('#agenda-cards').innerHTML='<div class="agenda-grid">'+sorted.map(b=>{
+    const tdist=Object.entries(b.theme_counts||{}).map(([t,c])=>`<span class="tchip" style="color:${THEME_COL[t]||'#999'}">${t} ${c}</span>`).join('');
+    const amts=(b.amounts||[]).map(a=>`<span class="amt">${a}</span>`).join('');
+    const items=b.items.map(it=>`<div class="aitem"><span class="ph ${it.phase}">${it.phase==='done'?'실적':'계획'}</span><span class="th" style="color:${THEME_COL[it.theme]||'#999'}">●</span><span>${it.title}</span></div>`).join('')
+      || '<div class="aitem dim">항목 헤드라인 없음(금액/계획만)</div>';
+    return `<div class="acard ${b.type}"><div class="acard-h"><span class="nm">${b.name}</span><span class="tp">${TYPE_LAB[b.type]||b.type}</span><span class="cnt">${b.items.length}건</span></div>
+      ${amts?`<div style="margin-bottom:6px">${amts}</div>`:''}${tdist?`<div class="tdist">${tdist}</div>`:''}${items}</div>`;
+  }).join('')+'</div>';
+}
+
+/* ── 사업장 달성률 히트맵 ── */
+function renderHeatmap(){
+  const amonths=D.mks.filter(mk=>(D.months[mk].property_dash||[]).length);
+  if(!amonths.length){$('#heatmap').innerHTML='<div class="note">사업장 달성률 데이터 없음</div>';return;}
+  // union of 사업장 names, ordered by appearance in latest month then others
+  const names=[];const seen=new Set();
+  for(let i=amonths.length-1;i>=0;i--){(D.months[amonths[i]].property_dash||[]).forEach(b=>{if(!seen.has(b.name)){seen.add(b.name);names.push(b.name);}});}
+  // map month->name->{ach,yoy}
+  const M={};amonths.forEach(mk=>{M[mk]={};(D.months[mk].property_dash||[]).forEach(b=>M[mk][b.name]=b);});
+  const cls=v=>v==null?'e':v>=100?'g':v>=90?'y':'r';
+  let head='<thead><tr><th class="lft">사업장</th>'+amonths.map(mk=>`<th>${D.months[mk].label}</th>`).join('')+'</tr></thead>';
+  let rows=names.map(n=>{
+    const cells=amonths.map(mk=>{const b=M[mk][n];if(!b)return '<td class="e">—</td>';return `<td class="${cls(b.ach)}">${b.ach}%${b.yoy!=null?`<span class="yo">${b.yoy>0?'+':''}${b.yoy}%</span>`:''}</td>`;}).join('');
+    return `<tr><td class="lft">${n}</td>${cells}</tr>`;
+  }).join('');
+  $('#heatmap').innerHTML=`<table class="hm">${head}<tbody>${rows}</tbody></table>`;
+}
+
+/* ── 아젠다 테마 추이 차트 ── */
+function renderAgendaTrend(){
+  const amk=D.mks.filter(mk=>D.months[mk].agenda);
+  const labels=amk.map(mk=>D.months[mk].label);
+  const themes=['시설·안전','행사·MICE','마케팅·프로모션','미디어·촬영','개발·운영검토','식음','멤버십·영업','상품·패키지'];
+  const ds=themes.map(t=>({label:t,data:amk.map(mk=>{let c=0;(D.months[mk].agenda||[]).forEach(b=>b.items.forEach(it=>{if(it.theme===t)c++;}));return c;}),backgroundColor:(THEME_COL[t]||'#999')+'cc',stack:'s'}));
+  mkChart('c-agenda',{type:'bar',data:{labels,datasets:ds},options:baseOpts({scales:{x:{stacked:true,ticks:{color:'#a8acb3',font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:'#a8acb3',font:{size:10}},grid:{color:'rgba(255,255,255,.06)'}}}})});
 }
 
 /* ── 라우팅 ── */
-function selectMonth(mk){curMonth=mk;document.querySelectorAll('#months .mpill').forEach(b=>b.classList.toggle('active',b.dataset.mk===mk));renderSeg(mk);renderProp(mk);renderOvs(mk);}
+function selectMonth(mk){curMonth=mk;document.querySelectorAll('#months .mpill').forEach(b=>b.classList.toggle('active',b.dataset.mk===mk));renderSeg(mk);renderProp(mk);renderOvs(mk);renderAgenda(mk);}
 function setView(v){curView=v;document.querySelectorAll('#viewtog button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   $('#view-month').classList.toggle('hidden',v!=='trend'?false:true);
   $('#view-trend').classList.toggle('hidden',v!=='trend');
