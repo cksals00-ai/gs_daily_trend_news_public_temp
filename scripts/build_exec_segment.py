@@ -571,6 +571,7 @@ def build(src_dir, out_path):
         logger.warning("parse_agenda 임포트 실패: %s", e)
 
     insights = make_insights(months)
+    deep = make_deep_insights(months)
 
     now = datetime.now(KST)
     result = {
@@ -587,6 +588,7 @@ def build(src_dir, out_path):
         },
         "months": months,
         "insights": insights,
+        "deep_insights": deep,
         "validation": {"warnings": warnings},
     }
 
@@ -620,6 +622,141 @@ def build(src_dir, out_path):
         logger.info("✓ 세그 그룹+COMP=합계 / 예상 세그합=사업장합 전월 통과")
     logger.info("✓ 저장: %s (+docs 사본) · 월=%s", out_path, result["meta"]["months"])
     return result
+
+
+def _seg(m, name, level=None):
+    for s in m.get("segments", []) or []:
+        if s["name"] == name and (level is None or s["level"] == level):
+            return s
+    return None
+
+
+def _ach(s):
+    return ((s or {}).get("rns") or {}).get("ach")
+
+
+def _yoyp(s):
+    r = (s or {}).get("rns") or {}
+    v, ly = r.get("v"), r.get("ly")
+    return round(v / ly * 100) if v and ly else None
+
+
+def make_deep_insights(months):
+    """여러 축(세그·채널·목표·사업장·아젠다)을 엮은 심층 분석 요약. 전부 실값 근거."""
+    mks = sorted(months)
+    outs = []
+    if not mks:
+        return outs
+    last = mks[-1]; m = months[last]; lab = m["label"]
+
+    # 1) 채널 믹스 이동 — 회원 미달 vs OTA/G-OTA 초과
+    hoe = _seg(m, "회원", "group"); ota = _seg(m, "OTA", "leaf"); gota = _seg(m, "G-OTA", "leaf")
+    ha, oa, ga = _ach(hoe), _ach(ota), _ach(gota)
+    if ha is not None and (((oa or 0) >= 100) or ((ga or 0) >= 100)) and ha < 98:
+        outs.append({"cat": "채널 믹스", "tone": "warn",
+                     "title": f"{lab}: 수요가 회원 → OTA·G-OTA로 이동",
+                     "detail": f"회원 달성 {ha}%(미달)인 반면 OTA {oa}%·G-OTA {ga}% 초과달성. 직접(회원) 예약이 온라인 채널로 이동 — 채널 수수료·수익성 점검 필요."})
+
+    # 2) 목표 정합성 — 전년비↑인데 달성률↓ (목표 과대)
+    over = []
+    for s in m.get("segments", []) or []:
+        if s["level"] != "leaf" or s["name"] == "COMP":
+            continue
+        a, y = _ach(s), _yoyp(s)
+        if a is not None and y is not None and a < 90 and y >= 105:
+            over.append((s["name"], a, y))
+    if over:
+        over.sort(key=lambda x: x[1])
+        txt = "; ".join(f"{n} 달성{a}%·전년비{y}%" for n, a, y in over[:3])
+        outs.append({"cat": "목표 정합성", "tone": "info",
+                     "title": f"{lab}: 전년비 성장에도 목표 미달 {len(over)}건 — 목표 과대 가능",
+                     "detail": f"{txt}. 전년比 105%↑ 성장에도 달성률 90%↓ → 목표 상향이 과했을 신호."})
+
+    # 3) 회원 vs FIT 비중 역전 (여러 달)
+    inv = []
+    for mk in mks:
+        mm = months[mk]
+        h = _seg(mm, "회원", "group"); f = _seg(mm, "FIT", "group")
+        t = (mm.get("seg_total") or {}).get("v")
+        if h and f and t:
+            hs = (h["rns"] or {}).get("v"); fs = (f["rns"] or {}).get("v")
+            if hs and fs and fs > hs:
+                inv.append((mm["label"], round(hs / t * 100, 1), round(fs / t * 100, 1)))
+    if inv:
+        txt = ", ".join(f"{l}(회원 {a}%·FIT {b}%)" for l, a, b in inv)
+        outs.append({"cat": "세그 믹스", "tone": "info",
+                     "title": f"FIT가 회원을 추월한 달 {len(inv)}개",
+                     "detail": f"{txt}. FIT(홈페이지·OTA·G-OTA) 비중이 회원을 상회 — 회원 기반 약화 구간."})
+
+    # 4) 사업장 지속 부진/호조 (확정월 히트맵)
+    amk = [mk for mk in mks if months[mk].get("property_dash")]
+    if amk:
+        series = defaultdict(dict)
+        for mk in amk:
+            for b in months[mk]["property_dash"]:
+                if b.get("ach") is not None:
+                    series[b["name"]][mk] = b["ach"]
+        low, high = [], []
+        for nm, d in series.items():
+            vals = [d[mk] for mk in amk if mk in d]
+            if len(vals) >= 3:
+                if sum(1 for v in vals if v < 90) >= 3:
+                    low.append((nm, sum(vals) // len(vals)))
+                if sum(1 for v in vals if v >= 100) >= 3:
+                    high.append((nm, sum(vals) // len(vals)))
+        if low:
+            low.sort(key=lambda x: x[1])
+            outs.append({"cat": "사업장 부진", "tone": "warn",
+                         "title": f"3개월 이상 달성률 90% 미만 사업장 {len(low)}곳",
+                         "detail": "지속 부진: " + ", ".join(f"{n}(평균 {a}%)" for n, a in low[:5]) + " — 목표 재설정·수요 진작 필요."})
+        if high:
+            high.sort(key=lambda x: -x[1])
+            outs.append({"cat": "사업장 호조", "tone": "good",
+                         "title": f"3개월 이상 목표 초과 사업장 {len(high)}곳",
+                         "detail": "지속 호조: " + ", ".join(f"{n}(평균 {a}%)" for n, a in high[:5]) + " — 성공요인 수평전개 검토."})
+
+    # 5) 세그 전년비 톱/보텀 (그룹, 최신월)
+    gy = [(s["name"], _yoyp(s)) for s in m.get("segments", []) or [] if s["level"] == "group" and _yoyp(s) is not None]
+    if gy:
+        best = max(gy, key=lambda x: x[1]); worst = min(gy, key=lambda x: x[1])
+        outs.append({"cat": "전년비", "tone": "info",
+                     "title": f"{lab} 전년비: {best[0]} {best[1]}% 견인 · {worst[0]} {worst[1]}% 부진",
+                     "detail": f"그룹별 전년 대비 — 최고 {best[0]} {best[1]}%, 최저 {worst[0]} {worst[1]}%. 격차가 세그 믹스 변화의 동인."})
+
+    # 6) ADR–물량 트레이드오프 (최신월 leaf)
+    to = []
+    for s in m.get("segments", []) or []:
+        if s["level"] != "leaf":
+            continue
+        a = _ach(s); adr = s.get("adr") or {}
+        av, aly = adr.get("v"), adr.get("ly")
+        if a is not None and av and aly and a < 95 and av > aly:
+            to.append((s["name"], a, round((av / aly - 1) * 100)))
+    if to:
+        to.sort(key=lambda x: x[1])
+        txt = "; ".join(f"{n}(물량 {a}%·ADR 전년比+{d}%)" for n, a, d in to[:3])
+        outs.append({"cat": "가격–물량", "tone": "info",
+                     "title": f"{lab}: 단가는 올랐으나 물량 미달 {len(to)}건",
+                     "detail": f"{txt}. ADR 상승이 물량 감소를 유발했을 가능성 — 가격 탄력성 점검."})
+
+    # 7) 아젠다 집중 + 활동
+    agmk = [mk for mk in mks if months[mk].get("agenda")]
+    if agmk:
+        am = months[agmk[-1]]; ag = am["agenda"]
+        theme = defaultdict(int); active = []
+        for b in ag:
+            for it in b["items"]:
+                theme[it["theme"]] += 1
+            if b["items"]:
+                active.append((b["name"], len(b["items"])))
+        active.sort(key=lambda x: -x[1])
+        tt = sorted(theme.items(), key=lambda x: -x[1])
+        if tt:
+            outs.append({"cat": "실행 아젠다", "tone": "info",
+                         "title": f"{am['label']} 현장 실행은 '{tt[0][0]}'에 집중({tt[0][1]}건)",
+                         "detail": "테마 상위 " + " · ".join(f"{k} {v}" for k, v in tt[:3]) + f". 최다 활동 사업장: " + ", ".join(f"{n}({c})" for n, c in active[:3]) + " — 실행 리소스 배분 참고."})
+
+    return outs
 
 
 def make_insights(months):

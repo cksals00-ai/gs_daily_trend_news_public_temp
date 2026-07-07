@@ -83,6 +83,13 @@ table.gt .grand td.lft{color:var(--gold-bright)}
 .chart-box .cs{font-size:10.5px;color:var(--ink-faint);margin-bottom:10px}
 .chart-box .cwrap{position:relative;height:260px}
 .note{font-size:10.5px;color:var(--ink-faint);line-height:1.7;margin-top:8px;font-weight:600}
+.deep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.dcard{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;border-top:3px solid var(--ink-faint)}
+.dcard.warn{border-top-color:var(--warning)}.dcard.good{border-top-color:var(--positive)}.dcard.info{border-top-color:var(--info)}
+.dcard .cat{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:5px}
+.dcard .tt{font-size:13.5px;font-weight:800;line-height:1.4;margin-bottom:6px;color:var(--ink)}
+.dcard.warn .tt{color:var(--warning)}.dcard.good .tt{color:var(--positive)}
+.dcard .dt{font-size:11.5px;line-height:1.6;color:var(--ink-soft);font-weight:500}
 .agenda-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
 .acard{background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px}
 .acard.dept{border-left:3px solid var(--info)}.acard.property{border-left:3px solid var(--gold)}.acard.overseas{border-left:3px solid var(--south)}
@@ -164,6 +171,11 @@ table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{backgr
 
   <div id="app" class="hidden">
     <div class="insights" id="insights"></div>
+
+    <div class="section" id="sec-deep" style="margin-top:14px">
+      <div class="section-head"><h2>분석 요약</h2><span class="tag actual">인사이트</span><span class="desc">세그·채널·목표·사업장·아젠다를 엮은 심층 발견 (실값 근거)</span></div>
+      <div id="deep-cards" class="deep-grid"></div>
+    </div>
 
     <div class="toolbar">
       <div class="months" id="months"></div>
@@ -452,7 +464,11 @@ async function boot(){
     Object.assign(D,await res.json());
     D.mks=D.meta.months.slice();
     // insights
-    $('#insights').innerHTML=(D.insights||[]).map(i=>`<div class="ins ${i.type||''}"><span class="k">${i.type==='actual'?'확정':i.type==='trend'?'추이':i.type==='yoy'?'전년비':'인사이트'}</span>${i.text}</div>`).join('');
+    $('#insights').innerHTML=(D.insights||[]).map(i=>`<div class="ins ${i.type||''}"><span class="k">${i.type==='actual'?'확정':i.type==='trend'?'추이':i.type==='yoy'?'전년비':i.type==='agenda'?'아젠다':'인사이트'}</span>${i.text}</div>`).join('');
+    // deep insights (분석 요약)
+    var deep=D.deep_insights||[];
+    if(deep.length){$('#deep-cards').innerHTML=deep.map(d=>`<div class="dcard ${d.tone||'info'}"><div class="cat">${d.cat||''}</div><div class="tt">${d.title||''}</div><div class="dt">${d.detail||''}</div></div>`).join('');}
+    else{$('#sec-deep').classList.add('hidden');}
     // month pills
     $('#months').innerHTML=D.mks.map(mk=>{const m=D.months[mk];return `<button class="mpill" data-mk="${mk}">${m.label}<span class="dot ${m.kind==='actual'?'a':'f'}"></span></button>`;}).join('');
     document.querySelectorAll('#months .mpill').forEach(b=>b.onclick=()=>selectMonth(b.dataset.mk));
