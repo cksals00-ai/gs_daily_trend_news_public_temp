@@ -371,7 +371,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
         st = "전년초과 ▲" if fg > 0 else ("동률" if fg == 0 else "전년미달 ▼")
         sc = ws.cell(r, STAT_C, st); sc.font = F(10, bold=True, color=clr(fg)); sc.alignment = cen; sc.border = box
     # Total
-    r = 16
+    r = 10 + len(TARGETS)
     ft26, ft25 = t_tm26 + t_hm26, t_tm25 + t_hm25; ftg = ft26 - ft25
     lc = ws.cell(r, 2, "Total"); lc.font = F(10, bold=True); lc.alignment = lft; lc.border = topbox(DBL)
     grp3(r, 3, t_tm26, t_tm25, bold=True); grp3(r, 6, t_hm26, t_hm25, bold=True, tint=True); grp3(r, 9, ft26, ft25, bold=True)
@@ -382,7 +382,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     note = "※ FIT=영업자료(대) 03일반=GS(OTA+G-OTA)+기타(홈페이지·제휴사·일반). 제휴사·일반 코드는 온라인팀 raw_db엔 거의 없어 BSR(전채널) 대비 미달"
     if has_bsr:
         note += f" · BSR({bsr_lbl[5:-1]})=소노 Booking Status Report FIT(전채널·시점차로 우리 FIT가 다소 낮음)"
-    ws.cell(17, 2, note).font = F(9, color=GREY)
+    ws.cell(r + 1, 2, note).font = F(9, color=GREY)
 
     # ===== 공용: 사업장별 3컬럼(26Y/25Y/GAP) 추이 시트 =====
     def trend_sheet(title_text, sheet_name, value_fn):
