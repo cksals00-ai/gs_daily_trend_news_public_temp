@@ -113,7 +113,7 @@ table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{backgr
 #loading{padding:60px 0;text-align:center;color:var(--ink-muted);font-family:var(--mono);font-size:13px}
 #err{display:none;padding:20px;background:var(--negative-bg);color:var(--negative);border-radius:7px;font-size:13px;margin-top:20px}
 .hidden{display:none!important}
-@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.container{padding:14px 12px 48px}.mast-sub{display:none}.viewtog{margin-left:0}}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.container{padding:14px 12px 48px}.mast-sub{display:none}.viewtog{margin-left:0}.issue-2col{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body>
@@ -175,6 +175,13 @@ table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{backgr
     <div class="section" id="sec-deep" style="margin-top:14px">
       <div class="section-head"><h2>분석 요약</h2><span class="tag actual">인사이트</span><span class="desc">세그·채널·목표·사업장·아젠다를 엮은 심층 발견 (실값 근거)</span></div>
       <div id="deep-cards" class="deep-grid"></div>
+    </div>
+
+    <div class="section" id="sec-issues">
+      <div class="section-head"><h2>이슈 분석</h2><span class="tag" style="color:var(--negative);border:1px solid var(--negative)">주간 논점 · 데이터 검증</span><span class="desc">"확인필요" = 원자료에 없어 판단 보류</span></div>
+      <div class="deep-grid" id="issue-cards" style="margin-bottom:14px"></div>
+      <div id="issue-yoy" style="margin-bottom:14px"></div>
+      <div id="issue-props"></div>
     </div>
 
     <div class="toolbar">
@@ -450,6 +457,53 @@ function renderAgendaTrend(){
   mkChart('c-agenda',{type:'bar',data:{labels,datasets:ds},options:baseOpts({scales:{x:{stacked:true,ticks:{color:'#a8acb3',font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:'#a8acb3',font:{size:10}},grid:{color:'rgba(255,255,255,.06)'}}}})});
 }
 
+/* ── 이슈 분석 ── */
+function yoCls(y){return y==null?'dim':(y>=100?'pos':'neg');}
+function renderIssues(){
+  const I=D.issues; if(!I){$('#sec-issues').classList.add('hidden');return;}
+  let cards='';
+  // 단양 포커스
+  const fp=I.focus_property;
+  if(fp&&fp.by_month&&fp.by_month.length){
+    const rows=fp.by_month.map(b=>`<tr><td class="lft">${b.label}</td><td>${num(b.rns)}</td><td class="dim">${num(b.target)}</td><td>${achB(b.ach)}</td><td class="${yoCls(b.yoy)}">${b.yoy==null?'—':b.yoy+'%'}</td><td class="${yoCls(b.rev_yoy)}">${b.rev_yoy==null?'—':b.rev_yoy+'%'}</td></tr>`).join('');
+    cards+=`<div class="dcard ${fp.tone||'info'}"><div class="cat">포커스 · 단양</div><div class="tt">"단양 부진" 지적 — 데이터 검증</div>
+      <div class="tbl-wrap" style="margin:6px 0"><table class="gt" style="min-width:0;font-size:11px"><thead><tr><th class="lft">월</th><th>RN 실적</th><th>목표</th><th>달성</th><th>RN YoY</th><th>Rev YoY</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="dt">${fp.verdict||''}<br><span class="dim" style="font-size:10.5px">${fp.segment_note||''}</span></div></div>`;
+  }
+  // 직영 vs 외부 FIT
+  const df=I.direct_fit;
+  if(df){
+    const ch=(df.channel_yoy||[]).map(r=>`<tr><td class="lft">${r.label}</td>`+['홈페이지','OTA','G-OTA'].map(c=>{const x=r[c]||{};return `<td class="${yoCls(x.yoy)}">${x.yoy==null?'—':x.yoy+'%'}</td>`;}).join('')+`</tr>`).join('');
+    cards+=`<div class="dcard warn"><div class="cat">직영 vs 외부 FIT</div><div class="tt">파나크 영덕 · 직영 FIT 격차 <span class="tchip" style="color:var(--warning)">확인필요</span></div>
+      <div class="dt">${df.verdict}</div>
+      <div style="margin-top:8px"><div class="dim" style="font-size:10px;margin-bottom:3px">전사 채널 전년비 — 직영성 홈페이지 vs 외부 OTA/G-OTA (사업장별 분해는 확인필요)</div>
+      <div class="tbl-wrap"><table class="gt" style="min-width:0;font-size:11px"><thead><tr><th class="lft">월</th><th>홈페이지</th><th>OTA</th><th>G-OTA</th></tr></thead><tbody>${ch}</tbody></table></div></div></div>`;
+  }
+  $('#issue-cards').innerHTML=cards;
+
+  // YoY 하락 표(세그 + 사업장)
+  const yd=I.yoy_down||{segments:[],properties:[]};
+  const segRows=yd.segments.map(s=>`<tr><td class="lft">${s.label}</td><td class="lft">${s.name}<span class="dim" style="font-size:9px"> ${s.level==='group'?'그룹':''}</span></td><td class="neg">${s.yoy}%</td><td>${num(s.v)}</td><td class="dim">${num(s.ly)}</td><td>${achB(s.ach)}</td></tr>`).join('')||'<tr><td class="lft dim" colspan="6">전년비 하락 세그 없음</td></tr>';
+  const propRows=yd.properties.map(p=>`<tr><td class="lft">${p.label}</td><td class="lft">${p.name}</td><td class="${yoCls(p.rns_yoy)}">${p.rns_yoy==null?'—':p.rns_yoy+'%'}</td><td class="${yoCls(p.rev_yoy)}">${p.rev_yoy==null?'—':p.rev_yoy+'%'}</td><td>${achB(p.ach)}</td></tr>`).join('')||'<tr><td class="lft dim" colspan="5">전년비 하락 사업장 없음</td></tr>';
+  $('#issue-yoy').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="issue-2col">
+    <div><div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">전년比 하락 세그 (7·8월)</div>
+      <div class="tbl-wrap"><table class="gt" style="min-width:0"><thead><tr><th class="lft">월</th><th class="lft">세그</th><th>YoY</th><th>실적</th><th>전년</th><th>달성</th></tr></thead><tbody>${segRows}</tbody></table></div></div>
+    <div><div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">전년比 하락 사업장 (7·8월)</div>
+      <div class="tbl-wrap"><table class="gt" style="min-width:0"><thead><tr><th class="lft">월</th><th class="lft">사업장</th><th>RN YoY</th><th>Rev YoY</th><th>달성</th></tr></thead><tbody>${propRows}</tbody></table></div></div>
+  </div>`;
+
+  // 사업장별 이슈 요약
+  const base=I.issue_base_month;
+  const pi=I.property_issues||[];
+  const irows=pi.map(p=>{
+    const iss=p.issues&&p.issues.length?p.issues.map(x=>`<span class="tchip" style="color:${x.includes('미달')?'var(--negative)':'var(--warning)'}">${x}</span>`).join(' '):'<span class="dim">특이사항 없음</span>';
+    return `<tr><td class="lft">${p.name}</td><td class="lft dim">${p.region||''}</td><td>${achB(p.ach)}</td><td class="${yoCls(p.yoy)}">${p.yoy==null?'—':p.yoy+'%'}</td><td class="${yoCls(p.rev_yoy)}">${p.rev_yoy==null?'—':p.rev_yoy+'%'}</td><td class="lft" style="white-space:normal">${iss}</td></tr>`;
+  }).join('');
+  $('#issue-props').innerHTML=`<div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--gold-bright);margin:2px 0 6px">사업장별 이슈 요약 · ${base?base.replace('2026-','')+'월':''} (부진 우선)</div>
+    <div class="tbl-wrap"><table class="gt"><thead><tr><th class="lft">사업장</th><th class="lft">권역</th><th>달성률</th><th>RN YoY</th><th>Rev YoY</th><th class="lft">핵심 이슈</th></tr></thead><tbody>${irows}</tbody></table></div>
+    <div class="note">${(I.notes||[]).join(' · ')}</div>`;
+}
+
 /* ── 라우팅 ── */
 function selectMonth(mk){curMonth=mk;document.querySelectorAll('#months .mpill').forEach(b=>b.classList.toggle('active',b.dataset.mk===mk));renderSeg(mk);renderProp(mk);renderOvs(mk);renderAgenda(mk);}
 function setView(v){curView=v;document.querySelectorAll('#viewtog button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
@@ -469,6 +523,7 @@ async function boot(){
     var deep=D.deep_insights||[];
     if(deep.length){$('#deep-cards').innerHTML=deep.map(d=>`<div class="dcard ${d.tone||'info'}"><div class="cat">${d.cat||''}</div><div class="tt">${d.title||''}</div><div class="dt">${d.detail||''}</div></div>`).join('');}
     else{$('#sec-deep').classList.add('hidden');}
+    renderIssues();
     // month pills
     $('#months').innerHTML=D.mks.map(mk=>{const m=D.months[mk];return `<button class="mpill" data-mk="${mk}">${m.label}<span class="dot ${m.kind==='actual'?'a':'f'}"></span></button>`;}).join('');
     document.querySelectorAll('#months .mpill').forEach(b=>b.onclick=()=>selectMonth(b.dataset.mk));

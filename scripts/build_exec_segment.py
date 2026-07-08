@@ -111,17 +111,17 @@ def norm_metric(md):
     }
 
 
-def parse_forecast(pdf):
-    """예상 리포트의 '당월' 세그/사업장/해외 추출."""
+def parse_forecast(pdf, which=0):
+    """예상 리포트의 세그/사업장/해외 추출. which=0 당월, 1 익월(해외 없음)."""
     seg_pages, prop_only, ovs_pages, pnl_pages = W.classify_pages(pdf)
-    if not seg_pages:
+    if len(seg_pages) <= which:
         return None
-    pi = seg_pages[0]  # 첫 세그 페이지 = 당월
+    pi = seg_pages[which]
     page = pdf.pages[pi]
     sy = W.split_y(page)
     segs, seg_total, seg_occ = W.parse_seg_table(page, ymax=sy)
     props, prop_total = W.parse_prop_table(page, ymin=sy)
-    overseas = W.parse_overseas(pdf.pages[ovs_pages[0]]) if ovs_pages else None
+    overseas = W.parse_overseas(pdf.pages[ovs_pages[0]]) if (ovs_pages and which == 0) else None
 
     total_rns = _mnum((seg_total or {}).get("rns"))
     # 표준 세그 구조로 변환
@@ -554,6 +554,28 @@ def build(src_dir, out_path):
             entry["properties"] = None; entry["overseas"] = None; entry["prop_total"] = None
         months[mk] = entry
 
+    # ── 익월(next-month) 예상 추가: 최신 예상 리포트의 '익월' 페이지 ──
+    if forecast:
+        latest_mo = max(forecast)
+        nm = 1 if latest_mo == 12 else latest_mo + 1
+        nmk = month_key(YEAR if latest_mo < 12 else YEAR + 1, nm)
+        if nmk not in months:
+            try:
+                npdf = pdfplumber.open(forecast[latest_mo][2])
+                nd = parse_forecast(npdf, which=1)
+                if nd and (nd["seg_total"] or {}).get("v"):
+                    months[nmk] = {
+                        "label": f"{nm}월", "month": nmk, "kind": "forecast",
+                        "seg_source": "forecast", "leaf_validated": True,
+                        "segments": nd["segments"], "seg_total": nd["seg_total"],
+                        "headline": nd["headline"], "properties": nd["properties"],
+                        "prop_total_raw": nd["prop_total"], "overseas": None,
+                        "property_source": "forecast", "next_month": True,
+                    }
+                    all_months = sorted(set(all_months) | {nm if latest_mo < 12 else 0})
+            except Exception as e:
+                logger.warning("익월 파싱 실패 %s: %s", nmk, e)
+
     # ── 아젠다 추출(월별 최신 예상 리포트) ──
     try:
         import parse_agenda
@@ -572,14 +594,18 @@ def build(src_dir, out_path):
 
     insights = make_insights(months)
     deep = make_deep_insights(months)
+    issues = make_issues(months)
 
     now = datetime.now(KST)
+    _mks_sorted = sorted(months)
+    _actual_mks = [mk for mk in _mks_sorted if months[mk]["kind"] == "actual"]
+    _forecast_mks = [mk for mk in _mks_sorted if months[mk]["kind"] == "forecast"]
     result = {
         "meta": {
             "generated_at": now.strftime("%Y-%m-%d %H:%M KST"),
-            "months": [month_key(YEAR, m) for m in all_months],
-            "actual_months": [month_key(YEAR, m) for m in sorted(actual)],
-            "forecast_months": [month_key(YEAR, m) for m in sorted(forecast) if m not in actual],
+            "months": _mks_sorted,
+            "actual_months": _actual_mks,
+            "forecast_months": _forecast_mks,
             "unit_notes": {
                 "rns": "실(박)", "adr": "천원", "rev": "백만원",
                 "occ": "%", "share": "구성비 %(실적/합계)",
@@ -589,6 +615,7 @@ def build(src_dir, out_path):
         "months": months,
         "insights": insights,
         "deep_insights": deep,
+        "issues": issues,
         "validation": {"warnings": warnings},
     }
 
@@ -639,6 +666,136 @@ def _yoyp(s):
     r = (s or {}).get("rns") or {}
     v, ly = r.get("v"), r.get("ly")
     return round(v / ly * 100) if v and ly else None
+
+
+def _yoy_ratio(v, ly):
+    return round(v / ly * 100) if (v and ly) else None
+
+
+def _pget(prop, metric):
+    return (prop.get(metric) or {})
+
+
+def make_issues(months):
+    """주간회의 논점을 데이터로 분석한 이슈 리포트. 데이터 없는 항목은 확인필요로 명시."""
+    mks = sorted(months)
+    out = {"focus_property": None, "yoy_down": {"segments": [], "properties": []},
+           "direct_fit": None, "property_issues": [], "notes": []}
+    # 대상월: 7·8월(있으면). 없으면 최신 예상월들.
+    target = [mk for mk in mks if mk in ("2026-07", "2026-08")] or [mk for mk in mks if months[mk]["kind"] == "forecast"][-2:]
+
+    # ── 1) 단양 포커스 ──
+    dy = {"name": "단양", "by_month": [], "segment_note": "사업장별 세그(회원/단체/FIT) 분해는 원자료가 전사 단위로만 제공 → 단양 세그 구성은 확인필요."}
+    for mk in target:
+        m = months[mk]
+        p = next((r for r in (m.get("properties") or []) if r["name"] == "단양"), None)
+        if p:
+            rn = _pget(p, "rns"); rev = _pget(p, "rev"); occ = _pget(p, "occ")
+            dy["by_month"].append({
+                "month": mk, "label": m["label"],
+                "rns": rn.get("실적"), "target": rn.get("목표"), "ly": rn.get("전년"),
+                "ach": rn.get("달성률"), "yoy": _yoy_ratio(rn.get("실적"), rn.get("전년")),
+                "rev": rev.get("실적"), "rev_yoy": _yoy_ratio(rev.get("실적"), rev.get("전년")),
+                "occ": occ.get("실적"),
+            })
+    # 판정
+    achs = [b["ach"] for b in dy["by_month"] if b["ach"] is not None]
+    yoys = [b["yoy"] for b in dy["by_month"] if b["yoy"] is not None]
+    if achs:
+        if all(a >= 100 for a in achs) and all((y or 0) >= 100 for y in yoys):
+            dy["verdict"] = "데이터상 단양은 부진 아님 — 목표 초과·전년비 성장. (회의 지적과 상이, 세그 구성은 확인필요)"
+            dy["tone"] = "good"
+        elif any(a < 90 for a in achs) or any((y or 100) < 95 for y in yoys):
+            dy["verdict"] = "일부월 목표 미달/전년비 둔화 — 세부 원인은 세그 구성 확인필요."
+            dy["tone"] = "warn"
+        else:
+            dy["verdict"] = "목표 부근 등락 — 뚜렷한 부진 신호는 약함(세그 구성 확인필요)."
+            dy["tone"] = "info"
+    out["focus_property"] = dy
+
+    # ── 2) YoY 하락(전년比 <100%) — 세그·사업장 ──
+    for mk in target:
+        m = months[mk]
+        for s in m.get("segments", []) or []:
+            r = s.get("rns") or {}
+            y = _yoy_ratio(r.get("v"), r.get("ly"))
+            if y is not None and y < 100:
+                out["yoy_down"]["segments"].append({"month": mk, "label": m["label"],
+                    "name": s["name"], "level": s["level"], "yoy": y,
+                    "v": r.get("v"), "ly": r.get("ly"), "ach": r.get("ach")})
+        for p in m.get("properties", []) or []:
+            if p["name"] == "소계":
+                continue
+            r = p.get("rns") or {}; rev = p.get("rev") or {}
+            y = _yoy_ratio(r.get("실적"), r.get("전년"))
+            ry = _yoy_ratio(rev.get("실적"), rev.get("전년"))
+            if (y is not None and y < 100) or (ry is not None and ry < 100):
+                out["yoy_down"]["properties"].append({"month": mk, "label": m["label"],
+                    "name": p["name"], "region": p.get("region"),
+                    "rns_yoy": y, "rev_yoy": ry, "ach": r.get("달성률"),
+                    "v": r.get("실적"), "ly": r.get("전년")})
+
+    # ── 3) 직영 vs 외부 FIT (데이터 가용성) ──
+    prop_names = set()
+    for mk in mks:
+        for p in (months[mk].get("properties") or []):
+            prop_names.add(p["name"])
+    dash_names = set()
+    for mk in mks:
+        for b in (months[mk].get("property_dash") or []):
+            dash_names.add(b["name"])
+    panak = sorted([n for n in (prop_names | dash_names) if "파나크" in n or "영덕" in n])
+    # 전사 채널 YoY(직영성 홈페이지 vs 외부 OTA/G-OTA) — 대상월
+    chan_yoy = []
+    for mk in target:
+        m = months[mk]
+        row = {"month": mk, "label": m["label"]}
+        for ch in ("홈페이지", "OTA", "G-OTA", "제휴사", "기타"):
+            s = _seg(m, ch, "leaf")
+            r = (s or {}).get("rns") or {}
+            row[ch] = {"yoy": _yoy_ratio(r.get("v"), r.get("ly")), "ach": r.get("ach")}
+        chan_yoy.append(row)
+    out["direct_fit"] = {
+        "channel_yoy": chan_yoy,
+        "panak_in_weekly_detail": any(("파나크" in n or "영덕" in n) for n in prop_names),
+        "panak_in_closing_dash": any(("파나크" in n or "영덕" in n) for n in dash_names),
+        "panak_names": panak,
+        "per_property_fit_available": False,
+        "verdict": ("‘파나크 영덕’은 사업장별 RN 상세(예상 리포트)에는 없고 마감 대시보드의 매출 달성률/YoY로만 존재. "
+                    "또한 FIT(홈페이지·OTA·G-OTA 등) 실적은 원자료가 전사 단위로만 제공되어 사업장별 FIT 분해가 불가 → "
+                    "‘직영 vs 파나크 FIT 격차’ 정량 비교는 현재 데이터로 불가. 확인필요: (1)직영/외부위탁 사업장 구분 기준, (2)사업장별 채널(FIT) 실적 자료."),
+    }
+    out["notes"].append("사업장별 세그/채널(FIT) 분해·직영/외부 구분은 원자료에 없음 → 별도 자료 필요(확인필요).")
+
+    # ── 4) 사업장별 이슈 요약(당월=7월 우선, 없으면 대상 마지막월) ──
+    base = "2026-07" if "2026-07" in months else (target[-1] if target else (mks[-1] if mks else None))
+    if base:
+        m = months[base]
+        for p in m.get("properties", []) or []:
+            if p["name"] == "소계":
+                continue
+            r = p.get("rns") or {}; rev = p.get("rev") or {}; occ = p.get("occ") or {}
+            ach = r.get("달성률"); yoy = _yoy_ratio(r.get("실적"), r.get("전년"))
+            ryoy = _yoy_ratio(rev.get("실적"), rev.get("전년"))
+            flags = []
+            if ach is not None and ach < 90:
+                flags.append(f"목표 미달({ach}%)")
+            if yoy is not None and yoy < 100:
+                flags.append(f"전년比 하락(RN {yoy}%)")
+            if ryoy is not None and ryoy < 100:
+                flags.append(f"매출 전년比 {ryoy}%")
+            if occ.get("실적") is not None and occ.get("전년") is not None and occ["실적"] < occ["전년"]:
+                flags.append(f"OCC↓({occ['전년']}→{occ['실적']}%)")
+            out["property_issues"].append({
+                "name": p["name"], "region": p.get("region"),
+                "ach": ach, "yoy": yoy, "rev_yoy": ryoy,
+                "rns": r.get("실적"), "rev": rev.get("실적"),
+                "issues": flags, "severity": (0 if not flags else (2 if (ach or 100) < 90 else 1)),
+            })
+        # 부진 우선 정렬
+        out["property_issues"].sort(key=lambda x: (-x["severity"], (x["ach"] if x["ach"] is not None else 999)))
+        out["issue_base_month"] = base
+    return out
 
 
 def make_deep_insights(months):
