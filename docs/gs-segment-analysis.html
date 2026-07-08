@@ -96,7 +96,10 @@ table.gt .grand td.lft{color:var(--gold-bright)}
 .acard-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
 .acard-h .nm{font-weight:800;font-size:13.5px}
 .acard-h .tp{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:3px;background:var(--bg-soft);color:var(--ink-faint)}
-.acard-h .cnt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700}
+.acard-h .cnt{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:700}
+.acard-h .perf{margin-left:auto;font-family:var(--mono);font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.acard-h .perf.g{background:var(--positive-bg);color:var(--positive)}.acard-h .perf.y{background:var(--warning-bg);color:var(--warning)}.acard-h .perf.r{background:var(--negative-bg);color:var(--negative)}.acard-h .perf.n{background:var(--bg-soft);color:var(--ink-faint)}
+.acard .flag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:800;color:var(--negative);background:var(--negative-bg);padding:1px 6px;border-radius:3px;margin:0 3px 6px 0}
 .amt{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:800;color:var(--positive);background:var(--positive-bg);padding:1px 6px;border-radius:3px;margin:0 3px 4px 0}
 .aitem{display:flex;gap:6px;align-items:baseline;padding:3px 0;font-size:11.5px;line-height:1.45;color:var(--ink-soft)}
 .aitem .ph{font-family:var(--mono);font-size:8px;font-weight:800;padding:1px 4px;border-radius:2px;flex-shrink:0;margin-top:1px}
@@ -198,6 +201,12 @@ table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{backgr
 
     <!-- ── 월별 상세 ── -->
     <div id="view-month">
+      <div class="section" id="sec-agenda">
+        <div class="section-head"><h2>주간 사업장 요약</h2><span class="tag forecast" id="agenda-mtag">—</span><span class="desc">사업장별 실적(달성률·전년비) + 전주 실적/금주 계획 · 이슈 · 매출 파이프라인</span></div>
+        <div id="agenda-summary" class="summary-row"></div>
+        <div id="agenda-cards"></div>
+        <div class="note">전주 주요사항(실적)·금주 계획을 항목 단위로 추출, 키워드 규칙으로 테마 분류. 원문 헤드라인 보존(요약·창작 없음).</div>
+      </div>
       <div class="section" id="sec-seg">
         <div class="section-head"><h2>세그먼트 분석</h2><span class="tag" id="seg-kind">—</span><span class="desc">회원 · 단체 · FIT / 점유비 · RN · ADR · Rev · 달성률 · 전년비</span></div>
         <div class="summary-row" id="seg-summary"></div>
@@ -212,12 +221,6 @@ table.hm td.g{background:rgba(76,175,111,.20);color:#8fe0ad}table.hm td.y{backgr
         <div class="section-head"><h2>해외 상세</h2><span class="tag forecast">예상</span><span class="desc" >미주(하와이) · 괌(망길라오·탈로포포) · 베트남(하이퐁) · 당월+누계</span></div>
         <div id="ovs-sections"></div>
         <div class="note">해외 매출=백만원, 골프 내장객=명, 그린피는 해외/로컬(현지) 구분.</div>
-      </div>
-      <div class="section" id="sec-agenda">
-        <div class="section-head"><h2>사업장 아젠다 분석</h2><span class="tag forecast" id="agenda-mtag">—</span><span class="desc">사업장·부서별 전주 실적/금주 계획 · 테마 분류 · 매출 파이프라인</span></div>
-        <div id="agenda-summary" class="summary-row"></div>
-        <div id="agenda-cards"></div>
-        <div class="note">전주 주요사항(실적)·금주 계획을 항목 단위로 추출, 키워드 규칙으로 테마 분류. 원문 헤드라인 보존(요약·창작 없음).</div>
       </div>
     </div>
 
@@ -401,32 +404,56 @@ function renderTrend(){
 /* ── 아젠다 ── */
 const THEME_COL={'미디어·촬영':'#d97a7a','마케팅·프로모션':'#e6b970','식음':'#6db58a','행사·MICE':'#6ba3c4','시설·안전':'#a892c8','멤버십·영업':'#c9a063','디지털·시스템':'#5a9fc4','상품·패키지':'#8fbf9f','개발·운영검토':'#b08fc8','기타':'#7a7e85'};
 const TYPE_LAB={property:'사업장',dept:'부서',overseas:'해외',etc:'기타'};
+function matchProp(name, props){
+  if(!props)return null;
+  let best=null;
+  props.forEach(p=>{if(p.name==='소계')return;
+    if(name===p.name||name.endsWith(p.name)||name.split(' ').indexOf(p.name)>=0){if(!best||p.name.length>best.name.length)best=p;}});
+  if(!best)props.forEach(p=>{if(p.name!=='소계'&&name.indexOf(p.name)>=0&&(!best||p.name.length>best.name.length))best=p;});
+  return best;
+}
 function renderAgenda(mk){
-  const m=D.months[mk],ag=m.agenda;
   const sec=$('#sec-agenda');
-  if(!ag||!ag.length){sec.classList.add('hidden');return;}
+  let m=D.months[mk],ag=m.agenda,agMonth=mk,fallback=false;
+  if(!ag||!ag.length){
+    const amk=D.mks.filter(x=>D.months[x].agenda&&D.months[x].agenda.length);
+    if(!amk.length){sec.classList.add('hidden');return;}
+    agMonth=amk[amk.length-1];m=D.months[agMonth];ag=m.agenda;fallback=true;
+  }
   sec.classList.remove('hidden');
-  $('#agenda-mtag').className='tag forecast';$('#agenda-mtag').textContent=m.label+' 아젠다';
+  const props=m.properties||[];
+  $('#agenda-mtag').className='tag forecast';
+  $('#agenda-mtag').textContent=fallback?`${m.label} 기준(최신 주간)`:`${m.label} 주간`;
   // summary
-  const themeAll={};let totItems=0;const props=ag.filter(b=>b.type==='property');
+  const themeAll={};let totItems=0;const pcnt=ag.filter(b=>b.type==='property').length;
   ag.forEach(b=>b.items.forEach(it=>{themeAll[it.theme]=(themeAll[it.theme]||0)+1;totItems++;}));
   const topThemes=Object.entries(themeAll).sort((a,b)=>b[1]-a[1]);
   const active=ag.filter(b=>b.items.length).sort((a,b)=>b.items.length-a.items.length);
   $('#agenda-summary').innerHTML=`
-    ${sBox('아젠다 항목',totItems+'<small>건</small>',`사업장 ${props.length}곳 · 블록 ${ag.length}개`)}
-    ${sBox('최다 사업장',active[0]?active[0].name:'—',active[0]?active[0].items.length+'건':'')}
+    ${sBox('주간 항목',totItems+'<small>건</small>',`사업장 ${pcnt}곳 · 블록 ${ag.length}개`)}
+    ${sBox('최다 활동',active[0]?active[0].name:'—',active[0]?active[0].items.length+'건':'')}
     ${sBox('집중 테마',topThemes[0]?topThemes[0][0]:'—',topThemes[0]?topThemes[0][1]+'건':'')}
   `;
-  // cards: property first, then dept/overseas, sorted by item count
   const order={property:0,overseas:1,dept:2,etc:3};
   const sorted=ag.slice().sort((a,b)=>(order[a.type]-order[b.type])||(b.items.length-a.items.length));
   $('#agenda-cards').innerHTML='<div class="agenda-grid">'+sorted.map(b=>{
+    // 실적 매칭(사업장만)
+    let perf='',flags='';
+    if(b.type==='property'){
+      const p=matchProp(b.name,props);
+      if(p){const rn=p.rns||{},ach=rn.달성률,yo=yoyPct(rn.실적,rn.전년);
+        perf=`<span class="perf ${achCls(ach)}">달성 ${pct(ach)}${yo!=null?` · YoY ${yo>=100?'+':''}${yo-100}%`:''}</span>`;
+        const fl=[];if(ach!=null&&ach<90)fl.push(`목표미달 ${ach}%`);if(yo!=null&&yo<100)fl.push(`전년比 ${yo}%`);
+        const occ=p.occ||{};if(occ.실적!=null&&occ.전년!=null&&occ.실적<occ.전년)fl.push(`OCC↓ ${occ.전년}→${occ.실적}%`);
+        flags=fl.map(x=>`<span class="flag">${x}</span>`).join('');
+      }
+    }
     const tdist=Object.entries(b.theme_counts||{}).map(([t,c])=>`<span class="tchip" style="color:${THEME_COL[t]||'#999'}">${t} ${c}</span>`).join('');
     const amts=(b.amounts||[]).map(a=>`<span class="amt">${a}</span>`).join('');
     const items=b.items.map(it=>`<div class="aitem"><span class="ph ${it.phase}">${it.phase==='done'?'실적':'계획'}</span><span class="th" style="color:${THEME_COL[it.theme]||'#999'}">●</span><span>${it.title}</span></div>`).join('')
       || '<div class="aitem dim">항목 헤드라인 없음(금액/계획만)</div>';
-    return `<div class="acard ${b.type}"><div class="acard-h"><span class="nm">${b.name}</span><span class="tp">${TYPE_LAB[b.type]||b.type}</span><span class="cnt">${b.items.length}건</span></div>
-      ${amts?`<div style="margin-bottom:6px">${amts}</div>`:''}${tdist?`<div class="tdist">${tdist}</div>`:''}${items}</div>`;
+    return `<div class="acard ${b.type}"><div class="acard-h"><span class="nm">${b.name}</span><span class="tp">${TYPE_LAB[b.type]||b.type}</span>${perf||`<span class="cnt" style="margin-left:auto">${b.items.length}건</span>`}</div>
+      ${flags?`<div style="margin-bottom:5px">${flags}</div>`:''}${amts?`<div style="margin-bottom:6px">${amts}</div>`:''}${tdist?`<div class="tdist">${tdist}</div>`:''}${items}</div>`;
   }).join('')+'</div>';
 }
 
@@ -531,8 +558,9 @@ async function boot(){
     const na=D.meta.actual_months.length,nf=D.meta.forecast_months.length;
     $('#subtitle').textContent=`월별 세그먼트 · 사업장 · 해외 실적 추이 — ${D.mks[0].replace('2026-','')}~${D.mks[D.mks.length-1].replace('2026-','')}월 (확정 ${na}개월 · 예상 ${nf}개월)`;
     $('#foot').textContent=`생성 ${D.meta.generated_at} · 월 ${D.mks.join(', ')}`;
-    // default: latest month, month view
-    selectMonth(D.mks[D.mks.length-1]);
+    // default: 최신 '당월'(익월-only 제외) — 보통 현재월(데이터 최다)
+    var defMk=D.mks.slice().reverse().find(mk=>!D.months[mk].next_month)||D.mks[D.mks.length-1];
+    selectMonth(defMk);
     $('#loading').classList.add('hidden');$('#app').classList.remove('hidden');
   }catch(e){$('#loading').classList.add('hidden');const el=$('#err');el.style.display='block';el.textContent='데이터를 불러오지 못했습니다: '+e.message;}
 }
