@@ -277,11 +277,9 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     def wdc(day): return WD[datetime.strptime(day, "%Y%m%d").weekday()]
     def clr(g): return GREEN if g > 0 else (RED if g < 0 else BLACK)
 
-    # 표시 라벨 (참고파일 기준): 데이터시트=full, 개요=short
-    DATA_LBL = {"소노캄 비발디파크": "소노캄 비발디파크", "소노문 단양": "소노벨 단양",
-                "소노벨 청송": "소노벨 청송", "소노캄 여수": "소노캄 여수",
-                "소노캄 거제": "소노캄 거제", "쏠비치 진도": "쏠비치 진도"}
-    GAEYO_LBL = dict(DATA_LBL, **{"소노캄 비발디파크": "소노캄 비발디"})
+    # 표시 라벨 = TARGETS 라벨(전사업장 커버). raw_db명 → 표시명(BSR명).
+    DATA_LBL = dict(LABEL)
+    GAEYO_LBL = dict(LABEL)
 
     wb = openpyxl.Workbook()
     _fixed = datetime.strptime(data_date, "%Y%m%d")
