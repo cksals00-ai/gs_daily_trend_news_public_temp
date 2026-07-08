@@ -140,7 +140,7 @@ thead.l1 th.bsr{color:var(--cyan)!important}
   <div class="mast-l">
     <div class="eyebrow">Daily Pickup Report</div>
     <h1>데일리 보고 리포트 — 7월 동기간 픽업</h1>
-    <div class="sub">전년대비 모니터링 6개 사업장 · GS(OTA+G-OTA) + 기타(홈피·제휴·일반) = 합계(FIT) · 일별 픽업(증감) 관리</div>
+    <div class="sub">전사업장 7월 동기간 픽업 · GS(OTA+G-OTA) + 기타(홈피·제휴·일반) = 합계(FIT) · 일별 픽업(증감) 관리</div>
   </div>
   <div class="mast-r">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
@@ -276,7 +276,7 @@ function renderSummary(){
   let sT=[0,0], sH=[0,0], sB=0, sO=0;
   S.forEach(s=>{ const tm=[grp(s.on26,TEAM),grp(s.on25,TEAM)], hm=[grp(s.on26,HOME),grp(s.on25,HOME)], bf=bfitOf(s.name), of=ourOf(s.name);
     sT[0]+=tm[0];sT[1]+=tm[1];sH[0]+=hm[0];sH[1]+=hm[1];sB+=bf;sO+=of; h+=line(s.label,tm,hm,of,bf,false); });
-  h+=line('합계 (6개)',sT,sH,sO,sB,true);
+  h+=line('합계 (전체)',sT,sH,sO,sB,true);
   tb.innerHTML=h+'</tbody>';
 }
 
@@ -289,7 +289,7 @@ function renderCmt(){
   const gap=f26-f25, behind=rows.filter(r=>r.gap<0), ahead=rows.filter(r=>r.gap>=0);
   const chip=r=>`<span class="chip ${r.gap<0?'neg':'pos'}">${r.label} ${SIGN(r.gap)}</span>`;
   document.getElementById('cmt').innerHTML=
-    `<b>[합계 FIT] 6개 동기간 온북 ${NF(f26)}실</b> (전년 ${NF(f25)}실, `+
+    `<b>[합계 FIT] 전사업장 동기간 온북 ${NF(f26)}실</b> (전년 ${NF(f25)}실, `+
     `<span class="chip ${gap<0?'neg':'pos'}">${SIGN(gap)}실 / ${(gap/f25*100).toFixed(1)}%</span>) `+
     `= GS ${NF(tm26)} + 기타 ${NF(hm26)}. 전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
     rows.map(chip).join(' ')+
@@ -311,7 +311,7 @@ function renderDaily(){
   const T=DATA.meta.targets, D=DATA.daily;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">예약 유입일</th>';
   T.forEach(t=>h+=`<th colspan="3" class="grp">${t.label}</th>`);
-  h+='<th colspan="3" class="grp">6개 합계</th></tr><tr>';
+  h+='<th colspan="3" class="grp">전체 합계</th></tr><tr>';
   T.forEach(()=>h+="<th class='grp'>'26</th><th>'25</th><th>전년비</th>");
   h+="<th class='grp'>'26</th><th>'25</th><th>전년비</th></tr></thead><tbody>";
   D.forEach(d=>{
@@ -330,7 +330,7 @@ function renderCum(){
   const T=DATA.meta.targets, C=DATA.cumulative;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">기준일</th>';
   T.forEach(t=>h+=`<th colspan="3" class="grp">${t.label}</th>`);
-  h+='<th colspan="3" class="grp">6개 합계</th></tr><tr>';
+  h+='<th colspan="3" class="grp">전체 합계</th></tr><tr>';
   T.forEach(()=>h+="<th class='grp'>'26</th><th>'25</th><th>갭</th>");
   h+="<th class='grp'>'26</th><th>'25</th><th>갭</th></tr></thead><tbody>";
   C.forEach(c=>{

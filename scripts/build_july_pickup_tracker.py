@@ -3,7 +3,7 @@
 """
 build_july_pickup_tracker.py — 7월 동기간 픽업 일자별 관리 엑셀 (송예건 CM 지시, 2026-06-30~)
 
-대상: 7월 동기간 YoY 모니터링 6개 사업장 (세그 구분없이 전체 = 온라인영업팀 raw_db 전 세그)
+대상: 7월 동기간 YoY 모니터링 전사업장 (세그 구분없이 전체 = 온라인영업팀 raw_db 전 세그)
   소노캄 비발디파크 / 소노문 단양 / 소노벨 청송 / 소노캄 여수 / 소노캄 거제 / 쏠비치 진도
 
 데이터: data/raw_db (27/28/43/44) 라이브 스냅샷 직접 net 계산 — db_aggregated 이중계상(doubling) 회피.
@@ -36,14 +36,34 @@ RAW = PROJECT_DIR / "data" / "raw_db"
 
 WINDOW_DAYS = 30  # 일별 픽업 시트: 마지막 완전일 기준 최근 N일
 
-# 대상 6개 사업장: (raw_db 정규화명, 표시 라벨)
+# 대상 = 전사업장(raw_db 온라인영업팀 기준 25개): (raw_db 정규화명, 표시 라벨=BSR명)
+# BSR 페이지 순서(권역별)로 정렬. 일부는 브랜드명 상이(소노문 단양=소노벨 단양 등).
 TARGETS = [
-    ("소노캄 비발디파크", "소노캄 비발디파크"),
-    ("소노문 단양",       "소노문 단양(舊 소노벨)"),
-    ("소노벨 청송",       "소노벨 청송"),
-    ("소노캄 여수",       "소노캄 여수"),
-    ("소노캄 거제",       "소노캄 거제"),
-    ("쏠비치 진도",       "쏠비치 진도"),
+    ("소노벨 비발디파크",          "소노벨 비발디파크"),
+    ("소노캄 비발디파크",          "소노캄 비발디파크"),
+    ("소노펫 비발디파크",          "소노펫 비발디파크"),
+    ("소노펠리체 비발디파크",       "소노펠리체 비발디파크"),
+    ("소노펠리체 빌리지 비발디파크", "소노펠리체 빌리지 비발디파크"),
+    ("소노문 비발디파크",          "소노문 비발디파크"),          # BSR 없음
+    ("소노휴 양평",               "소노벨 양평"),
+    ("델피노",                   "델피노"),
+    ("쏠비치 양양",               "쏠비치 양양"),
+    ("쏠비치 삼척",               "쏠비치 삼척"),
+    ("소노문 단양",               "소노벨 단양"),
+    ("소노벨 경주",               "소노캄 경주"),
+    ("소노벨 청송",               "소노벨 청송"),
+    ("소노벨 천안",               "소노벨 천안"),
+    ("소노벨 변산",               "소노벨 변산"),
+    ("소노캄 여수",               "소노캄 여수"),
+    ("소노캄 거제",               "소노캄 거제"),
+    ("쏠비치 진도",               "쏠비치 진도"),
+    ("소노벨 제주",               "소노벨 제주"),
+    ("소노캄 제주",               "소노캄 제주"),
+    ("소노캄 고양",               "소노캄 고양"),
+    ("소노문 해운대",             "소노문 해운대"),
+    ("쏠비치 남해",               "쏠비치 남해"),
+    ("르네블루",                 "르네블루"),
+    ("오션월드빌리지",            "오션월드빌리지"),               # BSR 없음
 ]
 TARGET_SET = {t[0] for t in TARGETS}
 LABEL = {t[0]: t[1] for t in TARGETS}
@@ -93,13 +113,12 @@ def live_files(year):
 def retrans_files(year):
     return sorted(fp for fp, n in _list(year) if "재전송" in n)
 
-# BSR(Booking Status Report) PDF → 6개 사업장 FIT OTB(2026-07/2025-07). 로컬 실행 전용(pdfplumber).
-BSR_TAG = {"소노캄 비발디파크": "소노캄 비발디파크", "소노문 단양": "소노벨 단양",
-           "소노벨 청송": "소노벨 청송", "소노캄 여수": "소노캄 여수",
-           "소노캄 거제": "소노캄 거제", "쏠비치 진도": "쏠비치 진도"}
+# BSR(Booking Status Report) PDF → 전사업장 FIT OTB(2026-07/2025-07). 로컬 실행 전용(pdfplumber).
+# raw_db명 → BSR 페이지명(=TARGETS 라벨). BSR 없는 사업장은 페이지 미매칭 → 자동 제외.
+BSR_TAG = {name: lab for name, lab in TARGETS}
 
 def parse_bsr():
-    """최신 'Booking Status Report_YYYY.MM.DD.pdf'에서 6개 사업장 FIT OTB 추출.
+    """최신 'Booking Status Report_YYYY.MM.DD.pdf'에서 전사업장 FIT OTB 추출.
     실패(라이브러리/파일/파싱 불가) 시 None → 리포트는 BSR 컬럼 생략."""
     try:
         import pdfplumber
@@ -303,7 +322,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     t = ws.cell(2, 2, "7월 동기간 比 일자별 픽업 현황"); t.font = F(14); t.alignment = cen
     ws.row_dimensions[2].height = 24
     dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
-    ws.cell(4, 2, "- 사업장 : 캄 비발디, 단양, 청송, 여수, 거제, 진도").font = F(10)
+    ws.cell(4, 2, f"- 사업장 : 전사업장 {len(TARGETS)}개 (온라인영업팀 raw_db 기준)").font = F(10)
     ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
     ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
