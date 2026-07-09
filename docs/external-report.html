@@ -5,7 +5,7 @@
 <script src="./js/auth.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>외부 리포트 분석 · SONO & TRINITY GS팀</title>
+<title>외부 리포트 분석 · 야놀자 리서치 시리즈 · SONO & TRINITY GS팀</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -602,6 +602,30 @@ input, button, select, table, th, td {
   color: var(--ink);
   border-color: var(--rule-strong);
 }
+
+/* ───── SERIES: 다중 호(號) 전환 ───── */
+.report-view { display: none; }
+.report-view.active { display: block; }
+.scatter-legend {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 12px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+}
+.scatter-legend .dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 5px; vertical-align: middle;
+}
+.quad-note {
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+  margin-top: 8px; line-height: 1.6;
+}
+.tier-pill {
+  display: inline-block; padding: 1px 7px; border-radius: 3px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+}
+.tier-1 { background: rgba(201,160,99,0.2); color: var(--gold-bright); }
+.tier-2 { background: rgba(90,159,196,0.16); color: var(--info); }
+.tier-3 { background: rgba(168,172,179,0.14); color: var(--ink-muted); }
 </style>
 </head>
 <body>
@@ -628,40 +652,414 @@ input, button, select, table, th, td {
 <div class="app-shell">
 
   <!-- SIDEBAR -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       야놀자 리서치 시리즈 — 신간 추가 방법 (주기적 작업)
+       1) 아래 <main> 안에 <section class="report-view" data-report-id="vNN"> …
+          </section> 블록을 새로 추가 (기존 호 블록을 템플릿으로 복제·수정)
+       2) 페이지 하단 <script>의 REPORTS 배열 맨 앞에 새 호 메타데이터 1건 추가
+          {id, label, sub, date, footer, sections:[...], init: initVNNCharts}
+       3) 차트가 있으면 initVNNCharts() 함수 정의 (없으면 init: null)
+       사이드바 목록·섹션 이동·푸터는 REPORTS에서 자동 렌더링됨.
+       ═══════════════════════════════════════════════════════════════════ -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-title">외부 리포트 분석</div>
-    <nav class="sidebar-nav">
-      <a class="sidebar-nav-item active" href="#" data-report="yanolja-v13">
-        <span>[야놀자 리서치] BRIEF Vol.13</span>
-        <span class="report-source">2026 Q1 인·아웃바운드 관광 실적</span>
-        <span class="report-date">2026.05 발행</span>
-      </a>
-    </nav>
+    <div class="sidebar-title">야놀자 리서치 시리즈</div>
+    <nav class="sidebar-nav" id="reportList"><!-- JS 렌더 --></nav>
     <div class="sidebar-divider"></div>
     <div class="sidebar-title" style="margin-top:4px;">섹션 이동</div>
-    <nav class="sidebar-nav" id="sectionNav">
-      <a class="sidebar-nav-item" href="#sec-inbound" style="font-size:12px;padding:7px 12px;">
-        <span>1. 인바운드 관광 실적</span>
-      </a>
-      <a class="sidebar-nav-item" href="#sec-outbound" style="font-size:12px;padding:7px 12px;">
-        <span>2. 아웃바운드 관광 실적</span>
-      </a>
-      <a class="sidebar-nav-item" href="#sec-hanilryeong" style="font-size:12px;padding:7px 12px;">
-        <span>3. 중국발 한일령 영향</span>
-      </a>
-      <a class="sidebar-nav-item" href="#sec-sono" style="font-size:12px;padding:7px 12px;">
-        <span>4. 소노 호텔 시사점</span>
-      </a>
-    </nav>
-    <div class="sidebar-footer">
-      <div>원문: 야놀자 리서치 BRIEF Vol.13</div>
-      <div>분석일: 2026.05.18</div>
-      <div style="margin-top:6px;">※ 본 페이지는 외부 리서치 자료를<br>자사 시사점 관점에서 분석한 것입니다.</div>
+    <nav class="sidebar-nav" id="sectionNav"><!-- JS 렌더 --></nav>
+    <div class="sidebar-footer" id="seriesFooter">
+      <div style="margin-top:6px;">※ 본 페이지는 외부 공개 리서치 자료를<br>자사 시사점 관점에서 분석·구성한 것입니다.</div>
     </div>
   </aside>
 
   <!-- MAIN -->
   <main class="main-content">
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ██ REPORT: 야놀자 리서치 INSIGHTS Vol.44 (2026.07) ██ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <section class="report-view" data-report-id="v44">
+
+    <!-- HERO -->
+    <div class="report-hero">
+      <div class="report-hero-eyebrow">YANOLJA RESEARCH · INSIGHTS VOL.44</div>
+      <h1>야놀자 도시경쟁력지수(YCCI): 관광도시 경쟁력을 판단하는 나침반</h1>
+      <p class="subtitle">
+        전국 255개 행정구역·29,336개 관광지를 소셜 빅데이터로 평가한 첫 수요자 중심 관광도시 경쟁력 지수.<br>
+        '얼마나 알려졌는가(인지도·명성)'와 '얼마나 좋게 경험되는가(매력)'를 50:50으로 결합해 도시별 전략 방향을 진단.
+      </p>
+      <div class="report-meta">
+        <span class="meta-chip"><span class="label">출처</span> 야놀자 리서치</span>
+        <span class="meta-chip"><span class="label">대상</span> 255개 행정구역 · 29,336개 관광지</span>
+        <span class="meta-chip"><span class="label">기간</span> 2025.04–2026.04</span>
+        <span class="meta-chip"><span class="label">발행</span> 2026.07</span>
+        <span class="meta-chip"><span class="label">분석</span> GS팀</span>
+      </div>
+    </div>
+
+    <!-- Quick TOC -->
+    <div class="section-toc">
+      <a href="#v44-concept">1. 지수 개념</a>
+      <a href="#v44-method">2. 방법론·Tier</a>
+      <a href="#v44-result">3. 2026 평가 결과</a>
+      <a href="#v44-sono">4. 소노 시사점</a>
+      <a href="#v44-strategy">5. 6대 전략</a>
+    </div>
+
+    <!-- 핵심 인사이트 요약 -->
+    <div class="callout">
+      <strong>핵심 요약(Executive Summary):</strong>
+      YCCI는 시설·예산 같은 공급자 지표가 아니라 <strong>관광객이 온라인에 남긴 자발적 언급·감성</strong>으로
+      도시 경쟁력을 측정하는 나침반이다. 2026 평가에서 종합 1위는 서울 송파구(인지도 9.37·매력 8.72),
+      매력 1위는 부산 수영구(10.00), 인지도 1위는 서울 종로구(10.00). 수도권이 1st Tier의 42%를 차지했지만,
+      경주·해운대·강릉·홍천 등 <strong>고유 자원 기반 비수도권 도시도 상위권에 다수 진입</strong>했다.
+      <strong>소노 사업장 소재 지역 다수(경주 6위·해운대 8위·제주 7·12위·홍천 19위·여수 21위·보령 27위·거제 31위)가
+      1st Tier에 포진</strong>했고, 특히 <strong>비발디파크(홍천)·대천(보령)·변산(부안)은 매력이 인지도보다 높은
+      '과소평가된 매력 도시'</strong>로 분류돼 발견성(브랜딩·콘텐츠 유통) 강화가 유효한 것으로 나타났다.
+    </div>
+
+    <!-- ═══════════ SECTION 1: 개념·프레임워크 ═══════════ -->
+    <div class="section" id="v44-concept">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <span class="section-title">YCCI란 무엇인가 — 2축 7차원 프레임워크</span>
+        <span class="section-subtitle">개념</span>
+      </div>
+
+      <div class="callout info">
+        <strong>패러다임 전환:</strong> 기존 지표(한국관광 100선, 지역관광발전지수 등)가 "도시가 관광객을 맞이할
+        준비가 얼마나 되어 있는가"라는 <strong>공급자 중심 질문</strong>이었다면, YCCI는 "관광객의 머릿속·마음속에서
+        이 도시는 어떤 위치에 있는가"라는 <strong>수요자 중심 질문</strong>으로 방향을 바꾼다. 야놀자리서치가 미국
+        퍼듀대 CHRIBA 연구소·경희대 H&T애널리틱스센터와 공동 개발했다.
+      </div>
+
+      <div class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+        <div class="stat-box">
+          <div class="stat-label">상위 차원 (Dimension)</div>
+          <div class="stat-value gold" style="font-size:16px;">2개 축</div>
+          <div class="stat-change neutral">인지도·명성 / 매력</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">하위 차원 (Sub-dimension)</div>
+          <div class="stat-value" style="font-size:18px;">7개</div>
+          <div class="stat-change neutral">자원·경험 요소</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">종합지수 산식</div>
+          <div class="stat-value" style="font-size:15px;">50 : 50</div>
+          <div class="stat-change neutral">인지도·매력 동일가중</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">점수 척도</div>
+          <div class="stat-value" style="font-size:18px;">1~10점</div>
+          <div class="stat-change neutral">정규화(도시 간 비교)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🧭</span> 2개 축의 의미 — "머리와 가슴을 함께 본다"</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>축</th><th>측정</th><th>질문</th><th>하위 차원</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:700;color:var(--gold-bright)">인지도·명성<br>Reputation</td>
+                <td>버즈량(언급량) 기반<br>얼마나 많이 이야기되는가</td>
+                <td>"가보고 싶은가"</td>
+                <td>자연경관 · 역사·문화·종교 · 건축·미학적 명소 · 위락·여가시설 <span style="color:var(--ink-faint)">(Pull 자원)</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;color:var(--info)">매력<br>Attractiveness</td>
+                <td>긍정 감성비율 기반<br>얼마나 좋게 이야기되는가</td>
+                <td>"가보니 좋았는가"</td>
+                <td>축제·이벤트 · 로컬 관광상품 · 체험·액티비티 <span style="color:var(--ink-faint)">(경험 전환 요소)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout" style="margin-top:12px;">
+          <strong>이론적 배경:</strong> Push-Pull 관광동기이론 · 목적지 이미지 이론(인지적/감성적) · 자원기반관점(RBV).
+          핵심 명제는 <strong>"자원은 경험으로 전환될 때 비로소 경쟁력이 된다"</strong> — 자원 → 경험 → 감정 → 공유 → 재방문의 흐름.
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 2: 방법론·Tier ═══════════ -->
+    <div class="section" id="v44-method">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <span class="section-title">방법론과 Tier 등급 체계</span>
+        <span class="section-subtitle">측정 방식</span>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📡</span> 조사 설계 요약</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <tbody>
+              <tr><td style="color:var(--ink-faint)">분석 대상</td><td style="font-weight:600">전국 255개 행정구역 · 29,336개 관광지·축제</td></tr>
+              <tr><td style="color:var(--ink-faint)">데이터 기간</td><td style="font-weight:600">2025.04 – 2026.04 (최근 1개년)</td></tr>
+              <tr><td style="color:var(--ink-faint)">수집 채널</td><td style="font-weight:600">YouTube · Instagram · Blog · Facebook · X · Community</td></tr>
+              <tr><td style="color:var(--ink-faint)">분석 방식</td><td style="font-weight:600">버즈량 → 인지도·명성 / 감성분석 긍정비율 → 매력, 각 1~10점 정규화</td></tr>
+              <tr><td style="color:var(--ink-faint)">제외 데이터</td><td style="font-weight:600">공식 홍보성 자료 · 사건/이슈 중심 뉴스 (자발적 반응만 채택)</td></tr>
+              <tr><td style="color:var(--ink-faint)">데이터 제공</td><td style="font-weight:600">바이브컴퍼니 (한국어 소셜 빅데이터 분석)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout info" style="margin-top:12px;">
+          <strong>산식:</strong> YCCIᵢ = (0.5 × 인지도·명성 점수) + (0.5 × 매력 점수).
+          예) 인지도 8·매력 6인 도시와 인지도 5·매력 9인 도시는 종합 7.0으로 같지만, 전자는 <strong>'경험 품질 개선'</strong>,
+          후자는 <strong>'브랜딩·확산'</strong>이라는 서로 다른 처방이 도출된다.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🏅</span> Tier 등급화 (종합순위 기준)</div>
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));">
+          <div class="stat-box">
+            <div class="stat-label">1st Tier City</div>
+            <div class="stat-value gold" style="font-size:16px;">1~50위</div>
+            <div class="stat-change neutral">선도 관광도시</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">2nd Tier City</div>
+            <div class="stat-value" style="font-size:16px;">51~100위</div>
+            <div class="stat-change neutral">중상위권</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">3rd Tier City</div>
+            <div class="stat-value" style="font-size:16px;">101~150위</div>
+            <div class="stat-change neutral">성장 잠재력</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Candidate City</div>
+            <div class="stat-value" style="font-size:16px;">151~255위</div>
+            <div class="stat-change neutral">후보(순위 비공개)</div>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:12px;">
+          <strong>4대 도시 유형별 처방:</strong>
+          <span style="color:var(--positive)">●</span> 고인지·고매력 → 체류·고부가가치화 ·
+          <span style="color:var(--warning)">●</span> 고인지·저매력 → 현장 경험 품질 개선 ·
+          <span style="color:var(--info)">●</span> 저인지·고매력(숨은 보석) → 브랜딩·마케팅 우선 ·
+          <span style="color:var(--negative)">●</span> 저인지·저매력 → 자원 재해석·콘텐츠 개발.
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 3: 2026 평가 결과 ═══════════ -->
+    <div class="section" id="v44-result">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <span class="section-title">2026 한국 관광도시 경쟁력 평가 결과</span>
+        <span class="section-subtitle">Top 50 / 지역분포</span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">종합 1위</div>
+          <div class="stat-value gold" style="font-size:16px;">서울 송파구</div>
+          <div class="stat-change up">인지 9.37 · 매력 8.72</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">매력 1위</div>
+          <div class="stat-value" style="font-size:16px;">부산 수영구</div>
+          <div class="stat-change up">10.00 (전국 최고)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">인지도 1위</div>
+          <div class="stat-value" style="font-size:16px;">서울 종로구</div>
+          <div class="stat-change up">10.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">1st Tier 수도권</div>
+          <div class="stat-value" style="font-size:18px;">21 / 50</div>
+          <div class="stat-change neutral">서울 11 · 경기 10</div>
+        </div>
+      </div>
+
+      <!-- 포지셔닝 맵 -->
+      <div class="chart-wrap">
+        <div class="chart-title">관광도시 포지셔닝 맵 — 인지도·명성(X) × 매력(Y)</div>
+        <canvas id="v44Positioning" class="chart-canvas" style="max-height:420px;"></canvas>
+        <div class="scatter-legend">
+          <span><span class="dot" style="background:#a8acb3;"></span>주요 상위 관광도시</span>
+          <span><span class="dot" style="background:#e6b970;"></span>소노 사업장 소재 지역</span>
+        </div>
+        <div class="quad-note">
+          ※ 우상단 = 인기·매력 모두 우수(대표 관광도시) · 좌상단 = 매력 우위(과소평가, 홍보 강화) ·
+          우하단 = 인지 우위(과대평가, 경험 개선) · 좌하단 = 혁신 필요. 점선은 상위권 기준선(7.5) 참고.
+        </div>
+      </div>
+
+      <!-- Top 20 표 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🏆</span> 종합순위 Top 20 (1st Tier)</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>순위</th><th>지역</th><th>대표 관광지(예시)</th><th>인지·명성</th><th>매력</th></tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-row"><td><span class="rank-badge rank-1">1</span></td><td style="font-weight:700;color:var(--ink)">서울 송파구</td><td>롯데월드, 석촌호수, 올림픽공원</td><td class="num">9.37</td><td class="num">8.72</td></tr>
+              <tr><td><span class="rank-badge rank-2">2</span></td><td style="font-weight:700;color:var(--ink)">부산 수영구</td><td>광안리해수욕장, 금련산, 수영팔도시장</td><td class="num">7.91</td><td class="num pos">10.00</td></tr>
+              <tr><td><span class="rank-badge rank-3">3</span></td><td style="font-weight:700;color:var(--ink)">서울 영등포구</td><td>여의도한강공원, 63스퀘어, 문래창작촌</td><td class="num">8.93</td><td class="num">8.55</td></tr>
+              <tr><td><span class="rank-badge rank-4">4</span></td><td style="font-weight:700;color:var(--ink)">서울 성동구</td><td>서울숲, 응봉산, 성수동거리</td><td class="num">8.02</td><td class="num">9.44</td></tr>
+              <tr><td><span class="rank-badge rank-4">5</span></td><td style="font-weight:700;color:var(--ink)">대구 중구</td><td>동성로, 서문시장, 김광석길</td><td class="num">8.90</td><td class="num">8.55</td></tr>
+              <tr class="highlight-row"><td><span class="rank-badge rank-4">6</span></td><td style="font-weight:700;color:var(--gold-bright)">경북 경주시 ◆</td><td>황리단길, 불국사, 첨성대</td><td class="num">9.28</td><td class="num">8.02</td></tr>
+              <tr class="highlight-row"><td><span class="rank-badge rank-4">7</span></td><td style="font-weight:700;color:var(--gold-bright)">제주 서귀포시 ◆</td><td>한라산, 성산일출봉, 중문관광단지</td><td class="num">9.67</td><td class="num">7.61</td></tr>
+              <tr class="highlight-row"><td><span class="rank-badge rank-4">8</span></td><td style="font-weight:700;color:var(--gold-bright)">부산 해운대구 ◆</td><td>달맞이길, 해운대해수욕장, 청사포</td><td class="num">8.28</td><td class="num">8.91</td></tr>
+              <tr><td>9</td><td style="font-weight:700;color:var(--ink)">강원 강릉시</td><td>강릉중앙시장, 경포대, 정동진</td><td class="num">8.67</td><td class="num">8.50</td></tr>
+              <tr><td>10</td><td style="font-weight:700;color:var(--ink)">서울 강남구</td><td>압구정로데오, 가로수길, 고투몰</td><td class="num">8.50</td><td class="num">8.44</td></tr>
+              <tr><td>11</td><td style="font-weight:700;color:var(--ink)">전북 전주시 완산구</td><td>전주한옥마을, 전동성당, 남부시장</td><td class="num">7.90</td><td class="num">8.96</td></tr>
+              <tr class="highlight-row"><td>12</td><td style="font-weight:700;color:var(--gold-bright)">제주 제주시 ◆</td><td>한라산, 우도, 함덕해수욕장</td><td class="num">9.30</td><td class="num">7.40</td></tr>
+              <tr><td>13</td><td style="font-weight:700;color:var(--ink)">서울 종로구</td><td>경복궁, 북촌, 광화문광장</td><td class="num pos">10.00</td><td class="num">6.30</td></tr>
+              <tr><td>14</td><td style="font-weight:700;color:var(--ink)">강원 속초시</td><td>설악산, 속초해수욕장, 대포항</td><td class="num">8.19</td><td class="num">8.01</td></tr>
+              <tr><td>15</td><td style="font-weight:700;color:var(--ink)">강원 춘천시</td><td>남이섬, 레고랜드, 삼악산</td><td class="num">7.61</td><td class="num">8.45</td></tr>
+              <tr><td>16</td><td style="font-weight:700;color:var(--ink)">경기 가평군</td><td>자라섬, 아침고요수목원, 쁘띠프랑스</td><td class="num">7.15</td><td class="num">8.86</td></tr>
+              <tr><td>17</td><td style="font-weight:700;color:var(--ink)">인천 연수구</td><td>송도센트럴파크, 트리플스트리트</td><td class="num">7.09</td><td class="num">8.77</td></tr>
+              <tr><td>18</td><td style="font-weight:700;color:var(--ink)">서울 용산구</td><td>남산, 국립중앙박물관, 해방촌</td><td class="num">8.65</td><td class="num">6.91</td></tr>
+              <tr class="highlight-row"><td>19</td><td style="font-weight:700;color:var(--gold-bright)">강원 홍천군 ◆</td><td>비발디파크, 팔봉산, 수타사</td><td class="num">7.00</td><td class="num">8.46</td></tr>
+              <tr><td>20</td><td style="font-weight:700;color:var(--ink)">서울 서초구</td><td>예술의전당, 한가람미술관, 국립국악원</td><td class="num">7.01</td><td class="num">8.39</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="quad-note" style="margin-top:10px;">◆ = 소노 사업장 소재 지역</div>
+      </div>
+
+      <!-- 지역분포 + Tier 구성 -->
+      <div class="chart-wrap">
+        <div class="chart-title">Top 150 광역시·도별 분포 (포함 도시 수)</div>
+        <canvas id="v44Region" class="chart-canvas" style="max-height:340px;"></canvas>
+      </div>
+
+      <div class="callout positive">
+        <strong>공간 구조 해석:</strong> Top 150 중 서울·경기가 50개(전체의 1/3)로 <strong>수도권 집중</strong>이 뚜렷하지만,
+        강원(18개 중 12개)·충남(16개 중 11개)·전북(15개 중 10개)·경남(13개) 등 비수도권도 대거 포함됐다.
+        보고서는 이를 <strong>수도권='시장 접근성', 비수도권='장소 고유성'</strong>의 두 경쟁력 축으로 정리한다.
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 4: 소노 시사점 ═══════════ -->
+    <div class="section" id="v44-sono">
+      <div class="section-header">
+        <span class="section-num">4</span>
+        <span class="section-title">소노 관점 — 사업장 소재 지역의 YCCI 위치</span>
+        <span class="section-subtitle">자사 전략 연결</span>
+      </div>
+
+      <div class="callout">
+        <strong>분석 관점:</strong> 소노 호텔&리조트 사업장이 소재한 행정구역이 YCCI에서 어떤 경쟁력 위치에 있는지 매핑했다.
+        아래 값은 <strong>외부 리서치의 도시 단위 관광 경쟁력</strong>이며, 소노 자체 실적과는 무관하다.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🏨</span> 소노 사업장 소재 지역 YCCI 매핑</div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>지역 (사업장 권역)</th><th>종합순위</th><th>Tier</th><th>인지·명성</th><th>매력</th><th>YCCI 유형</th></tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">경북 경주 <span style="color:var(--ink-faint)">소노벨 경주</span></td><td class="num">6</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">9.28</td><td class="num">8.02</td><td>고인지·고매력</td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">제주 서귀포 <span style="color:var(--ink-faint)">권역</span></td><td class="num">7</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">9.67</td><td class="num">7.61</td><td>인지 우위</td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">부산 해운대 <span style="color:var(--ink-faint)">소노 해운대</span></td><td class="num">8</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">8.28</td><td class="num">8.91</td><td>고인지·고매력</td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">제주 제주시 <span style="color:var(--ink-faint)">소노벨/소노캄 제주</span></td><td class="num">12</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">9.30</td><td class="num">7.40</td><td>인지 우위</td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--gold-bright)">강원 홍천 <span style="color:var(--ink-faint)">비발디파크</span></td><td class="num">19</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">7.00</td><td class="num pos">8.46</td><td><span style="color:var(--info)">과소평가 매력</span></td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">전남 여수 <span style="color:var(--ink-faint)">소노캄 여수</span></td><td class="num">21</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">7.81</td><td class="num">7.58</td><td>균형형</td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--gold-bright)">충남 보령·대천 <span style="color:var(--ink-faint)">소노벨 대천</span></td><td class="num">27</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">6.74</td><td class="num pos">7.94</td><td><span style="color:var(--info)">과소평가 매력</span></td></tr>
+              <tr class="highlight-row"><td style="font-weight:700;color:var(--ink)">경남 거제 <span style="color:var(--ink-faint)">소노캄 거제</span></td><td class="num">31</td><td><span class="tier-pill tier-1">1st</span></td><td class="num">7.36</td><td class="num">7.17</td><td>균형형</td></tr>
+              <tr><td style="font-weight:700;color:var(--ink)">충북 단양 <span style="color:var(--ink-faint)">소노문 단양</span></td><td class="num">66</td><td><span class="tier-pill tier-2">2nd</span></td><td class="num">6.83</td><td class="num">6.70</td><td>균형(성장)</td></tr>
+              <tr><td style="font-weight:700;color:var(--ink)">강원 고성 <span style="color:var(--ink-faint)">델피노</span></td><td class="num">77</td><td><span class="tier-pill tier-2">2nd</span></td><td class="num">6.75</td><td class="num">6.42</td><td>균형(성장)</td></tr>
+              <tr><td style="font-weight:700;color:var(--ink)">전북 부안·변산 <span style="color:var(--ink-faint)">소노벨 변산</span></td><td class="num">89</td><td><span class="tier-pill tier-2">2nd</span></td><td class="num">5.78</td><td class="num pos">7.19</td><td><span style="color:var(--info)">과소평가 매력</span></td></tr>
+              <tr><td style="font-weight:700;color:var(--ink)">충남 천안 <span style="color:var(--ink-faint)">소노벨 천안</span></td><td class="num">149</td><td><span class="tier-pill tier-3">3rd</span></td><td class="num">3.89</td><td class="num pos">7.85</td><td><span style="color:var(--info)">과소평가 매력</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="quad-note" style="margin-top:10px;">
+          ※ 값은 해당 행정구역(도시)의 YCCI 지수(2026)이며 개별 사업장 평가가 아님. 남해군(76위, 인지 7.05·매력 6.16)은
+          거제·통영과 함께 남해안 관광권을 형성.
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">소노 사업장 소재 지역 — 인지도·명성 vs 매력 (종합순위 순)</div>
+        <canvas id="v44Sono" class="chart-canvas" style="max-height:360px;"></canvas>
+      </div>
+
+      <div class="impl-grid">
+        <div class="impl-card" style="border-top-color: var(--info);">
+          <h4><span style="color:var(--info);">●</span> '과소평가 매력' 권역 = 발견성 강화</h4>
+          <p>
+            비발디파크(홍천, 매력 <strong>8.46</strong>·전국 12위)·대천(보령 7.94)·변산(부안 7.19)·천안(7.85)은
+            <strong>경험 만족도는 높으나 인지도가 상대적으로 낮은</strong> 유형. 대규모 시설 투자보다
+            UGC 바이럴, 글로벌 OTA 노출, 인플루언서·검색 최적화 등 <strong>'알리는' 프로모션</strong>이 효과적.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--positive);">
+          <h4><span style="color:var(--positive);">●</span> 1st Tier 고인지 권역 = 체류·고부가</h4>
+          <p>
+            경주(6위)·서귀포(7위)·해운대(8위)·제주시(12위)는 인지·매력이 모두 높은 대표 관광권.
+            추가 홍보보다 <strong>체류시간 연장·고부가가치 상품·주변 확산</strong> 전략이 유효. 소노 입장에선
+            객단가·연박·부대매출을 끌어올릴 <strong>프리미엄 패키지</strong> 여지가 크다.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--gold);">
+          <h4><span style="color:var(--gold);">●</span> 도심·경험형 콘텐츠 부상</h4>
+          <p>
+            성동·영등포·동탄 등 <strong>생활권 라이프스타일 상권</strong>이 상위권에 진입. 리조트도
+            '명소 관람'을 넘어 <strong>카페·야간경관·체험·로컬 미식</strong>을 결합한 경험 설계가
+            경쟁력의 핵심이라는 시그널. 광안리(수영구 매력 10.0) 사례가 대표적.
+          </p>
+        </div>
+        <div class="impl-card" style="border-top-color: var(--warning);">
+          <h4><span style="color:var(--warning);">●</span> 지방공항·인바운드 3,000만 대비</h4>
+          <p>
+            보고서는 3~4년 내 <strong>외국인 3,000만 시대</strong>와 지방공항 활성화를 전망.
+            제주·여수·거제·해운대 등 소노 해양 권역은 인바운드 저변 확대 수혜 가능. 다국어 예약·결제,
+            라스트마일 교통 연계가 <strong>관광소비 전환율</strong>을 좌우.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SECTION 5: 6대 전략 ═══════════ -->
+    <div class="section" id="v44-strategy">
+      <div class="section-header">
+        <span class="section-num">5</span>
+        <span class="section-title">관광도시 경쟁력 강화 6대 전략</span>
+        <span class="section-subtitle">정책 제언</span>
+      </div>
+      <div class="card">
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>전략</th><th>핵심 질문</th><th>주요 실행 과제</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">1. 고객 다변화</td><td>우리 도시에 와줄 고객은 누구인가</td><td>세분화·타깃 설정·가치제안, 허브·스포크별 고객전략</td></tr>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">2. 관광도시 브랜딩</td><td>도시 이름 하면 무엇이 떠오르는가</td><td>브랜드 키워드 도출·핵심 연상 정제, 일관된 메시지·상품·공간</td></tr>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">3. 포트폴리오 최적화</td><td>무엇을 키우고 정리할 것인가</td><td>재활성화·합리화·신규개발, 체류형 상품화</td></tr>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">4. 프로모션 효율화</td><td>어떻게 실제 방문·소비를 만들 것인가</td><td>광고·홍보와 판매촉진 분리, UGC·패키지·교통숙박 연계</td></tr>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">5. 교통·정보체계</td><td>여정을 어떻게 끊김없이 연결할 것인가</td><td>진입 접근성·라스트마일·광역 연결, 다국어·결제·예약 개선</td></tr>
+              <tr><td style="font-weight:700;color:var(--gold-bright)">6. 거버넌스 체계</td><td>누가 장기 실행·관리할 것인가</td><td>전문 컨트롤타워·DMO·광역 협업, 성과기반 KPI</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout" style="margin-top:12px;">
+          <strong>종합 메시지:</strong> "접근성은 관광객을 불러오고, 자원은 방문 동기를 만들며, 경험은 도시를 기억하게 한다."
+          YCCI는 관광정책을 <strong>공급자 투입 중심 → 수요자 경험 중심</strong>으로 전환시키는 데이터 기반 나침반이다.
+        </div>
+      </div>
+    </div>
+
+  </section>
+  <!-- ██ END REPORT Vol.44 ██ -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ██ REPORT: 야놀자 리서치 BRIEF Vol.13 (2026.05) ██ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <section class="report-view" data-report-id="v13">
 
     <!-- HERO -->
     <div class="report-hero">
@@ -1052,19 +1450,22 @@ input, button, select, table, th, td {
       </div>
     </div>
 
+  </section>
+  <!-- ██ END REPORT Vol.13 ██ -->
+
   </main>
 </div>
 
 <!-- FOOTER -->
 <footer class="page-footer">
-  SONO & TRINITY GS팀 · 외부 리포트 분석 · 원문: 야놀자 리서치 BRIEF Vol.13 · 분석일 2026.05.18
+  SONO & TRINITY GS팀 · 야놀자 리서치 시리즈 외부 리포트 분석 · <span id="footerSource"></span>
 </footer>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <!-- CHARTS -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <script>
-(function() {
+function initV13Charts() {
   const COLORS = {
     gold: '#e6b970',
     goldDim: 'rgba(201,160,99,0.4)',
@@ -1314,6 +1715,178 @@ input, button, select, table, th, td {
     }
   });
 
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Vol.44 차트 — YCCI 도시경쟁력지수
+// ═══════════════════════════════════════════════════════════════════
+function initV44Charts() {
+  const COLORS = {
+    gold: '#e6b970', goldDim: 'rgba(201,160,99,0.55)',
+    positive: '#4caf6f', negative: '#e57373',
+    info: '#5a9fc4', infoDim: 'rgba(90,159,196,0.45)',
+    warning: '#e8a256', warningDim: 'rgba(232,162,86,0.45)',
+    ink: '#a8acb3', inkFaint: '#7a7e85', rule: 'rgba(255,255,255,0.08)',
+  };
+  const font = { family: "'Pretendard Variable', 'Noto Sans KR', sans-serif", size: 11, weight: 600 };
+  const ticks = { color: COLORS.inkFaint, font: { ...font, size: 10 } };
+  Chart.defaults.color = COLORS.ink;
+  Chart.defaults.font = font;
+
+  // ── 1. 포지셔닝 맵 (scatter) ──
+  const topCities = [
+    {x:9.37,y:8.72,c:'송파구'},{x:7.91,y:10.00,c:'수영구'},{x:8.93,y:8.55,c:'영등포구'},
+    {x:8.02,y:9.44,c:'성동구'},{x:8.90,y:8.55,c:'대구 중구'},{x:8.67,y:8.50,c:'강릉'},
+    {x:10.00,y:6.30,c:'종로구'},{x:8.50,y:8.44,c:'강남구'},{x:7.90,y:8.96,c:'전주 완산'},
+    {x:7.61,y:8.45,c:'춘천'},{x:7.15,y:8.86,c:'가평'},{x:7.09,y:8.77,c:'연수구'},
+    {x:6.08,y:9.22,c:'동탄구'},{x:9.11,y:5.90,c:'서울 중구'},
+  ];
+  const sonoCities = [
+    {x:9.28,y:8.02,c:'경주'},{x:9.67,y:7.61,c:'서귀포'},{x:8.28,y:8.91,c:'해운대'},
+    {x:9.30,y:7.40,c:'제주시'},{x:7.00,y:8.46,c:'홍천(비발디)'},{x:7.81,y:7.58,c:'여수'},
+    {x:6.74,y:7.94,c:'보령(대천)'},{x:7.36,y:7.17,c:'거제'},{x:6.83,y:6.70,c:'단양'},
+    {x:6.75,y:6.42,c:'고성(델피노)'},{x:5.78,y:7.19,c:'부안(변산)'},{x:3.89,y:7.85,c:'천안'},
+  ];
+  const quadLine = {
+    id: 'quadLine',
+    beforeDraw(chart) {
+      const {ctx, chartArea, scales} = chart;
+      if (!chartArea) return;
+      const xp = scales.x.getPixelForValue(7.5), yp = scales.y.getPixelForValue(7.5);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+      ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xp, chartArea.top); ctx.lineTo(xp, chartArea.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chartArea.left, yp); ctx.lineTo(chartArea.right, yp); ctx.stroke();
+      ctx.restore();
+    }
+  };
+  new Chart(document.getElementById('v44Positioning'), {
+    type: 'scatter',
+    data: { datasets: [
+      { label:'주요 상위 관광도시', data: topCities,
+        backgroundColor:'rgba(168,172,179,0.55)', borderColor:'#a8acb3', borderWidth:1,
+        pointRadius:6, pointHoverRadius:8 },
+      { label:'소노 사업장 소재 지역', data: sonoCities,
+        backgroundColor:'rgba(230,185,112,0.85)', borderColor:'#e6b970', borderWidth:1.5,
+        pointRadius:7, pointHoverRadius:9, pointStyle:'rectRot' },
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'top', labels:{ boxWidth:12, padding:14, font:{...font,size:11}, usePointStyle:true } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.raw.c} (인지 ${ctx.raw.x} · 매력 ${ctx.raw.y})` } }
+      },
+      scales:{
+        x:{ min:3.5, max:10.3, title:{display:true,text:'인지도·명성 →',color:COLORS.inkFaint,font:{...font,size:10}}, grid:{color:COLORS.rule}, ticks },
+        y:{ min:5.5, max:10.3, title:{display:true,text:'매력 →',color:COLORS.inkFaint,font:{...font,size:10}}, grid:{color:COLORS.rule}, ticks },
+      }
+    },
+    plugins:[quadLine]
+  });
+
+  // ── 2. 소노 지역 인지 vs 매력 (grouped bar) ──
+  const sonoSorted = [
+    ['경주',9.28,8.02],['서귀포',9.67,7.61],['해운대',8.28,8.91],['제주시',9.30,7.40],
+    ['홍천',7.00,8.46],['여수',7.81,7.58],['보령',6.74,7.94],['거제',7.36,7.17],
+    ['단양',6.83,6.70],['고성',6.75,6.42],['부안',5.78,7.19],['천안',3.89,7.85],
+  ];
+  new Chart(document.getElementById('v44Sono'), {
+    type:'bar',
+    data:{ labels: sonoSorted.map(r=>r[0]),
+      datasets:[
+        { label:'인지도·명성', data:sonoSorted.map(r=>r[1]), backgroundColor:COLORS.infoDim, borderColor:COLORS.info, borderWidth:1.5, borderRadius:3 },
+        { label:'매력', data:sonoSorted.map(r=>r[2]), backgroundColor:COLORS.goldDim, borderColor:COLORS.gold, borderWidth:1.5, borderRadius:3 },
+      ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{boxWidth:12,padding:14,font:{...font,size:10}} },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}` } } },
+      scales:{ x:{ grid:{display:false}, ticks:{...ticks, maxRotation:0} },
+        y:{ min:0, max:10, grid:{color:COLORS.rule}, ticks } } }
+  });
+
+  // ── 3. Top150 지역분포 (horizontal bar) ──
+  const region = [
+    ['경기도',30],['서울특별시',20],['경상남도',13],['강원특별자치도',12],['충청남도',11],
+    ['전라북도',10],['부산광역시',9],['경상북도',9],['전라남도',9],['제주특별자치도',2],['기타 광역',25],
+  ];
+  new Chart(document.getElementById('v44Region'), {
+    type:'bar',
+    data:{ labels: region.map(r=>r[0]),
+      datasets:[{ label:'Top 150 포함 도시 수', data:region.map(r=>r[1]),
+        backgroundColor: region.map(r=> r[0]==='기타 광역' ? 'rgba(168,172,179,0.3)' : COLORS.goldDim),
+        borderColor: region.map(r=> r[0]==='기타 광역' ? '#7a7e85' : COLORS.gold),
+        borderWidth:1.5, borderRadius:3 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ctx.parsed.x + '개' } } },
+      scales:{ x:{ beginAtZero:true, grid:{color:COLORS.rule}, ticks:{...ticks, callback:v=>v+'개'} },
+        y:{ grid:{display:false}, ticks:{...ticks, font:{...font,size:11}} } } }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 시리즈 컨트롤러 — 사이드바 렌더링 및 호(號) 전환
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  const REPORTS = [
+    { id:'v44', label:'[야놀자 리서치] INSIGHTS Vol.44',
+      sub:'2026 야놀자 도시경쟁력지수(YCCI)', date:'2026.07 발행',
+      sections:[['v44-concept','1. 지수 개념·프레임워크'],['v44-method','2. 방법론·Tier 체계'],
+        ['v44-result','3. 2026 평가 결과'],['v44-sono','4. 소노 시사점'],['v44-strategy','5. 6대 강화 전략']],
+      footer:'원문: 야놀자 리서치 INSIGHTS Vol.44 (2026.07) · 분석일 2026.07.09',
+      init: initV44Charts },
+    { id:'v13', label:'[야놀자 리서치] BRIEF Vol.13',
+      sub:'2026 Q1 인·아웃바운드 관광 실적', date:'2026.05 발행',
+      sections:[['sec-inbound','1. 인바운드 관광 실적'],['sec-outbound','2. 아웃바운드 관광 실적'],
+        ['sec-hanilryeong','3. 중국발 한일령 영향'],['sec-sono','4. 소노 호텔 시사점']],
+      footer:'원문: 야놀자 리서치 BRIEF Vol.13 · 분석일 2026.05.18',
+      init: initV13Charts },
+  ];
+  const inited = new Set();
+  const reportList = document.getElementById('reportList');
+  const sectionNav = document.getElementById('sectionNav');
+  const footerSource = document.getElementById('footerSource');
+
+  // 리포트 목록 렌더
+  REPORTS.forEach(r => {
+    const a = document.createElement('a');
+    a.className = 'sidebar-nav-item';
+    a.href = '#'; a.dataset.reportId = r.id;
+    a.innerHTML = `<span>${r.label}</span><span class="report-source">${r.sub}</span><span class="report-date">${r.date}</span>`;
+    a.addEventListener('click', e => { e.preventDefault(); showReport(r.id); });
+    reportList.appendChild(a);
+  });
+
+  function showReport(id) {
+    const r = REPORTS.find(x => x.id === id);
+    if (!r) return;
+    // report-view 전환
+    document.querySelectorAll('.report-view').forEach(v =>
+      v.classList.toggle('active', v.dataset.reportId === id));
+    // 목록 active
+    reportList.querySelectorAll('.sidebar-nav-item').forEach(a =>
+      a.classList.toggle('active', a.dataset.reportId === id));
+    // 섹션 이동 nav 재구성
+    sectionNav.innerHTML = '';
+    r.sections.forEach(([sid, label]) => {
+      const a = document.createElement('a');
+      a.className = 'sidebar-nav-item';
+      a.href = '#' + sid;
+      a.style.cssText = 'font-size:12px;padding:7px 12px;';
+      a.innerHTML = `<span>${label}</span>`;
+      sectionNav.appendChild(a);
+    });
+    if (footerSource) footerSource.textContent = r.footer;
+    // 차트 최초 1회 초기화 (visible 상태에서)
+    if (!inited.has(id) && typeof r.init === 'function') {
+      inited.add(id);
+      r.init();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 최신 호를 기본 표시
+  showReport(REPORTS[0].id);
 })();
 </script>
 
