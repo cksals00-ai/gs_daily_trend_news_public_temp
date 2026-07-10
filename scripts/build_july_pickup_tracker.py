@@ -172,6 +172,31 @@ def _apportion(total, weights):
     return out
 
 
+def _rescale(v, num, den):
+    """v를 num/den 배로 보정(반올림, 0에서 멀어지는 방향). v==den이면 정확히 num."""
+    if den == 0 or num == den or v == 0:
+        return v
+    x = v * num / den
+    return int(x + 0.5) if x >= 0 else -int(-x + 0.5)
+
+
+def bsr_scale(anchor):
+    """사업장별 보정 계수 (확정 FIT / 자사 실측 FIT). 추이(일별·누적)에 곱해
+    최종 시점 누적이 확정 OTB와 정확히 일치하도록 한다.
+    확정치 미제공(src=rawdb) 또는 전년 미집계면 보정 없음(계수 1)."""
+    sc = {}
+    for name, _lab in TARGETS:
+        a = anchor.get(name) or {}
+        use = a.get("src") == "bsr"
+        n26, d26 = (a.get("fit26", 0), a.get("raw26", 0)) if use else (0, 0)
+        n25, d25 = (a.get("fit25", 0), a.get("raw25", 0)) if (use and a.get("has_prior")) else (0, 0)
+        sc[name] = {
+            "n26": n26 if d26 > 0 else 1, "d26": d26 if d26 > 0 else 1,
+            "n25": n25 if d25 > 0 else 1, "d25": d25 if d25 > 0 else 1,
+        }
+    return sc
+
+
 def bsr_anchor(bsr, on26, on25):
     """BSR FIT(15시)을 사업장별 권위값으로 삼고, GS(OTA+G-OTA)/기타(홈피·제휴·일반)
     분해는 raw_db FIT 구성비로 비례배분한다.  → 합계는 BSR과 정확히 일치.
@@ -290,7 +315,7 @@ def daily_newcancel(rows):
     return new, cxl
 
 # ───────────────────────── 엑셀 (소노위크 보고 양식) ─────────────────────────
-def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA", bsr=None, anchor=None):
+def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA", bsr=None, anchor=None, scale=None):
     """소노위크 보고 양식(간소화) — 개요/일별픽업(증감)/전년대비(누적)/상세. 설명문 제거."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -512,17 +537,29 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
             rr += 1
         ws.freeze_panes = ws.cell(sub + 1, 3).coordinate
 
-    # 일별 픽업 (증감): 올해 일별 net vs 전년 동일자
-    trend_sheet("일별 픽업 (증감) — 7월 투숙, 전년 동기간 比", "일별픽업(증감)",
-                lambda name, day: (net_of(new26, cxl26, name, day), net_of(new25, cxl25, name, to25(day))))
-    # 전년대비 누적 온북 추이
+    # BSR 보정: 추이·상세 값도 확정 OTB 계수로 스케일 (누적 최종일 = 확정 OTB와 정확히 일치)
+    S = scale or {}
+    def s26v(name, v):
+        f = S.get(name); return _rescale(v, f["n26"], f["d26"]) if f else v
+    def s25v(name, v):
+        f = S.get(name); return _rescale(v, f["n25"], f["d25"]) if f else v
+
+    # 보정된 누적 온북(캐시) — 일별 net은 이 곡선의 차분으로 산출해 반올림 오차를 없앤다.
     nb_cache26 = {}; nb_cache25 = {}
     def cum_fn(name, day):
         if day not in nb_cache26: nb_cache26[day] = onbook_at(rows26, day)
         d25 = to25(day)
         if d25 not in nb_cache25: nb_cache25[d25] = onbook_at(rows25, d25)
-        return nb_cache26[day].get(name, 0), nb_cache25[d25].get(name, 0)
-    trend_sheet("전년 동기간 대비 누적 온북 추이 (일자별 cutoff)", "전년대비(누적추이)", cum_fn)
+        return s26v(name, nb_cache26[day].get(name, 0)), s25v(name, nb_cache25[d25].get(name, 0))
+    def prevd(day): return (datetime.strptime(day, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    def net_fn(name, day):
+        c, p = cum_fn(name, day), cum_fn(name, prevd(day))
+        return c[0] - p[0], c[1] - p[1]
+
+    # 일별 픽업 (증감): 올해 일별 net vs 전년 동일자
+    trend_sheet("일별 픽업 (증감) — 7월 투숙, 전년 동기간 比", "일별픽업(증감)", net_fn)
+    # 전년대비 누적 온북 추이
+    trend_sheet("전년 동기간 대비 누적 온북 추이 (일자별 cutoff, 확정 OTB 보정)", "전년대비(누적추이)", cum_fn)
 
     # ============================== 상세 (오름차순) ==============================
     ws4 = wb.create_sheet("상세(신규·취소)"); ws4.sheet_view.showGridLines = False
@@ -535,10 +572,12 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     for day in days26:  # 과거 → 최근
         nbd = onbook_at(rows26, day)
         for name, _ in TARGETS:
-            nw = new26.get((name, day), 0); cx = cxl26.get((name, day), 0); net = nw - cx
+            # net은 보정 누적의 차분으로 확정, 신규만 보정 후 취소를 역산 → 당일 누적온북과 정합
+            net = net_fn(name, day)[0]
+            nw = s26v(name, new26.get((name, day), 0)); cx = nw - net
             row = [(f"{d2k(day)} ({wdc(day)})", cen, None, F(9)), (DATA_LBL[name], lft, None, F(9)),
                    (nw, rgt, NF_NUM, F(9)), (-cx, rgt, NF_NUM, F(9)),
-                   (net, rgt, NF_NUM, F(9, bold=True, color=clr(net))), (nbd.get(name, 0), rgt, NF_NUM, F(9))]
+                   (net, rgt, NF_NUM, F(9, bold=True, color=clr(net))), (s26v(name, nbd.get(name, 0)), rgt, NF_NUM, F(9))]
             for i, (v, al, nf, ft) in enumerate(row):
                 cell = ws4.cell(rr, 2 + i, v); cell.alignment = al; cell.font = ft; cell.border = box
                 if nf: cell.number_format = nf
@@ -548,7 +587,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     wb.save(out_path)
 
 # ───────────────────────── JSON (대시보드 HTML용) ─────────────────────────
-def build_payload(data_date, asof26, asof25, rows26, rows25, anchor=None):
+def build_payload(data_date, asof26, asof25, rows26, rows25, anchor=None, scale=None):
     """세그먼트(OTA/G-OTA/Inbound/기타)별로 분해해 payload 생성.
     HTML이 선택된 세그를 합산해 표/총평을 재계산(기본 OTA+G-OTA)."""
     hi = datetime.strptime(asof26, "%Y%m%d")
@@ -594,20 +633,57 @@ def build_payload(data_date, asof26, asof25, rows26, rows25, anchor=None):
             item["anchor"] = {k: a[k] for k in ("fit26", "fit25", "gap", "raw26", "raw25", "src", "has_prior")}
         summary.append(item)
 
-    # 일별 픽업: per[prop][seg]=[신규,취소], per25=전년 동일자
-    daily = []
-    for day in ordered:
-        d25 = to25(day)
-        per   = {n: {s: [new26.get((n, s, day), 0), cxl26.get((n, s, day), 0)] for s in SEGMENTS} for n, _ in TARGETS}
-        per25 = {n: {s: [new25.get((n, s, d25), 0), cxl25.get((n, s, d25), 0)] for s in SEGMENTS} for n, _ in TARGETS}
-        daily.append({"d": day, "wd": wdc(day), "d25": d25, "per": per, "per25": per25})
+    # BSR 보정 계수 — FIT 세그(GS·기타)에만 적용. Inbound·기타는 FIT 밖이라 실측 유지.
+    SC = scale or {}
+    def k26(n, s, v):
+        f = SC.get(n); return _rescale(v, f["n26"], f["d26"]) if (f and s in FIT_SEGMENTS) else v
+    def k25(n, s, v):
+        f = SC.get(n); return _rescale(v, f["n25"], f["d25"]) if (f and s in FIT_SEGMENTS) else v
 
-    # 누적 추이: per[prop][seg]=[온북26, 온북25]
-    cumulative = []
-    for day in ordered:
+    # 보정된 누적 온북: {day: {prop: {seg: [온북26, 온북25]}}}
+    # 최종일(asof26)의 FIT 세그는 앵커 값으로 고정 → 요약·확정 OTB와 정확히 일치.
+    prev_day = (datetime.strptime(days26[0], "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    cum_days = [prev_day] + days26          # 과거 → 최근 (첫날 net 계산용으로 하루 더)
+    cum_scaled = {}
+    for day in cum_days:
         c26 = onbook_seg(rows26, day); c25 = onbook_seg(rows25, to25(day))
-        per = {n: {s: [c26.get(n, {}).get(s, 0), c25.get(n, {}).get(s, 0)] for s in SEGMENTS} for n, _ in TARGETS}
-        cumulative.append({"d": day, "wd": wdc(day), "per": per})
+        last = (day == asof26)
+        per = {}
+        for n, _ in TARGETS:
+            a = (anchor or {}).get(n)
+            row = {}
+            for s in SEGMENTS:
+                v26 = c26.get(n, {}).get(s, 0); v25 = c25.get(n, {}).get(s, 0)
+                if last and a and s in FIT_SEGMENTS:
+                    row[s] = [a["seg26"][s], a["seg25"][s] if a["has_prior"] else k25(n, s, v25)]
+                else:
+                    row[s] = [k26(n, s, v26), k25(n, s, v25)]
+            per[n] = row
+        cum_scaled[day] = per
+
+    # 일별 픽업: per[prop][seg]=[신규, 취소].
+    # net(=신규−취소)은 보정 누적의 차분으로 확정하고, 신규만 계수 보정한 뒤 취소를 역산한다.
+    # → 일별 net 합계가 누적 곡선과 정확히 일치(반올림 오차 0).
+    def _daily(day, prev, newmap, cxlmap, key_day, kfn, idx):
+        per = {}
+        for n, _ in TARGETS:
+            row = {}
+            for s in SEGMENTS:
+                net = cum_scaled[day][n][s][idx] - cum_scaled[prev][n][s][idx]
+                nw = kfn(n, s, newmap.get((n, s, key_day), 0))
+                row[s] = [nw, nw - net]
+            per[n] = row
+        return per
+
+    daily = []
+    for day in ordered:                      # 최근 → 과거
+        prev = (datetime.strptime(day, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+        d25 = to25(day)
+        daily.append({"d": day, "wd": wdc(day), "d25": d25,
+                      "per":   _daily(day, prev, new26, cxl26, day, k26, 0),
+                      "per25": _daily(day, prev, new25, cxl25, d25, k25, 1)})
+
+    cumulative = [{"d": day, "wd": wdc(day), "per": cum_scaled[day]} for day in ordered]
 
     return {
         "meta": {"data_date": data_date, "asof26": asof26, "asof25": asof25,
@@ -680,9 +756,11 @@ def main():
     else:
         print("BSR: PDF 없음/파싱불가 — raw_db 실측만 사용")
 
+    scale = bsr_scale(anchor)
     build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl,
-                seg_label=xl_label, bsr=bsr, anchor=anchor)
-    payload = build_payload(data_date, asof26, asof25, rows26, rows25, anchor=anchor)
+                seg_label=xl_label, bsr=bsr, anchor=anchor, scale=scale)
+    payload = build_payload(data_date, asof26, asof25, rows26, rows25, anchor=anchor, scale=scale)
+    payload["meta"]["scaled"] = bool(bsr)
     if bsr:
         payload["bsr"] = {"date": bsr["date"], "prior_date": bsr["prior_date"],
                           "fit26": bsr["fit26"], "fit25": bsr["fit25"],
