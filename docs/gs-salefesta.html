@@ -655,28 +655,6 @@ body{background:var(--bg-main);color:var(--ink);font-family:var(--sans);line-hei
       + '</tbody></table></div>';
   }
 
-  function productTable(products){
-    var TOP = 12;
-    var head = products.slice(0,TOP), tail = products.slice(TOP);
-    var rows = head.map(function(p){
-      return '<tr><td>'+esc(p.name)+'</td><td class="num">'+num(p.rn)+'</td>'
-        + '<td class="num">'+eok(p.room_rev_m)+'억</td><td class="num">'+num(p.adr)+'원</td></tr>';
-    }).join('');
-    if (tail.length){
-      var trn = tail.reduce(function(a,p){ return a+p.rn; },0);
-      var trev = tail.reduce(function(a,p){ return a+p.room_rev_m; },0);
-      rows += '<tr><td style="color:var(--ink-faint);">기타 '+tail.length+'계열</td>'
-        + '<td class="num">'+num(trn)+'</td><td class="num">'+eok(trev)+'억</td><td class="num">–</td></tr>';
-    }
-    var srn = products.reduce(function(a,p){ return a+p.rn; },0);
-    var srev = products.reduce(function(a,p){ return a+p.room_rev_m; },0);
-    rows += '<tr class="total-row"><td>상품계열 합계</td><td class="num">'+num(srn)+'</td>'
-      + '<td class="num">'+eok(srev)+'억</td><td class="num">–</td></tr>';
-    return '<div class="card" style="padding:0;overflow-x:auto;"><table class="tbl"><thead><tr>'
-      + '<th>상품계열</th><th class="num">RN</th><th class="num">객실매출</th><th class="num">ADR</th>'
-      + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
-  }
-
   function historyBlock(history){
     if (history.length < 2){
       return '<div class="notice">일별 온북 스냅샷은 <strong>'+esc(history[0] ? history[0].date : '-')
@@ -741,21 +719,7 @@ body{background:var(--bg-main);color:var(--ink);font-family:var(--sans);line-hei
 
     html += '<div class="perf-card-title" style="margin-bottom:6px;">일별 온북 추이</div>'
       + '<div class="perf-card-sub">최근 14일 · 누적 온북 RN과 일별 증감</div>'
-      + historyBlock(d.history) + '<div style="height:14px"></div>';
-
-    html += '<div class="perf-card-title" style="margin-bottom:6px;">상품계열별 실적</div>'
-      + '<div class="perf-card-sub">'+esc(d.meta.scope_note)+'</div>'
-      + productTable(d.products);
-
-    var sp = d.spring_ref;
-    if (sp && sp.rn){
-      var months = sp.sale_months.map(ym).join(' ~ ');
-      html += '<div class="notice" style="margin-top:14px;">'
-        + '<strong>직전 봄편 계열 참고:</strong> 판매 '+esc(months)+' · '+sp.products+'개 상품계열 · '
-        + 'RN '+num(sp.rn)+' · 객실매출 '+eok(sp.room_rev_m)+'억. '
-        + '여름편 상품계열 합계 대비 RN '+ (d.products.reduce(function(a,p){return a+p.rn;},0)/sp.rn).toFixed(1) +'배.'
-        + '</div>';
-    }
+      + historyBlock(d.history);
 
     root.innerHTML = html;
   }
