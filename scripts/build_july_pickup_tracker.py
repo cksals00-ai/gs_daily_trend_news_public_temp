@@ -114,16 +114,18 @@ def retrans_files(year):
     return sorted(fp for fp, n in _list(year) if "재전송" in n)
 
 # BSR(Booking Status Report) PDF → 전사업장 FIT OTB(2026-07/2025-07). 로컬 실행 전용(pdfplumber).
-# raw_db명 → BSR 페이지명(=TARGETS 라벨). BSR 없는 사업장은 페이지 미매칭 → 자동 제외.
-BSR_TAG = {name: lab for name, lab in TARGETS}
+# raw_db명 → BSR 페이지명. 기본은 TARGETS 라벨, 페이지명이 더 긴 경우만 아래에서 덮어씀.
+BSR_PAGE_OVERRIDE = {"르네블루": "르네블루 바이 쏠비치"}
+BSR_TAG = {name: BSR_PAGE_OVERRIDE.get(name, lab) for name, lab in TARGETS}
+# BSR에 페이지가 없는 사업장 → raw_db 실측으로 폴백
+NO_BSR_PAGE = {"소노문 비발디파크", "오션월드빌리지"}
 
 def parse_bsr():
-    """최신 'Booking Status Report_YYYY.MM.DD.pdf'에서 전사업장 FIT OTB 추출.
-    실패(라이브러리/파일/파싱 불가) 시 None → 리포트는 BSR 컬럼 생략."""
-    try:
-        import pdfplumber
-    except ImportError:
-        return None
+    """최신 'Booking Status Report_YYYY.MM.DD.pdf'의 Segment(OTB) 블록에서
+    사업장별 7월 투숙 FIT OTB(2026/2025/차이)를 추출.
+
+    BSR은 15시 기준 스냅샷이며 전년 대조일은 요일 정렬(2026-07-09 목 ↔ 2025-07-10 목).
+    실패(라이브러리/파일/파싱 불가) 시 None → 리포트는 raw_db 실측만 사용."""
     pdf_dir = PROJECT_DIR / "data" / "Daily Booking Report PDF"
     if not pdf_dir.is_dir():
         return None
@@ -133,26 +135,68 @@ def parse_bsr():
     cands = sorted(pdf_dir.glob("Booking Status Report_*.pdf"), key=fdate)
     if not cands:
         return None
-    pdf_path = cands[-1]; bsr_date = fdate(pdf_path)
-    # FIT OTB 세그먼트 행: '20YY년 07월' + 5개 콤마정수(Membership/Group/FIT/Comp/Total) + pct
-    rx = re.compile(r"(202[56])년 07월\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+\d+\.\d+%")
-    fit26, fit25 = {}, {}
     try:
-        with pdfplumber.open(str(pdf_path)) as pdf:
-            for pg in pdf.pages:
-                t = pg.extract_text() or ""
-                head = t.split("\n", 1)[0] if t else ""
-                for name, tag in BSR_TAG.items():
-                    if name in fit26 or f"[{tag}]" not in head:
-                        continue
-                    for m in rx.finditer(t):
-                        fit = int(m.group(4).replace(",", ""))  # 3rd of 5 = FIT
-                        (fit26 if m.group(1) == "2026" else fit25)[name] = fit
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from parse_bsr_segment import parse_bsr as _parse
+        raw = _parse(cands[-1], month="07")
     except Exception:
         return None
+    pages = raw.get("props") or {}
+    fit26, fit25, gap, has_prior = {}, {}, {}, {}
+    for name, _lab in TARGETS:
+        d = pages.get(BSR_TAG[name])
+        if not d:
+            continue
+        fit26[name] = d["fit26"]; fit25[name] = d["fit25"]
+        gap[name] = d["gap"];     has_prior[name] = d["has_prior"]
     if not fit26:
         return None
-    return {"date": bsr_date, "fit26": fit26, "fit25": fit25}
+    return {"date": raw["date"], "prior_date": raw["prior_date"],
+            "fit26": fit26, "fit25": fit25, "gap": gap, "has_prior": has_prior,
+            "total": raw["total"]}
+
+
+def _apportion(total, weights):
+    """total(정수)을 weights 비율로 정수 배분(최대잔여법). weights 합이 0이면 첫 칸에 전액."""
+    keys = list(weights)
+    wsum = sum(weights[k] for k in keys)
+    if total == 0 or not keys:
+        return {k: 0 for k in keys}
+    if wsum <= 0:
+        out = {k: 0 for k in keys}; out[keys[0]] = total; return out
+    exact = {k: total * weights[k] / wsum for k in keys}
+    out = {k: int(exact[k]) for k in keys}
+    rem = total - sum(out.values())
+    for k in sorted(keys, key=lambda k: exact[k] - int(exact[k]), reverse=True)[:rem]:
+        out[k] += 1
+    return out
+
+
+def bsr_anchor(bsr, on26, on25):
+    """BSR FIT(15시)을 사업장별 권위값으로 삼고, GS(OTA+G-OTA)/기타(홈피·제휴·일반)
+    분해는 raw_db FIT 구성비로 비례배분한다.  → 합계는 BSR과 정확히 일치.
+
+    BSR 페이지가 없는 사업장(소노문 비발디파크·오션월드빌리지)은 raw_db 실측 그대로(src=rawdb).
+    BSR에 전년이 미집계된 사업장(소노캄 경주·르네블루)은 has_prior=False로 표시."""
+    anchor = {}
+    for name, _lab in TARGETS:
+        raw26 = {s: on26.get(name, {}).get(s, 0) for s in FIT_SEGMENTS}
+        raw25 = {s: on25.get(name, {}).get(s, 0) for s in FIT_SEGMENTS}
+        r26, r25 = sum(raw26.values()), sum(raw25.values())
+        if bsr and name in bsr["fit26"]:
+            f26, f25 = bsr["fit26"][name], bsr["fit25"][name]
+            src, prior = "bsr", bsr["has_prior"][name]
+        else:
+            f26, f25, src, prior = r26, r25, "rawdb", True
+        s26 = _apportion(f26, raw26 if r26 else {s: 1 for s in FIT_SEGMENTS})
+        s25 = _apportion(f25, raw25 if r25 else {s: 1 for s in FIT_SEGMENTS})
+        anchor[name] = {
+            "fit26": f26, "fit25": f25, "gap": f26 - f25,
+            "seg26": s26, "seg25": s25,
+            "raw26": r26, "raw25": r25,      # 우리 raw_db 실측(참고·정합률)
+            "src": src, "has_prior": prior,
+        }
+    return anchor
 
 def snapshot_date():
     """최신 27 라이브 스냅샷 파일명에서 기준일(YYYYMMDD) 추출."""
@@ -246,7 +290,7 @@ def daily_newcancel(rows):
     return new, cxl
 
 # ───────────────────────── 엑셀 (소노위크 보고 양식) ─────────────────────────
-def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA", bsr=None):
+def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="OTA+G-OTA", bsr=None, anchor=None):
     """소노위크 보고 양식(간소화) — 개요/일별픽업(증감)/전년대비(누적)/상세. 설명문 제거."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -305,10 +349,18 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     TEAM_S = set(TEAM_SEGMENTS); HOME_S = set(HOME_SEGMENTS)
     tm26 = onbook_seg(rows26, asof26, TEAM_S); tm25 = onbook_seg(rows25, asof25, TEAM_S)
     hm26 = onbook_seg(rows26, asof26, HOME_S); hm25 = onbook_seg(rows25, asof25, HOME_S)
+    # BSR 정합: 개요의 FIT 합계를 BSR(15시) 값으로 고정하고 GS/기타는 raw_db 구성비로 비례배분
+    if anchor:
+        for n, _l in TARGETS:
+            a = anchor.get(n)
+            if not a: continue
+            tm26[n] = sum(a["seg26"][s] for s in TEAM_SEGMENTS); hm26[n] = sum(a["seg26"][s] for s in HOME_SEGMENTS)
+            tm25[n] = sum(a["seg25"][s] for s in TEAM_SEGMENTS); hm25[n] = sum(a["seg25"][s] for s in HOME_SEGMENTS)
 
     # ============================== 개요 (GS / 홈페이지 / 합계 FIT [+ BSR]) ==============================
     ws = wb.active; ws.title = "개요"; ws.sheet_view.showGridLines = False
-    has_bsr = bool(bsr and bsr.get("fit26"))
+    # 앵커 모드에선 합계(FIT) 자체가 BSR 값 → 별도 BSR 대조 컬럼 불필요
+    has_bsr = bool(bsr and bsr.get("fit26") and not anchor)
     BSR_C = 12; STAT_C = 14 if has_bsr else 12  # BSR: L(FIT)·M(달성%),  상태: N or L
     LASTC = STAT_C
     bsr_lbl = f"BSR ({bsr['date'][4:6]}/{bsr['date'][6:8]})" if has_bsr else ""
@@ -320,9 +372,14 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     t = ws.cell(2, 2, "7월 동기간 比 일자별 픽업 현황"); t.font = F(14); t.alignment = cen
     ws.row_dimensions[2].height = 24
     dcell = ws.cell(3, LASTC, _fixed); dcell.number_format = "yyyy-mm-dd"; dcell.font = F(9); dcell.alignment = rgt
-    ws.cell(4, 2, f"- 사업장 : 전사업장 {len(TARGETS)}개 (온라인영업팀 raw_db 기준)").font = F(10)
+    ws.cell(4, 2, f"- 사업장 : 전사업장 {len(TARGETS)}개").font = F(10)
     ws.cell(5, 2, "- 일  자 : 7월 투숙건").font = F(10)
-    ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반)").font = F(10)
+    if anchor and bsr:
+        d, p = bsr["date"], bsr.get("prior_date") or ""
+        fmt = lambda s: f"{s[:4]}-{s[4:6]}-{s[6:8]}" if s else "전년 동기"
+        ws.cell(6, 2, f"- 기  준 : {fmt(d)} 15시 OTB  vs  {fmt(p)}  |  합계(FIT) = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반)").font = F(10)
+    else:
+        ws.cell(6, 2, "- 기  준 : 전년 동기간 YOY  |  합계(FIT) = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반)").font = F(10)
     ws.cell(7, 2, "- 사업장별 7월 동기간 OTB 현황").font = F(11)
     ic = ws.cell(7, LASTC, "[단위 : 실]"); ic.font = F(9); ic.alignment = rgt
     # 2단 헤더
@@ -338,10 +395,14 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     for base in (3, 6, 9):
         for j, lab in enumerate(("26Y", "25Y", "GAP")): hcell(ws, 9, base + j, lab)
 
-    def grp3(r, base, v26, v25, bold=False, tint=False):
+    def grp3(r, base, v26, v25, bold=False, tint=False, no_prior=False):
+        """no_prior: 전년 미집계 → '25·GAP은 '—'(0과 비교하면 갭이 허수)."""
         g = v26 - v25
-        for j, (v, nf, col) in enumerate([(v26, NF_NUM, clr(0)), (v25, NF_NUM, clr(0)), (g, NF_GAP, clr(g))]):
-            cell = ws.cell(r, base + j, v); cell.alignment = rgt; cell.number_format = nf
+        cells = [(v26, NF_NUM, clr(0)), ("—" if no_prior else v25, NF_NUM, clr(0)),
+                 ("—" if no_prior else g, NF_GAP, clr(0 if no_prior else g))]
+        for j, (v, nf, col) in enumerate(cells):
+            cell = ws.cell(r, base + j, v); cell.alignment = rgt
+            if not isinstance(v, str): cell.number_format = nf
             cell.font = F(10, bold=(bold or j == 2), color=col)
             cell.border = topbox(DBL) if bold else box
             if tint: cell.fill = PatternFill("solid", fgColor="F0ECF9")
@@ -357,31 +418,60 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
         c2.font = F(10, bold=bold, color="1F4E78")
         if ach is not None: c2.number_format = NF_PCT
 
+    def _no_prior(name):
+        a = (anchor or {}).get(name)
+        return bool(a and a["has_prior"] is False)
+
     t_tm26 = t_tm25 = t_hm26 = t_hm25 = t_bsr = 0
+    c_tm26 = c_tm25 = c_hm26 = c_hm25 = 0   # 비교가능(전년 보유) 소계
+    n_new = 0
     for i, (name, _) in enumerate(TARGETS):
         r = 10 + i
         a26, a25 = tm26.get(name, 0), tm25.get(name, 0)
         h26, h25 = hm26.get(name, 0), hm25.get(name, 0)
         f26, f25 = a26 + h26, a25 + h25; fg = f26 - f25
+        npr = _no_prior(name)
         t_tm26 += a26; t_tm25 += a25; t_hm26 += h26; t_hm25 += h25
-        lc = ws.cell(r, 2, GAEYO_LBL[name]); lc.font = F(10); lc.alignment = lft; lc.border = box
-        grp3(r, 3, a26, a25); grp3(r, 6, h26, h25, tint=True); grp3(r, 9, f26, f25)
+        if npr:
+            n_new += 1
+        else:
+            c_tm26 += a26; c_tm25 += a25; c_hm26 += h26; c_hm25 += h25
+        lab = GAEYO_LBL[name] + ("†" if npr else ("*" if (anchor or {}).get(name, {}).get("src") == "rawdb" else ""))
+        lc = ws.cell(r, 2, lab); lc.font = F(10); lc.alignment = lft; lc.border = box
+        grp3(r, 3, a26, a25, no_prior=npr); grp3(r, 6, h26, h25, tint=True, no_prior=npr)
+        grp3(r, 9, f26, f25, no_prior=npr)
         if has_bsr:
             bfit = bsr["fit26"].get(name, 0); t_bsr += bfit; bsr_cells(r, f26, bfit)
-        st = "전년초과 ▲" if fg > 0 else ("동률" if fg == 0 else "전년미달 ▼")
-        sc = ws.cell(r, STAT_C, st); sc.font = F(10, bold=True, color=clr(fg)); sc.alignment = cen; sc.border = box
-    # Total
+        st = "신규 (전년 미집계)" if npr else ("전년초과 ▲" if fg > 0 else ("동률" if fg == 0 else "전년미달 ▼"))
+        sc = ws.cell(r, STAT_C, st); sc.font = F(10, bold=True, color=clr(0 if npr else fg))
+        sc.alignment = cen; sc.border = box
+    # Total (전체) — 신규 포함 시 전년 비교 불가
     r = 10 + len(TARGETS)
     ft26, ft25 = t_tm26 + t_hm26, t_tm25 + t_hm25; ftg = ft26 - ft25
-    lc = ws.cell(r, 2, "Total"); lc.font = F(10, bold=True); lc.alignment = lft; lc.border = topbox(DBL)
-    grp3(r, 3, t_tm26, t_tm25, bold=True); grp3(r, 6, t_hm26, t_hm25, bold=True, tint=True); grp3(r, 9, ft26, ft25, bold=True)
+    lc = ws.cell(r, 2, f"Total (전체 {len(TARGETS)}개)"); lc.font = F(10, bold=True); lc.alignment = lft; lc.border = topbox(DBL)
+    grp3(r, 3, t_tm26, t_tm25, bold=True, no_prior=bool(n_new))
+    grp3(r, 6, t_hm26, t_hm25, bold=True, tint=True, no_prior=bool(n_new))
+    grp3(r, 9, ft26, ft25, bold=True, no_prior=bool(n_new))
     if has_bsr:
         bsr_cells(r, ft26, t_bsr, bold=True)
-    sc = ws.cell(r, STAT_C, ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")); sc.font = F(10, bold=True, color=clr(ftg))
+    stt = "전년 비교 불가" if n_new else ("전년초과 ▲" if ftg > 0 else "전년미달 ▼")
+    sc = ws.cell(r, STAT_C, stt); sc.font = F(10, bold=True, color=clr(0 if n_new else ftg))
     sc.alignment = cen; sc.border = topbox(DBL)
-    note = "※ FIT=영업자료(대) 03일반=GS(OTA+G-OTA)+기타(홈페이지·제휴사·일반). 제휴사·일반 코드는 온라인팀 raw_db엔 거의 없어 BSR(전채널) 대비 미달"
-    if has_bsr:
-        note += f" · BSR({bsr_lbl[5:-1]})=소노 Booking Status Report FIT(전채널·시점차로 우리 FIT가 다소 낮음)"
+    # 비교가능 합계 (전년 보유 사업장만) — 동일 기준 YoY
+    if n_new:
+        r += 1
+        cf26, cf25 = c_tm26 + c_hm26, c_tm25 + c_hm25; cfg = cf26 - cf25
+        lc = ws.cell(r, 2, f"비교가능 합계 (전년 보유 {len(TARGETS) - n_new}개)")
+        lc.font = F(10, bold=True); lc.alignment = lft; lc.border = box
+        grp3(r, 3, c_tm26, c_tm25, bold=True); grp3(r, 6, c_hm26, c_hm25, bold=True, tint=True)
+        grp3(r, 9, cf26, cf25, bold=True)
+        sc = ws.cell(r, STAT_C, "전년초과 ▲" if cfg > 0 else ("동률" if cfg == 0 else "전년미달 ▼"))
+        sc.font = F(10, bold=True, color=clr(cfg)); sc.alignment = cen; sc.border = box
+    if anchor:
+        note = ("※ 합계(FIT)=사업장별 확정 OTB(15시 기준). GS(OTA+G-OTA)·기타(홈피·제휴·일반)는 자사 구성비로 비례배분 → GS+기타=FIT.  "
+                "†=전년 미집계(브랜드 전환) → '25·GAP 및 전체 Total의 전년 비교 제외, 별도 '비교가능 합계' 참조.  *=확정치 미제공 → 자사 실측")
+    else:
+        note = "※ FIT=영업자료(대) 03일반=GS(OTA+G-OTA)+기타(홈페이지·제휴사·일반). 제휴사·일반 코드는 온라인팀 raw_db엔 거의 없어 전채널 대비 미달"
     ws.cell(r + 1, 2, note).font = F(9, color=GREY)
 
     # ===== 공용: 사업장별 3컬럼(26Y/25Y/GAP) 추이 시트 =====
@@ -458,7 +548,7 @@ def build_excel(out_path, data_date, asof26, asof25, rows26, rows25, seg_label="
     wb.save(out_path)
 
 # ───────────────────────── JSON (대시보드 HTML용) ─────────────────────────
-def build_payload(data_date, asof26, asof25, rows26, rows25):
+def build_payload(data_date, asof26, asof25, rows26, rows25, anchor=None):
     """세그먼트(OTA/G-OTA/Inbound/기타)별로 분해해 payload 생성.
     HTML이 선택된 세그를 합산해 표/총평을 재계산(기본 OTA+G-OTA)."""
     hi = datetime.strptime(asof26, "%Y%m%d")
@@ -491,9 +581,18 @@ def build_payload(data_date, asof26, asof25, rows26, rows25):
     new26, cxl26 = daily_seg(rows26); new25, cxl25 = daily_seg(rows25)
 
     # 요약: 사업장별 세그별 온북 (HTML이 선택 세그 합산)
-    summary = [{"name": n, "label": l,
-                "on26": segmap(on26.get(n, {})), "on25": segmap(on25.get(n, {}))}
-               for n, l in TARGETS]
+    # anchor가 있으면 FIT 세그는 BSR 정합값(seg26/seg25)으로 치환 → 합계가 BSR과 일치.
+    # Inbound·기타는 BSR FIT 밖이므로 raw_db 실측 유지.
+    summary = []
+    for n, l in TARGETS:
+        s26, s25 = segmap(on26.get(n, {})), segmap(on25.get(n, {}))
+        item = {"name": n, "label": l, "on26": s26, "on25": s25}
+        if anchor and n in anchor:
+            a = anchor[n]
+            for s in FIT_SEGMENTS:
+                s26[s] = a["seg26"][s]; s25[s] = a["seg25"][s]
+            item["anchor"] = {k: a[k] for k in ("fit26", "fit25", "gap", "raw26", "raw25", "src", "has_prior")}
+        summary.append(item)
 
     # 일별 픽업: per[prop][seg]=[신규,취소], per25=전년 동일자
     daily = []
@@ -551,22 +650,44 @@ def main():
     xl_seg = set(DEFAULT_SEGMENTS); xl_label = "+".join(DEFAULT_SEGMENTS)
     rows26_xl = [r for r in rows26 if r["seg"] in xl_seg]
     rows25_xl = [r for r in rows25 if r["seg"] in xl_seg]
-    bsr = parse_bsr()   # 최신 BSR PDF의 FIT(전일) — 로컬 실행 시에만
+    bsr = parse_bsr()   # 최신 BSR PDF(15시)의 사업장별 FIT OTB — 로컬 실행 시에만
+
+    # FIT 세그 raw_db 실측(비례배분 가중치 + 정합률 산출용)
+    def _onbook_seg(rows, cutoff):
+        out = defaultdict(lambda: defaultdict(int))
+        for r in rows:
+            if r["seg"] not in FIT_SEGMENTS: continue
+            if r["entry"] and r["entry"] <= cutoff:  out[r["prop"]][r["seg"]] += r["rn"]
+            if r["cancel"] and r["cancel"] <= cutoff: out[r["prop"]][r["seg"]] -= r["rn"]
+        return out
+    fon26 = _onbook_seg(rows26, asof26); fon25 = _onbook_seg(rows25, asof25)
+    anchor = bsr_anchor(bsr, fon26, fon25)
+
     if bsr:
-        print(f"BSR: {bsr['date']} FIT = " + ", ".join(f"{LABEL.get(k,k)}={v}" for k, v in bsr['fit26'].items()))
+        print(f"\n[BSR 정합] {bsr['date']} 15시 OTB  ↔  전년 {bsr['prior_date']}  (7월 투숙 FIT)")
+        print(f"  {'사업장':22}{'2026':>8}{'2025':>8}{'차이':>8}{'raw_db26':>10}{'정합률':>8}")
+        A26 = A25 = 0
+        for name, lab in TARGETS:
+            a = anchor[name]; A26 += a["fit26"]; A25 += a["fit25"]
+            rate = f"{a['raw26']/a['fit26']*100:5.1f}%" if a["fit26"] else "    —"
+            flag = "" if a["src"] == "bsr" else "  (raw_db)"
+            if a["src"] == "bsr" and not a["has_prior"]: flag = "  (전년 미집계)"
+            print(f"  {lab:22}{a['fit26']:>8,}{a['fit25']:>8,}{a['gap']:>+8,}{a['raw26']:>10,}{rate:>8}{flag}")
+        print(f"  {'합계':22}{A26:>8,}{A25:>8,}{A26-A25:>+8,}")
+        bt = bsr["total"]
+        bsr_sum26 = sum(bsr["fit26"].values())
+        print(f"  · BSR 사업장 합(우리 25개 매칭분) = {bsr_sum26:,} / BSR Total 페이지 = {bt['fit26']:,}")
     else:
-        print("BSR: PDF 없음/파싱불가 — BSR 컬럼 생략")
-    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl, seg_label=xl_label, bsr=None)  # 엑셀엔 BSR 미포함(화면만)
-    payload = build_payload(data_date, asof26, asof25, rows26, rows25)
+        print("BSR: PDF 없음/파싱불가 — raw_db 실측만 사용")
+
+    build_excel(str(xlsx_docs), data_date, asof26, asof25, rows26_xl, rows25_xl,
+                seg_label=xl_label, bsr=bsr, anchor=anchor)
+    payload = build_payload(data_date, asof26, asof25, rows26, rows25, anchor=anchor)
     if bsr:
-        # 날짜 정렬 비교: 우리 FIT를 BSR 날짜(≤asof) 시점으로 잘라 동일 시점끼리 대조.
-        # BSR PDF가 며칠 늦어도(주말 후 월요일=이틀전 등) 왜곡 없이 같은 as-of로 비교됨.
-        bsr_cut = min(bsr["date"], asof26)   # 우리 스냅샷이 못 미치는 미래일 방지
-        fit_rows26 = [r for r in rows26 if r["seg"] in FIT_SEGMENTS]
-        our_fit_at_bsr = onbook_at(fit_rows26, bsr_cut)
-        bsr["our_fit"] = {n: our_fit_at_bsr.get(n, 0) for n, _ in TARGETS}
-        bsr["our_cut"] = bsr_cut
-        payload["bsr"] = bsr
+        payload["bsr"] = {"date": bsr["date"], "prior_date": bsr["prior_date"],
+                          "fit26": bsr["fit26"], "fit25": bsr["fit25"],
+                          "gap": bsr["gap"], "has_prior": bsr["has_prior"],
+                          "total": bsr["total"]}
     json_docs = docs_data / "july_pickup.json"
     json.dump(payload, open(json_docs, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"\n대시보드 배포본 → {json_docs}\n               → {xlsx_docs}")

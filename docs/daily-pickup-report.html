@@ -246,57 +246,71 @@ function refreshSeg(){ refreshSegChips(); renderTrends(); }
 
 const NMn=v=>v<0?'−'+NF(v):NF(v);   // 음수만 부호
 
-// 요약: 사업장별 GS(OTA+G-OTA) / 홈페이지(기타) / 합계(FIT) [+ BSR 전일], 각 '26/'25/갭
+// 요약: 사업장별 GS(OTA+G-OTA) / 기타(홈피·제휴·일반) / 합계(FIT), 각 '26/'25/갭
+// 합계(FIT)는 Booking Status Report 15시 기준 OTB로 고정(사업장별 확정치).
+// GS·기타는 자사 raw_db 구성비로 비례배분 → GS+기타 = FIT (합계는 원자료와 정확히 일치).
 function renderSummary(){
   const S=DATA.summary, tb=document.getElementById('tblSum');
-  const BSR=DATA.bsr, bd=BSR?BSR.date:null;
-  const bfitOf=n=>BSR&&BSR.fit26?(BSR.fit26[n]||0):0;
-  const ourOf =n=>BSR&&BSR.our_fit?(BSR.our_fit[n]||0):0;   // 우리 FIT(BSR 날짜 기준)
   const sub=g=>`<th class='grp${g}'>'26</th><th class='${g}'>'25</th><th class='${g}'>갭</th>`;
   let h='<thead class="l1"><tr><th class="lbl" rowspan="2">구분</th>'+
     '<th colspan="3" class="grp">GS (OTA+G-OTA)</th>'+
     '<th colspan="3" class="grp hp">기타 (홈피·제휴·일반)</th>'+
     '<th colspan="3" class="grp">합계 (FIT)</th>'+
-    (BSR?`<th colspan="3" class="grp bsr">BSR (${md(bd)}) 동시점 대조</th>`:'')+
-    '<th rowspan="2" class="grp">상태</th></tr><tr>'+ sub('') + sub(' hp') + sub('')+
-    (BSR?"<th class='grp bsr'>우리</th><th class='bsr'>BSR</th><th class='bsr'>달성%</th>":'') +'</tr></thead><tbody>';
-  const line=(label,tm,hm,ofit,bfit,isT)=>{
+    '<th rowspan="2" class="grp">상태</th></tr><tr>'+ sub('') + sub(' hp') + sub('') +'</tr></thead><tbody>';
+  // noPrior(전년 미집계) 사업장은 '25·갭을 '—'로 — 0과 비교하면 갭이 허수가 된다.
+  const line=(label,tm,hm,a,isT,note,noCmp)=>{
     const f26=tm[0]+hm[0], f25=tm[1]+hm[1], fg=f26-f25, tg=tm[0]-tm[1], hg=hm[0]-hm[1];
-    const st=fg>0?'<span class="st pos">전년초과 ▲</span>':fg<0?'<span class="st neg">전년미달 ▼</span>':'<span class="st eq">동률</span>';
+    const noPrior = noCmp || !!(a && a.has_prior===false);
+    const st = noCmp ? '<span class="st eq">전년 비교 불가</span>'
+      : noPrior ? '<span class="st eq">신규 (전년 미집계)</span>'
+      : fg>0?'<span class="st pos">전년초과 ▲</span>':fg<0?'<span class="st neg">전년미달 ▼</span>':'<span class="st eq">동률</span>';
     const bold=isT?' style="font-weight:700"':'';
-    let bsrHtml='';
-    if(BSR){ const ach=bfit?ofit/bfit:null;
-      bsrHtml=`<td class="num bsr"${bold}>${NF(ofit)}</td><td class="num bsr"${bold}>${bfit?NF(bfit):'—'}</td><td class="num bsr"${bold}>${ach!=null?(ach*100).toFixed(1)+'%':'—'}</td>`; }
-    return `<tr class="${isT?'total':''}"><td class="lbl">${label}</td>`+
-      `<td class="num"${bold}>${NMn(tm[0])}</td><td class="num"${bold}>${NMn(tm[1])}</td><td class="num ${clsG(tg)}"${bold}>${SIGN(tg)}</td>`+
-      `<td class="num hp"${bold}>${NMn(hm[0])}</td><td class="num hp"${bold}>${NMn(hm[1])}</td><td class="num hp ${clsG(hg)}"${bold}>${SIGN(hg)}</td>`+
-      `<td class="num" style="font-weight:700">${NMn(f26)}</td><td class="num" style="font-weight:700">${NMn(f25)}</td><td class="num ${clsG(fg)}" style="font-weight:700">${SIGN(fg)}</td>`+
-      bsrHtml+`<td style="text-align:center">${st}</td></tr>`;
+    const mark = !a ? '' : a.src==='rawdb' ? '<sup style="color:var(--ink4)">*</sup>'
+      : (a.has_prior===false ? '<sup style="color:var(--ink4)">†</sup>' : '');
+    const dash=(cls,v)=>`<td class="num ${cls}"${bold}>${noPrior?'—':v}</td>`;
+    return `<tr class="${isT?'total':''}"><td class="lbl">${label}${mark}${note||''}</td>`+
+      `<td class="num"${bold}>${NMn(tm[0])}</td>`+dash('',NMn(tm[1]))+dash(clsG(tg),SIGN(tg))+
+      `<td class="num hp"${bold}>${NMn(hm[0])}</td>`+dash('hp',NMn(hm[1]))+dash('hp '+clsG(hg),SIGN(hg))+
+      `<td class="num" style="font-weight:700">${NMn(f26)}</td>`+
+      `<td class="num" style="font-weight:700">${noPrior?'—':NMn(f25)}</td>`+
+      `<td class="num ${clsG(fg)}" style="font-weight:700">${noPrior?'—':SIGN(fg)}</td>`+
+      `<td style="text-align:center">${st}</td></tr>`;
   };
-  let sT=[0,0], sH=[0,0], sB=0, sO=0;
-  S.forEach(s=>{ const tm=[grp(s.on26,TEAM),grp(s.on25,TEAM)], hm=[grp(s.on26,HOME),grp(s.on25,HOME)], bf=bfitOf(s.name), of=ourOf(s.name);
-    sT[0]+=tm[0];sT[1]+=tm[1];sH[0]+=hm[0];sH[1]+=hm[1];sB+=bf;sO+=of; h+=line(s.label,tm,hm,of,bf,false); });
-  h+=line('합계 (전체)',sT,sH,sO,sB,true);
+  let sT=[0,0], sH=[0,0], cT=[0,0], cH=[0,0], nNew=0;   // s=전체, c=비교가능(전년 보유)
+  S.forEach(s=>{ const tm=[grp(s.on26,TEAM),grp(s.on25,TEAM)], hm=[grp(s.on26,HOME),grp(s.on25,HOME)];
+    sT[0]+=tm[0];sT[1]+=tm[1];sH[0]+=hm[0];sH[1]+=hm[1];
+    if(s.anchor && s.anchor.has_prior===false){ nNew++; } else { cT[0]+=tm[0];cT[1]+=tm[1];cH[0]+=hm[0];cH[1]+=hm[1]; }
+    h+=line(s.label,tm,hm,s.anchor,false); });
+  h+=line(`합계 (전체 ${S.length}개)`,sT,sH,null,true,
+    nNew?' <span style="color:var(--ink4);font-weight:400">신규 '+nNew+'개 포함</span>':'', !!nNew);
+  if(nNew) h+=line(`비교가능 합계 (전년 보유 ${S.length-nNew}개)`,cT,cH,null,true,
+    ' <span style="color:var(--ink4);font-weight:400">전년 미집계 '+nNew+'개 제외</span>');
   tb.innerHTML=h+'</tbody>';
 }
 
 // 총평: 합계(FIT) = GS + 홈페이지
 function renderCmt(){
-  let f26=0,f25=0,tm26=0,hm26=0;
+  let f26=0,f25=0,tm26=0,hm26=0,c26=0,c25=0,nNew=0;
   const rows=DATA.summary.map(s=>{ const t26=grp(s.on26,TEAM),h26=grp(s.on26,HOME),fit26=t26+h26,
     fit25=grp(s.on25,TEAM)+grp(s.on25,HOME); f26+=fit26;f25+=fit25;tm26+=t26;hm26+=h26;
-    return {label:s.label,gap:fit26-fit25}; });
-  const gap=f26-f25, behind=rows.filter(r=>r.gap<0), ahead=rows.filter(r=>r.gap>=0);
-  const chip=r=>`<span class="chip ${r.gap<0?'neg':'pos'}">${r.label} ${SIGN(r.gap)}</span>`;
+    const isNew = !!(s.anchor && s.anchor.has_prior===false);
+    if(isNew) nNew++; else { c26+=fit26; c25+=fit25; }
+    return {label:s.label,gap:fit26-fit25,isNew}; });
+  const cgap=c26-c25;
+  const cmp=rows.filter(r=>!r.isNew), behind=cmp.filter(r=>r.gap<0), ahead=cmp.filter(r=>r.gap>=0);
+  const chip=r=>r.isNew?`<span class="chip">${r.label} 신규</span>`
+    :`<span class="chip ${r.gap<0?'neg':'pos'}">${r.label} ${SIGN(r.gap)}</span>`;
   document.getElementById('cmt').innerHTML=
-    `<b>[합계 FIT] 전사업장 동기간 온북 ${NF(f26)}실</b> (전년 ${NF(f25)}실, `+
-    `<span class="chip ${gap<0?'neg':'pos'}">${SIGN(gap)}실 / ${(gap/f25*100).toFixed(1)}%</span>) `+
-    `= GS ${NF(tm26)} + 기타 ${NF(hm26)}. 전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개.<br>`+
+    `<b>[합계 FIT] 전사업장 동기간 온북 ${NF(f26)}실</b> = GS ${NF(tm26)} + 기타 ${NF(hm26)}.<br>`+
+    `<b>동일 기준 비교(전년 보유 ${cmp.length}개)</b> ${NF(c26)}실 vs 전년 ${NF(c25)}실 `+
+    `<span class="chip ${cgap<0?'neg':'pos'}">${SIGN(cgap)}실 / ${(cgap/c25*100).toFixed(1)}%</span> · `+
+    `전년미달 ${behind.length}개 · 전년초과 ${ahead.length}개`+
+    (nNew?` · 신규 ${nNew}개(전년 미집계) 제외`:'')+`.<br>`+
     rows.map(chip).join(' ')+
-    ((DATA.bsr&&DATA.bsr.fit26)?(()=>{const b=Object.values(DATA.bsr.fit26).reduce((a,v)=>a+v,0);
-      const o=DATA.bsr.our_fit?Object.values(DATA.bsr.our_fit).reduce((a,v)=>a+v,0):f26;
-      return `<br><span style="color:var(--cyan)">BSR(${md(DATA.bsr.date)}) 동시점 대조 — 우리 FIT ${NF(o)}실 vs BSR ${NF(b)}실 달성 ${(o/b*100).toFixed(1)}%</span> <span style="color:var(--ink4)">(우리도 BSR 날짜 기준으로 잘라 왜곡 없이 비교. 전채널 vs 온라인팀 스코프차만 존재)</span>`;})():'')+
-    `<br><span style="color:var(--ink3)">FIT = GS(OTA+G-OTA) + 기타(홈페이지·제휴사·일반). 소노 Booking Status Report FIT 정의(영업자료 03일반)와 동일 분류.</span>`;
+    ((DATA.bsr)?(()=>{const B=DATA.bsr, fm=s=>s?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:'';
+      return `<br><span style="color:var(--cyan)">기준 — ${fm(B.date)} 15시 OTB  vs  전년 ${fm(B.prior_date)} (요일 정렬)</span>`;})():'')+
+    `<br><span style="color:var(--ink3)">합계(FIT)는 사업장별 확정 OTB, GS·기타는 자사 구성비로 비례배분(GS+기타=FIT). `+
+    `<sup>*</sup> 확정치 미제공 → 자사 실측 · <sup>†</sup> 전년 미집계(브랜드 전환).</span>`;
 }
 
 // 추이(일별·누적): 세그 필터(SEL) 적용
@@ -345,9 +359,9 @@ function renderCum(){
   document.getElementById('tblCum').innerHTML=h+'</tbody>';
   document.getElementById('footNote').innerHTML=
     '※ FIT(=영업자료 03일반) = OTA · G-OTA · 홈페이지(D멤버스·자사·FIT) · 제휴사 · 일반(세트권·카드대여·할인권 등). 기타=홈피+제휴+일반. Inbound·회원·단체는 FIT 외.<br>'+
-    '※ 합계(FIT) = GS(OTA+G-OTA) + 기타(홈피·제휴·일반) · 취소 반영 동기간 net. 소노 BSR FIT(영업자료 03일반)과 동일 분류, BSR 대비 2026 ~97%·2025 ~90%(홈페이지 채널 취소율·시점차).<br>'+
+    '※ 상단 요약표의 합계(FIT)는 사업장별 확정 OTB(15시 기준, 전년은 요일 정렬일)와 일치. GS·기타는 자사 구성비로 비례배분(GS+기타=FIT).<br>'+
     '※ 7월 동기간 = 판매일자 202607(7월 투숙) 온북. 픽업 증감 = 신규(최초입력일자) − 취소(취소일자), 이중계상 없음.<br>'+
-    '※ 데이터 = raw_db(온라인영업팀 27/28/43/44) 직접 net 산출. 갭(+)=전년초과, 갭(−)=전년미달. 엑셀 다운로드는 OTA+G-OTA 기준(화면 기본 뷰와 동일).';
+    '※ 아래 일별·누적 추이 탭은 자사 실측(취소 반영 net) 그대로 — 확정 OTB 보정 미적용. 갭(+)=전년초과, 갭(−)=전년미달. 엑셀 다운로드는 FIT 기준.';
 }
 
 function switchTab(v){
