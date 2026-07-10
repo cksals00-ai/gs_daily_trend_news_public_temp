@@ -700,6 +700,22 @@ def main():
     data_date = snapshot_date()                       # 예: 20260630
     asof26 = (datetime.strptime(data_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")  # 마지막 완전일
     asof25 = "2025" + asof26[4:]
+
+    # 확정 OTB(15시)와 기준일 정렬: 매일 자동 실행돼도 두 소스가 같은 as-of를 보게 한다.
+    #  · 확정치가 우리보다 과거(주말 후 월요일 등) → 우리 기준일을 그쪽으로 내려 동일 시점 대조
+    #  · 전년 기준일은 확정치의 대조일(요일 정렬)을 그대로 사용
+    bsr = parse_bsr()
+    bsr_lag = 0
+    if bsr:
+        if bsr["date"] < asof26:
+            bsr_lag = (datetime.strptime(asof26, "%Y%m%d") - datetime.strptime(bsr["date"], "%Y%m%d")).days
+            print(f"⚠ 확정 OTB({bsr['date']})가 raw_db 완전일({asof26})보다 {bsr_lag}일 과거 → 기준일을 {bsr['date']}로 정렬")
+            asof26 = bsr["date"]
+        elif bsr["date"] > asof26:
+            bsr_lag = -(datetime.strptime(bsr["date"], "%Y%m%d") - datetime.strptime(asof26, "%Y%m%d")).days
+            print(f"⚠ 확정 OTB({bsr['date']})가 raw_db 완전일({asof26})보다 미래 → 보정 계수는 {asof26} 실측 기준")
+        if bsr.get("prior_date"):
+            asof25 = bsr["prior_date"]
     print(f"스냅샷일={data_date}  동기간 기준(완전일)={asof26} / 전년={asof25}")
 
     print("2026 7월 투숙 로딩...", flush=True)
@@ -726,8 +742,6 @@ def main():
     xl_seg = set(DEFAULT_SEGMENTS); xl_label = "+".join(DEFAULT_SEGMENTS)
     rows26_xl = [r for r in rows26 if r["seg"] in xl_seg]
     rows25_xl = [r for r in rows25 if r["seg"] in xl_seg]
-    bsr = parse_bsr()   # 최신 BSR PDF(15시)의 사업장별 FIT OTB — 로컬 실행 시에만
-
     # FIT 세그 raw_db 실측(비례배분 가중치 + 정합률 산출용)
     def _onbook_seg(rows, cutoff):
         out = defaultdict(lambda: defaultdict(int))
@@ -761,6 +775,7 @@ def main():
                 seg_label=xl_label, bsr=bsr, anchor=anchor, scale=scale)
     payload = build_payload(data_date, asof26, asof25, rows26, rows25, anchor=anchor, scale=scale)
     payload["meta"]["scaled"] = bool(bsr)
+    payload["meta"]["bsr_lag_days"] = bsr_lag
     if bsr:
         payload["bsr"] = {"date": bsr["date"], "prior_date": bsr["prior_date"],
                           "fit26": bsr["fit26"], "fit25": bsr["fit25"],
