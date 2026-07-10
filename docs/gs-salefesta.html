@@ -206,7 +206,29 @@ body{background:var(--bg-main);color:var(--ink);font-family:var(--sans);line-hei
 .placeholder-title{font-size:14px;font-weight:600;color:var(--ink-muted);margin-bottom:6px;}
 .placeholder-desc{font-size:12px;color:var(--ink-faint);}
 
+/* Perf (실적 연동) */
+.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
+.perf-card-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.perf-card-sub{font-size:10px;color:var(--ink-faint);margin-bottom:12px;}
+.bar-row{display:grid;grid-template-columns:118px 1fr 108px;gap:10px;align-items:center;padding:5px 0;}
+.bar-name{font-size:12px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar-track{height:8px;border-radius:5px;background:var(--bg-soft);overflow:hidden;}
+.bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--orange),var(--orange-bright));}
+.bar-fill.info{background:linear-gradient(90deg,#3d7898,var(--info));}
+.bar-fill.positive{background:linear-gradient(90deg,#357a4d,var(--positive));}
+.bar-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);text-align:right;}
+.bar-val span{color:var(--ink-faint);font-weight:500;margin-left:5px;}
+.gauge-wrap{margin-bottom:16px;}
+.gauge-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.gauge-lbl{font-size:12px;font-weight:600;color:var(--ink-soft);}
+.gauge-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--orange-bright);}
+.gauge-track{height:10px;border-radius:6px;background:var(--bg-soft);position:relative;overflow:hidden;}
+.gauge-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange),var(--orange-bright));}
+.gauge-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:4px;}
+.perf-meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.04em;}
+
 @media(max-width:720px){
+  .bar-row{grid-template-columns:96px 1fr 92px;}
   .hero{padding:40px 20px 36px;}
   .hero h1{font-size:24px;}
   .main{padding:24px 18px 44px;}
@@ -570,20 +592,184 @@ body{background:var(--bg-main);color:var(--ink);font-family:var(--sans);line-hei
       <div class="section-num">05</div>
       <div class="section-title">실적 모니터링</div>
     </div>
-    <div class="section-sub">예약 접수 시작 후 채널별·사업장별 소진율 데이터 연동 예정</div>
+    <div class="section-sub" id="perf-sub">온북 실적 자동 연동 · 매일 갱신</div>
 
-    <div class="placeholder">
-      <div class="placeholder-icon">📊</div>
-      <div class="placeholder-title">데이터 연동 대기 중</div>
-      <div class="placeholder-desc">
-        Phase 3 진입 시점(6/11)부터 채널별 쿠폰 소진율·사업장별 RN/매출·OCC 개선 추이를 자동 집계합니다.<br>
-        주간 비교 그래프 · 사업장별 진행률 게이지 · 채널 믹스 변동 추이가 표시될 예정입니다.
+    <div id="perf-root">
+      <div class="placeholder">
+        <div class="placeholder-icon">📊</div>
+        <div class="placeholder-title">실적 불러오는 중…</div>
       </div>
     </div>
   </section>
 
 </main>
 
+<script>
+/* §5 실적 모니터링 — docs/data/salefesta_perf.json (build_salefesta_perf.py, 매일 갱신) */
+(function(){
+  // 기획 목표: §1 계획값(증분 기준). 실적이 아니라 페이지가 이미 명시한 계획 수치.
+  var PLAN = { rnLow:8400, rnHigh:12600, revLow:1470, revHigh:2210 }; // 매출 단위 백만원
+
+  var root = document.getElementById('perf-root');
+  var sub  = document.getElementById('perf-sub');
+
+  var esc = function(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; };
+  var num = function(n){ return Math.round(n).toLocaleString('ko-KR'); };
+  var eok = function(m){ return (m/100).toFixed(1); };           // 백만원 → 억
+  var ym  = function(k){ return k.slice(0,4)+'.'+k.slice(4,6); };
+
+  function bars(rows, key, cls, limit){
+    var list = limit ? rows.slice(0,limit) : rows;
+    var max = Math.max.apply(null, list.map(function(r){ return r[key]; })) || 1;
+    return list.map(function(r){
+      var pct = Math.max(2, r[key]/max*100);
+      return '<div class="bar-row">'
+        + '<div class="bar-name" title="'+esc(r.name)+'">'+esc(r.name)+'</div>'
+        + '<div class="bar-track"><div class="bar-fill '+cls+'" style="width:'+pct.toFixed(1)+'%"></div></div>'
+        + '<div class="bar-val">'+num(r.rn)+'<span>'+eok(r.rev_m)+'억</span></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function gauge(label, actual, low, high, fmt){
+    var pct = Math.min(100, actual/high*100);
+    var lowPct = actual/low*100;
+    return '<div class="gauge-wrap">'
+      + '<div class="gauge-head"><div class="gauge-lbl">'+label+'</div>'
+      + '<div class="gauge-num">'+lowPct.toFixed(0)+'% <span style="color:var(--ink-faint);font-weight:500">(목표 하단 대비)</span></div></div>'
+      + '<div class="gauge-track"><div class="gauge-fill" style="width:'+pct.toFixed(1)+'%"></div></div>'
+      + '<div class="gauge-foot"><span>실적 '+fmt(actual)+'</span>'
+      + '<span>하단 '+fmt(low)+' · 상단 '+fmt(high)+'</span></div>'
+      + '</div>';
+  }
+
+  function monthTable(sale, stay){
+    var keys = Object.keys(sale).concat(Object.keys(stay))
+      .filter(function(v,i,a){ return a.indexOf(v)===i; }).sort();
+    return '<div class="card" style="padding:0;overflow-x:auto;"><table class="tbl"><thead><tr>'
+      + '<th>월</th><th class="num">판매(예약)월 RN</th><th class="num">투숙월 RN</th></tr></thead><tbody>'
+      + keys.map(function(k){
+          return '<tr><td><strong>'+ym(k)+'</strong></td><td class="num">'+num(sale[k]||0)
+            + '</td><td class="num">'+num(stay[k]||0)+'</td></tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+
+  function productTable(products){
+    var TOP = 12;
+    var head = products.slice(0,TOP), tail = products.slice(TOP);
+    var rows = head.map(function(p){
+      return '<tr><td>'+esc(p.name)+'</td><td class="num">'+num(p.rn)+'</td>'
+        + '<td class="num">'+eok(p.room_rev_m)+'억</td><td class="num">'+num(p.adr)+'원</td></tr>';
+    }).join('');
+    if (tail.length){
+      var trn = tail.reduce(function(a,p){ return a+p.rn; },0);
+      var trev = tail.reduce(function(a,p){ return a+p.room_rev_m; },0);
+      rows += '<tr><td style="color:var(--ink-faint);">기타 '+tail.length+'계열</td>'
+        + '<td class="num">'+num(trn)+'</td><td class="num">'+eok(trev)+'억</td><td class="num">–</td></tr>';
+    }
+    var srn = products.reduce(function(a,p){ return a+p.rn; },0);
+    var srev = products.reduce(function(a,p){ return a+p.room_rev_m; },0);
+    rows += '<tr class="total-row"><td>상품계열 합계</td><td class="num">'+num(srn)+'</td>'
+      + '<td class="num">'+eok(srev)+'억</td><td class="num">–</td></tr>';
+    return '<div class="card" style="padding:0;overflow-x:auto;"><table class="tbl"><thead><tr>'
+      + '<th>상품계열</th><th class="num">RN</th><th class="num">객실매출</th><th class="num">ADR</th>'
+      + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  function historyBlock(history){
+    if (history.length < 2){
+      return '<div class="notice">일별 온북 스냅샷은 <strong>'+esc(history[0] ? history[0].date : '-')
+        + '</strong>부터 누적을 시작했습니다. 2일차부터 일별 픽업(증감)이 표시됩니다.</div>';
+    }
+    var rows = history.slice(-14).map(function(h,i,a){
+      var prev = i>0 ? a[i-1] : null;
+      var d = prev ? h.rn - prev.rn : null;
+      var col = d===null ? 'var(--ink-faint)' : (d>0 ? 'var(--positive)' : (d<0 ? 'var(--negative,#c96a6a)' : 'var(--ink-faint)'));
+      var txt = d===null ? '–' : (d>0?'+':'')+num(d);
+      return '<tr><td>'+esc(h.date)+'</td><td class="num">'+num(h.rn)+'</td>'
+        + '<td class="num" style="color:'+col+'">'+txt+'</td>'
+        + '<td class="num">'+eok(h.room_rev_m)+'억</td></tr>';
+    }).join('');
+    return '<div class="card" style="padding:0;overflow-x:auto;"><table class="tbl"><thead><tr>'
+      + '<th>일자</th><th class="num">누적 온북 RN</th><th class="num">일별 픽업</th><th class="num">객실매출</th>'
+      + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  function render(d){
+    var s = d.summary;
+    sub.innerHTML = '<span class="perf-meta">기준 ' + esc(d.meta.base_date)
+      + ' · ' + esc(d.meta.basis) + ' · 기획전코드 「' + esc(d.meta.campaign_key) + '」</span>';
+
+    var html = '';
+
+    html += '<div class="kpi-grid" style="margin-bottom:14px;">'
+      + '<div class="kpi-card"><div class="kpi-lbl">온북 RN</div><div class="kpi-val">'+num(s.rn)+'</div>'
+      +   '<div class="kpi-sub">유효예약 기준 (취소 제외)</div></div>'
+      + '<div class="kpi-card positive"><div class="kpi-lbl">객실매출</div><div class="kpi-val">'+eok(s.room_rev_m)+'억</div>'
+      +   '<div class="kpi-sub">VAT 제외</div></div>'
+      + '<div class="kpi-card info"><div class="kpi-lbl">총매출</div><div class="kpi-val">'+eok(s.total_rev_m)+'억</div>'
+      +   '<div class="kpi-sub">패키지 총액 · 수수료 '+eok(s.commission_m)+'억</div></div>'
+      + '<div class="kpi-card warning"><div class="kpi-lbl">ADR</div><div class="kpi-val">'+num(s.adr)+'원</div>'
+      +   '<div class="kpi-sub">객실매출 ÷ RN</div></div>'
+      + '</div>';
+
+    html += '<div class="card" style="margin-bottom:14px;">'
+      + '<div class="perf-card-title">목표 대비 진행</div>'
+      + '<div class="perf-card-sub">§1 목표는 <strong>추가(증분)</strong> 기준, 실적은 기획전코드 <strong>온북 총량</strong> 기준 — 스코프가 달라 직접 비교가 아닌 참고 지표입니다.</div>'
+      + gauge('추가 RN 8.4~12.6천실', s.rn, PLAN.rnLow, PLAN.rnHigh,
+              function(v){ return num(v)+'실'; })
+      + gauge('추가 매출 14.7~22.1억', s.room_rev_m, PLAN.revLow, PLAN.revHigh,
+              function(v){ return eok(v)+'억'; })
+      + '</div>';
+
+    html += '<div class="perf-grid" style="margin-bottom:14px;">'
+      + '<div class="card"><div class="perf-card-title">세그먼트 믹스</div>'
+      +   '<div class="perf-card-sub">RN · 객실매출</div>'+bars(d.by_segment,'rn','positive')+'</div>'
+      + '<div class="card"><div class="perf-card-title">판매월 · 투숙월</div>'
+      +   '<div class="perf-card-sub">RN 분포</div>'+monthTable(d.by_sale_month, d.by_stay_month)+'</div>'
+      + '</div>';
+
+    html += '<div class="perf-grid" style="margin-bottom:14px;">'
+      + '<div class="card"><div class="perf-card-title">사업장별 실적</div>'
+      +   '<div class="perf-card-sub">RN 내림차순 · '+d.by_property.length+'개 사업장</div>'
+      +   bars(d.by_property,'rn','')+'</div>'
+      + '<div class="card"><div class="perf-card-title">채널(거래처)별 실적</div>'
+      +   '<div class="perf-card-sub">RN 상위 10 · 총 '+d.by_agent.length+'개 채널</div>'
+      +   bars(d.by_agent,'rn','info',10)+'</div>'
+      + '</div>';
+
+    html += '<div class="perf-card-title" style="margin-bottom:6px;">일별 온북 추이</div>'
+      + '<div class="perf-card-sub">최근 14일 · 누적 온북 RN과 일별 증감</div>'
+      + historyBlock(d.history) + '<div style="height:14px"></div>';
+
+    html += '<div class="perf-card-title" style="margin-bottom:6px;">상품계열별 실적</div>'
+      + '<div class="perf-card-sub">'+esc(d.meta.scope_note)+'</div>'
+      + productTable(d.products);
+
+    var sp = d.spring_ref;
+    if (sp && sp.rn){
+      var months = sp.sale_months.map(ym).join(' ~ ');
+      html += '<div class="notice" style="margin-top:14px;">'
+        + '<strong>직전 봄편 계열 참고:</strong> 판매 '+esc(months)+' · '+sp.products+'개 상품계열 · '
+        + 'RN '+num(sp.rn)+' · 객실매출 '+eok(sp.room_rev_m)+'억. '
+        + '여름편 상품계열 합계 대비 RN '+ (d.products.reduce(function(a,p){return a+p.rn;},0)/sp.rn).toFixed(1) +'배.'
+        + '</div>';
+    }
+
+    root.innerHTML = html;
+  }
+
+  fetch('./data/salefesta_perf.json?t=' + Date.now())
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(render)
+    .catch(function(e){
+      root.innerHTML = '<div class="placeholder"><div class="placeholder-icon">⚠️</div>'
+        + '<div class="placeholder-title">실적 데이터를 불러오지 못했습니다</div>'
+        + '<div class="placeholder-desc">data/salefesta_perf.json · '+esc(String(e.message))+'</div></div>';
+    });
+})();
+</script>
 <script src="./js/menu-visibility.js"></script>
 </body>
 </html>

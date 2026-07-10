@@ -166,6 +166,8 @@ run_quick "8/12 generate_insights"          "scripts/generate_insights.py"
 run_quick "9/12 generate_campaign_perf"     "scripts/generate_campaign_performance.py"
 run_quick "10/12 parse_campaign86"          "scripts/parse_campaign86.py"
 run_quick "10b/12 campaign_history"         "scripts/build_campaign_history.py"
+# 10c — 숙세페 여름편 실적 슬라이스(gs-salefesta.html §5). campaign_history.json 산출 이후에 실행해야 함.
+run_quick "10c/12 salefesta_perf"           "scripts/build_salefesta_perf.py"
 run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
 
 # ── [12/12] HTML 빌드 ──────────────────────────────────────────
