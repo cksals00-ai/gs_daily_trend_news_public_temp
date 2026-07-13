@@ -93,8 +93,17 @@ def month_from_weekly_name(name):
 
 
 def date_key(name):
-    m = re.search(r"(20\d{6})", nfc(name))
-    return m.group(1) if m else "00000000"
+    """파일명 날짜 → 정렬키(YYYYMMDD). 8자리(20260713)·6자리(260713=YYMMDD) 모두."""
+    nm = nfc(name)
+    m = re.search(r"(20\d{6})", nm)
+    if m:
+        return m.group(1)
+    # 6자리 YYMMDD (예: 260713 → 20260713). 주차 표기 '3~4' 등과 구분 위해 MMDD 유효성 체크
+    for g in re.findall(r"(?<!\d)(\d{6})(?!\d)", nm):
+        mm, dd = int(g[2:4]), int(g[4:6])
+        if 1 <= mm <= 12 and 1 <= dd <= 31:
+            return "20" + g
+    return "00000000"
 
 
 def _mnum(md):
@@ -447,7 +456,9 @@ def classify(pdf, name):
     ts = txt.replace(" ", "")
     if "EBITDA" in ts.upper() and "투숙률" in ts and "매출합계" in ts:
         return "closing"
-    if "무기명" in ts and "미주합계" in ts and ("분양구좌" in ts or "G-OTA" in ts):
+    # 예상(주간) 리포트: 세그(무기명·G-OTA) + 사업장(아시아·델피노) 표 존재
+    # 해외 라벨(미주합계/하이퐁)은 리포트 판(주간회의/주간업무)마다 달라 시그니처에서 제외.
+    if "무기명" in ts and "G-OTA" in ts and "델피노" in ts and ("아시아" in ts or "점유비" in ts):
         return "weekly"
     return "skip"
 
@@ -463,6 +474,7 @@ def build(src_dir, out_path):
         sys.exit(2)
     YEAR = 2026
     forecast = {}   # month → (datekey, data)
+    forecast_ovs = {}  # month → (datekey, overseas) — 해외 파싱된 최신(폴백용)
     actual = {}     # month → data
     mapping = []    # 보고용: 파일 → 타입/월
     close_chain = {}
@@ -487,6 +499,10 @@ def build(src_dir, out_path):
                 dk = date_key(base)
                 if mo not in forecast or dk >= forecast[mo][0]:
                     forecast[mo] = (dk, data, f)  # 파일경로 보관(아젠다 추출용)
+                # 해외는 판(리포트 양식)마다 파싱 가능 여부가 달라, 해당 월 '해외가 파싱된 최신' 별도 보관(폴백)
+                if data.get("overseas") and data["overseas"].get("sections"):
+                    if mo not in forecast_ovs or dk >= forecast_ovs[mo][0]:
+                        forecast_ovs[mo] = (dk, data["overseas"])
                 mapping.append((base, "예상", mo))
             else:  # closing
                 m = re.search(r"\(26\.(\d\d)\)", nfc(base))
@@ -543,7 +559,12 @@ def build(src_dir, out_path):
             entry["properties"] = fc[1]["properties"]
             entry["prop_total"] = W.metric_dict((fc[1]["prop_total"] or {}).get("rns", {}), "rns") if fc[1].get("prop_total") else None
             entry["prop_total_raw"] = fc[1]["prop_total"]
-            entry["overseas"] = fc[1]["overseas"]
+            # 해외: 선택 리포트에 있으면 사용, 없으면(양식 상이) 그 달 해외 파싱된 최신으로 폴백
+            _ovs = fc[1]["overseas"]
+            if not (_ovs and _ovs.get("sections")) and mo in forecast_ovs:
+                _ovs = forecast_ovs[mo][1]
+                entry["overseas_stale"] = True
+            entry["overseas"] = _ovs
             entry["property_source"] = "forecast"
             # 예상 교차검증: 세그합==사업장합
             st = (fc[1].get("seg_total_full") or {}).get("rns", {}).get("실적")
