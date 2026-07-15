@@ -38,7 +38,7 @@ on_error() {
 trap on_error ERR
 
 # ── .git lock 정리 ───────────────────────────────────────────
-rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
+find .git -maxdepth 3 -name '*.lock' -type f -delete 2>/dev/null || true
 
 # ── 헬퍼 함수 ────────────────────────────────────────────────
 print_header() {
@@ -181,15 +181,19 @@ run_quick "12/12 build"                     "scripts/build.py"
 CURRENT_STAGE="git"
 print_header "Git 커밋 & 푸시"
 
-rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
+find .git -maxdepth 3 -name '*.lock' -type f -delete 2>/dev/null || true
 git add -A
+# _host_crawl_status.json 은 호스트 크롤이 소유하는 상태파일 → daily_update 는 stale 본을
+# 커밋해 원격 최신 ts 를 되돌리면 안 됨(주말 status ts 롤백 원인). 스테이지에서 제외.
+git reset -q -- _host_crawl_status.json 2>/dev/null || true
 
 # 산출물 충돌 자동해소: data/·docs/ 는 --ours(로컬 빌드본), 그 외는 중단要
 resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要)
     local U BAD
     U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
     [ -z "$U" ] && return 0
-    BAD="$(printf '%s\n' "$U" | grep -vE '^(data|docs)/' || true)"
+    # 허용 충돌: data/·docs/ 산출물 + 루트 _host_crawl_status.json(상태파일=생성물)
+    BAD="$(printf '%s\n' "$U" | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' || true)"
     if [ -n "$BAD" ]; then
         echo -e "${RED}    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:${NC}"
         printf '%s\n' "$BAD" | sed 's/^/        /'
@@ -198,6 +202,20 @@ resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要
     fi
     printf '%s\n' "$U" | while IFS= read -r f; do
         [ -z "$f" ] && continue
+        if [ "$f" = "_host_crawl_status.json" ]; then
+            # 상태파일은 ts(ISO 문자열) 최신본 우선 — 롤백 방지
+            OURS_TS="$(git show :2:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
+            THEIRS_TS="$(git show :3:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
+            if [ -n "$THEIRS_TS" ] && { [ -z "$OURS_TS" ] || [[ "$THEIRS_TS" > "$OURS_TS" ]]; }; then
+                git checkout --theirs -- "$f" >/dev/null 2>&1 || true
+                echo "    충돌→최신 status(theirs ts=$THEIRS_TS): $f"
+            else
+                git checkout --ours -- "$f" >/dev/null 2>&1 || true
+                echo "    충돌→최신 status(ours ts=$OURS_TS): $f"
+            fi
+            git add -- "$f" >/dev/null 2>&1 || true
+            continue
+        fi
         git checkout --ours -- "$f" >/dev/null 2>&1 || true
         git add -- "$f" >/dev/null 2>&1 || true
         echo "    충돌→ours(로컬 빌드본): $f"
@@ -219,7 +237,7 @@ DEPLOY_ALREADY_TRIGGERED=0
 safe_push() {
     local attempt rc
     for attempt in 1 2 3; do
-        rm -f .git/index.lock .git/HEAD.lock 2>/dev/null || true
+        find .git -maxdepth 3 -name '*.lock' -type f -delete 2>/dev/null || true
         if git push origin main; then
             return 0
         fi

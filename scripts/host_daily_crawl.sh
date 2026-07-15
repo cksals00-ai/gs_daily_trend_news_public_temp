@@ -55,8 +55,9 @@ log "PROJECT_ROOT: $PROJECT_ROOT"
 log "Python      : $PY ($($PY --version 2>&1))"
 write_status "init" "running" 0
 
-# ── git lock 정리 ────────────────────────────────────────────────────────
-rm -f "$PROJECT_ROOT/.git/index.lock" "$PROJECT_ROOT/.git/HEAD.lock" 2>>"$LOG_FILE"
+# ── git lock 정리 (stale 락 자동정리: index/HEAD/config/refs 등 모든 *.lock) ──
+#   push 실패의 흔한 원인이 죽은 프로세스가 남긴 stale 락이므로 시작 시 싹 제거.
+find "$PROJECT_ROOT/.git" -maxdepth 3 -name '*.lock' -type f -delete 2>>"$LOG_FILE" || true
 
 # ── best-effort 크롤러: 실패해도 파이프라인 계속 (기존 데이터 유지) ──────
 run_crawl() {
@@ -150,11 +151,12 @@ run_fatal "build" "scripts/build.py"
 # ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
 log "--- [git] commit + push ---"
 write_status "git" "running" 0
-cleanup_locks() { rm -f "$PROJECT_ROOT/.git/index.lock" "$PROJECT_ROOT/.git/HEAD.lock" 2>>"$LOG_FILE"; }
+cleanup_locks() { find "$PROJECT_ROOT/.git" -maxdepth 3 -name '*.lock' -type f -delete 2>>"$LOG_FILE" || true; }
 cleanup_locks
 
 # 크롤·빌드 산출물만 스테이징 (입력 xlsx/txt·로그는 .gitignore 가 거름)
-git add data/ docs/ >>"$LOG_FILE" 2>&1
+#   _host_crawl_status.json 은 크롤이 소유하는 상태파일 → 함께 커밋해 최신 ts 를 원격에 반영.
+git add data/ docs/ _host_crawl_status.json >>"$LOG_FILE" 2>&1
 
 if git diff --cached --quiet; then
   log "    ℹ 변경사항 없음 — 커밋 스킵 (원격 fast-forward 만 확인)"
@@ -174,7 +176,8 @@ resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要
   local U BAD
   U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
   [ -z "$U" ] && return 0
-  BAD="$(printf '%s\n' "$U" | grep -vE '^(data|docs)/' || true)"
+  # 허용 충돌: data/·docs/ 산출물 + 루트 _host_crawl_status.json(상태파일=생성물)
+  BAD="$(printf '%s\n' "$U" | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' || true)"
   if [ -n "$BAD" ]; then
     log "    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:"
     printf '%s\n' "$BAD" | sed 's/^/        /' | tee -a "$LOG_FILE" >/dev/null
@@ -183,6 +186,20 @@ resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要
   fi
   printf '%s\n' "$U" | while IFS= read -r f; do
     [ -z "$f" ] && continue
+    if [ "$f" = "_host_crawl_status.json" ]; then
+      # 상태파일은 ts(ISO 문자열) 최신본 우선 — 롤백 방지(주말 status ts 되돌림 재발 차단)
+      OURS_TS="$(git show :2:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
+      THEIRS_TS="$(git show :3:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
+      if [ -n "$THEIRS_TS" ] && { [ -z "$OURS_TS" ] || [[ "$THEIRS_TS" > "$OURS_TS" ]]; }; then
+        git checkout --theirs -- "$f" >>"$LOG_FILE" 2>&1 || true
+        log "    충돌→최신 status(theirs ts=$THEIRS_TS): $f"
+      else
+        git checkout --ours -- "$f" >>"$LOG_FILE" 2>&1 || true
+        log "    충돌→최신 status(ours ts=$OURS_TS): $f"
+      fi
+      git add -- "$f" >>"$LOG_FILE" 2>&1 || true
+      continue
+    fi
     git checkout --ours -- "$f" >>"$LOG_FILE" 2>&1 || true
     git add -- "$f" >>"$LOG_FILE" 2>&1 || true
     log "    충돌→ours(로컬 빌드본): $f"
