@@ -42,12 +42,30 @@ fi
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S %Z')  $*" | tee -a "$LOG_FILE"; }
 
+# 하위 스텝 soft-fail 누적 — 최종 status 에 반드시 드러나게 한다.
+# (예전엔 마지막 write_status "done" "success" 가 앞선 soft_fail 을 덮어써서
+#  기획전 동기화가 며칠째 실패해도 status=success 로만 보였다.)
+SOFT_FAILS=()
+
 write_status() {
   # $1=stage $2=status $3=exit_code
+  local sf_json="" first=1
+  for s in "${SOFT_FAILS[@]}"; do
+    [ $first -eq 1 ] && first=0 || sf_json="$sf_json, "
+    sf_json="$sf_json\"$s\""
+  done
+  local overall="$2"
+  # 하위 스텝이 하나라도 실패했으면 최종 성공을 partial 로 강등
+  if [ "$1" = "done" ] && [ "$2" = "success" ] && [ ${#SOFT_FAILS[@]} -gt 0 ]; then
+    overall="partial"
+  fi
   cat > "$STATUS_FILE" <<EOF
-{"stage": "$1", "status": "$2", "exit_code": $3, "ts": "$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')"}
+{"stage": "$1", "status": "$overall", "exit_code": $3, "ts": "$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')", "soft_failures": [$sf_json], "stale_sources": [$STALE_JSON]}
 EOF
 }
+
+# 산출물 신선도 점검 결과 (아래 check_freshness 가 채움)
+STALE_JSON=""
 
 log "============================================================"
 log "=== host_daily_crawl 시작 ==="
@@ -74,6 +92,7 @@ run_crawl() {
   else
     local rc=$?
     log "    ⚠ $label 실패 (exit=$rc) — 기존 데이터 유지하고 계속"
+    SOFT_FAILS+=("$label")
     write_status "$label" "soft_fail" "$rc"
   fi
   return 0

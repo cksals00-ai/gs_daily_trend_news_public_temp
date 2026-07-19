@@ -32,6 +32,7 @@ import sys
 import csv
 import re
 import io
+import time
 import urllib.request
 from pathlib import Path
 from collections import defaultdict
@@ -128,18 +129,31 @@ def parse_kor_date(s: str):
         return None
 
 
+def _fetch_with_retry(url: str, tries: int = 3, timeout: int = 60) -> str:
+    """구글시트 published CSV 는 간헐적으로 read timeout 이 난다.
+    1회 실패로 전체 동기화가 죽거나 Key 매핑이 부분 유실되므로 재시도한다."""
+    last = None
+    for attempt in range(1, tries + 1):
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except Exception as e:
+            last = e
+            if attempt < tries:
+                wait = 5 * attempt
+                print(f"  fetch 실패({attempt}/{tries}): {e} — {wait}s 후 재시도")
+                time.sleep(wait)
+    raise last
+
+
 def fetch_csv(url: str) -> list[list[str]]:
     """Google publish-to-web CSV 다운로드 → rows"""
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = resp.read().decode("utf-8", errors="replace")
-    return list(csv.reader(io.StringIO(data)))
+    return list(csv.reader(io.StringIO(_fetch_with_retry(url))))
 
 
 def fetch_text(url: str) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read().decode("utf-8", errors="replace")
+    return _fetch_with_retry(url)
 
 
 def discover_sheet_gids() -> dict[str, str]:
@@ -367,6 +381,7 @@ def main():
     # ─ Key 서브시트에서 패키지코드 매핑 ─
     key_to_codes: dict[str, list[str]] = {}
     key_to_meta: dict[str, dict[str, str]] = {}
+    failed_keys: list[str] = []   # 페치 실패 Key — 기존 매핑 보존 대상
     fetched = 0
     skipped_unpublished = 0
     skipped_empty = 0
@@ -415,9 +430,23 @@ def main():
                 if meta:
                     key_to_meta[key] = meta
             except Exception as e:
+                failed_keys.append(key)
                 print(f"  Key={key} (gid={gid}) 페치 실패: {e}")
     print(f"  Key 서브시트 결과: {fetched}건 패키지코드 적재 / "
-          f"미발행 {skipped_unpublished} / 빈시트 {skipped_empty}")
+          f"미발행 {skipped_unpublished} / 빈시트 {skipped_empty} / "
+          f"페치실패 {len(failed_keys)}")
+
+    # ─ 페치 실패 Key 는 기존 JSON 의 매핑을 보존 (부분 실패로 매핑이 사라지는 것 방지) ─
+    if failed_keys and OUTPUT_JSON.exists():
+        try:
+            prev = json.loads(OUTPUT_JSON.read_text(encoding="utf-8"))
+            prev_codes = prev.get("key_to_codes", {}) or {}
+            for key in failed_keys:
+                if key not in key_to_codes and prev_codes.get(key):
+                    key_to_codes[key] = prev_codes[key]
+                    print(f"  Key={key} 기존 매핑 보존 ({len(prev_codes[key])}개 코드)")
+        except Exception as e:
+            print(f"  기존 key_to_codes 보존 실패(무시): {e}")
 
     # events에 패키지코드 머지 + 동일 Key의 모든 row가 같은 코드를 공유
     pkg_used_by: dict[str, list[str]] = defaultdict(list)  # 코드 → [keys] (중복 추적)
