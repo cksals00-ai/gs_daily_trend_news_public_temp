@@ -805,7 +805,7 @@
             <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--positive);background:rgba(76,175,111,0.15);padding:2px 7px;border-radius:3px">✅ RESOLVED</span>
             <span style="font-size:13px;font-weight:700;color:var(--ink)">기획전 실적 업데이트 지연 — 해소</span>
           </div>
-          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 7/11 기준 데이터 신선도 정상(otb_data 07-11 05:02·db_aggregated 07-11 05:02 갱신, RM FCST는 Revenue Meeting_2026.07.07.pdf 스냅샷 반영) — 6/18 host 크롤 git 자동화(fetch→merge→ours→재push) 내장으로 push 차단·미푸시 누적 제약도 해소, origin/main 완전 동기화(0 ahead).</div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 7/20 기준 데이터 신선도 정상(db_aggregated 07-20 05:02·otb_data 07-20 08:06 갱신, RM FCST는 Revenue Meeting_2026.07.14.pdf 스냅샷 반영) — 6/18 host 크롤 git 자동화(fetch→merge→ours→재push) + 7/15 stale 락 자동정리 확대로 push 차단·미푸시 누적 제약 해소, origin/main 완전 동기화(0 ahead). Cowork 스케줄러 07-16~19 미가동 구간에도 호스트 크롤이 커버해 공백 없음.</div>
         </div>
         <div style="border-left:4px solid var(--positive);background:var(--positive-bg);padding:12px 16px;border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1037,6 +1037,19 @@
       <h2><span class="num">4</span> 변경이력</h2>
       <div class="sub">시스템 업데이트 및 수정 내역</div>
       <div style="display:flex;flex-direction:column;gap:14px" id="changelog-list">
+        <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-07-12 ~ 07-20</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:var(--bg-soft);padding:2px 6px;border-radius:3px">v3.7</span>
+          </div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">데이터 최신화</b> — RM FCST(<b>Revenue Meeting_2026.07.14.pdf 스냅샷</b>·6/7/8/9월 커버·07-15 추출)·Daily Booking·온북 DB 반영. Grand Total 7월 255,096실/58,270백만원, 8월 274,167실/67,234백만원, 9월 189,645실/38,311백만원. Daily Booking 2026-07-15 스냅샷 GT 온북 <b>7월 238,756실(달성 91.2%·YoY +0.9%)</b> · 8월 201,250실(70.9%·YoY -23.3%) · 9월 47,597실(23.8%·YoY -72.4%) · 10월 39,036실(16.1%·YoY -83.6%)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">연간 누적</b>(OTB 07-20 기준) — 온북 <b>571,228실</b>(Budget 859,709 · 달성 <b>66.4%</b> · YoY +20.9%) · 매출 124,306백만원(달성 68.3% · YoY +31.7%) · ADR 217,611원(YoY +8.9%) · AI FCST 894,938실(104.1%). 당일 순증 +2,216실 · 7월 마감 카운트다운, 9~10월 조기 선행관리 구간</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">파이프라인 안정화</b> — git-safe stale 락 자동정리 확대 + <code>_host_crawl_status.json</code> 최신 ts 우선 머지(07-15) · 전체 세그 분석 자료 월별 갱신(07-13) · 호스트 크롤 07-19·07-20 05:02 연속 정상 커밋(exit 0)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">스케줄러 관측</b> — Cowork 스케줄러 07-16~07-19 미가동 → 07-20 08:04 일괄 보정 실행. 태스크 정리로 총 22건(활성 11) 체계화(trend-report-regional·tf-meeting-calendar-sync 삭제). 호스트 파이프라인은 공백 없이 가동돼 데이터 신선도 영향 없음</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>뉴스 218건 수집(신규 7건 · 07-20 05:04) · 활성 스케줄 <b>11건</b> 가동 · 구축리포트 리포트 인벤토리 58건 · origin/main 완전 동기화(0 ahead)</li>
+          </ul>
+        </div>
         <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-07-05 ~ 07-11</span>
