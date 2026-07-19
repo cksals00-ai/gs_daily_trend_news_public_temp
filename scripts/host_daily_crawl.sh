@@ -151,6 +151,7 @@ if [ -x "$CRAWLER_PY" ] && [ -f "$CRAWLER_ROOT/build_competitor_analysis.py" ]; 
     write_status "competitor_analysis" "done" 0
   else
     log "    ⚠ competitor_analysis 실패 — 기존 데이터 유지하고 계속"
+    SOFT_FAILS+=("competitor_analysis")
     write_status "competitor_analysis" "soft_fail" 1
   fi
 else
@@ -169,6 +170,42 @@ run_fatal "build" "scripts/build.py"
 
 # ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
 log "--- [git] commit + push ---"
+# ── [7.5] 산출물 신선도 점검 (소스 미수신 조용한 정지 감지) ──────────────
+#   Daily Booking / RM FCST 는 사용자가 PDF 를 드롭해야 갱신된다. 소스가 안 들어오면
+#   파이프라인은 정상 종료하므로, 며칠씩 stale 인 것을 아무도 모른 채 지나간다.
+#   → 기준일수 초과 시 로그 경고 + status.stale_sources 에 기록.
+log "--- [check] 산출물 신선도 ---"
+STALE_JSON=$("$PY" - <<'PYEOF' 2>>"$LOG_FILE"
+import json, datetime, pathlib
+today = datetime.date.today()
+stale = []
+def age(d):
+    return (today - d).days
+try:
+    m = json.load(open('data/daily_booking.json'))['meta']
+    d = datetime.date.fromisoformat(m['report_date'])
+    if age(d) > 2:
+        stale.append(f"daily_booking:{m['report_date']}({age(d)}일)")
+except Exception as e:
+    stale.append(f"daily_booking:read_error({e})")
+try:
+    r = json.load(open('data/rm_fcst.json'))
+    sd = datetime.date.fromisoformat(r['_snapshot_date'].replace('.', '-'))
+    if age(sd) > 8:   # RM 은 주간 회의 자료 → 8일 기준
+        stale.append(f"rm_fcst:{r['_snapshot_date']}({age(sd)}일)")
+except Exception as e:
+    stale.append(f"rm_fcst:read_error({e})")
+for s in stale:
+    print(f"STALE {s}", file=__import__('sys').stderr)
+print(", ".join(f'"{s}"' for s in stale))
+PYEOF
+)
+if [ -n "$STALE_JSON" ]; then
+  log "    ⚠ stale 산출물: $STALE_JSON — 소스 PDF 미수신 가능성(사용자 확인 필요)"
+else
+  log "    ✅ 산출물 신선도 정상"
+fi
+
 write_status "git" "running" 0
 cleanup_locks() { find "$PROJECT_ROOT/.git" -maxdepth 3 -name '*.lock' -type f -delete 2>>"$LOG_FILE" || true; }
 cleanup_locks
