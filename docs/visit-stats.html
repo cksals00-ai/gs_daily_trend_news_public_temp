@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="auth-required" content="admin">
+<script src="./js/auth.js"></script>
+<title>방문 현황 · Usage Analytics · GS 영업기획</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --rule:#1e2733;
+    --ink:#e6edf3; --ink-dim:#9aa7b4; --ink-faint:#5b6672;
+    --gold:#c9a063; --gold-bright:#e6b970; --blue:#58a6ff; --green:#3fb950; --red:#e5737a;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);
+       -webkit-font-smoothing:antialiased;padding:0 0 60px}
+  a{color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+  header.mast{border-bottom:1px solid var(--rule);padding:22px 0 18px;margin-bottom:26px;
+              background:linear-gradient(180deg,#0d131c,transparent)}
+  .mast-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .mast h1{font-size:19px;letter-spacing:.14em;margin:0;font-weight:700}
+  .mast h1 .dot{color:var(--gold-bright)}
+  .mast .sub{font-size:11px;color:var(--ink-faint);letter-spacing:.16em;margin-top:6px;text-transform:uppercase}
+  .back{font-size:11px;color:var(--ink-faint);text-decoration:none;border:1px solid var(--rule);
+        padding:5px 11px;border-radius:4px;transition:color .15s,border-color .15s}
+  .back:hover{color:var(--ink);border-color:var(--gold)}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--green);letter-spacing:.14em}
+  .live .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);
+           animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+  .tile{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:16px 18px}
+  .tile .k{font-size:10px;color:var(--ink-faint);letter-spacing:.14em;text-transform:uppercase}
+  .tile .v{font-size:26px;font-weight:700;margin-top:8px;color:var(--gold-bright)}
+  .tile .v small{font-size:12px;color:var(--ink-dim);font-weight:400;letter-spacing:.05em}
+
+  .sec-head{display:flex;align-items:center;gap:10px;margin:30px 0 12px}
+  .sec-head .bar{width:3px;height:15px;background:var(--gold)}
+  .sec-head .t{font-size:13px;letter-spacing:.12em;font-weight:700}
+  .sec-head .c{font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--ink-faint);font-weight:600;font-size:10px;letter-spacing:.1em;
+     text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+  th.num,td.num{text-align:right}
+  td{padding:9px 10px;border-bottom:1px solid #161f2b;vertical-align:middle}
+  tr:hover td{background:#0f1620}
+  .rank{color:var(--ink-faint);font-size:11px;width:34px}
+  .rank.top{color:var(--gold-bright);font-weight:700}
+  .pg{font-weight:600}
+  .pg small{display:block;color:var(--ink-faint);font-weight:400;font-size:10.5px;margin-top:2px}
+  .visits{color:var(--gold-bright);font-weight:700}
+  .bar-cell{width:130px}
+  .barwrap{height:6px;background:#1a2330;border-radius:3px;overflow:hidden}
+  .barfill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright))}
+  .roles{font-size:10.5px;color:var(--ink-dim)}
+  .role-chip{display:inline-block;padding:0 5px;border-radius:3px;margin-right:3px;font-size:9.5px}
+  .r-admin{background:rgba(229,115,115,.16);color:#e5737a}
+  .r-sales{background:rgba(232,162,86,.16);color:#e8a256}
+  .r-executive{background:rgba(88,166,255,.16);color:#58a6ff}
+  .r-external{background:rgba(168,146,200,.16);color:#a892c8}
+  .r-anon{background:rgba(120,130,140,.16);color:#8b97a3}
+  .last{color:var(--ink-dim);font-size:11px}
+
+  .never{display:flex;flex-wrap:wrap;gap:7px}
+  .never .chip{font-size:11px;color:var(--ink-dim);background:var(--panel2);border:1px solid var(--rule);
+               border-radius:4px;padding:4px 9px}
+  .never .chip.hidden-flag{border-color:rgba(201,160,99,.3)}
+  .never .chip small{color:var(--ink-faint);margin-left:5px;font-size:9.5px}
+
+  .msg{padding:40px 20px;text-align:center;color:var(--ink-dim);font-size:13px;line-height:1.7}
+  .msg a{color:var(--gold-bright)}
+  .note{font-size:10.5px;color:var(--ink-faint);margin-top:8px;line-height:1.6}
+  @media(max-width:760px){
+    .tiles{grid-template-columns:repeat(2,1fr)}
+    .bar-cell,.roles{display:none}
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-row">
+      <div>
+        <h1><span class="dot">◈</span> 방문 현황 · Usage Analytics</h1>
+        <div class="sub">1개월 사용도 트라이얼 · 페이지 정리 근거</div>
+      </div>
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <a class="back" href="gs-map.html">← 영업기획</a>
+        <span class="live"><span class="d"></span><span id="live-label">LIVE · 60초 자동갱신</span></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="tiles" class="tiles" style="display:none">
+    <div class="tile"><div class="k">총 방문</div><div class="v" id="t-total">—</div></div>
+    <div class="tile"><div class="k">순 사용자</div><div class="v" id="t-users">—</div></div>
+    <div class="tile"><div class="k">방문된 페이지</div><div class="v" id="t-pages">—</div></div>
+    <div class="tile"><div class="k">집계 기간</div><div class="v" id="t-period" style="font-size:14px">—</div></div>
+  </div>
+
+  <div id="content"></div>
+
+  <div id="loading" class="msg">불러오는 중…</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var DEFAULT_API='https://script.google.com/macros/s/AKfycbz9JwH0BJfcH-AVo9Vy1EYasER5jAz_5ZL9e2v22PtrGZ7Yb5ATbJLuUJ9UvGDjv07MJA/exec';
+
+  // 현재 대시보드 페이지 카탈로그(0회 방문 탐지용). 숨김메뉴=hidden.
+  var CATALOG=[
+    ['action_plan_dashboard.html','Action Plan'],['admin.html','데일리 키인'],['admin-users.html','회원 관리'],
+    ['booking-status.html','Booking Status'],['booking-trend.html','예약 추이'],['campaign-followup.html','기획전 팔로업'],
+    ['channel.html','채널 분석'],['channel-mapping.html','채널 매핑'],['daily-pickup-report.html','데일리 픽업'],
+    ['data-check.html','데이터 점검'],['external-report.html','외부 리포트(로컬)'],['fcst-admin.html','FCST 관리'],
+    ['fcst-status.html','FCST 키인 현황'],['fcst-trend.html','FCST 추이'],['gs-chat.html','세일즈 챗'],
+    ['gs-closing-report.html','마감 리포트'],['gs-gsa-report.html','GSA 리포트'],['gs-influencer.html','인플루언서'],
+    ['gs-map.html','영업기획 맵'],['gs-proposal.html','품의 기획','hidden'],['gs-proposal-yeosu.html','여수 품의서'],
+    ['gs-report.html','구축 현황'],['gs-request.html','요청 관리'],['gs-salefesta.html','숙세페 실적'],
+    ['gs-sales.html','세일즈'],['gs-sales-report.html','세일즈 리포트'],['gs-segment-analysis.html','전체 세그 분석','hidden'],
+    ['gs-setup-report.html','셋업 리포트'],['gs-strategy.html','전략'],['gs-strategy-report.html','전략 리포트'],
+    ['gs-verify.html','검증'],['gs-watch.html','워치'],['gs-weekly.html','주간회의자료'],
+    ['hidden-menus.html','숨김 메뉴 관리'],['index.html','트렌드 리포트'],['inbound-nationality-keyin.html','인바운드 국적'],
+    ['inbound-nationality-keyin-sales.html','인바운드 국적(세일즈)'],['inbound-strategy-keyin.html','인바운드 전략'],
+    ['ly-product.html','전년 상품','hidden'],['ly-trend.html','전년 추이'],['manager-analysis.html','담당자 분석','hidden'],
+    ['monthly.html','월별'],['otb.html','GS 실적'],['overseas.html','해외'],['palatium.html','팔라티움(로컬)'],
+    ['pickup-678.html','픽업 6/7/8월'],['product-detail.html','상품 상세'],['property-report.html','사업장 리포트'],
+    ['pumui.html','품의'],['rate-converter.html','요금 변환'],['sales-guide.html','세일즈 가이드'],
+    ['sales-kpi.html','세일즈 KPI'],['stay-date.html','투숙일'],['strategy-keyin.html','전략 키인'],
+    ['verification-tracker.html','검증 트래커'],['weekly-compare.html','주간 비교'],['ytd.html','YTD']
+  ];
+  var LABELS={},HIDDEN={};
+  CATALOG.forEach(function(c){LABELS[c[0]]=c[1];if(c[2]==='hidden')HIDDEN[c[0]]=1;});
+
+  function api(){try{var v=localStorage.getItem('gsn_auth_api_url');if(v)return v;}catch(e){}return DEFAULT_API;}
+  function token(){try{return localStorage.getItem('gsn_auth_token')||'';}catch(e){return'';}}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function roleChips(roles){
+    var order=['admin','sales','executive','external','anon'];
+    return order.filter(function(r){return roles[r];}).map(function(r){
+      return '<span class="role-chip r-'+r+'">'+r+' '+roles[r]+'</span>';
+    }).join('');
+  }
+
+  function render(d){
+    document.getElementById('loading').style.display='none';
+    var tiles=document.getElementById('tiles');tiles.style.display='';
+    document.getElementById('t-total').innerHTML=(d.total||0).toLocaleString()+' <small>회</small>';
+    document.getElementById('t-users').innerHTML=(d.users||0)+' <small>명</small>';
+    document.getElementById('t-pages').innerHTML=(d.pages?d.pages.length:0)+' <small>개</small>';
+    var per=d.period||{};
+    document.getElementById('t-period').textContent=(per.from&&per.to)?(per.from+' ~ '+per.to):'—';
+
+    var max=(d.pages&&d.pages[0])?d.pages[0].visits:1;
+    var rows=(d.pages||[]).map(function(p,i){
+      var lbl=LABELS[p.page]||'';
+      var w=Math.max(3,Math.round(p.visits/max*100));
+      return '<tr>'+
+        '<td class="rank'+(i<3?' top':'')+'">'+(i+1)+'</td>'+
+        '<td class="pg">'+esc(lbl||p.page)+(lbl?'<small>'+esc(p.page)+(HIDDEN[p.page]?' · 숨김메뉴':'')+'</small>':'')+'</td>'+
+        '<td class="num visits">'+p.visits+'</td>'+
+        '<td class="bar-cell"><div class="barwrap"><div class="barfill" style="width:'+w+'%"></div></div></td>'+
+        '<td class="num">'+p.unique+'</td>'+
+        '<td class="roles">'+roleChips(p.roles||{})+'</td>'+
+        '<td class="last">'+esc(p.last||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    var visited={};(d.pages||[]).forEach(function(p){visited[p.page]=1;});
+    var never=CATALOG.map(function(c){return c[0];}).filter(function(f){
+      return f!=='visit-stats.html'&&!visited[f];
+    });
+    var neverHtml=never.map(function(f){
+      return '<span class="chip'+(HIDDEN[f]?' hidden-flag':'')+'">'+esc(LABELS[f]||f)+
+             '<small>'+esc(f)+(HIDDEN[f]?' · 숨김':'')+'</small></span>';
+    }).join('');
+
+    document.getElementById('content').innerHTML=
+      '<div class="sec-head"><span class="bar"></span><span class="t">페이지별 방문 순위</span>'+
+        '<span class="c">갱신 '+esc(d.generated||'')+' KST</span></div>'+
+      '<table><thead><tr><th class="rank">#</th><th>페이지</th><th class="num">방문</th>'+
+        '<th class="bar-cell"></th><th class="num">순사용자</th><th>역할 분포</th><th>최근</th></tr></thead>'+
+        '<tbody>'+(rows||'<tr><td colspan="7" class="msg">아직 방문 기록이 없습니다.</td></tr>')+'</tbody></table>'+
+      '<div class="sec-head" style="margin-top:34px"><span class="bar" style="background:var(--ink-faint)"></span>'+
+        '<span class="t">아직 0회 방문</span><span class="c">'+never.length+'개 · 미사용 후보</span></div>'+
+      '<div class="never">'+(neverHtml||'<span class="chip">모든 페이지가 최소 1회 방문됨</span>')+'</div>'+
+      '<div class="note">· 방문자당 같은 페이지는 30분에 1회로 집계(새로고침 노이즈 제외). '+
+        '· uid=이메일 salt 해시(원문 미저장). · 트라이얼 데이터, 표본이 쌓일수록 정확.</div>';
+  }
+
+  function showMsg(html){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').innerHTML='<div class="msg">'+html+'</div>';
+  }
+
+  function load(){
+    var t=token();
+    if(!t){showMsg('관리자 로그인이 필요합니다.<br><a href="login.html">로그인하기</a>');return;}
+    fetch(api()+'?action=visit_stats&token='+encodeURIComponent(t))
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(j&&j.status==='ok'){render(j);}
+        else if(j&&j.code==='forbidden'){showMsg('admin 권한이 필요한 페이지입니다.');}
+        else if(j&&j.code==='unauthorized'){showMsg('세션이 만료되었습니다.<br><a href="login.html">다시 로그인</a>');}
+        else{showMsg('데이터를 불러오지 못했습니다.<br><small>'+esc((j&&j.message)||'unknown')+'</small>');}
+      })
+      .catch(function(e){showMsg('네트워크 오류: '+esc(e.message||e));});
+  }
+
+  load();
+  setInterval(load,60000);
+})();
+</script>
+<script src="./js/menu-visibility.js"></script>
+<script src="./js/visit-log.js"></script>
+</body>
+</html>

@@ -452,6 +452,45 @@ function handleLogVisit_(body) {
   return ok_({ logged: true });
 }
 
+// 실시간 뷰어용 집계 (admin 토큰 게이트). docs/visit-stats.html 가 호출.
+//   페이지별 방문수·순사용자·역할분포·최근방문 + 전체 순사용자. __selftest__ 행 제외.
+function handleVisitStats_(params) {
+  const sh = getSheet_();
+  const me = authedUser_(sh, params.token);
+  if (!me) return err_('인증 실패', 'unauthorized');
+  if (me.role !== 'admin') return err_('권한 없음(admin 전용)', 'forbidden');
+  const tz = 'Asia/Seoul';
+  const gen = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm');
+  const vs = getVisitLogSheet_();
+  const last = vs.getLastRow();
+  if (last < 2) return ok_({ pages: [], total: 0, users: 0, period: {}, generated: gen });
+  const vals = vs.getRange(2, 1, last - 1, VISIT_LOG_HEADERS.length).getValues();
+  const per = {}, allUids = {};
+  let total = 0, minD = null, maxD = null;
+  for (let i = 0; i < vals.length; i++) {
+    const page = String(vals[i][2] || '');
+    if (!page || page.indexOf('__selftest__') === 0) continue;
+    const date = String(vals[i][1] || '');
+    const uid = String(vals[i][3] || '');
+    const role = String(vals[i][4] || 'anon');
+    total++;
+    if (uid) allUids[uid] = 1;
+    if (date) { if (!minD || date < minD) minD = date; if (!maxD || date > maxD) maxD = date; }
+    const p = per[page] || (per[page] = { page: page, visits: 0, uids: {}, roles: {}, last: null });
+    p.visits++;
+    if (uid) p.uids[uid] = 1;
+    p.roles[role] = (p.roles[role] || 0) + 1;
+    if (date && (!p.last || date > p.last)) p.last = date;
+  }
+  const pages = Object.keys(per).map(function (k) {
+    const p = per[k];
+    return { page: p.page, visits: p.visits, unique: Object.keys(p.uids).length, roles: p.roles, last: p.last };
+  });
+  pages.sort(function (a, b) { return b.visits - a.visits; });
+  return ok_({ pages: pages, total: total, users: Object.keys(allUids).length,
+               period: { from: minD, to: maxD }, generated: gen });
+}
+
 // 집계 파이프라인용 읽기 전용 export (스크립트 속성 SYNC_KEY 게이트).
 // scripts/build_visit_stats.py 가 호출.
 function handleExportVisits_(params) {
@@ -483,6 +522,7 @@ function doGet(e) {
     if (action === 'load_admin') return handleLoadAdmin_(p);
     if (action === 'export_admin') return handleExportAdmin_(p);
     if (action === 'export_visits') return handleExportVisits_(p);
+    if (action === 'visit_stats') return handleVisitStats_(p);
     if (action === 'ping')       return ok_({ pong: true });
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {
