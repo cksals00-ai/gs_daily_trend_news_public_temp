@@ -165,15 +165,61 @@ fi
 #   중단되어 기존 campaign_data.json 이 그대로 보존됨 → best-effort(run_crawl).
 run_crawl "campaign_data_sync" "scripts/generate_campaign_data.py"
 
+# ── [6.9] 부킹/RM PDF 자동 파싱 (회귀 안전·이중커밋 없음) ─────────────────
+#   사용자가 update_daily_booking.sh / update_rm_fcst.sh 를 매일 수동 실행하는 걸
+#   깜빡하면 며칠씩 stale 이 된다(이번 사건의 근본원인). 여기서 최신 PDF 를
+#   자동 반영하되:
+#     - 파일명 날짜가 "이미 반영된 보고일보다 엄격히 최신"일 때만 파싱(회귀 방지)
+#     - best-effort: 파싱 실패해도 크롤 중단 안 함(SOFT_FAILS 기록)
+#     - 별도 commit/push 없음 — 바로 뒤 build + 크롤 자체의 단일 commit 이 흡수
+#   수동 스크립트(update_*.sh)는 그대로 유효(회귀가드·검증·강제옵션 포함).
+auto_parse_pdf() {
+  # $1=label $2=parser $3=pdf_glob_dir $4=pdf_iname $5=current_date(ISO or empty)
+  local label="$1" parser="$2" dir="$3" iname="$4" cur="$5"
+  [ -f "$parser" ] || { log "    ⚠ $label: $parser 없음 — 스킵"; return 0; }
+  [ -d "$dir" ]    || { log "    ⚠ $label: $dir 없음 — 스킵"; return 0; }
+  #   파일명 어디든 있는 YYYY.MM.DD 를 정렬키로 뽑는다(날짜 뒤 접미사 파일도 처리).
+  #   키 없는(날짜 없는) 파일은 제외.
+  local pdf
+  pdf="$(find "$dir" -maxdepth 1 -type f -iname "$iname" 2>/dev/null \
+        | sed -E 's/.*_([0-9]{4}\.[0-9]{2}\.[0-9]{2}).*/\1\t&/' \
+        | grep -E '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\t' \
+        | sort | tail -1 | cut -f2-)"
+  [ -n "$pdf" ] || { log "    ⚠ $label: 날짜 있는 PDF 없음 — 스킵(기존 유지)"; return 0; }
+  local pdate
+  pdate="$(basename "$pdf" | sed -E 's/.*_([0-9]{4})\.([0-9]{2})\.([0-9]{2}).*/\1-\2-\3/')"
+  if [ -n "$cur" ] && [ -n "$pdate" ] && [ ! "$pdate" \> "$cur" ]; then
+    log "    ✅ $label: 최신 PDF($pdate) ≤ 반영본($cur) — 재파싱 불필요"
+    return 0
+  fi
+  log "    → $label: 신규 PDF 파싱 ($pdate > ${cur:-없음}) — $(basename "$pdf")"
+  if "$PY" "$parser" "$pdf" >>"$LOG_FILE" 2>&1; then
+    log "    ✅ $label: $pdate 반영 완료"
+  else
+    local rc=$?
+    log "    ⚠ $label: 파싱 실패(exit=$rc) — 기존 데이터 유지"
+    SOFT_FAILS+=("$label")
+  fi
+  return 0
+}
+
+log "--- [parse] 부킹/RM PDF 자동 반영 ---"
+BK_CUR="$("$PY" -c "import json;d=json.load(open('data/daily_booking.json'));md=d.get('months_detail') or [{}];print(md[0].get('report_date','') or '')" 2>/dev/null)"
+RM_CUR="$("$PY" -c "import json;print((json.load(open('data/rm_fcst.json')).get('_snapshot_date','') or '').replace('.','-'))" 2>/dev/null)"
+auto_parse_pdf "auto_booking" "scripts/parse_daily_booking.py" \
+  "data/Daily Booking Report PDF" "Daily Booking Report_*.pdf" "$BK_CUR"
+auto_parse_pdf "auto_rm_fcst"  "scripts/parse_rm_fcst.py" \
+  "data/RM자료" "Revenue*Meeting_*.pdf" "$RM_CUR"
+
 # ── [7] HTML 빌드 (필수) ──────────────────────────────────────────────────
 run_fatal "build" "scripts/build.py"
 
-# ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
-log "--- [git] commit + push ---"
 # ── [7.5] 산출물 신선도 점검 (소스 미수신 조용한 정지 감지) ──────────────
 #   Daily Booking / RM FCST 는 사용자가 PDF 를 드롭해야 갱신된다. 소스가 안 들어오면
 #   파이프라인은 정상 종료하므로, 며칠씩 stale 인 것을 아무도 모른 채 지나간다.
 #   → 기준일수 초과 시 로그 경고 + status.stale_sources 에 기록.
+#   주의: daily_booking 의 meta.report_date 는 갱신되지 않는 stale 필드다(항상 옛날짜).
+#         신뢰 가능한 최신 보고일은 months_detail[0].report_date (update 스크립트 회귀가드도 이 값 사용).
 log "--- [check] 산출물 신선도 ---"
 STALE_JSON=$("$PY" - <<'PYEOF' 2>>"$LOG_FILE"
 import json, datetime, pathlib
@@ -182,10 +228,12 @@ stale = []
 def age(d):
     return (today - d).days
 try:
-    m = json.load(open('data/daily_booking.json'))['meta']
-    d = datetime.date.fromisoformat(m['report_date'])
-    if age(d) > 2:
-        stale.append(f"daily_booking:{m['report_date']}({age(d)}일)")
+    d = json.load(open('data/daily_booking.json'))
+    md = d.get('months_detail') or [{}]
+    rpt = md[0].get('report_date') or ''
+    dd = datetime.date.fromisoformat(rpt)
+    if age(dd) > 2:
+        stale.append(f"daily_booking:{rpt}({age(dd)}일)")
 except Exception as e:
     stale.append(f"daily_booking:read_error({e})")
 try:
@@ -205,6 +253,9 @@ if [ -n "$STALE_JSON" ]; then
 else
   log "    ✅ 산출물 신선도 정상"
 fi
+
+# ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
+log "--- [git] commit + push ---"
 
 write_status "git" "running" 0
 cleanup_locks() { find "$PROJECT_ROOT/.git" -maxdepth 3 -name '*.lock' -type f -delete 2>>"$LOG_FILE" || true; }
