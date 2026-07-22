@@ -387,7 +387,7 @@ def main():
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "segment_scope": "OTA+G-OTA+Inbound (당일현황 actual 표준)",
             "channel_scope": "OTA+G-OTA 거래처만 (Inbound 제외)",
-            "yoy_basis": "2026 현재 온북 ÷ 2025 동일 투숙일(캘린더 대응) 실적",
+            "yoy_basis": "2026 현재 온북(진행 중) ÷ 2025 동일 투숙일(캘린더 대응) 마감 확정실적 — 동기간(리드타임 대칭) 아님",
             "resolution": "투숙일자별(=판매일자, 연박 매일반복) × 사업장/세그먼트/채널",
         },
         "periods": periods,

@@ -2349,8 +2349,11 @@ if ('serviceWorker' in navigator) {
         <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#ffb347;font-weight:700;">◈ SPECIAL PERIOD · 최성수기 전략상품 실적 팔로업</div>
         <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="sp-meta-label">—</div>
       </div>
-      <div style="font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,0.45);margin-bottom:12px;line-height:1.5;">
-        해당 기간 <b style="color:rgba(255,255,255,0.7);">투숙일자별</b> 실적(RN·ADR·매출)과 전년비 · 실적=<b style="color:#ffd089;">현재 온북(진행 중)</b>, 전년비=<b style="color:var(--gold-bright);">전년(2025) 동일 투숙일 확정실적</b> 대비 · 세그=OTA+G-OTA+Inbound 기준
+      <div style="font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,0.45);margin-bottom:8px;line-height:1.5;">
+        해당 기간 <b style="color:rgba(255,255,255,0.7);">투숙일자별</b> 실적(RN·ADR·매출)과 전년비 · 실적=<b style="color:#ffd089;">현재 온북(진행 중)</b>, 전년비=<b style="color:var(--gold-bright);">전년(2025) 동일 투숙일 마감 확정실적</b> 대비 · 세그=OTA+G-OTA+Inbound 기준
+      </div>
+      <div style="font-family:var(--mono);font-size:9.5px;color:#ffb37a;background:rgba(255,179,71,0.08);border-left:2px solid rgba(255,179,71,0.5);border-radius:3px;padding:6px 10px;margin-bottom:12px;line-height:1.5;">
+        ※ 전년은 <b>마감 확정실적</b>(동기간 아님) — 올해는 아직 채워지는 <b>현재 온북</b>이라 리드타임 시점이 달라 RN 전년비가 구조적으로 낮게 보일 수 있음. ADR·매출은 확정 최종값 대비.
       </div>
 
       <!-- 기간 토글 -->
@@ -2368,7 +2371,7 @@ if ('serviceWorker' in navigator) {
           <div style="padding:14px 18px;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
               <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.12em;color:#ffb347;font-weight:900;">투숙일자별 총계</span>
-              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">RN · ADR · 매출 · 전년비 (OTA+G-OTA+Inbound)</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">RN · ADR · 매출 · 전년마감比 (OTA+G-OTA+Inbound)</span>
             </div>
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
@@ -2497,9 +2500,9 @@ if ('serviceWorker' in navigator) {
           }
           var scopeNote = p.scope_note || '';
           root.querySelector('#sp-summary').innerHTML =
-            card('현재 온북 RN', fmtInt(s.rn) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 실</span>', s.yoy_rn, '전년 ' + fmtInt(s.py_rn) + '실', '#ffb347')
-            + card('매출', fmtM(s.rev_m) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 백만</span>', s.yoy_rev, '전년 ' + fmtM(s.py_rev_m) + '백만', '#4ecdc4')
-            + card('ADR', '₩' + fmtInt(s.adr), s.yoy_adr, '전년 ₩' + fmtInt(s.py_adr), '#a892c8')
+            card('현재 온북 RN', fmtInt(s.rn) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 실</span>', s.yoy_rn, '전년마감 ' + fmtInt(s.py_rn) + '실', '#ffb347')
+            + card('매출', fmtM(s.rev_m) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 백만</span>', s.yoy_rev, '전년마감 ' + fmtM(s.py_rev_m) + '백만', '#4ecdc4')
+            + card('ADR', '₩' + fmtInt(s.adr), s.yoy_adr, '전년마감 ₩' + fmtInt(s.py_adr), '#a892c8')
             + '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;">'
             + '<div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-bright);font-weight:800;margin-bottom:6px;">' + p.label + '</div>'
             + '<div style="font-family:var(--mono);font-size:12px;color:#fff;font-weight:700;">' + p.range_label + '</div>'
