@@ -39,6 +39,10 @@ PROJECT_DIR = os.path.dirname(SCRIPTS_DIR)
 RAW_DB_DIR  = os.path.join(PROJECT_DIR, "data", "raw_db")
 OUT_DATA    = os.path.join(PROJECT_DIR, "data", "special_period.json")
 OUT_DOCS    = os.path.join(PROJECT_DIR, "docs", "data", "special_period.json")
+# 데일리 증감용 히스토리(일자별 온북 스냅샷 누적) — 전일 대비 픽업 표기에 사용
+HIST_DATA   = os.path.join(PROJECT_DIR, "data", "special_period_history.json")
+HIST_DOCS   = os.path.join(PROJECT_DIR, "docs", "data", "special_period_history.json")
+HIST_KEEP   = 120   # 최근 N일 스냅샷만 보관(용량 상한)
 DB_AGG      = os.path.join(PROJECT_DIR, "docs", "data", "db_aggregated.json")
 
 # ─── 기간 정의(첨부 md 확정값 · 설정 상수) ───────────────────────────────
@@ -362,6 +366,50 @@ def validate_against_db(result_periods):
     return ok, msgs
 
 
+def _kst_today():
+    """호스트 TZ 무관 KST 오늘 'YYYY-MM-DD'."""
+    from datetime import timezone, timedelta
+    return (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
+
+
+def _build_snapshot(period):
+    """히스토리 저장용 compact 스냅샷(숫자만). 전일 대비 델타 계산의 기준."""
+    return {
+        "summary": {"rn": period["summary"]["rn"], "rev_m": period["summary"]["rev_m"]},
+        "daily": {d["date"]: d["rn"] for d in period["daily_total"]},
+        "by_property": {r["key"]: r["rn"] for r in period["by_property"]},
+        "by_segment":  {r["key"]: r["rn"] for r in period["by_segment"]},
+        "by_channel":  {r["key"]: r["rn"] for r in period["by_channel"]},
+    }
+
+
+def _compute_delta(cur_snap, prior_snap, prior_date):
+    """오늘 온북 − 전일(prior) 온북. prior 없으면 base_date=None(내일부터 표기)."""
+    if not prior_snap:
+        return {"base_date": None}
+    def _dd(cmap, pmap):
+        return {k: cmap[k] - pmap.get(k, 0) for k in cmap}
+    return {
+        "base_date": prior_date,
+        "summary": {
+            "rn": cur_snap["summary"]["rn"] - prior_snap.get("summary", {}).get("rn", 0),
+            "rev_m": round(cur_snap["summary"]["rev_m"] - prior_snap.get("summary", {}).get("rev_m", 0), 2),
+        },
+        "daily":       _dd(cur_snap["daily"],       prior_snap.get("daily", {})),
+        "by_property": _dd(cur_snap["by_property"], prior_snap.get("by_property", {})),
+        "by_segment":  _dd(cur_snap["by_segment"],  prior_snap.get("by_segment", {})),
+        "by_channel":  _dd(cur_snap["by_channel"],  prior_snap.get("by_channel", {})),
+    }
+
+
+def _write_json(paths, obj):
+    payload = json.dumps(obj, ensure_ascii=False, indent=1)
+    for path in paths:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(payload)
+
+
 def main():
     print("=== 스페셜/연휴 전략상품 실적 팔로업 산출 ===")
     if not os.path.isdir(RAW_DB_DIR):
@@ -382,6 +430,49 @@ def main():
         print("❌ 대조검증 실패 — 산출 중단(파일 미기록)")
         sys.exit(2)
 
+    # ─── 데일리 증감(전일 온북 대비) ───────────────────────────────
+    today = _kst_today()
+    history = {"snapshots": {}}
+    if os.path.exists(HIST_DOCS):
+        try:
+            history = json.load(open(HIST_DOCS, encoding="utf-8"))
+            if "snapshots" not in history:
+                history = {"snapshots": {}}
+        except Exception:
+            history = {"snapshots": {}}
+    snaps = history["snapshots"]
+    _snaps_before = json.dumps(snaps, ensure_ascii=False, sort_keys=True)
+
+    # 전일 = 오늘보다 이전(엄격히 <)인 스냅샷 중 최신. 같은 날 재실행은 기준 불변.
+    prior_dates = sorted(d for d in snaps if d < today)
+    prior_date = prior_dates[-1] if prior_dates else None
+    prior_all = snaps.get(prior_date) if prior_date else None
+
+    today_snapshot = {}
+    for per in periods:
+        cur_snap = _build_snapshot(per)
+        today_snapshot[per["key"]] = cur_snap
+        prior_snap = (prior_all or {}).get(per["key"]) if prior_all else None
+        per["daily_change"] = _compute_delta(cur_snap, prior_snap, prior_date)
+        dc = per["daily_change"]
+        if dc.get("base_date"):
+            print(f"   일일 증감({per['key']}, {prior_date}→{today}): "
+                  f"RN {dc['summary']['rn']:+,} · 매출 {dc['summary']['rev_m']:+.1f}백만")
+        else:
+            print(f"   일일 증감({per['key']}): 기준 스냅샷 저장(전일 없음 → 내일부터 표기)")
+
+    # 오늘 스냅샷 저장(같은 날 재실행 시 덮어씀) + 오래된 것 pruning
+    snaps[today] = today_snapshot
+    for old in sorted(snaps)[:-HIST_KEEP]:
+        del snaps[old]
+    # 멱등: 스냅샷 내용 동일하면 히스토리 재기록 스킵(generated_at 제외)
+    if json.dumps(snaps, ensure_ascii=False, sort_keys=True) != _snaps_before:
+        history["generated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _write_json((HIST_DATA, HIST_DOCS), history)
+        print(f"✅ 히스토리 기록: {HIST_DOCS} (스냅샷 {len(snaps)}일)")
+    else:
+        print(f"✅ 히스토리 변경 없음 — 기록 스킵 (스냅샷 {len(snaps)}일)")
+
     out = {
         "meta": {
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -389,6 +480,7 @@ def main():
             "channel_scope": "OTA+G-OTA 거래처만 (Inbound 제외)",
             "yoy_basis": "2026 현재 온북(진행 중) ÷ 2025 동일 투숙일(캘린더 대응) 마감 확정실적 — 동기간(리드타임 대칭) 아님",
             "resolution": "투숙일자별(=판매일자, 연박 매일반복) × 사업장/세그먼트/채널",
+            "daily_change_basis": "각 기간 daily_change = 오늘 온북 − 전일 스냅샷(special_period_history.json). base_date=null이면 전일 없음(내일부터 표기)",
         },
         "periods": periods,
     }

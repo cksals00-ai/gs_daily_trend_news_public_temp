@@ -47,8 +47,11 @@ cd "$REPO" || die "cd 실패"
 BUILDER="scripts/build_special_period.py"
 DATA_JSON="data/special_period.json"
 DOCS_JSON="docs/data/special_period.json"
+HIST_DATA="data/special_period_history.json"
+HIST_DOCS="docs/data/special_period_history.json"
 # 이 페이지가 소유(=커밋 대상)하는 파일. db/otb/gz 등 공용파일은 절대 포함하지 않는다.
-OWNED=("$DATA_JSON" "$DOCS_JSON")
+# 히스토리(일자별 온북 스냅샷)는 데일리 증감 표기의 근거이므로 함께 커밋한다.
+OWNED=("$DATA_JSON" "$DOCS_JSON" "$HIST_DATA" "$HIST_DOCS")
 
 command -v python3 >/dev/null 2>&1 || die "python3 없음"
 [ -f "$BUILDER" ] || die "$BUILDER 없음"
