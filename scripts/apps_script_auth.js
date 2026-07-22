@@ -29,6 +29,8 @@
  *   POST ?action=users      & token=... body: {email, name, role, status, password?}
  *   POST ?action=delete     & token=... body: {email}     → soft delete (status=inactive)
  *   POST ?action=save_admin body: {token, data}           → 데일리 키인(admin_input) 저장 (admin)
+ *   POST ?action=log_visit  body: {page, token?, ref?}     → 방문 로그 append (VISIT_LOG, 무권한)
+ *   GET  ?action=export_visits & key=SYNC_KEY              → 방문 로그 전량 export (집계용)
  *
  *  ※ Apps Script 는 응답 헤더(CORS) 제어가 제한적이라 token 은 query 또는 body 로 받음.
  */
@@ -400,6 +402,76 @@ function handleExportAdmin_(params) {
 }
 
 // ============================================================================
+// 방문 로그(VISIT_LOG) — 1개월 사용도 트라이얼. docs/js/visit-log.js 가 append.
+//   행: [ts_kst, date, page, uid(해시), role, referrer]
+//   · 신원은 토큰을 서버에서 검증해 도출(위조 방지).
+//   · 이메일 원문은 저장하지 않고 salt 해시(uid, 16자)만 남긴다. 비로그인=anon.
+//   · salt 는 스크립트 속성 VISIT_SALT, 없으면 AUTH_SECRET 사용(무설정 동작).
+// ============================================================================
+const VISIT_LOG_SHEET   = 'VISIT_LOG';
+const VISIT_LOG_HEADERS = ['ts_kst', 'date', 'page', 'uid', 'role', 'referrer'];
+
+function getVisitLogSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(VISIT_LOG_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(VISIT_LOG_SHEET);
+    sh.getRange(1, 1, 1, VISIT_LOG_HEADERS.length).setValues([VISIT_LOG_HEADERS]);
+    sh.getRange(1, 1, 1, VISIT_LOG_HEADERS.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function visitSalt_() {
+  return PropertiesService.getScriptProperties().getProperty('VISIT_SALT') || AUTH_SECRET;
+}
+
+function sanitizePage_(s) {
+  s = String(s || '').split('?')[0].split('#')[0];
+  s = s.replace(/^.*\//, '');               // basename
+  s = s.replace(/[^A-Za-z0-9._-]/g, '');    // 화이트리스트
+  return s.substring(0, 60);
+}
+
+function handleLogVisit_(body) {
+  const page = sanitizePage_(body.page);
+  if (!page) return ok_({ logged: false });   // page 없으면 무시(에러로 취급 안 함)
+  let uid = '', role = 'anon';
+  const payload = verifyToken_(body.token);    // 서명 검증된 토큰만 신뢰
+  if (payload && payload.email) {
+    uid = sha256_(String(payload.email).toLowerCase() + '|' + visitSalt_()).substring(0, 16);
+    role = String(payload.role || 'unknown');
+  }
+  const ref = sanitizePage_(body.ref);
+  const now = new Date();
+  const tz = 'Asia/Seoul';
+  const ts = Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss');
+  const date = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+  getVisitLogSheet_().appendRow([ts, date, page, uid, role, ref]);
+  return ok_({ logged: true });
+}
+
+// 집계 파이프라인용 읽기 전용 export (스크립트 속성 SYNC_KEY 게이트).
+// scripts/build_visit_stats.py 가 호출.
+function handleExportVisits_(params) {
+  const key = String(params.key || '');
+  const expected = PropertiesService.getScriptProperties().getProperty('SYNC_KEY') || '';
+  if (!expected || key !== expected) return err_('unauthorized', 'unauthorized');
+  const sh = getVisitLogSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return ok_({ rows: [], count: 0 });
+  const vals = sh.getRange(2, 1, last - 1, VISIT_LOG_HEADERS.length).getValues();
+  const rows = vals.map(function (r) {
+    return {
+      ts: String(r[0]), date: String(r[1]), page: String(r[2]),
+      uid: String(r[3]), role: String(r[4]), referrer: String(r[5])
+    };
+  });
+  return ok_({ rows: rows, count: rows.length });
+}
+
+// ============================================================================
 // 엔트리포인트
 // ============================================================================
 function doGet(e) {
@@ -410,6 +482,7 @@ function doGet(e) {
     if (action === 'users')      return handleListUsers_(p);
     if (action === 'load_admin') return handleLoadAdmin_(p);
     if (action === 'export_admin') return handleExportAdmin_(p);
+    if (action === 'export_visits') return handleExportVisits_(p);
     if (action === 'ping')       return ok_({ pong: true });
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {
@@ -431,6 +504,7 @@ function doPost(e) {
     if (action === 'users')      return handleUpsertUser_(body, p);
     if (action === 'delete')     return handleDeleteUser_(body, p);
     if (action === 'save_admin') return handleSaveAdmin_(body);
+    if (action === 'log_visit')  return handleLogVisit_(body);
     return err_('알 수 없는 action: ' + action, 'bad_request');
   } catch (e) {
     return err_(e.toString(), 'internal');
