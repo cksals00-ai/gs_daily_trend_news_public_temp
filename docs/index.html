@@ -1289,6 +1289,9 @@ if ('serviceWorker' in navigator) {
     /* TODAY+WEEKLY COMPARISON: 모바일에서 1~2칼럼 */
     #today-weekly-cmp .twc-row1 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
     #today-weekly-cmp .twc-row2 { grid-template-columns: 1fr !important; }
+    /* SPECIAL PERIOD: 모바일에서 스택 */
+    #special-period-followup .sp-summary-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    #special-period-followup .sp-body-grid { grid-template-columns: 1fr !important; }
     /* 큰 숫자(당일/금주/전주/전년)는 한 줄 유지 — 콤마(3,703)에서 줄바꿈 방지 */
     #today-weekly-cmp #twc-today-rn,
     #today-weekly-cmp #twc-this-rn,
@@ -2338,6 +2341,251 @@ if ('serviceWorker' in navigator) {
 
     </div>
     <!-- // TODAY + WEEKLY COMPARISON END -->
+
+    <!-- ============ SPECIAL PERIOD — 스페셜(최성수기) 전략상품 실적 팔로업 ============ -->
+    <!-- 데이터: data/special_period.json (독립 산출 · db/otb 무접촉 · 매일 파이프라인 갱신 시 자동 최신화) -->
+    <div id="special-period-followup" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:var(--mono);font-size:14px;letter-spacing:0.2em;color:#ffb347;font-weight:700;">◈ SPECIAL PERIOD · 최성수기 전략상품 실적 팔로업</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);" id="sp-meta-label">—</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,0.45);margin-bottom:12px;line-height:1.5;">
+        해당 기간 <b style="color:rgba(255,255,255,0.7);">투숙일자별</b> 실적(RN·ADR·매출)과 전년비 · 실적=<b style="color:#ffd089;">현재 온북(진행 중)</b>, 전년비=<b style="color:var(--gold-bright);">전년(2025) 동일 투숙일 확정실적</b> 대비 · 세그=OTA+G-OTA+Inbound 기준
+      </div>
+
+      <!-- 기간 토글 -->
+      <div id="sp-period-tabs" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;"></div>
+
+      <!-- 요약 카드 (RN / 매출 / ADR / 기간정보) -->
+      <div id="sp-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:14px;margin-bottom:16px;" class="sp-summary-row"></div>
+
+      <!-- 본문: 일자별 총계 표 + 축별 분해 -->
+      <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:14px;" class="sp-body-grid">
+
+        <!-- 좌: 투숙일자별 총계 -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,179,71,0.22);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#ffb347,#e08a2a);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+              <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.12em;color:#ffb347;font-weight:900;">투숙일자별 총계</span>
+              <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.35);">RN · ADR · 매출 · 전년비 (OTA+G-OTA+Inbound)</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">투숙일</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">RN</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">ADR</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">매출(백만)</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="sp-daily-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 우: 축별 분해 (사업장 / 세그먼트 / 채널) -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(78,205,196,0.22);border-radius:8px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,#4ecdc4,#1a9b8a);"></div>
+          <div style="padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-family:var(--mono);font-size:12px;letter-spacing:0.12em;color:#4ecdc4;font-weight:900;">축별 분해</span>
+                <span id="sp-axis-note" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.35);">행 클릭 → 일자별 펼치기</span>
+              </div>
+              <div id="sp-axis-tabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;">
+                <thead>
+                  <tr style="color:rgba(255,255,255,0.45);font-weight:700;text-align:right;">
+                    <th style="text-align:left;padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);" id="sp-axis-col">사업장</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">RN</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">ADR</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">매출</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="sp-axis-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+    // ===== SPECIAL PERIOD 전략상품 실적 팔로업 렌더러 (data/special_period.json 자동 연동) =====
+    (function () {
+      var root = document.getElementById('special-period-followup');
+      if (!root) return;
+      var cb = new Date().toISOString().slice(0, 13);   // 시간 단위 캐시버스터
+      fetch('./data/special_period.json?t=' + cb)
+        .then(function (r) { if (!r.ok) throw new Error('special_period fetch failed'); return r.json(); })
+        .then(function (data) { render(data); })
+        .catch(function (e) {
+          root.querySelector('#sp-summary').innerHTML =
+            '<div style="grid-column:1/-1;padding:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);">스페셜 기간 데이터 로딩 실패</div>';
+        });
+
+      function fmtInt(n) { return (n || 0).toLocaleString('ko-KR'); }
+      function fmtM(n) { return (n == null ? '—' : Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })); }
+      // YoY 배지 (▲녹 / ▼적)
+      function yoy(v) {
+        if (v == null) return '<span style="color:rgba(255,255,255,0.3);">—</span>';
+        var up = v >= 0;
+        var c = up ? '#4ecdc4' : '#f8737b';
+        var arr = up ? '▲' : '▼';
+        return '<span style="color:' + c + ';font-weight:700;">' + arr + ' ' + (up ? '+' : '') + v.toFixed(1) + '%</span>';
+      }
+      function dateShort(ymd) { return ymd.slice(4, 6) + '.' + ymd.slice(6, 8); }
+
+      function render(data) {
+        var periods = data.periods || [];
+        if (!periods.length) return;
+        var state = { pi: 0, axis: 'by_property' };
+
+        // 기간 탭
+        var ptabs = root.querySelector('#sp-period-tabs');
+        ptabs.innerHTML = periods.map(function (p, i) {
+          return '<button data-pi="' + i + '" class="sp-ptab" style="font-family:var(--mono);font-size:11px;font-weight:700;padding:7px 16px;border:1px solid rgba(255,179,71,0.35);border-radius:6px;cursor:pointer;background:transparent;color:rgba(255,255,255,0.55);">'
+            + p.label + ' <span style="font-size:9px;opacity:0.7;">' + p.range_label.split(' · ')[1] + '</span></button>';
+        }).join('');
+        ptabs.querySelectorAll('.sp-ptab').forEach(function (b) {
+          b.addEventListener('click', function () { state.pi = +b.dataset.pi; draw(); });
+        });
+
+        // 축 탭
+        var axes = [['by_property', '사업장'], ['by_segment', '세그먼트'], ['by_channel', '채널']];
+        var atabs = root.querySelector('#sp-axis-tabs');
+        atabs.innerHTML = axes.map(function (a) {
+          return '<button data-axis="' + a[0] + '" class="sp-atab" style="font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 11px;border:1px solid rgba(78,205,196,0.3);border-radius:5px;cursor:pointer;background:transparent;color:rgba(255,255,255,0.5);">' + a[1] + '</button>';
+        }).join('');
+        atabs.querySelectorAll('.sp-atab').forEach(function (b) {
+          b.addEventListener('click', function () { state.axis = b.dataset.axis; draw(); });
+        });
+
+        root.querySelector('#sp-meta-label').textContent =
+          (data.meta && data.meta.generated_at ? data.meta.generated_at.slice(0, 10) + ' 기준' : '');
+
+        function draw() {
+          var p = periods[state.pi];
+          // 탭 active 스타일
+          ptabs.querySelectorAll('.sp-ptab').forEach(function (b) {
+            var on = +b.dataset.pi === state.pi;
+            b.style.background = on ? 'rgba(255,179,71,0.18)' : 'transparent';
+            b.style.color = on ? '#ffd089' : 'rgba(255,255,255,0.55)';
+            b.style.borderColor = on ? 'rgba(255,179,71,0.6)' : 'rgba(255,179,71,0.35)';
+          });
+          atabs.querySelectorAll('.sp-atab').forEach(function (b) {
+            var on = b.dataset.axis === state.axis;
+            b.style.background = on ? 'rgba(78,205,196,0.18)' : 'transparent';
+            b.style.color = on ? '#4ecdc4' : 'rgba(255,255,255,0.5)';
+            b.style.borderColor = on ? 'rgba(78,205,196,0.6)' : 'rgba(78,205,196,0.3)';
+          });
+
+          // 요약 카드
+          var s = p.summary;
+          var desig = '';
+          if (p.designated && p.designated.length) {
+            desig = '<div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);margin-top:6px;line-height:1.5;">지정 사업장: ' + p.designated.join(' · ') + '</div>';
+          }
+          var scopeNote = p.scope_note || '';
+          root.querySelector('#sp-summary').innerHTML =
+            card('현재 온북 RN', fmtInt(s.rn) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 실</span>', s.yoy_rn, '전년 ' + fmtInt(s.py_rn) + '실', '#ffb347')
+            + card('매출', fmtM(s.rev_m) + '<span style="font-size:12px;color:rgba(255,255,255,0.4);"> 백만</span>', s.yoy_rev, '전년 ' + fmtM(s.py_rev_m) + '백만', '#4ecdc4')
+            + card('ADR', '₩' + fmtInt(s.adr), s.yoy_adr, '전년 ₩' + fmtInt(s.py_adr), '#a892c8')
+            + '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;">'
+            + '<div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-bright);font-weight:800;margin-bottom:6px;">' + p.label + '</div>'
+            + '<div style="font-family:var(--mono);font-size:12px;color:#fff;font-weight:700;">' + p.range_label + '</div>'
+            + '<div style="font-family:var(--mono);font-size:9.5px;color:rgba(255,255,255,0.4);margin-top:5px;">' + scopeNote + '</div>'
+            + desig + '</div>';
+
+          // 투숙일자별 총계 표
+          var body = p.daily_total.map(function (d, i) {
+            return '<tr style="text-align:right;border-bottom:1px solid rgba(255,255,255,0.05);">'
+              + '<td style="text-align:left;padding:5px;color:#fff;font-weight:700;">' + dateShort(d.date)
+              + ' <span style="color:rgba(255,255,255,0.35);font-size:9px;">(' + (p.dow[i] || '') + ')</span></td>'
+              + '<td style="padding:5px;color:#fff;">' + fmtInt(d.rn) + '</td>'
+              + '<td style="padding:5px;">' + yoy(d.yoy_rn) + '</td>'
+              + '<td style="padding:5px;color:rgba(255,255,255,0.8);">' + fmtInt(d.adr) + '</td>'
+              + '<td style="padding:5px;">' + yoy(d.yoy_adr) + '</td>'
+              + '<td style="padding:5px;color:rgba(255,255,255,0.8);">' + fmtM(d.rev_m) + '</td>'
+              + '<td style="padding:5px;">' + yoy(d.yoy_rev) + '</td></tr>';
+          }).join('');
+          // 합계행
+          body += '<tr style="text-align:right;border-top:2px solid rgba(255,179,71,0.4);font-weight:800;">'
+            + '<td style="text-align:left;padding:6px 5px;color:#ffb347;">기간 합계</td>'
+            + '<td style="padding:6px 5px;color:#ffb347;">' + fmtInt(s.rn) + '</td>'
+            + '<td style="padding:6px 5px;">' + yoy(s.yoy_rn) + '</td>'
+            + '<td style="padding:6px 5px;color:#ffb347;">' + fmtInt(s.adr) + '</td>'
+            + '<td style="padding:6px 5px;">' + yoy(s.yoy_adr) + '</td>'
+            + '<td style="padding:6px 5px;color:#ffb347;">' + fmtM(s.rev_m) + '</td>'
+            + '<td style="padding:6px 5px;">' + yoy(s.yoy_rev) + '</td></tr>';
+          root.querySelector('#sp-daily-tbody').innerHTML = body;
+
+          // 축별 분해
+          var axisLabel = { by_property: '사업장', by_segment: '세그먼트', by_channel: '채널(거래처)' }[state.axis];
+          root.querySelector('#sp-axis-col').textContent = axisLabel;
+          root.querySelector('#sp-axis-note').textContent =
+            (state.axis === 'by_channel' ? 'OTA+G-OTA 거래처만 · 행 클릭→일자별' : '행 클릭 → 일자별 펼치기');
+          var rows = p[state.axis] || [];
+          var atb = root.querySelector('#sp-axis-tbody');
+          atb.innerHTML = rows.map(function (r, ri) {
+            var isDesig = p.designated && p.designated.indexOf(r.key) >= 0;
+            var main = '<tr class="sp-arow" data-ri="' + ri + '" style="text-align:right;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;">'
+              + '<td style="text-align:left;padding:5px;color:#fff;font-weight:700;">'
+              + '<span style="color:rgba(78,205,196,0.6);font-size:9px;margin-right:4px;" class="sp-caret">▸</span>' + r.key
+              + (isDesig ? ' <span style="color:#ffb347;font-size:8px;">◆지정</span>' : '') + '</td>'
+              + '<td style="padding:5px;color:#fff;">' + fmtInt(r.rn) + '</td>'
+              + '<td style="padding:5px;">' + yoy(r.yoy_rn) + '</td>'
+              + '<td style="padding:5px;color:rgba(255,255,255,0.75);">' + fmtInt(r.adr) + '</td>'
+              + '<td style="padding:5px;color:rgba(255,255,255,0.75);">' + fmtM(r.rev_m) + '</td>'
+              + '<td style="padding:5px;">' + yoy(r.yoy_rev) + '</td></tr>';
+            // 숨김 일자별 서브행
+            var sub = '<tr class="sp-sub sp-sub-' + ri + '" style="display:none;"><td colspan="6" style="padding:0 5px 8px 22px;background:rgba(0,0,0,0.15);">'
+              + '<table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10px;">'
+              + r.daily.filter(function (dd) { return dd.rn > 0 || dd.py_rn > 0; }).map(function (dd, di) {
+                return '<tr style="text-align:right;color:rgba(255,255,255,0.65);">'
+                  + '<td style="text-align:left;padding:2px 4px;">' + dateShort(dd.date) + ' <span style="color:rgba(255,255,255,0.3);">(' + (p.dow[p.dates.indexOf(dd.date)] || '') + ')</span></td>'
+                  + '<td style="padding:2px 4px;">' + fmtInt(dd.rn) + '실</td>'
+                  + '<td style="padding:2px 4px;">' + yoy(dd.yoy_rn) + '</td>'
+                  + '<td style="padding:2px 4px;">₩' + fmtInt(dd.adr) + '</td>'
+                  + '<td style="padding:2px 4px;">' + fmtM(dd.rev_m) + 'm</td>'
+                  + '<td style="padding:2px 4px;">' + yoy(dd.yoy_rev) + '</td></tr>';
+              }).join('') + '</table></td></tr>';
+            return main + sub;
+          }).join('');
+          // 행 클릭 → 펼치기
+          atb.querySelectorAll('.sp-arow').forEach(function (tr) {
+            tr.addEventListener('click', function () {
+              var ri = tr.dataset.ri;
+              var sub = atb.querySelector('.sp-sub-' + ri);
+              var caret = tr.querySelector('.sp-caret');
+              if (sub.style.display === 'none') { sub.style.display = ''; caret.textContent = '▾'; }
+              else { sub.style.display = 'none'; caret.textContent = '▸'; }
+            });
+          });
+        }
+
+        function card(label, big, yoyVal, sub, accent) {
+          return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;overflow:hidden;">'
+            + '<div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:' + accent + ';font-weight:800;margin-bottom:7px;">' + label + '</div>'
+            + '<div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#fff;line-height:1;margin-bottom:6px;">' + big + '</div>'
+            + '<div style="font-family:var(--mono);font-size:11px;">' + yoy(yoyVal) + ' <span style="color:rgba(255,255,255,0.3);font-size:9px;margin-left:4px;">' + sub + '</span></div>'
+            + '</div>';
+        }
+
+        draw();
+      }
+    })();
+    </script>
+    <!-- // SPECIAL PERIOD END -->
 
   </div>
 </div>
@@ -11205,5 +11453,6 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 })();
 </script>
 <script src="./js/menu-visibility.js"></script>
+<script src="./js/visit-log.js"></script>
 </body>
 </html>

@@ -168,6 +168,9 @@ run_quick "10/12 parse_campaign86"          "scripts/parse_campaign86.py"
 run_quick "10b/12 campaign_history"         "scripts/build_campaign_history.py"
 # 10c — 숙세페 여름편 실적 슬라이스(gs-salefesta.html §5). campaign_history.json 산출 이후에 실행해야 함.
 run_quick "10c/12 salefesta_perf"           "scripts/build_salefesta_perf.py"
+# 10d — 스페셜(최성수기)/연휴 전략상품 실적 팔로업(index.html). raw_db(3/12 parse_raw_db 이후 최신)만 읽는
+#       독립 산출물 → db/otb/gz 무접촉. special_period.json 은 아래 git 단계에서 함께 커밋됨.
+run_quick "10d/12 special_period"           "scripts/build_special_period.py"
 run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
 
 # ── [12/12] HTML 빌드 ──────────────────────────────────────────
