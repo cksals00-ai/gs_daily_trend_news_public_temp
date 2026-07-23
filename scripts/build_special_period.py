@@ -43,7 +43,29 @@ OUT_DOCS    = os.path.join(PROJECT_DIR, "docs", "data", "special_period.json")
 HIST_DATA   = os.path.join(PROJECT_DIR, "data", "special_period_history.json")
 HIST_DOCS   = os.path.join(PROJECT_DIR, "docs", "data", "special_period_history.json")
 HIST_KEEP   = 120   # 최근 N일 스냅샷만 보관(용량 상한)
-DB_AGG      = os.path.join(PROJECT_DIR, "docs", "data", "db_aggregated.json")
+# 대조검증용 db_aggregated: parse_raw_db 의 직접 출력물은 data/ 이고, docs/ 는 build.py(파이프라인
+# 마지막 단계)에서야 동기화된다. 이 빌더(daily_update 10d)는 build.py 이전에 돌기 때문에 docs/ db 는
+# 전일값(stale)일 수 있다 → 반드시 "같은 raw 로 만들어진 신선한 db"(generated_at 최신)와 대조해야 한다.
+DB_AGG_DATA = os.path.join(PROJECT_DIR, "data", "db_aggregated.json")
+DB_AGG_DOCS = os.path.join(PROJECT_DIR, "docs", "data", "db_aggregated.json")
+
+
+def _load_freshest_db():
+    """data/·docs/ 두 db_aggregated 중 generated_at 이 최신인 것을 로드.
+    (파이프라인에서 parse_raw_db 가 data/ 를 먼저 갱신 → 그 신선본과 대조)
+    반환: (db_dict|None, path|None)"""
+    best = (None, None, "")
+    for path in (DB_AGG_DATA, DB_AGG_DOCS):
+        if not os.path.exists(path):
+            continue
+        try:
+            d = json.load(open(path, encoding="utf-8"))
+        except Exception:
+            continue
+        gen = (d.get("meta", {}) or {}).get("generated_at") or d.get("generated_at") or ""
+        if best[0] is None or gen > best[2]:
+            best = (d, path, gen)
+    return best[0], best[1]
 
 # ─── 기간 정의(첨부 md 확정값 · 설정 상수) ───────────────────────────────
 #   dates_2026 = 대상 투숙일(YYYYMMDD). 전년(2025)은 동일 MMDD 로 자동 매핑.
@@ -334,11 +356,12 @@ def validate_against_db(result_periods):
     기간 내 각 세그·일자 RN 이 일치해야 함(같은 원천·같은 로직).
     반환: (ok:bool, msgs:list)"""
     msgs = []
-    try:
-        db = json.load(open(DB_AGG, encoding="utf-8"))
-        sdd = db.get("stay_date_daily", {})
-    except Exception as e:
-        return True, [f"(대조 스킵: db_aggregated 로드 실패 {e})"]
+    db, db_path = _load_freshest_db()
+    if db is None:
+        return True, ["(대조 스킵: db_aggregated 로드 실패)"]
+    sdd = db.get("stay_date_daily", {})
+    _gen = (db.get("meta", {}) or {}).get("generated_at") or db.get("generated_at") or "?"
+    msgs.append(f"  · 대조 기준 db: {os.path.relpath(db_path, PROJECT_DIR)} (generated_at {_gen})")
 
     ok = True
     for per in result_periods:
