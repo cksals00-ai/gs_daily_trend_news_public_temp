@@ -2412,6 +2412,7 @@ if ('serviceWorker' in navigator) {
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">RN</th>
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(78,205,196,0.25);color:#4ecdc4;">일일Δ</th>
+                    <th style="padding:6px 5px;border-bottom:1px solid rgba(184,137,63,0.3);color:var(--gold-bright);" id="sp-occ-th" title="데일리 BSR 기준 OCC(전채널)">OCC</th>
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">ADR</th>
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">매출</th>
                     <th style="padding:6px 5px;border-bottom:1px solid rgba(255,255,255,0.1);">YoY</th>
@@ -2460,6 +2461,12 @@ if ('serviceWorker' in navigator) {
         if (v == null || v === 0) return '';
         var up = v > 0;
         return '<span style="color:' + (up ? '#4ecdc4' : '#f8737b') + ';font-weight:700;">' + (up ? '+' : '') + fmtM(v) + '</span>';
+      }
+      // OCC(데일리 BSR·전채널): 높을수록 진한 골드. null=BSR 미보유 → '—'
+      function occ(v) {
+        if (v == null) return '<span style="color:rgba(255,255,255,0.25);">—</span>';
+        var c = v >= 90 ? '#ffd089' : v >= 70 ? '#e6b970' : v >= 50 ? 'rgba(230,185,112,0.75)' : 'rgba(255,255,255,0.5)';
+        return '<span style="color:' + c + ';font-weight:700;">' + v.toFixed(1) + '<span style="font-size:8px;opacity:0.6;">%</span></span>';
       }
 
       function render(data) {
@@ -2558,10 +2565,16 @@ if ('serviceWorker' in navigator) {
           // 축별 분해
           var axisLabel = { by_property: '사업장', by_segment: '세그먼트', by_channel: '채널(거래처)' }[state.axis];
           root.querySelector('#sp-axis-col').textContent = axisLabel;
-          root.querySelector('#sp-axis-note').textContent =
-            (state.axis === 'by_channel' ? 'OTA+G-OTA 거래처만 · 행 클릭→일자별' : '행 클릭 → 일자별 펼치기');
+          root.querySelector('#sp-axis-note').innerHTML =
+            (state.axis === 'by_channel' ? 'OTA+G-OTA 거래처만 · 행 클릭→일자별'
+             : state.axis === 'by_property' ? '행 클릭→일자별 · <span style="color:var(--gold-bright);">OCC=데일리 BSR 전채널</span>'
+             : '행 클릭 → 일자별 펼치기');
           var rows = p[state.axis] || [];
           var daxis = (dc[state.axis] || {});
+          // OCC는 사업장 축에서만 의미(전채널 BSR 지표) → 다른 축에선 컬럼 숨김
+          var showOcc = (state.axis === 'by_property');
+          var occTh = root.querySelector('#sp-occ-th');
+          if (occTh) occTh.style.display = showOcc ? '' : 'none';
           var atb = root.querySelector('#sp-axis-tbody');
           atb.innerHTML = rows.map(function (r, ri) {
             var isDesig = p.designated && p.designated.indexOf(r.key) >= 0;
@@ -2572,17 +2585,19 @@ if ('serviceWorker' in navigator) {
               + '<td style="padding:5px;color:#fff;">' + fmtInt(r.rn) + '</td>'
               + '<td style="padding:5px;">' + yoy(r.yoy_rn) + '</td>'
               + '<td style="padding:5px;">' + (hasDc ? dchg(daxis[r.key]) : '<span style="color:rgba(255,255,255,0.25);">·</span>') + '</td>'
+              + (showOcc ? '<td style="padding:5px;">' + occ(r.occ) + '</td>' : '')
               + '<td style="padding:5px;color:rgba(255,255,255,0.75);">' + fmtInt(r.adr) + '</td>'
               + '<td style="padding:5px;color:rgba(255,255,255,0.75);">' + fmtM(r.rev_m) + '</td>'
               + '<td style="padding:5px;">' + yoy(r.yoy_rev) + '</td></tr>';
             // 숨김 일자별 서브행
-            var sub = '<tr class="sp-sub sp-sub-' + ri + '" style="display:none;"><td colspan="7" style="padding:0 5px 8px 22px;background:rgba(0,0,0,0.15);">'
+            var sub = '<tr class="sp-sub sp-sub-' + ri + '" style="display:none;"><td colspan="' + (showOcc ? 8 : 7) + '" style="padding:0 5px 8px 22px;background:rgba(0,0,0,0.15);">'
               + '<table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10px;">'
               + r.daily.filter(function (dd) { return dd.rn > 0 || dd.py_rn > 0; }).map(function (dd, di) {
                 return '<tr style="text-align:right;color:rgba(255,255,255,0.65);">'
                   + '<td style="text-align:left;padding:2px 4px;">' + dateShort(dd.date) + ' <span style="color:rgba(255,255,255,0.3);">(' + (p.dow[p.dates.indexOf(dd.date)] || '') + ')</span></td>'
                   + '<td style="padding:2px 4px;">' + fmtInt(dd.rn) + '실</td>'
                   + '<td style="padding:2px 4px;">' + yoy(dd.yoy_rn) + '</td>'
+                  + (showOcc ? '<td style="padding:2px 4px;">' + occ(dd.occ) + '</td>' : '')
                   + '<td style="padding:2px 4px;">₩' + fmtInt(dd.adr) + '</td>'
                   + '<td style="padding:2px 4px;">' + fmtM(dd.rev_m) + 'm</td>'
                   + '<td style="padding:2px 4px;">' + yoy(dd.yoy_rev) + '</td></tr>';

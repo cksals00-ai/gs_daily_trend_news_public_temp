@@ -389,6 +389,92 @@ def validate_against_db(result_periods):
     return ok, msgs
 
 
+# ─── 사업장별 OCC (데일리 BSR) ────────────────────────────────────────────
+#   daily_booking.json(BSR 파싱 산출물)의 by_property[사업장].months[YYYY-MM].daily_occ
+#   = 그 달의 일자별 OCC 배열(index 0 = 1일). read-only 로만 사용.
+DAILY_BOOKING = os.path.join(PROJECT_DIR, "docs", "data", "daily_booking.json")
+
+# BSR 표기 ↔ raw_db 정규화 표기 차이(브랜드 개명/띄어쓰기). 좌=raw_db 명, 우=BSR 명.
+OCC_NAME_ALIAS = {
+    "소노문 단양": "소노벨 단양",
+    "소노휴 양평": "소노벨 양평",
+    "소노벨 경주": "소노캄 경주",
+    "소노펠리체 빌리지 비발디파크": "소노펠리체빌리지 비발디파크",
+}
+
+
+def _load_occ():
+    """BSR daily_booking.json → (occ_lookup, report_date, bsr_names)
+    occ_lookup[bsr_name][YYYYMMDD] = OCC(float) . 없으면 (None, None, set())."""
+    if not os.path.exists(DAILY_BOOKING):
+        return None, None, set()
+    try:
+        db = json.load(open(DAILY_BOOKING, encoding="utf-8"))
+    except Exception:
+        return None, None, set()
+    # 신선도 판정은 months_detail[0].report_date 우선(meta.report_date 는 고정 필드일 수 있음)
+    rpt = None
+    mds = db.get("months_detail") or []
+    if mds:
+        rpt = mds[0].get("report_date")
+    rpt = rpt or (db.get("meta", {}) or {}).get("report_date")
+
+    lookup = {}
+    for name, entry in (db.get("by_property") or {}).items():
+        if name == "Grand Total":
+            continue
+        per_date = {}
+        for mkey, m in (entry.get("months") or {}).items():
+            arr = m.get("daily_occ") or []
+            ym = mkey.replace("-", "")   # '2026-07' → '202607'
+            for i, v in enumerate(arr):
+                if v is None:
+                    continue
+                per_date[f"{ym}{i+1:02d}"] = v
+        lookup[name] = per_date
+    return lookup, rpt, set(lookup.keys())
+
+
+def _resolve_occ_name(prop, bsr_names):
+    """raw_db 사업장명 → BSR 사업장명. 정확일치 → 공백제거 일치 → 별칭. 없으면 None."""
+    if prop in bsr_names:
+        return prop
+    alias = OCC_NAME_ALIAS.get(prop)
+    if alias and alias in bsr_names:
+        return alias
+    squished = prop.replace(" ", "")
+    for n in bsr_names:
+        if n.replace(" ", "") == squished:
+            return n
+    return None
+
+
+def attach_occ(period, occ_lookup, bsr_names):
+    """period['by_property'] 각 행에 기간평균 occ + 일자별 occ 주입.
+    매칭 실패/데이터 없음은 None(화면 '—') — 추정값 생성 금지.
+    반환: 매칭 실패한 사업장명 리스트."""
+    if not occ_lookup:
+        return [r["key"] for r in period["by_property"]]
+    unmatched = []
+    dates = period["dates"]
+    for row in period["by_property"]:
+        bsr = _resolve_occ_name(row["key"], bsr_names)
+        per_date = occ_lookup.get(bsr, {}) if bsr else {}
+        if not bsr:
+            unmatched.append(row["key"])
+        vals = []
+        for d in row["daily"]:
+            v = per_date.get(d["date"])
+            d["occ"] = v
+            if v is not None:
+                vals.append(v)
+        # 기간 평균(동일 사업장 = 일별 capacity 동일하므로 단순평균이 타당)
+        row["occ"] = round(sum(vals) / len(vals), 1) if vals else None
+        row["occ_days"] = len(vals)
+    _ = dates
+    return unmatched
+
+
 def _kst_today():
     """호스트 TZ 무관 KST 오늘 'YYYY-MM-DD'."""
     from datetime import timezone, timedelta
@@ -453,6 +539,18 @@ def main():
         print("❌ 대조검증 실패 — 산출 중단(파일 미기록)")
         sys.exit(2)
 
+    # ─── 사업장별 OCC(데일리 BSR) 결합 ───────────────────────────────
+    occ_lookup, occ_report_date, bsr_names = _load_occ()
+    if occ_lookup:
+        for per in periods:
+            un = attach_occ(per, occ_lookup, bsr_names)
+            covered = sum(1 for r in per["by_property"] if r.get("occ") is not None)
+            print(f"   OCC 결합({per['key']}): {covered}/{len(per['by_property'])} 사업장"
+                  + (f" · 미매칭 {un}" if un else ""))
+        print(f"   OCC 기준일(BSR): {occ_report_date}")
+    else:
+        print("   ⚠ OCC 소스(daily_booking.json) 없음 — OCC 미표기")
+
     # ─── 데일리 증감(전일 온북 대비) ───────────────────────────────
     today = _kst_today()
     history = {"snapshots": {}}
@@ -504,6 +602,8 @@ def main():
             "yoy_basis": "2026 현재 온북(진행 중) ÷ 2025 동일 투숙일(캘린더 대응) 마감 확정실적 — 동기간(리드타임 대칭) 아님",
             "resolution": "투숙일자별(=판매일자, 연박 매일반복) × 사업장/세그먼트/채널",
             "daily_change_basis": "각 기간 daily_change = 오늘 온북 − 전일 스냅샷(special_period_history.json). base_date=null이면 전일 없음(내일부터 표기)",
+            "occ_basis": "사업장별 OCC = 데일리 BSR(daily_booking.json) 일자별 daily_occ. 전채널 기준(RN 컬럼의 OTA+G-OTA+Inbound 스코프와 다름). null=BSR 미보유",
+            "occ_report_date": occ_report_date,
         },
         "periods": periods,
     }
