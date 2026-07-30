@@ -254,7 +254,40 @@ def compute_monthly_sosaup(target, sos_all, props, closed_before=None):
     return series, cum, cur
 
 
-def build_sales_pptx(target, cur_seg, cum_seg):
+def _gs_room_rev(target, closed_before, props):
+    """GS 세그(OTA/G-OTA/Inbound) 객실 매출을 otb_data 에서 산출 (백만원).
+    반환 (cur, cum): 각 {seg: {budget, fcst, last}}.
+      당월(target월) = 목표 rev_budget / FCST rev_fcst / 전년(동기간) rev_last.
+      누계(1~target월) = Σ월 (마감월 m<closed_before=rev_actual 온북, 그외=rev_fcst) / 목표 Σrev_budget / 전년 Σrev_last.
+    비-GS 행(운영매출·MICE 등)은 건드리지 않음(마케팅팀 목표=템플릿 유지).
+    """
+    year, cur_m = int(target.split("-")[0]), int(target.split("-")[1])
+    if closed_before is None:
+        closed_before = cur_m
+    try:
+        otb = json.loads(OTB_JSON.read_text(encoding="utf-8")).get("allMonths", {})
+    except Exception:
+        otb = {}
+
+    def srev(seg, m, field):
+        rows = otb.get(str(m), {}).get("byPropertySegment", {}).get(seg, [])
+        return sum((r.get(field) or 0) for r in rows if r.get("name") in props) / 1e6
+
+    cur, cum = {}, {}
+    for seg in SEGS:
+        cur[seg] = {"budget": srev(seg, cur_m, "rev_budget"),
+                    "fcst":   srev(seg, cur_m, "rev_fcst"),
+                    "last":   srev(seg, cur_m, "rev_last")}
+        b = f = l = 0.0
+        for m in range(1, cur_m + 1):
+            b += srev(seg, m, "rev_budget")
+            l += srev(seg, m, "rev_last")
+            f += srev(seg, m, "rev_actual" if m < closed_before else "rev_fcst")
+        cum[seg] = {"budget": b, "fcst": f, "last": l}
+    return cur, cum
+
+
+def build_sales_pptx(target, cur_seg, cum_seg, props, closed_before=None):
     """세일즈마케팅 예상매출현황 PPT 재생성.
 
     템플릿(객실-only)에서 시작 → GS Forecast = 객실 + 소사업(총매출):
@@ -302,21 +335,29 @@ def build_sales_pptx(target, cur_seg, cum_seg):
         for extra in par.runs[1:]:
             extra._r.getparent().remove(extra._r)
 
+    # [8월 전환] GS 3행(OTA/GOTA/Inbound)+총합의 객실 매출을 otb_data(대상월)에서 직접 산출.
+    #   6월 고정 템플릿 대신 실제 대상월 객실 목표/FCST/전년(동기간)을 넣고 소사업(FCST)을 가산한다.
+    #   비-GS 행(운영매출·마케팅·MICE·레저 = 마케팅팀 목표)은 템플릿 그대로 둔다.
+    gs_cur, gs_cum = _gs_room_rev(target, closed_before, props)
+    rowseg = {8: "OTA", 9: "G-OTA", 10: "Inbound"}
+
+    def room(block, seg, field):
+        d = gs_cur if block == 0 else gs_cum
+        return sum(d[s][field] for s in SEGS) if seg == "__GS__" else d[seg][field]
+
     for ri, adds in add.items():
+        seg = rowseg.get(ri, "__GS__")
         for bi, (c_tgt, c_fc, c_diff, c_ach, c_ly, c_lyd, c_lyr) in enumerate(BLK):
-            fc0 = num(ri, c_fc)
-            if fc0 is None:
-                continue
-            fc = fc0 + adds[bi]
+            tgt = room(bi, seg, "budget")
+            fc = room(bi, seg, "fcst") + adds[bi]   # 객실 FCST + 소사업
+            ly = room(bi, seg, "last")
+            put(ri, c_tgt, tgt)
             put(ri, c_fc, fc)
-            tgt = num(ri, c_tgt)
-            ly = num(ri, c_ly)
-            if tgt is not None:
-                put(ri, c_diff, fc - tgt)
-                put(ri, c_ach, round(fc / tgt * 100) if tgt else 0, pct=True)
-            if ly is not None:
-                put(ri, c_lyd, fc - ly)
-                put(ri, c_lyr, round((fc - ly) / ly * 100) if ly else 0, pct=True)
+            put(ri, c_diff, fc - tgt)
+            put(ri, c_ach, round(fc / tgt * 100) if tgt else 0, pct=True)
+            put(ri, c_ly, ly)
+            put(ri, c_lyd, fc - ly)
+            put(ri, c_lyr, round((fc - ly) / ly * 100) if ly else 0, pct=True)
 
     # 기간 라벨을 대상월로 동적 변경 (템플릿은 고정, 월만 교체).
     import calendar
@@ -534,7 +575,7 @@ def main():
         print(f"  → {OUT_SOS}")
         print(f"  → {DOCS_OUT_SOS}")
         # 세일즈마케팅 예상매출현황 PPT (템플릿 + 소사업: 당월=FCST, 누계=온북+FCST)
-        res = build_sales_pptx(target, cur_seg, cum_seg)
+        res = build_sales_pptx(target, cur_seg, cum_seg, props, closed_before)
         if res is not None:
             cur_gs, cum_gs = res
             print(f"✓ 세일즈마케팅_예상매출현황.pptx 생성 (GS 소사업 당월+{cur_gs:,} / 누계+{cum_gs:,}백만 → 총매출)")
