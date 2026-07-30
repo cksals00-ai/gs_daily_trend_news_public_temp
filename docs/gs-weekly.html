@@ -1519,17 +1519,24 @@ function getInboundBudgetByNat(monthIdx) {
 }
 
 // 국가별 분해(인바운드)를 세그먼트 OTB 합계에 정합시킨다.
-// [원칙] 4개국(홍콩·대만·중국·베트남) = inbound_enriched 의 실제 거래처 국적 net 그대로(비율 스케일 금지).
-//   기타 = 세그먼트 OTB(target) − 4개국 실합 = 그 외 국적 + 국적미상/행사(예: '콩쿨대회' 등 EVENT 제외분) 잔여.
-//   → 명목 국적은 항상 실데이터, 비율 배분하지 않는다. target 없으면 원본 기타 유지.
+// [원칙] 기본은 4개국(홍콩·대만·중국·베트남)=inbound_enriched 실제 거래처 국적 net 그대로(비율 배분 금지),
+//   기타 = target − 4개국 실합(그 외 국적 + 국적미상/행사 잔여). → 명목 국적은 실데이터.
+// [정합 보정] 단, 4개국 실합이 세그먼트 총합(target)을 초과하면(예: 전년 열 — enriched 국적합이
+//   세그먼트 net 총합보다 큰 경우) 국적합≠총합이 되어 표가 안 맞으므로, 그때만 4개국을 target에 맞춰
+//   비례 축소(기타=0). 초과하지 않는 일반 경우(당월 실적 등)는 실데이터 그대로 유지.
 function reconcileInboundNat(groups, target) {
   const out = {};
-  IB_NATS.forEach(n => out[n] = Math.round(groups[n] || 0));
-  const named = IB_NATS.reduce((s, n) => s + out[n], 0);
-  if (target > 0) {
-    out['기타'] = Math.max(0, Math.round(target) - named);
+  const namedRaw = IB_NATS.reduce((s, n) => s + (groups[n] || 0), 0);
+  const t = Math.round(target || 0);
+  if (t > 0 && namedRaw > t) {
+    // 초과분: 총합에 정합시키기 위해 4개국 비례 축소, 기타=0
+    const ratio = t / namedRaw;
+    IB_NATS.forEach(n => out[n] = Math.round((groups[n] || 0) * ratio));
+    out['기타'] = Math.max(0, t - IB_NATS.reduce((s, n) => s + out[n], 0));
   } else {
-    out['기타'] = Math.round(groups['기타'] || 0);
+    IB_NATS.forEach(n => out[n] = Math.round(groups[n] || 0));
+    const named = IB_NATS.reduce((s, n) => s + out[n], 0);
+    out['기타'] = t > 0 ? Math.max(0, t - named) : Math.round(groups['기타'] || 0);
   }
   return out;
 }
