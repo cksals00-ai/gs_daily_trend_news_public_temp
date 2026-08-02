@@ -31,8 +31,10 @@ if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 
 # canonical 파싱 helper 재사용 (수정 금지 · 그대로 import)
+import re
 from parse_raw_db import (
     normalize_property, get_region, extract_channel, classify_segment,
+    detect_file_type, _snapshot_min_stay_month, _prev_month, _next_month,
 )
 
 PROJECT_DIR = os.path.dirname(SCRIPTS_DIR)
@@ -113,24 +115,78 @@ def _to_prev_year(ymd):
     return str(int(ymd[:4]) - 1) + ymd[4:]
 
 
+def _is_retrans(fname):
+    """재전송 파일 판별: 파일명에 (YYYYMMDD-YYYYMMDD) 날짜범위 패턴."""
+    return bool(re.search(r'\(\d{8}-\d{8}\)', fname))
+
+
+def _retrans_override():
+    """parse_raw_db 와 동일한 [복구가능 토글] 값(YYYYMM) 또는 None."""
+    ovr = os.path.join(PROJECT_DIR, "data", "raw_db_retrans_max_override.txt")
+    if os.path.exists(ovr):
+        v = open(ovr, encoding="utf-8").read().strip()
+        if re.fullmatch(r"\d{6}", v):
+            return v
+    return None
+
+
 def _iter_booking_files(year_dir):
-    """해당 연도 폴더에서 예약(booking) 파일(27/43)만. 취소(28/44)는 제외."""
+    """해당 연도 폴더에서 예약(booking) 파일(27/43)만 + 월필터. 취소(28/44)는 제외.
+
+    ⚠️ 파일 선택·월필터는 parse_raw_db.main 과 반드시 동일해야 한다(db = source of truth).
+       재전송 파일과 최신 누적 스냅샷이 공존하면 같은 예약이 양쪽에 들어있어,
+       월 분리 없이 둘 다 읽으면 그 월이 이중 집계된다(= 빌더 과다집계 버그).
+       · 재전송   → stay_month ≤ retrans_max (스냅샷 최소 보유월의 직전월)
+       · 스냅샷   → stay_month ≥ snap_min    (스냅샷이 실제 보유한 최소월)
+       · 동일타입 구 스냅샷은 스킵(최신 1개만)
+    yield: (filepath, file_type, min_month|None, max_month|None)
+    """
     if not os.path.isdir(year_dir):
         return
+    by_type = defaultdict(list)   # ft → [filepath]
     for fn in sorted(os.listdir(year_dir)):
         if not fn.lower().endswith(".txt"):
             continue
-        if fn.startswith("27"):
-            yield os.path.join(year_dir, fn), "27"
-        elif fn.startswith("43"):
-            yield os.path.join(year_dir, fn), "43"
+        ft = detect_file_type(fn)
+        if ft not in ("27", "43"):
+            continue  # 예약(booking)만 — 취소(28/44) 제외
+        by_type[ft].append(os.path.join(year_dir, fn))
+
+    ovr = _retrans_override()
+    for ft, fps in sorted(by_type.items()):
+        retrans   = [fp for fp in fps if _is_retrans(os.path.basename(fp))]
+        snapshots = [fp for fp in fps if not _is_retrans(os.path.basename(fp))]
+
+        # 동일 타입 누적 스냅샷이 여러 개면 최신(파일명 날짜)만 사용
+        if len(snapshots) > 1:
+            def _snap_date(fp):
+                m = re.search(r'_(\d{8})_생성시간', os.path.basename(fp))
+                return m.group(1) if m else '00000000'
+            snapshots.sort(key=_snap_date, reverse=True)
+            snapshots = [snapshots[0]]
+
+        if retrans and snapshots:
+            snap_min = _snapshot_min_stay_month(snapshots, ft)
+            retrans_max = _prev_month(snap_min) if snap_min else None
+            if ovr:
+                retrans_max = ovr
+                snap_min = _next_month(ovr)
+            for fp in retrans:
+                yield fp, ft, None, retrans_max
+            for fp in snapshots:
+                yield fp, ft, snap_min, None
+        else:
+            # 재전송/스냅샷 중 하나만 존재 → 월필터 없이 전체 파싱
+            for fp in retrans + snapshots:
+                yield fp, ft, None, None
 
 
-def _parse_file(filepath, file_type, wanted_dates, acc):
+def _parse_file(filepath, file_type, wanted_dates, acc, min_month=None, max_month=None):
     """예약 파일 1개를 스트리밍 파싱해 acc 에 집계.
 
     acc[(stay_date, prop, segment, channel)] = {'rn':int, 'rev':int}
     wanted_dates: 대상 YYYYMMDD set (그 외 행은 즉시 스킵 → 빠름).
+    min_month/max_month: 'YYYYMM' — 범위 밖 stay_month 스킵(parse_raw_db 와 동일 규칙).
     로직은 parse_raw_db.parse_and_aggregate 의 booking 경로와 동일(행 dedup·거래처/매출조정 제거).
     """
     encodings = ["cp949", "euc-kr", "utf-8"]
@@ -171,6 +227,12 @@ def _parse_file(filepath, file_type, wanted_dates, acc):
                             sell_date = parts[idx_checkin].strip() if 0 <= idx_checkin < plen else ""
                         sd = sell_date[:8]
                         if sd not in wanted_dates:
+                            continue
+                        # 월필터(재전송/스냅샷 이중집계 방지) — parse_raw_db 와 동일
+                        stay_month = sd[:6]
+                        if min_month and stay_month < min_month:
+                            continue
+                        if max_month and stay_month > max_month:
                             continue
 
                         # 거래처 제거: 예약자명 == 회원명 (Inbound 코드58 예외)
@@ -219,9 +281,10 @@ def _collect_year(year, wanted_dates):
     year_dir = os.path.join(RAW_DB_DIR, str(year))
     acc = defaultdict(lambda: {"rn": 0, "rev": 0})
     files = list(_iter_booking_files(year_dir))
-    for fp, ft in files:
-        _parse_file(fp, ft, wanted_dates, acc)
-    return acc, [os.path.basename(fp) for fp, _ in files]
+    for fp, ft, min_m, max_m in files:
+        _parse_file(fp, ft, wanted_dates, acc, min_month=min_m, max_month=max_m)
+    return acc, [f"{os.path.basename(fp)} [월필터: {min_m or '*'}~{max_m or '*'}]"
+                 for fp, _, min_m, max_m in files]
 
 
 def _adr(rev_won, rn):
