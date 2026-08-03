@@ -254,12 +254,28 @@ else
   log "    ✅ 산출물 신선도 정상"
 fi
 
-# ── [8] git commit + push (안전 자동화: fetch→merge→ours→push 재시도) ──────
+# ── [8] git commit + push (안전 자동화: 잔재정리→main보정→fetch·rebase→push) ──
 log "--- [git] commit + push ---"
 
 write_status "git" "running" 0
 cleanup_locks() { find "$PROJECT_ROOT/.git" -maxdepth 3 -name '*.lock' -type f -delete 2>>"$LOG_FILE" || true; }
 cleanup_locks
+
+# 공용 git 안전 계층 — daily_update.sh 와 동일 로직(잔재정리·main보정·rebase push)
+# shellcheck source=git_safe.sh
+GSN_GIT_OUT="$LOG_FILE"
+source "$PROJECT_ROOT/scripts/git_safe.sh"
+gsn_log() { log "$*"; }
+
+# 커밋 전 상태 보정: 중단된 rebase 잔재·detached HEAD 를 여기서 흡수한다.
+#   (2026-08-04: 잔재 rebase + detached HEAD 로 크롤 커밋이 브랜치 밖에 쌓였던 사고)
+gsn_git_heal_state
+if gsn_git_ensure_main; then :; else
+  log "    ❌ main 브랜치 확보 실패 — 커밋하지 않고 중단 (산출물은 워킹트리에 보존)"
+  write_status "git" "branch_error" 1
+  log "=== host_daily_crawl 종료 (브랜치 오류) ==="
+  exit 1
+fi
 
 # 크롤·빌드 산출물만 스테이징 (입력 xlsx/txt·로그는 .gitignore 가 거름)
 #   _host_crawl_status.json 은 크롤이 소유하는 상태파일 → 함께 커밋해 최신 ts 를 원격에 반영.
@@ -267,8 +283,8 @@ git add data/ docs/ _host_crawl_status.json >>"$LOG_FILE" 2>&1
 
 if git diff --cached --quiet; then
   log "    ℹ 변경사항 없음 — 커밋 스킵 (원격 fast-forward 만 확인)"
-  git fetch origin main >>"$LOG_FILE" 2>&1 || true
-  git merge --ff-only origin/main >>"$LOG_FILE" 2>&1 || true
+  _gsn_git "$GSN_GIT_T_FETCH" "fetch origin main" fetch origin main || true
+  _gsn_git "$GSN_GIT_T_LOCAL" "merge --ff-only" merge --ff-only origin/main || true
   write_status "done" "no_changes" 0
   log "=== host_daily_crawl 종료 (변경 없음) ==="
   exit 0
@@ -277,74 +293,21 @@ fi
 DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
 git commit -m "chore(auto): host crawl ${DATE_KST} KST [skip ci]" >>"$LOG_FILE" 2>&1
 
-# 충돌 자동해소: 산출물(data/·docs/)은 방금 빌드한 로컬본(--ours) 우선.
-#   data/·docs/ 밖(소스코드 등) 충돌은 사람이 봐야 하므로 merge abort 후 중단(데이터 손실 방지).
-resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要)
-  local U BAD
-  U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
-  [ -z "$U" ] && return 0
-  # 허용 충돌: data/·docs/ 산출물 + 루트 _host_crawl_status.json(상태파일=생성물)
-  BAD="$(printf '%s\n' "$U" | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' || true)"
-  if [ -n "$BAD" ]; then
-    log "    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:"
-    printf '%s\n' "$BAD" | sed 's/^/        /' | tee -a "$LOG_FILE" >/dev/null
-    git merge --abort >>"$LOG_FILE" 2>&1 || true
-    return 2
-  fi
-  printf '%s\n' "$U" | while IFS= read -r f; do
-    [ -z "$f" ] && continue
-    if [ "$f" = "_host_crawl_status.json" ]; then
-      # 상태파일은 ts(ISO 문자열) 최신본 우선 — 롤백 방지(주말 status ts 되돌림 재발 차단)
-      OURS_TS="$(git show :2:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
-      THEIRS_TS="$(git show :3:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
-      if [ -n "$THEIRS_TS" ] && { [ -z "$OURS_TS" ] || [[ "$THEIRS_TS" > "$OURS_TS" ]]; }; then
-        git checkout --theirs -- "$f" >>"$LOG_FILE" 2>&1 || true
-        log "    충돌→최신 status(theirs ts=$THEIRS_TS): $f"
-      else
-        git checkout --ours -- "$f" >>"$LOG_FILE" 2>&1 || true
-        log "    충돌→최신 status(ours ts=$OURS_TS): $f"
-      fi
-      git add -- "$f" >>"$LOG_FILE" 2>&1 || true
-      continue
-    fi
-    git checkout --ours -- "$f" >>"$LOG_FILE" 2>&1 || true
-    git add -- "$f" >>"$LOG_FILE" 2>&1 || true
-    log "    충돌→ours(로컬 빌드본): $f"
-  done
-  if ! git commit --no-edit >>"$LOG_FILE" 2>&1; then
-    log "    ⚠ merge 커밋 실패 — merge abort"
-    git merge --abort >>"$LOG_FILE" 2>&1 || true
-    return 2
-  fi
-  return 0
-}
-
-# push 재시도: 거부되면 fetch→merge(--no-edit)→충돌 자동해소→재push (최대 3회)
+# push: fetch → rebase origin/main(생성물 충돌=재빌드본 우선 자동해소) → push, 최대 3회.
+#   충돌 해소·잔재정리·main 보정은 모두 scripts/git_safe.sh 가 담당(force-push 없음).
 PUSH_OK=0
-for attempt in 1 2 3; do
-  cleanup_locks
-  if git push origin main >>"$LOG_FILE" 2>&1; then
-    PUSH_OK=1
-    break
-  fi
-  log "    ⚠ push 시도 $attempt 실패 — origin fetch 후 merge 재시도"
-  if ! git fetch origin main >>"$LOG_FILE" 2>&1; then
-    log "    ⚠ fetch 실패(네트워크?) — 다음 시도"
-    continue
-  fi
-  if git merge --no-edit origin/main >>"$LOG_FILE" 2>&1; then
-    log "    ✅ merge 클린 — 재push"
-  else
-    resolve_generated_conflicts; rc=$?
-    if [ "$rc" -eq 2 ]; then
-      log "    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요 (로컬 커밋은 보존됨)"
-      write_status "git_push" "merge_conflict" 1
-      log "=== host_daily_crawl 종료 (merge 충돌) ==="
-      exit 1
-    fi
-    log "    ✅ 충돌 자동해소 완료 — 재push"
-  fi
-done
+if gsn_git_sync_push; then prc=0; else prc=$?; fi
+case "$prc" in
+  0) PUSH_OK=1 ;;
+  2) log "    ❌ 코드(data/·docs/ 밖) 충돌 — 자동 rebase 불가, 수동 확인 필요 (로컬 커밋은 보존됨)"
+     write_status "git_push" "merge_conflict" 1
+     log "=== host_daily_crawl 종료 (충돌) ==="
+     exit 1 ;;
+  3) log "    ❌ git 구조 문제(브랜치·HEAD) — 자동 진행 불가 (로컬 커밋은 refs/gsn-backup/* 에 보존)"
+     write_status "git_push" "branch_error" 1
+     log "=== host_daily_crawl 종료 (브랜치 오류) ==="
+     exit 1 ;;
+esac
 
 if [ "$PUSH_OK" -ne 1 ]; then
   log "    ❌ git push 최종 실패 (3회) — 로컬 커밋은 보존됨, 다음 05:00 실행에서 재시도"
@@ -354,7 +317,7 @@ if [ "$PUSH_OK" -ne 1 ]; then
 fi
 
 # 최종 동기화 확인
-git fetch origin >>"$LOG_FILE" 2>&1
+_gsn_git "$GSN_GIT_T_FETCH" "fetch origin" fetch origin || true
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 if [ "$LOCAL" != "$REMOTE" ]; then

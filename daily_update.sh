@@ -176,94 +176,46 @@ run_quick "11/12 generate_chat_index"       "scripts/generate_chat_index.py"
 # ── [12/12] HTML 빌드 ──────────────────────────────────────────
 run_quick "12/12 build"                     "scripts/build.py"
 
-# ── Git 커밋 & 푸시 (안전 자동화: 원격 발산 시 fetch→merge→산출물 자동해소→재push) ──
-#   scripts/host_daily_crawl.sh 의 git 단계와 동일 원칙:
-#   - 산출물(data/·docs/) 충돌 → 방금 빌드한 로컬본(--ours) 우선 자동해소
-#   - data/·docs/ 밖(손으로 쓴 소스·스크립트 등) 충돌 → merge abort 후 중단(수동 확인)
-#   - push 거부(다른 세션·호스트 크롤이 원격 선점) 시 fetch→merge→재push 최대 3회
+# ── Git 커밋 & 푸시 (안전 자동화: 잔재 정리 → main 보정 → fetch·rebase → push) ──
+#   scripts/git_safe.sh 로 host_daily_crawl.sh 와 로직을 공유한다:
+#   - 커밋 전: 미완 rebase/merge 잔재 정리 + detached HEAD → main 복귀(커밋 보존)
+#   - 산출물(data/·docs/) 충돌 → 방금 빌드한 재빌드본 우선 자동해소
+#   - data/·docs/ 밖(손으로 쓴 소스·스크립트 등) 충돌 → rebase 되돌린 뒤 중단(수동 확인)
+#   - push 거부(다른 세션·호스트 크롤이 원격 선점) 시 fetch→rebase→재push 최대 3회(force 금지)
 CURRENT_STAGE="git"
 print_header "Git 커밋 & 푸시"
 
-find .git -maxdepth 3 -name '*.lock' -type f -delete 2>/dev/null || true
+# shellcheck source=scripts/git_safe.sh
+source "scripts/git_safe.sh"
+gsn_log() { echo -e "$*"; }
+
+# 커밋 전 상태 보정: 중단된 rebase 잔재·detached HEAD 를 여기서 흡수한다.
+#   (2026-08-04: 잔재 rebase + detached HEAD 로 daily 커밋이 브랜치 밖에 고립됐던 사고)
+gsn_git_heal_state
+if gsn_git_ensure_main; then :; else
+    echo -e "${RED}    ❌ main 브랜치 확보 실패 — 커밋하지 않고 중단${NC}"
+    echo -e "${RED}       빌드 산출물은 워킹트리에 그대로 있습니다(유실 없음).${NC}"
+    exit 1
+fi
+
 git add -A
 # _host_crawl_status.json 은 호스트 크롤이 소유하는 상태파일 → daily_update 는 stale 본을
 # 커밋해 원격 최신 ts 를 되돌리면 안 됨(주말 status ts 롤백 원인). 스테이지에서 제외.
 git reset -q -- _host_crawl_status.json 2>/dev/null || true
 
-# 산출물 충돌 자동해소: data/·docs/ 는 --ours(로컬 빌드본), 그 외는 중단要
-resolve_generated_conflicts() {   # 0=해소됨, 2=데이터외 충돌(중단要)
-    local U BAD
-    U="$(git diff --name-only --diff-filter=U 2>/dev/null)"
-    [ -z "$U" ] && return 0
-    # 허용 충돌: data/·docs/ 산출물 + 루트 _host_crawl_status.json(상태파일=생성물)
-    BAD="$(printf '%s\n' "$U" | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' || true)"
-    if [ -n "$BAD" ]; then
-        echo -e "${RED}    ❌ data/·docs/ 밖 충돌 — 자동해소 불가:${NC}"
-        printf '%s\n' "$BAD" | sed 's/^/        /'
-        git merge --abort 2>/dev/null || true
-        return 2
-    fi
-    printf '%s\n' "$U" | while IFS= read -r f; do
-        [ -z "$f" ] && continue
-        if [ "$f" = "_host_crawl_status.json" ]; then
-            # 상태파일은 ts(ISO 문자열) 최신본 우선 — 롤백 방지
-            OURS_TS="$(git show :2:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
-            THEIRS_TS="$(git show :3:"$f" 2>/dev/null | sed -n 's/.*"ts": *"\([^"]*\)".*/\1/p')"
-            if [ -n "$THEIRS_TS" ] && { [ -z "$OURS_TS" ] || [[ "$THEIRS_TS" > "$OURS_TS" ]]; }; then
-                git checkout --theirs -- "$f" >/dev/null 2>&1 || true
-                echo "    충돌→최신 status(theirs ts=$THEIRS_TS): $f"
-            else
-                git checkout --ours -- "$f" >/dev/null 2>&1 || true
-                echo "    충돌→최신 status(ours ts=$OURS_TS): $f"
-            fi
-            git add -- "$f" >/dev/null 2>&1 || true
-            continue
-        fi
-        git checkout --ours -- "$f" >/dev/null 2>&1 || true
-        git add -- "$f" >/dev/null 2>&1 || true
-        echo "    충돌→ours(로컬 빌드본): $f"
-    done
-    if ! git commit --no-edit >/dev/null 2>&1; then
-        echo -e "${RED}    ⚠ merge 커밋 실패 — merge abort${NC}"
-        git merge --abort 2>/dev/null || true
-        return 2
-    fi
-    return 0
-}
-
-# 안전 push: 거부되면 fetch→merge(--no-edit)→산출물 충돌 자동해소→재push (최대 3회)
-#   반환  0=push성공  1=3회 실패  2=소스충돌(중단要). 데이터 커밋·트리거 커밋 공용.
-#   부수효과: 이번 push에서 merge 커밋(= [skip ci] 없는 커밋)을 원격에 올렸으면
-#   DEPLOY_ALREADY_TRIGGERED=1 로 표시(deploy.yml push 트리거가 이미 발동됨).
-#   → 호출측이 trigger_deploy()의 추가 트리거 커밋을 생략해 중복 빌드를 막는다.
+# 안전 push: scripts/git_safe.sh 의 gsn_git_sync_push 위임
+#   fetch → rebase origin/main(생성물 충돌=재빌드본 우선 자동해소) → push, 최대 3회.
+#   반환  0=push성공  1=3회 실패  2=코드충돌(중단要)  3=구조적 중단(브랜치 등).
+#
+#   DEPLOY_ALREADY_TRIGGERED: 과거 merge 방식에선 발산 흡수용 merge 커밋([skip ci] 없음)이
+#   deploy.yml push 트리거를 발동시켜 중복 빌드를 막을 필요가 있었다. rebase 방식에선
+#   merge 커밋이 생기지 않아 push 되는 커밋이 전부 [skip ci] → 배포가 트리거되지 않는다.
+#   따라서 항상 0 으로 두고 아래 trigger_deploy() 가 배포를 책임진다.
 DEPLOY_ALREADY_TRIGGERED=0
 safe_push() {
-    local attempt rc
-    for attempt in 1 2 3; do
-        find .git -maxdepth 3 -name '*.lock' -type f -delete 2>/dev/null || true
-        if git push origin main; then
-            return 0
-        fi
-        echo -e "${YELLOW}    ⚠ push 시도 ${attempt} 실패(원격 발산) — origin fetch 후 merge 재시도${NC}"
-        if ! git fetch origin main; then
-            echo -e "${YELLOW}    ⚠ fetch 실패(네트워크?) — 다음 시도${NC}"
-            continue
-        fi
-        if git merge --no-edit origin/main; then
-            echo -e "${GREEN}    ✅ merge 클린 — 재push${NC}"
-        else
-            # set -e + ERR trap 하에서 함수 반환값을 안전하게 받기 위해 if 로 가드
-            if resolve_generated_conflicts; then rc=0; else rc=$?; fi
-            [ "$rc" -eq 2 ] && return 2
-            echo -e "${GREEN}    ✅ 산출물 충돌 자동해소 완료 — 재push${NC}"
-        fi
-        # 여기 도달 = push 거부 후 발산을 merge 로 흡수한 경우. 발산 merge 는
-        # 항상 merge 커밋("Merge remote-tracking branch ...", [skip ci] 없음)을
-        # 만들고, 이게 다음 루프의 push 로 원격에 올라가면 deploy.yml 의 push
-        # 트리거가 발동한다. → 이미 빌드가 트리거되므로 플래그를 세운다.
-        DEPLOY_ALREADY_TRIGGERED=1
-    done
-    return 1
+    local rc
+    if gsn_git_sync_push; then rc=0; else rc=$?; fi
+    return "$rc"
 }
 
 # 즉시 배포 트리거: 데이터 커밋엔 [skip ci]가 있어 push 배포가 스킵됨.
@@ -286,8 +238,8 @@ trigger_deploy() {
 if git diff --cached --quiet; then
     echo -e "${YELLOW}⚠ 변경사항 없음 — 커밋/푸시 스킵${NC}"
     # 원격이 앞서 있으면 fast-forward 만 맞춰둠 (다음 실행 발산 예방)
-    git fetch origin main >/dev/null 2>&1 || true
-    git merge --ff-only origin/main >/dev/null 2>&1 || true
+    _gsn_git "$GSN_GIT_T_FETCH" "fetch origin main" fetch origin main >/dev/null 2>&1 || true
+    _gsn_git "$GSN_GIT_T_LOCAL" "merge --ff-only" merge --ff-only origin/main >/dev/null 2>&1 || true
 else
     STAT=$(git diff --cached --stat | tail -1)
     DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
@@ -298,8 +250,13 @@ else
     DEPLOY_ALREADY_TRIGGERED=0
     if safe_push; then prc=0; else prc=$?; fi
     if [ "$prc" -eq 2 ]; then
-        echo -e "${RED}    ❌ 자동 merge 불가(소스 충돌 등) — 수동 확인 필요${NC}"
-        echo -e "${RED}       (방금 만든 로컬 커밋은 보존되어 있습니다)${NC}"
+        echo -e "${RED}    ❌ 코드(data/·docs/ 밖) 충돌 — 자동 rebase 불가, 수동 확인 필요${NC}"
+        echo -e "${RED}       (rebase 는 되돌렸고 방금 만든 로컬 커밋은 보존되어 있습니다)${NC}"
+        exit 1
+    fi
+    if [ "$prc" -eq 3 ]; then
+        echo -e "${RED}    ❌ git 구조 문제(브랜치·HEAD) — 자동 진행 불가, 수동 확인 필요${NC}"
+        echo -e "${RED}       (로컬 커밋은 보존, 필요 시 refs/gsn-backup/* 에서 복구 가능)${NC}"
         exit 1
     fi
     if [ "$prc" -ne 0 ]; then
@@ -312,11 +269,10 @@ else
     echo "   $STAT"
 
     # 데이터 push 성공 직후 즉시 배포 트리거 — 단, 중복 빌드 방지:
-    #   이번 실행에서 이미 merge 커밋([skip ci] 없음)이 원격에 push돼
-    #   deploy.yml 의 push 트리거가 발동됐다면(=빌드 #A) trigger_deploy 의
-    #   추가 트리거 커밋(=빌드 #B)을 생략해 같은 최종상태를 두 번 배포하지 않는다.
-    #   merge 없이 fast-forward(데이터 [skip ci] 커밋만)로 올라가 아무 빌드도
-    #   안 돈 경우에만 trigger_deploy 가 no-skip-ci 트리거 커밋을 올려 1빌드 보장.
+    #   rebase 방식에선 발산을 흡수해도 merge 커밋이 생기지 않아 push 되는 커밋이
+    #   전부 [skip ci] → deploy.yml push 트리거가 안 돈다. 따라서 항상 아래
+    #   trigger_deploy 가 no-skip-ci 트리거 커밋을 올려 1빌드를 보장한다.
+    #   (플래그는 merge 방식으로 되돌릴 경우를 위해 분기만 남겨둠)
     if [ "$DEPLOY_ALREADY_TRIGGERED" -eq 1 ]; then
         echo -e "${GREEN}🚀 이미 merge 커밋(no [skip ci])으로 빌드 트리거됨 — 트리거 커밋 생략 (중복 빌드 방지)${NC}"
     else
