@@ -11035,13 +11035,17 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
       if (agg && agg.pickup_daily) {
         var keys = Object.keys(agg.pickup_daily).sort();
         // 마지막 키가 실데이터 거의 없는 부분일(<100실)이면 직전 완성일 사용
-        var idx = keys.length - 1;
+        // pickup_daily 엔트리 필드는 rn/rev — net_rn 은 없다. 없는 필드만 읽으면
+        // 전 구간이 0 으로 평가돼 최초 키(20210526)까지 내려간다.
+        var idx = keys.length - 1, found = -1;
         while (idx >= 0) {
-          var rn = (agg.pickup_daily[keys[idx]] || {}).net_rn || 0;
-          if (rn >= 100 || idx === 0) break;
+          var e = agg.pickup_daily[keys[idx]] || {};
+          var rn = (e.net_rn != null ? e.net_rn : e.rn) || 0;
+          if (rn >= 100) { found = idx; break; }
           idx--;
         }
-        if (idx >= 0) twcData.latest_data_date = keys[idx];
+        // 완전일을 못 찾으면 빌더가 계산한 latest_data_date 를 그대로 둔다
+        if (found >= 0) twcData.latest_data_date = keys[found];
         if (agg.generated_at) twcData.source_generated_at = agg.generated_at;
       }
       renderTWC(twcData, agg);
