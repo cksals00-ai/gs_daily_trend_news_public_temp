@@ -46,42 +46,44 @@ CANCEL_STATUS = "Cancelled Reservation"
 
 
 def find_latest_xlsx():
-    """data/palatium_db/ 에서 최신 예약정보조회 xlsx 파일들을 찾음."""
+    """data/palatium_db/ 의 예약정보조회 xlsx 를 **전부** 반환.
+
+    ⚠️ 월 롤오버 대응(하드코딩 금지):
+      DB 는 매월 [마감월 재전송 3파일 추가] + [당월~ 누적 스냅샷 매일 갱신] 구조로 늘어난다.
+        · 현재: [1~6월 재전송] + [7월 재전송] + [08-03 누적스냅샷]
+        · 9월엔: [1~6월] + [7월] + [8월 재전송] + [09-xx 누적스냅샷]
+      과거엔 파일명(MMDD)으로 그룹을 만들어 max() 한 그룹만 파싱했는데,
+        · 파일명 자릿수가 섞이면(예: '2026010701' vs '080301') 문자열 max 가 엉뚱한
+          그룹('2026' > '0803')을 골라 최신 데이터를 통째로 버리고,
+        · 재전송 3파일은 각각 다른 그룹('0701','0702','0703')이 돼 한 파트만 잡힌다.
+      → 파일명으로 고르지 않는다. 전부 읽고, "어느 export 가 어느 투숙월의 주인인가"는
+        parse_reservations() 가 **파일 안의 Sales Date** 로 동적 판정한다(_resolve_month_owner).
+    """
     import unicodedata
     if not PALATIUM_DB_DIR.exists():
         return []
-    files = sorted(
+    return sorted(
         f for f in PALATIUM_DB_DIR.iterdir()
         if unicodedata.normalize("NFC", f.name).startswith("예약정보조회")
         and f.suffix == ".xlsx"
     )
-    if not files:
-        return []
-    # 파일명 패턴: 예약정보조회MMDD0N.xlsx (예: 예약정보조회051801.xlsx)
-    # 또는 구형: 예약정보조회4월01.xlsx
-    date_groups = defaultdict(list)
-    for f in files:
-        name = f.stem  # 예약정보조회051801
-        # 패턴1: MMDD 숫자 (6자리 이상)
-        m1 = re.search(r'예약정보조회(\d{4,})', name)
-        if m1:
-            date_key = m1.group(1)[:4]  # MMDD
-            date_groups[date_key].append(f)
-            continue
-        # 패턴2: M월NN (예: 4월01)
-        m2 = re.search(r'예약정보조회(\d{1,2})월', name)
-        if m2:
-            month_num = int(m2.group(1))
-            date_key = f"{month_num:02d}00"  # 0400 (일자 불명이면 00)
-            date_groups[date_key].append(f)
-            continue
-        date_groups["0000"].append(f)
 
-    if not date_groups:
-        return list(files)
-    # 가장 최근 날짜 그룹 반환
-    latest_key = max(date_groups.keys())
-    return date_groups[latest_key]
+
+# 투숙월 소유권 판정: 최신 Sales Date 우선. 단 그 export 의 해당 월 행 수가
+# 최대 보유 export 의 이 비율 미만이면 "마감월이 스냅샷에서 빠지며 남은 잔여행(잡음)"
+# 으로 보고 이전 export(재전송)로 폴백한다. parse_raw_db._snapshot_min_stay_month 의
+# min_rows 잡음 가드와 같은 취지(고정 월 대신 실데이터로 경계 판정).
+OWNER_COVERAGE_RATIO = 0.5
+
+
+def _resolve_month_owner(counts):
+    """counts[month][sales_date] = 행 수  →  {month: 그 달을 대표할 sales_date}"""
+    owner = {}
+    for month, per_sd in counts.items():
+        best = max(per_sd.values()) if per_sd else 0
+        cands = [sd for sd, c in per_sd.items() if c >= best * OWNER_COVERAGE_RATIO]
+        owner[month] = max(cands) if cands else None
+    return owner
 
 
 def find_budget_xlsx():
@@ -108,29 +110,29 @@ def parse_reservations(xlsx_files):
         log.error("openpyxl 필요: pip install openpyxl")
         return None
 
-    monthly = defaultdict(lambda: {
-        "booking_rn": 0, "cancel_rn": 0, "revenue": 0,
-        "daily_rn": defaultdict(int),  # day → room nights
-    })
-    sales_date = None
-    today_booking = 0
-    today_cancel = 0
-    seen_keys = set()  # 중복 방지 (예약번호+도착일)
+    # ── 1단계: 전 파일 행 수집(파일당 1회 읽기) ───────────────────────────
+    #   이 시점엔 아직 집계하지 않는다. 어느 export(Sales Date)가 어느 투숙월의
+    #   주인인지 정한 뒤에 집계해야 재전송×스냅샷 중복/과다집계가 안 생긴다.
+    records = []                                    # 수집된 행
+    counts = defaultdict(lambda: defaultdict(int))  # month → sales_date → 행 수
+    sales_dates = []
 
     for fpath in xlsx_files:
-        log.info(f"  파싱: {fpath.name}")
         wb = openpyxl.load_workbook(str(fpath), data_only=True, read_only=True)
         ws = wb.active
 
-        # Sales Date 추출 (2행)
-        row2_val = None
+        # Sales Date 추출 (2행) — 파일별로 각각(파일명 아닌 내용 기준)
+        f_sales_date = ""
         for row in ws.iter_rows(min_row=2, max_row=2, max_col=1, values_only=True):
             row2_val = row[0]
-        if row2_val and "Sales Date" in str(row2_val) and not sales_date:
-            m = re.search(r'(\d{4}-\d{2}-\d{2})', str(row2_val))
-            if m:
-                sales_date = m.group(1)
+            if row2_val and "Sales Date" in str(row2_val):
+                m = re.search(r'(\d{4}-\d{2}-\d{2})', str(row2_val))
+                if m:
+                    f_sales_date = m.group(1)
+        if f_sales_date:
+            sales_dates.append(f_sales_date)
 
+        n_rows = 0
         # 데이터 행 (4행부터)
         for row in ws.iter_rows(min_row=4, values_only=True):
             status = row[0] if row[0] else ""
@@ -157,34 +159,67 @@ def parse_reservations(xlsx_files):
                 except (ValueError, TypeError):
                     continue
 
-            # 중복 체크
-            dup_key = f"{reservation_no}_{arr_dt.strftime('%Y%m%d')}_{status}"
-            if dup_key in seen_keys:
-                continue
-            seen_keys.add(dup_key)
-
-            month = arr_dt.month
-            day = arr_dt.day
-            n = max(1, int(nights or 1))
-            rc = max(1, int(room_cnt or 1))
-            rn = n * rc
-            rev = float(room_rev or 0)
-
-            if status == CANCEL_STATUS:
-                monthly[month]["cancel_rn"] += rn
-                if arr_dt.date() == datetime.strptime(sales_date, "%Y-%m-%d").date() if sales_date else False:
-                    today_cancel += rn
-            elif status in ACTIVE_STATUSES:
-                monthly[month]["booking_rn"] += rn
-                monthly[month]["revenue"] += rev
-                # 일별 객실수 (도착일 기준으로 배분)
-                for d_off in range(n):
-                    target_day = day + d_off
-                    days_in_month = calendar.monthrange(arr_dt.year, month)[1]
-                    if target_day <= days_in_month:
-                        monthly[month]["daily_rn"][target_day] += rc
+            records.append((f_sales_date, arr_dt, status, reservation_no, nights, room_rev, room_cnt))
+            counts[arr_dt.month][f_sales_date] += 1
+            n_rows += 1
 
         wb.close()
+        log.info(f"  파싱: {fpath.name} (Sales Date {f_sales_date or '?'}, {n_rows}행)")
+
+    # ── 2단계: 투숙월 소유권 판정(동적) ───────────────────────────────────
+    owner = _resolve_month_owner(counts)
+    for month in sorted(owner):
+        per_sd = counts[month]
+        detail = ", ".join(f"{sd or '?'}:{c}" for sd, c in sorted(per_sd.items()))
+        dropped = sum(c for sd, c in per_sd.items() if sd != owner[month])
+        log.info(f"  [{month:2d}월] 소유 export={owner[month] or '?'} "
+                 f"({detail})" + (f" → 구 export {dropped}행 제외" if dropped else ""))
+
+    sales_date = max(sales_dates) if sales_dates else None
+
+    # ── 3단계: 소유 export 행만 집계(+중복제거) ───────────────────────────
+    monthly = defaultdict(lambda: {
+        "booking_rn": 0, "cancel_rn": 0, "revenue": 0,
+        "daily_rn": defaultdict(int),  # day → room nights
+    })
+    today_booking = 0
+    today_cancel = 0
+    seen_keys = set()  # 중복 방지 (예약번호+도착일+상태)
+    dup_skipped = 0
+
+    for f_sales_date, arr_dt, status, reservation_no, nights, room_rev, room_cnt in records:
+        month = arr_dt.month
+        if owner.get(month) != f_sales_date:
+            continue  # 그 달의 주인이 아닌 export → 제외(중복·stale 차단)
+
+        dup_key = f"{reservation_no}_{arr_dt.strftime('%Y%m%d')}_{status}"
+        if dup_key in seen_keys:
+            dup_skipped += 1
+            continue
+        seen_keys.add(dup_key)
+
+        day = arr_dt.day
+        n = max(1, int(nights or 1))
+        rc = max(1, int(room_cnt or 1))
+        rn = n * rc
+        rev = float(room_rev or 0)
+
+        if status == CANCEL_STATUS:
+            monthly[month]["cancel_rn"] += rn
+            if sales_date and arr_dt.date() == datetime.strptime(sales_date, "%Y-%m-%d").date():
+                today_cancel += rn
+        elif status in ACTIVE_STATUSES:
+            monthly[month]["booking_rn"] += rn
+            monthly[month]["revenue"] += rev
+            # 일별 객실수 (도착일 기준으로 배분)
+            for d_off in range(n):
+                target_day = day + d_off
+                days_in_month = calendar.monthrange(arr_dt.year, month)[1]
+                if target_day <= days_in_month:
+                    monthly[month]["daily_rn"][target_day] += rc
+
+    if dup_skipped:
+        log.info(f"  중복 제거: {dup_skipped}행 (예약번호+도착일+상태 동일)")
 
     return {
         "sales_date": sales_date,
@@ -278,8 +313,19 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
     data["meta"]["source"] = "Daily_Booking_Report"
     data["meta"]["property_count"] = 25  # 기존 값 유지
 
+    # 갱신 대상 = meta.months(당월+2) + months_detail 에 이미 있는 과거월 중 파싱된 달.
+    # 월이 넘어가면 직전월(예: 7월)이 meta.months 에서 빠지는데, months_detail 블록은
+    # 남아 있어 팔라티움 행이 stale 0 으로 굳는다(= '7월 actual=0' 증상). 파싱된 달이면 함께 갱신.
+    update_months = list(target_months)
+    for md in data.get("months_detail", []):
+        mk = md.get("month_key") or ""
+        if mk in update_months or not mk.startswith(f"{year}-"):
+            continue
+        if reservations["months"].get(int(mk.split("-")[1])):
+            update_months.append(mk)
+
     # months_detail에서 팔라티움 해운대 by sonofelice 엔트리 추가/갱신
-    for month_key in target_months:
+    for month_key in sorted(update_months):
         m = int(month_key.split("-")[1])
         days_in_month = calendar.monthrange(year, m)[1]
 
