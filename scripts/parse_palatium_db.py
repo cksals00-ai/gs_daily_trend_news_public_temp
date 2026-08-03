@@ -276,17 +276,48 @@ def load_room_availability():
         return {}, {}
 
 
-def build_daily_occ(month: int, year: int, daily_avail: dict) -> list:
-    """월의 일별 OCC 리스트 생성 (room_availability.json 기반)."""
+def build_daily_occ(month: int, year: int, daily_avail: dict, daily_rn: dict = None) -> list:
+    """월의 일별 OCC 리스트 생성.
+
+    OCC = 그날 판매 RN ÷ 그날 Inventory(재고) × 100.
+      · 분모(Inventory) = room_availability(사용가능 객실 현황) — 물리 재고라 추출일이
+        조금 지나도 유효(≈201실/일).
+      · 분자(판매 RN)   = 예약정보조회 export 의 일별 RN(최신 Sales Date).
+    room_availability 의 'sold' 는 그 파일을 뽑은 시점에 **얼어붙은** 값이라 분자로 쓰면
+    추출일 이후 월이 전부 0% 로 나온다(04-30 추출 → 7·8월 0.0%). 그래서 분자만 신선한
+    예약 데이터로 교체한다. daily_rn 이 없으면 기존대로 파일의 occ 로 폴백.
+    """
     days_in_month = calendar.monthrange(year, month)[1]
     occ_list = []
     for d in range(1, days_in_month + 1):
         key = f"{year}-{month:02d}-{d:02d}"
-        if key in daily_avail:
-            occ_list.append(round(daily_avail[key].get("occ", 0), 1))
+        avail = daily_avail.get(key)
+        inv = (avail or {}).get("inventory", 0)
+        if daily_rn is not None and inv:
+            occ_list.append(round(daily_rn.get(d, 0) / inv * 100, 1))
+        elif avail:
+            occ_list.append(round(avail.get("occ", 0), 1))
         else:
             occ_list.append(0)
     return occ_list
+
+
+def occ_denominator_is_stale(month: int, year: int, daily_avail: dict, daily_rn: dict) -> bool:
+    """그 달의 Inventory(분모)가 낡았는지 판정: 판매 RN 이 재고를 넘는 날이 하루라도 있으면 True.
+
+    팔라티움은 단계적 오픈으로 재고가 계속 늘어(2월 101실 → 6월 201실/일), '사용가능 객실 현황'
+    파일을 뽑은 시점 이후의 재고는 그 시점 계획값으로 얼어붙는다. 실제 판매가 그 값을 넘으면
+    (예: 07-25 판매 256 > 재고 201) 분모가 이미 틀린 것이므로, OCC 를 계산하면 과대표시된다.
+    → 그런 달은 수치를 만들지 않고 null(화면 '—')로 두고 경고한다. 최신 현황 파일을 넣으면
+      경고가 사라지고 자동으로 채워진다(추정값 생성 금지).
+    """
+    if not daily_rn:
+        return False
+    for d, rn in daily_rn.items():
+        inv = daily_avail.get(f"{year}-{month:02d}-{d:02d}", {}).get("inventory", 0)
+        if inv and rn > inv:
+            return True
+    return False
 
 
 def update_daily_booking(reservations, budget, room_monthly, room_daily):
@@ -316,6 +347,7 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
     # 갱신 대상 = meta.months(당월+2) + months_detail 에 이미 있는 과거월 중 파싱된 달.
     # 월이 넘어가면 직전월(예: 7월)이 meta.months 에서 빠지는데, months_detail 블록은
     # 남아 있어 팔라티움 행이 stale 0 으로 굳는다(= '7월 actual=0' 증상). 파싱된 달이면 함께 갱신.
+    stale_occ_months = []
     update_months = list(target_months)
     for md in data.get("months_detail", []):
         mk = md.get("month_key") or ""
@@ -367,13 +399,26 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
         ach = round(actual_rns / budget_rns * 100, 1) if budget_rns > 0 else 0
         vs_budget = actual_rns - budget_rns
 
-        # OCC (room_availability 기반)
+        # OCC = 판매 RN(예약 export, 최신) ÷ Inventory(room_availability, 물리 재고) × 100.
+        #   room_availability 의 sold 는 파일 추출 시점에 고정 → 분자로 쓰면 이후 월이 0% 가 된다.
+        #   분자는 월내 소진 RN(일별 RN 합)을 쓴다. actual_rns(=도착월 기준 booking_rn)와는
+        #   월경계 이월분만큼 미세하게 다르며, OCC 는 '그 달에 실제 판 객실밤' 기준이 맞다.
         ra_monthly_key = f"{year}-{m:02d}"
         ra_month = room_monthly.get(ra_monthly_key, {})
-        occ_actual = ra_month.get("occ", 0)
-
-        # 일별 OCC
-        daily_occ = build_daily_occ(m, year, room_daily)
+        res_daily_rn = res_month.get("daily_rn", {}) or {}
+        inv_sum = ra_month.get("inventory_sum", 0)
+        rn_in_month = sum(res_daily_rn.values())
+        if occ_denominator_is_stale(m, year, room_daily, res_daily_rn):
+            # 재고(분모)가 낡아 OCC 가 과대표시됨 → 수치 미생성(null)
+            occ_actual = None
+            daily_occ = [None] * days_in_month
+            stale_occ_months.append(month_key)
+        else:
+            if inv_sum > 0 and rn_in_month:
+                occ_actual = round(rn_in_month / inv_sum * 100, 1)
+            else:
+                occ_actual = ra_month.get("occ", 0)   # 재고/예약 없음 → 파일값 폴백
+            daily_occ = build_daily_occ(m, year, room_daily, res_daily_rn or None)
 
         # 당일 변동 (대략적 — 정확한 계산은 전일 대비 필요하지만 현재 데이터로는 근사)
         daily_change = 0
@@ -384,7 +429,10 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
         occ_ly = 0
         yoy_rns = 0
         yoy_pct = 0.0
-        occ_yoy_change = round(occ_actual - occ_ly, 1) if occ_ly > 0 else round(occ_actual - occ_budget, 1)
+        if occ_actual is None:
+            occ_yoy_change = None   # OCC 미산출(분모 stale) → 증감도 만들지 않음
+        else:
+            occ_yoy_change = round(occ_actual - occ_ly, 1) if occ_ly > 0 else round(occ_actual - occ_budget, 1)
 
         new_prop = {
             "name": PROPERTY_NAME,
@@ -403,7 +451,7 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
             "occ_budget": occ_budget,
             "occ_ly": occ_ly,
             "occ_yoy_change": occ_yoy_change,
-            "occ_actual": round(occ_actual, 1),
+            "occ_actual": round(occ_actual, 1) if occ_actual is not None else None,
             "daily_occ": daily_occ,
         }
 
@@ -411,6 +459,19 @@ def update_daily_booking(reservations, budget, room_monthly, room_daily):
             prop_entry.update(new_prop)
         else:
             md_entry.setdefault("properties", []).append(new_prop)
+
+    if stale_occ_months:
+        ra_gen = "?"
+        if ROOM_AVAIL_JSON.exists():
+            try:
+                ra_gen = json.loads(ROOM_AVAIL_JSON.read_text(encoding="utf-8")).get("_generated", "?")
+            except Exception:
+                pass
+        log.warning(
+            f"⚠ OCC 미산출 {stale_occ_months}: 판매 RN 이 재고를 넘음 "
+            f"(현황 파일 추출일 {ra_gen} 기준 재고가 낡음 — 단계적 오픈으로 실재고 증가). "
+            f"최신 '사용가능 객실 현황' xlsx 를 data/palatium_rooma/ 에 넣으면 자동 산출됨."
+        )
 
     return data
 
