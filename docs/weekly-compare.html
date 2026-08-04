@@ -550,8 +550,11 @@ body {
 <script>
 // ===== TODAY + WEEKLY COMPARISON 렌더러 =====
 (function () {
-  fetch('./data/weekly_comparison.json')
-    .then(function (r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); })
+  // 캐시버스터(분단위) — 없으면 브라우저가 묵은 스냅샷을 계속 서빙한다
+  var _d = new Date(), _p = function (n) { return (n < 10 ? '0' : '') + n; };
+  var _bust = '' + _d.getFullYear() + _p(_d.getMonth() + 1) + _p(_d.getDate()) + _p(_d.getHours()) + _p(_d.getMinutes());
+  fetch('./data/weekly_comparison.json?t=' + _bust)
+    .then(function (r) { if (!r.ok) throw new Error('fetch failed: HTTP ' + r.status); return r.json(); })
     .then(function (data) { renderTWC(data); })
     .catch(function (e) {
       console.warn('[twc] load failed:', e);

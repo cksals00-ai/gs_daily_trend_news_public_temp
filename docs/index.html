@@ -11252,11 +11252,27 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 <script>
 // ===== TODAY + WEEKLY COMPARISON 렌더러 =====
 (function () {
+  // 캐시버스터 — 없으면 브라우저가 며칠 묵은 스냅샷을 계속 서빙해 화면만 stale 해진다.
+  //   소형 json = ?t=분단위, db_aggregated(14MB gz) = ?v=날짜(하루 1회만 무효화)
+  function _twcBust(fine) {
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var day = '' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+    return fine ? day + p(d.getHours()) + p(d.getMinutes()) : day;
+  }
+  // 로드 실패를 화면에 드러내는 헬퍼 — console.warn 만 하면 블록 전체가 '—' 로
+  // 남아 사용자는 "데이터가 비었다"고만 보이고 원인을 알 수 없다(2026-08-04 문의).
+  function _twcFail(msg) {
+    var lb = document.getElementById('twc-date-label');
+    if (lb) lb.textContent = '데이터 로드 실패';
+    var wl = document.getElementById('twc-window-label');
+    if (wl) wl.textContent = msg;
+  }
+
   // weekly_comparison.json + db_aggregated.json 동시 로드 →
   // 데이터 기준일은 db_aggregated.json의 pickup_daily 최신 키(실데이터 존재 기준)로 강제 동기화
   Promise.all([
-    fetch('./data/weekly_comparison.json').then(function (r) { if (!r.ok) throw new Error('twc fetch failed'); return r.json(); }),
-    fetch('./data/db_aggregated.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    fetch('./data/weekly_comparison.json?t=' + _twcBust(true)).then(function (r) { if (!r.ok) throw new Error('twc fetch failed: HTTP ' + r.status); return r.json(); }),
+    fetch('./data/db_aggregated.json?v=' + _twcBust(false)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
   ])
     .then(function (results) {
       var twcData = results[0];
@@ -11277,9 +11293,19 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
         if (found >= 0) twcData.latest_data_date = keys[found];
         if (agg.generated_at) twcData.source_generated_at = agg.generated_at;
       }
-      renderTWC(twcData, agg);
+      // 렌더 중 예외가 나면 라벨만 찍히고 나머지 셀이 전부 '—' 로 남는다 →
+      // 조용히 실패하지 말고 사유를 화면에 남긴다.
+      try {
+        renderTWC(twcData, agg);
+      } catch (err) {
+        console.error('[twc] render failed:', err);
+        _twcFail('주간비교 렌더 오류: ' + ((err && err.message) || err));
+      }
     })
-    .catch(function (e) { console.warn('[twc] load failed:', e); });
+    .catch(function (e) {
+      console.warn('[twc] load failed:', e);
+      _twcFail('주간비교 데이터를 불러오지 못했습니다 — 강력새로고침(⌘⇧R) 후에도 계속되면 관리자 확인 필요');
+    });
 
   function fmtDate(ymd) {
     if (!ymd || ymd.length < 8) return '—';
