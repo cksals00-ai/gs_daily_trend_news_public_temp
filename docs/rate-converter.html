@@ -157,6 +157,7 @@ async function fillTemplate(res, fee){
 var $=function(id){return document.getElementById(id);};
 /* ===== 검토 요청(B안): flag 파일을 구글 드라이브로 전송 ===== */
 var REVIEW_ENDPOINT="https://script.google.com/macros/s/AKfycbxyCTCGayiX5a1DxJVkbVUyGDdvO92z9baI5anFxkbL3JkaFQ6aPzx3Clxm0Phv096l/exec"; /* Apps Script 웹앱(검토대기 드라이브 수집) */
+var REVIEW_DONE_URL="https://drive.google.com/drive/folders/1F4rh3UvReRLKYdXppgtwClCSh5goIDI2"; /* 요금표_완료 폴더 (결과 회신 위치) */
 function flagUI(msg, f, reason){
   var h='<span class=warn>⚠ '+msg+'</span>';
   if(REVIEW_ENDPOINT){
@@ -175,7 +176,7 @@ function sendForReview(f, reason){
     var b64=String(rd.result).split(',')[1];
     fetch(REVIEW_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({filename:f.name, reason:reason||'', b64:b64})})
-    .then(function(){ m.innerHTML='<span class=ok>✅ 검토 요청 전송됨 · 담당자 처리 후 회신됩니다</span>'; })
+    .then(function(){ m.innerHTML='<span class=ok>✅ 검토 요청 전송됨</span> · 담당자 검토 후 <a href="'+REVIEW_DONE_URL+'" target="_blank" style="color:#5fd1ff">요금표_완료 폴더</a>에 <b>'+f.name.replace(/\.(xlsx|xlsm)$/i,'')+'_품의.xlsx</b>로 올라옵니다'; })
     .catch(function(e){ m.innerHTML='<span class=bad>전송 실패: '+(e&&e.message?e.message:e)+'</span> (네트워크 확인)'; });
   };
   rd.readAsDataURL(f);
