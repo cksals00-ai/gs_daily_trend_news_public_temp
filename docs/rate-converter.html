@@ -127,19 +127,59 @@ function wsAccessor(sjws){ if(!sjws||!sjws['!ref']) return {max_row:0,max_column
 /* ===== 템플릿 채우기 (ExcelJS) ===== */
 var ROWMAP={'주중':36,'금요일':39,'토요일':42,'7/16':45,'하이':48,'골드':51,'스페셜':54};
 var COLS=[4,8,12,16,20,24,28,32,36];
-async function fillTemplate(res){
+function setC(ws,r,c,v){ try{ ws.getRow(r).getCell(c).value=v; }catch(e){} }
+function extractFee(sheets){
+  for(var i=0;i<sheets.length;i++){ var ws=sheets[i].ws, R=Math.min(ws.max_row,80), C=Math.min(ws.max_column,60);
+    for(var r=1;r<=R;r++) for(var c=1;c<=C;c++){ var v=ws.cell(r,c);
+      if(typeof v!=='string'||v.indexOf('수수료')<0) continue;
+      var m=v.match(/(\d+(?:\.\d+)?)\s*[~∼\-]?\s*(\d+(?:\.\d+)?)?\s*[%％]/);
+      if(m) return m[0].replace(/\s+/g,'');
+      var nb=ws.cell(r,c+1); if(typeof nb==='string'){ var m2=nb.match(/(\d+(?:\.\d+)?)[^%％]*[%％]/); if(m2) return m2[0].replace(/\s+/g,''); }
+    } }
+  return '';
+}
+async function fillTemplate(res, fee){
   var resp=await fetch('./pumui_template.xlsx'); var buf=await resp.arrayBuffer();
   var wb=new ExcelJS.Workbook(); await wb.xlsx.load(buf);
   var ws=wb.getWorksheet('품의 양식(회원동반)');
+  [25,26,27,28,29,30,31,57].forEach(function(r){ setC(ws,r,4,null); });   /* FESTA 커버 샘플 제거 */
+  if(fee) setC(ws,57,4,' · '+fee);
+  [4,13,22,31].forEach(function(c){ setC(ws,61,c,null); });               /* 부대상세 슬롯명 제거 */
+  for(var r=63;r<=68;r++) for(var c=4;c<=39;c++) setC(ws,r,c,null);        /* 부대상세 값 제거 */
   for(var s in ROWMAP){ var r0=ROWMAP[s],g=res.G[s];
-    if(!g){ ws.getRow(r0).getCell(2).value=''; for(var ci=0;ci<COLS.length;ci++){ for(var rr=r0;rr<=r0+2;rr++) ws.getRow(rr).getCell(COLS[ci]).value=''; } continue; }
+    if(!g){ setC(ws,r0,2,''); for(var ci=0;ci<COLS.length;ci++){ for(var rr=r0;rr<=r0+2;rr++) setC(ws,rr,COLS[ci],''); } continue; }
     var blk=blk1(g,res.has_rack);
     for(var j=0;j<COLS.length;j++){ var c=COLS[j];
-      ws.getRow(r0).getCell(c).value=blk[j][0]; ws.getRow(r0+1).getCell(c).value=blk[j][1]; ws.getRow(r0+2).getCell(c).value=blk[j][2]; } }
+      setC(ws,r0,c,blk[j][0]); setC(ws,r0+1,c,blk[j][1]); setC(ws,r0+2,c,blk[j][2]); } }
   return await wb.xlsx.writeBuffer();
 }
 /* ===== UI ===== */
 var $=function(id){return document.getElementById(id);};
+/* ===== 검토 요청(B안): flag 파일을 구글 드라이브로 전송 ===== */
+var REVIEW_ENDPOINT=""; /* ★ 관리자: 아래 Apps Script 웹앱 URL 붙여넣기 (비우면 버튼 숨김) */
+function flagUI(msg, f, reason){
+  var h='<span class=warn>⚠ '+msg+'</span>';
+  if(REVIEW_ENDPOINT){
+    h+='<br><button class="dl" id="rvBtn" style="background:#2f6fb0;color:#fff;margin-top:8px">검토 요청 전송 →</button>'+
+       '<span id="rvMsg" class="mut" style="margin-left:8px"></span>';
+  }else{
+    h+='<br><span class=mut>이 파일은 담당(Claude)이 수동 처리합니다.</span>';
+  }
+  $('status').innerHTML=h;
+  if(REVIEW_ENDPOINT){ $('rvBtn').onclick=function(){ sendForReview(f, reason); }; }
+}
+function sendForReview(f, reason){
+  var m=$('rvMsg'); m.textContent='전송 중…';
+  var rd=new FileReader();
+  rd.onload=function(){
+    var b64=String(rd.result).split(',')[1];
+    fetch(REVIEW_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({filename:f.name, reason:reason||'', b64:b64})})
+    .then(function(){ m.innerHTML='<span class=ok>✅ 검토 요청 전송됨 · 담당자 처리 후 회신됩니다</span>'; })
+    .catch(function(e){ m.innerHTML='<span class=bad>전송 실패: '+(e&&e.message?e.message:e)+'</span> (네트워크 확인)'; });
+  };
+  rd.readAsDataURL(f);
+}
 function previewTable(res){
   var order=['주중','금요일','토요일','하이','골드','스페셜'];
   var h='<table><tr><th>시즌</th><th>객실 무기명<br>정상~배분</th><th>객실 FIT<br>정상~배분</th><th>판매 무기명</th><th>판매 FIT</th></tr>';
@@ -156,12 +196,12 @@ async function handle(f){
     var sheets=sjwb.SheetNames.map(function(nm,i){ var hid=(sjwb.Workbook&&sjwb.Workbook.Sheets&&sjwb.Workbook.Sheets[i])?sjwb.Workbook.Sheets[i].Hidden:0;
       return {name:nm, ws:wsAccessor(sjwb.Sheets[nm]), visible:!hid}; });
     var pick=pickSheet(sheets);
-    if(!pick){ $('status').innerHTML='<span class=warn>⚠ 요금 시트를 찾지 못했습니다.</span> 담당(Claude)에게 넘겨주세요.'; return; }
+    if(!pick){ flagUI('요금 시트를 찾지 못했습니다.', f, '요금시트 미탐지'); return; }
     var res=runEngine(pick.ws);
-    if(res.status!=='OK'){ $('status').innerHTML='<span class=warn>⚠ 자동변환 불가 — '+res.reason+'</span><br><span class=mut>시트: '+pick.name+' · 이 파일은 담당(Claude)이 수동 처리합니다.</span>'; return; }
+    if(res.status!=='OK'){ flagUI('자동변환 불가 — '+res.reason+' (시트: '+pick.name+')', f, res.reason); return; }
     var seas=Object.keys(res.seasons).join(', ');
     $('status').innerHTML='<span class=ok>✅ 변환 완료 · 역산검증 통과</span> ('+res.rows+'행 · 시트 '+pick.name+' · 시즌: '+seas+')';
-    var outbuf=await fillTemplate(res);
+    var outbuf=await fillTemplate(res, extractFee(sheets));
     var blob=new Blob([outbuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     var url=URL.createObjectURL(blob); var name=f.name.replace(/\.(xlsx|xlsm)$/i,'')+'_품의.xlsx';
     $('status').innerHTML+='<br><a class="dl" href="'+url+'" download="'+name+'">품의 xlsx 다운로드 ↓</a>';
