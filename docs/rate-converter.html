@@ -5,6 +5,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>요금표 → 품의 배분가(안) 변환기 · GS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root{--bg:#0f1722;--card:#16202e;--line:#2a3a4f;--ink:#e7eef7;--mut:#9fb2c9;--ac:#2f6fb0;--ok:#37c98b;--warn:#e0b341;--bad:#e57373}
 *{box-sizing:border-box}body{margin:0;font-family:'맑은 고딕',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
@@ -13,30 +15,20 @@ header{background:linear-gradient(90deg,#1F4E79,#2f6fb0);padding:16px 22px}h1{ma
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
 .card h2{margin:0 0 10px;font-size:13px;color:#cfe0f3}.step{display:inline-block;background:var(--ac);color:#fff;border-radius:999px;width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;margin-right:6px}
 .drop{border:2px dashed var(--ac);border-radius:10px;padding:26px;text-align:center;color:var(--mut);cursor:pointer;background:#0e1722}.drop.hot{background:#13243a;border-color:var(--ok)}
-button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:bold;cursor:pointer}
 .mut{color:var(--mut);font-size:11px;line-height:1.6}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
-.pill{font-size:11px;padding:3px 10px;border-radius:20px;background:#0e1722;border:1px solid var(--line);color:var(--mut)}
-.dl{display:inline-block;margin-top:10px;padding:9px 18px;background:var(--ok);color:#08210f;border-radius:8px;text-decoration:none;font-weight:bold}
-.banner{border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:1.6}
-.banner.bad{background:rgba(229,115,115,.12);border:1px solid rgba(229,115,115,.4);color:#f3b0b0}
+.dl{display:inline-block;margin-top:10px;padding:9px 18px;background:var(--ok);color:#08210f;border-radius:8px;text-decoration:none;font-weight:bold;border:0;cursor:pointer;font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:11px;margin-top:10px}th,td{border:1px solid var(--line);padding:3px 5px;text-align:center}th{background:#0e1722;color:#cfe0f3}
 </style></head><body>
-<header><h1>요금표 → 품의 배분가(안) 변환기</h1><p>로컬 변환 엔진이 양식을 자동 인식하고 <b>역산검증(판매=객실배분+부대배분)</b>으로 오류를 걸러 GS 품의 양식으로 변환합니다.</p></header>
+<header><h1>요금표 → 품의 배분가(안) 변환기</h1><p>브라우저에서 양식을 자동 인식하고 <b>역산검증(판매=객실배분+부대배분)</b>으로 오류를 걸러 GS 품의 양식으로 변환합니다. · 서버 불필요</p></header>
 <div class="wrap">
 
- <div id="offBanner" class="banner bad" style="display:none">
-   ○ 로컬 변환기가 꺼져 있습니다. 변환 서비스(pumui-receiver)가 실행 중인지 확인하세요.
-   <span class="mut">터미널: <code>curl http://127.0.0.1:8765/health</code> · 크롬 권장</span>
- </div>
-
  <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-   <h2 style="margin:0"><span class="step">1</span>요금표 업로드</h2>
-   <span id="conn" class="pill">연결 확인 중…</span>
-  </div>
+  <h2><span class="step">1</span>요금표 업로드</h2>
   <div id="drop" class="drop">xlsx 파일을 끌어다 놓거나 클릭 — 채널/사업장 무관, 양식 달라도 자동 인식</div>
   <input id="file" type="file" accept=".xlsx,.xlsm" style="display:none"/>
   <div id="status" class="mut" style="margin-top:12px;min-height:20px"></div>
+  <div id="prev"></div>
  </div>
 
  <div class="card">
@@ -45,56 +37,142 @@ button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 1
    · 회원 = 무기명 / FIT = FIT·카카오·인플루언서·OTA 자동감지<br>
    · 시즌: 하이1·2→하이, 골드3·4→스페셜(추석), 주중(일)→주중, 전 객실타입 MIN~MAX<br>
    · 부대배분 = 판매 − 객실배분(역산), 정상요금 컬럼 있으면 부대정상까지 산출<br>
-   · <b>역산 불일치·매핑 실패 시 변환하지 않고 '수동확인필요'로 격리</b> (잘못된 품의 방지)<br>
-   · 여러 상품 시트면 가장 큰 시트 자동 선택 — 특정 상품 지정이 필요하면 담당(Claude)이 처리
+   · <b>역산 불일치·매핑 실패 시 변환하지 않고 안내</b> (잘못된 품의 방지) — 그런 파일은 담당(Claude)이 수동 처리<br>
+   · 여러 상품 시트면 가장 큰 시트 자동 선택 · 결과는 섹션4(배분가) 채움
   </div>
  </div>
 
 </div>
 
 <script>
-(function(){
-  var EP="http://127.0.0.1:8765";
-  var $=function(id){return document.getElementById(id);};
-  var drop=$('drop'),inp=$('file'),st=$('status'),conn=$('conn'),off=$('offBanner');
-
-  function checkConn(){
-    fetch(EP+"/health").then(function(r){return r.json();}).then(function(){
-      conn.textContent="● 로컬 변환기 연결됨"; conn.style.color="#5fe08a"; conn.style.borderColor="#245a37"; off.style.display="none";
-    }).catch(function(){
-      conn.textContent="○ 로컬 변환기 꺼짐"; conn.style.color="#ff8a8a"; conn.style.borderColor="#5a2424"; off.style.display="block";
-    });
-  }
-  checkConn(); setInterval(checkConn, 15000);
-
-  function send(f){
-    if(!f) return;
-    if(!/\.(xlsx|xlsm)$/i.test(f.name)){ st.innerHTML='<span class=warn>xlsx 파일만 가능합니다.</span>'; return; }
-    st.innerHTML='⏳ 변환 중… <b>'+f.name+'</b>';
-    fetch(EP+"/convert",{method:"POST",body:f,headers:{"X-Filename":encodeURIComponent(f.name)}})
-      .then(function(r){return r.json();})
-      .then(function(j){
-        if(j.status==="OK"){
-          var seas=Object.keys(j.seasons||{}).join(", ");
-          st.innerHTML='<span class=ok>✅ 변환 완료 · 역산검증 통과</span> ('+j.rows+'행 · 시즌: '+seas+')<br>'+
-            '<a class="dl" href="'+EP+j.download+'" download>품의 xlsx 다운로드 ↓</a>';
-        }else{
-          st.innerHTML='<span class=warn>⚠ 자동변환 불가 — '+(j.message||'')+'</span><br>'+
-            '<span class=mut>수동확인필요 폴더로 이동됨. 담당(Claude)이 처리합니다.</span>';
-        }
-      })
-      .catch(function(e){
-        st.innerHTML='<span class=bad>❌ 로컬 변환기에 연결할 수 없습니다.</span><br>'+
-          '<span class=mut>변환 서비스가 켜져 있는지 확인하세요 (curl http://127.0.0.1:8765/health). 크롬 권장.</span>';
-      });
-    inp.value="";
-  }
-
-  drop.onclick=function(){ inp.click(); };
-  drop.ondragover=function(e){ e.preventDefault(); drop.classList.add('hot'); };
-  drop.ondragleave=function(){ drop.classList.remove('hot'); };
-  drop.ondrop=function(e){ e.preventDefault(); drop.classList.remove('hot'); send(e.dataTransfer.files[0]); };
-  inp.onchange=function(e){ send(e.target.files[0]); };
-})();
+/* ===== 엔진 (Python rate_to_pumui.py 1:1 포팅, Node 6/6 검증 완료) ===== */
+function norm(v){ return (v==null?'':String(v)).replace(/\s+/g,''); }
+function canon(s){ s=norm(s); if(!s)return null;
+  if(s.indexOf('하이')===0)return '하이';
+  if(s.indexOf('골드3')===0||s.indexOf('골드4')===0)return '스페셜';
+  if(s.indexOf('골드')===0)return '골드';
+  if(s.indexOf('스페셜')===0||s.indexOf('연휴')>=0||s.indexOf('추석')>=0||s.indexOf('최성수')>=0)return '스페셜';
+  if(s.indexOf('주중')===0||s.indexOf('주말')===0)return '주중';
+  if(s==='금'||s==='금요일'||s.indexOf('금요일')===0)return '금요일';
+  if(s==='토'||s==='토요일'||s.indexOf('토요일')===0)return '토요일';
+  return null; }
+var SKIP=['갑지','내용','상품안','상품(안)','코드','요약','상품코드','패키지','정보','월력','취소','GS','펫','코드번호'];
+function pickSheet(sheets){ var best=null,bs=-1;
+  for(var i=0;i<sheets.length;i++){ var sh=sheets[i],nn=norm(sh.name),skip=false;
+    for(var j=0;j<SKIP.length;j++) if(nn.indexOf(SKIP[j])>=0){skip=true;break;}
+    if(skip) continue; var ws=sh.ws,found=false;
+    for(var r=1;r<=Math.min(ws.max_row,20)&&!found;r++) for(var c=1;c<=Math.min(ws.max_column,60);c++){ if(norm(ws.cell(r,c))==='시즌'){found=true;break;} }
+    if(!found) continue; var score=ws.max_row+(sh.visible?500:0); if(score>bs){bs=score;best=sh;} }
+  return best; }
+function findLayout(ws){ var srow=null,scol=null,HZ=Math.min(ws.max_row,25);
+  for(var r=1;r<=HZ&&!scol;r++) for(var c=1;c<=ws.max_column;c++){ if(norm(ws.cell(r,c))==='시즌'){srow=r;scol=c;break;} }
+  if(!scol) return null; var hzEnd=srow+2;
+  function cellHas(c,kw){ for(var r=1;r<=hzEnd;r++) if(norm(ws.cell(r,c)).indexOf(kw)>=0) return true; return false; }
+  function cellEq(c,kw){ for(var r=1;r<=hzEnd;r++) if(norm(ws.cell(r,c))===kw) return true; return false; }
+  function gstart(kw){ var c; for(c=1;c<=ws.max_column;c++) if(cellEq(c,kw)) return c; for(c=1;c<=ws.max_column;c++) if(cellHas(c,kw)) return c; return null; }
+  var gm=[],kws=['정상가','스마트요금','배분가','판매가','정상요금'];
+  for(var i=0;i<kws.length;i++){ var g=gstart(kws[i]); if(g) gm.push([g,kws[i]]); }
+  gm.sort(function(a,b){return a[0]-b[0];}); if(!gm.length) return null;
+  function span(kw){ for(var i=0;i<gm.length;i++) if(gm[i][1]===kw){ var end=i+1<gm.length?gm[i+1][0]-1:ws.max_column; return [gm[i][0],end]; } return null; }
+  function findSub(sp,exacts,contains){ if(!sp) return null; contains=contains||[]; var c,k;
+    for(c=sp[0];c<=sp[1];c++) for(k=0;k<exacts.length;k++) if(cellEq(c,exacts[k])) return c;
+    for(c=sp[0];c<=sp[1];c++) for(k=0;k<contains.length;k++) if(cellHas(c,contains[k])) return c; return null; }
+  var n_sp=span('정상가'),a_sp=span('배분가'),s_sp=span('판매가'),r_sp=span('정상요금'),L={};
+  L.mem_norm=findSub(n_sp,['무기명']); L.fit_norm=findSub(n_sp,['FIT']);
+  L.mem_alloc=findSub(a_sp,['무기명']); L.fit_alloc=findSub(a_sp,['FIT']);
+  L.mem_sale=findSub(s_sp,['무기명'],['무기명']); L.fit_sale=findSub(s_sp,['FIT'],['카카오','인플','OTA','트립닷컴','메이커스','예약하기']);
+  L.mem_rack=r_sp?findSub(r_sp,['무기명']):null; L.fit_rack=r_sp?findSub(r_sp,['FIT']):null;
+  var end_pm=r_sp?r_sp[0]-1:ws.max_column,c;
+  if(L.mem_sale==null&&L.mem_alloc){ for(c=L.mem_alloc+1;c<=end_pm;c++) if(cellEq(c,'무기명')){L.mem_sale=c;break;} }
+  if(L.fit_sale==null&&L.fit_alloc){ for(c=L.fit_alloc+1;c<=end_pm;c++) if(cellEq(c,'FIT')){L.fit_sale=c;break;} }
+  L.season=scol; L.data_start=srow+3; return L; }
+function isNum(x){ return typeof x==='number'&&!isNaN(x); }
+function extract(ws,L){ var G={},bad=0,tot=0,has_rack=!!(L.mem_rack&&L.fit_rack);
+  for(var r=L.data_start;r<=ws.max_row;r++){ var s=canon(ws.cell(r,L.season)); if(!s) continue;
+    var jn=ws.cell(r,L.mem_norm),kn=ws.cell(r,L.fit_norm),ya=ws.cell(r,L.mem_alloc),aa=ws.cell(r,L.fit_alloc),sm=ws.cell(r,L.mem_sale),sf=ws.cell(r,L.fit_sale);
+    if(!(isNum(jn)&&isNum(kn)&&isNum(ya)&&isNum(aa)&&isNum(sm)&&isNum(sf))) continue;
+    var ba=sm-ya; if((sf-aa)!==ba){ bad++; continue; }
+    var bn=null; if(has_rack){ var rn=ws.cell(r,L.mem_rack); bn=isNum(rn)?rn-jn:null; }
+    tot++; var g=G[s]||(G[s]={jn:[],kn:[],ya:[],aaa:[],sm:[],sf:[],ba:[],bn:[]});
+    g.jn.push(jn);g.kn.push(kn);g.ya.push(ya);g.aaa.push(aa);g.sm.push(sm);g.sf.push(sf);g.ba.push(ba);g.bn.push(bn); }
+  return {G:G,bad:bad,tot:tot,has_rack:has_rack}; }
+function runEngine(ws){ var L=findLayout(ws);
+  var need=['mem_norm','fit_norm','mem_alloc','fit_alloc','mem_sale','fit_sale','season'];
+  if(!L||need.some(function(k){return !L[k];})) return {status:'FLAG',reason:'컬럼 자동매핑 실패'};
+  var e=extract(ws,L); if(e.tot===0) return {status:'FLAG',reason:'유효 데이터 0'};
+  if(e.bad>0) return {status:'FLAG',reason:'역산 불일치 '+e.bad+'행'};
+  var seasons={}; for(var k in e.G) seasons[k]=e.G[k].jn.length;
+  return {status:'OK',rows:e.tot,seasons:seasons,has_rack:e.has_rack,G:e.G}; }
+/* ===== 출력 값 (은행가반올림) ===== */
+function pyround(x){ var f=Math.floor(x),d=x-f; if(d<0.5)return f; if(d>0.5)return f+1; return (f%2===0)?f:f+1; }
+function commas(n){ return n.toLocaleString('en-US'); }
+function rng(a){ a=a.filter(function(x){return typeof x==='number'&&!isNaN(x);}); if(!a.length)return '-';
+  var lo=pyround(Math.min.apply(null,a)/1000),hi=pyround(Math.max.apply(null,a)/1000); return lo===hi?commas(lo):commas(lo)+'~'+commas(hi); }
+function pct(n,a){ var ds=[],i; for(i=0;i<n.length;i++){ if(typeof n[i]==='number'&&n[i]&&typeof a[i]==='number') ds.push(pyround((n[i]-a[i])/n[i]*100)); }
+  if(!ds.length)return '-'; var lo=Math.min.apply(null,ds),hi=Math.max.apply(null,ds); return lo===hi?lo+'%':lo+'%~'+hi+'%'; }
+function blk1(g,has_rack){ var n=g.jn.length,i,gapN=[],gapA=[],psGa=[];
+  for(i=0;i<n;i++){gapN.push(g.kn[i]-g.jn[i]);gapA.push(g.aaa[i]-g.ya[i]);psGa.push(g.sf[i]-g.sm[i]);}
+  var allbn=g.bn.every(function(x){return typeof x==='number';}),psN,psF,bnv;
+  if(has_rack&&allbn){ psN=[];psF=[]; for(i=0;i<n;i++){psN.push(g.jn[i]+g.bn[i]);psF.push(g.kn[i]+g.bn[i]);} bnv=g.bn; }
+  else { psN=Array(n).fill(null);psF=Array(n).fill(null);bnv=Array(n).fill(null); }
+  return [[rng(g.jn),rng(g.ya),pct(g.jn,g.ya)],[rng(g.kn),rng(g.aaa),pct(g.kn,g.aaa)],[rng(gapN),rng(gapA),'-'],
+          [rng(bnv),rng(g.ba),pct(bnv,g.ba)],[rng(bnv),rng(g.ba),pct(bnv,g.ba)],['-',0,'-'],
+          [rng(psN),rng(g.sm),pct(psN,g.sm)],[rng(psF),rng(g.sf),pct(psF,g.sf)],['-',rng(psGa),'-']]; }
+/* ===== SheetJS → ws 접근자 ===== */
+function wsAccessor(sjws){ if(!sjws||!sjws['!ref']) return {max_row:0,max_column:0,cell:function(){return null;}};
+  var rg=XLSX.utils.decode_range(sjws['!ref']);
+  return { max_row:rg.e.r+1, max_column:rg.e.c+1,
+    cell:function(r,c){ var cell=sjws[XLSX.utils.encode_cell({r:r-1,c:c-1})]; if(!cell||cell.v==null)return null;
+      if(cell.v instanceof Date) return cell.w||String(cell.v); return cell.v; } }; }
+/* ===== 템플릿 채우기 (ExcelJS) ===== */
+var ROWMAP={'주중':36,'금요일':39,'토요일':42,'7/16':45,'하이':48,'골드':51,'스페셜':54};
+var COLS=[4,8,12,16,20,24,28,32,36];
+async function fillTemplate(res){
+  var resp=await fetch('./pumui_template.xlsx'); var buf=await resp.arrayBuffer();
+  var wb=new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+  var ws=wb.getWorksheet('품의 양식(회원동반)');
+  for(var s in ROWMAP){ var r0=ROWMAP[s],g=res.G[s];
+    if(!g){ ws.getRow(r0).getCell(2).value=''; for(var ci=0;ci<COLS.length;ci++){ for(var rr=r0;rr<=r0+2;rr++) ws.getRow(rr).getCell(COLS[ci]).value=''; } continue; }
+    var blk=blk1(g,res.has_rack);
+    for(var j=0;j<COLS.length;j++){ var c=COLS[j];
+      ws.getRow(r0).getCell(c).value=blk[j][0]; ws.getRow(r0+1).getCell(c).value=blk[j][1]; ws.getRow(r0+2).getCell(c).value=blk[j][2]; } }
+  return await wb.xlsx.writeBuffer();
+}
+/* ===== UI ===== */
+var $=function(id){return document.getElementById(id);};
+function previewTable(res){
+  var order=['주중','금요일','토요일','하이','골드','스페셜'];
+  var h='<table><tr><th>시즌</th><th>객실 무기명<br>정상~배분</th><th>객실 FIT<br>정상~배분</th><th>판매 무기명</th><th>판매 FIT</th></tr>';
+  for(var i=0;i<order.length;i++){ var s=order[i],g=res.G[s]; if(!g) continue; var b=blk1(g,res.has_rack);
+    h+='<tr><td>'+s+'</td><td>'+b[0][0]+' / '+b[0][1]+'</td><td>'+b[1][0]+' / '+b[1][1]+'</td><td>'+b[6][1]+'</td><td>'+b[7][1]+'</td></tr>'; }
+  return h+'</table>';
+}
+async function handle(f){
+  if(!f) return;
+  if(!/\.(xlsx|xlsm)$/i.test(f.name)){ $('status').innerHTML='<span class=warn>xlsx 파일만 가능합니다.</span>'; return; }
+  $('status').innerHTML='⏳ 분석 중… <b>'+f.name+'</b>'; $('prev').innerHTML='';
+  try{
+    var buf=await f.arrayBuffer(); var sjwb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true});
+    var sheets=sjwb.SheetNames.map(function(nm,i){ var hid=(sjwb.Workbook&&sjwb.Workbook.Sheets&&sjwb.Workbook.Sheets[i])?sjwb.Workbook.Sheets[i].Hidden:0;
+      return {name:nm, ws:wsAccessor(sjwb.Sheets[nm]), visible:!hid}; });
+    var pick=pickSheet(sheets);
+    if(!pick){ $('status').innerHTML='<span class=warn>⚠ 요금 시트를 찾지 못했습니다.</span> 담당(Claude)에게 넘겨주세요.'; return; }
+    var res=runEngine(pick.ws);
+    if(res.status!=='OK'){ $('status').innerHTML='<span class=warn>⚠ 자동변환 불가 — '+res.reason+'</span><br><span class=mut>시트: '+pick.name+' · 이 파일은 담당(Claude)이 수동 처리합니다.</span>'; return; }
+    var seas=Object.keys(res.seasons).join(', ');
+    $('status').innerHTML='<span class=ok>✅ 변환 완료 · 역산검증 통과</span> ('+res.rows+'행 · 시트 '+pick.name+' · 시즌: '+seas+')';
+    var outbuf=await fillTemplate(res);
+    var blob=new Blob([outbuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob); var name=f.name.replace(/\.(xlsx|xlsm)$/i,'')+'_품의.xlsx';
+    $('status').innerHTML+='<br><a class="dl" href="'+url+'" download="'+name+'">품의 xlsx 다운로드 ↓</a>';
+    $('prev').innerHTML=previewTable(res);
+  }catch(e){ $('status').innerHTML='<span class=bad>변환 오류: '+(e&&e.message?e.message:e)+'</span>'; }
+}
+var drop=$('drop'),inp=$('file');
+drop.onclick=function(){ inp.click(); };
+drop.ondragover=function(e){ e.preventDefault(); drop.classList.add('hot'); };
+drop.ondragleave=function(){ drop.classList.remove('hot'); };
+drop.ondrop=function(e){ e.preventDefault(); drop.classList.remove('hot'); handle(e.dataTransfer.files[0]); };
+inp.onchange=function(e){ handle(e.target.files[0]); inp.value=''; };
 </script>
 </body></html>
