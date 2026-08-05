@@ -204,6 +204,8 @@ function render(data){
   html += `<div class="card"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars(s.countries,'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
   html += '</div>';
 
+  html += '<div id="rmHome"></div>';
+
   if(s.channel_month&&s.channel_month.series&&s.channel_month.series.length){
     html += `<div class="card" style="margin-top:18px"><h3>채널 × 월 추이 <span class="tag">세션 · 스택(누적)</span></h3><div class="chartbox" style="height:330px"><canvas id="chChart"></canvas></div></div>`;
   }
@@ -257,8 +259,42 @@ fetch('data/ga4_latest.json?_t='+Date.now())
   .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(d=>{ if(!d||!d.sections||!Object.keys(d.sections).length) return renderEmpty('(파일은 있으나 수집 섹션이 비어 있음)'); render(d); })
   .catch(e=>renderEmpty('('+e.message+')'));
+
+// ── 홈페이지 채널 (Revenue Meeting 파싱) ─────────────────────────
+function renderRmHome(rm){
+  const box=document.getElementById('rmHome'); if(!box||!rm||!rm.main) return;
+  const months=Object.keys(rm.main).map(Number).sort((a,b)=>a-b);
+  if(!months.length) return;
+  const mo=months[0]; const m=rm.main[mo];
+  const rnAch=m.rn_ach, revAch=m.rev_ach;
+  const cls=v=>v>=100?'up':(v>=90?'flat':'down');
+  const arw=v=>v>=100?'▲':'▼';
+  let html=`<div class="ins-head" style="margin-top:26px"><span class="t">🏠 홈페이지 채널 · Revenue Meeting</span><span class="b">${rm.source||''} · 투숙 ${mo}월</span></div>`;
+  html+='<div class="kpis">';
+  html+=`<div class="kpi"><div class="label">예약(RN) 목표→전망</div><div class="val">${NF.format(m.fcst_rn)}<small> / ${NF.format(m.budget_rn)}</small></div><div class="delta ${cls(rnAch)}">${arw(rnAch)} 달성 ${rnAch}% <span style="color:var(--ink-faint);font-weight:500">(${m.fcst_rn-m.budget_rn>=0?'+':''}${NF.format(m.fcst_rn-m.budget_rn)})</span></div></div>`;
+  html+=`<div class="kpi"><div class="label">매출 목표→전망(백만)</div><div class="val">${NF.format(m.fcst_rev)}<small> / ${NF.format(m.budget_rev)}</small></div><div class="delta ${cls(revAch)}">${arw(revAch)} 달성 ${revAch}%</div></div>`;
+  html+=`<div class="kpi"><div class="label">ADR 목표→전망(천원)</div><div class="val">${NF.format(m.fcst_adr)}<small> / ${NF.format(m.budget_adr)}</small></div><div class="delta ${cls(m.fcst_adr/m.budget_adr*100)}">${m.fcst_adr-m.budget_adr>=0?'▲':'▼'} ${m.fcst_adr-m.budget_adr>=0?'+':''}${m.fcst_adr-m.budget_adr}천원</div></div>`;
+  const pk=rm.pickup&&rm.pickup[mo];
+  if(pk){
+    const cur=pk.rn_2026[pk.rn_2026.length-1], ly=pk.rn_2025[pk.rn_2025.length-1];
+    const diff=cur-ly, dp=(cur/ly-1)*100;
+    html+=`<div class="kpi"><div class="label">픽업 OTB (26 vs 25)</div><div class="val">${NF.format(cur)}</div><div class="delta ${diff>=0?'up':'down'}">${diff>=0?'▲':'▼'} ${diff>=0?'+':''}${NF.format(diff)} RN (${dp.toFixed(1)}%) 전년비</div></div>`;
+  }
+  html+='</div>';
+  if(pk){ html+=`<div class="card" style="margin-top:16px"><h3>홈페이지 픽업 추이 <span class="tag">주차별 OTB · 26년 vs 25년</span></h3><div class="chartbox" style="height:280px"><canvas id="rmPickChart"></canvas></div></div>`; }
+  box.innerHTML=html;
+  if(pk && typeof Chart!=='undefined'){
+    const wk=(rm.pickup_weeks&&rm.pickup_weeks[mo])||pk.rn_2026.map((_,i)=>'W-'+(4-i));
+    try{ new Chart(document.getElementById('rmPickChart'),{type:'line',
+      data:{labels:wk,datasets:[
+        {label:'26년 OTB',data:pk.rn_2026,borderColor:'#c9a063',backgroundColor:'rgba(201,160,99,.12)',fill:true,tension:.3,pointRadius:3},
+        {label:'25년 OTB',data:pk.rn_2025,borderColor:'#5a9fc4',borderDash:[5,4],tension:.3,pointRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,padding:14}}},
+        scales:{x:{grid:{color:'rgba(255,255,255,0.08)'}},y:{grid:{color:'rgba(255,255,255,0.08)'},ticks:{callback:v=>NF.format(v)}}}}});
+    }catch(e){console.warn(e);}
+  }
+}
+fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>
