@@ -73,10 +73,13 @@
   .ins-head{display:flex;align-items:center;gap:8px;margin:2px 0 14px}
   .ins-head .t{font-size:15px;font-weight:800}
   .ins-head .b{font-size:11px;color:var(--gold);border:1px solid rgba(201,160,99,.4);border-radius:999px;padding:2px 9px;letter-spacing:.05em}
-  .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:26px}
-  .ins{background:var(--bg-card);border:1px solid var(--rule);border-left-width:3px;border-radius:12px;padding:14px 16px}
-  .ins .it{font-size:13.5px;font-weight:700;margin-bottom:5px;display:flex;gap:7px;align-items:flex-start}
-  .ins .ib{font-size:12.5px;color:var(--ink-muted);line-height:1.55}
+  .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:10px;margin-bottom:24px}
+  .ins{background:var(--bg-card);border:1px solid var(--rule);border-left-width:3px;border-radius:10px;padding:11px 13px}
+  .ins .it{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;gap:6px;align-items:flex-start;line-height:1.35}
+  .ins .ib{font-size:12px;color:var(--ink-muted);line-height:1.5}
+  .ins-counts{display:flex;gap:6px;flex-wrap:wrap}
+  .ins-counts b{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--rule)}
+  .c-warn{color:var(--negative)} .c-action{color:var(--gold-bright)} .c-good{color:var(--positive)} .c-info{color:var(--info)}
   .ins.warn{border-left-color:var(--negative)} .ins.warn .it{color:var(--negative)}
   .ins.action{border-left-color:var(--gold-bright)} .ins.action .it{color:var(--gold-bright)}
   .ins.good{border-left-color:var(--positive)} .ins.good .it{color:var(--positive)}
@@ -171,7 +174,9 @@ function tableBars(rows, dimKey, dimLabel, valKey, valLabel, extra){
 }
 
 let _GA=null, _scope='all';
-const GC={gold:'#c9a063',info:'#5a9fc4',pos:'#4caf6f',grid:'rgba(255,255,255,0.08)',ink:'#a8acb3'};
+const GC={brand:'#c9a063',grid:'rgba(255,255,255,0.09)',ink:'#a8acb3',muted:'#7a7e85'};
+// 색맹 검증 통과(dark) 카테고리 팔레트 — 고정 순서, 순환 금지
+const CAT=['#3987e5','#d95926','#199e70','#c98500','#d55181','#9085e9','#e66767'];
 
 function render(data){
   _GA=data; _scope='all';
@@ -185,7 +190,9 @@ function render(data){
   if(ins.length){
     const order={warn:0,action:1,good:2,info:3};
     const sorted=[...ins].sort((a,b)=>(order[a.level]??9)-(order[b.level]??9));
-    html+=`<div class="ins-head"><span class="t">🔎 자동 인사이트</span><span class="b">AI 해석 · 매 갱신 자동</span></div>`;
+    const cnt={warn:0,action:0,good:0,info:0}; ins.forEach(i=>{cnt[i.level]=(cnt[i.level]||0)+1;});
+    html+=`<div class="ins-head"><span class="t">🔎 자동 인사이트</span>
+      <span class="ins-counts"><b class="c-warn">주의 ${cnt.warn}</b><b class="c-action">액션 ${cnt.action}</b><b class="c-good">양호 ${cnt.good}</b><b class="c-info">참고 ${cnt.info}</b></span></div>`;
     html+='<div class="insights">'+sorted.map(i=>`<div class="ins ${i.level||'info'}">
       <div class="it"><span>${i.icon||'•'}</span><span>${i.title||''}</span></div>
       <div class="ib">${i.body||''}</div></div>`).join('')+'</div>';
@@ -217,20 +224,19 @@ function render(data){
         const m=s.monthly;
         new Chart(document.getElementById('trendChart'),{type:'line',
           data:{labels:m.map(r=>MONTH_LABEL(r.yearMonth)),datasets:[
-            {label:'사용자',data:m.map(r=>r.activeUsers),borderColor:GC.gold,backgroundColor:'rgba(201,160,99,.12)',fill:true,tension:.34,pointRadius:2},
-            {label:'세션',data:m.map(r=>r.sessions),borderColor:GC.info,tension:.34,pointRadius:2},
-            {label:'페이지뷰',data:m.map(r=>r.screenPageViews),borderColor:GC.pos,tension:.34,pointRadius:2,hidden:true}]},
+            {label:'사용자',data:m.map(r=>r.activeUsers),borderColor:CAT[0],backgroundColor:CAT[0]+'20',fill:true,tension:.34,pointRadius:2,borderWidth:2},
+            {label:'세션',data:m.map(r=>r.sessions),borderColor:CAT[1],tension:.34,pointRadius:2,borderWidth:2},
+            {label:'페이지뷰',data:m.map(r=>r.screenPageViews),borderColor:CAT[2],tension:.34,pointRadius:2,borderWidth:2,hidden:true}]},
           options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
             plugins:{legend:{labels:{boxWidth:12,padding:14}}},
             scales:{x:{grid:{color:GC.grid}},y:{grid:{color:GC.grid},ticks:{callback:v=>NF.format(v)}}}}});
       }
       const cm=s.channel_month;
       if(cm&&cm.series&&document.getElementById('chChart')){
-        const pal=[GC.gold,GC.info,GC.pos,'#a892c8','#e8a256','#e57373','#7a7e85'];
         new Chart(document.getElementById('chChart'),{type:'line',
           data:{labels:cm.months.map(MONTH_LABEL),datasets:cm.series.map((se,i)=>({
-            label:se.channel,data:se.sessions,borderColor:pal[i%pal.length],
-            backgroundColor:pal[i%pal.length]+'55',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}))},
+            label:se.channel,data:se.sessions,borderColor:CAT[i%CAT.length],
+            backgroundColor:CAT[i%CAT.length]+'66',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}))},
           options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
             plugins:{legend:{labels:{boxWidth:12,padding:12}},tooltip:{itemSort:(a,b)=>b.raw-a.raw}},
             scales:{x:{grid:{color:GC.grid}},y:{stacked:true,grid:{color:GC.grid},ticks:{callback:v=>NF.format(v)}}}}});
@@ -297,7 +303,7 @@ function renderScope(){
       if(window._devChart) window._devChart.destroy();
       window._devChart=new Chart(document.getElementById('deviceChart'),{type:'doughnut',
         data:{labels:devs.map(r=>r.deviceCategory),datasets:[{data:devs.map(r=>r.activeUsers),
-          backgroundColor:[GC.gold,GC.info,GC.pos,'#a892c8','#e8a256'],borderColor:'#252932',borderWidth:2}]},
+          backgroundColor:CAT,borderColor:'#252932',borderWidth:2}]},
         options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:12}}}}});
     }
   }catch(e){console.warn(e);}
@@ -335,8 +341,8 @@ function renderRmHome(rm){
     const wk=(rm.pickup_weeks&&rm.pickup_weeks[mo])||pk.rn_2026.map((_,i)=>'W-'+(4-i));
     try{ new Chart(document.getElementById('rmPickChart'),{type:'line',
       data:{labels:wk,datasets:[
-        {label:'26년 OTB',data:pk.rn_2026,borderColor:'#c9a063',backgroundColor:'rgba(201,160,99,.12)',fill:true,tension:.3,pointRadius:3},
-        {label:'25년 OTB',data:pk.rn_2025,borderColor:'#5a9fc4',borderDash:[5,4],tension:.3,pointRadius:3}]},
+        {label:'26년 OTB',data:pk.rn_2026,borderColor:CAT[0],backgroundColor:CAT[0]+'20',fill:true,tension:.3,pointRadius:3,borderWidth:2},
+        {label:'25년 OTB',data:pk.rn_2025,borderColor:'#7a7e85',borderDash:[5,4],tension:.3,pointRadius:2,borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,padding:14}}},
         scales:{x:{grid:{color:'rgba(255,255,255,0.08)'}},y:{grid:{color:'rgba(255,255,255,0.08)'},ticks:{callback:v=>NF.format(v)}}}}});
     }catch(e){console.warn(e);}
@@ -344,7 +350,5 @@ function renderRmHome(rm){
 }
 fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>

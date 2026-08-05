@@ -277,10 +277,9 @@ def build_insights(sec):
     if step and dnu is not None and dnu > 300 and (du is None or abs(du) < 40):
         ym = f"{step[:4]}-{step[4:]}"
         out.append({
-            "level": "warn", "icon": "⚠️", "title": "YoY 수치 그대로 해석 금지 — 추적 설정 변경 흔적",
-            "body": (f"신규 사용자 YoY {dnu:+.0f}%·페이지뷰 {dpv:+.0f}%인데 사용자 수는 {du:+.1f}%로 정체. "
-                     f"실제 급성장이 아니라 {ym}경 GA4 측정이 바뀌어 그 전 구간이 과소 집계된 것으로 보임. "
-                     f"신뢰 기준선은 {ym} 이후로 두고, 이 구간을 낀 YoY 비교는 지양.")})
+            "level": "warn", "icon": "⚠️", "title": f"YoY 해석 주의 — 추적 변경({ym})",
+            "body": (f"신규 {dnu:+.0f}%·PV {dpv:+.0f}%인데 사용자 {du:+.1f}%. "
+                     f"{ym} GA4 측정 변경 흔적 → 그 전 과소집계. 신뢰구간 {ym}↑, YoY 비교 지양 필요.")})
         reliable = [m for m in monthly if m.get("yearMonth", "") >= step]
     else:
         reliable = monthly[:]
@@ -293,10 +292,9 @@ def build_insights(sec):
         trough = min(seas, key=lambda m: m.get("sessions", 0))
         pym, tym = peak["yearMonth"], trough["yearMonth"]
         out.append({
-            "level": "info", "icon": "📈", "title": "성수기·비수기 뚜렷 — 캠페인 캘린더 기준",
-            "body": (f"성수기 {pym[:4]}-{pym[4:]}(세션 {_fmt(peak['sessions'])}), "
-                     f"비수기 {tym[:4]}-{tym[4:]}(세션 {_fmt(trough['sessions'])}). "
-                     f"성수기는 재고·요금 관리, 비수기(어깨철)에 유료·프로모를 태우면 증분 효과가 큼.")})
+            "level": "info", "icon": "📈", "title": f"성수기 {pym[:4]}-{pym[4:]} · 비수기 {tym[:4]}-{tym[4:]}",
+            "body": (f"세션 성수기 {_fmt(peak['sessions'])} vs 비수기 {_fmt(trough['sessions'])}. "
+                     f"성수기=재고·요금 관리, 비수기=유료·프로모 집중 필요.")})
 
     # (2) 채널 집중도 / 유료·태깅
     if channels:
@@ -306,15 +304,14 @@ def build_insights(sec):
         paid = sum(v for k, v in share.items() if k.startswith("Paid") or k == "Display")
         una = share.get("Unassigned", 0)
         os_ch = next((c for c in channels if c["sessionDefaultChannelGroup"] == "Organic Search"), None)
-        body = f"Direct+Organic이 세션의 {do:.0f}%로 브랜드·오가닉 의존형. 유료 채널은 {paid:.1f}%로 사실상 미가동."
+        body = f"Direct+Organic {do:.0f}% · 유료 {paid:.1f}%뿐."
         if os_ch:
-            body += f" 오가닉 검색 참여율 {os_ch.get('engagementRate',0)*100:.0f}%로 최상급 → SEO 강화가 가성비 최고."
-        out.append({"level": "action", "icon": "🧭", "title": "채널: 브랜드·오가닉 83% 의존, 유료는 백지", "body": body})
+            body += f" 오가닉 검색 참여율 {os_ch.get('engagementRate',0)*100:.0f}% 최상 → SEO 강화 최우선."
+        out.append({"level": "action", "icon": "🧭", "title": f"브랜드·오가닉 {do:.0f}% 의존, 유료 미가동", "body": body})
         if una >= 3:
             out.append({
-                "level": "action", "icon": "🏷️", "title": "UTM 태깅 누락으로 성과 유실",
-                "body": (f"Unassigned가 세션의 {una:.1f}%. 캠페인 유입이 귀속 없이 새고 있음 — "
-                         f"UTM 파라미터만 정리해도 유료/제휴 성과가 살아남.")})
+                "level": "action", "icon": "🏷️", "title": "UTM 태깅 누락 — 성과 유실",
+                "body": f"Unassigned {una:.1f}%. 캠페인 성과 미귀속 → UTM 표준화 필요."})
 
     # (3) 모바일 비중
     if devices:
@@ -323,9 +320,8 @@ def build_insights(sec):
         if mob:
             pct = mob["activeUsers"] / tu * 100
             out.append({
-                "level": "info", "icon": "📱", "title": f"모바일 {pct:.0f}% — 전환 설계는 모바일 우선",
-                "body": (f"사용자의 {pct:.0f}%가 모바일. 트래픽 최상위 예약 화면도 모바일 객실 페이지 — "
-                         f"UX·전환 개선 리소스는 모바일 객실선택→결제에 집중해야 함.")})
+                "level": "info", "icon": "📱", "title": f"모바일 {pct:.0f}% — 모바일 우선 설계",
+                "body": f"사용자 {pct:.0f}% 모바일. 전환 개선은 모바일 객실→결제 집중 필요."})
 
     # (4) 예약 퍼널 이탈 (모바일 객실 → 결제)
     room = pages.get("/reserve/room/mo")
@@ -334,19 +330,18 @@ def build_insights(sec):
         rate = pay["activeUsers"] / room["activeUsers"] * 100
         lvl = "action" if rate < 50 else "good"
         out.append({
-            "level": lvl, "icon": "🛒", "title": f"모바일 예약 퍼널: 객실→결제 도달 {rate:.0f}%",
-            "body": (f"모바일 객실화면 사용자 {_fmt(room['activeUsers'])}명 중 결제화면 도달 {_fmt(pay['activeUsers'])}명. "
-                     f"객실 페이지의 사용자당 조회 {room.get('screenPageViews',0)/max(room['activeUsers'],1):.0f}회로 반복 열람이 많음 → "
-                     f"매진·달력 마찰인지 비교탐색인지 RM/pickup(매진 날짜)과 교차 확인 필요.")})
+            "level": lvl, "icon": "🛒", "title": f"예약 퍼널 객실→결제 {rate:.0f}%",
+            "body": (f"모바일 객실 {_fmt(room['activeUsers'])}명 → 결제 {_fmt(pay['activeUsers'])}명. "
+                     f"반복조회 {room.get('screenPageViews',0)/max(room['activeUsers'],1):.0f}회 → 매진·마찰 여부 RM 교차확인 필요.")})
 
     # (5) 참여 품질
     er = cur.get("engagementRate")
     br = cur.get("bounceRate")
     if er is not None:
         out.append({
-            "level": "good", "icon": "✅", "title": "참여 품질 양호 — 고관여 예약 트래픽",
-            "body": (f"참여율 {er*100:.0f}%·이탈률 {(br or 0)*100:.0f}%·평균 참여 "
-                     f"{int((cur.get('averageSessionDuration') or 0)//60)}분. 구매의도 높은 방문이 주를 이룸.")})
+            "level": "good", "icon": "✅", "title": "참여 품질 양호",
+            "body": (f"참여율 {er*100:.0f}%·이탈 {(br or 0)*100:.0f}%·체류 "
+                     f"{int((cur.get('averageSessionDuration') or 0)//60)}분. 고관여 예약 트래픽.")})
 
     # (6) 해외 비중
     if countries:
@@ -354,9 +349,9 @@ def build_insights(sec):
         intl = sum(x.get("activeUsers", 0) for x in countries if x.get("country") != "South Korea")
         pct = intl / tc * 100
         out.append({
-            "level": "info", "icon": "🌏", "title": f"해외 {pct:.0f}% — 인바운드 전략 판단 지점",
-            "body": (f"국내 {100-pct:.0f}% 집중. 해외는 일본·미국·싱가포르 순이나 합쳐 {pct:.0f}%뿐. "
-                     f"인바운드가 목표면 백지 상태의 기회, 아니면 국내 집중 유지.")})
+            "level": "info", "icon": "🌏", "title": f"해외 {pct:.0f}% — 인바운드 판단 지점",
+            "body": (f"국내 {100-pct:.0f}% 집중, 해외 {pct:.0f}%뿐. "
+                     f"인바운드=백지 기회 or 국내 집중 유지 판단 필요.")})
 
     # (7) 월별 이슈 자동 감지
     cmm = sec.get("channel_month", {})
@@ -368,9 +363,9 @@ def build_insights(sec):
         worst = min(q, key=lambda m: m["engagementRate"])
         wym = worst["yearMonth"]
         out.append({
-            "level": "action", "icon": "📉", "title": f"참여 품질 최저 달: {ymL(wym)}",
-            "body": (f"신뢰구간 중 참여율 {worst['engagementRate']*100:.0f}%·이탈률 "
-                     f"{(worst.get('bounceRate') or 0)*100:.0f}%로 가장 나쁨. 이 달 유입 구성·랜딩 점검 필요.")})
+            "level": "action", "icon": "📉", "title": f"참여 최저 달 {ymL(wym)}",
+            "body": (f"참여율 {worst['engagementRate']*100:.0f}%·이탈 "
+                     f"{(worst.get('bounceRate') or 0)*100:.0f}%로 최저. 유입·랜딩 점검 필요.")})
 
     # 7b) UTM 태깅 누락 급등 달 (Unassigned 월 점유율 ≥ 8%)
     if cmm.get("unassigned") and cmm.get("total"):
@@ -379,9 +374,9 @@ def build_insights(sec):
                if tot[i] and una[i] / tot[i] >= 0.08 and months[i] != cur_ym]
         if bad:
             out.append({
-                "level": "action", "icon": "🏷️", "title": "캠페인 달마다 UTM 태깅 누락 반복",
-                "body": (f"Unassigned 점유율 8% 초과 달: {', '.join(ymL(m) for m in bad)}. "
-                         f"성수기·캠페인 달에 UTM 없이 집행돼 성과가 미귀속으로 유실됨 — 태깅 표준화 필요.")})
+                "level": "action", "icon": "🏷️", "title": "캠페인 달 UTM 누락 반복",
+                "body": (f"Unassigned 8%↑: {', '.join(ymL(m) for m in bad)}. "
+                         f"성수기 무태깅 집행 → 표준화 필요.")})
 
     # 7c) 유료 예산 타이밍 엇박 (연중 최저 달에 유료 축소)
     if cmm.get("paid") and seas:
@@ -393,9 +388,9 @@ def build_insights(sec):
             avgp = sum(paid) / len(paid) if paid else 0
             if avgp and paid[ti] < avgp * 0.6:
                 out.append({
-                    "level": "action", "icon": "⏱️", "title": "유료 예산 타이밍 엇박 — 비수기에 축소",
-                    "body": (f"연중 최저 {ymL(tym)}에 유료 세션이 월평균의 {paid[ti]/avgp*100:.0f}%로 축소됨. "
-                             f"수요가 필요한 비수기로 예산을 옮기면 증분 효과가 큼.")})
+                    "level": "action", "icon": "⏱️", "title": "유료 예산 타이밍 엇박",
+                    "body": (f"최저 {ymL(tym)}에 유료 {paid[ti]/avgp*100:.0f}%로 축소. "
+                             f"비수기로 예산 이동 필요.")})
 
     return out
 
