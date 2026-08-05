@@ -81,6 +81,12 @@
   .ins.action{border-left-color:var(--gold-bright)} .ins.action .it{color:var(--gold-bright)}
   .ins.good{border-left-color:var(--positive)} .ins.good .it{color:var(--positive)}
   .ins.info{border-left-color:var(--info)} .ins.info .it{color:var(--info)}
+  /* 월 선택기 */
+  .msel{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;margin-bottom:6px}
+  .mbtn{flex:0 0 auto;padding:6px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--bg-card);color:var(--ink-muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .mbtn:hover{background:var(--bg-hover);color:var(--ink)}
+  .mbtn.active{background:var(--gold);color:#1a1d23;border-color:var(--gold)}
+  .scope-tag{font-size:11px;color:var(--gold);font-weight:600;margin-left:8px}
   .chartbox{position:relative;height:280px}
   .foot{color:var(--ink-faint);font-size:11.5px;margin-top:30px;text-align:center;font-family:var(--mono)}
   .pill{display:inline-block;background:var(--bg-soft);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--ink-muted);margin-left:8px}
@@ -121,11 +127,12 @@ const NF = new Intl.NumberFormat('ko-KR');
 const fmt = n => (n==null||isNaN(n)) ? '—' : NF.format(Math.round(n));
 const fmtPct = n => (n==null||isNaN(n)) ? '—' : (Math.round(n*10)/10).toFixed(1)+'%';
 function dur(sec){ if(sec==null||isNaN(sec)) return '—'; sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60; return m+'분 '+String(s).padStart(2,'0')+'초'; }
-function deltaHtml(pct){
-  if(pct==null||isNaN(pct)) return '<span class="delta flat">— 전년 동기 대비</span>';
+function deltaHtml(pct, label){
+  label = label || '전년 동기';
+  if(pct==null||isNaN(pct)) return `<span class="delta flat">— ${label} 대비</span>`;
   const up = pct>=0; const cls = Math.abs(pct)<0.05?'flat':(up?'up':'down');
   const arw = cls==='flat'?'•':(up?'▲':'▼');
-  return `<span class="delta ${cls}">${arw} ${Math.abs(pct).toFixed(1)}% <span style="color:var(--ink-faint);font-weight:500">전년 동기</span></span>`;
+  return `<span class="delta ${cls}">${arw} ${Math.abs(pct).toFixed(1)}% <span style="color:var(--ink-faint);font-weight:500">${label}</span></span>`;
 }
 
 const MONTH_LABEL = ym => ym && ym.length===6 ? `${ym.slice(2,4)}.${ym.slice(4,6)}` : ym;
@@ -142,9 +149,9 @@ function renderEmpty(reason){
     </div>`;
 }
 
-function kpiCard(label, val, deltaPct, unit){
+function kpiCard(label, val, deltaPct, unit, deltaLabel){
   return `<div class="kpi"><div class="label">${label}</div>
-    <div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${deltaHtml(deltaPct)}</div>`;
+    <div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${deltaHtml(deltaPct, deltaLabel)}</div>`;
 }
 
 function tableBars(rows, dimKey, dimLabel, valKey, valLabel, extra){
@@ -163,96 +170,137 @@ function tableBars(rows, dimKey, dimLabel, valKey, valLabel, extra){
   return `<table><thead><tr><th>${dimLabel}</th><th class="num">${valLabel}</th>${exHead}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
+let _GA=null, _scope='all';
+const GC={gold:'#c9a063',info:'#5a9fc4',pos:'#4caf6f',grid:'rgba(255,255,255,0.08)',ink:'#a8acb3'};
+
 function render(data){
+  _GA=data; _scope='all';
   const s = data.sections || {};
-  const cur = (s.summary&&s.summary.current)||{};
-  const dp = (s.summary&&s.summary.delta_pct)||{};
   document.getElementById('meta-line').innerHTML =
     `업데이트 ${data.meta?.generated_at||'—'}<br>속성 ${data.meta?.property_id||''} · ${data.meta?.date_range?.label||''}`;
 
-  let html = '';
-
-  // 자동 인사이트 패널
-  const ins = data.insights || [];
+  let html='';
+  // 자동 인사이트
+  const ins=data.insights||[];
   if(ins.length){
     const order={warn:0,action:1,good:2,info:3};
     const sorted=[...ins].sort((a,b)=>(order[a.level]??9)-(order[b.level]??9));
-    html += `<div class="ins-head"><span class="t">🔎 자동 인사이트</span><span class="b">AI 해석 · 매 갱신 자동</span></div>`;
-    html += '<div class="insights">';
-    html += sorted.map(i=>`<div class="ins ${i.level||'info'}">
+    html+=`<div class="ins-head"><span class="t">🔎 자동 인사이트</span><span class="b">AI 해석 · 매 갱신 자동</span></div>`;
+    html+='<div class="insights">'+sorted.map(i=>`<div class="ins ${i.level||'info'}">
       <div class="it"><span>${i.icon||'•'}</span><span>${i.title||''}</span></div>
-      <div class="ib">${i.body||''}</div></div>`).join('');
-    html += '</div>';
+      <div class="ib">${i.body||''}</div></div>`).join('')+'</div>';
   }
+  // 월 선택기
+  const months=(s.by_month&&s.by_month.months)||(s.monthly||[]).map(m=>m.yearMonth);
+  html+='<div class="msel" id="msel">';
+  html+=`<button class="mbtn active" data-ym="all">전체 12개월</button>`;
+  html+=months.map(m=>`<button class="mbtn" data-ym="${m}">${MONTH_LABEL(m)}</button>`).join('');
+  html+='</div>';
+  // 스코프 영역 (월 따라 바뀜)
+  html+='<div id="scopeArea"></div>';
+  // 정적 차트 영역
+  html+='<div class="grid" style="grid-template-columns:1fr 1fr;margin-top:4px">';
+  html+=`<div class="card"><h3>월별 추이 <span class="tag">사용자 · 세션 · 페이지뷰</span></h3><div class="chartbox"><canvas id="trendChart"></canvas></div></div>`;
+  if(s.channel_month&&s.channel_month.series&&s.channel_month.series.length)
+    html+=`<div class="card"><h3>채널 × 월 추이 <span class="tag">세션 · 스택</span></h3><div class="chartbox"><canvas id="chChart"></canvas></div></div>`;
+  html+='</div>';
+  html+='<div id="rmHome"></div>';
 
-  html += '<div class="kpis">';
-  html += kpiCard('사용자', fmt(cur.activeUsers), dp.activeUsers);
-  html += kpiCard('세션', fmt(cur.sessions), dp.sessions);
-  html += kpiCard('페이지뷰', fmt(cur.screenPageViews), dp.screenPageViews);
-  html += kpiCard('신규 사용자', fmt(cur.newUsers), dp.newUsers);
-  html += kpiCard('참여율', fmtPct((cur.engagementRate||0)*100), dp.engagementRate);
-  html += kpiCard('평균 참여시간', dur(cur.averageSessionDuration), dp.averageSessionDuration);
-  html += '</div>';
+  document.getElementById('content').innerHTML=html;
+  document.getElementById('foot').textContent=`출처: ${data.meta?.source||'GA4'} · 자동 수집 파이프라인`;
 
-  html += '<div class="grid">';
-  html += `<div class="card"><h3>월별 추이 <span class="tag">사용자 · 세션 · 페이지뷰</span></h3><div class="chartbox"><canvas id="trendChart"></canvas></div></div>`;
-  html += `<div class="card"><h3>기기 <span class="tag">사용자 비중</span></h3><div class="chartbox"><canvas id="deviceChart"></canvas></div></div>`;
-  html += '</div>';
+  // 정적 차트 생성
+  try{
+    if(typeof Chart!=='undefined'){
+      Chart.defaults.color=GC.ink; Chart.defaults.font.family="'Pretendard Variable',sans-serif";
+      if(s.monthly&&s.monthly.length){
+        const m=s.monthly;
+        new Chart(document.getElementById('trendChart'),{type:'line',
+          data:{labels:m.map(r=>MONTH_LABEL(r.yearMonth)),datasets:[
+            {label:'사용자',data:m.map(r=>r.activeUsers),borderColor:GC.gold,backgroundColor:'rgba(201,160,99,.12)',fill:true,tension:.34,pointRadius:2},
+            {label:'세션',data:m.map(r=>r.sessions),borderColor:GC.info,tension:.34,pointRadius:2},
+            {label:'페이지뷰',data:m.map(r=>r.screenPageViews),borderColor:GC.pos,tension:.34,pointRadius:2,hidden:true}]},
+          options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+            plugins:{legend:{labels:{boxWidth:12,padding:14}}},
+            scales:{x:{grid:{color:GC.grid}},y:{grid:{color:GC.grid},ticks:{callback:v=>NF.format(v)}}}}});
+      }
+      const cm=s.channel_month;
+      if(cm&&cm.series&&document.getElementById('chChart')){
+        const pal=[GC.gold,GC.info,GC.pos,'#a892c8','#e8a256','#e57373','#7a7e85'];
+        new Chart(document.getElementById('chChart'),{type:'line',
+          data:{labels:cm.months.map(MONTH_LABEL),datasets:cm.series.map((se,i)=>({
+            label:se.channel,data:se.sessions,borderColor:pal[i%pal.length],
+            backgroundColor:pal[i%pal.length]+'55',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}))},
+          options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+            plugins:{legend:{labels:{boxWidth:12,padding:12}},tooltip:{itemSort:(a,b)=>b.raw-a.raw}},
+            scales:{x:{grid:{color:GC.grid}},y:{stacked:true,grid:{color:GC.grid},ticks:{callback:v=>NF.format(v)}}}}});
+      }
+    }
+  }catch(err){console.warn('정적 차트 실패:',err);}
 
-  html += '<div class="grid" style="grid-template-columns:1fr 1fr">';
-  html += `<div class="card"><h3>유입 채널 <span class="tag">세션 기준</span></h3>${tableBars(s.channels,'sessionDefaultChannelGroup','채널','sessions','세션',{key:'activeUsers',label:'사용자',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
-  html += `<div class="card"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars(s.countries,'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
-  html += '</div>';
+  // 월 선택기 이벤트
+  document.getElementById('msel').addEventListener('click',e=>{
+    const b=e.target.closest('.mbtn'); if(!b) return;
+    document.querySelectorAll('#msel .mbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); _scope=b.dataset.ym; renderScope();
+  });
+  renderScope();
+}
 
-  html += '<div id="rmHome"></div>';
+function renderScope(){
+  const data=_GA, s=data.sections||{}, ym=_scope;
+  const isAll = ym==='all';
+  const bm=(s.by_month&&s.by_month.data)||{};
+  const slice=isAll?null:bm[ym];
+  const scopeLabel=isAll?'최근 12개월':MONTH_LABEL(ym)+' 한 달';
 
-  if(s.channel_month&&s.channel_month.series&&s.channel_month.series.length){
-    html += `<div class="card" style="margin-top:18px"><h3>채널 × 월 추이 <span class="tag">세션 · 스택(누적)</span></h3><div class="chartbox" style="height:330px"><canvas id="chChart"></canvas></div></div>`;
+  // KPI 값/델타
+  let cur, dp={}, dLabel;
+  if(isAll){ cur=(s.summary&&s.summary.current)||{}; dp=(s.summary&&s.summary.delta_pct)||{}; dLabel='전년 동기'; }
+  else{
+    const arr=s.monthly||[]; const idx=arr.findIndex(m=>m.yearMonth===ym); const m=arr[idx]||{};
+    const pv=idx>0?arr[idx-1]:null; cur=m; dLabel='전월';
+    const keys=['activeUsers','sessions','screenPageViews','newUsers','engagementRate','averageSessionDuration'];
+    keys.forEach(k=>{ dp[k]=(pv&&pv[k])?Math.round((( (m[k]||0)/pv[k])-1)*1000)/10:null; });
   }
+  const chans=isAll?s.channels:(slice&&slice.channels);
+  const ctrys=isAll?s.countries:(slice&&slice.countries);
+  const pages=isAll?s.top_pages:(slice&&slice.top_pages);
+  const devs =isAll?s.devices:(slice&&slice.devices);
 
-  html += `<div class="card" style="margin-top:18px"><h3>인기 페이지 <span class="tag">페이지뷰 상위</span></h3>${tableBars((s.top_pages||[]).slice(0,15),'pagePath','페이지','screenPageViews','페이지뷰',{key:'activeUsers',label:'사용자',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  let html='';
+  html+=`<div style="display:flex;align-items:center;margin:2px 0 12px"><span style="font-size:14px;font-weight:800">${isAll?'전체 기간':MONTH_LABEL(ym)} 지표</span><span class="scope-tag">${scopeLabel}${isAll?'':' · 전월 대비'}</span></div>`;
+  html+='<div class="kpis">';
+  html+=kpiCard('사용자',fmt(cur.activeUsers),dp.activeUsers,'',dLabel);
+  html+=kpiCard('세션',fmt(cur.sessions),dp.sessions,'',dLabel);
+  html+=kpiCard('페이지뷰',fmt(cur.screenPageViews),dp.screenPageViews,'',dLabel);
+  html+=kpiCard('신규 사용자',fmt(cur.newUsers),dp.newUsers,'',dLabel);
+  html+=kpiCard('참여율',fmtPct((cur.engagementRate||0)*100),dp.engagementRate,'',dLabel);
+  html+=kpiCard('평균 참여시간',dur(cur.averageSessionDuration),dp.averageSessionDuration,'',dLabel);
+  html+='</div>';
 
-  document.getElementById('content').innerHTML = html;
-  document.getElementById('foot').textContent = `출처: ${data.meta?.source||'GA4'} · 자동 수집 파이프라인`;
+  html+='<div class="grid" style="grid-template-columns:1.1fr 1fr">';
+  html+=`<div class="card"><h3>유입 채널 <span class="tag">세션 기준</span></h3>${tableBars(chans,'sessionDefaultChannelGroup','채널','sessions','세션',{key:'activeUsers',label:'사용자',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  html+=`<div class="card"><h3>기기 <span class="tag">사용자 비중</span></h3><div class="chartbox" style="height:250px"><canvas id="deviceChart"></canvas></div></div>`;
+  html+='</div>';
 
-  // 차트 — Chart.js 로드 실패해도 KPI·표는 그대로 보이도록 방어
-  try {
-    if (typeof Chart === 'undefined') { console.warn('Chart.js 미로드 — 차트 생략'); return; }
-    const gold='#c9a063', info='#5a9fc4', pos='#4caf6f', grid='rgba(255,255,255,0.08)', ink='#a8acb3';
-    Chart.defaults.color=ink; Chart.defaults.font.family="'Pretendard Variable',sans-serif";
+  html+='<div class="grid" style="grid-template-columns:1fr 1fr">';
+  html+=`<div class="card"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars(ctrys,'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  html+=`<div class="card"><h3>인기 페이지 <span class="tag">페이지뷰 상위</span></h3>${tableBars((pages||[]).slice(0,15),'pagePath','페이지','screenPageViews','페이지뷰',{key:'activeUsers',label:'사용자',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  html+='</div>';
 
-    if(s.monthly&&s.monthly.length){
-      const m=s.monthly;
-      new Chart(document.getElementById('trendChart'),{type:'line',
-        data:{labels:m.map(r=>MONTH_LABEL(r.yearMonth)),datasets:[
-          {label:'사용자',data:m.map(r=>r.activeUsers),borderColor:gold,backgroundColor:'rgba(201,160,99,.12)',fill:true,tension:.34,pointRadius:2},
-          {label:'세션',data:m.map(r=>r.sessions),borderColor:info,tension:.34,pointRadius:2},
-          {label:'페이지뷰',data:m.map(r=>r.screenPageViews),borderColor:pos,tension:.34,pointRadius:2,hidden:true},
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{boxWidth:12,padding:14}}},
-          scales:{x:{grid:{color:grid}},y:{grid:{color:grid},ticks:{callback:v=>NF.format(v)}}}}});
+  document.getElementById('scopeArea').innerHTML=html;
+
+  // 기기 도넛 (스코프별 재생성)
+  try{
+    if(typeof Chart!=='undefined' && devs && devs.length){
+      if(window._devChart) window._devChart.destroy();
+      window._devChart=new Chart(document.getElementById('deviceChart'),{type:'doughnut',
+        data:{labels:devs.map(r=>r.deviceCategory),datasets:[{data:devs.map(r=>r.activeUsers),
+          backgroundColor:[GC.gold,GC.info,GC.pos,'#a892c8','#e8a256'],borderColor:'#252932',borderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:12}}}}});
     }
-    if(s.devices&&s.devices.length){
-      const d=s.devices;
-      new Chart(document.getElementById('deviceChart'),{type:'doughnut',
-        data:{labels:d.map(r=>r.deviceCategory),datasets:[{data:d.map(r=>r.activeUsers),
-          backgroundColor:[gold,info,pos,'#a892c8','#e8a256'],borderColor:'#252932',borderWidth:2}]},
-        options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:14}}}}});
-    }
-    // 채널 × 월 스택 영역차트
-    const cm=s.channel_month;
-    if(cm&&cm.series&&cm.series.length&&document.getElementById('chChart')){
-      const palette=[gold,info,pos,'#a892c8','#e8a256','#e57373','#7a7e85'];
-      new Chart(document.getElementById('chChart'),{type:'line',
-        data:{labels:cm.months.map(MONTH_LABEL),datasets:cm.series.map((se,i)=>({
-          label:se.channel,data:se.sessions,borderColor:palette[i%palette.length],
-          backgroundColor:palette[i%palette.length]+'55',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}))},
-        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{boxWidth:12,padding:12}},tooltip:{itemSort:(a,b)=>b.raw-a.raw}},
-          scales:{x:{grid:{color:grid}},y:{stacked:true,grid:{color:grid},ticks:{callback:v=>NF.format(v)}}}}});
-    }
-  } catch(err){ console.warn('차트 렌더 실패(무시):', err); }
+  }catch(e){console.warn(e);}
 }
 
 fetch('data/ga4_latest.json?_t='+Date.now())

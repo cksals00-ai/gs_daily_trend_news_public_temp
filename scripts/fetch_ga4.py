@@ -213,6 +213,38 @@ def build_homepage(rows):
             "unmapped_revenue": round(unmapped_rev), "properties": plist}
 
 
+def build_by_month(client, property_id):
+    """각 지표를 월별로 쪼개 저장 → 대시보드 월 선택기용.
+    반환: {"months":[ym...], "data":{ym:{channels,devices,countries,top_pages}}}"""
+    from collections import defaultdict
+    by = defaultdict(lambda: {"channels": [], "devices": [], "countries": [], "top_pages": []})
+
+    def pull(dims, mets, sort, section, topn=None):
+        try:
+            rows = _run(client, property_id, dims, mets, DATE_START, DATE_END,
+                        order_by_metric=sort, limit=2000)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("  · by_month %s 실패: %s", section, e)
+            return
+        grp = defaultdict(list)
+        for r in rows:
+            ym = r.get("yearMonth")
+            if ym:
+                grp[ym].append({k: v for k, v in r.items() if k != "yearMonth"})
+        for ym, lst in grp.items():
+            lst.sort(key=lambda x: -(x.get(sort, 0) or 0))
+            by[ym][section] = lst[:topn] if topn else lst
+
+    pull(["yearMonth", "sessionDefaultChannelGroup"], ["sessions", "activeUsers", "engagementRate"],
+         "sessions", "channels", topn=15)
+    pull(["yearMonth", "deviceCategory"], ["activeUsers", "sessions"], "activeUsers", "devices")
+    pull(["yearMonth", "country"], ["activeUsers", "sessions"], "activeUsers", "countries", topn=12)
+    pull(["yearMonth", "pagePath"], ["screenPageViews", "activeUsers"], "screenPageViews", "top_pages", topn=15)
+
+    months = sorted(by.keys())
+    return {"months": months, "data": {m: by[m] for m in months}}
+
+
 def _fmt(n):
     try:
         return f"{int(round(n)):,}"
@@ -478,6 +510,13 @@ def collect(property_id):
         logger.info("  ✔ 국가: %d개", len(sec["countries"]))
     except Exception as e:  # noqa: BLE001
         logger.warning("  ✗ 국가 실패: %s", e)
+
+    # 6.5) 월별 상세 (월 선택기용) — 채널·기기·국가·페이지를 월별로
+    try:
+        sec["by_month"] = build_by_month(client, property_id)
+        logger.info("  ✔ 월별 상세: %d개월", len(sec["by_month"]["months"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("  ✗ 월별 상세 실패: %s", e)
 
     # 7) 홈페이지(자사웹) 사업장별 실적 — 이커머스 itemCategory 크로스워크
     try:
