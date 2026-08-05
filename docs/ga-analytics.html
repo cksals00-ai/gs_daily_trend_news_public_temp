@@ -84,6 +84,28 @@
   .ins.action{border-left-color:var(--gold-bright)} .ins.action .it{color:var(--gold-bright)}
   .ins.good{border-left-color:var(--positive)} .ins.good .it{color:var(--positive)}
   .ins.info{border-left-color:var(--info)} .ins.info .it{color:var(--info)}
+  /* 고객여정 퍼널 */
+  .fn-callout{background:linear-gradient(90deg,rgba(57,135,229,.16),rgba(25,158,112,.06));border:1px solid var(--rule);border-radius:14px;padding:16px 20px;margin-bottom:14px}
+  .fc-big{font-size:27px;font-weight:800;font-family:var(--mono);color:var(--gold-bright);letter-spacing:-.01em}
+  .fc-big span{font-size:14px;color:var(--ink-muted);font-weight:600}
+  .fc-sub{font-size:12.5px;color:var(--ink-muted);margin-top:5px}
+  .fc-sub b{color:var(--ink)}
+  .fn-step{display:grid;grid-template-columns:92px 1fr 92px;gap:10px;align-items:center;margin:9px 0}
+  .fn-label{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .fn-track{background:var(--bg-deep);border-radius:8px;height:32px;overflow:hidden}
+  .fn-fill{height:100%;background:linear-gradient(90deg,#3987e5,#199e70);border-radius:8px;display:flex;align-items:center;padding-left:12px;color:#fff;font-family:var(--mono);font-weight:700;font-size:12.5px;white-space:nowrap}
+  .fn-drop{font-size:11px;color:var(--ink-faint);text-align:right}
+  .cvr-row{display:grid;grid-template-columns:100px 1fr 44px;gap:10px;align-items:center;margin:7px 0}
+  .cvr-name{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cvr-track{background:var(--bg-deep);border-radius:6px;height:18px;overflow:hidden}
+  .cvr-fill{height:100%;background:#3987e5;border-radius:6px}
+  .cvr-fill.low{background:var(--negative)}
+  .cvr-val{font-size:12px;font-family:var(--mono);text-align:right;color:var(--ink-soft)}
+  /* 월 요약 스트립 */
+  .mstrip{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .mstrip span{background:var(--bg-soft);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--ink-soft);font-weight:600}
+  .mstrip span b{color:var(--gold-bright)}
+  .mstrip span.up b{color:var(--positive)} .mstrip span.down b{color:var(--negative)}
   /* 월 선택기 */
   .msel{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;margin-bottom:6px}
   .mbtn{flex:0 0 auto;padding:6px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--bg-card);color:var(--ink-muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
@@ -205,6 +227,8 @@ function render(data){
   html+='</div>';
   // 스코프 영역 (월 따라 바뀜)
   html+='<div id="scopeArea"></div>';
+  // 고객여정 퍼널 (전체 기간)
+  html+='<div id="funnelBox"></div>';
   // 정적 차트 영역
   html+='<div class="grid" style="grid-template-columns:1fr 1fr;margin-top:4px">';
   html+=`<div class="card"><h3>월별 추이 <span class="tag">사용자 · 세션 · 페이지뷰</span></h3><div class="chartbox"><canvas id="trendChart"></canvas></div></div>`;
@@ -251,6 +275,60 @@ function render(data){
     b.classList.add('active'); _scope=b.dataset.ym; renderScope();
   });
   renderScope();
+  renderFunnel(data);
+}
+
+function statTile(label,val,note){
+  return `<div class="kpi"><div class="label">${label}</div><div class="val">${val}</div>${note?`<div class="delta flat" style="color:var(--ink-faint)">${note}</div>`:''}</div>`;
+}
+function renderFunnel(data){
+  const fn=(data.sections||{}).funnel, box=document.getElementById('funnelBox'); if(!box||!fn) return;
+  const steps=fn.steps||[], max=Math.max(...steps.map(s=>s.count||0))||1;
+  const dv=fn.device||{}, up=fn.mobile_uplift, c=fn.conversions||{};
+  const mr=dv.mobile&&dv.mobile.rate, dr=dv.desktop&&dv.desktop.rate;
+  let html=`<div class="ins-head" style="margin-top:24px"><span class="t">🧭 고객여정 · 구매 퍼널</span><span class="b">최근 12개월</span></div>`;
+  if(up&&mr&&dr){
+    html+=`<div class="fn-callout"><div class="fc-big">연 +${NF.format(up)} <span>구매 기회</span></div>
+      <div class="fc-sub">모바일 전환 <b>${mr}%</b> vs 데스크톱 <b>${dr}%</b> — 모바일이 데스크톱 수준이면 확보되는 규모. 모바일 결제 UX가 최우선 과제.</div></div>`;
+  }
+  html+='<div class="card"><h3>여정 단계 <span class="tag">단계별 볼륨 · 이전 단계 대비</span></h3>';
+  steps.forEach((s,i)=>{
+    const pct=(s.count/max*100).toFixed(1), prev=i>0?steps[i-1].count:null;
+    const drop=prev?`이전比 ${(s.count/prev*100).toFixed(0)}%`:'기준';
+    html+=`<div class="fn-step"><div class="fn-label">${s.label}</div>
+      <div class="fn-track"><div class="fn-fill" style="width:${Math.max(pct,7)}%">${NF.format(s.count)}</div></div>
+      <div class="fn-drop">${drop}${s.mobile_pct!=null?`<br>📱${s.mobile_pct}%`:''}</div></div>`;
+  });
+  html+='</div>';
+  html+='<div class="kpis" style="margin-top:14px">';
+  html+=statTile('예약버튼→구매', c.booking_to_purchase!=null?c.booking_to_purchase+'%':'—','클릭 후 마감률');
+  html+=statTile('폼 완료율', c.form_completion!=null?c.form_completion+'%':'—','시작→완료');
+  html+=statTile('모바일 전환', mr!=null?mr+'%':'—','구매 ÷ 사용자');
+  html+=statTile('데스크톱 전환', dr!=null?dr+'%':'—','구매 ÷ 사용자');
+  html+='</div>';
+  // 채널별 전환율 + 요일별 예약
+  const cc=fn.channel_conv||[], wd=fn.weekday||[];
+  html+='<div class="grid" style="grid-template-columns:1.15fr 1fr;margin-top:14px">';
+  if(cc.length){
+    const cmax=Math.max(...cc.map(c=>c.cvr))||1;
+    html+='<div class="card"><h3>채널별 전환율 <span class="tag">구매 ÷ 세션</span></h3>';
+    html+=cc.slice(0,10).map(c=>`<div class="cvr-row"><span class="cvr-name">${c.channel}</span>
+      <div class="cvr-track"><div class="cvr-fill${c.cvr<1.5?' low':''}" style="width:${Math.max((c.cvr/cmax*100),4).toFixed(0)}%"></div></div>
+      <span class="cvr-val">${c.cvr}%</span></div>`).join('');
+    html+='</div>';
+  }
+  if(wd.length===7) html+=`<div class="card"><h3>요일별 예약 <span class="tag">구매 기준</span></h3><div class="chartbox" style="height:230px"><canvas id="wdChart"></canvas></div></div>`;
+  html+='</div>';
+  box.innerHTML=html;
+  if(wd.length===7 && typeof Chart!=='undefined'){
+    const names=['일','월','화','수','목','금','토'];
+    try{ new Chart(document.getElementById('wdChart'),{type:'bar',
+      data:{labels:names,datasets:[{data:wd.map(w=>w.purchases),
+        backgroundColor:wd.map(w=>(w.dow===0||w.dow===6)?'#7a7e85':CAT[0]),borderRadius:5}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false}},y:{grid:{color:GC.grid},ticks:{callback:v=>NF.format(v)}}}}});
+    }catch(e){console.warn(e);}
+  }
 }
 
 function renderScope(){
@@ -276,6 +354,18 @@ function renderScope(){
 
   let html='';
   html+=`<div style="display:flex;align-items:center;margin:2px 0 12px"><span style="font-size:14px;font-weight:800">${isAll?'전체 기간':MONTH_LABEL(ym)} 지표</span><span class="scope-tag">${scopeLabel}${isAll?'':' · 전월 대비'}</span></div>`;
+
+  // 월 선택 연동 인사이트 스트립
+  if(!isAll){
+    const arr=s.monthly||[], idx=arr.findIndex(m=>m.yearMonth===ym), m=arr[idx]||{}, pv=idx>0?arr[idx-1]:null;
+    const chips=[];
+    if(pv&&pv.sessions){ const mm=((m.sessions/pv.sessions)-1)*100; chips.push([`세션 <b>${mm>=0?'+':''}${mm.toFixed(0)}%</b> 전월비`, mm>=0?'up':'down']); }
+    if(chans&&chans.length){ const t=chans.reduce((a,c)=>a+(c.sessions||0),0)||1; const top=chans[0]; chips.push([`유입 1위 <b>${top.sessionDefaultChannelGroup}</b> ${(top.sessions/t*100).toFixed(0)}%`,'']); }
+    if(devs&&devs.length){ const tu=devs.reduce((a,d)=>a+(d.activeUsers||0),0)||1; const mo=devs.find(d=>d.deviceCategory==='mobile'); if(mo) chips.push([`모바일 <b>${(mo.activeUsers/tu*100).toFixed(0)}%</b>`,'']); }
+    if(m.engagementRate!=null){ const allEr=(s.summary&&s.summary.current&&s.summary.current.engagementRate)||0; const diff=(m.engagementRate-allEr)*100; chips.push([`참여율 <b>${(m.engagementRate*100).toFixed(0)}%</b> ${allEr?`(평균${diff>=0?'+':''}${diff.toFixed(0)}%p)`:''}`, diff>=0?'up':'down']); }
+    if(pages&&pages.length){ chips.push([`인기페이지 1위 <b>${pages[0].pagePath}</b>`,'']); }
+    if(chips.length) html+=`<div class="mstrip">${chips.map(([c,cl])=>`<span class="${cl}">${c}</span>`).join('')}</div>`;
+  }
   html+='<div class="kpis">';
   html+=kpiCard('사용자',fmt(cur.activeUsers),dp.activeUsers,'',dLabel);
   html+=kpiCard('세션',fmt(cur.sessions),dp.sessions,'',dLabel);

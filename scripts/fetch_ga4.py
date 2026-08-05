@@ -213,6 +213,74 @@ def build_homepage(rows):
             "unmapped_revenue": round(unmapped_rev), "properties": plist}
 
 
+def build_funnel(client, property_id):
+    """구매 퍼널(고객여정) + 기기별 전환 + 정량 기회."""
+    fe = _run(client, property_id, ["eventName", "deviceCategory"], ["eventCount"], DATE_START, DATE_END, limit=400)
+    du = _run(client, property_id, ["deviceCategory"], ["activeUsers"], DATE_START, DATE_END)
+    agg = {}
+    for r in fe:
+        agg.setdefault(r["eventName"], {})[r["deviceCategory"]] = r.get("eventCount", 0)
+    users = {r["deviceCategory"]: r.get("activeUsers", 0) for r in du}
+
+    def tot(e):
+        return sum(agg.get(e, {}).values())
+
+    def mob(e):
+        t = tot(e)
+        return round(agg.get(e, {}).get("mobile", 0) / t * 100) if t else None
+
+    selects = sum(tot(e) for e in ["select_room", "select_package", "select_activity", "select_dining", "select_ticket"])
+    steps = [
+        {"key": "list", "label": "숙소 리스트 조회", "count": tot("view_item_list"), "mobile_pct": mob("view_item_list")},
+        {"key": "select", "label": "상품 선택", "count": selects, "mobile_pct": None},
+        {"key": "booking", "label": "예약 버튼", "count": tot("click_pkg_booking_btn"), "mobile_pct": mob("click_pkg_booking_btn")},
+        {"key": "purchase", "label": "구매 완료", "count": tot("purchase"), "mobile_pct": mob("purchase")},
+    ]
+    pur = agg.get("purchase", {})
+    dev = {}
+    for d in ["mobile", "desktop", "tablet"]:
+        u, p = users.get(d, 0), pur.get(d, 0)
+        dev[d] = {"users": u, "purchases": p, "rate": round(p / u * 100, 2) if u else None}
+    uplift = None
+    if dev["mobile"]["users"] and dev["desktop"]["rate"] and dev["mobile"]["rate"]:
+        uplift = round((dev["desktop"]["rate"] - dev["mobile"]["rate"]) / 100 * dev["mobile"]["users"])
+    mix = [{"name": n, "count": tot(e)} for e, n in
+           [("select_room", "객실"), ("select_package", "패키지"), ("select_activity", "액티비티"),
+            ("select_dining", "다이닝"), ("select_ticket", "티켓")]]
+    mix.sort(key=lambda x: -x["count"])
+    conv = {
+        "booking_to_purchase": round(tot("purchase") / tot("click_pkg_booking_btn") * 100, 1) if tot("click_pkg_booking_btn") else None,
+        "form_completion": round(tot("form_submit") / tot("form_start") * 100, 1) if tot("form_start") else None,
+        "select_room_mobile_pct": mob("select_room"),
+    }
+    # 채널별 전환율 (구매 ÷ 세션)
+    channel_conv = []
+    try:
+        cc = _run(client, property_id, ["sessionDefaultChannelGroup"],
+                  ["sessions", "ecommercePurchases"], DATE_START, DATE_END,
+                  order_by_metric="sessions", limit=12)
+        for r in cc:
+            s = r.get("sessions", 0) or 0
+            if s >= 1000:
+                p = r.get("ecommercePurchases", 0) or 0
+                channel_conv.append({"channel": r["sessionDefaultChannelGroup"], "sessions": s,
+                                     "purchases": p, "cvr": round(p / s * 100, 2)})
+        channel_conv.sort(key=lambda x: -x["cvr"])
+    except Exception:  # noqa: BLE001
+        pass
+    # 요일별 예약 (GA dayOfWeek: 0=일 … 6=토)
+    weekday = []
+    try:
+        wk = _run(client, property_id, ["dayOfWeek"], ["ecommercePurchases", "sessions"], DATE_START, DATE_END)
+        wm = {r["dayOfWeek"]: r for r in wk}
+        weekday = [{"dow": d, "purchases": wm.get(str(d), {}).get("ecommercePurchases", 0),
+                    "sessions": wm.get(str(d), {}).get("sessions", 0)} for d in range(7)]
+    except Exception:  # noqa: BLE001
+        pass
+    return {"steps": steps, "device": dev, "mobile_uplift": uplift, "product_mix": mix,
+            "conversions": conv, "channel_conv": channel_conv, "weekday": weekday}
+
+
 def build_by_month(client, property_id):
     """각 지표를 월별로 쪼개 저장 → 대시보드 월 선택기용.
     반환: {"months":[ym...], "data":{ym:{channels,devices,countries,top_pages}}}"""
@@ -392,6 +460,64 @@ def build_insights(sec):
                     "body": (f"최저 {ymL(tym)}에 유료 {paid[ti]/avgp*100:.0f}%로 축소. "
                              f"비수기로 예산 이동 필요.")})
 
+    # (8) 고객여정(퍼널) 심층 — 정량 기회
+    fn = sec.get("funnel", {})
+    if fn:
+        dev = fn.get("device", {})
+        mr = (dev.get("mobile") or {}).get("rate")
+        dr = (dev.get("desktop") or {}).get("rate")
+        up = fn.get("mobile_uplift")
+        if mr and dr and up and dr > mr:
+            out.append({
+                "level": "warn", "icon": "🔻", "title": f"모바일 전환 열위 — 연 +{_fmt(up)} 기회",
+                "body": (f"전환 모바일 {mr:.1f}% vs 데스크톱 {dr:.1f}%. "
+                         f"데스크톱 수준시 모바일 +{_fmt(up)} 구매/년. 모바일 결제 UX 최우선.")})
+        cv = fn.get("conversions", {})
+        b2p = cv.get("booking_to_purchase")
+        if b2p is not None:
+            lvl = "good" if b2p >= 70 else "action"
+            out.append({
+                "level": lvl, "icon": "🎯", "title": f"예약버튼→구매 {b2p:.0f}%",
+                "body": (f"클릭 후 마감률 {b2p:.0f}%. "
+                         + ("마감 강함 → 상단 유입·객실 노출 확대가 지렛대." if b2p >= 70 else "마감 이탈 큼 → 결제 단계 점검 필요."))})
+        fc = cv.get("form_completion")
+        if fc is not None and fc < 60:
+            out.append({
+                "level": "action", "icon": "📝", "title": f"폼 완료율 {fc:.0f}% — 절반 이탈",
+                "body": f"폼 시작→완료 {fc:.0f}%. 입력 항목 단축·자동완성 필요."})
+        srm = cv.get("select_room_mobile_pct")
+        if srm is not None and srm < 15:
+            out.append({
+                "level": "action", "icon": "🧩", "title": "모바일 객실선택 계측 공백",
+                "body": f"객실선택 이벤트 모바일 {srm:.0f}%뿐 — 여정 추적 공백. 모바일 select_room 태깅 필요."})
+        mix = fn.get("product_mix", [])
+        if len(mix) >= 2 and mix[0]["count"]:
+            top2 = " · ".join(f"{m['name']}" for m in mix[:3])
+            out.append({
+                "level": "info", "icon": "🧺", "title": f"상품 선택 1위 {mix[0]['name']}",
+                "body": f"선택 볼륨 {top2} 순. 객실 외 상품 교차판매 여지."})
+        # 채널별 전환율 — 최고 vs 유료 낭비
+        cc = fn.get("channel_conv", [])
+        if len(cc) >= 3:
+            best = cc[0]
+            paid_lo = min((c for c in cc if c["channel"].startswith("Paid") or c["channel"] == "Display"),
+                          key=lambda c: c["cvr"], default=None)
+            body = f"전환 1위 {best['channel']} {best['cvr']:.1f}%."
+            if paid_lo and paid_lo["cvr"] < best["cvr"] / 2:
+                body += f" 반면 {paid_lo['channel']} {paid_lo['cvr']:.1f}%로 트래픽 낭비 — 타게팅·소재 재점검 필요."
+            out.append({
+                "level": "action" if paid_lo and paid_lo["cvr"] < 1.5 else "info",
+                "icon": "💱", "title": "채널별 전환율 편차 큼", "body": body})
+        # 요일 예약 패턴
+        wd = fn.get("weekday", [])
+        if len(wd) == 7 and sum(w["purchases"] for w in wd):
+            names = ["일", "월", "화", "수", "목", "금", "토"]
+            pk = max(wd, key=lambda w: w["purchases"])
+            lo = min(wd, key=lambda w: w["purchases"])
+            out.append({
+                "level": "info", "icon": "🗓️", "title": f"예약 최다 {names[pk['dow']]}요일 · 최저 {names[lo['dow']]}요일",
+                "body": f"주중 예약 집중, {names[lo['dow']]}요일 최저. 주중 프로모·재고 노출 강화 여지."})
+
     return out
 
 
@@ -505,6 +631,14 @@ def collect(property_id):
         logger.info("  ✔ 국가: %d개", len(sec["countries"]))
     except Exception as e:  # noqa: BLE001
         logger.warning("  ✗ 국가 실패: %s", e)
+
+    # 6.3) 고객여정(구매 퍼널) + 기기별 전환
+    try:
+        sec["funnel"] = build_funnel(client, property_id)
+        up = sec["funnel"].get("mobile_uplift")
+        logger.info("  ✔ 고객여정 퍼널 (모바일 전환기회 +%s)", _fmt(up) if up else "—")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("  ✗ 퍼널 실패: %s", e)
 
     # 6.5) 월별 상세 (월 선택기용) — 채널·기기·국가·페이지를 월별로
     try:
