@@ -2472,8 +2472,9 @@ if ('serviceWorker' in navigator) {
       }
 
       function render(data) {
-        var periods = data.periods || [];
-        if (!periods.length) return;
+        // hidden 기간은 대시보드에서 제외(데이터는 JSON에 남아있음 · 빌더 PERIODS.hidden 로 제어)
+        var periods = (data.periods || []).filter(function (p) { return !p.hidden; });
+        if (!periods.length) { root.style.display = 'none'; return; }
         var state = { pi: 0, axis: 'by_property' };
 
         // 기간 탭

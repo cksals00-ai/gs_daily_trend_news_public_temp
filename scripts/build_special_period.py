@@ -88,6 +88,9 @@ PERIODS = [
         "dates_2026": _daterange(2026, 7, 24, 8, 1),   # 9일
         "scope_note": "전 사업장 공통",
         "designated": None,   # 전 사업장
+        # 대시보드 노출 여부(숨김 처리). 데이터·히스토리는 계속 산출(연속성 유지)하되
+        # 화면에서만 감춘다. 다음 성수기에 다시 쓰려면 False 로만 바꾸면 됨.
+        "hidden": True,
     },
     {
         "key": "holiday",
@@ -97,6 +100,7 @@ PERIODS = [
         "scope_note": "일부 사업장(지정 5곳) 대상 기간",
         # md 명시 5곳(정규화된 사업장명) — 표시 강조용. 데이터는 전 사업장 온북을 그대로 노출.
         "designated": ["소노벨 비발디파크", "소노캄 여수", "쏠비치 진도", "소노캄 고양", "소노캄 제주"],
+        "hidden": False,
     },
 ]
 
@@ -397,6 +401,7 @@ def build_period(period):
         "range_label": period["range_label"],
         "scope_note": period["scope_note"],
         "designated": period["designated"],
+        "hidden": bool(period.get("hidden", False)),
         "dates": dates26,
         "dow": [ "일월화수목금토"[date(int(d[:4]), int(d[4:6]), int(d[6:8])).isoweekday() % 7] for d in dates26 ],
         "summary": {
