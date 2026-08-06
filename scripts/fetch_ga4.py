@@ -578,6 +578,43 @@ def build_insights(sec):
             "body": (f"모바일 객실 {_fmt(room['activeUsers'])}명 → 결제 {_fmt(pay['activeUsers'])}명. "
                      f"반복조회 {room.get('screenPageViews',0)/max(room['activeUsers'],1):.0f}회 → 매진·마찰 여부 RM 교차확인 필요.")})
 
+    # (4b) 로그인 관문 — 로그인 유니크가 홈에 육박/초과하면 최대 전환 병목
+    login = pages.get("/member/login")
+    home = pages.get("/")
+    if login and login.get("activeUsers"):
+        lu = login["activeUsers"]
+        hu = home.get("activeUsers") if home else 0
+        if not hu or lu >= hu * 0.7:
+            cmp = f"홈({_fmt(hu)})보다 {'많은' if lu > hu else '적은'} " if hu else ""
+            out.append({
+                "level": "action", "icon": "🔑", "title": "로그인이 최대 관문 — 전환 병목",
+                "body": (f"로그인 유니크 {_fmt(lu)}명({cmp}수준). 모든 예약이 이 페이지를 거침. "
+                         f"소셜·간편 로그인/비회원 예약으로 이탈만 줄여도 예약 퍼널 전체가 상승.")})
+
+    # (4c) 탐색 깊이 — 특정 페이지 반복조회(인당 7회+)는 비교·결정 지연 신호
+    deep = None
+    for p in sec.get("top_pages", []):
+        u = p.get("activeUsers", 0) or 0
+        if u >= 200000:
+            d = (p.get("screenPageViews", 0) or 0) / u
+            if d >= 7 and (deep is None or d > deep[1]):
+                deep = (p.get("pagePath"), d, u)
+    if deep:
+        out.append({
+            "level": "action", "icon": "🔁", "title": f"결정 지연 — {deep[0]} 인당 {deep[1]:.1f}회 조회",
+            "body": (f"{_fmt(deep[2])}명이 인당 {deep[1]:.1f}회 반복 조회. 객실을 오가며 비교 = "
+                     f"가격·잔여·조건을 못 찾고 헤매는 신호. 리스트에 최저가·잔여·조건 노출 강화 필요.")})
+
+    # (4d) 마이소노 리텐션 — 회원 대시보드 재방문 허브
+    dash = pages.get("/mysono/dashboard")
+    if dash and dash.get("activeUsers"):
+        du2 = (dash.get("screenPageViews", 0) or 0) / dash["activeUsers"]
+        if du2 >= 4:
+            out.append({
+                "level": "good", "icon": "♻️", "title": f"마이소노가 리텐션 엔진 — 인당 {du2:.1f}회 재방문",
+                "body": (f"{_fmt(dash['activeUsers'])}명이 대시보드를 인당 {du2:.1f}회 재방문. 로열 회원 허브. "
+                         f"개인화 추천·쿠폰을 노출해 재예약으로 연결 필요.")})
+
     # (5) 참여 품질
     er = cur.get("engagementRate")
     br = cur.get("bounceRate")

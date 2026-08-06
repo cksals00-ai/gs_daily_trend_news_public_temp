@@ -132,6 +132,10 @@
   .mstrip span{background:var(--bg-soft);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--ink-soft);font-weight:600}
   .mstrip span b{color:var(--gold-bright)}
   .mstrip span.up b{color:var(--positive)} .mstrip span.down b{color:var(--negative)}
+  /* 페이지 인사이트 콜아웃 */
+  .pins{display:flex;flex-direction:column;gap:8px;margin:2px 0 16px}
+  .pin{background:var(--bg-soft);border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:8px;padding:10px 13px;font-size:13px;line-height:1.6;color:var(--ink-soft)}
+  .pin b{color:var(--gold-bright);font-weight:700}
   /* 월 선택기 */
   .msel{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;margin-bottom:6px}
   .mbtn{flex:0 0 auto;padding:6px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--bg-card);color:var(--ink-muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
@@ -196,6 +200,62 @@ const CH_KO={
   'AI Assistant':'AI어시스턴트','Mobile Push Notifications':'모바일푸시','Organic Video':'자연동영상',
   'Paid Video':'유료동영상','SMS':'문자','Audio':'오디오','기타':'기타'};
 const chLabel = n => { if(n==null||n==='') return '(기타)'; const ko=CH_KO[n]; return ko?`${ko}(${n})`:n; };
+
+// 페이지 경로 → 한글 라벨 (주요 경로 우선, 없으면 세그먼트 조합)
+const PAGE_KO={
+  '/':'홈','/member/login':'로그인','/member/joinType':'회원가입 유형선택',
+  '/reserve':'예약 메인','/reserve/room':'객실 예약','/reserve/room/mo':'객실 예약(모바일)',
+  '/reserve/room/mo/payment':'객실 결제(모바일)','/reserve/newAndHot/dtl':'신상품·인기 상세',
+  '/reserve/remaining/mo':'잔여객실(모바일)','/reserve/remaining/pc':'잔여객실(PC)',
+  '/reserve/package':'패키지','/reserve/package/dtl':'패키지 상세',
+  '/reserve/activity':'액티비티','/reserve/activity/dtl':'액티비티 상세',
+  '/mysono/dashboard':'마이소노 대시보드','/mysono/pc/coupon/box':'쿠폰함(PC)',
+  '/mysono/pc/reserve/room':'회원 객실예약(PC)','/mysono/mo/reserve/room':'회원 객실예약(모바일)',
+  '/mysono/mo/reserve/promotion':'회원 프로모션(모바일)','/destinations':'사업장·목적지'};
+const SEG_KO={reserve:'예약',room:'객실',mo:'모바일',pc:'PC',payment:'결제',package:'패키지',
+  dtl:'상세',activity:'액티비티',remaining:'잔여',newAndHot:'신상품·인기',member:'회원',
+  login:'로그인',joinType:'가입유형',mysono:'마이소노',dashboard:'대시보드',coupon:'쿠폰',
+  box:'함',promotion:'프로모션',destinations:'목적지',search:'검색',event:'이벤트'};
+const pageKo = p => { if(p==null) return '(기타)'; if(PAGE_KO[p]) return PAGE_KO[p];
+  const segs=String(p).split('/').filter(Boolean); if(!segs.length) return '홈';
+  return segs.map(s=>SEG_KO[s]||s).join(' '); };
+
+// 인기 페이지 — 탐색깊이(pv/user) + WHY 인사이트 콜아웃
+function renderPages(pages){
+  if(!pages||!pages.length) return '<p style="color:var(--ink-faint)">데이터 없음</p>';
+  const rows=pages.slice(0,15).map(r=>({p:r.pagePath,pv:+r.screenPageViews||0,u:+r.activeUsers||0,
+    d:(r.activeUsers?((+r.screenPageViews)/(+r.activeUsers)):0)}));
+  const max=Math.max(...rows.map(r=>r.pv))||1;
+  const find=pp=>pages.find(x=>x.pagePath===pp);
+  // 동적 인사이트
+  const tips=[];
+  const login=find('/member/login'), home=find('/');
+  if(login){ const lu=+login.activeUsers; const cmp=home?` — 홈(${fmt(+home.activeUsers)})보다 ${lu>+home.activeUsers?'많은':'적은'}`:'';
+    if(!home||lu>=+home.activeUsers*0.7) tips.push(`🔑 <b>로그인이 최대 관문</b> · 유니크 ${fmt(lu)}명${cmp} 모든 예약이 이 페이지를 거칩니다. 소셜·간편 로그인/비회원 예약으로 이탈만 줄여도 예약 퍼널 전체가 올라갑니다.`); }
+  // 탐색깊이 최고 (사용자 20만+ 만)
+  const deep=rows.filter(r=>r.u>=200000).sort((a,b)=>b.d-a.d)[0];
+  if(deep&&deep.d>=7) tips.push(`🔁 <b>${pageKo(deep.p)}에서 결정 지연</b> · 인당 ${deep.d.toFixed(1)}회 반복 조회. 객실을 수십 번 오가며 비교 = 가격·잔여·조건을 못 찾고 헤매는 신호일 수 있습니다. 리스트에 최저가·잔여·조건 노출을 강화하세요.`);
+  // 모바일 객실조회 → 결제 도달
+  const rm=find('/reserve/room/mo'), pay=find('/reserve/room/mo/payment');
+  if(rm&&pay){ const ru=+rm.activeUsers, pu=+pay.activeUsers; const rate=ru?(pu/ru*100):0;
+    tips.push(`📉 <b>모바일 결제 이탈</b> · 객실조회 ${fmt(ru)}명 → 결제 ${fmt(pu)}명(<b>${rate.toFixed(0)}%</b> 도달). ${(100-rate).toFixed(0)}%가 결제 전 이탈 — 모바일 결제단계 간소화가 가장 큰 레버입니다.`); }
+  // 마이소노 리텐션
+  const dash=find('/mysono/dashboard');
+  if(dash){ const du=(+dash.screenPageViews)/(+dash.activeUsers||1);
+    if(du>=4) tips.push(`♻️ <b>마이소노가 리텐션 엔진</b> · ${fmt(+dash.activeUsers)}명이 인당 ${du.toFixed(1)}회 재방문. 로열 회원 재방문 허브 — 대시보드에 개인화 추천·쿠폰을 노출해 재예약을 유도하세요.`); }
+
+  const body=rows.map(r=>{
+    const pct=(r.pv/max*100).toFixed(1);
+    const hot=r.d>=7; const dCol=hot?'#e0a44a':'var(--ink)';
+    return `<tr>
+      <td class="bar-cell"><span><span style="color:var(--ink)">${pageKo(r.p)}</span> <span style="color:var(--ink-faint);font-size:10px;font-family:var(--mono)">${r.p}</span></span><div class="bar" style="width:${pct}%"></div></td>
+      <td class="num">${fmt(r.pv)}</td><td class="num">${fmt(r.u)}</td>
+      <td class="num" style="color:${dCol};font-weight:${hot?'800':'600'}" title="페이지뷰 ÷ 사용자 = 탐색 깊이">${r.d.toFixed(1)}</td></tr>`;
+  }).join('');
+  const table=`<table><thead><tr><th>페이지</th><th class="num">페이지뷰</th><th class="num">사용자</th><th class="num" title="페이지뷰÷사용자">깊이</th></tr></thead><tbody>${body}</tbody></table>`;
+  const callout=tips.length?`<div class="pins">${tips.map(t=>`<div class="pin">${t}</div>`).join('')}</div>`:'';
+  return callout+table;
+}
 
 function renderEmpty(reason){
   document.getElementById('meta-line').textContent = '연동 대기중';
@@ -504,9 +564,9 @@ function renderScope(){
   html+=`<div class="card"><h3>기기 <span class="tag">사용자 비중</span></h3><div class="chartbox" style="height:250px"><canvas id="deviceChart"></canvas></div></div>`;
   html+='</div>';
 
-  html+='<div class="grid" style="grid-template-columns:1fr 1fr">';
+  html+='<div class="grid" style="grid-template-columns:1fr">';
   html+=`<div class="card"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars(ctrys,'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
-  html+=`<div class="card"><h3>인기 페이지 <span class="tag">페이지뷰 상위</span></h3>${tableBars((pages||[]).slice(0,15),'pagePath','페이지','screenPageViews','페이지뷰',{key:'activeUsers',label:'사용자',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  html+=`<div class="card"><h3>인기 페이지 <span class="tag">페이지뷰 · 탐색깊이</span></h3>${renderPages(pages)}</div>`;
   html+='</div>';
 
   document.getElementById('scopeArea').innerHTML=html;
