@@ -348,7 +348,8 @@ function render(data){
   let html='';
   // 0) 홈페이지 채널 · Revenue Meeting (최상단)
   html+='<div id="rmHome"></div>';
-  // 1) 월 선택기
+  // 1) 홈페이지 GA 분석 섹션 제목 + 월 선택기
+  html+=`<div class="ins-head" style="margin-top:30px;margin-bottom:14px"><span class="t">📊 홈페이지 GA 분석</span><span class="b">월별 · 채널 · 페이지 · 유입 상세</span></div>`;
   const months=(s.by_month&&s.by_month.months)||(s.monthly||[]).map(m=>m.yearMonth);
   html+='<div class="msel" id="msel">';
   html+=`<button class="mbtn active" data-ym="all">전체 12개월</button>`;
@@ -705,7 +706,5 @@ function renderRmHome(rm){
 }
 fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>
