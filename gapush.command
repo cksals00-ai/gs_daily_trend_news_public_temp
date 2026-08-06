@@ -12,4 +12,5 @@ git pull --rebase -X theirs origin main || {
 }
 echo "⬆️  푸시..."
 git push && echo "✅ 완료!" || echo "❌ 푸시 실패 — 로그 확인"
-read -n1 -p "닫으려면 아무 키나 누르세요..."
+echo "닫으려면 Enter를 누르세요..."
+read _

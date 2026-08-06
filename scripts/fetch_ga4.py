@@ -292,6 +292,105 @@ def build_funnel(client, property_id):
             "conversions": conv, "channel_conv": channel_conv, "weekday": weekday, "heatmap": heat}
 
 
+def build_actions(sec, out_path=None):
+    """인사이트를 '실행 가능한 처방'으로 변환 — 우선순위·레버·근거·기대효과·실행법.
+    대시보드 최상단 액션 플랜용."""
+    import os as _os
+    import json as _json
+    A = []
+    fn = sec.get("funnel", {})
+    rt = sec.get("retention", {})
+    monthly = sec.get("monthly", [])
+    countries = sec.get("countries", [])
+    dev = fn.get("device", {})
+    cur_ym = datetime.now(KST).strftime("%Y%m")
+
+    # 1) 모바일 결제 UX (최대 정량 기회)
+    up = fn.get("mobile_uplift")
+    mr = (dev.get("mobile") or {}).get("rate")
+    dr = (dev.get("desktop") or {}).get("rate")
+    if up and mr and dr:
+        A.append({"priority": 1, "lever": "UX·전환", "title": "모바일 결제 퍼널 개선",
+                  "why": f"모바일 전환 {mr:.1f}% vs 데스크톱 {dr:.1f}% (모바일 72% 트래픽)",
+                  "impact": f"이론 상한 +{_fmt(up)} 구매/년", "level": "warn",
+                  "how": "모바일 객실선택→결제 단계 단축 · 자동입력 · 간편결제 도입"})
+
+    # 2) 재방문 CRM
+    nw, rr = rt.get("new"), rt.get("returning")
+    if nw and rr and rr.get("cvr_session") and nw.get("cvr_session"):
+        tp = (nw["purchases"] + rr["purchases"]) or 1
+        rs = rr["purchases"] / tp * 100
+        ratio = rr["cvr_session"] / nw["cvr_session"]
+        A.append({"priority": 2, "lever": "CRM·리텐션", "title": "재방문 유도(리마케팅·멤버십) 강화",
+                  "why": f"재방문 전환 {ratio:.1f}배 · 구매의 {rs:.0f}%가 재방문", "level": "action",
+                  "impact": "재방문율↑ = 매출 직접 상승", "how": "이탈 리마케팅 · 멤버 전용 쿠폰 · 재구매 주기 알림(CRM)"})
+
+    # 3) 채널 예산 재배분
+    cc = fn.get("channel_conv", [])
+    if len(cc) >= 3:
+        best = cc[0]
+        worst = min(cc, key=lambda c: c["cvr"])
+        if worst["cvr"] < best["cvr"] / 2:
+            A.append({"priority": 3, "lever": "미디어 예산", "title": "저전환 유료 예산 → 고전환 채널 재배분",
+                      "why": f"{worst['channel']} 전환 {worst['cvr']}% vs {best['channel']} {best['cvr']}%", "level": "action",
+                      "impact": "동일 예산 대비 구매 수 증가", "how": f"{worst['channel']} 등 저전환 유료 축소 → SEO·리타겟·Direct 강화"})
+
+    # 4) 비수기 캠페인 (연중 최저 달)
+    seas = [m for m in monthly if m.get("yearMonth") != cur_ym]
+    if len(seas) >= 4:
+        trough = min(seas, key=lambda m: m.get("sessions", 0))
+        tym = trough["yearMonth"]
+        A.append({"priority": 4, "lever": "캠페인", "title": "비수기 수요창출 캠페인 집행",
+                  "why": f"연중 최저 {tym[:4]}-{tym[4:]} 트래픽 저점 (성수기엔 수요 이미 충분)", "level": "action",
+                  "impact": "저점 매출 방어 · 증분 효과 최대", "how": "비수기(3월·가을 어깨철) 타겟 유료+프로모, 성수기는 재고·요금 관리"})
+
+    # 5) 사업장 웹 육성 (웹강도지수 — otb_data.json 있으면 정량)
+    hp = sec.get("homepage_by_property", {})
+    props = hp.get("properties", [])
+    otb_path = _os.path.join(_os.path.dirname(out_path or "docs/data/x"), "otb_data.json")
+    weak = []
+    try:
+        if props and _os.path.exists(otb_path):
+            otb = _json.load(open(otb_path, encoding="utf-8"))
+            bud = {p["name"]: (p.get("rns_budget") or 0) for p in otb.get("byProperty", [])}
+            totb = sum(bud.values()) or 1
+            totw = sum(p["revenue"] for p in props) or 1
+            idx = []
+            for p in props:
+                bs = bud.get(p["key"], 0) / totb * 100
+                ws = p["revenue"] / totw * 100
+                if bs > 0.5:
+                    idx.append((ws / bs * 100, p["name"]))
+            idx.sort()
+            weak = [n.split(".")[-1] for _, n in idx[:3]]
+    except Exception:  # noqa: BLE001
+        weak = []
+    if weak:
+        A.append({"priority": 5, "lever": "사업장 활성화", "title": f"웹 과소 사업장 육성: {', '.join(weak)}",
+                  "why": "규모 대비 자사웹 판매가 약한 사업장(웹강도지수 하위)", "level": "action",
+                  "impact": "약한 사업장 웹 매출 정상화", "how": "해당 사업장 상품 노출·SEO·프로모 우선 배치 / 도심 비즈니스는 채널전략 분리"})
+
+    # 6) 국가·인바운드
+    if countries:
+        tc = sum(x.get("activeUsers", 0) for x in countries) or 1
+        intl = sum(x.get("activeUsers", 0) for x in countries if x.get("country") != "South Korea")
+        top_intl = [x["country"] for x in countries if x.get("country") != "South Korea"][:3]
+        A.append({"priority": 6, "lever": "국가 전략", "title": "인바운드 타겟 결정",
+                  "why": f"해외 {intl/tc*100:.0f}%뿐 · 상위 {', '.join(top_intl)}", "level": "info",
+                  "impact": "백지 시장 진입 or 국내 집중 택1", "how": "목표면 일본어/영문 랜딩+현지 채널, 아니면 국내 집중 유지"})
+
+    # 7) 측정 정합 (UTM)
+    cmm = sec.get("channel_month", {})
+    if cmm.get("unassigned") and cmm.get("total"):
+        una = sum(cmm["unassigned"]) / (sum(cmm["total"]) or 1) * 100
+        if una >= 3:
+            A.append({"priority": 7, "lever": "측정·운영", "title": "UTM 태깅 표준화",
+                      "why": f"Unassigned {una:.0f}% — 캠페인 성과 미귀속", "level": "info",
+                      "impact": "캠페인 ROI 측정 복구", "how": "모든 캠페인 링크 UTM 규칙 통일 · 자동화"})
+
+    return A
+
+
 def build_retention(client, property_id):
     """신규 vs 재방문 — 구성·전환·매출."""
     r = _run(client, property_id, ["newVsReturning"],
@@ -725,6 +824,14 @@ def collect(property_id):
     except Exception as e:  # noqa: BLE001
         logger.warning("  ✗ 인사이트 생성 실패: %s", e)
         data["insights"] = []
+
+    # 7.5) 액션 플랜 (처방)
+    try:
+        data["actions"] = build_actions(sec, DEFAULT_OUTPUT)
+        logger.info("  ✔ 액션 플랜: %d건", len(data["actions"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("  ✗ 액션 생성 실패: %s", e)
+        data["actions"] = []
 
     data["meta"] = {
         "generated_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
