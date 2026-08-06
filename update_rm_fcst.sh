@@ -151,6 +151,10 @@ log "[2/6] 파싱: parse_rm_fcst.py \"$(basename "$PDF")\""
 python3 "$PARSER" "$PDF" || die "파싱 실패 ($PARSER) — unmapped 사업장/테이블 구조 변경 의심"
 [ -f "$DATA_JSON" ] || die "$DATA_JSON 가 생성되지 않았습니다"
 
+# [2/6b] 홈페이지 세그(주요지표+픽업) 파싱 → docs/data/homepage_rm.json (GA 대시보드용)
+log "[2/6b] 홈페이지 세그 파싱: parse_homepage_rm.py"
+python3 scripts/parse_homepage_rm.py "$PDF" || echo "  ⚠ 홈페이지 RM 파싱 실패 — 기존 homepage_rm.json 유지 (무시하고 계속)"
+
 # 핵심 수치 출력 + 검증 (소스 PDF 명에 공백이 있으므로 탭 구분으로 안전하게 읽음)
 IFS=$'\t' read -r SRC_PDF SNAP_DATE RN6 REV6 RN7 REV7 RN8 REV8 SEGCSV <<EOF
 $(python3 - "$DATA_JSON" <<'PY'

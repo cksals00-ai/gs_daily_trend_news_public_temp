@@ -277,8 +277,35 @@ def build_funnel(client, property_id):
                     "sessions": wm.get(str(d), {}).get("sessions", 0)} for d in range(7)]
     except Exception:  # noqa: BLE001
         pass
+    # 요일 × 시간대 히트맵 (예약 밀도)
+    heat = [[0] * 24 for _ in range(7)]
+    try:
+        hr = _run(client, property_id, ["dayOfWeek", "hour"], ["ecommercePurchases"], DATE_START, DATE_END, limit=300)
+        for x in hr:
+            try:
+                heat[int(x["dayOfWeek"])][int(x["hour"])] = x.get("ecommercePurchases", 0)
+            except (ValueError, IndexError):
+                pass
+    except Exception:  # noqa: BLE001
+        pass
     return {"steps": steps, "device": dev, "mobile_uplift": uplift, "product_mix": mix,
-            "conversions": conv, "channel_conv": channel_conv, "weekday": weekday}
+            "conversions": conv, "channel_conv": channel_conv, "weekday": weekday, "heatmap": heat}
+
+
+def build_retention(client, property_id):
+    """신규 vs 재방문 — 구성·전환·매출."""
+    r = _run(client, property_id, ["newVsReturning"],
+             ["activeUsers", "sessions", "ecommercePurchases", "purchaseRevenue"], DATE_START, DATE_END)
+    out = {}
+    for x in r:
+        k = x.get("newVsReturning")
+        if k in ("new", "returning"):
+            s = x.get("sessions", 0) or 0
+            p = x.get("ecommercePurchases", 0) or 0
+            out[k] = {"users": x.get("activeUsers", 0), "sessions": s, "purchases": p,
+                      "revenue": x.get("purchaseRevenue", 0),
+                      "cvr_session": round(p / s * 100, 2) if s else None}
+    return out
 
 
 def build_by_month(client, property_id):
@@ -517,6 +544,28 @@ def build_insights(sec):
             out.append({
                 "level": "info", "icon": "🗓️", "title": f"예약 최다 {names[pk['dow']]}요일 · 최저 {names[lo['dow']]}요일",
                 "body": f"주중 예약 집중, {names[lo['dow']]}요일 최저. 주중 프로모·재고 노출 강화 여지."})
+        # 요일×시간대 피크
+        hm = fn.get("heatmap")
+        if hm and any(any(r) for r in hm):
+            names = ["일", "월", "화", "수", "목", "금", "토"]
+            pk = max(((hm[d][h], d, h) for d in range(7) for h in range(24)), key=lambda x: x[0])
+            tot = sum(sum(r) for r in hm) or 1
+            biz = sum(hm[d][h] for d in range(7) for h in range(9, 18)) / tot * 100
+            out.append({
+                "level": "info", "icon": "⏰", "title": f"예약 피크 {names[pk[1]]}요일 {pk[2]}시",
+                "body": f"업무시간(9~18시) 예약 {biz:.0f}% 집중. 광고 노출·CS 인력 이 시간대 배치 효율적."})
+
+    # (9) 리텐션 — 재방문 전환 우위
+    rt = sec.get("retention", {})
+    nw, rr = rt.get("new"), rt.get("returning")
+    if nw and rr and nw.get("cvr_session") and rr.get("cvr_session"):
+        tp = (nw["purchases"] + rr["purchases"]) or 1
+        rshare = rr["purchases"] / tp * 100
+        ratio = rr["cvr_session"] / nw["cvr_session"] if nw["cvr_session"] else 0
+        out.append({
+            "level": "action", "icon": "🔁", "title": f"재방문이 구매 {rshare:.0f}% — 리텐션이 핵심",
+            "body": (f"세션 전환 재방문 {rr['cvr_session']:.1f}% vs 신규 {nw['cvr_session']:.1f}%({ratio:.1f}배). "
+                     f"재방문이 구매의 {rshare:.0f}%. CRM·리마케팅이 성장 지렛대.")})
 
     return out
 
@@ -639,6 +688,13 @@ def collect(property_id):
         logger.info("  ✔ 고객여정 퍼널 (모바일 전환기회 +%s)", _fmt(up) if up else "—")
     except Exception as e:  # noqa: BLE001
         logger.warning("  ✗ 퍼널 실패: %s", e)
+
+    # 6.4) 신규 vs 재방문 (리텐션)
+    try:
+        sec["retention"] = build_retention(client, property_id)
+        logger.info("  ✔ 리텐션(신규/재방문)")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("  ✗ 리텐션 실패: %s", e)
 
     # 6.5) 월별 상세 (월 선택기용) — 채널·기기·국가·페이지를 월별로
     try:

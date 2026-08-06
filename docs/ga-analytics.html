@@ -80,6 +80,14 @@
   .ins-counts{display:flex;gap:6px;flex-wrap:wrap}
   .ins-counts b{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--rule)}
   .c-warn{color:var(--negative)} .c-action{color:var(--gold-bright)} .c-good{color:var(--positive)} .c-info{color:var(--info)}
+  .more-btn{width:100%;margin:2px 0 24px;padding:9px;background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;color:var(--ink-muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .more-btn:hover{background:var(--bg-hover);color:var(--ink)}
+  /* 리텐션 구성 막대 */
+  .ret-comp{margin:10px 0}
+  .ret-comp .rl{font-size:12px;color:var(--ink-muted);margin-bottom:5px;display:flex;justify-content:space-between}
+  .ret-bar{display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--rule)}
+  .ret-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+  .ret-new{background:#7a7e85} .ret-ret{background:#3987e5}
   .ins.warn{border-left-color:var(--negative)} .ins.warn .it{color:var(--negative)}
   .ins.action{border-left-color:var(--gold-bright)} .ins.action .it{color:var(--gold-bright)}
   .ins.good{border-left-color:var(--positive)} .ins.good .it{color:var(--positive)}
@@ -101,6 +109,11 @@
   .cvr-fill{height:100%;background:#3987e5;border-radius:6px}
   .cvr-fill.low{background:var(--negative)}
   .cvr-val{font-size:12px;font-family:var(--mono);text-align:right;color:var(--ink-soft)}
+  .heat-row{display:grid;grid-template-columns:22px repeat(24,1fr);gap:2px;align-items:center;margin-bottom:2px}
+  .heat-row .d{font-size:10px;color:var(--ink-faint);text-align:center}
+  .heat-cell{height:15px;border-radius:2px;background:var(--bg-deep)}
+  .heat-ax{display:grid;grid-template-columns:22px repeat(24,1fr);gap:2px;margin-top:4px}
+  .heat-ax span{font-size:9px;color:var(--ink-faint);text-align:center}
   /* 월 요약 스트립 */
   .mstrip{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
   .mstrip span{background:var(--bg-soft);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--ink-soft);font-weight:600}
@@ -215,9 +228,13 @@ function render(data){
     const cnt={warn:0,action:0,good:0,info:0}; ins.forEach(i=>{cnt[i.level]=(cnt[i.level]||0)+1;});
     html+=`<div class="ins-head"><span class="t">🔎 자동 인사이트</span>
       <span class="ins-counts"><b class="c-warn">주의 ${cnt.warn}</b><b class="c-action">액션 ${cnt.action}</b><b class="c-good">양호 ${cnt.good}</b><b class="c-info">참고 ${cnt.info}</b></span></div>`;
-    html+='<div class="insights">'+sorted.map(i=>`<div class="ins ${i.level||'info'}">
-      <div class="it"><span>${i.icon||'•'}</span><span>${i.title||''}</span></div>
-      <div class="ib">${i.body||''}</div></div>`).join('')+'</div>';
+    const card=i=>`<div class="ins ${i.level||'info'}"><div class="it"><span>${i.icon||'•'}</span><span>${i.title||''}</span></div><div class="ib">${i.body||''}</div></div>`;
+    const SHOWN=6, hidden=sorted.length-SHOWN;
+    html+='<div class="insights">'+sorted.slice(0,SHOWN).map(card).join('')+'</div>';
+    if(hidden>0){
+      html+='<div class="insights" id="insMore" style="display:none">'+sorted.slice(SHOWN).map(card).join('')+'</div>';
+      html+=`<button class="more-btn" id="insToggle" data-n="${hidden}">인사이트 ${hidden}개 더보기 ▾</button>`;
+    }
   }
   // 월 선택기
   const months=(s.by_month&&s.by_month.months)||(s.monthly||[]).map(m=>m.yearMonth);
@@ -229,6 +246,8 @@ function render(data){
   html+='<div id="scopeArea"></div>';
   // 고객여정 퍼널 (전체 기간)
   html+='<div id="funnelBox"></div>';
+  // 신규 vs 재방문 (리텐션)
+  html+='<div id="retBox"></div>';
   // 정적 차트 영역
   html+='<div class="grid" style="grid-template-columns:1fr 1fr;margin-top:4px">';
   html+=`<div class="card"><h3>월별 추이 <span class="tag">사용자 · 세션 · 페이지뷰</span></h3><div class="chartbox"><canvas id="trendChart"></canvas></div></div>`;
@@ -274,8 +293,33 @@ function render(data){
     document.querySelectorAll('#msel .mbtn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active'); _scope=b.dataset.ym; renderScope();
   });
+  const it=document.getElementById('insToggle');
+  if(it) it.addEventListener('click',()=>{ const m=document.getElementById('insMore'); const open=m.style.display!=='none';
+    m.style.display=open?'none':'grid'; it.textContent=open?`인사이트 ${it.dataset.n}개 더보기 ▾`:'접기 ▴'; });
   renderScope();
   renderFunnel(data);
+  renderRetention(data);
+}
+
+function renderRetention(data){
+  const rt=(data.sections||{}).retention, box=document.getElementById('retBox'); if(!box||!rt||!rt.new||!rt.returning) return;
+  const n=rt.new, r=rt.returning, tu=(n.users+r.users)||1, tp=(n.purchases+r.purchases)||1;
+  const un=(n.users/tu*100), up=(n.purchases/tp*100);
+  let html=`<div class="ins-head" style="margin-top:24px"><span class="t">🔁 신규 vs 재방문 · 리텐션</span><span class="b">최근 12개월</span></div>`;
+  html+='<div class="card">';
+  html+=`<div class="ret-comp"><div class="rl"><span>사용자 구성</span><span>신규 ${un.toFixed(0)}% · 재방문 ${(100-un).toFixed(0)}%</span></div>
+    <div class="ret-bar"><div class="ret-seg ret-new" style="width:${un}%">신규</div><div class="ret-seg ret-ret" style="width:${100-un}%">재방문</div></div></div>`;
+  html+=`<div class="ret-comp"><div class="rl"><span>구매 구성</span><span>신규 ${up.toFixed(0)}% · 재방문 ${(100-up).toFixed(0)}%</span></div>
+    <div class="ret-bar"><div class="ret-seg ret-new" style="width:${up}%">${up>=8?'신규':''}</div><div class="ret-seg ret-ret" style="width:${100-up}%">재방문</div></div></div>`;
+  html+=`<div class="fc-sub" style="margin-top:10px">👥 사용자는 <b>신규 ${un.toFixed(0)}%</b>인데 💳 구매는 <b>재방문 ${(100-up).toFixed(0)}%</b> — 재방문이 매출을 만든다.</div>`;
+  html+='</div>';
+  html+='<div class="kpis" style="margin-top:14px">';
+  html+=statTile('재방문 세션전환', r.cvr_session!=null?r.cvr_session+'%':'—','구매 ÷ 세션');
+  html+=statTile('신규 세션전환', n.cvr_session!=null?n.cvr_session+'%':'—','구매 ÷ 세션');
+  html+=statTile('전환 배수', (n.cvr_session?(r.cvr_session/n.cvr_session).toFixed(1):'—')+'배','재방문 ÷ 신규');
+  html+=statTile('재방문 매출비중', NF.format(Math.round(r.revenue/((n.revenue+r.revenue)||1)*100))+'%','전체 대비');
+  html+='</div>';
+  box.innerHTML=html;
 }
 
 function statTile(label,val,note){
@@ -319,6 +363,20 @@ function renderFunnel(data){
   }
   if(wd.length===7) html+=`<div class="card"><h3>요일별 예약 <span class="tag">구매 기준</span></h3><div class="chartbox" style="height:230px"><canvas id="wdChart"></canvas></div></div>`;
   html+='</div>';
+  // 요일×시간대 히트맵
+  const hm=fn.heatmap;
+  if(hm&&hm.length===7){
+    const hmax=Math.max(...hm.flat())||1, dn=['일','월','화','수','목','금','토'];
+    let h='<div class="card" style="margin-top:14px"><h3>요일 × 시간대 예약 히트맵 <span class="tag">구매 밀도 · 진할수록 많음</span></h3>';
+    for(let d=0;d<7;d++){
+      h+=`<div class="heat-row"><span class="d">${dn[d]}</span>`;
+      for(let hr=0;hr<24;hr++){ const v=hm[d][hr]||0, a=(0.05+0.95*(v/hmax)).toFixed(3);
+        h+=`<div class="heat-cell" style="background:rgba(57,135,229,${a})" title="${dn[d]} ${hr}시 · ${NF.format(v)}"></div>`; }
+      h+='</div>';
+    }
+    h+='<div class="heat-ax"><span></span>'; for(let hr=0;hr<24;hr++) h+=`<span>${hr%6===0?hr+'시':''}</span>`; h+='</div></div>';
+    html+=h;
+  }
   box.innerHTML=html;
   if(wd.length===7 && typeof Chart!=='undefined'){
     const names=['일','월','화','수','목','금','토'];
@@ -440,7 +498,5 @@ function renderRmHome(rm){
 }
 fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>
