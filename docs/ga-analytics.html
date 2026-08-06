@@ -559,13 +559,16 @@ function renderScope(){
   html+=kpiCard('평균 참여시간',dur(cur.averageSessionDuration),dp.averageSessionDuration,'',dLabel);
   html+='</div>';
 
-  html+='<div class="grid" style="grid-template-columns:1.1fr 1fr">';
+  // 좌: 유입 채널(1개, 세로로 김) · 우: 기기 도넛 + 국가·지역(2개 스택) — 위아래 높이 맞춤
+  html+='<div class="grid" style="grid-template-columns:1.1fr 1fr;align-items:stretch">';
   html+=`<div class="card"><h3>유입 채널 <span class="tag">세션 기준</span></h3>${tableBars(chans,'sessionDefaultChannelGroup','채널','sessions','세션',{key:'activeUsers',label:'사용자',fmt:fmt},chLabel)||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
-  html+=`<div class="card"><h3>기기 <span class="tag">사용자 비중</span></h3><div class="chartbox" style="height:250px"><canvas id="deviceChart"></canvas></div></div>`;
+  html+='<div style="display:flex;flex-direction:column;gap:18px">';
+  html+=`<div class="card"><h3>기기 <span class="tag">사용자 비중</span></h3><div class="chartbox" style="height:230px"><canvas id="deviceChart"></canvas></div></div>`;
+  html+=`<div class="card" style="flex:1;display:flex;flex-direction:column"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars((ctrys||[]).slice(0,10),'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
+  html+='</div>';
   html+='</div>';
 
   html+='<div class="grid" style="grid-template-columns:1fr">';
-  html+=`<div class="card"><h3>국가·지역 <span class="tag">사용자 기준</span></h3>${tableBars(ctrys,'country','국가','activeUsers','사용자',{key:'sessions',label:'세션',fmt:fmt})||'<p style="color:var(--ink-faint)">데이터 없음</p>'}</div>`;
   html+=`<div class="card"><h3>인기 페이지 <span class="tag">페이지뷰 · 탐색깊이</span></h3>${renderPages(pages)}</div>`;
   html+='</div>';
 
@@ -624,7 +627,5 @@ function renderRmHome(rm){
 }
 fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>
