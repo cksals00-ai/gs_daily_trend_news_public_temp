@@ -391,6 +391,56 @@ def build_actions(sec, out_path=None):
     return A
 
 
+def build_acquisition(client, property_id):
+    """유입 2단계 — 소스/매체 · 캠페인(프로모션) · AI(ChatGPT 등)."""
+    def cvr(p, s):
+        return round(p / s * 100, 2) if s else 0
+    out = {}
+    # 소스/매체
+    try:
+        sm = _run(client, property_id, ["sessionSourceMedium"], ["sessions", "ecommercePurchases"],
+                  DATE_START, DATE_END, order_by_metric="sessions", limit=15)
+        out["source_medium"] = [{"sm": r["sessionSourceMedium"], "sessions": r.get("sessions", 0),
+                                 "purchases": r.get("ecommercePurchases", 0),
+                                 "cvr": cvr(r.get("ecommercePurchases", 0), r.get("sessions", 0))} for r in sm]
+    except Exception:  # noqa: BLE001
+        out["source_medium"] = []
+    # 캠페인(프로모션) — 자동귀속값 제외
+    try:
+        cp = _run(client, property_id, ["sessionCampaignName"], ["sessions", "ecommercePurchases"],
+                  DATE_START, DATE_END, order_by_metric="sessions", limit=40)
+        skip = {"(direct)", "(referral)", "(organic)", "(not set)", "(data not available)", "homepage", ""}
+        out["campaigns"] = [{"name": r["sessionCampaignName"], "sessions": r.get("sessions", 0),
+                             "purchases": r.get("ecommercePurchases", 0),
+                             "cvr": cvr(r.get("ecommercePurchases", 0), r.get("sessions", 0))}
+                            for r in cp if r.get("sessionCampaignName") not in skip][:12]
+    except Exception:  # noqa: BLE001
+        out["campaigns"] = []
+    # AI 유입 (ChatGPT 등)
+    try:
+        src = _run(client, property_id, ["sessionSource"], ["sessions", "ecommercePurchases"],
+                   DATE_START, DATE_END, order_by_metric="sessions", limit=500)
+        AI = ["chatgpt", "openai", "perplexity", "gemini", "bard", "copilot", "claude",
+              "anthropic", "you.com", "poe", "deepseek", "clova", "wrtn", "뤼튼"]
+        NAME = {"chatgpt.com": "ChatGPT", "gemini.google.com": "Gemini", "perplexity": "Perplexity",
+                "perplexity.ai": "Perplexity", "claude.ai": "Claude", "copilot.com": "Copilot",
+                "copilot.microsoft.com": "Copilot"}
+        agg = {}
+        for r in src:
+            s = (r.get("sessionSource") or "").lower()
+            if any(a in s for a in AI):
+                nm = NAME.get(r["sessionSource"], r["sessionSource"])
+                a = agg.setdefault(nm, {"name": nm, "sessions": 0, "purchases": 0})
+                a["sessions"] += r.get("sessions", 0)
+                a["purchases"] += r.get("ecommercePurchases", 0)
+        ai = sorted(agg.values(), key=lambda x: -x["sessions"])
+        out["ai"] = {"sources": ai, "total_sessions": sum(x["sessions"] for x in ai),
+                     "total_purchases": sum(x["purchases"] for x in ai)}
+    except Exception:  # noqa: BLE001
+        out["ai"] = {"sources": [], "total_sessions": 0, "total_purchases": 0}
+    return out
+
+
 def build_retention(client, property_id):
     """신규 vs 재방문 — 구성·전환·매출."""
     r = _run(client, property_id, ["newVsReturning"],
@@ -666,6 +716,26 @@ def build_insights(sec):
             "body": (f"세션 전환 재방문 {rr['cvr_session']:.1f}% vs 신규 {nw['cvr_session']:.1f}%({ratio:.1f}배). "
                      f"재방문이 구매의 {rshare:.0f}%. CRM·리마케팅이 성장 지렛대.")})
 
+    # (10) 유입 상세 — AI · 프로모션
+    ac = sec.get("acquisition", {})
+    ai = ac.get("ai", {})
+    if ai.get("sources"):
+        top = ai["sources"][0]
+        share = top["sessions"] / ai["total_sessions"] * 100 if ai["total_sessions"] else 0
+        out.append({
+            "level": "info", "icon": "🤖", "title": f"AI 유입 1위 {top['name']} ({share:.0f}%)",
+            "body": (f"AI 유입 {_fmt(ai['total_sessions'])}세션 중 {top['name']}가 {share:.0f}%. "
+                     f"신생 채널이나 성장세 — AI 검색 노출(브랜드·상품 정보) 모니터링 필요.")})
+    camps = ac.get("campaigns", [])
+    if len(camps) >= 3:
+        byc = sorted([c for c in camps if c["sessions"] >= 3000], key=lambda c: -c["cvr"])
+        if byc:
+            best, wor = byc[0], byc[-1]
+            out.append({
+                "level": "action", "icon": "🎟️", "title": f"프로모션 전환 편차: 최고 {best['name']} {best['cvr']:.0f}%",
+                "body": (f"최고 {best['name']} {best['cvr']:.0f}% vs 최저 {wor['name']} {wor['cvr']:.1f}%. "
+                         f"고전환 프로모 유형 확대 · 저조 프로모 소재/타겟 재검토.")})
+
     return out
 
 
@@ -794,6 +864,16 @@ def collect(property_id):
         logger.info("  ✔ 리텐션(신규/재방문)")
     except Exception as e:  # noqa: BLE001
         logger.warning("  ✗ 리텐션 실패: %s", e)
+
+    # 6.45) 유입 2단계 (소스/매체 · 캠페인 · AI)
+    try:
+        sec["acquisition"] = build_acquisition(client, property_id)
+        ai = sec["acquisition"].get("ai", {})
+        logger.info("  ✔ 유입 상세: 소스 %d · 캠페인 %d · AI %d세션",
+                    len(sec["acquisition"].get("source_medium", [])),
+                    len(sec["acquisition"].get("campaigns", [])), ai.get("total_sessions", 0))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("  ✗ 유입 상세 실패: %s", e)
 
     # 6.5) 월별 상세 (월 선택기용) — 채널·기기·국가·페이지를 월별로
     try:

@@ -256,6 +256,8 @@ function render(data){
   html+='<div id="funnelBox"></div>';
   // 5) 신규 vs 재방문 (리텐션)
   html+='<div id="retBox"></div>';
+  // 5.5) 유입 상세 (2단계)
+  html+='<div id="acqBox"></div>';
   // 6) 정적 차트
   html+='<div class="grid" style="grid-template-columns:1fr 1fr;margin-top:22px">';
   html+=`<div class="card"><h3>월별 추이 <span class="tag">사용자 · 세션 · 페이지뷰</span></h3><div class="chartbox"><canvas id="trendChart"></canvas></div></div>`;
@@ -320,6 +322,36 @@ function render(data){
   renderScope();
   renderFunnel(data);
   renderRetention(data);
+  renderAcquisition(data);
+}
+
+function renderAcquisition(data){
+  const ac=(data.sections||{}).acquisition, box=document.getElementById('acqBox'); if(!box||!ac) return;
+  const sm=ac.source_medium||[], camps=ac.campaigns||[], ai=ac.ai||{};
+  let html=`<div class="ins-head" style="margin-top:24px"><span class="t">🔀 유입 상세 · 2단계</span><span class="b">소스 · 프로모션 · AI</span></div>`;
+  html+='<div class="grid" style="grid-template-columns:1.3fr 1fr">';
+  // 소스/매체
+  const smax=Math.max(...sm.map(x=>x.sessions),1);
+  html+='<div class="card"><h3>유입 소스/매체 <span class="tag">세션 · 전환율</span></h3><table><thead><tr><th>소스 / 매체</th><th class="num">세션</th><th class="num">전환</th></tr></thead><tbody>';
+  html+=sm.slice(0,12).map(x=>`<tr><td class="bar-cell"><span>${x.sm}</span><div class="bar" style="width:${(x.sessions/smax*100).toFixed(0)}%"></div></td><td class="num">${fmt(x.sessions)}</td><td class="num">${x.cvr}%</td></tr>`).join('')||'<tr><td>데이터 없음</td></tr>';
+  html+='</tbody></table></div>';
+  // AI
+  html+='<div class="card"><h3>AI 유입 <span class="tag">ChatGPT 등</span></h3>';
+  if(ai.sources&&ai.sources.length){
+    const amax=Math.max(...ai.sources.map(x=>x.sessions),1);
+    html+=`<div class="fc-sub" style="margin-bottom:10px">AI 총 <b>${fmt(ai.total_sessions)}</b> 세션 · 구매 ${fmt(ai.total_purchases)}</div>`;
+    html+=ai.sources.map(x=>`<div class="cvr-row"><span class="cvr-name">${x.name}</span><div class="cvr-track"><div class="cvr-fill" style="width:${Math.max(x.sessions/amax*100,4).toFixed(0)}%"></div></div><span class="cvr-val">${fmt(x.sessions)}</span></div>`).join('');
+  } else html+='<p style="color:var(--ink-faint)">AI 유입 데이터 없음</p>';
+  html+='</div></div>';
+  // 캠페인/프로모션
+  if(camps.length){
+    const cmax=Math.max(...camps.map(c=>c.sessions),1);
+    html+='<div class="card" style="margin-top:14px"><h3>캠페인 · 프로모션 성과 <span class="tag">세션 · 구매 · 전환율</span></h3><table><thead><tr><th>캠페인</th><th class="num">세션</th><th class="num">구매</th><th class="num">전환율</th></tr></thead><tbody>';
+    html+=camps.map(c=>{const col=c.cvr>=6?'var(--positive)':(c.cvr<2?'var(--negative)':'var(--ink-soft)');
+      return `<tr><td class="bar-cell"><span>${c.name}</span><div class="bar" style="width:${(c.sessions/cmax*100).toFixed(0)}%"></div></td><td class="num">${fmt(c.sessions)}</td><td class="num">${fmt(c.purchases)}</td><td class="num" style="color:${col};font-weight:700">${c.cvr}%</td></tr>`;}).join('');
+    html+='</tbody></table></div>';
+  }
+  box.innerHTML=html;
 }
 
 function renderActions(data){
@@ -532,7 +564,5 @@ function renderRmHome(rm){
 }
 fetch('data/homepage_rm.json?_t='+Date.now()).then(r=>r.ok?r.json():null).then(rm=>rm&&renderRmHome(rm)).catch(()=>{});
 </script>
-<script src="./js/menu-visibility.js"></script>
-<script src="./js/visit-log.js"></script>
 </body>
 </html>
