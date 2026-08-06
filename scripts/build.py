@@ -3241,6 +3241,23 @@ def main():
     except Exception as e:
         logger.warning(f"✗ data_freshness.json 생성 실패: {e}")
 
+    # ── 상단 GSN 네비 정본 통일 ──
+    # 네비 마크업이 페이지마다 하드코딩이라 재생성/수기편집 후 갈라지기 쉽다.
+    # normalize_gsn_nav.py 가 정본을 전 페이지에 재주입한다(멱등).
+    nav_script = Path(__file__).resolve().parent / "normalize_gsn_nav.py"
+    if nav_script.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(nav_script)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                logger.info("✓ GSN 상단 네비 통일 완료")
+            else:
+                logger.warning(f"✗ GSN 네비 통일 불일치: {result.stdout.strip()[-400:]}")
+        except Exception as e:
+            logger.warning(f"✗ GSN 네비 통일 오류: {e}")
+
     # ── 숨김 메뉴 처리(menu-visibility.js) include 주입 ──
     # 페이지 재생성(otb/sales-kpi 등) 후에도 include 가 유지되도록 마지막에 실행.
     # GSN_HIDDEN_MENUS(docs/js/menu-visibility.js)가 미사용 메뉴를 네비에서 감춘다.

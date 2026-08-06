@@ -64,6 +64,18 @@ ACTIVE_RE = re.compile(
     re.DOTALL,
 )
 
+# 구형 잔재 — 시트 페이지(otb 계열)에 남아 있던 2차 active 마커.
+# 지금은 존재하지 않는 data-gsn 키(channel/ytd/monthly...)를 찾으며
+# 정본 스크립트가 칠한 active 를 도로 지운다 → 제거.
+LEGACY_ACTIVE_RES = [
+    re.compile(r"\n*\(function\(\)\{var h=location\.href,m=\{.*?\}\)\(\);", re.DOTALL),
+    # gs-verify.html 전용: 존재하지 않는 'verify' 키 외 전부 active 제거
+    re.compile(
+        r"\n*/\* ─+ GSN ACTIVE HIGHLIGHT ─+ \*/\n\(function\(\)\{.*?k === 'verify'.*?\}\)\(\);",
+        re.DOTALL,
+    ),
+]
+
 
 def build_anchors(indent: str) -> str:
     out = []
@@ -98,7 +110,11 @@ def normalize(path: Path):
         ins = nav_close + len("</nav>")
         txt = txt[:ins] + "\n" + CANONICAL_SCRIPT + txt[ins:]
 
-    # ── 3) 숨김 메뉴 스크립트 보장(대외비 항목이 노출되지 않도록) ────────
+    # ── 3) 구형 2차 active 마커 제거 ────────────────────────────────────
+    for rx in LEGACY_ACTIVE_RES:
+        txt = rx.sub("", txt)
+
+    # ── 4) 숨김 메뉴 스크립트 보장(대외비 항목이 노출되지 않도록) ────────
     if "js/menu-visibility.js" not in txt and "</body>" in txt:
         b = txt.rfind("</body>")
         txt = txt[:b] + '<script src="./js/menu-visibility.js"></script>\n' + txt[b:]

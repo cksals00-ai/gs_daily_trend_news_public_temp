@@ -340,7 +340,9 @@ function render(data){
     `업데이트 ${data.meta?.generated_at||'—'}<br>속성 ${data.meta?.property_id||''} · ${data.meta?.date_range?.label||''}`;
 
   let html='';
-  // 1) 월 선택기 (최상단)
+  // 0) 홈페이지 채널 · Revenue Meeting (최상단)
+  html+='<div id="rmHome"></div>';
+  // 1) 월 선택기
   const months=(s.by_month&&s.by_month.months)||(s.monthly||[]).map(m=>m.yearMonth);
   html+='<div class="msel" id="msel">';
   html+=`<button class="mbtn active" data-ym="all">전체 12개월</button>`;
@@ -362,7 +364,6 @@ function render(data){
   if(s.channel_month&&s.channel_month.series&&s.channel_month.series.length)
     html+=`<div class="card"><h3>채널 × 월 추이 <span class="tag">세션 · 스택</span></h3><div class="chartbox"><canvas id="chChart"></canvas></div></div>`;
   html+='</div>';
-  html+='<div id="rmHome"></div>';
   // 7) 자동 인사이트 (맨 아래 · 기본 접힘 — 상세 근거)
   const ins=data.insights||[];
   if(ins.length){
@@ -671,7 +672,7 @@ function renderRmHome(rm){
   const rnAch=m.rn_ach, revAch=m.rev_ach;
   const cls=v=>v>=100?'up':(v>=90?'flat':'down');
   const arw=v=>v>=100?'▲':'▼';
-  let html=`<div class="ins-head" style="margin-top:26px"><span class="t">🏠 홈페이지 채널 · Revenue Meeting</span><span class="b">${rm.source||''} · 투숙 ${mo}월</span></div>`;
+  let html=`<div class="ins-head" style="margin-top:4px"><span class="t">🏠 홈페이지 채널 · Revenue Meeting</span><span class="b">${rm.source||''} · 투숙 ${mo}월</span></div>`;
   html+='<div class="kpis">';
   html+=`<div class="kpi"><div class="label">예약(RN) 목표→전망</div><div class="val">${NF.format(m.fcst_rn)}<small> / ${NF.format(m.budget_rn)}</small></div><div class="delta ${cls(rnAch)}">${arw(rnAch)} 달성 ${rnAch}% <span style="color:var(--ink-faint);font-weight:500">(${m.fcst_rn-m.budget_rn>=0?'+':''}${NF.format(m.fcst_rn-m.budget_rn)})</span></div></div>`;
   html+=`<div class="kpi"><div class="label">매출 목표→전망(백만)</div><div class="val">${NF.format(m.fcst_rev)}<small> / ${NF.format(m.budget_rev)}</small></div><div class="delta ${cls(revAch)}">${arw(revAch)} 달성 ${revAch}%</div></div>`;
