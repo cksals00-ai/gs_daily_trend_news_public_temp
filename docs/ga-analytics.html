@@ -220,6 +220,44 @@ const pageKo = p => { if(p==null) return '(기타)'; if(PAGE_KO[p]) return PAGE_
   const segs=String(p).split('/').filter(Boolean); if(!segs.length) return '홈';
   return segs.map(s=>SEG_KO[s]||s).join(' '); };
 
+// 유입 소스/매체 → 한글 풀이
+const SM_MAP={
+  '(direct) / (none)':'직접·앱·북마크(미태깅 포함)','m.search.naver.com / referral':'네이버 모바일 통합검색',
+  'naver / organic':'네이버 자연검색','google / organic':'구글 자연검색','crm / lms':'자사 CRM 문자(LMS)',
+  'daum / organic':'다음 자연검색','m.place.naver.com / referral':'네이버플레이스(모바일 지도)',
+  'pcmap.place.naver.com / referral':'네이버플레이스(PC 지도)','bing / organic':'빙 자연검색',
+  'crm / homepage':'자사 CRM 홈페이지 배너','(not set)':'미설정','(not set) ':'미설정',
+  'naver.com / referral':'네이버 추천유입','instagram / social':'인스타그램','facebook / social':'페이스북',
+  'kakao / social':'카카오','youtube / referral':'유튜브'};
+const smLabel = s => { if(s==null) return '(기타)'; const t=String(s).trim(); return SM_MAP[t]||SM_MAP[s]||s; };
+
+// 캠페인 코드 → 실제 프로모션명 + 성격(웹 검증: 47주년 소노 브랜드데이·오션월드 20주년)
+const CAMP_MAP={
+  '47brandday_pkg_main':['창립 47주년 소노 브랜드데이 · 패키지','정기 대형 프로모션(최대 43%↓)'],
+  '47brandday_coupon_main':['창립 47주년 소노 브랜드데이 · 쿠폰','정기 대형 프로모션'],
+  'lobster_festa':['랍스터 페스타','다이닝·뷔페 프로모션'],
+  '26spring_edition':['2026 봄 에디션','시즌 패키지'],
+  'vivaldihome':['소노벨 비발디파크','리조트·스키 상품'],
+  'oceanfesta':['오션월드 여름 페스티벌','워터파크(20주년)'],
+  'mega_early':['메가 얼리버드','성수기 조기예약 특가'],
+  'cool_summer_hotdeal':['쿨 서머 핫딜','여름 단일 특가'],
+  'vi_ready':['비발디파크 시즌 레디','스키시즌 준비'],
+  'oceanworld_20th_fbig_visit':['오션월드 20주년 · 방문 유도','SNS 인지형(전환 목적 아님)'],
+  'coupon':['일반 쿠폰',''],
+  '2510_PMAX_전환_비발디파크':['25.10 구글 PMax 전환 · 비발디파크','유료·성과형(Google Ads)']};
+const SEG_C={brandday:'브랜드데이',festa:'페스타',festival:'페스티벌',early:'얼리버드',coupon:'쿠폰',
+  edition:'에디션',hotdeal:'핫딜',summer:'서머',spring:'봄',winter:'겨울',pkg:'패키지',main:'',
+  visit:'방문',ready:'레디',PMAX:'구글PMax',전환:'전환형',promo:'프로모션',event:'이벤트'};
+function campLabel(name){
+  if(CAMP_MAP[name] && Array.isArray(CAMP_MAP[name])) return CAMP_MAP[name][0];
+  let s=String(name||'');
+  const ym=s.match(/^(\d{2})(\d{2})[_-]/); let pre='';
+  if(ym){ pre=`${ym[1]}.${ym[2]} `; s=s.slice(ym[0].length); }
+  const parts=s.split(/[_-]/).map(t=>SEG_C[t]||t).filter(Boolean);
+  return (pre+parts.join(' ')).trim()||name;
+}
+const campTag = name => (CAMP_MAP[name]&&Array.isArray(CAMP_MAP[name]))?CAMP_MAP[name][1]:'';
+
 // 인기 페이지 — 탐색깊이(pv/user) + WHY 인사이트 콜아웃
 function renderPages(pages){
   if(!pages||!pages.length) return '<p style="color:var(--ink-faint)">데이터 없음</p>';
@@ -393,7 +431,8 @@ function renderAcquisition(data){
   // 소스/매체
   const smax=Math.max(...sm.map(x=>x.sessions),1);
   html+='<div class="card"><h3>유입 소스/매체 <span class="tag">세션 · 전환율</span></h3><table><thead><tr><th>소스 / 매체</th><th class="num">세션</th><th class="num">전환</th></tr></thead><tbody>';
-  html+=sm.slice(0,12).map(x=>`<tr><td class="bar-cell"><span>${x.sm}</span><div class="bar" style="width:${(x.sessions/smax*100).toFixed(0)}%"></div></td><td class="num">${fmt(x.sessions)}</td><td class="num">${x.cvr}%</td></tr>`).join('')||'<tr><td>데이터 없음</td></tr>';
+  html+=sm.slice(0,12).map(x=>{const cv=+x.cvr; const col=cv>=8?'var(--positive)':(cv<2?'var(--negative)':'var(--ink-soft)');
+    return `<tr><td class="bar-cell"><span><span style="color:var(--ink)">${smLabel(x.sm)}</span> <span style="color:var(--ink-faint);font-size:10px;font-family:var(--mono)">${x.sm}</span></span><div class="bar" style="width:${(x.sessions/smax*100).toFixed(0)}%"></div></td><td class="num">${fmt(x.sessions)}</td><td class="num" style="color:${col};font-weight:600">${x.cvr}%</td></tr>`;}).join('')||'<tr><td>데이터 없음</td></tr>';
   html+='</tbody></table></div>';
   // AI
   html+='<div class="card"><h3>AI 유입 <span class="tag">ChatGPT 등</span></h3>';
@@ -401,14 +440,46 @@ function renderAcquisition(data){
     const amax=Math.max(...ai.sources.map(x=>x.sessions),1);
     html+=`<div class="fc-sub" style="margin-bottom:10px">AI 총 <b>${fmt(ai.total_sessions)}</b> 세션 · 구매 ${fmt(ai.total_purchases)}</div>`;
     html+=ai.sources.map(x=>`<div class="cvr-row"><span class="cvr-name">${x.name}</span><div class="cvr-track"><div class="cvr-fill" style="width:${Math.max(x.sessions/amax*100,4).toFixed(0)}%"></div></div><span class="cvr-val">${fmt(x.sessions)}</span></div>`).join('');
+    if(ai.sources[0]){ const t=ai.total_sessions||1; const share=(ai.sources[0].sessions/t*100);
+      html+=`<div class="pins" style="margin-top:12px"><div class="pin">🤖 <b>AI 유입 1위 ChatGPT</b> · AI 전체의 ${share.toFixed(0)}%. AI 검색이 이미 유의미한 유입원 — 사업장·프로모션명이 AI 답변에 잘 노출되는지(GEO) 관리 대상입니다.</div></div>`; }
   } else html+='<p style="color:var(--ink-faint)">AI 유입 데이터 없음</p>';
   html+='</div></div>';
+
+  // 소스/매체 해석 콜아웃 (전체 폭)
+  const smf=t=>sm.find(x=>String(x.sm).trim()===t);
+  const stips=[];
+  const placeKeys=['m.search.naver.com / referral','m.place.naver.com / referral','pcmap.place.naver.com / referral','naver.com / referral'];
+  const placeRows=placeKeys.map(smf).filter(Boolean);
+  const naverOrg=smf('naver / organic');
+  if(placeRows.length && naverOrg){
+    const psum=placeRows.reduce((a,r)=>a+r.sessions,0);
+    stips.push(`🧭 <b>네이버 플레이스·지도는 양 많고 전환 낮음</b> · 지도·통합검색 유입 합계 ${fmt(psum)}세션인데 전환 1~2%대. 반면 <b>네이버 자연검색 ${naverOrg.cvr}%</b>. 플레이스 상세를 예약 페이지로 직결·최적화하면 전환 여력이 가장 큽니다.`);
+  }
+  const bing=smf('bing / organic');
+  if(bing && +bing.cvr>=8) stips.push(`🏆 <b>빙 자연검색 전환 ${bing.cvr}%</b> · 규모(${fmt(bing.sessions)})는 작지만 효율 최고. MS 코파일럿·빙 SEO는 저비용 고효율 기회입니다.`);
+  const crmH=smf('crm / homepage'), crmL=smf('crm / lms');
+  if(crmH&&crmL) stips.push(`📨 <b>자사 CRM은 문자보다 온사이트 배너</b> · 홈페이지 배너 ${crmH.cvr}% vs 문자(LMS) ${crmL.cvr}% — 약 2배 차이. CRM 예산을 온사이트 배너·재방문 트리거로 이동할 근거.`);
+  if(stips.length) html+=`<div class="pins" style="margin-top:14px">${stips.map(t=>`<div class="pin">${t}</div>`).join('')}</div>`;
+
   // 캠페인/프로모션
   if(camps.length){
     const cmax=Math.max(...camps.map(c=>c.sessions),1);
-    html+='<div class="card" style="margin-top:14px"><h3>캠페인 · 프로모션 성과 <span class="tag">세션 · 구매 · 전환율</span></h3><table><thead><tr><th>캠페인</th><th class="num">세션</th><th class="num">구매</th><th class="num">전환율</th></tr></thead><tbody>';
-    html+=camps.map(c=>{const col=c.cvr>=6?'var(--positive)':(c.cvr<2?'var(--negative)':'var(--ink-soft)');
-      return `<tr><td class="bar-cell"><span>${c.name}</span><div class="bar" style="width:${(c.sessions/cmax*100).toFixed(0)}%"></div></td><td class="num">${fmt(c.sessions)}</td><td class="num">${fmt(c.purchases)}</td><td class="num" style="color:${col};font-weight:700">${c.cvr}%</td></tr>`;}).join('');
+    // 캠페인 해석
+    const byCvr=[...camps].sort((a,b)=>b.cvr-a.cvr);
+    const worst=[...camps].filter(c=>c.sessions>=30000).sort((a,b)=>a.cvr-b.cvr)[0];
+    const best=byCvr[0];
+    const ctips=[];
+    const bd=camps.find(c=>c.name.startsWith('47brandday_pkg'));
+    if(bd) ctips.push(`🏆 <b>브랜드데이·시즌 에디션이 매출 엔진</b> · 47주년 브랜드데이 패키지 ${fmt(bd.sessions)}세션·${bd.cvr}%, 봄 에디션 ${(camps.find(c=>c.name==='26spring_edition')||{}).cvr||''}% 최고 전환. 규모와 효율을 동시에 잡는 정기·시즌 패키지를 확대하세요.`);
+    if(worst && worst.cvr<1) ctips.push(`🚨 <b>${campLabel(worst.name)} 트래픽 낭비</b> · ${fmt(worst.sessions)}세션인데 전환 <b>${worst.cvr}%</b>(구매 ${fmt(worst.purchases)}). SNS 인지형이라도 방문 후 <b>예약 리타겟팅</b>이 없으면 예산이 샙니다 — 20주년 트래픽에 리마케팅을 붙이세요.`);
+    const summer=camps.filter(c=>/festa|summer|ocean|vi_ready/.test(c.name));
+    const sAvg=summer.length?summer.reduce((a,c)=>a+c.cvr,0)/summer.length:0;
+    if(summer.length>=2 && sAvg<4) ctips.push(`💧 <b>단일 상품 프로모션 < 패키지</b> · 여름·워터파크 단품 캠페인 평균 전환 ${sAvg.toFixed(1)}%로, 브랜드데이·에디션 같은 패키지형(7~10%)보다 낮습니다. 단품보다 숙박+이용권 묶음이 전환에 유리합니다.`);
+    html+='<div class="card" style="margin-top:14px"><h3>캠페인 · 프로모션 성과 <span class="tag">코드 풀이 · 세션 · 구매 · 전환율</span></h3>';
+    if(ctips.length) html+=`<div class="pins" style="margin:2px 0 14px">${ctips.map(t=>`<div class="pin">${t}</div>`).join('')}</div>`;
+    html+='<table><thead><tr><th>캠페인</th><th class="num">세션</th><th class="num">구매</th><th class="num">전환율</th></tr></thead><tbody>';
+    html+=camps.map(c=>{const col=c.cvr>=6?'var(--positive)':(c.cvr<2?'var(--negative)':'var(--ink-soft)'); const tag=campTag(c.name);
+      return `<tr><td class="bar-cell"><span><span style="color:var(--ink)">${campLabel(c.name)}</span>${tag?` <span style="color:var(--ink-faint);font-size:10.5px">· ${tag}</span>`:''}<br><span style="color:var(--ink-faint);font-size:10px;font-family:var(--mono)">${c.name}</span></span><div class="bar" style="width:${(c.sessions/cmax*100).toFixed(0)}%"></div></td><td class="num">${fmt(c.sessions)}</td><td class="num">${fmt(c.purchases)}</td><td class="num" style="color:${col};font-weight:700">${c.cvr}%</td></tr>`;}).join('');
     html+='</tbody></table></div>';
   }
   box.innerHTML=html;
