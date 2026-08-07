@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta name="auth-required" content="sales">
+<script src="./js/auth.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>요금 검수 (요금표 ↔ 세팅값) · GS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0f1722;--card:#16202e;--line:#2a3a4f;--ink:#e7eef7;--mut:#9fb2c9;--ac:#2f6fb0;--ok:#37c98b;--warn:#e0b341;--bad:#e57373}
+*{box-sizing:border-box}body{margin:0;font-family:'맑은 고딕',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(90deg,#1F4E79,#2f6fb0);padding:16px 22px}h1{margin:0;font-size:17px}header p{margin:4px 0 0;color:#d6e6f7;font-size:12px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:13px;color:#cfe0f3}.step{display:inline-block;background:var(--ac);color:#fff;border-radius:999px;width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;margin-right:6px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.drop{border:2px dashed var(--ac);border-radius:10px;padding:20px;text-align:center;color:var(--mut);cursor:pointer;background:#0e1722;font-size:12px}.drop.on{border-color:var(--ok);color:#bfe6cf}
+label{display:block;font-size:11px;color:var(--mut);margin:8px 0 3px}
+input[type=number]{width:80px;background:#0e1722;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:5px 7px;font-size:12px}
+button{background:var(--ok);color:#08210f;border:0;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:bold;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+.mut{color:var(--mut);font-size:11px;line-height:1.6}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.dl{display:inline-block;margin-left:10px;padding:8px 14px;background:var(--ac);color:#fff;border-radius:8px;text-decoration:none;font-size:12px;cursor:pointer}
+table{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}th,td{border:1px solid var(--line);padding:4px 6px;text-align:center}th{background:#0e1722;color:#cfe0f3;position:sticky;top:0}
+tr.err td{background:rgba(229,115,115,.13)}tr.nm td{background:rgba(224,179,65,.10)}
+.pill{font-size:11px;padding:3px 9px;border-radius:20px;margin-right:6px}
+.scroll{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+</style></head><body>
+<header><h1>요금 검수 · 요금표(FIT) ↔ 세팅값 대조</h1><p>요금표 <b>전 시트</b>의 FIT 판매가를 기준으로, 패키지판매금액조회 세팅값을 누락 없이 교차 검수합니다. · 브라우저 처리(서버 불필요)</p></header>
+<div class="wrap">
+
+ <div class="card">
+  <h2><span class="step">1</span>파일 업로드</h2>
+  <div class="row2">
+   <div><label>① 요금표 (기준 · FIT 판매가 · 전 시트)</label>
+     <div id="dropA" class="drop">요금표 xlsx 끌어놓기/클릭</div>
+     <input id="fileA" type="file" accept=".xlsx,.xlsm" style="display:none"/>
+     <div id="infoA" class="mut" style="margin-top:6px"></div></div>
+   <div><label>② 세팅값 (패키지판매금액조회 Raw)</label>
+     <div id="dropB" class="drop">세팅값 xlsx 끌어놓기/클릭</div>
+     <input id="fileB" type="file" accept=".xlsx,.xlsm" style="display:none"/>
+     <div id="infoB" class="mut" style="margin-top:6px"></div></div>
+  </div>
+  <div style="margin-top:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+   <div><label style="display:inline">룸 유사도 임계값(%)</label> <input id="thr" type="number" min="50" max="100" value="80"/></div>
+   <button id="go" disabled>검수 실행</button>
+   <span id="status" class="mut"></span>
+  </div>
+ </div>
+
+ <div class="card" id="resCard" style="display:none">
+  <h2><span class="step">2</span>검수 결과</h2>
+  <div id="summary"></div>
+  <div id="dlwrap" style="margin-top:8px"></div>
+  <div class="scroll"><div id="tbl"></div></div>
+  <div class="mut" style="margin-top:8px">· 8/15(광복절)은 미판매로 검수 제외 · 수수료/입금가는 판매금액 기준 수율 검산 · 룸 매칭은 평형/룸 토큰 유사도(관리자 매핑표 연동은 후속) </div>
+ </div>
+</div>
+
+<script>
+/* ===== 공통 파서 ===== */
+function norm(v){ return (v==null?'':String(v)).replace(/\s+/g,''); }
+function canonSeason(s){ s=norm(s); if(!s)return null;
+  if(s.indexOf('하이')===0)return '하이';
+  if(s.indexOf('골드3')===0||s.indexOf('골드4')===0)return '스페셜';
+  if(s.indexOf('골드')===0)return '골드';
+  if(s.indexOf('스페셜')===0||s.indexOf('연휴')>=0||s.indexOf('추석')>=0||s.indexOf('최성수')>=0)return '스페셜';
+  if(s.indexOf('주말')>=0)return '주말';
+  if(s.indexOf('주중')===0)return '주중';
+  if(s==='금'||s.indexOf('금요일')>=0||s.indexOf('금)')>=0)return '금요일';
+  if(s==='토'||s.indexOf('토요일')>=0||s.indexOf('토)')>=0)return '토요일';
+  if(s.indexOf('일')===0)return '주중';
+  return s; }
+function wsAcc(sj){ if(!sj||!sj['!ref'])return {mr:0,mc:0,cell:function(){return null;}};
+  var rg=XLSX.utils.decode_range(sj['!ref']);
+  var mrg={}; (sj['!merges']||[]).forEach(function(m){ var a=sj[XLSX.utils.encode_cell({r:m.s.r,c:m.s.c})]; var v=a?a.v:null;
+    for(var R=m.s.r;R<=m.e.r;R++)for(var C=m.s.c;C<=m.e.c;C++) mrg[R+','+C]=v; });
+  return { mr:rg.e.r+1, mc:rg.e.c+1, cell:function(r,c){ var cel=sj[XLSX.utils.encode_cell({r:r-1,c:c-1})];
+    if(cel&&cel.v!=null&&String(cel.v).trim()!=='') return (cel.v instanceof Date)?(cel.w||String(cel.v)):cel.v;
+    var m=mrg[(r-1)+','+(c-1)]; return (m!=null&&String(m).trim()!=='')?m:null; } }; }
+function toks(s){ return String(s||'').toLowerCase().split(/[^0-9a-z가-힣]+/).filter(function(t){return t&&t!=='뷰';}); }
+function jacc(a,b){ var A={},n=0,u; a.forEach(function(t){A[t]=1;}); var B={}; b.forEach(function(t){B[t]=1;});
+  var keys={}; a.concat(b).forEach(function(t){keys[t]=1;}); u=Object.keys(keys).length; if(!u)return 0;
+  for(var k in A) if(B[k]) n++; return n/u; }
+var isNum=function(x){return typeof x==='number'&&!isNaN(x);};
+
+/* ===== 요금표(기준) 파싱: 전 시트, per (룸, 시즌) FIT 판매가 ===== */
+var SKIP=['갑지','내용','상품안','상품(안)','코드','요약','상품코드','패키지','정보','월력','취소','펫프렌','취소위약'];
+function parseBaseline(wb){
+  var out=[]; var sheets=wb.SheetNames;
+  sheets.forEach(function(sn){
+    var nn=norm(sn); for(var i=0;i<SKIP.length;i++) if(nn.indexOf(SKIP[i])>=0) return;
+    var ws=wsAcc(wb.Sheets[sn]); if(ws.mr<3) return;
+    // 시즌 열
+    var srow=null,scol=null;
+    for(var r=1;r<=Math.min(ws.mr,25)&&!scol;r++) for(var c=1;c<=ws.mc;c++){ if(norm(ws.cell(r,c))==='시즌'){srow=r;scol=c;break;} }
+    if(!scol) return;
+    // FIT 판매가 열: 판매가 그룹 안의 FIT (또는 마지막 'FIT'). 판매가 그룹 라벨 위치 찾기
+    var hz=srow+2;
+    function hasIn(c,kw){ for(var r=1;r<=hz;r++) if(norm(ws.cell(r,c)).indexOf(kw)>=0) return true; return false; }
+    function eqIn(c,kw){ for(var r=1;r<=hz;r++) if(norm(ws.cell(r,c))===kw) return true; return false; }
+    // 판매가 그룹 시작
+    var saleStart=null; for(var c=1;c<=ws.mc;c++){ if(hasIn(c,'판매가')){saleStart=c;break;} }
+    // 정상요금 그룹 시작(판매 그룹 끝 경계)
+    var rackStart=null; for(var c=1;c<=ws.mc;c++){ if(eqIn(c,'정상요금')||hasIn(c,'정상 요금')){rackStart=c;break;} }
+    var end = rackStart? rackStart-1 : ws.mc;
+    // 판매 FIT 열
+    var fitCol=null;
+    if(saleStart){ for(var c=saleStart;c<=end;c++){ if(eqIn(c,'FIT')){fitCol=c;break;} } }
+    if(!fitCol && saleStart){ for(var c=saleStart;c<=end;c++){ if(hasIn(c,'FIT')){fitCol=c;break;} } }
+    if(!fitCol) return;
+    // 룸 라벨 열들: 시즌 왼쪽에서 텍스트 헤더 있는 열(구분/타입/뷰/평형/동)
+    var roomCols=[]; for(var c=1;c<scol;c++){ if(hasIn(c,'구분')||hasIn(c,'타입')||hasIn(c,'뷰')||hasIn(c,'평형')||hasIn(c,'동')) roomCols.push(c); }
+    if(!roomCols.length){ for(var c=Math.max(1,scol-4);c<scol;c++) roomCols.push(c); }
+    for(var r=srow+1;r<=ws.mr;r++){
+      var seas=canonSeason(ws.cell(r,scol)); if(!seas) continue;
+      var fit=ws.cell(r,fitCol); if(!isNum(fit)) continue;
+      var lbl=roomCols.map(function(c){return ws.cell(r,c)||'';}).join(' ').trim();
+      out.push({sheet:sn, room:lbl, tok:toks(lbl), season:seas, fit:fit});
+    }
+  });
+  return out;
+}
+
+/* ===== 세팅값(패키지판매금액조회) 파싱 ===== */
+function parseSetting(wb){
+  var sn=wb.SheetNames[0]; // 보통 SHEET1
+  var ws=wsAcc(wb.Sheets[sn]);
+  // 헤더행 찾기(일자/판매금액 포함)
+  var hr=null; for(var r=1;r<=5;r++){ var joined=''; for(var c=1;c<=ws.mc;c++) joined+=norm(ws.cell(r,c))+'|'; if(joined.indexOf('일자')>=0&&joined.indexOf('판매금액')>=0){hr=r;break;} }
+  if(!hr) hr=1;
+  var idx={}; for(var c=1;c<=ws.mc;c++){ var h=norm(ws.cell(hr,c)); if(h) idx[h]=c; }
+  function col(){ for(var i=0;i<arguments.length;i++){ var k=arguments[i]; for(var h in idx) if(h.indexOf(k)>=0) return idx[h]; } return null; }
+  var cDate=col('일자','날짜'),cPy=col('평형'),cView=col('뷰'),cRoom=col('룸'),cSeas=col('영업장시즌','시즌'),cSale=col('판매금액'),cFee=col('수수료'),cNet=col('입금가');
+  var rows=[];
+  for(var r=hr+1;r<=ws.mr;r++){
+    var d=cDate?ws.cell(r,cDate):null; if(!d) continue;
+    var sale=cSale?ws.cell(r,cSale):null; if(!isNum(sale)) continue;
+    var lbl=[cPy?ws.cell(r,cPy):'',cView?ws.cell(r,cView):'',cRoom?ws.cell(r,cRoom):''].join(' ').trim();
+    rows.push({ date:String(d).slice(0,10), room:lbl, tok:toks(lbl),
+      season:canonSeason(cSeas?ws.cell(r,cSeas):''), sale:sale,
+      fee:cFee?ws.cell(r,cFee):null, net:cNet?ws.cell(r,cNet):null });
+  }
+  return rows;
+}
+
+/* ===== 검수 ===== */
+function audit(baseline, setting, thr){
+  var res=[]; var nErr=0,nOk=0,nNM=0,nFee=0;
+  setting.forEach(function(s){
+    if(/-08-15$|\/8\/15$|0815/.test(s.date) || /08-15/.test(s.date)){ res.push(Object.assign({},s,{status:'제외',note:'8/15 미판매'})); return; }
+    // 후보: 같은 시즌
+    var cand=baseline.filter(function(b){ return b.season===s.season; });
+    if(!cand.length) cand=baseline; // 시즌 못맞추면 전체에서 룸으로만
+    var best=null,bs=0;
+    cand.forEach(function(b){ var j=jacc(s.tok,b.tok); if(j>bs){bs=j;best=b;} });
+    if(!best || bs*100 < thr){ nNM++; res.push(Object.assign({},s,{status:'미매칭',sim:Math.round(bs*100),note:'요금표에서 룸 매칭 실패'})); return; }
+    var diff = s.sale - best.fit;
+    // 수수료 검산
+    var feeNote='';
+    if(isNum(s.fee) && s.sale){ var rate=s.fee/s.sale; var rr=Math.round(rate*1000)/10;
+      if(![0,9.9,11,12,13,15].some(function(x){return Math.abs(rr-x)<0.2;})) feeNote='수율이상('+rr+'%)';
+      if(isNum(s.net) && Math.abs((s.sale-s.fee)-s.net)>1) feeNote+=(feeNote?' ':'')+'입금가불일치'; }
+    if(feeNote) nFee++;
+    if(diff!==0){ nErr++; res.push(Object.assign({},s,{status:'오류',fit:best.fit,diff:diff,sim:Math.round(bs*100),matched:best.sheet+'/'+best.room,note:feeNote})); }
+    else { nOk++; res.push(Object.assign({},s,{status:'일치',fit:best.fit,diff:0,sim:Math.round(bs*100),matched:best.sheet+'/'+best.room,note:feeNote})); }
+  });
+  return {res:res,nErr:nErr,nOk:nOk,nNM:nNM,nFee:nFee};
+}
+
+/* ===== UI ===== */
+var $=function(id){return document.getElementById(id);};
+var wbA=null,wbB=null;
+function hook(dropId,fileId,infoId,cb){
+  var d=$(dropId),f=$(fileId);
+  d.onclick=function(){f.click();};
+  d.ondragover=function(e){e.preventDefault();d.classList.add('on');};
+  d.ondragleave=function(){d.classList.remove('on');};
+  d.ondrop=function(e){e.preventDefault();d.classList.remove('on');rd(e.dataTransfer.files[0]);};
+  f.onchange=function(e){rd(e.target.files[0]);};
+  function rd(file){ if(!file)return; var fr=new FileReader();
+    fr.onload=function(){ try{ var wb=XLSX.read(new Uint8Array(fr.result),{type:'array',cellDates:true});
+      $(infoId).innerHTML='<span class=ok>'+file.name+'</span> · 시트 '+wb.SheetNames.length+'개'; cb(wb); ready(); }
+      catch(err){ $(infoId).innerHTML='<span class=bad>읽기 실패: '+err.message+'</span>'; } };
+    fr.readAsArrayBuffer(file); }
+}
+hook('dropA','fileA','infoA',function(wb){wbA=wb;});
+hook('dropB','fileB','infoB',function(wb){wbB=wb;});
+function ready(){ $('go').disabled=!(wbA&&wbB); }
+
+$('go').onclick=function(){
+  $('status').textContent='검수 중…';
+  try{
+    var base=parseBaseline(wbA);
+    var setg=parseSetting(wbB);
+    if(!base.length){ $('status').innerHTML='<span class=bad>요금표에서 FIT 판매가를 찾지 못했습니다(시트/컬럼 확인).</span>'; return; }
+    if(!setg.length){ $('status').innerHTML='<span class=bad>세팅값에서 데이터를 찾지 못했습니다.</span>'; return; }
+    var thr=parseInt($('thr').value||'80',10);
+    var a=audit(base,setg,thr);
+    $('status').textContent='';
+    $('resCard').style.display='block';
+    $('summary').innerHTML=
+      '<span class="pill" style="background:#3d1212;color:#ff8a8a">오류 '+a.nErr+'</span>'+
+      '<span class="pill" style="background:#123d24;color:#5fe08a">일치 '+a.nOk+'</span>'+
+      '<span class="pill" style="background:#3a2f10;color:#f0d58a">미매칭 '+a.nNM+'</span>'+
+      '<span class="pill" style="background:#0e1722;color:#9fb2c9">기준 '+base.length+'행 · 세팅 '+setg.length+'행 · 수수료이상 '+a.nFee+'</span>';
+    // 테이블 (오류·미매칭 우선)
+    var order={'오류':0,'미매칭':1,'일치':2,'제외':3};
+    a.res.sort(function(x,y){return (order[x.status]-order[y.status]);});
+    var h='<table><tr><th>상태</th><th>일자</th><th>세팅 룸</th><th>시즌</th><th>세팅가</th><th>요금표가(FIT)</th><th>차액</th><th>유사도</th><th>매칭 기준</th><th>비고</th></tr>';
+    a.res.forEach(function(x){
+      var cls=x.status==='오류'?'err':(x.status==='미매칭'?'nm':'');
+      h+='<tr class="'+cls+'"><td>'+x.status+'</td><td>'+x.date+'</td><td style="text-align:left">'+(x.room||'')+'</td><td>'+(x.season||'')+'</td>'+
+         '<td>'+(x.sale!=null?x.sale.toLocaleString():'')+'</td><td>'+(x.fit!=null?x.fit.toLocaleString():'')+'</td>'+
+         '<td>'+(x.diff!=null&&x.diff!==0?('<b style="color:#ff8a8a">'+x.diff.toLocaleString()+'</b>'):(x.diff===0?'0':''))+'</td>'+
+         '<td>'+(x.sim!=null?x.sim+'%':'')+'</td><td style="text-align:left;color:#9fb2c9">'+(x.matched||'')+'</td><td style="color:#e0b341">'+(x.note||'')+'</td></tr>';
+    });
+    h+='</table>'; $('tbl').innerHTML=h;
+    // CSV 다운로드
+    var csv='상태,일자,세팅룸,시즌,세팅가,요금표가,차액,유사도,매칭기준,비고\n';
+    a.res.forEach(function(x){ csv+=[x.status,x.date,'"'+(x.room||'')+'"',x.season||'',x.sale!=null?x.sale:'',x.fit!=null?x.fit:'',x.diff!=null?x.diff:'',x.sim!=null?x.sim:'','"'+(x.matched||'')+'"','"'+(x.note||'')+'"'].join(',')+'\n'; });
+    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}); var url=URL.createObjectURL(blob);
+    $('dlwrap').innerHTML='<a class="dl" href="'+url+'" download="요금검수결과.csv">검수결과 CSV 다운로드 ↓</a>';
+  }catch(e){ $('status').innerHTML='<span class=bad>검수 오류: '+(e&&e.message?e.message:e)+'</span>'; }
+};
+</script>
+</body></html>
