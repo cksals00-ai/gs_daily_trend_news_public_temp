@@ -288,7 +288,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="sidebar-divider"></div>
     <div>
-      <div class="filter-section-label">월</div>
+      <div class="filter-section-label">월 <span style="font-weight:400;opacity:0.6;font-size:9px;">다중선택 · 합산</span></div>
       <div class="filter-chips" id="month-chips"></div>
     </div>
     <div class="sidebar-divider"></div>
@@ -680,7 +680,11 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 
 let db = null;
 let activeYear = new Date().getFullYear().toString();
-let activeMonth = String(new Date().getMonth() + 1); // 당월 기본
+// 월 선택: 다중(토글) 선택 지원 — 선택된 월들의 값을 합산해서 표시
+// activeMonths: '1'~'12' 문자열 Set (pumui.html 월 칩 다중선택 패턴과 동일)
+// monthAll: '전체'(연간) 모드
+let activeMonths = new Set([String(new Date().getMonth() + 1)]); // 당월 기본
+let monthAll = false;
 let activeSegment = 'ALL'; // ALL / OTA / G-OTA
 let showAllChannels = false;
 let showAllChartChannels = false;
@@ -757,13 +761,27 @@ function getChannelSegment(ch) {
   return maxSeg;
 }
 
+// 선택된 월 번호(오름차순). '전체' 모드거나 선택이 비면 null
+function getSelectedMonthNums() {
+  if (monthAll || activeMonths.size === 0) return null;
+  return [...activeMonths].map(Number).sort((a, b) => a - b);
+}
+
 function getMonthsForPeriod() {
   const allMonths = db.meta.months;
-  if (activeMonth === '0') {
+  const nums = getSelectedMonthNums();
+  if (nums === null) {
     return allMonths.filter(m => m.startsWith(activeYear));
   }
-  const key = activeYear + activeMonth.padStart(2,'0');
-  return allMonths.includes(key) ? [key] : [];
+  // 다중 선택: 선택된 모든 월을 반환 → 하위 집계(aggregateChannels 등)에서 합산됨
+  return nums.map(n => activeYear + String(n).padStart(2,'0')).filter(k => allMonths.includes(k));
+}
+
+// 표시용 라벨: 단일 '2026년 8월' / 다중 '2026년 7·8월' / 전체 '2026년 전체'
+function getMonthLabel() {
+  const nums = getSelectedMonthNums();
+  if (nums === null) return activeYear + '년 전체';
+  return activeYear + '년 ' + nums.join('·') + '월';
 }
 
 // 예약일자 필터가 활성화되어 있는지 체크
@@ -1077,7 +1095,7 @@ function render() {
   setText('kpi-rev', fmt.rev(totalREV));
   setText('kpi-rev-sub', months.length + '개월 누계');
 
-  const periodLabel = activeMonth === '0' ? activeYear + '년 전체' : activeYear + '년 ' + activeMonth + '월';
+  const periodLabel = getMonthLabel();
   const segLabel = activeSegment === 'ALL' ? '' : ' · ' + activeSegment;
   const regionLabel = activeRegion !== '전체'
     ? ' · ' + (activeProps.size > 0 ? [...activeProps].join('+') : REGION_LABEL[activeRegion] + ' 전체')
@@ -1783,9 +1801,10 @@ function buildYoYTrendChart() {
     allChannelYearly[ch] = {};
     for (const yr of years) {
       let total = 0;
-      const yrMonths = activeMonth === '0'
+      const yrSelNums = getSelectedMonthNums();
+      const yrMonths = yrSelNums === null
         ? db.meta.months.filter(m => m.startsWith(yr))
-        : [yr + activeMonth.padStart(2,'0')];
+        : yrSelNums.map(n => yr + String(n).padStart(2,'0'));
       for (const m of yrMonths) {
         if (chData[m]) total += chData[m].net_rn || 0;
       }
@@ -1859,26 +1878,45 @@ function buildFilters() {
 function buildMonthChips() {
   const mc = document.getElementById('month-chips');
   if (!mc) return;
-  const available = db.meta.months.filter(m => m.startsWith(activeYear)).map(m => m.slice(4));
+  const available = db.meta.months.filter(m => m.startsWith(activeYear)).map(m => String(parseInt(m.slice(4))));
   mc.innerHTML = '';
 
-  // 현재 월이 데이터에 없으면 '전체'로 fallback
-  const curMonthPad = String(parseInt(activeMonth)).padStart(2, '0');
-  if (activeMonth !== '0' && !available.includes(curMonthPad)) {
-    activeMonth = available.length > 0 ? String(parseInt(available[available.length - 1])) : '0';
+  // 선택된 월 중 해당 연도 데이터에 없는 월 제거 → 전부 사라지면 최신 월 fallback
+  if (!monthAll) {
+    for (const v of [...activeMonths]) if (!available.includes(v)) activeMonths.delete(v);
+    if (activeMonths.size === 0) {
+      if (available.length > 0) activeMonths.add(available[available.length - 1]);
+      else monthAll = true;
+    }
   }
 
-  [{ v: '0', l: '전체' }, ...available.map(m => ({ v: String(parseInt(m)), l: m.replace(/^0/,'') + '월' }))].forEach(({v,l}) => {
+  const paint = () => mc.querySelectorAll('.chip').forEach(b => {
+    const v = b.dataset.value;
+    b.classList.toggle('active', v === '0' ? monthAll : (!monthAll && activeMonths.has(v)));
+  });
+
+  [{ v: '0', l: '전체' }, ...available.map(v => ({ v, l: v + '월' }))].forEach(({v,l}) => {
     const btn = document.createElement('button');
-    btn.className = 'chip' + (v === activeMonth ? ' active' : '');
+    btn.className = 'chip';
     btn.textContent = l;
+    btn.dataset.value = v;
+    btn.title = v === '0' ? '연간 전체' : '클릭으로 여러 월 동시 선택 (선택 월 합산)';
     btn.addEventListener('click', () => {
-      activeMonth = v;
-      mc.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.textContent.replace('월','') === (v==='0'?'전체':parseInt(v).toString()+'') || (v==='0'&&b.textContent==='전체')));
+      if (v === '0') {
+        monthAll = true;                                  // 전체 = 연간
+      } else if (monthAll) {
+        monthAll = false; activeMonths = new Set([v]);    // 전체 → 단일 월
+      } else if (activeMonths.has(v)) {
+        if (activeMonths.size > 1) activeMonths.delete(v); // 최소 1개월 유지
+      } else {
+        activeMonths.add(v);                              // 다중 선택 (합산)
+      }
+      paint();
       render();
     });
     mc.appendChild(btn);
   });
+  paint();
 }
 
 function buildSegmentChips() {
