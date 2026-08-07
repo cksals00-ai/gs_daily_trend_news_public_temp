@@ -144,18 +144,33 @@ function audit(baseline,setting,thr){ var res=[],nErr=0,nOk=0,nNM=0,nFee=0;
     else { nOk++; res.push(Object.assign({},s,{status:'일치',fit:best.fit,diff:0,sim:Math.round(bs*100),matched:best.sheet+'/'+best.room,note:feeNote})); } });
   return {res:res,nErr:nErr,nOk:nOk,nNM:nNM,nFee:nFee}; }
 
-/* ===== DB 리스트 ===== */
+/* ===== DB 리스트 (구글시트 gviz 연동) ===== */
 var $=function(id){return document.getElementById(id);};
-function fileCell(url){ return url? '<a class="filelink" href="'+url+'" target="_blank">📄 열기</a>' : '<span class="mut">—</span>'; }
-function loadDB(){ fetch('./data/rate_audit_db.json?_='+Date.now()).then(function(r){return r.json();}).then(function(d){
-    var recs=(d&&d.records)||[]; var h='<tr><th>일자</th><th>사업장</th><th>상품</th><th>요금표</th><th>품의</th><th>판매금액조회</th><th>검수</th></tr>';
-    recs.forEach(function(x){ var st=x.audit_status||'대기';
-      var stc=st==='완료'?'#5fe08a':(st==='오류'?'#ff8a8a':'#9fb2c9');
-      h+='<tr><td>'+(x.date||'')+'</td><td>'+(x.biz||'')+'</td><td>'+(x.title||'')+'</td>'+
-         '<td>'+fileCell(x.rate_url)+'</td><td>'+fileCell(x.pumui_url)+'</td><td>'+fileCell(x.setting_url)+'</td>'+
-         '<td><span style="color:'+stc+'">'+st+'</span></td></tr>'; });
-    $('dbTbl').innerHTML=h; $('dbInfo').textContent=recs.length+'건';
-  }).catch(function(){ $('dbInfo').innerHTML='<span class=warn>DB 로드 실패(data/rate_audit_db.json)</span>'; }); }
+var SHEET_ID='1iIUOQcBK6RCXboMUdn4Yuj1EPsxK9ZxMJCyk1DvI5Mk';   // 요금검수DB
+var GVIZ='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet=요금검수DB';
+function fileCell(url){ url=(url||'').trim(); return url? '<a class="filelink" href="'+url+'" target="_blank">📄 열기</a>' : '<span class="mut">—</span>'; }
+function parseCSV(t){ var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<t.length;i++){ var c=t[i];
+    if(q){ if(c=='"'){ if(t[i+1]=='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c=='"')q=true; else if(c==','){row.push(cur);cur='';} else if(c=='\n'){row.push(cur);rows.push(row);row=[];cur='';} else if(c!='\r')cur+=c; } }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); } return rows; }
+function renderDB(recs,src){ var h='<tr><th>일자</th><th>사업장</th><th>상품</th><th>요금표</th><th>품의</th><th>판매금액조회</th><th>검수</th></tr>';
+  recs.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  recs.forEach(function(x){ var st=(x.audit_status||'대기').trim();
+    var stc=st.indexOf('완료')>=0?'#5fe08a':(st.indexOf('오류')>=0?'#ff8a8a':'#9fb2c9');
+    var extra=(x.err_count!==undefined&&x.err_count!=='')?' <span class="mut">('+x.err_count+'오류)</span>':'';
+    h+='<tr><td>'+(x.date||'')+'</td><td>'+(x.biz||'')+'</td><td>'+(x.title||'')+'</td>'+
+       '<td>'+fileCell(x.rate_url)+'</td><td>'+fileCell(x.pumui_url)+'</td><td>'+fileCell(x.setting_url)+'</td>'+
+       '<td><span style="color:'+stc+'">'+st+'</span>'+extra+'</td></tr>'; });
+  $('dbTbl').innerHTML=h; $('dbInfo').innerHTML=recs.length+'건 · <span class=mut>'+src+'</span>'; }
+function loadDB(){
+  fetch(GVIZ,{cache:'no-store'}).then(function(r){ if(!r.ok) throw 0; return r.text(); }).then(function(t){
+    var rows=parseCSV(t); if(rows.length<2) throw 0; var hd=rows[0].map(function(s){return s.trim();});
+    var recs=rows.slice(1).filter(function(r){return r.some(function(c){return c&&c.trim();});}).map(function(r){ var o={}; hd.forEach(function(k,i){o[k]=(r[i]||'').trim();}); return o; });
+    renderDB(recs,'구글시트 연동'); })
+  .catch(function(){ fetch('./data/rate_audit_db.json?_='+Date.now()).then(function(r){return r.json();}).then(function(d){
+      renderDB((d&&d.records)||[],'로컬 백업(JSON) · 시트 공유 확인 필요'); })
+    .catch(function(){ $('dbInfo').innerHTML='<span class=warn>DB 로드 실패</span>'; }); }); }
 loadDB();
 
 /* ===== 스텝 업로드 ===== */
@@ -183,10 +198,17 @@ $('go').onclick=function(){ $('status').textContent='검수 중…';
   try{ var setg=parseSetting(wbB); if(!setg.length){ $('status').innerHTML='<span class=bad>세팅값 데이터 없음</span>'; return; }
     var a=audit(baseCache,setg,parseInt($('thr').value||'80',10)); $('status').textContent='';
     $('resCard').style.display='block';
+    // 시즌별 오류 요약 (D)
+    var bySeas={}; a.res.forEach(function(x){ if(x.status==='오류'){ var k=x.season||'기타'; bySeas[k]=(bySeas[k]||0)+1; } });
+    var seasStr=Object.keys(bySeas).map(function(k){return k+' '+bySeas[k];}).join(' · ')||'없음';
+    var feeRows=a.res.filter(function(x){return x.note&&x.note.indexOf('수율')>=0||x.note&&x.note.indexOf('입금가')>=0;});
     $('summary').innerHTML='<span class="pill" style="background:#3d1212;color:#ff8a8a">오류 '+a.nErr+'</span>'+
       '<span class="pill" style="background:#123d24;color:#5fe08a">일치 '+a.nOk+'</span>'+
       '<span class="pill" style="background:#3a2f10;color:#f0d58a">미매칭 '+a.nNM+'</span>'+
-      '<span class="pill" style="background:#0e1722;color:#9fb2c9">기준 '+baseCache.length+' · 세팅 '+setg.length+' · 수수료이상 '+a.nFee+'</span>';
+      '<span class="pill" style="background:#0e1722;color:#9fb2c9">기준 '+baseCache.length+' · 세팅 '+setg.length+'</span>'+
+      '<div class="mut" style="margin-top:8px">▸ 시즌별 오류: <b class="bad">'+seasStr+'</b>'+
+        (feeRows.length?' &nbsp;|&nbsp; 수수료/입금가 이상 <b class="warn">'+feeRows.length+'건</b>':' &nbsp;|&nbsp; 수수료 정상')+
+        (a.nErr===0&&a.nNM===0?' &nbsp;<b class="ok">✔ 전 항목 요금표와 일치</b>':'')+'</div>';
     var order={'오류':0,'미매칭':1,'일치':2,'제외':3}; a.res.sort(function(x,y){return order[x.status]-order[y.status];});
     var h='<table><tr><th>상태</th><th>일자</th><th>세팅 룸</th><th>시즌</th><th>세팅가</th><th>요금표가(FIT)</th><th>차액</th><th>유사도</th><th>매칭 기준</th><th>비고</th></tr>';
     a.res.forEach(function(x){ var cls=x.status==='오류'?'err':(x.status==='미매칭'?'nm':'');
@@ -198,7 +220,18 @@ $('go').onclick=function(){ $('status').textContent='검수 중…';
     var csv='상태,일자,세팅룸,시즌,세팅가,요금표가,차액,유사도,매칭기준,비고\n';
     a.res.forEach(function(x){ csv+=[x.status,x.date,'"'+(x.room||'')+'"',x.season||'',x.sale!=null?x.sale:'',x.fit!=null?x.fit:'',x.diff!=null?x.diff:'',x.sim!=null?x.sim:'','"'+(x.matched||'')+'"','"'+(x.note||'')+'"'].join(',')+'\n'; });
     var url=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
-    $('dlwrap').innerHTML='<a class="dl" href="'+url+'" download="요금검수결과.csv">검수결과 CSV 다운로드 ↓</a>';
+    // DB 기록 헬퍼 (D): 요금검수DB 시트에 붙여넣을 행 생성
+    var dCnt={}; a.res.forEach(function(x){ if(x.date){dCnt[x.date]=(dCnt[x.date]||0)+1;} });
+    var mDate=Object.keys(dCnt).sort(function(p,q){return dCnt[q]-dCnt[p];})[0]||'';
+    var biz=(baseCache[0]&&baseCache[0].sheet)||'';
+    var stTxt=a.nErr>0?('검수완료(오류 '+a.nErr+')'):'검수완료(정상)';
+    var today=new Date().toISOString().slice(0,10);
+    var tsvRow=[today,biz,'',(fileA.value?'':''),'','',stTxt,a.nErr,a.nOk,new Date().toISOString().slice(0,16)].join('\t');
+    $('dlwrap').innerHTML='<a class="dl" href="'+url+'" download="요금검수결과.csv">검수결과 CSV 다운로드 ↓</a>'+
+      '<button id="rec" class="dl" style="background:#245a37;border:0">DB 기록행 복사 ↧</button>'+
+      '<a class="dl" href="https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit" target="_blank" style="background:#333">요금검수DB 열기 ↗</a>'+
+      '<div class="mut" style="margin-top:6px">· "DB 기록행 복사" → 요금검수DB 시트 마지막 행에 붙여넣기(사업장·파일링크는 시트에서 채움)</div>';
+    document.getElementById('rec').onclick=function(){ navigator.clipboard.writeText(tsvRow).then(function(){ this.textContent='복사됨 ✔'; }.bind(this)); };
   }catch(e){ $('status').innerHTML='<span class=bad>검수 오류: '+(e&&e.message?e.message:e)+'</span>'; } };
 </script>
 </body></html>
