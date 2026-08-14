@@ -794,16 +794,30 @@
     <!-- ══════ 운영-3. 자동화 로직 점검 ══════ -->
     <section class="card" id="sec-automation">
       <h2><span class="num">3</span> 자동화 로직 점검</h2>
-      <div class="sub">데이터 입력 → 파싱 → 출력 → 리포트 반영 전 단계 점검 <span style="font-family:var(--mono);font-size:11px;color:var(--gold-bright);margin-left:8px">점검기간: 2026-07-25 ~ 08-01</span></div>
+      <div class="sub">데이터 입력 → 파싱 → 출력 → 리포트 반영 전 단계 점검 <span style="font-family:var(--mono);font-size:11px;color:var(--gold-bright);margin-left:8px">점검기간: 2026-08-08 ~ 08-15</span></div>
 
       <!-- 긴급 점검 사항 -->
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+        <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 ATTENTION</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">Daily Booking 원본 5일 미수신 (report_date 2026-08-10)</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55"><span style="font-family:var(--mono);color:var(--gold-bright)">_host_crawl_status.json</span> 이 <span style="font-family:var(--mono)">stale_sources: daily_booking:2026-08-10(5일)</span> 를 정상 보고 중. Daily Booking Report PDF 는 수동 업로드 영역이라 크롤 대상이 아니며, 원본 미수신 구간에는 <b>08-10 스냅샷을 유지</b>한다(더미 생성 없음). 부킹 기준 달성률(8월 88.7% 등)은 08-10 시점 값이므로 <b>온북 DB 기준 지표(otb_data, 08-15 최신)와 기준일이 다르다</b>는 점에 유의. 원본 수신 시 <span style="font-family:var(--mono)">auto_parse_pdf</span> 가 자동 반영.</div>
+        </div>
+        <div style="border-left:4px solid var(--warning);background:var(--warning-bg);padding:12px 16px;border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--warning);background:rgba(232,162,86,0.15);padding:2px 7px;border-radius:3px">🟡 WATCH</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">08-14·08-15 daily update 커밋 부재</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">최근 2일은 <span style="font-family:var(--mono)">host crawl</span> 커밋만 존재하고 <span style="font-family:var(--mono)">daily update</span> 커밋이 없다. 데이터 JSON(db_aggregated·otb_data) 은 08-15 05:01 로 정상 갱신되어 <b>데이터 공백은 아니며</b>, docs 산출물 무변경으로 커밋이 스킵된 것으로 추정된다. 08-16 에도 동일하면 <span style="font-family:var(--mono)">build.py</span> 단계 로그 점검이 필요.</div>
+        </div>
         <div style="border-left:4px solid var(--positive);background:var(--positive-bg);padding:12px 16px;border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <span style="font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--positive);background:rgba(76,175,111,0.15);padding:2px 7px;border-radius:3px">✅ RESOLVED</span>
             <span style="font-size:13px;font-weight:700;color:var(--ink)">기획전 실적 업데이트 지연 — 해소</span>
           </div>
-          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 8/1 기준 데이터 신선도 정상(db_aggregated 08-01 05:01 갱신, RM FCST는 Revenue Meeting_2026.07.28.pdf 스냅샷 반영·커버 06~09월, Daily Booking report_date 07-30 GT 온북 248,455실 달성 94.9%) — 6/18 host 크롤 git 자동화(fetch→merge→ours→재push) + 7/15 stale 락 자동정리 확대로 push 차단·미푸시 누적 제약 해소, origin/main 완전 동기화(0 ahead). 7/22 부킹·RM PDF를 host crawl auto_parse_pdf로 자동 반영 전환해 수동 개입 제거.</div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.55">5/19 안전망(빈 raw_db에서 기존 실적 덮어쓰기 방지) 적용 후 일별 스케줄 체인이 정상 가동 중. 8/15 기준 db_aggregated·otb_data·competitor_analysis 모두 08-15 05:01 갱신 정상, RM FCST는 <b>Revenue Meeting_2026.08.10.pdf</b> 스냅샷 반영(커버 06~10월 <b>5개월</b>) — 6/18 host 크롤 git 자동화(fetch→merge→ours→재push) + 7/15 stale 락 자동정리 확대로 push 차단·미푸시 누적 제약 해소. 7/22 부킹·RM PDF를 host crawl auto_parse_pdf로 자동 반영 전환해 수동 개입 제거.</div>
         </div>
         <div style="border-left:4px solid var(--positive);background:var(--positive-bg);padding:12px 16px;border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1035,6 +1049,20 @@
       <h2><span class="num">4</span> 변경이력</h2>
       <div class="sub">시스템 업데이트 및 수정 내역</div>
       <div style="display:flex;flex-direction:column;gap:14px" id="changelog-list">
+        <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-08-02 ~ 08-15</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);background:var(--bg-soft);padding:2px 6px;border-radius:3px">v4.0</span>
+          </div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">데이터 최신화</b> — RM FCST(<b>Revenue Meeting_2026.08.10.pdf 스냅샷</b>·<b>06~10월 5개월 커버</b>·08-11 추출)·온북 DB 반영. Grand Total FCST 8월 273,307실/66,305백만원(Budget 대비 96.3%), 9월 185,071실/37,834백만원(92.5%), 10월 223,422실/46,198백만원(91.9%) · 7월 248,690실/56,978백만원(95.0%). Daily Booking 은 <b>2026-08-10 스냅샷</b>(원본 5일 미수신) GT 온북 <b>8월 251,725실(달성 88.7%·YoY -4.1%)</b> · 9월 86,387실(43.2%·YoY -50.0%) · 10월 66,202실(27.2%·YoY -72.1%) · 11월 19,036실(9.8%)</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">연간 누적</b>(OTB 08-15 기준) — 온북 <b>637,779실</b>(Budget 859,709 · 달성 <b>74.2%</b> · YoY +20.7%) · 매출 141,277백만원(달성 77.6% · YoY <b>+31.4%</b>) · ADR 221,515원(YoY +8.8% · Budget 대비 +4.6%) · AI FCST 979,382실(113.9% · 구간 918,822~1,039,942). 당일 예약 5,217 / 취소 2,140 / <b>순증 +3,077실</b> · 8월 성수기 마감 구간 진입, 9~11월 선행관리 확대 구간</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">신규 구축</b> — <b>GA4 웹 분석 대시보드</b>(ga-analytics.html) 신설: 월별 이슈 자동감지·채널×월 교차·채널별 전환율·요일별 예약 패턴·월 선택기·키워드 레이더(08-06~07) · <b>BRIEF Vol.14</b>(2026 상반기 인·아웃바운드 관광 실적) + <b>2026년 2분기 국내 숙박업 동향</b> 페이지 추가 · 요금표 변환기 오픈 공지 및 검토요청 완료폴더 안내</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">데이터 정합·안정화</b> — export별 <b>투숙월 소유권 판정</b>으로 7월 누락·구 export 혼입 제거 · <b>재전송·스냅샷 이중집계 제거</b>(db 정합) · 8월 롤오버 <code>WEEK_VIEW_OVERRIDE=false</code> 로 당월=8월 고정(9월 오버슈트 방지) · push 경로 방어로직(잔재 정리·main 보정·rebase 자동해소) · 주간비교 기준일 라벨 2021-05-26 고정 버그 수정 · 스페셜(최성수기) 기간 대시보드 숨김 처리</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span><b style="color:var(--gold-bright)">점검 필요</b> — ① Daily Booking 원본 <b>2026-08-10 이후 미수신</b>(5일 stale · 스냅샷 유지, 더미 없음) ② 08-14·08-15 <b>daily update 커밋 부재</b>(데이터 JSON 은 정상 갱신 · docs 무변경 추정, 08-16 재확인) ③ 기획전 패키지코드 4/224건 등록 정체 지속</li>
+            <li style="font-size:12px;color:var(--ink-soft);padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">·</span>뉴스 236건 수집(신규 132건 · 08-15 05:00) · 활성 스케줄 <b>13건</b>(GS 정기 8 · 수기 2 · 타 프로젝트 3) 가동 · 구축리포트 리포트 인벤토리 <b>63건</b> · <code>gs-strategy-summary-refresh</code> 등록 해제(주간 리프레시는 weekly-setup-strategy 가 흡수) · host crawl 7일간 5건 정상 커밋(최근 08-15 05:02 exit 0)</li>
+          </ul>
+        </div>
         <div style="border-left:3px solid var(--gold);padding:10px 14px;background:var(--bg-deep);border-radius:0 6px 6px 0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--gold-bright)">2026-07-26 ~ 08-01</span>
