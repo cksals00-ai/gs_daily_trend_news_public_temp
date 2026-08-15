@@ -443,8 +443,19 @@ def main():
     rs = enr.get("region_status", {})
     if rs:
         rmap = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC"}
-        reg_str = " · ".join(f"{rmap.get(k,k)} {v.get('달성률','')}%" for k, v in rs.items())
-        ins.append(f"<li><span class='insight-kw'>권역 상황</span>권역별 달성률(stay-month 페이싱) — {reg_str}. 권역별 달성률을 차주 영업 우선순위에 반영 권장.</li>")
+
+        def _rv(v):
+            try:
+                return float(str(v.get("달성률", "")).strip())
+            except Exception:
+                return None
+        live = [(rmap.get(k, k), _rv(v), (v.get("메모") or "").strip()) for k, v in rs.items()]
+        have = [x for x in live if x[1] is not None and x[1] > 0]
+        pend = [x[0] for x in live if x[1] is None or x[1] <= 0]
+        if have:
+            reg_str = " · ".join(f"{n} {p:.1f}%{(' ' + m) if m else ''}" for n, p, m in have)
+            pend_str = f" (집계 대기: {', '.join(pend)})" if pend else ""
+            ins.append(f"<li><span class='insight-kw'>권역 상황</span>권역별 달성률(stay-month 페이싱) — {reg_str}.{pend_str} 권역별 달성률을 차주 영업 우선순위에 반영 권장.</li>")
     H.append('<section class="section"><span class="section-num">SECTION 04</span><h2 class="section-title"><span class="st-icon">💡</span> 주간 인사이트</h2><div class="insight-box"><h3>금주 실적 · enriched_notes 기반 자동 분석</h3><ul>' + "".join(ins) + '</ul></div></section>')
 
     # ── 섹션 5 캠페인 ──
