@@ -17,17 +17,20 @@ import sys, os, re, json, glob, argparse, unicodedata
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HTML_PATH = os.path.join(ROOT, "docs", "gs-closing-report.html")
 PDF_DIR = os.path.join(ROOT, "docs", "data", "weekly_pdf")
-# 사용자 표준 드롭 폴더: 매주 주간업무/시장·트랜드 PDF를 여기에 둠(.gitignore 처리 → 데몬 안전).
-DROP_DIR = os.path.join(ROOT, "data", "weekly report")
+# 사용자 표준 드롭 폴더: 매주 주간업무/주간회의 PDF를 여기에 둠.
+# 2026-08 폴더 이관: data/weekly report → data/weekly_total (여러 소스 PDF 통합 보관).
+DROP_DIR = os.path.join(ROOT, "data", "weekly_total")
+# 하위호환: 옛 드롭폴더도 함께 탐색.
+SEARCH_DIRS = (DROP_DIR, os.path.join(ROOT, "data", "weekly report"), PDF_DIR)
 
 
 def find_latest_pdf():
-    """드롭 폴더(우선)·legacy weekly_pdf에서 가장 최근 '주간업무/주간회의' PDF를 mtime 기준 자동 선택."""
-    # 보고서명이 '주간업무'/'주간회의'로 혼용됨. '시장·트랜드' 조사 PDF는 제외.
+    """드롭 폴더들에서 가장 최근 '주간업무/주간회의' PDF를 mtime 기준 자동 선택."""
+    # 보고서명이 '주간업무'/'주간회의'로 혼용됨. '시장·트랜드' 조사·'경영실적 보고' PDF는 제외.
     INCLUDE = ("주간업무", "주간회의")
-    EXCLUDE = ("시장", "트랜드", "트렌드")
+    EXCLUDE = ("시장", "트랜드", "트렌드", "경영실적")
     cands = []
-    for d in (DROP_DIR, PDF_DIR):
+    for d in SEARCH_DIRS:
         if not os.path.isdir(d):
             continue
         for p in glob.glob(os.path.join(d, "*.pdf")):

@@ -56,13 +56,15 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || die "리포지토리 경
 cd "$REPO" || die "cd $REPO 실패"
 
 BUILDER="scripts/build_weekly_business.py"
-PDF_DIR="data/weekly report"
+# 2026-08 폴더 이관: data/weekly report → data/weekly_total. 옛 폴더도 하위호환 탐색.
+PDF_DIR="data/weekly_total"
+PDF_DIR_LEGACY="data/weekly report"
 CLOSING_HTML="docs/gs-closing-report.html"
 
 command -v python3 >/dev/null 2>&1 || die "python3 가 없습니다"
 [ -f "$BUILDER" ]      || die "$BUILDER 없음"
 [ -f "$CLOSING_HTML" ] || die "$CLOSING_HTML 없음"
-[ -d "$PDF_DIR" ]      || die "$PDF_DIR 디렉터리 없음 ('…주간업무….pdf' 를 여기에 두세요)"
+[ -d "$PDF_DIR" ] || [ -d "$PDF_DIR_LEGACY" ] || die "$PDF_DIR 디렉터리 없음 ('…주간업무/주간회의….pdf' 를 여기에 두세요)"
 
 echo -e "${BOLD}${BLUE}========================================================${NC}"
 echo -e "${BOLD}${BLUE}  세일즈마케팅 주간업무 PDF → 마감보고서 주간탭 반영${NC}"
@@ -98,17 +100,21 @@ if [ -n "$EXPLICIT_PDF" ]; then
     ok "명시 지정: $(basename "$PDF")"
 else
     # macOS 파일명은 NFD 저장 → Python 에서 NFC 정규화 후 매칭, mtime 최신 1개.
-    # 보고서명이 '주간업무'/'주간회의'로 혼용됨(둘 다 인식). '시장·트랜드' 조사 PDF는 제외.
-    PDF="$(python3 - "$PDF_DIR" <<'PY'
+    # 보고서명이 '주간업무'/'주간회의'로 혼용됨(둘 다 인식). '시장·트랜드'·'경영실적 보고' PDF는 제외.
+    # 신규 폴더(weekly_total) + 옛 폴더(weekly report) 함께 탐색.
+    PDF="$(python3 - "$PDF_DIR" "$PDF_DIR_LEGACY" <<'PY'
 import sys, os, glob, unicodedata
-d = sys.argv[1]
+dirs = sys.argv[1:]
 INC = ("주간업무", "주간회의")
-EXC = ("시장", "트랜드", "트렌드")
+EXC = ("시장", "트랜드", "트렌드", "경영실적")
 c = []
-for p in glob.glob(os.path.join(d, "*.pdf")):
-    b = unicodedata.normalize("NFC", os.path.basename(p))
-    if any(k in b for k in INC) and not any(k in b for k in EXC):
-        c.append(p)
+for d in dirs:
+    if not os.path.isdir(d):
+        continue
+    for p in glob.glob(os.path.join(d, "*.pdf")):
+        b = unicodedata.normalize("NFC", os.path.basename(p))
+        if any(k in b for k in INC) and not any(k in b for k in EXC):
+            c.append(p)
 print(max(c, key=os.path.getmtime) if c else "")
 PY
 )"
