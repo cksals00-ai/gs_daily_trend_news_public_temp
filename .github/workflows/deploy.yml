@@ -39,6 +39,8 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # 어떤 런도 무한 hang 금지 — 멈추면 30분 내 자동 종료해 pages 큐를 즉시 해방
+    timeout-minutes: 30
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -171,6 +173,7 @@ jobs:
 
       - name: 💾 [Step 5] 결과 자동 커밋
         if: steps.mode.outputs.full == 'true'
+        timeout-minutes: 8
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GS Auto-Bot"
