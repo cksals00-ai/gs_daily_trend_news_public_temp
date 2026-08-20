@@ -88,6 +88,6 @@ git add "$JSON" docs/decision-log.html 2>/dev/null
 git diff --cached --quiet && { echo "변경 없음 — 커밋 생략"; exit 0; }
 git commit -q -m "$MSG" && echo "커밋 완료"
 if [ "$DO_PUSH" = "1" ]; then
-  git pull --rebase -q origin main 2>/dev/null
+  git pull --no-rebase --autostash -q origin main 2>/dev/null
   git push -q origin main && echo "푸시 완료" || echo "푸시 실패 — 나중에 ./decide.sh --no-push 후 수동 푸시"
 fi
