@@ -517,6 +517,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
     <button class="view-tab active" data-view="table" onclick="setView('table')">📋 테이블</button>
     <button class="view-tab" data-view="calendar" onclick="setView('calendar')">📅 캘린더</button>
     <button class="view-tab" data-view="gantt" onclick="setView('gantt')">📊 간트 차트</button>
+    <button class="view-tab" data-view="influencer" onclick="setView('influencer')">🎬 인플루언서 실적</button>
   </div>
 
   <!-- Content panes -->
@@ -525,6 +526,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   </div>
   <div id="view-calendar" class="view-pane" style="display:none"></div>
   <div id="view-gantt" class="view-pane" style="display:none"></div>
+  <div id="view-influencer" class="view-pane" style="display:none"></div>
 </main>
 
 <script>
@@ -842,7 +844,7 @@ function renderBarRows(arr,limit,kind){
 function setView(v){
   curView=v;
   document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
-  ['table','calendar','gantt'].forEach(k=>{
+  ['table','calendar','gantt','influencer'].forEach(k=>{
     document.getElementById('view-'+k).style.display=(k===v?'block':'none');
   });
   render();
@@ -1641,5 +1643,80 @@ document.addEventListener('DOMContentLoaded',()=>{
 <footer style="background:#0a0a0a;color:rgba(255,255,255,0.5);text-align:center;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:0.08em;border-top:1px solid rgba(184,137,63,0.18);margin-top:0;"></footer>
 <script src="./js/menu-visibility.js"></script>
 <script src="./js/visit-log.js"></script>
+
+<script>/* AP_INFLUENCER */
+(function(){
+  const N = n => (n||0).toLocaleString('ko-KR');
+  const M = n => ((n||0)/1e6).toLocaleString('ko-KR',{maximumFractionDigits:1});
+  const E = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let DATA=null, sortKey='실적RN', sortDir=-1, fProp='', fChan='';
+  function card(l,v,s,c){return `<div class="kpi-card" style="border-left:3px solid ${c}">
+    <div class="kpi-label">${l}</div><div class="kpi-value">${v}</div>
+    <div class="kpi-sub">${s||''}</div></div>`;}
+  function draw(){
+    const el=document.getElementById('view-influencer'); if(!el) return;
+    if(!DATA){el.innerHTML='<div class="empty-state"><div class="empty-state-title">불러오는 중...</div></div>';return;}
+    const m=DATA.meta||{};
+    let rows=(DATA.rows||[]).filter(r=>(!fProp||r.사업장===fProp)&&(!fChan||r.채널===fChan));
+    rows.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];
+      return (typeof x==='number'?x-y:String(x||'').localeCompare(String(y||'')))*sortDir;});
+    const props=[...new Set((DATA.rows||[]).map(r=>r.사업장).filter(Boolean))].sort();
+    const chans=[...new Set((DATA.rows||[]).map(r=>r.채널).filter(Boolean))].sort();
+    const adr=m.total_rn?Math.round(m.total_rev_won/m.total_rn):0;
+    const th=(k,t,r)=>`<th style="text-align:${r?'right':'left'};cursor:pointer;white-space:nowrap"
+       onclick="__apiSort('${k}')">${t}${sortKey===k?(sortDir<0?' ▾':' ▴'):''}</th>`;
+    el.innerHTML=`
+      <div class="kpi-grid" style="margin-bottom:14px">
+        ${card('총 객실수',N(m.total_rn)+'<span style="font-size:.5em"> 실</span>','중복 코드 1회만 집계','#5cc49a')}
+        ${card('총 매출',M(m.total_rev_won)+'<span style="font-size:.5em"> 백만</span>','1박객실료 × 객실수','#d4a74a')}
+        ${card('평균 ADR',N(adr)+'<span style="font-size:.5em"> 원</span>','','#5cc4d0')}
+        ${card('실적 매칭',N(m.rows_with_perf)+' / '+N(m.rows_with_codes),'패키지번호 '+N(m.codes)+'개','#a07ee8')}
+      </div>
+      ${m.rows_with_shared_codes?`<div style="padding:9px 13px;margin-bottom:12px;border-radius:8px;
+        background:rgba(232,154,92,.12);border:1px solid rgba(232,154,92,.3);font-size:12px;line-height:1.6">
+        <b>공유 코드 ${m.rows_with_shared_codes}개 행</b> — 같은 패키지번호가 여러 행에 등록돼 있어요.
+        각 행에는 그대로 표시하되 <b>총합계에서는 한 번만</b> 셉니다.
+        행 값을 단순히 더하면 ${N(m.naive_row_sum_rn)}실로 부풀려져요.</div>`:''}
+      <div class="filter-bar" style="margin-bottom:10px">
+        <span class="f-label">사업장</span>
+        <select class="filter-select" onchange="__apiFilter('prop',this.value)">
+          <option value="">전체</option>${props.map(p=>`<option ${p===fProp?'selected':''}>${E(p)}</option>`).join('')}</select>
+        <span class="f-label" style="margin-left:6px">채널</span>
+        <select class="filter-select" onchange="__apiFilter('chan',this.value)">
+          <option value="">전체</option>${chans.map(c=>`<option ${c===fChan?'selected':''}>${E(c)}</option>`).join('')}</select>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto">${rows.length}건</span>
+      </div>
+      <div style="overflow:auto;border-radius:10px;border:1px solid rgba(255,255,255,.08)">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="background:rgba(255,255,255,.04)">
+          ${th('시작일','기간')}${th('사업장','사업장')}${th('인플루언서','인플루언서 / 채널')}
+          ${th('채널','채널')}${th('실적RN','객실수',1)}${th('실적매출','매출(백만)',1)}
+          ${th('ADR','ADR',1)}${th('취소RN','취소',1)}<th style="text-align:left">패키지번호</th>
+        </tr></thead><tbody>
+        ${rows.map(r=>`<tr style="border-top:1px solid rgba(255,255,255,.06)${r.공유코드&&r.공유코드.length?';background:rgba(232,154,92,.06)':''}">
+          <td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${E(r.시작일)}<br><span style="opacity:.5">${E(r.종료일)}</span></td>
+          <td>${E(r.사업장)}</td>
+          <td>${E(r.인플루언서)}${r.공유코드&&r.공유코드.length?' <span style="font-size:9px;color:#e89a5c;border:1px solid #e89a5c;border-radius:4px;padding:0 4px">중복</span>':''}</td>
+          <td style="opacity:.7">${E(r.채널)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700">${N(r.실적RN)}</td>
+          <td style="text-align:right;font-family:var(--mono)">${M(r.실적매출)}</td>
+          <td style="text-align:right;font-family:var(--mono)">${N(r.ADR)}</td>
+          <td style="text-align:right;font-family:var(--mono);opacity:.6">${r.취소RN?N(r.취소RN):'—'}</td>
+          <td style="font-family:var(--mono);font-size:10px;opacity:.55;max-width:230px;word-break:break-all">${E((r.codes||[]).join(' '))}</td>
+        </tr>`).join('')}
+        </tbody></table></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--ink-faint);line-height:1.7">
+        출처 [GS] 2026 인플루언서 현황 보고의 건 O열 → 온북 27/43(예약) 매칭 ·
+        28/44(취소)는 참고 표시만 · 기간 필터 없음(전 기간) · 갱신 ./update_action_plan.sh
+      </div>`;
+  }
+  window.__apiSort=k=>{if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(typeof(DATA.rows[0]||{})[k]==='number')?-1:1;}draw();};
+  window.__apiFilter=(w,v)=>{if(w==='prop')fProp=v;else fChan=v;draw();};
+  fetch('data/action_plan_performance.json?t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.json()).then(d=>{DATA=d;draw();})
+    .catch(()=>{const el=document.getElementById('view-influencer');
+      if(el)el.innerHTML='<div class="empty-state"><div class="empty-state-title">데이터 없음 — ./update_action_plan.sh 실행 필요</div></div>';});
+})();
+</script>
 </body>
 </html>
