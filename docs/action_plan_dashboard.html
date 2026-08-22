@@ -663,9 +663,8 @@ function mapRow(raw,idx){
   // Key시트 매칭: 패키지코드(actual) → 기획전명(title) → key 순으로 lookup
   const kpiFromKey=actual&&kpiDataMap[actual]?kpiDataMap[actual]
     :kpiDataMap[title]||kpiDataMap[key]||{};
-  const kpi=hasCSVKpi?kpiFromCSV:kpiFromKey;
-  // ADR 자동계산: 셋 중 둘만 있으면 나머지 도출
-  autoCalcADR(kpi);
+  // kpiDataMap 객체를 그대로 쓰면 행끼리 공유돼 오염되므로 복사본에 채운다
+  const kpi=Object.assign({},hasCSVKpi?kpiFromCSV:kpiFromKey);
 
   /* 캘린더 셀 표시용 KPI: 직접 컬럼(KPI 객실/매출 백만원) 우선, 없으면 kpi 객체에서 도출
      - kpiRn: 박 단위
@@ -676,6 +675,23 @@ function mapRow(raw,idx){
   const kpiRev=kpiRevDirect!=null?kpiRevDirect
     :(kpi.rev_target?kpi.rev_target/1000000
       :kpi.rev_actual?kpi.rev_actual/1000000:null);
+
+  /* 표 KPI 9칸 채우기
+     목표 ← 시트의 'KPI (객실수 실)' · 'KPI 매출 (백만원)' 열 (비어 있으면 '—' 유지)
+     실적 ← action_plan_performance.json (사업장+판매시작일+인플루언서명 매칭) */
+  if(kpi.rns_target==null&&kpiRnDirect!=null)kpi.rns_target=kpiRnDirect;
+  if(kpi.rev_target==null&&kpiRevDirect!=null)kpi.rev_target=kpiRevDirect*1000000;
+  const ip=matchInfluencerPerf(property,channel,saleStartStr);
+  if(ip&&ip.실적RN>0){
+    if(kpi.rns_actual==null)kpi.rns_actual=ip.실적RN;
+    if(kpi.rev_actual==null)kpi.rev_actual=ip.실적매출;
+    if(kpi.adr_actual==null)kpi.adr_actual=ip.ADR;
+    kpi.influ_row=ip.row; kpi.influ_codes=ip.codes||[];
+    kpi.influ_shared=(ip.공유코드||[]).length>0;
+    kpi.cancel_rn=ip.취소RN||0;
+  }
+  // ADR 자동계산: 셋 중 둘만 있으면 나머지 도출
+  autoCalcADR(kpi);
 
   /* 채널 segment 추정 */
   let segment='OTA';
@@ -1021,6 +1037,51 @@ async function loadKpiData(){
   }catch(e){
     console.warn('[ActionPlan] Key시트 KPI 로드 실패:',e.message);
   }
+}
+
+/* ── 인플루언서 실적 → 메인시트 행 매칭 ──────────────────────────────────
+   두 시트를 잇는 공식 키가 없어 (사업장 + 판매시작일 + 인플루언서명) 조합으로 잇는다.
+   보수적 매칭 — 후보가 여럿이면 인플루언서명이 채널문자열에 들어있는 행만 채택하고,
+   그래도 못 좁히면 채우지 않는다(추정 금지 → 화면에 '—' 유지). */
+let influPerfIdx=null;   // '사업장|YYYYMMDD' → [perfRow...]
+function _npProp(s){return String(s||'').normalize('NFC').trim()
+  .replace(/\s|\(.*?\)|소노벨|소노캄|소노문|파크/g,'');}
+function _nTok(s){return String(s||'').normalize('NFC').toLowerCase().replace(/[^0-9a-z가-힣]/g,'');}
+function _nDate(s){
+  const t=String(s||'').trim();
+  let m=t.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if(m)return m[1]+String(+m[2]).padStart(2,'0')+String(+m[3]).padStart(2,'0');
+  m=t.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})/);
+  if(m)return '20'+m[1]+String(+m[2]).padStart(2,'0')+String(+m[3]).padStart(2,'0');
+  return '';
+}
+async function loadInfluencerPerf(){
+  try{
+    const r=await fetch('data/action_plan_performance.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    influPerfIdx={};
+    (d.rows||[]).forEach(p=>{
+      const k=_npProp(p.사업장)+'|'+_nDate(p.시작일);
+      if(k.length<2)return;
+      (influPerfIdx[k]=influPerfIdx[k]||[]).push(p);
+    });
+    console.log('[ActionPlan] 인플루언서 실적 색인:',Object.keys(influPerfIdx).length,'키 /',(d.rows||[]).length,'행');
+  }catch(e){
+    console.warn('[ActionPlan] action_plan_performance.json 로드 실패:',e.message);
+  }
+}
+function matchInfluencerPerf(property,channel,saleStartStr){
+  if(!influPerfIdx)return null;
+  const cand=influPerfIdx[_npProp(property)+'|'+_nDate(saleStartStr)];
+  if(!cand||!cand.length)return null;
+  if(cand.length===1)return cand[0];
+  const ch=_nTok(channel);
+  const byName=cand.filter(p=>{
+    const nm=_nTok(p.인플루언서).replace(/\d+만$|링크$/,'');
+    return nm.length>=2&&ch.includes(nm);
+  });
+  return byName.length===1?byName[0]:null;   // 못 좁히면 추정하지 않는다
 }
 
 /* ── 서버 사이드 실적: campaign_performance.json (Key → 27DB 집계 RN/매출) ── */
@@ -1632,6 +1693,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Key시트 URL이 비어있어도 server perf만으로도 실적이 표시됨.
   loadCampaignPerformance()
     .then(()=>loadKpiData())
+    .then(()=>loadInfluencerPerf())   // 표 KPI '실적' 칸 소스 — loadCSV(mapRow) 전에 준비돼야 함
     .then(()=>loadCSV());
   loadOTBData();
   // 유사 과거 실적 카탈로그 — 로드되면 선택된 기획전 상세 재렌더
