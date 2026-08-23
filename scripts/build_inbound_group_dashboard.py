@@ -141,6 +141,11 @@ TOP_NAT = countries_sorted[:5]
 
 # ================= 엑셀 =================
 wb = openpyxl.Workbook()
+# 워크북 기본(Normal) 스타일 폰트를 대명체로 → 미지정 셀까지 전부 대명체 적용
+try:
+    wb._named_styles['Normal'].font = Font(name=FN, size=10)
+except Exception:
+    pass
 
 # 팔레트 (템플릿 근접 + 약간 리프레시)
 C_TITLE = "463F3A"   # 타이틀/헤더 바 (dark taupe)
