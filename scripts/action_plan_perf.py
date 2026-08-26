@@ -285,7 +285,12 @@ def main():
 
     (PROJECT_DIR / "docs" / "data").mkdir(parents=True, exist_ok=True)
     (PROJECT_DIR / "docs" / "data" / "action_plan_performance.json").write_text(
-        json.dumps({"rows": out, "meta": {
+        json.dumps({"rows": out,
+                    # 코드별 집계 — 화면에서 필터를 걸어도 '코드당 1회' 총합을 다시 낼 수 있게
+                    "by_code": {c: {"rn": v["rn"], "rev": v["rev_rn_mult"],
+                                    "cancel_rn": v["cancel_rn"]}
+                                for c, v in agg.items() if v["rn"] or v["cancel_rn"]},
+                    "meta": {
             "source": getattr(sheet, "name", "google-sheet-live"), "codes": len(code_to_rows),
             "rows_with_codes": len(items), "rows_with_perf": len(matched),
             "duplicate_codes": {k: v for k, v in list(dup.items())[:50]},
@@ -293,6 +298,14 @@ def main():
             "naive_row_sum_rn": naive_rn, "naive_row_sum_rev_won": naive_rev,
             "rows_with_shared_codes": dup_rows,
             "rule": "행별=자기 코드 합 / 총합계=코드당 1회(중복 제거) / 기간 필터 없음",
+            "cancel_note": ("취소(28/44)는 예약상태가 전부 '취소'인 별개 모집단이고 "
+                            "예약(27/43)에는 애초에 취소분이 들어있지 않다(이미 net). "
+                            "따라서 차감하지 않으며 화면에는 참고치로만 표시한다. "
+                            "기간 필터가 없어 캠페인 종료 후 취소까지 합산되므로 "
+                            "취소RN이 실적RN보다 큰 행이 정상적으로 존재한다."),
+            "dedupe_note": ("raw_db 의 누적 스냅샷과 월별 재전송은 구간이 겹친다. "
+                            "parse_raw_db.py 와 같은 규칙(판매일자 월 경계 분리)으로 "
+                            "겹친 구간을 한쪽에서만 읽어 이중 계상을 막는다."),
         }}, ensure_ascii=False, indent=2), encoding="utf-8")
 
     (PROJECT_DIR / "data").mkdir(exist_ok=True)

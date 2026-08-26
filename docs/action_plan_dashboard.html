@@ -1708,37 +1708,145 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 <script>/* AP_INFLUENCER */
 (function(){
-  const N = n => (n||0).toLocaleString('ko-KR');
+  const N = n => Math.round(n||0).toLocaleString('ko-KR');
   const M = n => ((n||0)/1e6).toLocaleString('ko-KR',{maximumFractionDigits:1});
   const E = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  let DATA=null, sortKey='실적RN', sortDir=-1, fProp='', fChan='';
+  const MONO = "font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1";
+  let DATA=null, sortKey='실적RN', sortDir=-1, fProp='', fChan='', fPeriod='';
+
+  /* '2026-07-01' → '26.07.01' · 기간 한 줄 압축 */
+  const ymd = s => {const m=String(s||'').match(/(\d{2})(\d{2})[-./](\d{1,2})[-./](\d{1,2})/)
+    ||String(s||'').match(/^()(\d{2})[-./](\d{1,2})[-./](\d{1,2})/);
+    return m?`${m[2]}.${String(+m[3]).padStart(2,'0')}.${String(+m[4]).padStart(2,'0')}`:String(s||'');};
+  const mdOnly = s => {const t=ymd(s); return t.length===8?t.slice(3):t;};
+  const period = r => {const a=ymd(r.시작일), b=mdOnly(r.종료일);
+    return b&&b!==a?`${a}~${b}`:(a||'—');};
+  const monthOf = r => {const m=String(r.시작일||'').match(/(\d{4})[-./](\d{1,2})/); return m?+m[2]:null;};
+
+  /* 코드당 1회만 세는 합계 — 필터를 걸어도 다시 계산할 수 있게 by_code 사용 */
+  function totals(rows){
+    const bc=(DATA&&DATA.by_code)||{}, seen=new Set(); let rn=0,rev=0,can=0;
+    rows.forEach(r=>(r.codes||[]).forEach(c=>{
+      if(seen.has(c))return; seen.add(c);
+      const v=bc[c]; if(!v)return;
+      rn+=v.rn||0; rev+=v.rev||0; can+=v.cancel_rn||0;
+    }));
+    return {rn,rev,can,codes:seen.size,adr:rn?Math.round(rev/rn):0};
+  }
   function card(l,v,s,c){return `<div class="kpi-card" style="border-left:3px solid ${c}">
     <div class="kpi-label">${l}</div><div class="kpi-value">${v}</div>
     <div class="kpi-sub">${s||''}</div></div>`;}
+
+  /* 가로 막대 한 줄 */
+  function bar(label,val,max,color,sub){
+    const w=max?Math.max(1,Math.round(val/max*100)):0;
+    return `<div style="display:grid;grid-template-columns:78px 1fr 74px;gap:8px;align-items:center;margin-bottom:5px">
+      <div style="font-size:11.5px;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(label)}</div>
+      <div style="height:9px;border-radius:5px;background:rgba(255,255,255,.06)">
+        <div style="height:9px;border-radius:5px;width:${w}%;background:${color}"></div></div>
+      <div style="${MONO};font-size:11px;text-align:right">${N(val)}<span style="opacity:.45;font-size:9.5px"> ${sub||'실'}</span></div>
+    </div>`;
+  }
+  function panel(title,body,note){
+    return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+      border-radius:10px;padding:12px 14px">
+      <div style="font-size:11px;letter-spacing:.06em;opacity:.6;margin-bottom:9px">${title}</div>
+      ${body}${note?`<div style="font-size:10px;opacity:.4;margin-top:7px">${note}</div>`:''}</div>`;
+  }
+
+  function summary(rows){
+    /* TOP5 인플루언서(객실수) */
+    const top=[...rows].sort((a,b)=>b.실적RN-a.실적RN).slice(0,5);
+    const topMax=top.length?top[0].실적RN:0;
+    const topHtml=top.map((r,i)=>`<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
+        <div style="width:17px;height:17px;border-radius:5px;background:${['#d4a74a','#9aa5b1','#b07a4a','rgba(255,255,255,.1)','rgba(255,255,255,.1)'][i]};
+          color:#0d0d0d;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(r.인플루언서||'—')}</div>
+          <div style="font-size:10px;opacity:.45">${E(r.사업장||'')} · ${E(period(r))}</div></div>
+        <div style="text-align:right">
+          <div style="${MONO};font-size:13px;font-weight:700">${N(r.실적RN)}<span style="font-size:9px;opacity:.5"> 실</span></div>
+          <div style="${MONO};font-size:10px;opacity:.5">${M(r.실적매출)} 백만</div></div>
+      </div>`).join('')||'<div style="opacity:.4;font-size:11px">해당 없음</div>';
+
+    /* 사업장별 상위 8 — 코드 중복 제거 */
+    const byProp={};
+    rows.forEach(r=>{(byProp[r.사업장||'—']=byProp[r.사업장||'—']||[]).push(r);});
+    const props=Object.entries(byProp).map(([k,v])=>[k,totals(v).rn]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const pMax=props.length?props[0][1]:0;
+    const propHtml=props.map(([k,v])=>bar(k,v,pMax,'#5cc49a')).join('')||'<div style="opacity:.4;font-size:11px">해당 없음</div>';
+
+    /* 채널별 OTA vs G-OTA */
+    const ch={}; rows.forEach(r=>{const k=(r.채널||'—').toUpperCase().replace('GOTA','G-OTA');
+      (ch[k]=ch[k]||[]).push(r);});
+    const chs=Object.entries(ch).map(([k,v])=>{const t=totals(v);return [k,t.rn,t.rev,v.length];})
+      .sort((a,b)=>b[1]-a[1]);
+    const chSum=chs.reduce((s,x)=>s+x[1],0)||1;
+    const chHtml=chs.map(([k,rn,rev,n])=>`<div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px">
+          <span>${E(k)} <span style="opacity:.4">${n}건</span></span>
+          <span style="${MONO}">${N(rn)}<span style="opacity:.45;font-size:9.5px"> 실 · ${Math.round(rn/chSum*100)}%</span></span></div>
+        <div style="height:9px;border-radius:5px;background:rgba(255,255,255,.06)">
+          <div style="height:9px;border-radius:5px;width:${Math.round(rn/chSum*100)}%;
+            background:${k==='OTA'?'#5cc4d0':'#a07ee8'}"></div></div>
+      </div>`).join('')||'<div style="opacity:.4;font-size:11px">해당 없음</div>';
+
+    /* 월별 추이 (판매 시작월) */
+    const mon={}; rows.forEach(r=>{const m=monthOf(r); if(m)(mon[m]=mon[m]||[]).push(r);});
+    const ms=Object.keys(mon).map(Number).sort((a,b)=>a-b);
+    const mVals=ms.map(m=>totals(mon[m]).rn); const mMax=Math.max(1,...mVals);
+    const monHtml=ms.length?`<div style="display:flex;align-items:flex-end;gap:6px;height:92px">
+        ${ms.map((m,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+          <div style="${MONO};font-size:9.5px;opacity:.55;margin-bottom:3px">${N(mVals[i])}</div>
+          <div title="${m}월 ${N(mVals[i])}실" style="width:100%;border-radius:4px 4px 0 0;
+            background:linear-gradient(180deg,#d4a74a,rgba(212,167,74,.35));
+            height:${Math.max(3,Math.round(mVals[i]/mMax*62))}px"></div>
+          <div style="font-size:10px;opacity:.5;margin-top:4px">${m}월</div></div>`).join('')}
+      </div>`:'<div style="opacity:.4;font-size:11px">해당 없음</div>';
+
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:11px;margin-bottom:14px">
+      ${panel('TOP 5 인플루언서 · 객실수',topHtml)}
+      ${panel('사업장별 객실수 · 상위 8',propHtml,'코드 중복 제거 기준')}
+      ${panel('채널별 구성 · OTA vs G-OTA',chHtml)}
+      ${panel('월별 추이 · 판매 시작월',monHtml,'행 기준 월 · 코드 중복 제거')}
+    </div>`;
+  }
+
   function draw(){
     const el=document.getElementById('view-influencer'); if(!el) return;
     if(!DATA){el.innerHTML='<div class="empty-state"><div class="empty-state-title">불러오는 중...</div></div>';return;}
     const m=DATA.meta||{};
-    let rows=(DATA.rows||[]).filter(r=>(!fProp||r.사업장===fProp)&&(!fChan||r.채널===fChan));
+    const inPeriod=r=>{
+      if(!fPeriod)return true;
+      const mo=monthOf(r); if(!mo)return false;
+      if(fPeriod==='h1')return mo<=6;
+      if(fPeriod==='h2')return mo>=7;
+      if(fPeriod==='r3'){const now=new Date().getMonth()+1;return mo>now-3&&mo<=now;}
+      return true;
+    };
+    let rows=(DATA.rows||[]).filter(r=>(!fProp||r.사업장===fProp)&&(!fChan||r.채널===fChan)&&inPeriod(r));
     rows.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];
       return (typeof x==='number'?x-y:String(x||'').localeCompare(String(y||'')))*sortDir;});
     const props=[...new Set((DATA.rows||[]).map(r=>r.사업장).filter(Boolean))].sort();
     const chans=[...new Set((DATA.rows||[]).map(r=>r.채널).filter(Boolean))].sort();
-    const adr=m.total_rn?Math.round(m.total_rev_won/m.total_rn):0;
-    const th=(k,t,r)=>`<th style="text-align:${r?'right':'left'};cursor:pointer;white-space:nowrap"
+    const filtered=!!(fProp||fChan||fPeriod);
+    const T=totals(rows);
+    const th=(k,t,r)=>`<th style="text-align:${r?'right':'left'};cursor:pointer;white-space:nowrap;padding:8px 10px"
        onclick="__apiSort('${k}')">${t}${sortKey===k?(sortDir<0?' ▾':' ▴'):''}</th>`;
+    const naive=rows.reduce((s,r)=>s+(r.실적RN||0),0);
     el.innerHTML=`
       <div class="kpi-grid" style="margin-bottom:14px">
-        ${card('총 객실수',N(m.total_rn)+'<span style="font-size:.5em"> 실</span>','중복 코드 1회만 집계','#5cc49a')}
-        ${card('총 매출',M(m.total_rev_won)+'<span style="font-size:.5em"> 백만</span>','1박객실료 × 객실수','#d4a74a')}
-        ${card('평균 ADR',N(adr)+'<span style="font-size:.5em"> 원</span>','','#5cc4d0')}
+        ${card(filtered?'객실수 (필터)':'총 객실수',N(T.rn)+'<span style="font-size:.5em"> 실</span>','코드당 1회만 집계','#5cc49a')}
+        ${card(filtered?'매출 (필터)':'총 매출',M(T.rev)+'<span style="font-size:.5em"> 백만</span>','1박객실료 × 객실수','#d4a74a')}
+        ${card('평균 ADR',N(T.adr)+'<span style="font-size:.5em"> 원</span>','','#5cc4d0')}
         ${card('실적 매칭',N(m.rows_with_perf)+' / '+N(m.rows_with_codes),'패키지번호 '+N(m.codes)+'개','#a07ee8')}
       </div>
       ${m.rows_with_shared_codes?`<div style="padding:9px 13px;margin-bottom:12px;border-radius:8px;
         background:rgba(232,154,92,.12);border:1px solid rgba(232,154,92,.3);font-size:12px;line-height:1.6">
         <b>공유 코드 ${m.rows_with_shared_codes}개 행</b> — 같은 패키지번호가 여러 행에 등록돼 있어요.
         각 행에는 그대로 표시하되 <b>총합계에서는 한 번만</b> 셉니다.
-        행 값을 단순히 더하면 ${N(m.naive_row_sum_rn)}실로 부풀려져요.</div>`:''}
+        지금 보이는 행 값을 단순히 더하면 ${N(naive)}실로 부풀려져요.</div>`:''}
+      ${summary(rows)}
       <div class="filter-bar" style="margin-bottom:10px">
         <span class="f-label">사업장</span>
         <select class="filter-select" onchange="__apiFilter('prop',this.value)">
@@ -1746,34 +1854,45 @@ document.addEventListener('DOMContentLoaded',()=>{
         <span class="f-label" style="margin-left:6px">채널</span>
         <select class="filter-select" onchange="__apiFilter('chan',this.value)">
           <option value="">전체</option>${chans.map(c=>`<option ${c===fChan?'selected':''}>${E(c)}</option>`).join('')}</select>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto">${rows.length}건</span>
+        <span class="f-label" style="margin-left:6px">기간</span>
+        <select class="filter-select" onchange="__apiFilter('period',this.value)">
+          ${[['','전체'],['r3','최근 3개월'],['h1','상반기(1~6월)'],['h2','하반기(7~12월)']]
+            .map(([v,t])=>`<option value="${v}" ${v===fPeriod?'selected':''}>${t}</option>`).join('')}</select>
+        <span style="${MONO};font-size:10px;color:var(--ink-faint);margin-left:auto">${rows.length}건</span>
       </div>
       <div style="overflow:auto;border-radius:10px;border:1px solid rgba(255,255,255,.08)">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="background:rgba(255,255,255,.04)">
           ${th('시작일','기간')}${th('사업장','사업장')}${th('인플루언서','인플루언서 / 채널')}
           ${th('채널','채널')}${th('실적RN','객실수',1)}${th('실적매출','매출(백만)',1)}
-          ${th('ADR','ADR',1)}${th('취소RN','취소',1)}<th style="text-align:left">패키지번호</th>
+          ${th('ADR','ADR',1)}${th('취소RN','취소(참고)',1)}
+          <th style="text-align:left;padding:8px 10px;white-space:nowrap">코드</th>
         </tr></thead><tbody>
-        ${rows.map(r=>`<tr style="border-top:1px solid rgba(255,255,255,.06)${r.공유코드&&r.공유코드.length?';background:rgba(232,154,92,.06)':''}">
-          <td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${E(r.시작일)}<br><span style="opacity:.5">${E(r.종료일)}</span></td>
-          <td>${E(r.사업장)}</td>
-          <td>${E(r.인플루언서)}${r.공유코드&&r.공유코드.length?' <span style="font-size:9px;color:#e89a5c;border:1px solid #e89a5c;border-radius:4px;padding:0 4px">중복</span>':''}</td>
-          <td style="opacity:.7">${E(r.채널)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-weight:700">${N(r.실적RN)}</td>
-          <td style="text-align:right;font-family:var(--mono)">${M(r.실적매출)}</td>
-          <td style="text-align:right;font-family:var(--mono)">${N(r.ADR)}</td>
-          <td style="text-align:right;font-family:var(--mono);opacity:.6">${r.취소RN?N(r.취소RN):'—'}</td>
-          <td style="font-family:var(--mono);font-size:10px;opacity:.55;max-width:230px;word-break:break-all">${E((r.codes||[]).join(' '))}</td>
-        </tr>`).join('')}
+        ${rows.map(r=>{
+          const cs=r.codes||[];
+          return `<tr style="border-top:1px solid rgba(255,255,255,.06)${r.공유코드&&r.공유코드.length?';background:rgba(232,154,92,.06)':''}">
+          <td style="white-space:nowrap;${MONO};font-size:11px;padding:7px 10px">${E(period(r))}</td>
+          <td style="padding:7px 10px;white-space:nowrap">${E(r.사업장)}</td>
+          <td style="padding:7px 10px">${E(r.인플루언서)}${r.공유코드&&r.공유코드.length?' <span style="font-size:9px;color:#e89a5c;border:1px solid #e89a5c;border-radius:4px;padding:0 4px">중복</span>':''}</td>
+          <td style="opacity:.7;padding:7px 10px;white-space:nowrap">${E(r.채널)}</td>
+          <td style="text-align:right;${MONO};font-weight:700;min-width:72px;padding:7px 10px">${N(r.실적RN)}</td>
+          <td style="text-align:right;${MONO};min-width:82px;padding:7px 10px">${M(r.실적매출)}</td>
+          <td style="text-align:right;${MONO};min-width:78px;padding:7px 10px">${N(r.ADR)}</td>
+          <td style="text-align:right;${MONO};opacity:.55;min-width:72px;padding:7px 10px">${r.취소RN?N(r.취소RN):'—'}</td>
+          <td style="padding:7px 10px;white-space:nowrap">${cs.length?`<details style="display:inline-block">
+              <summary style="cursor:pointer;list-style:none;font-size:10.5px;opacity:.7;
+                border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:1px 7px;white-space:nowrap">코드 ${cs.length}개 ▾</summary>
+              <div style="${MONO};font-size:10px;opacity:.6;max-width:270px;word-break:break-all;
+                margin-top:5px;line-height:1.6">${E(cs.join(' '))}</div></details>`:'—'}</td>
+        </tr>`;}).join('')}
         </tbody></table></div>
       <div style="margin-top:10px;font-size:11px;color:var(--ink-faint);line-height:1.7">
-        출처 [GS] 2026 인플루언서 현황 보고의 건 O열 → 온북 27/43(예약) 매칭 ·
-        28/44(취소)는 참고 표시만 · 기간 필터 없음(전 기간) · 갱신 ./update_action_plan.sh
+        패키지번호 → 온북 27/43(예약) 매칭 · 28/44(취소)는 <b>참고 표시만</b>(예약은 이미 취소 제외분이라 차감하지 않음) ·
+        집계에 기간 필터 없음(전 기간 합산, 위 기간 선택은 화면 표시용) · 갱신 ./update_action_plan.sh
       </div>`;
   }
   window.__apiSort=k=>{if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(typeof(DATA.rows[0]||{})[k]==='number')?-1:1;}draw();};
-  window.__apiFilter=(w,v)=>{if(w==='prop')fProp=v;else fChan=v;draw();};
+  window.__apiFilter=(w,v)=>{if(w==='prop')fProp=v;else if(w==='chan')fChan=v;else fPeriod=v;draw();};
   fetch('data/action_plan_performance.json?t='+Date.now(),{cache:'no-store'})
     .then(r=>r.json()).then(d=>{DATA=d;draw();})
     .catch(()=>{const el=document.getElementById('view-influencer');
