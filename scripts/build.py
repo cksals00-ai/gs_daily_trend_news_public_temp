@@ -2553,7 +2553,6 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_competitor_section(html, comp_data)
     if otb_data and agg_data:
         html = inject_macro_section(html, otb_data, comp_data, agg_data)
-    html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     if otb_data:
         rm_fcst_data = load_json(DOCS_DIR / "data" / "rm_fcst.json")
         html = inject_yoy_property_table(html, otb_data, rm_fcst_data)

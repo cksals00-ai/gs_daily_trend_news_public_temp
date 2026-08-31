@@ -25,14 +25,13 @@ BASE = "https://cksals00-ai.github.io/gs_daily_trend_news_public_temp"
 COMP = "https://cksals00-ai.github.io/sono-competitor-crawler"
 
 # (data-gsn, href, label, extra_attrs)
-# 순서 = 화면 노출 순서. segment-analysis 는 대외비(숨김 메뉴)라 마크업만 유지.
+# 순서 = 화면 노출 순서.
 CANONICAL_ITEMS = [
     ("trend",            f"{BASE}/",                        "트렌드 리포트", ""),
     ("sales-kpi",        f"{BASE}/sales-kpi.html",          "세일즈 KPI 현황 리포트", ""),
     ("strategy",         f"{BASE}/gs-strategy-report.html", "전략 리포트", ""),
     ("otb",              f"{BASE}/otb.html",                "GS 실적 리포트", ""),
     ("ga-analytics",     f"{BASE}/ga-analytics.html",       "웹 애널리틱스", ""),
-    ("segment-analysis", f"{BASE}/gs-segment-analysis.html", "전체 세그 분석 자료", ""),
     ("closing",          f"{BASE}/gs-closing-report.html",  "마감리포트", ""),
     ("monitor",          f"{COMP}/",                        "경쟁사 모니터링", ""),
     ("palatium",         f"{COMP}/palatium.html",           "팔라티움 해운대 by sonofelice 현황 리포트", ""),
@@ -50,7 +49,6 @@ CANONICAL_SCRIPT = (
     "else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;"
     "else if(k==='otb')hit=h.indexOf('otb.html')!==-1;"
     "else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;"
-    "else if(k==='segment-analysis')hit=h.indexOf('gs-segment-analysis.html')!==-1;"
     "else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;"
     "else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;"
     "else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;"
