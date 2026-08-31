@@ -8,6 +8,7 @@
 #   1) collect_news.py        — Google News RSS (네트워크)
 #   2) collect_gs_monitor.py  — 경쟁사 모니터 (네트워크, 실패 시 기존 유지)
 #   3) collect_powerbi.py     — Power BI 실적 (네트워크, 실패 시 기존 유지)
+#   3.5) fetch_ga4.py         — GA4 웹 애널리틱스 (OAuth 토큰 로컬전용, 실패 시 기존 유지)
 #   4) generate_insights.py   — KPI → 인사이트 (로컬)
 #   5) gen_sdd_by_prop.py     — 사업장별 SDD (로컬, optional)
 #   6) generate_campaign_performance.py — raw_db 27/28 txt 있을 때만
@@ -118,6 +119,9 @@ run_fatal() {
 run_crawl "collect_news"       "scripts/collect_news.py"
 run_crawl "collect_gs_monitor" "scripts/collect_gs_monitor.py"
 run_crawl "collect_powerbi"    "scripts/collect_powerbi.py"
+# GA4 웹 애널리틱스 — OAuth 토큰(ga4_oauth_token.json, gitignore·로컬전용)으로 수집.
+# CI엔 토큰이 없어 호스트 데몬만 갱신 가능. 실패 시 기존 docs/data/ga4_latest.json 보존(soft-fail).
+run_crawl "fetch_ga4"          "scripts/fetch_ga4.py"
 
 # ── [4] 인사이트 (필수) ───────────────────────────────────────────────────
 run_fatal "generate_insights"  "scripts/generate_insights.py"
