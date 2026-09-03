@@ -2550,6 +2550,7 @@ def _apply_common_injections(html: str, notes: dict, data: dict, comp_data: dict
     html = inject_signal_cards(html, notes.get("property_performance", {}))
     if agg_data:
         html = inject_weekly_onbook(html, agg_data)
+    html = inject_weekly_report(html, weekly_data, agg_data, otb_data=otb_data, admin_data=admin_data)
     html = inject_competitor_section(html, comp_data)
     if otb_data and agg_data:
         html = inject_macro_section(html, otb_data, comp_data, agg_data)
