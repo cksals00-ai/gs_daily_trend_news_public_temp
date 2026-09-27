@@ -1,5 +1,6 @@
 #!/bin/bash
 cd ~/Desktop/gs_daily_trend_news_public_temp
+source scripts/py_env.sh
 
 echo "=== Step 1: parse_raw_db.py ==="
 python3 scripts/parse_raw_db.py

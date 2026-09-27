@@ -47,6 +47,7 @@ die()  { echo -e "\n${RED}❌ 실패: $*${NC}\n   위 출력에서 원인 확인
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || die "리포지토리 경로 확인 실패"
 cd "$REPO" || die "cd $REPO 실패"
+source scripts/py_env.sh
 
 BUILDER="scripts/build_july_pickup_tracker.py"
 DOCS_JSON="docs/data/july_pickup.json"

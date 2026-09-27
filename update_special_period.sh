@@ -43,6 +43,7 @@ die(){ echo -e "\n${RED}❌ 실패: $*${NC}" >&2; exit 1; }
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || die "리포지토리 경로 확인 실패"
 cd "$REPO" || die "cd 실패"
+source scripts/py_env.sh
 
 BUILDER="scripts/build_special_period.py"
 DATA_JSON="data/special_period.json"

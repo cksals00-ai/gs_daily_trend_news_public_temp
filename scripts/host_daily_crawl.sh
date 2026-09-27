@@ -34,6 +34,7 @@ STATUS_FILE="$PROJECT_ROOT/_host_crawl_status.json"
 PY="$(command -v python3)"
 
 cd "$PROJECT_ROOT" || { echo "[FATAL] cannot cd to $PROJECT_ROOT"; exit 99; }
+source scripts/py_env.sh
 mkdir -p "$LOG_DIR"
 
 # ── 로그 로테이션 (5MB 초과 시 .1 로 보관) ──────────────────────────────

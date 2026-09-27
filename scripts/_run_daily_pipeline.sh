@@ -9,6 +9,7 @@ LOG_FILE="$PROJECT_ROOT/_pipeline_run.log"
 STATUS_FILE="$PROJECT_ROOT/_pipeline_status.json"
 
 cd "$PROJECT_ROOT" || { echo "[FATAL] cannot cd to $PROJECT_ROOT" > "$LOG_FILE"; exit 99; }
+source scripts/py_env.sh >> "$LOG_FILE" 2>&1
 
 # 로그 초기화
 {

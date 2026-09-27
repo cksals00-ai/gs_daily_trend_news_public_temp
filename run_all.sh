@@ -1,5 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")"
+source scripts/py_env.sh
 
 echo "=== Step 1: parse_raw_db.py ===" > /tmp/run_all.log
 python3 scripts/parse_raw_db.py >> /tmp/run_all.log 2>&1

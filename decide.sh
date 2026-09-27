@@ -11,6 +11,7 @@
 # =============================================================================
 set -uo pipefail
 cd "$(dirname "$0")" || exit 1
+source scripts/py_env.sh
 JSON="docs/data/decision_log.json"
 DO_PUSH=1
 MODE="add"; TARGET=""

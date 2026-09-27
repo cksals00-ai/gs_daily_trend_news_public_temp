@@ -2,6 +2,7 @@
 # update_action_plan.sh — 인플루언서 시트(라이브) → 실적 → Action Plan 페이지
 set -uo pipefail
 cd "$(dirname "$0")" || exit 1
+source scripts/py_env.sh
 DO_PUSH=1; for a in "$@"; do [ "$a" = "--no-push" ] && DO_PUSH=0; done
 python3 scripts/action_plan_perf.py || { echo "실적 생성 실패 — 기존 결과 유지"; exit 1; }
 python3 - <<'PY' || exit 1
