@@ -34,6 +34,16 @@ OUT = REPO / "docs" / "data" / "gs_targets.json"
 OUT2 = REPO / "data" / "gs_targets.json"
 PDF_CACHE = REPO / "data" / "_gs_targets_pdf_cache.json"
 
+# 2027+: 연도별 객실 사업계획 워크북(총량 수립)에서 OTA+G-OTA 월별 예산 직접 추출.
+#   data/raw_db/budget/<YEAR>/*사업계획*.xlsx  (2026 라이브 OTB용 glob과 분리된 하위폴더)
+#   사업장 상세시트 레이아웃은 generate_otb_data.load_budget과 동일.
+PLAN_YEARS = {"2027"}
+PLAN_DIR = REPO / "data" / "raw_db" / "budget"
+# 연도별 워크북에서 사업장 시트명이 다를 때 별칭(표준시트명 → 해당연도 시트명)
+PLAN_SHEET_ALIAS = {
+    "2027": {"소노펫 (D동+E동)": "소노펫", "소노캄 거제": "소노캄거제"},
+}
+
 # RM PDF에서 목표를 끌어올 연도 (2026은 otb_data 권위 소스 사용)
 RM_YEARS = {"2024", "2025"}
 SKIP_PDFS = {"Revenue Meeting_2024.01.24.pdf"}  # hang/corrupt (build_fcst_trend와 동일)
@@ -146,15 +156,61 @@ def load_otb_2026():
     return out, prov
 
 
+def load_plan_year(year):
+    """data/raw_db/budget/<year>/ 의 사업계획 워크북 → 월별 OTA+G-OTA RN.
+    반환: (targets_dict {"01":rn,...}, provenance_dict, source_name) 또는 (None,None,None)."""
+    import openpyxl
+    from generate_otb_data import (PROPERTY_DEFS, BUDGET_GRAND_TOTAL_ROWS,
+                                   BUDGET_COL_RN, SEGMENT_ROW_OFFSETS, BUDGET_MONTH_LABEL)
+    ydir = PLAN_DIR / year
+    xs = sorted(ydir.glob("*사업계획*.xlsx")) if ydir.exists() else []
+    if not xs:
+        return None, None, None
+    path = xs[-1]  # 최신본
+    wb = openpyxl.load_workbook(path, data_only=True)
+    avail = set(wb.sheetnames)
+    alias = PLAN_SHEET_ALIAS.get(year, {})
+    label_to_mm = {l: f"{i+1:02d}" for i, l in enumerate(BUDGET_MONTH_LABEL)}
+    agg = defaultdict(int)
+    used = 0
+    for sheet_name, *_rest in PROPERTY_DEFS:
+        sn = sheet_name if sheet_name in avail else alias.get(sheet_name)
+        if not sn or sn not in avail:
+            continue
+        rows = list(wb[sn].iter_rows(values_only=True))
+        used += 1
+        for gt_row, ml in zip(BUDGET_GRAND_TOTAL_ROWS, BUDGET_MONTH_LABEL):
+            for seg in ("OTA", "G-OTA"):
+                off = SEGMENT_ROW_OFFSETS[seg]
+                try:
+                    v = float(rows[gt_row + off - 1][BUDGET_COL_RN - 1] or 0)
+                except (IndexError, ValueError, TypeError):
+                    v = 0
+                agg[label_to_mm[ml]] += int(round(v))
+    out = {mm: agg[mm] for mm in sorted(agg) if agg[mm] > 0}
+    prov = {f"{year}-{mm}": {"value": out[mm], "source": path.name,
+                             "prop_count": used} for mm in out}
+    return out, prov, path.name
+
+
 def main():
     force_full = ("--rebuild" in sys.argv) or ("--full" in sys.argv)
     targets = {}
     provenance = {}
+    plan_sources = {}
 
     # 2026: otb_data 권위
     t26, p26 = load_otb_2026()
     targets["2026"] = t26
     provenance.update(p26)
+
+    # 2027+: 연도별 사업계획 워크북(총량 수립)에서 OTA+G-OTA 추출
+    for py in sorted(PLAN_YEARS):
+        tp, pp, src = load_plan_year(py)
+        if tp:
+            targets[py] = tp
+            provenance.update(pp)
+            plan_sources[py] = f"data/raw_db/budget/{py}/{src} (OTA+G-OTA 세그, load_budget 레이아웃)"
 
     # 2024/2025: RM PDF
     cands = parse_rm_targets(force_full=force_full)
@@ -179,6 +235,7 @@ def main():
         "_sources": {
             "2026": "otb_data.json segmentData (사업계획 12개월)",
             "2024/2025": "data/RM자료/Revenue Meeting_*.pdf (parse_rm_fcst, 커버리지 최대 스냅샷)",
+            **plan_sources,
         },
         "targets": {y: targets[y] for y in sorted(targets)},
         "_provenance": dict(sorted(provenance.items())),
