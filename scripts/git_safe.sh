@@ -256,10 +256,24 @@ gsn_git_sync_push() {   # 0=성공 1=3회실패 2=코드충돌(중단要) 3=구�
         if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
             gsn_log "    ℹ origin/main 이 이미 로컬에 포함됨 — rebase 생략"
         else
-            gsn_log "    ↻ rebase origin/main (시도 ${attempt}/3)"
+            # 생성물(data/docs) 충돌은 '재빌드본 우선(rebase=-X theirs)'으로 병합 시점에
+            # 미리 해소하면 바이너리(xlsx 등)까지 자동으로 넘어간다(사후 checkout 은 바이너리에서 걸림).
+            # 단, -X theirs 는 코드(data/docs 밖)까지 조용히 덮으므로, 양쪽이 '같은 코드 파일'을
+            # 건드렸을 때만 신중모드로 빠져 사람이 확인하게 한다(안 겹치면 코드 충돌 자체가 불가능).
+            local xopt="" lcode rcode overlap
+            lcode="$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' | sort -u || true)"
+            rcode="$(git diff --name-only HEAD...origin/main 2>/dev/null | grep -vE '^(data/|docs/|_host_crawl_status\.json$)' | sort -u || true)"
+            overlap="$(comm -12 <(printf '%s\n' "$lcode") <(printf '%s\n' "$rcode") 2>/dev/null | sed '/^$/d' || true)"
+            if [ -z "$overlap" ]; then
+                xopt="-X theirs"
+            else
+                gsn_log "    ⚠ 코드 파일 겹침 감지 — 신중모드(-X theirs 미적용, 충돌 시 사람 확인):"
+                printf '%s\n' "$overlap" | sed 's/^/        /' | while IFS= read -r l; do gsn_log "$l"; done
+            fi
+            gsn_log "    ↻ rebase origin/main (시도 ${attempt}/3)${xopt:+  [$xopt]}"
             # --autostash: _host_crawl_status.json 등 미스테이징 변경이 있어도 rebase 가 거부되지 않게
-            if _gsn_git "$GSN_GIT_T_REBASE" "rebase origin/main" rebase --autostash origin/main; then
-                gsn_log "    ✅ rebase 클린"
+            if _gsn_git "$GSN_GIT_T_REBASE" "rebase origin/main" rebase --autostash $xopt origin/main; then
+                gsn_log "    ✅ rebase 클린${xopt:+ (생성물=재빌드본 우선)}"
             else
                 if _gsn_rebase_drive; then rc=0; else rc=$?; fi
                 if [ "$rc" -ne 0 ]; then
