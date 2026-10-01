@@ -30,6 +30,7 @@ DATA_DB = REPO / "data" / "db_aggregated.json"
 DOCS_DB = REPO / "docs" / "data" / "db_aggregated.json"
 BASELINE = REPO / "data" / "db_closed_baseline.json"
 MIN_HEALTHY = 5000        # baseline 없을 때 정상 판정 최소 booking_rn
+MAX_UPLIFT = 1.30         # 마감월 상향 개정 허용 상한(초과 = 중복적재 손상으로 간주)
 
 
 def protected_months(cur_ym):
@@ -151,13 +152,16 @@ def freeze_file(db_path, baseline, cur_ym, updated_baseline):
         base_rn = month_booking_rn(baseline.get(sm) or {}, sm) if baseline.get(sm) else 0
         # 마감월 booking_rn 은 상향 개정만 정상(late data). 라이브가 baseline 이상으로 완전할
         # 때만 갱신(자가치유), 더 낮으면(체크아웃 드롭·재전송 삭제 등 손실) baseline 복원.
-        if rn >= MIN_HEALTHY and rn >= base_rn:
+        # 단, 상한 초과(기본 1.3배)는 late data 가 아니라 raw 중복적재 손상이므로 복원 대상.
+        inflated = base_rn > 0 and rn > base_rn * MAX_UPLIFT
+        if rn >= MIN_HEALTHY and rn >= base_rn and not inflated:
             updated_baseline[sm] = _strip_daily(extract_month(db, sm))
             healed += 1
         elif baseline.get(sm):
             restore_month(db, _strip_daily(baseline[sm]))
             restored += 1
-            print(f"  복원 {sm}: live booking_rn={rn:,} → baseline {base_rn:,}", file=sys.stderr)
+            why = "과대(중복적재 의심)" if inflated else "과소/누락"
+            print(f"  복원 {sm}: live booking_rn={rn:,} {why} → baseline {base_rn:,}", file=sys.stderr)
     recompute_meta_months(db)
     db_path.write_text(json.dumps(db, ensure_ascii=False), encoding="utf-8")
     return db, restored, healed

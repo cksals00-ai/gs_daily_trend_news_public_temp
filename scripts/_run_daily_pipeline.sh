@@ -68,6 +68,9 @@ run_stage() {
 
 run_stage "parse_raw_db"           "python3 scripts/parse_raw_db.py"
 run_stage "compare_and_update"     "python3 scripts/compare_and_update.py"
+# 마감월 동결: parse_raw_db 는 매 실행 raw 전체를 재계산(무보존)하므로, 중복적재/누락이
+# 그대로 otb_data 에 흘러들어간다. generate_otb_data 직전에 반드시 freeze 를 통과시킨다.
+run_stage "freeze_closed_months"   "python3 scripts/freeze_closed_months.py"
 run_stage "generate_otb_data"      "python3 scripts/generate_otb_data.py"
 run_stage "generate_insights"      "python3 scripts/generate_insights.py"
 run_stage "campaign_performance"   "python3 scripts/generate_campaign_performance.py"
