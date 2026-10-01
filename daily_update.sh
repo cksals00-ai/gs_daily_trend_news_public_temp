@@ -155,6 +155,11 @@ run_quick "5/12 build_same_month_ratio"     "scripts/build_same_month_ratio.py"
 
 # ── [6/12] ~ [12/12] 후속 집계 ───────────────────────────────
 run_quick "6/12 compare_and_update"         "scripts/compare_and_update.py"
+# 6b — 마감월 동결. parse_raw_db 는 매 실행 raw 전체를 무보존 재계산하므로 중복적재/누락이
+#      그대로 otb_data 로 흘러든다(2026-10-01: 1~7월 약 1.9배 중복적재 사고). build.py(12/12)
+#      안에도 freeze 가 있지만 build 가 타임아웃/중단되면 otb_data 만 오염된 채 배포되므로,
+#      generate_otb_data 직전에 반드시 한 번 통과시킨다.
+run_quick "6b/12 freeze_closed_months"      "scripts/freeze_closed_months.py"
 run_quick "7/12 generate_otb_data"          "scripts/generate_otb_data.py"
 # 7b — 7월 동기간 픽업(데일리 보고 리포트): 온북 갱신과 함께 자동 갱신. raw_db 직접 net.
 #       Desktop 사본은 자동 파이프라인에선 생략(PICKUP_NO_DESKTOP). 산출물은 git add -A 로 함께 커밋/푸시.
