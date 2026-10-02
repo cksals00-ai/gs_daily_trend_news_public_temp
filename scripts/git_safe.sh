@@ -277,13 +277,24 @@ gsn_git_sync_push() {   # 0=성공 1=3회실패 2=코드충돌(중단要) 3=구�
             else
                 if _gsn_rebase_drive; then rc=0; else rc=$?; fi
                 if [ "$rc" -ne 0 ]; then
-                    gsn_log "    ❌ 자동해소 불가 — rebase 되돌리고 중단(로컬 커밋 보존)"
+                    gsn_log "    ⚠ rebase 자동해소 불가 — 되돌리고 merge 폴백 시도"
                     _gsn_backup_ref "pre-abort"
                     _gsn_git "$GSN_GIT_T_LOCAL" "rebase --abort" rebase --abort \
                         || _gsn_git "$GSN_GIT_T_LOCAL" "rebase --quit" rebase --quit || true
-                    return 2
+                    # 폴백: rebase 가 worktree 를 origin 트리로 하드리셋하다 한글경로(data/RM자료 등)
+                    #       파일이 일시 소실돼 "unstaged changes" 로 막히는 사례가 있다. merge 는
+                    #       그 하드리셋이 없어 통과한다. 코드 겹침이 없을 때만(merge -X theirs 가
+                    #       코드까지 덮지 않도록) 시도하며, 로컬 커밋은 머지커밋으로 보존된다.
+                    if [ -z "$overlap" ] && _gsn_git "$GSN_GIT_T_REBASE" "merge -X theirs" merge -X theirs --no-edit origin/main; then
+                        gsn_log "    ✅ merge 폴백 성공(생성물=origin 우선, 로컬 소스커밋 보존)"
+                    else
+                        _gsn_git "$GSN_GIT_T_LOCAL" "merge --abort" merge --abort >/dev/null 2>&1 || true
+                        gsn_log "    ❌ rebase·merge 모두 불가 — 중단(로컬 커밋 보존)"
+                        return 2
+                    fi
+                else
+                    gsn_log "    ✅ rebase 충돌 자동해소 완료(생성물=재빌드본 우선)"
                 fi
-                gsn_log "    ✅ rebase 충돌 자동해소 완료(생성물=재빌드본 우선)"
             fi
         fi
 
