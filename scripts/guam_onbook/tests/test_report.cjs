@@ -12,7 +12,7 @@ class Element {
   addEventListener(name, callback) {this.events[name]=callback;}
   setAttribute(name,value) {this.attributes[name]=value;}
 }
-const ids = Object.fromEntries(['months-select','venues-select','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
+const ids = Object.fromEntries(['months-select','venues-select','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','nationality-original','nationality-adjusted','nationality-note','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
 function venue(pax,rev,budget) {
   return {total:{pax,rev},budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null,
     categories:[{id:'kr',label:'KR',is_group:true,parent:null,pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},
@@ -22,10 +22,20 @@ function venue(pax,rev,budget) {
 const fixture={schema_version:1,as_of:'2026-10-07',coverage:{start:'2026-10-01',end:'2026-11-30'},comparison:null,
   months:[{month:'2026-10',venues:{mangilao:venue(2,300,600),talofofo:venue(1,150,300)}},
     {month:'2026-11',venues:{mangilao:venue(4,500,1000),talofofo:venue(3,450,null)}}]};
+fixture.months[0].venues.mangilao.nationalities=[{code:'UU',pax:1,rev:150},{code:'KR',pax:1,rev:150}];
+fixture.months[0].venues.mangilao.uu_resolution=[{market:'JP',basis:'clientName = GORA',pax:1,rev:150}];
 const context={document:{getElementById:id=>ids[id],createElement:()=>new Element()},
   fetch:async()=>({ok:true,json:async()=>fixture}),Date};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../..','docs/js/guam-onbook.js'),'utf8'),context);
 setImmediate(()=> {
+  assert.equal(ids.nationalities.children[0].children[0].textContent,'UU · 미상');
+  ids['nationality-adjusted'].events.click();
+  assert.ok(ids.nationalities.children.some(x=>x.children[0].textContent.includes('JP')));
+  assert.ok(!ids.nationalities.children.some(x=>x.children[0].textContent.startsWith('UU')));
+  assert.equal(ids.nationalities.children.reduce((a,x)=>a+Number(x.children[1].textContent),0),2);
+  assert.equal(fixture.months[0].venues.mangilao.nationalities[0].code,'UU');
+  ids['nationality-original'].events.click();
+  assert.equal(ids.nationalities.children[0].children[0].textContent,'UU · 미상');
   assert.equal(ids.rows.children[0].children[1].textContent,'10.0');
   assert.equal(ids.rows.children[0].children[2].textContent,'$1,400.0');
   assert.equal(ids.rows.children[0].children[6].textContent,'—'); // one missing target must not become zero
