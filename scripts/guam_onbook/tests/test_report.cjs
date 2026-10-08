@@ -64,11 +64,14 @@ setImmediate(()=> {
   assert.equal(ids.rows.children[0].children[11].textContent,'-25.0%');
   assert.equal(ids.rows.children[0].children[11].className,'down');
   ids['currency-select'].value='KRW'; ids['currency-select'].events.change();
-  assert.equal(ids.rows.children[0].children[8].textContent,'—');
+  assert.equal(ids.rows.children[0].children[8].textContent,'0.4');
+  assert.equal(ids['fx-rate'].value,1480);
   ids['fx-rate'].value='1200'; ids['fx-rate'].events.input();
-  assert.equal(ids.rows.children[0].children[8].textContent,'₩360,000.0');
+  assert.equal(ids.rows.children[0].children[8].textContent,'0.4');
   assert.equal(ids.rows.children[0].children[11].textContent,'-25.0%');
   assert.equal(ids.rows.children[0].children[2].textContent,'2.0');
+  ids['fx-rate'].value=''; ids['fx-rate'].events.input();
+  assert.equal(ids.rows.children[0].children[8].textContent,'0.4');
   ids['currency-select'].value='USD'; ids['currency-select'].events.change();
   assert.equal(ids.rows.children[0].children[8].textContent,'$300.0');
   console.log('Report rendering: period, venue, detail and missing-target checks passed.');
