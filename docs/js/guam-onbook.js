@@ -94,6 +94,7 @@
     const uu=countries.get('UU')?.pax??0, unresolved=sum([...resolutions.values()].filter(x=>['UNRESOLVED','REVIEW'].includes(x.market)).map(x=>x.pax));
     $('uu-audit').textContent='선택 범위 UU '+num(uu)+'라운드 / 분류 확인 필요 '+num(unresolved)+'라운드. 실제 국적 변경 0건.';
     const legacy=data.original_total;
+    if ($('channel-reference')) $('channel-reference').textContent = data.classification_reference ? '원본 채널 유지 · 엑셀 분류 ' + num(data.classification_reference.applied_rows) + '건 연결. 같은 예약·고객·상품·골프장·그룹만 적용. 신규 예약은 추정하지 않음.' : '엑셀 보완 채널 미적용';
     $('original-total').textContent=legacy ? legacy.months.join(' + ')+' / '+num(legacy.pax)+'라운드 / '+usd(legacy.rev)+' · 9월은 원본 고정값 참고' : '원본 범위의 9월 자료가 없어 참고 합계를 계산하지 않습니다.';
     $('rule-list').replaceChildren(...(data.classification_rules??[]).map(rule=>{const li=document.createElement('li');li.textContent=rule.label+' → '+rule.field+' = '+rule.match+' (원본 '+rule.report_row+'행)';return li;}));
   }
