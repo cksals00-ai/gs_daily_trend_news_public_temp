@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   let data;
+  let nationalityMode = "original";
   let selectedMonths = new Set(), selectedVenues = new Set(['mangilao','talofofo']);
   const $ = id => document.getElementById(id);
   const num = (value, decimal = 1) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
@@ -87,8 +88,24 @@
       }
     }
     const total=sum([...countries.values()].map(x=>x.pax));
-    const labels={KR:'KR · 한국',JP:'JP · 일본',GU:'GU · 괌',UU:'UU · 미상',US:'US · 미국',TW:'TW · 대만',CN:'CN · 중국',MISSING:'미입력'};
-    $('nationalities').replaceChildren(...[...countries].sort((a,b)=>b[1].pax-a[1].pax).map(([code,item])=>{const tr=document.createElement('tr');[labels[code]??code,num(item.pax),usd(item.rev),pct(total?item.pax/total:null)].forEach(x=>addCell(tr,x));return tr;}));
+    const display = new Map([...countries].map(([code,item])=>[code,{...item}]));
+    const supplemented = new Set();
+    if (nationalityMode === 'adjusted') {
+      for (const item of resolutions.values()) {
+        if (['UNRESOLVED','REVIEW'].includes(item.market)) continue;
+        const uu = display.get('UU');
+        if (!uu) continue;
+        uu.pax -= item.pax; uu.rev -= item.rev;
+        const code = item.market === 'OTHER' ? 'OTHER_ANALYSIS' : item.market;
+        const prior = display.get(code) ?? {pax:0,rev:0};
+        display.set(code,{pax:prior.pax+item.pax,rev:prior.rev+item.rev}); supplemented.add(code);
+      }
+    }
+    const labels={KR:'KR · 한국',JP:'JP · 일본',GU:'GU · 괌',UU:'UU · 미상',US:'US · 미국',TW:'TW · 대만',CN:'CN · 중국',MISSING:'미입력',LOCAL:'로컬·군인',OTHER_ANALYSIS:'기타 시장'};
+    $('nationalities').replaceChildren(...[...display].filter(([,x])=>x.pax||Math.abs(x.rev)>0.005).sort((a,b)=>b[1].pax-a[1].pax).map(([code,item])=>{const tr=document.createElement('tr');[ (labels[code]??code)+(supplemented.has(code)?' · 분석 포함':''),num(item.pax),usd(item.rev),pct(total?item.pax/total:null)].forEach(x=>addCell(tr,x));return tr;}));
+    $('nationality-note').textContent=nationalityMode==='original'?'원본 국적 그대로 · UU 미상':'UU 분석용 재분류 · 실제 국적 미확정';
+    $('nationality-original').setAttribute('aria-pressed',String(nationalityMode==='original'));
+    $('nationality-adjusted').setAttribute('aria-pressed',String(nationalityMode==='adjusted'));
     const markets={KR:'한국 판매시장',JP:'일본 판매시장',LOCAL:'로컬·군인 시장',OTHER:'기타 시장',UNRESOLVED:'분류 미확인',REVIEW:'규칙 충돌 · 검토 필요'};
     $('uu-resolution').replaceChildren(...[...resolutions.values()].sort((a,b)=>b.pax-a.pax).map(item=>{const tr=document.createElement('tr');[markets[item.market],item.basis,num(item.pax),usd(item.rev)].forEach(x=>addCell(tr,x));return tr;}));
     const uu=countries.get('UU')?.pax??0, unresolved=sum([...resolutions.values()].filter(x=>['UNRESOLVED','REVIEW'].includes(x.market)).map(x=>x.pax));
@@ -182,6 +199,8 @@
       $('status').textContent = data ? '새 데이터를 불러오지 못했습니다. 아래에 이전에 불러온 데이터를 표시합니다.' : '아직 예약 데이터가 반영되지 않았습니다. 예약 엑셀을 맥의 입력 폴더에 저장하고 업데이트 프로그램을 실행해 주세요.';
     }
   }
+  $('nationality-original').addEventListener('click',()=>{nationalityMode='original';render();});
+  $('nationality-adjusted').addEventListener('click',()=>{nationalityMode='adjusted';render();});
   $('detail').addEventListener('change', render);
   $('refresh').addEventListener('click', load);
   load();
