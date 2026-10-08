@@ -12,10 +12,10 @@ class Element {
   addEventListener(name, callback) {this.events[name]=callback;}
   setAttribute(name,value) {this.attributes[name]=value;}
 }
-const ids = Object.fromEntries(['months-select','venues-select','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','nationality-original','nationality-adjusted','nationality-note','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
+const ids = Object.fromEntries(['months-select','venues-select','channel-rows','currency-select','fx-rate','fx-field','currency-note','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','nationality-original','nationality-adjusted','nationality-note','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
 function venue(pax,rev,budget) {
   return {total:{pax,rev},budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null,
-    categories:[{id:'kr',label:'KR',is_group:true,parent:null,pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},
+    categories:[{id:'outbound',label:'해외',is_group:true,parent:null,pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},{id:'kr',label:'KR',is_group:true,parent:'outbound',pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},
       {id:'kr_individual',label:'한국 개인',is_group:false,parent:'kr',pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},
       {id:'unmapped',label:'미분류',is_group:false,parent:null,pax:0,rev:0,budget_pax:null,budget_rev:null,prev_pax:null,prev_rev:null,delta:null}]};
 }
@@ -51,8 +51,9 @@ setImmediate(()=> {
   assert.equal(ids.rows.children[0].children[11].className,'up'); // +50% vs prior
   assert.equal(ids.rows.children.length,2);
   ids.detail.checked=true; ids.detail.events.change();
-  assert.equal(ids.rows.children.length,4);
-  assert.equal(ids.rows.children[2].children[0].textContent,'한국 개인');
+  assert.equal(ids['channel-rows'].children.length,2);
+  assert.equal(ids['channel-rows'].children[1].children[0].textContent,'한국');
+  assert.equal(ids['channel-rows'].children[1].children[1].textContent,'한국 개인');
   ids['months-select'].children[0].events.click();
   ids['venues-select'].children[0].events.click();
   assert.equal(ids.rows.children[0].children[2].textContent,'10.0');
@@ -62,5 +63,13 @@ setImmediate(()=> {
   ids['venues-select'].children[2].events.click();
   assert.equal(ids.rows.children[0].children[11].textContent,'-25.0%');
   assert.equal(ids.rows.children[0].children[11].className,'down');
+  ids['currency-select'].value='KRW'; ids['currency-select'].events.change();
+  assert.equal(ids.rows.children[0].children[8].textContent,'—');
+  ids['fx-rate'].value='1200'; ids['fx-rate'].events.input();
+  assert.equal(ids.rows.children[0].children[8].textContent,'₩360,000.0');
+  assert.equal(ids.rows.children[0].children[11].textContent,'-25.0%');
+  assert.equal(ids.rows.children[0].children[2].textContent,'2.0');
+  ids['currency-select'].value='USD'; ids['currency-select'].events.change();
+  assert.equal(ids.rows.children[0].children[8].textContent,'$300.0');
   console.log('Report rendering: period, venue, detail and missing-target checks passed.');
 });
