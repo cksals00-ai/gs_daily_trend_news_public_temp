@@ -4,7 +4,7 @@
   let data;
   let currencyMode = 'USD', fxRate = 1480;
   try { if (typeof localStorage !== 'undefined') {const saved=JSON.parse(localStorage.getItem('guam-onbook-currency')||'{}');currencyMode=saved.currency==='KRW'?'KRW':'USD';fxRate=Number.isFinite(Number(saved.rate))&&Number(saved.rate)>0?Number(saved.rate):1480;} } catch (_) {}
-  let nationalityMode = "original";
+  let nationalityMode = "original", selectedYear = null;
   let selectedMonths = new Set(), selectedVenues = new Set(['mangilao','talofofo']);
   const $ = id => document.getElementById(id);
   const num = (value, decimal = 1) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
@@ -203,7 +203,20 @@
         return button;
       }));
     }
-    buttons('months-select',data.months.map(x=>[x.month,x.month]),selectedMonths);
+    const years=[...new Set(data.months.map(x=>x.month.slice(0,4)))].sort();
+    $('years-select').replaceChildren(...years.map(year=>{
+      const button=document.createElement('button');button.type='button';button.textContent=year+'년';
+      button.setAttribute('aria-pressed',String(year===selectedYear));
+      button.addEventListener('click',()=>{
+        const pattern=new Set([...selectedMonths].map(x=>x.slice(5)));
+        selectedYear=year;
+        const available=data.months.filter(x=>x.month.startsWith(year));
+        selectedMonths=new Set(available.filter(x=>pattern.has(x.month.slice(5))).map(x=>x.month));
+        if(!selectedMonths.size)selectedMonths=new Set(available.map(x=>x.month));
+        render();
+      });return button;
+    }));
+    buttons('months-select',data.months.filter(x=>x.month.startsWith(selectedYear)||selectedMonths.has(x.month)).map(x=>[x.month,Number(x.month.slice(5))+'월'+(x.month.startsWith(selectedYear)?'':' ('+x.month.slice(0,4)+')')]),selectedMonths);
     buttons('venues-select',[['mangilao','Mangilao'],['talofofo','Talofofo']],selectedVenues);
   }
 
@@ -215,7 +228,13 @@
       if (next.schema_version !== 1 || !next.months?.length) throw new Error('invalid-data');
       data = next;
       selectedMonths = new Set([...selectedMonths].filter(key => data.months.some(x => x.month === key)));
-      if (!selectedMonths.size) selectedMonths = new Set(data.months.map(x=>x.month));
+      if (!selectedMonths.size) {
+        const now=new Date();
+        const defaults=new Set([0,1,2].map(offset=>{const d=new Date(now.getFullYear(),now.getMonth()+offset,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}));
+        selectedMonths=new Set(data.months.filter(x=>defaults.has(x.month)).map(x=>x.month));
+        if(!selectedMonths.size)selectedMonths=new Set([data.months[data.months.length-1].month]);
+      }
+      if(!selectedYear)selectedYear=[...selectedMonths][0].slice(0,4);
       $('status').hidden = true; $('report').hidden = false; render();
     } catch (_) {
       $('status').hidden = false;
