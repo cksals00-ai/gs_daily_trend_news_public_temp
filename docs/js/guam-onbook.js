@@ -58,20 +58,19 @@
     const largest = Math.max(0, ...mix.map(x => x.rev));
     $('mix-chart').replaceChildren(...mix.filter(x => x.pax || x.is_group).map(x => chartRow(x.label,x.rev,null,largest,'비중 ' + pct(total.rev ? x.rev / total.rev : null))));
     const statements = [];
-    statements.push('현재 선택한 기간의 예약 매출은 ' + usd(total.rev) +
-      (total.budget_rev_rate == null ? '이며, 목표가 모두 입력되지 않아 전체 확보율을 계산하지 않았습니다.' : '로 월 목표 합계의 ' + pct(total.budget_rev_rate) + '를 확보했습니다. 이는 예약 기준이며 마감 실적 달성률은 아닙니다.'));
+    statements.push('예약 매출 ' + usd(total.rev) + ' · 목표 확보율 ' + pct(total.budget_rev_rate));
     const ranked = mix.filter(x => x.rev > 0).sort((a,b) => b.rev - a.rev);
-    if (ranked.length) statements.push('매출 비중이 가장 큰 분류는 ' + ranked[0].label + ' (' + pct(ranked[0].rev / total.rev) + ')입니다. 채널별 예약 유입을 볼 때 매출 구성 차이를 함께 확인해야 합니다.');
+    if (ranked.length) statements.push('최대 매출 비중: ' + ranked[0].label + ' ' + pct(ranked[0].rev / total.rev));
     const comparable = monthly.filter(x => x.budget_rev_rate != null).sort((a,b) => a.budget_rev_rate - b.budget_rev_rate);
-    if (comparable.length > 1) statements.push('예약 확보율이 가장 낮은 이용월은 ' + comparable[0].label + ' (' + pct(comparable[0].budget_rev_rate) + ')입니다. 월별 남은 기간이 달라 이 숫자만으로 영업 성과의 우열을 판단할 수는 없습니다.');
+    if (comparable.length > 1) statements.push('확보율 최저: ' + comparable[0].label + ' ' + pct(comparable[0].budget_rev_rate));
     if (selectedVenues.size === 2) {
       const averages = ['mangilao','talofofo'].map(key => {
         const p = sum(months.map(x => x.venues[key].total.pax)), r = sum(months.map(x => x.venues[key].total.rev));
         return [key, p ? r / p : null];
       });
-      statements.push('예약 라운드당 매출은 Mangilao ' + usd(averages[0][1]) + ', Talofofo ' + usd(averages[1][1]) + '입니다. 회원·여행사·로컬 구성과 상품 차이가 반영된 평균이므로 동일 상품의 가격 비교로 해석하지 않습니다.');
+      statements.push('라운드당 매출: Mangilao ' + usd(averages[0][1]) + ' / Talofofo ' + usd(averages[1][1]));
     }
-    statements.push(data.comparison ? '예약 증감은 ' + data.comparison.as_of + '에서 ' + data.as_of + '까지 ' + data.comparison.days + '일 동안의 순변화입니다. 신규·취소·금액 변경을 분리한 분석은 아닙니다.' : '현재 기준일만 있어 예약 증가 속도와 신규·취소 추이는 아직 판단할 수 없습니다. 다음 기준일 데이터를 같은 조회 기간으로 추가하면 순증감을 계산합니다.');
+    statements.push(data.comparison ? '예약 순증감: ' + data.comparison.as_of + ' 대비 (' + data.comparison.days + '일)' : '예약 증감: 비교 이력 없음');
     $('analysis').replaceChildren(...statements.map(text => {const li=document.createElement('li'); li.textContent=text; return li;}));
   }
 
@@ -144,9 +143,8 @@
     $('warnings').textContent = (unmapped?'미분류 '+num(unmapped)+'라운드가 있습니다. 전체 합계에 포함했으며 고객·채널 매핑 확인이 필요합니다. ':'')+
       (mismatch?'원본 분류·차감 규칙의 합계와 원천 예약 행 합계가 다릅니다. 원본 조건은 유지했으며 중복·차감 조건 검토가 필요합니다.':'');
     const range = selectedMonths.size === data.months.length ? data.coverage.start + ' ~ ' + data.coverage.end : [...selectedMonths].sort().join(', ');
-    $('notes').textContent = '조회 기간 ' + range + '. 취소 예약 제외. 식당·스파 제외. ' +
-      (data.comparison ? '증감은 ' + data.comparison.as_of + ' 기준과 비교한 값입니다 (' + data.comparison.days + '일 간격).' : '동일 조회 기간의 이전 스냅샷이 없어 증감은 표시하지 않습니다.') +
-      ' 목표·전년 값의 —는 미입력입니다. 합계는 현재 선택한 기간이며, 기존 엑셀 Total의 9~11월과 범위가 다를 수 있습니다.';
+    $('notes').textContent = '이용일 ' + range + ' · 취소·식당·스파 제외 · — 미입력' +
+      (data.comparison ? ' · ' + data.comparison.as_of + ' 대비' : ' · 증감 이력 없음');
   }
 
   function renderFilters() {
