@@ -1,6 +1,7 @@
 import importlib.util
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +28,21 @@ class ImportTests(unittest.TestCase):
 
     def aggregate(self, rows):
         return self.mod.aggregate(rows, "2026-10-07", "2026-10-01", "2026-12-31")
+
+    def test_previous_year_uses_actual_totals_and_rejects_unclassified_channels(self):
+        result = self.aggregate([row(Total=120)])
+        self.mod.attach_targets(result, {("2026-10", "mangilao", "total"): {"prev_pax":99,"prev_rev":999}})
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "bookings_2025-10_asof_2026-10-08.xlsx").write_bytes(b"fixture")
+            with patch.object(self.mod, "load_bookings", return_value=[row(**{"Start date":datetime(2025,10,2),"Channel":None}),row(2,Cancelled=1,**{"Start date":datetime(2025,10,3)})]):
+                self.mod.attach_previous_year(result,folder)
+        item=result["months"][0]["venues"]["mangilao"]
+        self.assertEqual(item["prev_pax"],1)
+        self.assertEqual(item["prev_rev"],100)
+        self.assertAlmostEqual(item["prev_rev_change"],0.2)
+        self.assertEqual(item["excel_prev_rev"],999)
+        self.assertTrue(all(x["prev_rev"] is None for x in item["categories"]))
+        self.assertIsNone(result["months"][1]["venues"]["mangilao"]["prev_rev"])
 
     def test_reference_channels_preserve_raw_and_require_same_booking(self):
         current = [row(Channel=None), row(2, Channel="JP"), row(3, Channel=None, Players=99), row(4, Channel=None)]
