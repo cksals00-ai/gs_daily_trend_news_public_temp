@@ -29,6 +29,22 @@ class ImportTests(unittest.TestCase):
     def aggregate(self, rows):
         return self.mod.aggregate(rows, "2026-10-07", "2026-10-01", "2026-12-31")
 
+    def test_patterns_preserve_source_and_named_rules(self):
+        source=[row(Channel=None,typeName="Green Fee 18H Military",Nationality="UU"),row(2,Channel=None,typeName="Green Fee 18H Guam Resident"),row(3,Channel=None,typeName="Green Fee 18H 2+ FIT",Nationality="JP"),row(4,Channel=None,typeName="Green Fee 18H 2+ FIT",Nationality="UU"),row(5,Channel=None,clientName="HIS",typeName="Green Fee 18H 2+ FIT",Nationality="JP"),row(6,Channel="KR",typeName="Green Fee 18H Military")]
+        enriched,audit=self.mod.pattern_channels(source)
+        self.assertEqual(audit["applied_rows"],3)
+        self.assertIsNone(source[0]["Channel"])
+        self.assertEqual(enriched[0]["Nationality"],"UU")
+        self.assertEqual(enriched[0]["analysisChannel"],"MILITARY")
+        self.assertEqual(enriched[1]["analysisChannel"],"LOCAL")
+        self.assertEqual(enriched[2]["analysisChannel"],"JP")
+        self.assertNotIn("analysisChannel",enriched[3])
+        self.assertNotIn("analysisChannel",enriched[4])
+        self.assertNotIn("analysisChannel",enriched[5])
+        result=self.aggregate(enriched)
+        self.assertEqual(result["months"][0]["venues"]["mangilao"]["total"]["pax"],6)
+        self.assertEqual(result["diagnostics"]["reconciliation_mismatches"],0)
+
     def test_previous_year_uses_actual_totals_and_rejects_unclassified_channels(self):
         result = self.aggregate([row(Total=120)])
         self.mod.attach_targets(result, {("2026-10", "mangilao", "total"): {"prev_pax":99,"prev_rev":999}})
