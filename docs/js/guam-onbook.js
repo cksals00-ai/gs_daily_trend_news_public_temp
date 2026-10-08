@@ -149,9 +149,14 @@
       let depth = 0, parent = item.parent;
       while (parent) {depth++; parent = children.get(parent);}
       name.style.paddingLeft = (14 + depth * 12) + 'px';
-      [num(item.pax), usd(item.rev), num(item.budget_pax), usd(item.budget_rev), pct(item.budget_pax_rate), pct(item.budget_rev_rate), num(item.prev_pax), usd(item.prev_rev)].forEach(x => addCell(tr, x));
-      ['pax','rev'].forEach(key => {const value=item['prev_'+key+'_change']; addCell(tr,change(value,pct),value > 0 ? 'up' : value < 0 ? 'down' : '');});
-      ['pax', 'rev'].forEach(key => {const value = item.delta?.[key]; addCell(tr, change(value, key === 'rev' ? usd : num), value > 0 ? 'up' : value < 0 ? 'down' : '');});
+      ['pax','rev'].forEach(key => {
+        const format = key === 'rev' ? usd : num;
+        [format(item['budget_'+key]),format(item[key]),pct(item['budget_'+key+'_rate']),format(item['prev_'+key])].forEach(x=>addCell(tr,x));
+        const previous=item['prev_'+key+'_change'];
+        addCell(tr,change(previous,pct),previous>0?'up':previous<0?'down':'');
+        const delta=item.delta?.[key];
+        addCell(tr,change(delta,format),delta>0?'up':delta<0?'down':'');
+      });
       return tr;
     }));
     $('updated').textContent = '예약 기준일 ' + data.as_of;
