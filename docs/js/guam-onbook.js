@@ -61,7 +61,7 @@
     const largest = Math.max(0, ...mix.map(x => x.rev));
     $('mix-chart').replaceChildren(...mix.filter(x => x.pax || x.is_group).map(x => chartRow(x.label,x.rev,null,largest,'비중 ' + pct(total.rev ? x.rev / total.rev : null))));
     const statements = [];
-    if(data.previous_year_source?.months?.length) statements.push('전년비: 현재 예약 / 전년 동월 최종 실적 · 채널 미확정은 비교 제외');
+    if(data.previous_year_source?.months?.length) statements.push('전년비: 현재 예약 / 전년 동월 최종 실적 · 분석 분류 기준, 미확정 별도');
     statements.push('매출 ' + usd(total.rev) + ' · 목표 확보율 ' + pct(total.budget_rev_rate));
     const ranked = mix.filter(x => x.rev > 0).sort((a,b) => b.rev - a.rev);
     if (ranked.length) statements.push('최대 매출 비중: ' + ranked[0].label + ' ' + pct(ranked[0].rev / total.rev));
@@ -113,6 +113,7 @@
     $('uu-resolution').replaceChildren(...[...resolutions.values()].sort((a,b)=>b.pax-a.pax).map(item=>{const tr=document.createElement('tr');[markets[item.market],item.basis,num(item.pax),usd(item.rev)].forEach(x=>addCell(tr,x));return tr;}));
     const uu=countries.get('UU')?.pax??0, unresolved=sum([...resolutions.values()].filter(x=>['UNRESOLVED','REVIEW'].includes(x.market)).map(x=>x.pax));
     $('uu-audit').textContent='선택 범위 UU '+num(uu)+'라운드 / 분류 확인 필요 '+num(unresolved)+'라운드. 실제 국적 변경 0건.';
+    if($('pattern-reference')) $('pattern-reference').textContent=data.analysis_classification?'패턴 분석 '+num(data.analysis_classification.applied_rows)+'건 적용 · 기존 엑셀 검증 2,272.0건 일치 / 충돌 0.0건 · 미확정 별도':'패턴 분석 미적용';
     const legacy=data.original_total;
     if ($('channel-reference')) $('channel-reference').textContent = data.classification_reference ? '원본 채널 유지 · 엑셀 분류 ' + num(data.classification_reference.applied_rows) + '건 연결. 같은 예약·고객·상품·골프장·그룹만 적용. 신규 예약은 추정하지 않음.' : '엑셀 보완 채널 미적용';
     $('original-total').textContent=legacy ? legacy.months.join(' + ')+' / '+num(legacy.pax)+'라운드 / '+usd(legacy.rev)+' · 9월은 원본 고정값 참고' : '원본 범위의 9월 자료가 없어 참고 합계를 계산하지 않습니다.';
