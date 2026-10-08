@@ -4,8 +4,8 @@
   let data;
   let selectedMonths = new Set(), selectedVenues = new Set(['mangilao','talofofo']);
   const $ = id => document.getElementById(id);
-  const num = (value, decimal = 0) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
-  const usd = value => value == null ? '—' : (value < 0 ? '-$' : '$') + num(Math.abs(value), 2);
+  const num = (value, decimal = 1) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
+  const usd = value => value == null ? '—' : (value < 0 ? '-$' : '$') + num(Math.abs(value), 1);
   const pct = value => value == null ? '—' : num(value * 100, 1) + '%';
   const sum = values => values.some(x => x == null) ? null : values.reduce((a, b) => a + b, 0);
   const change = (value, formatter) => value == null ? '—' : (value > 0 ? '+' : '') + formatter(value);
