@@ -450,11 +450,85 @@ def build(input_path, as_of, config, targets=None):
     result["source_sha256"] = hashlib.sha256(Path(input_path).read_bytes()).hexdigest()
     coverage = f'{config["start"]}_{config["end"]}'
     atomic_json(history / f"{as_of}_{coverage}.json", result)
+    if config.get("archive_folder"):
+        extend_archived_months(result,config["archive_folder"],load_targets(targets),config.get("analysis_patterns",False))
     atomic_json(config["output"], result)
     return result
 
 
+def extend_archived_months(result, folder, targets=None, use_patterns=False):
+    """Append source-backed monthly history while preserving the daily snapshot."""
+    by_month={x["month"]:x for x in result["months"]}
+    audit=[]
+    paths={p.name[9:16]:p for p in sorted(Path(folder).glob("bookings_????-??_asof_????-??-??.xlsx"))}
+    for month,path in sorted(paths.items()):
+        if month in by_month:
+            continue
+        year, mm=map(int,month.split("-"))
+        start=date(year,mm,1)
+        end=date(year+1 if mm==12 else year,1 if mm==12 else mm+1,1)-timedelta(days=1)
+        rows=load_bookings(path)
+        if use_patterns:
+            rows, pattern_audit=pattern_channels(rows)
+        old=aggregate(rows,result["as_of"],start.isoformat(),end.isoformat())
+        attach_targets(old,targets or {})
+        compare(old,None)
+        by_month[month]=old["months"][0]
+        audit.append({"month":month,"rows":len(rows),"sha256":hashlib.sha256(path.read_bytes()).hexdigest(),"unmapped_rows":old["diagnostics"]["unmapped_rows"]})
+    result["months"]=[by_month[x] for x in sorted(by_month)]
+    for month in result["months"]:
+        year,mm=map(int,month["month"].split("-"))
+        prior=by_month.get(f"{year-1:04d}-{mm:02d}")
+        if not prior:
+            continue
+        for venue,item in month["venues"].items():
+            previous=prior["venues"][venue]
+            cats={x["id"]:x for x in previous["categories"]}
+            for target,actual,reference in [(item,item["total"],previous["total"])] + [(x,x,cats[x["id"]]) for x in item["categories"]]:
+                for metric in ("pax","rev"):
+                    target.setdefault("excel_prev_"+metric,target.get("prev_"+metric))
+                    value=reference[metric]
+                    target["prev_"+metric]=value
+                    target["prev_"+metric+"_change"]=(actual[metric]-value)/value if value else None
+    result["archive_coverage"]={"start":result["months"][0]["month"],"end":result["months"][-1]["month"],"months":len(result["months"]),"sources":audit}
+    return result
+
+
+def merge_monthly_snapshot(config):
+    folder=Path(config.get("archive_folder",Path(config["inbox"])/"monthly"))
+    first,last=date.fromisoformat(config["start"]),date.fromisoformat(config["end"])
+    wanted=[];cursor=first.replace(day=1)
+    while cursor<=last:
+        wanted.append(cursor.strftime("%Y-%m"));cursor=date(cursor.year+1,1,1) if cursor.month==12 else date(cursor.year,cursor.month+1,1)
+    groups={}
+    for p in folder.glob("bookings_????-??_asof_????-??-??.xlsx"):
+        groups.setdefault(p.stem[-10:],{})[p.name[9:16]]=p
+    complete=[day for day,parts in groups.items() if all(month in parts for month in wanted)]
+    if not complete:return
+    as_of=max(complete);dest=Path(config["inbox"])/f"bookings_{as_of}.xlsx"
+    if dest.exists():return
+    workbook=openpyxl.Workbook();sheet=workbook.active;sheet.title="Booking"
+    header=None;seen=set()
+    try:
+        for month in wanted:
+            source=openpyxl.load_workbook(groups[as_of][month],read_only=True,data_only=True)
+            try:
+                values=source.active.iter_rows(values_only=True);columns=tuple(next(values))
+                if header is None:header=columns;sheet.append(list(header))
+                if columns!=header:raise ValueError("Monthly headers differ")
+                for row in values:
+                    key=row[header.index("Id")]
+                    if key is None:continue
+                    if str(key) in seen:raise ValueError("Duplicate Id across monthly snapshots")
+                    if day(row[header.index("Start date")]).strftime("%Y-%m")!=month:raise ValueError("Monthly use date mismatch")
+                    seen.add(str(key));sheet.append(list(row))
+            finally:source.close()
+        temp=dest.with_suffix(".building.xlsx");workbook.save(temp);temp.replace(dest)
+    finally:workbook.close()
+
+
 def run_folder(config):
+    merge_monthly_snapshot(config)
     inbox = Path(config["inbox"])
     matches = [(m.group(1), p) for p in inbox.glob("bookings_*.xlsx")
                if (m := re.fullmatch(r"bookings_(\d{4}-\d{2}-\d{2})\.xlsx", p.name))]
@@ -472,7 +546,7 @@ def main():
     parser.add_argument("--watch", action="store_true")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder"):
+    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder", "archive_folder"):
         if key not in config:
             continue
         config[key] = str((args.config.parent / config[key]).resolve())
@@ -483,6 +557,8 @@ def main():
     last_signature = None
     while True:
         files = sorted(Path(config["inbox"]).glob("*.xlsx")) + [args.config]
+        if config.get("archive_folder"):
+            files += sorted(Path(config["archive_folder"]).glob("*.xlsx"))
         if config.get("historical_months") and Path(config["historical_months"]).exists():
             files.append(Path(config["historical_months"]))
         if config.get("classification_reference"):
@@ -495,7 +571,7 @@ def main():
                 try:
                     # Config edits also affect watched coverage.
                     config = json.loads(args.config.read_text(encoding="utf-8"))
-                    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder"):
+                    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder", "archive_folder"):
                         if key not in config:
                             continue
                         config[key] = str((args.config.parent / config[key]).resolve())
