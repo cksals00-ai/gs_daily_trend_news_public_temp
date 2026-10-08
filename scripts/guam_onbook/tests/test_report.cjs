@@ -12,7 +12,7 @@ class Element {
   addEventListener(name, callback) {this.events[name]=callback;}
   setAttribute(name,value) {this.attributes[name]=value;}
 }
-const ids = Object.fromEntries(['months-select','venues-select','channel-rows','currency-select','fx-rate','fx-field','currency-note','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','nationality-original','nationality-adjusted','nationality-note','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
+const ids = Object.fromEntries(['years-select','months-select','venues-select','channel-rows','currency-select','fx-rate','fx-field','currency-note','detail','refresh','rows','cards','updated','warnings','notes','report','status','monthly-chart','mix-chart','analysis','nationalities','nationality-original','nationality-adjusted','nationality-note','uu-resolution','uu-audit','original-total','rule-list'].map(id=>[id,new Element()]));
 function venue(pax,rev,budget) {
   return {total:{pax,rev},budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null,
     categories:[{id:'outbound',label:'해외',is_group:true,parent:null,pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},{id:'kr',label:'KR',is_group:true,parent:'outbound',pax,rev,budget_pax:10,budget_rev:budget,prev_pax:10,prev_rev:200,delta:null},
@@ -24,8 +24,9 @@ const fixture={schema_version:1,as_of:'2026-10-07',coverage:{start:'2026-10-01',
     {month:'2026-11',venues:{mangilao:venue(4,500,1000),talofofo:venue(3,450,null)}}]};
 fixture.months[0].venues.mangilao.nationalities=[{code:'UU',pax:1,rev:150},{code:'KR',pax:1,rev:150}];
 fixture.months[0].venues.mangilao.uu_resolution=[{market:'JP',basis:'clientName = GORA',pax:1,rev:150}];
+fixture.months.push({month:'2025-10',venues:{mangilao:venue(7,700,1000),talofofo:venue(3,300,500)}});
 const context={document:{getElementById:id=>ids[id],createElement:()=>new Element()},
-  fetch:async()=>({ok:true,json:async()=>fixture}),Date};
+  fetch:async()=>({ok:true,json:async()=>fixture}),Date:class extends Date {constructor(...args){super(...(args.length?args:['2026-10-08T12:00:00+09:00']));}}};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../..','docs/js/guam-onbook.js'),'utf8'),context);
 setImmediate(()=> {
   assert.equal(ids.nationalities.children[0].children[0].textContent,'UU · 미상');
@@ -41,7 +42,7 @@ setImmediate(()=> {
   assert.equal(ids.rows.children[0].children[9].textContent,'—'); // one missing target must not become zero
   assert.ok(ids.analysis.children.length >= 2);
   assert.equal(ids['monthly-chart'].children[0].children[0].textContent,'2026-10');
-  ids['months-select'].children[2].events.click(); // remove November from all
+  ids['years-select','months-select'].children[2].events.click(); // remove November from all
   assert.equal(ids.rows.children[0].children[2].textContent,'3.0');
   assert.equal(ids.rows.children[0].children[8].textContent,'$450.0');
   assert.equal(ids.rows.children[0].children[9].textContent,'50.0%');
@@ -54,12 +55,12 @@ setImmediate(()=> {
   assert.equal(ids['channel-rows'].children.length,2);
   assert.equal(ids['channel-rows'].children[1].children[0].textContent,'한국');
   assert.equal(ids['channel-rows'].children[1].children[1].textContent,'한국 개인');
-  ids['months-select'].children[0].events.click();
+  ids['years-select','months-select'].children[0].events.click();
   ids['venues-select'].children[0].events.click();
   assert.equal(ids.rows.children[0].children[2].textContent,'10.0');
-  assert.equal(ids['months-select'].children[0].attributes['aria-pressed'],'true');
+  assert.equal(ids['years-select','months-select'].children[0].attributes['aria-pressed'],'true');
   fixture.months[0].venues.mangilao.prev_rev = 400;
-  ids['months-select'].children[2].events.click();
+  ids['years-select','months-select'].children[2].events.click();
   ids['venues-select'].children[2].events.click();
   assert.equal(ids.rows.children[0].children[11].textContent,'-25.0%');
   assert.equal(ids.rows.children[0].children[11].className,'down');
@@ -74,5 +75,9 @@ setImmediate(()=> {
   assert.equal(ids.rows.children[0].children[8].textContent,'0.4');
   ids['currency-select'].value='USD'; ids['currency-select'].events.change();
   assert.equal(ids.rows.children[0].children[8].textContent,'$300.0');
+  ids['years-select'].children[0].events.click();
+  assert.equal(ids.rows.children[0].children[2].textContent,'7.0');
+  assert.equal(ids['years-select'].children[0].attributes['aria-pressed'],'true');
+  assert.equal(ids['months-select'].children[1].textContent,'10월');
   console.log('Report rendering: period, venue, detail and missing-target checks passed.');
 });
