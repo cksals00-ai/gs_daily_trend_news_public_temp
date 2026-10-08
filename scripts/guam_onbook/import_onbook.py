@@ -313,6 +313,35 @@ def attach_targets(result, targets):
                     item["prev_" + metric + "_change"] = (actual[metric] - prev) / prev if prev else None
 
 
+def attach_previous_year(result, folder):
+    """Use source-backed final prior-year totals; never invent missing channels."""
+    audit = {"basis": "현재 예약 / 전년 동월 최종 실적", "months": []}
+    for month in result["months"]:
+        year, mm = map(int, month["month"].split("-"))
+        previous = f"{year-1:04d}-{mm:02d}"
+        files = sorted(Path(folder).glob(f"bookings_{previous}_asof_*.xlsx"))
+        if not files:
+            continue
+        start = date(year-1, mm, 1)
+        end = (date(year if mm==12 else year-1, 1 if mm==12 else mm+1, 1)-timedelta(days=1))
+        rows = load_bookings(files[-1])
+        old = aggregate(rows, result["as_of"], start.isoformat(), end.isoformat())["months"][0]
+        for venue, item in month["venues"].items():
+            for target in [item] + item["categories"]:
+                target["excel_prev_pax"] = target.get("prev_pax")
+                target["excel_prev_rev"] = target.get("prev_rev")
+            prior = old["venues"][venue]
+            complete = not next(x for x in prior["categories"] if x["id"]=="unmapped")["pax"]
+            by_id = {x["id"]: x for x in prior["categories"]}
+            for target, actual, reference in [(item,item["total"],prior["total"])] + [(x,x,by_id[x["id"]] if complete else None) for x in item["categories"]]:
+                for metric in ("pax", "rev"):
+                    value = reference[metric] if reference is not None else None
+                    target["prev_"+metric] = value
+                    target["prev_"+metric+"_change"] = (actual[metric]-value)/value if value else None
+        audit["months"].append({"month":month["month"],"previous_month":previous,"source_sha256":hashlib.sha256(files[-1].read_bytes()).hexdigest(),"raw_channel_missing":sum(not x.get("Channel") for x in rows)})
+    result["previous_year_source"] = audit
+
+
 def compare(result, previous):
     result["comparison"] = None
     for month in result["months"]:
@@ -374,6 +403,8 @@ def build(input_path, as_of, config, targets=None):
     result = aggregate(rows, as_of, config["start"], config["end"])
     result["classification_reference"] = audit
     attach_targets(result, load_targets(targets))
+    if config.get("previous_year_folder"):
+        attach_previous_year(result, config["previous_year_folder"])
     history = Path(config["history"])
     previous = []
     if history.exists():
@@ -411,7 +442,7 @@ def main():
     parser.add_argument("--watch", action="store_true")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    for key in ("inbox", "history", "output", "historical_months", "classification_reference"):
+    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder"):
         if key not in config:
             continue
         config[key] = str((args.config.parent / config[key]).resolve())
@@ -434,7 +465,7 @@ def main():
                 try:
                     # Config edits also affect watched coverage.
                     config = json.loads(args.config.read_text(encoding="utf-8"))
-                    for key in ("inbox", "history", "output", "historical_months", "classification_reference"):
+                    for key in ("inbox", "history", "output", "historical_months", "classification_reference", "previous_year_folder"):
                         if key not in config:
                             continue
                         config[key] = str((args.config.parent / config[key]).resolve())
