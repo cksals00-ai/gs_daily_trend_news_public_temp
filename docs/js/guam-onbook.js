@@ -2,11 +2,13 @@
 (() => {
   'use strict';
   let data;
+  let currencyMode = 'USD', fxRate = null;
+  try { if (typeof localStorage !== 'undefined') {const saved=JSON.parse(localStorage.getItem('guam-onbook-currency')||'{}');currencyMode=saved.currency==='KRW'?'KRW':'USD';fxRate=Number(saved.rate)>0?Number(saved.rate):null;} } catch (_) {}
   let nationalityMode = "original";
   let selectedMonths = new Set(), selectedVenues = new Set(['mangilao','talofofo']);
   const $ = id => document.getElementById(id);
   const num = (value, decimal = 1) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
-  const usd = value => value == null ? '—' : (value < 0 ? '-$' : '$') + num(Math.abs(value), 1);
+  const usd = value => value == null || currencyMode==='KRW' && !fxRate ? '—' : (value < 0 ? '-' : '') + (currencyMode==='KRW'?'₩':'$') + num(Math.abs(value) * (currencyMode==='KRW'?fxRate:1), 1);
   const pct = value => value == null ? '—' : num(value * 100, 1) + '%';
   const sum = values => values.some(x => x == null) ? null : values.reduce((a, b) => a + b, 0);
   const change = (value, formatter) => value == null ? '—' : (value > 0 ? '+' : '') + formatter(value);
@@ -117,6 +119,9 @@
   }
 
   function render() {
+    $('fx-field').hidden=currencyMode!=='KRW';
+    $('currency-note').textContent=currencyMode==='KRW'?(fxRate?'1 USD = ₩'+num(fxRate)+' · 입력 환율':'환율 입력 필요'):'USD 기준';
+    for(const node of document.querySelectorAll?.('.currency-code')??[]) node.textContent=currencyMode;
     renderFilters();
     const months = data.months.filter(x => selectedMonths.has(x.month));
     const venueRows = months.flatMap(x => Object.entries(x.venues).filter(([key]) => selectedVenues.has(key)).map(([, value]) => value));
@@ -142,23 +147,35 @@
     renderAnalysis(months, venueRows, total, records);
     renderNationality(venueRows);
     const children = new Map(meta.map(x => [x.id, x.parent]));
-    $('rows').replaceChildren(...records.filter(x => $('detail').checked || x.is_group || x.id === 'unmapped' && x.pax > 0).map(item => {
-      const tr = document.createElement('tr');
-      tr.className = item.id === 'total' ? 'total' : item.id === 'unmapped' && item.pax ? 'unmapped' : item.is_group ? 'group' : '';
-      const name = addCell(tr, item.label);
-      let depth = 0, parent = item.parent;
-      while (parent) {depth++; parent = children.get(parent);}
-      name.style.paddingLeft = (14 + depth * 12) + 'px';
+    function metricRow(item, type=null) {
+      const tr=document.createElement('tr');
+      tr.className=item.id==='total'?'total':item.id==='unmapped'?'unmapped':'';
+      if(type!=null) addCell(tr,type);
+      addCell(tr,item.label);
       ['pax','rev'].forEach(key => {
-        const format = key === 'rev' ? usd : num;
+        const format=key==='rev'?usd:num;
         [format(item['budget_'+key]),format(item[key]),pct(item['budget_'+key+'_rate']),format(item['prev_'+key])].forEach(x=>addCell(tr,x));
-        const previous=item['prev_'+key+'_change'];
-        addCell(tr,change(previous,pct),previous>0?'up':previous<0?'down':'');
-        const delta=item.delta?.[key];
-        addCell(tr,change(delta,format),delta>0?'up':delta<0?'down':'');
+        const previous=item['prev_'+key+'_change'];addCell(tr,change(previous,pct),previous>0?'up':previous<0?'down':'');
+        const delta=item.delta?.[key];addCell(tr,change(delta,format),delta>0?'up':delta<0?'down':'');
       });
       return tr;
+    }
+    const byId=new Map(records.map(x=>[x.id,x]));
+    $('rows').replaceChildren(...['total','local_total','outbound','unmapped'].map(id=>byId.get(id)).filter(x=>x&&(x.id!=='unmapped'||x.pax||x.rev)).map(item=>{
+      const label={total:'TOTAL',local_total:'로컬',outbound:'해외',unmapped:'미분류'}[item.id];
+      const tr=metricRow({...item,label});if(item.id==='local_total')tr.className='market-local';if(item.id==='outbound')tr.className='market-overseas';return tr;
     }));
+    const roots=['kr','jp','others','local_total'];
+    function kind(item) {
+      if(item.id==='total') return '전체';let key=item.id;
+      while(!roots.includes(key)&&children.get(key)) key=children.get(key);
+      return {kr:'한국',jp:'일본',others:'기타',local_total:'로컬'}[key]??'미분류';
+    }
+    const channelRecords=records.filter(x=>x.id==='total'||x.id==='unmapped'&&(x.pax||x.rev)||x.id!=='unmapped'&&($('detail').checked?!x.is_group:roots.includes(x.parent)));
+    const order=['전체','한국','일본','기타','로컬','미분류'];
+    channelRecords.sort((a,b)=>order.indexOf(kind(a))-order.indexOf(kind(b))||(a.report_row??0)-(b.report_row??0));
+    let lastKind=null;
+    $('channel-rows').replaceChildren(...channelRecords.map(item=>{const type=kind(item),tr=metricRow(item,type);if(lastKind!==type&&lastKind!==null)tr.className+=' channel-start';lastKind=type;return tr;}));
     $('updated').textContent = '예약 기준일 ' + data.as_of;
     const unmapped = sum(venueRows.map(v => v.categories.find(x => x.id === 'unmapped').pax));
     const mismatch=venueRows.some(v=>v.source_total&&(v.total.pax!==v.source_total.pax||Math.abs(v.total.rev-v.source_total.rev)>0.005));
@@ -204,6 +221,16 @@
       $('status').textContent = data ? '새 데이터를 불러오지 못했습니다. 아래에 이전에 불러온 데이터를 표시합니다.' : '아직 예약 데이터가 반영되지 않았습니다. 예약 엑셀을 맥의 입력 폴더에 저장하고 업데이트 프로그램을 실행해 주세요.';
     }
   }
+  $('currency-select').value=currencyMode;
+  if(fxRate) $('fx-rate').value=fxRate;
+  function updateCurrency() {
+    currencyMode=$('currency-select').value==='KRW'?'KRW':'USD';
+    const value=Number($('fx-rate').value);fxRate=Number.isFinite(value)&&value>0?value:null;
+    try {if(typeof localStorage!=='undefined') localStorage.setItem('guam-onbook-currency',JSON.stringify({currency:currencyMode,rate:fxRate}));} catch (_) {}
+    if(data)render();
+  }
+  $('currency-select').addEventListener('change',updateCurrency);
+  $('fx-rate').addEventListener('input',updateCurrency);
   $('nationality-original').addEventListener('click',()=>{nationalityMode='original';render();});
   $('nationality-adjusted').addEventListener('click',()=>{nationalityMode='adjusted';render();});
   $('detail').addEventListener('change', render);
