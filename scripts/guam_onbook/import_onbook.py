@@ -128,10 +128,32 @@ def load_bookings(path):
         workbook.close()
 
 
+def reference_channels(rows, reference):
+    """Keep raw Channel; attach a separately sourced, booking-specific report field."""
+    lookup = {}
+    for item in reference:
+        key = str(item["Id"])
+        if key in lookup:
+            raise ValueError("duplicate Id in classification reference")
+        lookup[key] = item
+    enriched, applied = [], 0
+    for original in rows:
+        item = dict(original)
+        prior = lookup.get(str(item["Id"]))
+        if not item.get("Channel") and prior and prior.get("Channel") and all(
+            item.get(key) == prior.get(key) for key in ("Players", "Type", "resourceTypeName", "Client Group")
+        ):
+            item["reportChannel"] = prior["Channel"]
+            applied += 1
+        enriched.append(item)
+    return enriched, {"applied_rows": applied, "raw_channel_changed": 0,
+                      "basis": "Original 2026-10-07 Excel Channel, matched by booking Id and unchanged payer/type/venue/group; new bookings are not inferred"}
+
+
 def original_contributions(row):
     """Literal SUMIFS membership rules; Nationality never determines a bucket."""
     result = {x[0]: 1 for x in LEAVES if x[4] and
-              str(row.get(x[4]) or "").casefold() == str(x[5]).casefold()}
+              str((row.get("Channel") or row.get("reportChannel")) if x[4] == "Channel" else (row.get(x[4]) or "")).casefold() == str(x[5]).casefold()}
     # Original formula: all Sono Member rows minus ALL J&J MEMBER client rows.
     if str(row.get("clientName") or "").casefold() == "j&j marketing (member)":
         result["sono_member"] = result.get("sono_member", 0) - 1
@@ -192,7 +214,8 @@ def aggregate(rows, as_of, start, end):
             for category, weight in contributions.items():
                 if weight > 0:
                     rule = next(x for x in LEAVES if x[0] == category)
-                    evidence.append(f"{rule[4]} = {rule[5]}" if rule[4] else "No matching rule")
+                    evidence_field = "엑셀 보완 채널" if rule[4] == "Channel" and not row.get("Channel") and row.get("reportChannel") else rule[4]
+                    evidence.append(f"{evidence_field} = {rule[5]}" if rule[4] else "No matching rule")
             uu_slot = uu_counts.setdefault((played.strftime("%Y-%m"), venue, market, "; ".join(evidence)), [0, Decimal(0)])
             uu_slot[0] += 1
             uu_slot[1] += amount
@@ -342,7 +365,14 @@ def original_total(result, historical_months):
 
 
 def build(input_path, as_of, config, targets=None):
-    result = aggregate(load_bookings(input_path), as_of, config["start"], config["end"])
+    rows = load_bookings(input_path)
+    audit = None
+    if config.get("classification_reference"):
+        reference = Path(config["classification_reference"])
+        rows, audit = reference_channels(rows, load_bookings(reference))
+        audit["reference_sha256"] = hashlib.sha256(reference.read_bytes()).hexdigest()
+    result = aggregate(rows, as_of, config["start"], config["end"])
+    result["classification_reference"] = audit
     attach_targets(result, load_targets(targets))
     history = Path(config["history"])
     previous = []
@@ -381,7 +411,7 @@ def main():
     parser.add_argument("--watch", action="store_true")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    for key in ("inbox", "history", "output", "historical_months"):
+    for key in ("inbox", "history", "output", "historical_months", "classification_reference"):
         if key not in config:
             continue
         config[key] = str((args.config.parent / config[key]).resolve())
@@ -394,6 +424,8 @@ def main():
         files = sorted(Path(config["inbox"]).glob("*.xlsx")) + [args.config]
         if config.get("historical_months") and Path(config["historical_months"]).exists():
             files.append(Path(config["historical_months"]))
+        if config.get("classification_reference"):
+            files.append(Path(config["classification_reference"]))
         signature = tuple((str(p), p.stat().st_size, p.stat().st_mtime_ns) for p in files if not p.name.startswith("~$"))
         if signature != last_signature:
             time.sleep(2)  # Wait for file copy to settle before parsing.
@@ -402,7 +434,7 @@ def main():
                 try:
                     # Config edits also affect watched coverage.
                     config = json.loads(args.config.read_text(encoding="utf-8"))
-                    for key in ("inbox", "history", "output", "historical_months"):
+                    for key in ("inbox", "history", "output", "historical_months", "classification_reference"):
                         if key not in config:
                             continue
                         config[key] = str((args.config.parent / config[key]).resolve())

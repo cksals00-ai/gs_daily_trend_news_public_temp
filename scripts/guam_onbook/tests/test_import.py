@@ -28,6 +28,20 @@ class ImportTests(unittest.TestCase):
     def aggregate(self, rows):
         return self.mod.aggregate(rows, "2026-10-07", "2026-10-01", "2026-12-31")
 
+    def test_reference_channels_preserve_raw_and_require_same_booking(self):
+        current = [row(Channel=None), row(2, Channel="JP"), row(3, Channel=None, Players=99), row(4, Channel=None)]
+        reference = [row(Channel="KR"), row(2, Channel="KR"), row(3, Channel="LOCAL", Players=98)]
+        enriched, audit = self.mod.reference_channels(current, reference)
+        self.assertIsNone(current[0]["Channel"])
+        self.assertIsNone(enriched[0]["Channel"])
+        self.assertEqual(enriched[0]["reportChannel"], "KR")
+        self.assertNotIn("reportChannel", enriched[1])
+        self.assertNotIn("reportChannel", enriched[2])
+        self.assertNotIn("reportChannel", enriched[3])
+        self.assertEqual(audit["applied_rows"], 1)
+        result = self.aggregate(enriched)
+        self.assertEqual(result["diagnostics"]["unmapped_rows"], 2)
+
     def test_creation_date_does_not_exclude_preexisting_bookings(self):
         result = self.aggregate([row(), row(2, Cancelled="Yes"),
                                  row(3, **{"Start date": datetime(2027, 10, 2)}),
