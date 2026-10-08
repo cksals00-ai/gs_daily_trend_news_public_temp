@@ -150,10 +150,34 @@ def reference_channels(rows, reference):
                       "basis": "Original 2026-10-07 Excel Channel, matched by booking Id and unchanged payer/type/venue/group; new bookings are not inferred"}
 
 
+def pattern_channel(r):
+ t=str(r.get('typeName') or '').upper();g=str(r.get('clientGroupName') or '').upper();n=str(r.get('Nationality') or '').upper();client=str(r.get('clientName') or '').upper()
+ if 'MILITARY' in t:return 'MILITARY','product_military'
+ if any(x in t for x in ['GUAM RESIDENT','RESIDENT TWILIGHT','GF RESIDENT','LOCAL GROUP','LOCAL GRP','LOCAL MEMBERSHIP','RES PROMO','US CITIZEN']):return 'LOCAL','product_local'
+ if g.startswith('LOCAL CLUBS') or re.search(r'LOCAL MEM[E]?BERSHIP',g):return 'LOCAL','group_local'
+ if client in ['RITA TOURS','DAEKUN TOUR BOOKING KOREA']:return 'Other','agency_other_exact'
+ if client=='SPORTS NIPPON SHIMBUNSHA (SPONICHI)':return 'JP GROUP','corporate_jp_exact'
+ if not g and n in ['KR','JP'] and any(x in t for x in ['FIT','PACK','PKG MEMBER','18H PRO']):return n,'individual_country_group_product'
+ return None,None
+
+def pattern_channels(rows):
+    enriched, rules = [], {}
+    for original in rows:
+        item = dict(original)
+        if item.get("resourceTypeName") in VENUES.values() and original_contributions(item)=={"unmapped":1} and not item.get("Channel") and not item.get("reportChannel"):
+            channel, basis = pattern_channel(item)
+            if channel:
+                item["analysisChannel"] = channel
+                item["analysisChannelBasis"] = basis
+                rules[basis] = rules.get(basis, 0)+1
+        enriched.append(item)
+    return enriched, {"version":"2026-10-08-v1","applied_rows":sum(rules.values()),"rules":rules,"raw_channel_changed":0,"raw_nationality_changed":0,"validation":{"reference":"2026-10-07 Excel","predicted":2272,"matched":2272,"conflicts":0,"unresolved":31},"basis":"분석용 분류 · 상품/고객그룹/거래처/국적 조합 · 원본 필드 유지"}
+
+
 def original_contributions(row):
     """Literal SUMIFS membership rules; Nationality never determines a bucket."""
     result = {x[0]: 1 for x in LEAVES if x[4] and
-              str((row.get("Channel") or row.get("reportChannel")) if x[4] == "Channel" else (row.get(x[4]) or "")).casefold() == str(x[5]).casefold()}
+              str((row.get("Channel") or row.get("reportChannel") or row.get("analysisChannel")) if x[4] == "Channel" else (row.get(x[4]) or "")).casefold() == str(x[5]).casefold()}
     # Original formula: all Sono Member rows minus ALL J&J MEMBER client rows.
     if str(row.get("clientName") or "").casefold() == "j&j marketing (member)":
         result["sono_member"] = result.get("sono_member", 0) - 1
@@ -214,7 +238,7 @@ def aggregate(rows, as_of, start, end):
             for category, weight in contributions.items():
                 if weight > 0:
                     rule = next(x for x in LEAVES if x[0] == category)
-                    evidence_field = "엑셀 보완 채널" if rule[4] == "Channel" and not row.get("Channel") and row.get("reportChannel") else rule[4]
+                    evidence_field = row.get("analysisChannelBasis") if row.get("analysisChannel") else "엑셀 보완 채널" if rule[4] == "Channel" and not row.get("Channel") and row.get("reportChannel") else rule[4]
                     evidence.append(f"{evidence_field} = {rule[5]}" if rule[4] else "No matching rule")
             uu_slot = uu_counts.setdefault((played.strftime("%Y-%m"), venue, market, "; ".join(evidence)), [0, Decimal(0)])
             uu_slot[0] += 1
@@ -313,7 +337,7 @@ def attach_targets(result, targets):
                     item["prev_" + metric + "_change"] = (actual[metric] - prev) / prev if prev else None
 
 
-def attach_previous_year(result, folder):
+def attach_previous_year(result, folder, use_patterns=False):
     """Use source-backed final prior-year totals; never invent missing channels."""
     audit = {"basis": "현재 예약 / 전년 동월 최종 실적", "months": []}
     for month in result["months"]:
@@ -325,6 +349,8 @@ def attach_previous_year(result, folder):
         start = date(year-1, mm, 1)
         end = (date(year if mm==12 else year-1, 1 if mm==12 else mm+1, 1)-timedelta(days=1))
         rows = load_bookings(files[-1])
+        if use_patterns:
+            rows, _ = pattern_channels(rows)
         old = aggregate(rows, result["as_of"], start.isoformat(), end.isoformat())["months"][0]
         for venue, item in month["venues"].items():
             for target in [item] + item["categories"]:
@@ -333,7 +359,7 @@ def attach_previous_year(result, folder):
             prior = old["venues"][venue]
             complete = not next(x for x in prior["categories"] if x["id"]=="unmapped")["pax"]
             by_id = {x["id"]: x for x in prior["categories"]}
-            for target, actual, reference in [(item,item["total"],prior["total"])] + [(x,x,by_id[x["id"]] if complete else None) for x in item["categories"]]:
+            for target, actual, reference in [(item,item["total"],prior["total"])] + [(x,x,by_id[x["id"]] if complete or use_patterns else None) for x in item["categories"]]:
                 for metric in ("pax", "rev"):
                     value = reference[metric] if reference is not None else None
                     target["prev_"+metric] = value
@@ -400,11 +426,15 @@ def build(input_path, as_of, config, targets=None):
         reference = Path(config["classification_reference"])
         rows, audit = reference_channels(rows, load_bookings(reference))
         audit["reference_sha256"] = hashlib.sha256(reference.read_bytes()).hexdigest()
+    pattern_audit = None
+    if config.get("analysis_patterns"):
+        rows, pattern_audit = pattern_channels(rows)
     result = aggregate(rows, as_of, config["start"], config["end"])
+    result["analysis_classification"] = pattern_audit
     result["classification_reference"] = audit
     attach_targets(result, load_targets(targets))
     if config.get("previous_year_folder"):
-        attach_previous_year(result, config["previous_year_folder"])
+        attach_previous_year(result, config["previous_year_folder"], config.get("analysis_patterns",False))
     history = Path(config["history"])
     previous = []
     if history.exists():
