@@ -74,7 +74,7 @@
       });
       statements.push('라운드당 매출: Mangilao ' + usd(averages[0][1]) + ' / Talofofo ' + usd(averages[1][1]));
     }
-    statements.push(data.comparison ? '예약 순증감: ' + data.comparison.as_of + ' 대비 (' + data.comparison.days + '일)' : '예약 증감: 비교 이력 없음');
+    statements.push(data.comparison && total.delta ? '예약 순증감: ' + data.comparison.as_of + ' 대비 (' + data.comparison.days + '일)' : '예약 증감: 비교 이력 없음');
     $('analysis').replaceChildren(...statements.map(text => {const li=document.createElement('li'); li.textContent=text; return li;}));
   }
 
@@ -184,9 +184,9 @@
     $('warnings').hidden = !unmapped && !mismatch;
     $('warnings').textContent = (unmapped?'미분류 '+num(unmapped)+'라운드가 있습니다. 전체 합계에 포함했으며 고객·채널 매핑 확인이 필요합니다. ':'')+
       (mismatch?'원본 분류·차감 규칙의 합계와 원천 예약 행 합계가 다릅니다. 원본 조건은 유지했으며 중복·차감 조건 검토가 필요합니다.':'');
-    const range = selectedMonths.size === data.months.length ? data.coverage.start + ' ~ ' + data.coverage.end : [...selectedMonths].sort().join(', ');
+    const range = selectedMonths.size === data.months.length ? data.months[0].month + ' ~ ' + data.months[data.months.length-1].month : [...selectedMonths].sort().join(', ');
     $('notes').textContent = '이용일 ' + range + ' · 취소·식당·스파 제외 · — 미입력' +
-      (data.comparison ? ' · ' + data.comparison.as_of + ' 대비' : ' · 증감 이력 없음');
+      (data.comparison && total.delta ? ' · ' + data.comparison.as_of + ' 대비' : ' · 증감 이력 없음');
   }
 
   function renderFilters() {
