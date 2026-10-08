@@ -29,6 +29,38 @@ class ImportTests(unittest.TestCase):
     def aggregate(self, rows):
         return self.mod.aggregate(rows, "2026-10-07", "2026-10-01", "2026-12-31")
 
+    def test_monthly_merge_requires_same_asof_complete_period(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);monthly=root/"monthly";monthly.mkdir()
+            def save(month,asof,id):
+                w=openpyxl.Workbook();w.active.append(["Id","Start date"]);w.active.append([id,datetime(2026,month,2)]);w.save(monthly/f"bookings_2026-{month:02d}_asof_{asof}.xlsx");w.close()
+            config={"inbox":str(root),"archive_folder":str(monthly),"start":"2026-10-01","end":"2026-12-31"}
+            save(10,"2026-10-09",1);save(11,"2026-10-09",2);save(12,"2026-10-08",3)
+            self.mod.merge_monthly_snapshot(config)
+            self.assertFalse((root/"bookings_2026-10-09.xlsx").exists())
+            save(12,"2026-10-09",3)
+            self.mod.merge_monthly_snapshot(config)
+            w=openpyxl.load_workbook(root/"bookings_2026-10-09.xlsx",read_only=True)
+            self.assertEqual(w.active.max_row,4);w.close()
+
+    def test_archives_keep_current_snapshot_and_prior_year_matches(self):
+        result=self.aggregate([row(Total=120)])
+        self.mod.attach_targets(result,{})
+        self.mod.compare(result,None)
+        coverage=dict(result["coverage"])
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder,"bookings_2025-10_asof_2026-10-08.xlsx").write_bytes(b"fixture")
+            with patch.object(self.mod,"load_bookings",return_value=[row(**{"Start date":datetime(2025,10,2)})]):
+                self.mod.extend_archived_months(result,folder,use_patterns=True)
+        self.assertEqual(result["coverage"],coverage)
+        self.assertEqual(len(result["months"]),4)
+        current=next(x for x in result["months"] if x["month"]=="2026-10")["venues"]["mangilao"]
+        self.assertEqual(current["total"]["rev"],120)
+        self.assertEqual(current["prev_rev"],100)
+        self.assertAlmostEqual(current["prev_rev_change"],0.2)
+        self.assertIsNone(current["delta"])
+        self.assertIsNone(result["months"][0]["venues"]["mangilao"]["prev_rev"])
+
     def test_patterns_preserve_source_and_named_rules(self):
         source=[row(Channel=None,typeName="Green Fee 18H Military",Nationality="UU"),row(2,Channel=None,typeName="Green Fee 18H Guam Resident"),row(3,Channel=None,typeName="Green Fee 18H 2+ FIT",Nationality="JP"),row(4,Channel=None,typeName="Green Fee 18H 2+ FIT",Nationality="UU"),row(5,Channel=None,clientName="HIS",typeName="Green Fee 18H 2+ FIT",Nationality="JP"),row(6,Channel="KR",typeName="Green Fee 18H Military")]
         enriched,audit=self.mod.pattern_channels(source)
