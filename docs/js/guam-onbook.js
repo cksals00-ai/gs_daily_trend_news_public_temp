@@ -61,6 +61,7 @@
     const largest = Math.max(0, ...mix.map(x => x.rev));
     $('mix-chart').replaceChildren(...mix.filter(x => x.pax || x.is_group).map(x => chartRow(x.label,x.rev,null,largest,'비중 ' + pct(total.rev ? x.rev / total.rev : null))));
     const statements = [];
+    if(data.previous_year_source?.months?.length) statements.push('전년비: 현재 예약 / 전년 동월 최종 실적 · 채널 미확정은 비교 제외');
     statements.push('매출 ' + usd(total.rev) + ' · 목표 확보율 ' + pct(total.budget_rev_rate));
     const ranked = mix.filter(x => x.rev > 0).sort((a,b) => b.rev - a.rev);
     if (ranked.length) statements.push('최대 매출 비중: ' + ranked[0].label + ' ' + pct(ranked[0].rev / total.rev));
