@@ -2,13 +2,13 @@
 (() => {
   'use strict';
   let data;
-  let currencyMode = 'USD', fxRate = null;
-  try { if (typeof localStorage !== 'undefined') {const saved=JSON.parse(localStorage.getItem('guam-onbook-currency')||'{}');currencyMode=saved.currency==='KRW'?'KRW':'USD';fxRate=Number(saved.rate)>0?Number(saved.rate):null;} } catch (_) {}
+  let currencyMode = 'USD', fxRate = 1480;
+  try { if (typeof localStorage !== 'undefined') {const saved=JSON.parse(localStorage.getItem('guam-onbook-currency')||'{}');currencyMode=saved.currency==='KRW'?'KRW':'USD';fxRate=Number.isFinite(Number(saved.rate))&&Number(saved.rate)>0?Number(saved.rate):1480;} } catch (_) {}
   let nationalityMode = "original";
   let selectedMonths = new Set(), selectedVenues = new Set(['mangilao','talofofo']);
   const $ = id => document.getElementById(id);
   const num = (value, decimal = 1) => value == null ? '—' : value.toLocaleString('ko-KR', {minimumFractionDigits: decimal, maximumFractionDigits: decimal});
-  const usd = value => value == null || currencyMode==='KRW' && !fxRate ? '—' : (value < 0 ? '-' : '') + (currencyMode==='KRW'?'₩':'$') + num(Math.abs(value) * (currencyMode==='KRW'?fxRate:1), 1);
+  const usd = value => value == null ? '—' : (value < 0 ? '-' : '') + (currencyMode==='KRW'?'':'$') + num(Math.abs(value) * (currencyMode==='KRW'?fxRate/1000000:1), 1);
   const pct = value => value == null ? '—' : num(value * 100, 1) + '%';
   const sum = values => values.some(x => x == null) ? null : values.reduce((a, b) => a + b, 0);
   const change = (value, formatter) => value == null ? '—' : (value > 0 ? '+' : '') + formatter(value);
@@ -45,7 +45,7 @@
       track.append(bar); row.append(track);
     });
     const values = document.createElement('div'); values.className = 'values';
-    const text = document.createElement('span'); text.textContent = '예약 ' + usd(actual) + (budget == null ? '' : ' / 목표 ' + usd(budget));
+    const text = document.createElement('span'); text.textContent = '매출 ' + usd(actual) + (budget == null ? '' : ' / 목표 ' + usd(budget));
     const share = document.createElement('span'); share.textContent = extra;
     values.append(text, share); row.append(values); return row;
   }
@@ -61,7 +61,7 @@
     const largest = Math.max(0, ...mix.map(x => x.rev));
     $('mix-chart').replaceChildren(...mix.filter(x => x.pax || x.is_group).map(x => chartRow(x.label,x.rev,null,largest,'비중 ' + pct(total.rev ? x.rev / total.rev : null))));
     const statements = [];
-    statements.push('예약 매출 ' + usd(total.rev) + ' · 목표 확보율 ' + pct(total.budget_rev_rate));
+    statements.push('매출 ' + usd(total.rev) + ' · 목표 확보율 ' + pct(total.budget_rev_rate));
     const ranked = mix.filter(x => x.rev > 0).sort((a,b) => b.rev - a.rev);
     if (ranked.length) statements.push('최대 매출 비중: ' + ranked[0].label + ' ' + pct(ranked[0].rev / total.rev));
     const comparable = monthly.filter(x => x.budget_rev_rate != null).sort((a,b) => a.budget_rev_rate - b.budget_rev_rate);
@@ -121,14 +121,14 @@
   function render() {
     $('fx-field').hidden=currencyMode!=='KRW';
     $('currency-note').textContent=currencyMode==='KRW'?(fxRate?'1 USD = ₩'+num(fxRate)+' · 입력 환율':'환율 입력 필요'):'USD 기준';
-    for(const node of document.querySelectorAll?.('.currency-code')??[]) node.textContent=currencyMode;
+    for(const node of document.querySelectorAll?.('.currency-code')??[]) node.textContent=currencyMode==='KRW'?'백만원':'USD';
     renderFilters();
     const months = data.months.filter(x => selectedMonths.has(x.month));
     const venueRows = months.flatMap(x => Object.entries(x.venues).filter(([key]) => selectedVenues.has(key)).map(([, value]) => value));
     const total = combine(venueRows, true);
     const cards = [
-      ['예약 라운드', num(total.pax), '이용월 내 예약 행 수'],
-      ['예약 매출', usd(total.rev), 'Mangilao · Talofofo / USD'],
+      ['18홀 라운딩', num(total.pax), '예약 행 기준 · 9홀 포함'],
+      ['매출', usd(total.rev), currencyMode==='KRW'?'백만원 · 환산 매출':'USD · 매출'],
       ['매출 목표 달성률', pct(total.budget_rev_rate), '목표 ' + usd(total.budget_rev)],
       ['이전 기준일 대비 매출', change(total.delta?.rev, usd), data.comparison ? data.comparison.as_of + ' 대비' : '비교 가능한 이전 데이터 없음']
     ];
@@ -225,7 +225,7 @@
   if(fxRate) $('fx-rate').value=fxRate;
   function updateCurrency() {
     currencyMode=$('currency-select').value==='KRW'?'KRW':'USD';
-    const value=Number($('fx-rate').value);fxRate=Number.isFinite(value)&&value>0?value:null;
+    const value=Number($('fx-rate').value);if(Number.isFinite(value)&&value>0)fxRate=value;
     try {if(typeof localStorage!=='undefined') localStorage.setItem('guam-onbook-currency',JSON.stringify({currency:currencyMode,rate:fxRate}));} catch (_) {}
     if(data)render();
   }
