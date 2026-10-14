@@ -34,13 +34,29 @@ def _clean(s):
     s = re.sub(r'^[\*#\s]+', '', s)
     return re.sub(r'^\[[^\]]*\]\s*', '', s).strip()
 
-def nat_of(mem):
-    g = _M.get(mem, {}).get('국가') or _M.get(_clean(mem), {}).get('국가') or _parse_nat(mem) or '기타'
-    return NORM.get(g, g)
+# ── 국가 오버라이드 (수기 교정) ──────────────────────────────
+# nat_overrides.csv: "키,국가"  (키 = 회원명 또는 여행사명, 공백무시 매칭).
+# 자동매핑이 틀린 거래처/여행사만 한 줄씩 적으면 최우선 적용된다.
+_OVR = {}
+_OVR_PATH = os.path.join(HERE, 'nat_overrides.csv')
+def _nsp(s): return re.sub(r'\s', '', str(s or ''))
+if os.path.exists(_OVR_PATH):
+    with open(_OVR_PATH, encoding='utf-8-sig') as _f:
+        for _ln in _f:
+            _p = _ln.rstrip('\n').split(',')
+            if len(_p) >= 2 and _p[0].strip() and not _p[0].strip().startswith('#') and _p[0].strip() != '키':
+                _OVR[_nsp(_p[0])] = _p[1].strip()
 
 def agent_of(mem):
     a = _M.get(mem, {}).get('여행사명') or _M.get(_clean(mem), {}).get('여행사명')
     return a or (re.sub(r'\s*[(\[].*', '', _clean(mem)).strip() or _clean(mem))
+
+def nat_of(mem):
+    # 1) 오버라이드(회원명/여행사명) 최우선 2) 파일매핑 3) (국적)파싱 4) 기타
+    ov = _OVR.get(_nsp(mem)) or _OVR.get(_nsp(agent_of(mem)))
+    if ov: return NORM.get(ov, ov)
+    g = _M.get(mem, {}).get('국가') or _M.get(_clean(mem), {}).get('국가') or _parse_nat(mem) or '기타'
+    return NORM.get(g, g)
 
 def scan_inbound(year, max_month='12'):
     """해당 연도 인바운드(58) 예약 라인.
