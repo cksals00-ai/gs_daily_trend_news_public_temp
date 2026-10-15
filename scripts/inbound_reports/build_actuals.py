@@ -113,6 +113,10 @@ def build(year, max_month, template, outdir):
                 ws.cell(r, rc).value = rns if rns else 0
                 ws.cell(r, rc + 1).value = round(adr, 1) if rns else 0
                 ws.cell(r, rc + 2).value = round(rev, 1) if rev else 0
+        # 템플릿의 잔존 숨김행 제거 — 데이터행 전부 보이게 (대만 등 숨김 방지)
+        for rr in range(7, max(ws.max_row, 7 + len(rows)) + 1):
+            if rr in ws.row_dimensions:
+                ws.row_dimensions[rr].hidden = False
 
     process(wb['Total'], 'Total')
     for sh in wb.sheetnames:
