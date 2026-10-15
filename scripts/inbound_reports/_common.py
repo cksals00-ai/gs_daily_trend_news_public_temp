@@ -69,7 +69,7 @@ def scan_inbound(year, max_month='12'):
                 h = fh.readline().strip().split(';'); ci = {c.strip(): i for i, c in enumerate(h)}
                 isd=ci.get('판매일자',-1); irm=ci.get('객실수',-1); i1=ci.get('1박객실료',-1)
                 icode=ci.get('변경예약집계코드', ci.get('예약집계코드', -1))
-                imem=ci.get('회원명',-1); ip=ci.get('영업장명',-1)
+                imem=ci.get('회원명',-1); ip=ci.get('영업장명',-1); icp=ci.get('변경사업장명',-1)
                 seen=set()
                 for line in fh:
                     hh=hash(line.rstrip('\n\r'))
@@ -87,5 +87,6 @@ def scan_inbound(year, max_month='12'):
                     mem=p[imem].strip() if 0<=imem<n else ''
                     out.append({'agent': agent_of(mem), 'nat': nat_of(mem),
                                 'prop': p[ip].strip() if 0<=ip<n else '',
+                                'cprop': p[icp].strip() if 0<=icp<n else '',
                                 'month': sd[4:6], 'rns': rm, 'rev': rate*rm/1.1/1e6})
     return out
