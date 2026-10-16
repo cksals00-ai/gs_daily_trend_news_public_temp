@@ -58,18 +58,54 @@ def nat_of(mem):
     g = _M.get(mem, {}).get('국가') or _M.get(_clean(mem), {}).get('국가') or _parse_nat(mem) or '기타'
     return NORM.get(g, g)
 
+def _next_ym(ym):
+    if not ym or len(ym) < 6: return None
+    y, m = int(ym[:4]), int(ym[4:6]); m += 1
+    if m == 13: y, m = y+1, 1
+    return f"{y}{m:02d}"
+
+def _retrans_range(fname):
+    """재전송 파일명에서 (시작YYYYMM, 끝YYYYMM) 추출."""
+    import re
+    m = re.search(r'재전송\((\d{8})-(\d{8})\)', fname)
+    return (m.group(1)[:6], m.group(2)[:6]) if m else (None, None)
+
 def scan_inbound(year, max_month='12'):
     """해당 연도 인바운드(58) 예약 라인.
+    재전송/스냅샷 월 경계를 동적 적용해 겹치는 월의 중복집계를 막는다.
     returns list of dict(agent, nat, prop(영업장명), month, rns, rev_백만)."""
     out = []
     ydir = os.path.join(RAW_DB, str(year))
     for ft in ('27', '43'):
-        for f in glob.glob(os.path.join(ydir, f'{ft}.*.txt')):
+        import unicodedata
+        _bn = lambda f: unicodedata.normalize('NFC', os.path.basename(f))  # macOS NFD 파일명 정규화
+        files = glob.glob(os.path.join(ydir, f'{ft}.*.txt'))
+        retrans = [f for f in files if '재전송' in _bn(f)]
+        snaps   = [f for f in files if '재전송' not in _bn(f)]
+        if len(snaps) > 1:  # 최신 스냅샷만
+            import re as _re
+            snaps.sort(key=lambda f: (_re.search(r'_(\d{8})_생성시간', f) or [None,'0'])[1]
+                       if _re.search(r'_(\d{8})_생성시간', f) else '0', reverse=True)
+            drop = set(snaps[1:]); files = [f for f in files if f not in drop]; snaps = [snaps[0]]
+        # 재전송: 각 파일명 날짜범위로 한정(서로 겹치지 않게 분할커버).
+        # 스냅샷: 재전송이 커버한 최대월 '다음달'부터만(겹치는 월 중복집계 방지).
+        win = {}
+        if retrans and snaps:
+            rmax = max((_retrans_range(_bn(f))[1] for f in retrans
+                        if _retrans_range(_bn(f))[1]), default=None)
+            snap_lo = _next_ym(rmax) if rmax else None
+            for f in retrans: win[f] = _retrans_range(_bn(f))
+            for f in snaps:   win[f] = (snap_lo, None)
+        else:
+            for f in files: win[f] = (None, None)
+        for f in files:
+            lo, hi = win[f]
             with open(f, encoding='cp949', errors='replace') as fh:
                 h = fh.readline().strip().split(';'); ci = {c.strip(): i for i, c in enumerate(h)}
                 isd=ci.get('판매일자',-1); irm=ci.get('객실수',-1); i1=ci.get('1박객실료',-1)
                 icode=ci.get('변경예약집계코드', ci.get('예약집계코드', -1))
                 imem=ci.get('회원명',-1); ip=ci.get('영업장명',-1); icp=ci.get('변경사업장명',-1)
+                irz=ci.get('요금시즌명',-1); isz=ci.get('시즌명',-1)
                 seen=set()
                 for line in fh:
                     hh=hash(line.rstrip('\n\r'))
@@ -79,14 +115,21 @@ def scan_inbound(year, max_month='12'):
                     if not (0 <= icode < n and p[icode].strip() == '58'): continue
                     sd=p[isd].strip() if 0<=isd<n else ''
                     if len(sd) < 6 or sd[:4] != str(year) or sd[4:6] > max_month: continue
+                    ym=sd[:6]
+                    if lo and ym < lo: continue      # 재전송/스냅샷 경계(중복 방지)
+                    if hi and ym > hi: continue
                     try: rm=int(p[irm] or 0)
                     except ValueError: rm=0
                     if rm <= 0 or rm > 5000: continue   # 부패행(예: 110,000) 컷
                     try: rate=int(p[i1] or 0)
                     except ValueError: rate=0
                     mem=p[imem].strip() if 0<=imem<n else ''
+                    rz=(p[irz].strip() if 0<=irz<n else '') or (p[isz].strip() if 0<=isz<n else '')
+                    try: dow=__import__('datetime').datetime.strptime(sd[:8],'%Y%m%d').weekday()
+                    except ValueError: dow=None
                     out.append({'agent': agent_of(mem), 'nat': nat_of(mem),
                                 'prop': p[ip].strip() if 0<=ip<n else '',
                                 'cprop': p[icp].strip() if 0<=icp<n else '',
-                                'month': sd[4:6], 'rns': rm, 'rev': rate*rm/1.1/1e6})
+                                'month': sd[4:6], 'dow': dow, 'hol': ('연휴' in rz),
+                                'rns': rm, 'rev': rate*rm/1.1/1e6})
     return out
