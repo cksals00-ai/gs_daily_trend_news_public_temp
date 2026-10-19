@@ -481,6 +481,10 @@ def main():
     log.info("팔라티움 해운대 by sonofelice DB 파싱 시작")
     log.info("=" * 60)
 
+    # 0. 개인정보 정리(비고·핸드폰번호·연락처 삭제, 고객·직원 이름 비움) — 커밋되는 원본에 남지 않도록 파싱 전에
+    from scrub_palatium_pii import scrub_all
+    scrub_all()
+
     # 1. xlsx 파일 찾기
     xlsx_files = find_latest_xlsx()
     if not xlsx_files:
