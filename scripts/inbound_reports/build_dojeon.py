@@ -99,9 +99,8 @@ def main():
         ws = wb[sh]; scope = '총괄' if sh.startswith('총괄') else sh
         for year, base in YEAR_COL.items():
             for col in range(base, base + 6):
-                if ws.cell(3, col).value not in (None, ''):
-                    ws.cell(3, col).value = year
-            ws.cell(4, base).value = (f'{year} Actual' if year == 2026 else f'{year}')
+                ws.cell(3, col).value = None            # 상단 연도숫자 제거(라벨 중복 방지)
+            ws.cell(4, base).value = f'{year} Actual'   # 그룹라벨 단일 'YYYY Actual'
         cur_mm = cur_dim = None; blk = {}
         for r in range(7, ws.max_row + 1):
             b = ws.cell(r, 2).value; c = ws.cell(r, 3).value; d = ws.cell(r, 4).value
@@ -129,6 +128,12 @@ def main():
                     ws.cell(r, base + 1).value = round(rns / trns, 3) if trns else 0
                     ws.cell(r, base + 3).value = round(adr / tadr, 2) if tadr else 0
                     ws.cell(r, base + 5).value = round(rev / trev, 3) if trev else 0
+    # 총괄 요약 시트: 2026 Actual + 2027 도전목표
+    try: fill_strategy(wb, act)
+    except Exception as e: print('  총괄(전략) 실패:', e)
+    try: fill_siljeok(wb, act)
+    except Exception as e: print('  총괄(실적) 실패:', e)
+
     wb.save(DOCS_XLSX)
     try:
         import shutil; shutil.copyfile(DOCS_XLSX, DL_XLSX)
@@ -136,6 +141,92 @@ def main():
         print('  Downloads 사본 실패:', e)
     print(f'엑셀 저장: {DOCS_XLSX}')
     print(f'         : {DL_XLSX}')
+
+
+# ── 2027 도전목표 모델 (대시보드 시뮬레이션과 동일 로직) ────────────────
+# 장수빈 매니저 가이드: 2027 도전목표 = 2026 실적 대비 5~10% 업, 양식 동일·숫자만.
+# 증가율은 달성률로 차등(초과달성 10% → 미달 5%); 대시보드에서 사업장별 수기 조정.
+def uplift_pct(ach):
+    if ach >= 1.0: return 10
+    if ach >= 0.9: return 8
+    return 5
+def target_2027(actual_rns, stretch_rns):
+    ach = (actual_rns / stretch_rns) if stretch_rns else 1.0
+    return round(actual_rns * (1 + uplift_pct(ach) / 100))
+
+
+def fill_strategy(wb, act):
+    """총괄(사업장별 전략): 2026 Actual + 2027 도전목표 열 삽입(값)."""
+    import openpyxl
+    ws = wb['총괄(사업장별 전략)']
+    ROWS = list(range(15, 33))  # 사업장 15~32, 계=14
+    def num(r, c):
+        v = ws.cell(r, c).value
+        return v if isinstance(v, (int, float)) else 0
+    lit = {}
+    for r in ROWS:
+        lit[r] = dict(name=(ws.cell(r, 4).value or '').strip(),
+                      rn19=num(r, 5), rev19=num(r, 7),
+                      rn25=num(r, 8), rev25=num(r, 10),
+                      bud_rn=num(r, 14), bud_adr=num(r, 15),
+                      str_rn=num(r, 17), str_adr=num(r, 18),
+                      key=ws.cell(r, 22).value)
+    # insert_cols는 병합셀과 충돌(KeyError) → 삽입 대신 밴드(r12~32,col5~28)를
+    # lit(원본값 선read)로 직접 재작성. 병합 해제 후 전 영역 클리어.
+    for mr in list(ws.merged_cells.ranges):
+        c1, r1, c2, r2 = mr.bounds
+        if r2 >= 12 and r1 <= 32:
+            ws.unmerge_cells(str(mr))
+    for r in range(12, 33):
+        for c in range(5, 29):
+            ws.cell(r, c).value = None
+    def grp(col, label):  # 라벨은 그룹 첫 셀에(병합 생략), 하위 RNs/ADR/REV
+        ws.cell(12, col).value = label
+        ws.cell(13, col).value = 'RNs'; ws.cell(13, col + 1).value = 'ADR'; ws.cell(13, col + 2).value = 'REV'
+    grp(5, '2019 Actual'); grp(8, '2025 Actual'); grp(11, '2026 Actual'); grp(14, '2027 도전목표')
+    grp(17, '25Y vs 19Y'); grp(20, '2026 Budget'); grp(23, '26Y Stretch Goal')
+    ws.cell(12, 26).value = '25년 比'; ws.cell(13, 26).value = 'Δ'; ws.cell(13, 27).value = '달성률'
+    ws.cell(12, 28).value = '달성 KEY 전략'
+    def adr(rev, rn): return round(rev * 1000 / rn) if rn else 0
+    for r in ROWS:
+        L = lit[r]; a = act.get(L['name'], {}).get('계', [0, 0.0]); arn, arev = a[0], a[1]
+        t27 = target_2027(arn, L['str_rn'])
+        t27adr = adr(arev, arn) or L['str_adr']  # 2026 실적 ADR 유지
+        v = [(5, L['rn19']), (6, adr(L['rev19'], L['rn19'])), (7, L['rev19']),
+             (8, L['rn25']), (9, adr(L['rev25'], L['rn25'])), (10, L['rev25']),
+             (11, arn), (12, adr(arev, arn)), (13, round(arev, 1)),
+             (14, t27), (15, t27adr), (16, round(t27 * t27adr / 1000, 1)),
+             (17, L['rn25'] - L['rn19']), (18, adr(L['rev25'], L['rn25']) - adr(L['rev19'], L['rn19'])), (19, round(L['rev25'] - L['rev19'], 1)),
+             (20, L['bud_rn']), (21, L['bud_adr']), (22, round(L['bud_rn'] * L['bud_adr'] / 1000, 1)),
+             (23, L['str_rn']), (24, L['str_adr']), (25, round(L['str_rn'] * L['str_adr'] / 1000, 1)),
+             (26, L['str_rn'] - L['rn25']), (27, round(L['str_rn'] / L['rn25'], 3) if L['rn25'] else ''),
+             (28, L['key'])]
+        for c, val in v: ws.cell(r, c).value = val
+    # 계 행(14) = 합/산출
+    def csum(c): return sum(num(r, c) for r in ROWS)
+    for c in [5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26]:
+        ws.cell(14, c).value = round(csum(c), 1)
+    for rnc, revc in [(5, 7), (8, 10), (11, 13), (14, 16), (17, 19), (20, 22), (23, 25)]:
+        ws.cell(14, rnc + 1).value = adr(ws.cell(14, revc).value or 0, ws.cell(14, rnc).value or 0)
+    ws.cell(14, 27).value = round((ws.cell(14, 23).value or 0) / (ws.cell(14, 8).value or 1), 3)
+    print('  총괄(전략): 2026 Actual + 2027 도전목표 열 추가 (2027 계 %s)' % ws.cell(14, 14).value)
+
+
+def fill_siljeok(wb, act):
+    """총괄(사업장별 실적): 우측에 2026 Actual(온북) 열 추가."""
+    ws = wb['총괄(사업장별 실적)']
+    col = ws.max_column + 2
+    ws.cell(4, col).value = '2026 Actual'
+    ws.cell(5, col).value = 'RNs(온북)'
+    tot = 0
+    for r in range(1, ws.max_row + 1):
+        nm = ws.cell(r, 3).value
+        nm = str(nm).strip() if nm else ''
+        if nm in act:
+            rns = act[nm].get('계', [0, 0])[0]; ws.cell(r, col).value = rns; tot += rns
+        elif nm == '계':
+            ws.cell(r, col).value = sum(act[s].get('계', [0, 0])[0] for s in act)
+    print('  총괄(실적): 2026 Actual(온북) 열 추가 (합 %s)' % tot)
 
 
 if __name__ == '__main__':
