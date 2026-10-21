@@ -68,7 +68,7 @@ PAGE_ROLES: dict[str, str] = {
 
 # login.html 은 가드를 적용하지 않음 (로그인 자체 페이지)
 # inbound-weekday.html 은 공개 임시 공유용(로그인 없이 열람) — 사용자 요청
-SKIP = {"login.html", "inbound-weekday.html", "inbound-nation.html"}
+SKIP = {"login.html", "inbound-weekday.html", "inbound-nation.html", "inbound-dojeon.html"}
 
 GUARD_BLOCK_TEMPLATE = (
     '<meta name="auth-required" content="{role}">\n'
