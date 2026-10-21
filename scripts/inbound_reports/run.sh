@@ -27,4 +27,6 @@ else
     [ "$do_strategy" = 1 ] && python3 "$DIR/rollforward_strategy.py" --base-year "$y"
   done
 fi
+# 도전목표 전략방안: 대시보드 inline 데이터 + 호스팅 xlsx + ~/Downloads 사본 재생성
+python3 "$DIR/build_dojeon.py"
 echo "✅ 완료 — ~/Downloads 확인"
