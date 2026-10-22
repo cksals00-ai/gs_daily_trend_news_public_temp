@@ -35,8 +35,7 @@ CANONICAL_ITEMS = [
     ("closing",          f"{BASE}/gs-closing-report.html",  "마감리포트", ""),
     ("monitor",          f"{COMP}/",                        "경쟁사 모니터링", ""),
     ("palatium",         f"{COMP}/palatium.html",           "팔라티움 해운대 by sonofelice 현황 리포트", ""),
-    ("outbound",         "https://sono-overseas-dash.higgsfield.app/dashboard",
-     "아웃바운드", ' target="_blank" rel="noopener noreferrer"'),
+    # 2026-10-22 대표 지시: 「아웃바운드」(외부 sono-overseas-dash) 네비에서 제거
 ]
 
 CANONICAL_SCRIPT = (
