@@ -31,24 +31,6 @@
       label: '전년상품 (전년 동기간 상품)',
       reason: '미사용 — 전년 동기간 상품 비교.'
     },
-    {
-      key: 'guam-onbook',
-      href: 'guam-onbook.html',
-      label: '괌 On Book (Daily On Book 리포트)',
-      reason: '2026-10-22 대표 지시로 숨김 — 괌 대시보드. 아웃바운드 대시보드(overseas.html)의 「괌」 탭도 함께 감춤.'
-    },
-    {
-      key: 'guam-onbook-guide',
-      href: 'guam-onbook-guide.html',
-      label: '괌 Golfmanager 예약 다운로드 가이드',
-      reason: '2026-10-22 괌 대시보드 숨김에 따른 부속 페이지.'
-    },
-    {
-      key: 'guam-onbook-risks',
-      href: 'guam-onbook-risks.html',
-      label: '괌 엑셀 수기 수정 리스크 분석',
-      reason: '2026-10-22 괌 대시보드 숨김에 따른 부속 페이지.'
-    },
   ];
 
   var LS_OVERRIDES = 'gsn_menu_overrides';
