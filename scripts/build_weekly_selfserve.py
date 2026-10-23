@@ -104,47 +104,45 @@ def pre(seg, mo, k, fb=0):
 
 wb = openpyxl.Workbook()
 
-# ② RM입력(주간) — [A] 세그 회사전체(PQ) + [B] 소사업
-w2 = wb.active; w2.title = "②RM입력(주간)"
-w2["A1"] = f"② RM 입력 — 당월 {CUR}·익월 {NXT} / 파랑=PowerQuery 자동(⑥), 연녹=고정(단가)"
-w2["A1"].font = BOLD
-w2["A2"] = "[A] 세그 회사전체 (RM 2026.MM '전체 주요지표' → ⑥ PQ 자동로드)"; w2["A2"].font = BOLD
-hA = ["세그", "월", "목표 매출(백만)", "FCST 매출(백만)", "전년 매출(백만)", "FCST 객실수"]
-for i, h in enumerate(hA, 1):
-    cell = w2.cell(3, i, h); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
-r = 4; Arow = {}
+# 쿼리데이터 — ⑥ PowerQuery가 로드하는 전용 시트(세그/월/목표/FCST/전년/객실수). ①이 SUMIFS로 참조.
+w2 = wb.active; w2.title = "쿼리데이터"
+hQ = ["세그", "월", "목표", "FCST", "전년", "객실수"]
+for i, h in enumerate(hQ, 1):
+    cell = w2.cell(1, i, h); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
+r = 2
 for s in SEGS:
-    for mo in MONTHS:
-        Arow[(s, mo)] = r
+    for mo in MONTHS:      # PQ가 덮어씀(미연결/수동 대비 prefill). 순서 무관(①=SUMIFS)
         w2.cell(r, 1, s); w2.cell(r, 2, mo)
         w2.cell(r, 3, pre(s, mo, "tgt", round(seg_company(s, mo, "rm_budget_rev_mil"), 1)))
         w2.cell(r, 4, pre(s, mo, "fcst", round(seg_company(s, mo, "rm_fcst_rev_mil"), 1)))
         w2.cell(r, 5, pre(s, mo, "ly", 0))
         w2.cell(r, 6, pre(s, mo, "rn", seg_company(s, mo, "rm_fcst_rn")))
-        for c in range(3, 7):
-            w2.cell(r, c).fill = PQFILL; w2.cell(r, c).border = BD
-        for c in (1, 2): w2.cell(r, c).border = BD
+        for c in (3, 4, 5, 6): w2.cell(r, c).fill = PQFILL
         r += 1
-A_LAST = r - 1
+QD = "'쿼리데이터'"
+QSEG = f"{QD}!$A:$A"; QMO = f"{QD}!$B:$B"
+QTGT = f"{QD}!$C:$C"; QFC = f"{QD}!$D:$D"; QLY = f"{QD}!$E:$E"; QRN = f"{QD}!$F:$F"
 
-b0 = r + 1
-w2.cell(b0, 1, "[B] 소사업 (단가=회사평균 소사업실당, 2026실적 부대비중 기반 / 고정)").font = BOLD
-hB = ["세그", "월", "FCST 객실수", "소사업단가(천원/실)", "소사업(백만)"]
+# ③ 단가·소사업 (고정단가 + 소사업=SUMIFS(쿼리 객실수)×단가)
+w3 = wb.create_sheet("③단가·소사업")
+w3["A1"] = "③ 소사업 단가(고정, 2026실적 부대비중 기반 / 수정가능) · 소사업=객실수×단가÷1000"
+w3["A1"].font = BOLD
+hB = ["세그", "월", "소사업단가(천원/실)", "FCST객실수", "소사업(백만)"]
 for i, h in enumerate(hB, 1):
-    cell = w2.cell(b0 + 1, i, h); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
-r = b0 + 2; Brow = {}
+    cell = w3.cell(2, i, h); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
+r = 3
 for s in SEGS:
     for mo in MONTHS:
-        Brow[(s, mo)] = r
-        ar = Arow[(s, mo)]
-        w2.cell(r, 1, s); w2.cell(r, 2, mo)
-        w2.cell(r, 3, f"=F{ar}")                       # FCST 객실수 = [A]
-        w2.cell(r, 4, round(sosaup_rate(s, mo), 2))    # 단가(고정)
-        w2.cell(r, 5, f"=C{r}*D{r}/1000")              # 소사업
-        w2.cell(r, 4).fill = FIXFILL
-        for c in range(1, 6): w2.cell(r, c).border = BD
+        w3.cell(r, 1, s); w3.cell(r, 2, mo)
+        w3.cell(r, 3, round(sosaup_rate(s, mo), 2))
+        w3.cell(r, 4, f'=SUMIFS({QRN},{QSEG},A{r},{QMO},B{r})')
+        w3.cell(r, 5, f"=D{r}*C{r}/1000")
+        w3.cell(r, 3).fill = FIXFILL
+        w3.cell(r, 3).number_format = "0.0"; w3.cell(r, 4).number_format = "#,##0"; w3.cell(r, 5).number_format = "#,##0.0"
+        for c in range(1, 6): w3.cell(r, c).border = BD
         r += 1
-B_FIRST = b0 + 2; B_LAST = r - 1
+BF, BL = 3, r - 1
+BSEG = f"'③단가·소사업'!$A${BF}:$A${BL}"; BMO = f"'③단가·소사업'!$B${BF}:$B${BL}"; BSOS = f"'③단가·소사업'!$E${BF}:$E${BL}"
 
 # ① 예상매출현황 — PPT 양식 (당월+익월)
 w1 = wb.create_sheet("①예상매출현황", 0)
@@ -175,25 +173,26 @@ ROWS = [
 ]
 R0 = 5
 tagrow = {rid: R0 + i for i, (rid, a, b, k) in enumerate(ROWS)}
-SH2 = "'②RM입력(주간)'"
 
 def put(rr, bi, seg=None, sumtags=None):
     base = 3 + bi * 7; mo = MONTHS[bi]
     cT, cF, cD, cAch, cLY, cLYd, cLYr = (base + k for k in range(7))
-    if seg:
-        a = Arow[(seg, mo)]; b = Brow[(seg, mo)]
-        w1.cell(rr, cT, f"={SH2}!C{a}")
-        w1.cell(rr, cF, f"=ROUND({SH2}!D{a}+{SH2}!E{b},0)")   # 객실FCST + 소사업
-        w1.cell(rr, cLY, f"={SH2}!E{a}")
+    if seg:   # GS 세그: 쿼리데이터에서 세그+월로 조회(열밀림·순서 무관)
+        w1.cell(rr, cT, f'=SUMIFS({QTGT},{QSEG},"{seg}",{QMO},"{mo}")')
+        w1.cell(rr, cF, f'=ROUND(SUMIFS({QFC},{QSEG},"{seg}",{QMO},"{mo}")+SUMIFS({BSOS},{BSEG},"{seg}",{BMO},"{mo}"),0)')
+        w1.cell(rr, cLY, f'=SUMIFS({QLY},{QSEG},"{seg}",{QMO},"{mo}")')
     elif sumtags:
         for col in (cT, cF, cLY):
             w1.cell(rr, col, "=" + "+".join(f"{L(col)}{tagrow[t]}" for t in sumtags))
     else:
         for col in (cT, cF, cLY): w1.cell(rr, col).fill = INFILL
     w1.cell(rr, cD, f"={L(cF)}{rr}-{L(cT)}{rr}")
-    w1.cell(rr, cAch, f'=IF({L(cT)}{rr}=0,"",ROUND({L(cF)}{rr}/{L(cT)}{rr}*100,0))')
+    w1.cell(rr, cAch, f'=IF({L(cT)}{rr}=0,"",{L(cF)}{rr}/{L(cT)}{rr})')               # 비율(%서식)
     w1.cell(rr, cLYd, f"={L(cF)}{rr}-{L(cLY)}{rr}")
-    w1.cell(rr, cLYr, f'=IF({L(cLY)}{rr}=0,"",ROUND(({L(cF)}{rr}-{L(cLY)}{rr})/{L(cLY)}{rr}*100,0))')
+    w1.cell(rr, cLYr, f'=IF({L(cLY)}{rr}=0,"",({L(cF)}{rr}-{L(cLY)}{rr})/{L(cLY)}{rr})')  # 비율(%서식)
+    # 표시형식: 매출/증감=천단위, 달성률/증감률=%
+    for col in (cT, cF, cD, cLY, cLYd): w1.cell(rr, col).number_format = "#,##0"
+    for col in (cAch, cLYr): w1.cell(rr, col).number_format = "0%"
 
 GS_IDS = {"GS", "OTA", "GOTA", "Inbound"}
 for i, (rid, a, b, kind) in enumerate(ROWS):
@@ -257,10 +256,10 @@ M = f'''let
 in
     표'''
 lines = [
- "■ 윈도우 엑셀: 같은 폴더의 RM 엑셀 → ②[A] 자동로드 (경로수정 불필요, 새로고침만)",
+ "■ 윈도우 엑셀: 같은 폴더의 RM 엑셀 → [쿼리데이터] 시트 자동로드 (경로수정 불필요, 새로고침만)",
  "배포법: 이 워크북 + RM 엑셀을 '같은 폴더'에 두고 받는 사람은 새로고침만.",
  "설정(1회): 데이터 → 새 쿼리 → 기타 원본에서 → 빈 쿼리 → 홈 → 고급 편집기 →",
- "           아래 M 전체 붙여넣기 → 완료 → 닫기및로드(다음으로) → 표 → 기존시트 '②RM입력(주간)'!$A$3.",
+ "           아래 M 전체 붙여넣기 → 완료 → 닫기및로드(다음으로) → 표 → 기존시트 '쿼리데이터'!$A$1.",
  "주의1: 이 워크북을 반드시 '저장'해야 폴더경로가 잡힘(새 통합문서 상태면 안 됨).",
  "주의2: 완료 시 개인정보/자격증명 물으면 '공용/조직' 허용, 개인정보수준은 '무시(결합 허용)'.",
  "동작: 같은 폴더에서 이름에 'Meeting' 들어간 .xlsx 중 가장 최신본을 자동 사용(파일명 안 바꿔도 됨).",
@@ -281,8 +280,8 @@ guide = [
  f"당월 {CUR} · 익월 {NXT}",
  "",
  "1) (윈도우) 이 워크북과 'RM 엑셀'을 같은 폴더에 두고 → [데이터 → 모두 새로고침].",
- "   → ②[A](세그 회사전체 목표/FCST/전년/객실수)가 같은 폴더 최신 RM에서 자동 갱신(경로수정 불필요).",
- "   (수동) PQ 없이 쓰려면 ②[A] 파랑칸에 RM 전체 주요지표 값 직접 입력.",
+ "   → [쿼리데이터] 시트가 같은 폴더 최신 RM에서 자동 갱신 → ①이 SUMIFS로 자동 반영(경로수정 불필요).",
+ "   (수동) PQ 없이 쓰려면 [쿼리데이터] 파랑칸에 RM 전체 주요지표 값 직접 입력.",
  "2) ①예상매출현황 GS 섹션(GS/OTA/G-OTA/Inbound)이 자동 계산 → PPT 테이블에 붙여넣기.",
  "   Forecast = 객실 FCST + 소사업(=FCST객실수×소사업실당 ÷1000).",
  "3) 마케팅/MICE/레저/운영 행은 ① 노란칸에 마케팅팀 숫자 입력(소계 자동).",
