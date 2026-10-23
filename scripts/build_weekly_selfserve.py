@@ -222,12 +222,23 @@ for p in PROPS:
             for i, v in enumerate(vals, 1): w5.cell(rr, i, v)
             rr += 1
 
-# ⑥ PowerQuery (실제 M코드)
+# ⑥ PowerQuery (실제 M코드) — 상대경로: 이 워크북과 같은 폴더의 최신 'Meeting' 엑셀 자동 탐지
 wq = wb.create_sheet("⑥PowerQuery(윈도우)")
-rmfile = str(RM_XLSX).replace("/", "\\")
+# 폴더경로 명명 셀(이 워크북이 저장된 폴더). 상대경로용. (파일 저장 후에만 값 생김)
+wq["H1"] = '=IFERROR(LEFT(CELL("filename",H1),FIND("[",CELL("filename",H1))-1),"")'
+try:
+    from openpyxl.workbook.defined_name import DefinedName
+    dn = DefinedName("폴더경로", attr_text="'⑥PowerQuery(윈도우)'!$H$1")
+    try: wb.defined_names.add(dn)
+    except Exception: wb.defined_names["폴더경로"] = dn
+except Exception as e:
+    print("  명명(폴더경로) 실패:", e)
 M = f'''let
-    파일 = "C:\\\\경로\\\\Revenue Meeting.xlsx",   // ← 매주 이 경로만 최신 RM으로. (예: {rmfile})
-    Src = Excel.Workbook(File.Contents(파일), null, true),
+    폴더 = Excel.CurrentWorkbook(){{[Name="폴더경로"]}}[Content]{{0}}[Column1],   // 이 워크북이 있는 폴더
+    파일들 = Folder.Files(폴더),
+    RM후보 = Table.SelectRows(파일들, each Text.Contains([Name], "Meeting") and Text.EndsWith(Text.Lower([Name]), ".xlsx") and not Text.StartsWith([Name], "~$")),
+    최신 = Table.Sort(RM후보, {{{{"Date modified", Order.Descending}}}}),   // 같은 폴더의 가장 최신 RM 자동
+    Src = Excel.Workbook(최신{{0}}[Content], null, true),
     당월 = Src{{[Item="{RM_SHEET[CUR]}", Kind="Sheet"]}}[Data],
     익월 = Src{{[Item="{RM_SHEET[NXT]}", Kind="Sheet"]}}[Data],
     셀 = (t, r, c) => Record.Field(t{{r-1}}, "Column" & Text.From(c)),
@@ -241,19 +252,22 @@ M = f'''let
 in
     표'''
 lines = [
- "■ 윈도우 엑셀: RM 엑셀 → ②[A] 자동로드 (매주 새로고침)",
- "방법: 데이터 → 데이터 가져오기 → 기타 원본 → 빈 쿼리 → 고급 편집기에 아래 M 붙여넣기 →",
- "      닫기및로드(연결만) → ②[A] 영역에 '테이블/범위에서' 또는 이 쿼리를 로드.",
- "      매주 '파일' 경로만 최신 RM으로 바꾸고 [데이터 모두 새로고침].",
+ "■ 윈도우 엑셀: 같은 폴더의 RM 엑셀 → ②[A] 자동로드 (경로수정 불필요, 새로고침만)",
+ "배포법: 이 워크북 + RM 엑셀을 '같은 폴더'에 두고 받는 사람은 새로고침만.",
+ "설정(1회): 데이터 → 새 쿼리 → 기타 원본에서 → 빈 쿼리 → 홈 → 고급 편집기 →",
+ "           아래 M 전체 붙여넣기 → 완료 → 닫기및로드(다음으로) → 표 → 기존시트 '②RM입력(주간)'!$A$3.",
+ "주의1: 이 워크북을 반드시 '저장'해야 폴더경로가 잡힘(새 통합문서 상태면 안 됨).",
+ "주의2: 완료 시 개인정보/자격증명 물으면 '공용/조직' 허용, 개인정보수준은 '무시(결합 허용)'.",
+ "동작: 같은 폴더에서 이름에 'Meeting' 들어간 .xlsx 중 가장 최신본을 자동 사용(파일명 안 바꿔도 됨).",
  "좌표 근거: 2026.MM '전체 주요지표' — Inbound=19행, OTA=22행, G-OTA=23행 /",
  "           목표=I열, FCST=N열, 전년(2025Actual)=AG열, FCST객실수=K열.",
  "────────────────────────────────────────────────────────",
 ]
 for i, t in enumerate(lines, 1):
-    wq.cell(i, 1, t)
-wq.cell(1, 1).font = BOLD
+    wq.cell(i, 2, t)   # B열(H1 명명셀과 분리)
+wq.cell(1, 2).font = BOLD
 for j, ln in enumerate(M.split("\n"), len(lines) + 1):
-    wq.cell(j, 1, ln)
+    wq.cell(j, 2, ln)
 
 # ⑦ 안내
 wg = wb.create_sheet("⑦안내")
@@ -261,8 +275,8 @@ guide = [
  "■ 주간회의 예상매출현황 — 담당자 사용법",
  f"당월 {CUR} · 익월 {NXT}",
  "",
- "1) (윈도우) 매주 RM 엑셀을 받으면 → ⑥의 파일경로만 최신으로 바꾸고 [데이터 모두 새로고침].",
- "   → ②[A](세그 회사전체 목표/FCST/전년/객실수)가 RM '전체 주요지표'에서 자동 갱신.",
+ "1) (윈도우) 이 워크북과 'RM 엑셀'을 같은 폴더에 두고 → [데이터 → 모두 새로고침].",
+ "   → ②[A](세그 회사전체 목표/FCST/전년/객실수)가 같은 폴더 최신 RM에서 자동 갱신(경로수정 불필요).",
  "   (수동) PQ 없이 쓰려면 ②[A] 파랑칸에 RM 전체 주요지표 값 직접 입력.",
  "2) ①예상매출현황 GS 섹션(GS/OTA/G-OTA/Inbound)이 자동 계산 → PPT 테이블에 붙여넣기.",
  "   Forecast = 객실 FCST + 소사업(=FCST객실수×소사업실당 ÷1000).",
@@ -279,7 +293,7 @@ wg.cell(1, 1).font = BOLD
 for i, wd in enumerate([10, 10] + [9] * 14, 1): w1.column_dimensions[L(i)].width = wd
 for i, wd in enumerate([9, 9, 14, 15, 14, 12], 1): w2.column_dimensions[L(i)].width = wd
 for i, wd in enumerate([9, 13, 9, 11, 11, 10, 11, 16], 1): w5.column_dimensions[L(i)].width = wd
-wq.column_dimensions["A"].width = 120
+wq.column_dimensions["A"].width = 10; wq.column_dimensions["B"].width = 120
 wg.column_dimensions["A"].width = 100
 
 wb.save(OUT)
