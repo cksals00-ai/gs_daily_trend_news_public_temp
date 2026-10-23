@@ -247,12 +247,12 @@ M = f'''let
     익월 = Src{{[Item="{RM_SHEET[NXT]}", Kind="Sheet"]}}[Data],
     익익월 = Src{{[Item="{RM_SHEET[NXT2]}", Kind="Sheet"]}}[Data],
     셀 = (t, r, c) => Record.Field(t{{r-1}}, "Column" & Text.From(c-2)),   // RM 빈 A·B열 잘림 보정
-    만들기 = (t, 월) => {{
-        [세그="Inbound", 월=월, 목표=셀(t,{SEG_ROW["Inbound"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["Inbound"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["Inbound"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["Inbound"]},{COL_RN})],
-        [세그="OTA",     월=월, 목표=셀(t,{SEG_ROW["OTA"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["OTA"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["OTA"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["OTA"]},{COL_RN})],
-        [세그="G-OTA",   월=월, 목표=셀(t,{SEG_ROW["G-OTA"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["G-OTA"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["G-OTA"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["G-OTA"]},{COL_RN})]
+    만들기 = (세그, r) => {{   // ②[A]와 동일한 '세그별' 순서(세그 × 당월/익월/익익월)
+        [세그=세그, 월="{CUR}",  목표=셀(당월,r,{COL_TGT}),   FCST=셀(당월,r,{COL_FCST}),   전년=셀(당월,r,{COL_LY}),   객실수=셀(당월,r,{COL_RN})],
+        [세그=세그, 월="{NXT}",  목표=셀(익월,r,{COL_TGT}),   FCST=셀(익월,r,{COL_FCST}),   전년=셀(익월,r,{COL_LY}),   객실수=셀(익월,r,{COL_RN})],
+        [세그=세그, 월="{NXT2}", 목표=셀(익익월,r,{COL_TGT}), FCST=셀(익익월,r,{COL_FCST}), 전년=셀(익익월,r,{COL_LY}), 객실수=셀(익익월,r,{COL_RN})]
     }},
-    결합 = 만들기(당월, "{CUR}") & 만들기(익월, "{NXT}") & 만들기(익익월, "{NXT2}"),
+    결합 = 만들기("OTA",{SEG_ROW["OTA"]}) & 만들기("G-OTA",{SEG_ROW["G-OTA"]}) & 만들기("Inbound",{SEG_ROW["Inbound"]}),
     표 = Table.FromRecords(결합)
 in
     표'''
