@@ -144,6 +144,7 @@ M = r'''let
     RM후보 = Table.SelectRows(파일들, each Text.Contains([Name], "Meeting") and Text.EndsWith(Text.Lower([Name]), ".xlsx") and not Text.StartsWith([Name], "~$")),
     최신 = Table.Sort(RM후보, {{"Date modified", Order.Descending}}),
     Src = Excel.Workbook(최신{0}[Content], null, true),
+    준비 = (sh) => Table.Buffer(Table.SelectColumns(Src{[Item=sh, Kind="Sheet"]}[Data], {"Column1","Column7","Column9","Column12","Column31"}, MissingField.UseNull)),
     셀 = (t, r, c) => Record.Field(t{r-1}, "Column" & Text.From(c-2)),
     txt = (t, r, c) => let v = try Record.Field(t{r-1}, "Column" & Text.From(c-2)) otherwise null in if v = null then "" else Text.Trim(Text.Replace(Text.From(v), "▣", "")),
     사이트 = (nm) => if Text.Contains(nm, "비발디파크") then "비발디파크" else if Text.Contains(nm, "르네블루") then "르네블루" else Text.Replace(nm, "_", " "),
@@ -159,9 +160,9 @@ M = r'''let
             [사업장 = nm, 세그 = seg, 월 = 월,
              목표 = 셀(t, rr, 9), FCST = fc, 전년 = 셀(t, rr, 33),
              객실수 = 셀(t, rr, 11), 소사업 = fc * factor(nm, seg)]))),
-    당월 = Src{[Item="__M0__", Kind="Sheet"]}[Data],
-    익월 = Src{[Item="__M1__", Kind="Sheet"]}[Data],
-    익익월 = Src{[Item="__M2__", Kind="Sheet"]}[Data],
+    당월 = 준비("__M0__"),
+    익월 = 준비("__M1__"),
+    익익월 = 준비("__M2__"),
     결합 = 한달(당월, "__CUR__") & 한달(익월, "__NXT__") & 한달(익익월, "__NXT2__"),
     표 = Table.FromRecords(결합)
 in
