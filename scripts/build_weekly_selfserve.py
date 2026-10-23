@@ -104,21 +104,11 @@ def pre(seg, mo, k, fb=0):
 
 wb = openpyxl.Workbook()
 
-# 쿼리데이터 — ⑥ PowerQuery가 로드하는 전용 시트(세그/월/목표/FCST/전년/객실수). ①이 SUMIFS로 참조.
+# 쿼리데이터 — ⑥ PowerQuery가 A1부터 채우는 전용 시트. 반드시 '비워' 둬야 로드시 열밀림(끼워넣기) 없음.
+# ①이 세그+월 SUMIFS로 참조하므로 순서·열위치 무관. (A:F 영역은 비워두고 PQ 로드 전까지 ①은 0)
 w2 = wb.active; w2.title = "쿼리데이터"
-hQ = ["세그", "월", "목표", "FCST", "전년", "객실수"]
-for i, h in enumerate(hQ, 1):
-    cell = w2.cell(1, i, h); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
-r = 2
-for s in SEGS:
-    for mo in MONTHS:      # PQ가 덮어씀(미연결/수동 대비 prefill). 순서 무관(①=SUMIFS)
-        w2.cell(r, 1, s); w2.cell(r, 2, mo)
-        w2.cell(r, 3, pre(s, mo, "tgt", round(seg_company(s, mo, "rm_budget_rev_mil"), 1)))
-        w2.cell(r, 4, pre(s, mo, "fcst", round(seg_company(s, mo, "rm_fcst_rev_mil"), 1)))
-        w2.cell(r, 5, pre(s, mo, "ly", 0))
-        w2.cell(r, 6, pre(s, mo, "rn", seg_company(s, mo, "rm_fcst_rn")))
-        for c in (3, 4, 5, 6): w2.cell(r, c).fill = PQFILL
-        r += 1
+w2["H1"] = "⑥ PowerQuery가 A1부터 자동 채움 — A:F 영역은 비워두세요(미리 값 넣으면 로드시 열이 밀립니다)."
+w2["H1"].font = Font(italic=True, color="888888")
 QD = "'쿼리데이터'"
 QSEG = f"{QD}!$A:$A"; QMO = f"{QD}!$B:$B"
 QTGT = f"{QD}!$C:$C"; QFC = f"{QD}!$D:$D"; QLY = f"{QD}!$E:$E"; QRN = f"{QD}!$F:$F"
