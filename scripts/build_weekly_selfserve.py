@@ -29,8 +29,8 @@ RM_XLSX = Path(sys.argv[2]) if len(sys.argv) > 2 else Path.home() / "Downloads" 
 def nextm(ym):
     y, m = int(ym[:4]), int(ym[5:7]); m += 1
     return f"{y+1}-01" if m == 13 else f"{y}-{m:02d}"
-NXT = nextm(CUR)
-MONTHS = [CUR, NXT]
+NXT = nextm(CUR); NXT2 = nextm(NXT)
+MONTHS = [CUR, NXT, NXT2]              # 당월·익월·익익월 (예: 10·11·12)
 SEGS = ["OTA", "G-OTA", "Inbound"]
 PROPS = list(RM["properties"].keys())
 SITE_MAP = {
@@ -47,7 +47,7 @@ CHAN_MAP = {"OTA": "국내OTA", "G-OTA": "GOTA", "Inbound": "인바운드"}
 # RM 상세 전체 주요지표 좌표
 SEG_ROW = {"Inbound": 19, "OTA": 22, "G-OTA": 23}
 COL_TGT, COL_FCST, COL_RN, COL_LY = 9, 14, 11, 33   # I,N,K,AG
-RM_SHEET = {CUR: "2026.10", NXT: "2026.11"}          # 당월/익월 → 상세시트명
+RM_SHEET = {m: m.replace("-", ".") for m in MONTHS}  # 2026-10 → 2026.10 (상세시트명)
 
 HDR = Font(bold=True, color="FFFFFF", size=10)
 HFILL = PatternFill("solid", fgColor="2F5597")
@@ -150,15 +150,19 @@ B_FIRST = b0 + 2; B_LAST = r - 1
 w1 = wb.create_sheet("①예상매출현황", 0)
 w1["B1"] = "① 예상매출현황 (주간회의 양식)"; w1["B1"].font = Font(bold=True, size=12)
 w1["B2"] = "단위: 매출 백만원(VAT제외) · 대외비·관리자용 / GS 섹션=자동(PQ), 그 외=입력"
-w1["C3"] = f"당월 ({CUR})"; w1["J3"] = f"익월 ({NXT})"
-for a in ("C3", "J3"): w1[a].font = BOLD; w1[a].alignment = CEN
-w1.merge_cells("C3:I3"); w1.merge_cells("J3:P3")
+BLK_LABEL = ["당월", "익월", "익익월"]
+NB = len(MONTHS)
+NCOL = 2 + NB * 7          # 라벨2 + 블록×7
+for bi, mo in enumerate(MONTHS):
+    base = 3 + bi * 7
+    cell = w1.cell(3, base, f"{BLK_LABEL[bi]} ({mo})"); cell.font = BOLD; cell.alignment = CEN
+    w1.merge_cells(start_row=3, start_column=base, end_row=3, end_column=base + 6)
 sub = ["목표", "Forecast", "증감", "달성률", "전년", "전년증감", "증감률"]
 w1["A4"] = "구분"; w1["B4"] = "세부"
-for bi in range(2):
+for bi in range(NB):
     for i, s in enumerate(sub):
         w1.cell(4, 3 + bi * 7 + i, s)
-for c in range(1, 17):
+for c in range(1, NCOL + 1):
     cell = w1.cell(4, c); cell.fill = HFILL; cell.font = HDR; cell.alignment = CEN; cell.border = BD
 
 ROWS = [
@@ -195,13 +199,13 @@ GS_IDS = {"GS", "OTA", "GOTA", "Inbound"}
 for i, (rid, a, b, kind) in enumerate(ROWS):
     rr = R0 + i
     w1.cell(rr, 1, a); w1.cell(rr, 2, b)
-    for bi in range(2):
+    for bi in range(NB):
         if kind.startswith("seg:"): put(rr, bi, seg=kind.split(":")[1])
         elif kind.startswith("sum:"): put(rr, bi, sumtags=kind.split(":", 1)[1].split(","))
         else: put(rr, bi)
-    for c in range(1, 17): w1.cell(rr, c).border = BD
+    for c in range(1, NCOL + 1): w1.cell(rr, c).border = BD
     if rid in GS_IDS:
-        for c in range(3, 17): w1.cell(rr, c).fill = GSFILL
+        for c in range(3, NCOL + 1): w1.cell(rr, c).fill = GSFILL
     if a in ("운영 매출", "세일즈마케팅", "GS", "마케팅", "MICE", "레저마케팅"): w1.cell(rr, 1).font = BOLD
 
 # ⑤ 로우 (사업장×세그×월, 참조)
@@ -241,13 +245,14 @@ M = f'''let
     Src = Excel.Workbook(최신{{0}}[Content], null, true),
     당월 = Src{{[Item="{RM_SHEET[CUR]}", Kind="Sheet"]}}[Data],
     익월 = Src{{[Item="{RM_SHEET[NXT]}", Kind="Sheet"]}}[Data],
-    셀 = (t, r, c) => Record.Field(t{{r-1}}, "Column" & Text.From(c)),
+    익익월 = Src{{[Item="{RM_SHEET[NXT2]}", Kind="Sheet"]}}[Data],
+    셀 = (t, r, c) => Record.Field(t{{r-1}}, "Column" & Text.From(c-2)),   // RM 빈 A·B열 잘림 보정
     만들기 = (t, 월) => {{
         [세그="Inbound", 월=월, 목표=셀(t,{SEG_ROW["Inbound"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["Inbound"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["Inbound"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["Inbound"]},{COL_RN})],
         [세그="OTA",     월=월, 목표=셀(t,{SEG_ROW["OTA"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["OTA"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["OTA"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["OTA"]},{COL_RN})],
         [세그="G-OTA",   월=월, 목표=셀(t,{SEG_ROW["G-OTA"]},{COL_TGT}), FCST=셀(t,{SEG_ROW["G-OTA"]},{COL_FCST}), 전년=셀(t,{SEG_ROW["G-OTA"]},{COL_LY}), 객실수=셀(t,{SEG_ROW["G-OTA"]},{COL_RN})]
     }},
-    결합 = 만들기(당월, "{CUR}") & 만들기(익월, "{NXT}"),
+    결합 = 만들기(당월, "{CUR}") & 만들기(익월, "{NXT}") & 만들기(익익월, "{NXT2}"),
     표 = Table.FromRecords(결합)
 in
     표'''
@@ -290,7 +295,7 @@ for i, t in enumerate(guide, 1):
     wg.cell(i, 1, t)
 wg.cell(1, 1).font = BOLD
 
-for i, wd in enumerate([10, 10] + [9] * 14, 1): w1.column_dimensions[L(i)].width = wd
+for i, wd in enumerate([10, 10] + [9] * (NB * 7), 1): w1.column_dimensions[L(i)].width = wd
 for i, wd in enumerate([9, 9, 14, 15, 14, 12], 1): w2.column_dimensions[L(i)].width = wd
 for i, wd in enumerate([9, 13, 9, 11, 11, 10, 11, 16], 1): w5.column_dimensions[L(i)].width = wd
 wq.column_dimensions["A"].width = 10; wq.column_dimensions["B"].width = 120
