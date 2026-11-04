@@ -1428,6 +1428,13 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         # admin FCST key-in 오버라이드 집계
         admin_fcst_keyin = (admin_data or {}).get("fcst_keyin", {})
 
+        # 익익월이 차년도(13월↑)로 넘어가는 연말 보정 — 별도 산출본(온북·예산) 주입
+        _ny_path = Path(__file__).resolve().parent.parent / "docs" / "data" / "otb_nextyear.json"
+        try:
+            otb_nextyear = _json.loads(_ny_path.read_text(encoding="utf-8")) if _ny_path.exists() else {}
+        except Exception:
+            otb_nextyear = {}
+
         for m_idx, mkey in enumerate(month_keys):
             s = all_months.get(mkey, {}).get("summary", {})
             actual   = s.get("rns_actual")
@@ -1463,6 +1470,19 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             t_net    = s.get("today_net", 0) or 0
             t_book   = s.get("today_booking", 0) or 0
             t_cancel = s.get("today_cancel", 0) or 0
+
+            # 익익월이 차년도(13월↑) → 별도 산출본(온북·예산)으로 대체
+            nk = int(mkey)
+            if nk > 12:
+                _ny_year = now.year + 1
+                _ny_key = f"{_ny_year}{nk - 12:02d}"
+                nyrow = otb_nextyear.get(_ny_key)
+                if nyrow:
+                    actual   = nyrow.get("actual")
+                    ach      = nyrow.get("ach")
+                    fcst     = nyrow.get("fcst")
+                    fcst_ach = nyrow.get("fcst_ach")
+                    t_net    = nyrow.get("today_net", 0) or 0
 
             html = apply_tpl(html, f"otb-m{m_idx}-actual",   f"{actual:,}"         if actual   is not None else "—")
             html = apply_tpl(html, f"otb-m{m_idx}-ach",      f"{ach:.1f}%"         if ach      is not None else "—")
@@ -2957,6 +2977,21 @@ def main():
                 logger.warning(f"✗ generate_otb_data 실패: {result.stderr.strip()[-200:]}")
         except Exception as e:
             logger.warning(f"✗ generate_otb_data 실행 오류: {e}")
+
+    # ── 트렌드리포트 익익월(차년도 2027-01+) 온북·예산 (연말 보정) ──
+    ny_script = Path(__file__).resolve().parent / "build_otb_nextyear.py"
+    if ny_script.exists() and (DATA_DIR / "raw_db" / "2026").exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(ny_script)],
+                capture_output=True, text=True, timeout=180,
+            )
+            if result.returncode == 0:
+                logger.info("✓ build_otb_nextyear 완료")
+            else:
+                logger.warning(f"✗ build_otb_nextyear 실패: {result.stderr.strip()[-200:]}")
+        except Exception as e:
+            logger.warning(f"✗ build_otb_nextyear 실행 오류: {e}")
 
     # ── 주간비교(weekly_comparison.json) 자동 재생성 ──
     # index.html / weekly-compare.html 상단 "기준일자" 표시용.
