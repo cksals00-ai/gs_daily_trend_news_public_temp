@@ -122,14 +122,14 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
 <script>
 const ALLDT=['주중','금','토','일','연휴','스페셜'];
 const F={year:2026, month:'전체', seg:'ONLINE', dts:['주중','금','토','일','연휴','스페셜'], ib:false, site:'전체'};
-let DATA=null, IDX=null, SITES=null, ROOMS=null;
+let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null;
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(1)+'%';
 const won=n=>n>=1e8?(n/1e8).toFixed(1)+'억':(n>=1e4?Math.round(n/1e4).toLocaleString()+'만':fmt(n));
 
 fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
-  DATA=d.rows; ROOMS=d.meta.rooms;
+  DATA=d.rows; ROOMS=d.meta.rooms; META=d.meta;
   SITES=Object.keys(ROOMS).sort((a,b)=>ROOMS[b]-ROOMS[a]);
   IDX={};
   for(const r of DATA){ IDX[[r.year,r.month,r.site,r.seg,r.daytype].join('|')]=r; }
@@ -140,8 +140,8 @@ fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
 
 function chipRow(el,opts,cur,cb){el.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.className='chip'+(o.v===cur?' active':'');b.textContent=o.t;b.onclick=()=>{cb(o.v);[...el.children].forEach(c=>c.classList.remove('active'));b.classList.add('active');};el.appendChild(b);});}
 function buildFilters(meta){
-  chipRow(document.getElementById('f-year'),meta.years.map(y=>({v:y,t:y})),F.year,v=>{F.year=v;render();});
-  chipRow(document.getElementById('f-month'),[{v:'전체',t:'전체'}].concat(meta.months.map(m=>({v:m,t:m+'월'}))),F.month,v=>{F.month=v;render();});
+  chipRow(document.getElementById('f-year'),meta.years.map(y=>({v:y,t:y})),F.year,v=>{F.year=v;buildMonthChips();render();});
+  buildMonthChips();
   chipRow(document.getElementById('f-seg'),[{v:'ONLINE',t:'온라인합'},{v:'OTA',t:'OTA'},{v:'GOTA',t:'GOTA'}],F.seg,v=>{F.seg=v;render();});
   buildDtChips();
   document.getElementById('f-ib').onchange=e=>{F.ib=e.target.checked;render();};
@@ -167,7 +167,13 @@ function SHORT(s){return s.replace(' 비발디파크',' 비발').replace('소노
 function scopeSite(){return F.site==='전체'?'전사':F.site;}
 
 // (year, site, seg, daytype) 월1~10 합산 → {rn, occ, share, lead, nights}
-function months(){return F.month==='전체'?[1,2,3,4,5,6,7,8,9,10]:[+F.month];}
+function monList(){return (META&&META.months_by_year&&META.months_by_year[F.year])||[1,2,3,4,5,6,7,8,9,10];}
+function buildMonthChips(){
+  const ms=monList();
+  if(F.month!=='전체' && !ms.includes(+F.month)) F.month='전체';
+  chipRow(document.getElementById('f-month'),[{v:'전체',t:'전체'}].concat(ms.map(m=>({v:m,t:m+'월'}))),F.month,v=>{F.month=v;render();});
+}
+function months(){return F.month==='전체'?monList():[+F.month];}
 // dts: 단일 문자열 또는 배열(합산). 비중=share(RN/월전체가용, 조합·총계 정합). occ=요일가용대비(단일요일용).
 function agg(year,site,seg,dts){
   if(typeof dts==='string') dts=(dts==='ALL'?ALLDT:[dts]);

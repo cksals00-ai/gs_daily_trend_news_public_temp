@@ -28,7 +28,9 @@ OUT_JSON = ROOT / "docs" / "data" / "leadtime_share.json"
 OUT_XLSX = ROOT / "docs" / "data" / "gs_leadtime.xlsx"
 
 YEARS = [2024, 2025, 2026]
-MONTHS = list(range(1, 11))
+MONTHS = list(range(1, 13))                       # 마감연도(2024·2025)는 11·12월 포함
+MONTHS_BY_YEAR = {2024: list(range(1, 13)), 2025: list(range(1, 13)), 2026: list(range(1, 11))}
+def mly(y): return MONTHS_BY_YEAR.get(y, MONTHS)
 DAYTYPES = ["주중", "금", "토", "일", "연휴", "스페셜"]
 SEGS = ["OTA", "GOTA", "IB"]          # 저장 단위 (IB=인바운드, 참고용)
 ONLINE = ["OTA", "GOTA"]              # 메인 = 온라인 채널
@@ -146,7 +148,7 @@ def process(fp, is_cancel):
         site = _site(p[i_biz])
         if not site: continue
         ci = _pdate(p[i_ci])
-        if not ci or ci.year not in YEARS or ci.month not in MONTHS: continue
+        if not ci or ci.year not in YEARS or ci.month not in mly(ci.year): continue
         h = hash(ln)
         if h in seen: continue
         seen.add(h)
@@ -195,6 +197,7 @@ def main():
         return dim  # 연휴/스페셜/ALL fallback
 
     data = {"meta": {"company_rooms": COMPANY_ROOMS, "years": YEARS, "months": MONTHS,
+                     "months_by_year": {str(k): v for k, v in MONTHS_BY_YEAR.items()},
                      "daytypes": DAYTYPES, "segs": SEGS, "rooms": ROOMS,
                      "weekend": ["금", "토", "일"],
                      "note": "net=예약−취소, RN=박수×객실수, 입실월 귀속, 비중=RN/(객실수×월일수), 리드타임=입실−최초입력(net가중)"},
@@ -202,7 +205,7 @@ def main():
 
     scope_sites = sites + ["전사"]
     for y in YEARS:
-        for m in MONTHS:
+        for m in mly(y):
             dim = calendar.monthrange(y, m)[1]
             for site in scope_sites:
                 rooms = COMPANY_ROOMS if site == "전사" else ROOMS[site]
@@ -245,7 +248,7 @@ def main():
     agg = {}
     for site in sites:
         rn = ltw = av = 0.0
-        for m in MONTHS:
+        for m in mly(2026):
             a, b = 0.0, 0.0
             for sg in ONLINE:
                 x, y2, _ = net(2026, m, site, sg, "토"); a += x; b += y2
@@ -281,7 +284,7 @@ def build_xlsx(data, sites):
             for site in ["전사"] + sites:
                 for seg in SEG_OUT:
                     sn = segname[seg]
-                    for m in MONTHS:
+                    for m in mly(y):
                         row = [y, f"{m}월", site, sn]
                         for dt in DAYTYPES + ["ALL"]:
                             r = idx.get((y, m, site, seg, dt), {})
