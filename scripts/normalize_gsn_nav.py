@@ -31,6 +31,7 @@ CANONICAL_ITEMS = [
     ("sales-kpi",        f"{BASE}/sales-kpi.html",          "세일즈 KPI 현황 리포트", ""),
     ("strategy",         f"{BASE}/gs-strategy-report.html", "전략 리포트", ""),
     ("otb",              f"{BASE}/otb.html",                "GS 실적 리포트", ""),
+    ("block-sim",        f"{BASE}/gs-block-sim.html",       "주말 블록 시뮬", ""),
     ("ga-analytics",     f"{BASE}/ga-analytics.html",       "웹 애널리틱스", ""),
     ("closing",          f"{BASE}/gs-closing-report.html",  "마감리포트", ""),
     ("monitor",          f"{COMP}/",                        "경쟁사 모니터링", ""),
@@ -47,6 +48,7 @@ CANONICAL_SCRIPT = (
     "else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;"
     "else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;"
     "else if(k==='otb')hit=h.indexOf('otb.html')!==-1;"
+    "else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;"
     "else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;"
     "else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;"
     "else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;"
