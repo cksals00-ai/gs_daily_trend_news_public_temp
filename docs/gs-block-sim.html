@@ -176,7 +176,8 @@ function buildMonthChips(){
 function months(){return F.month==='전체'?monList():[+F.month];}
 // dts: 단일 문자열 또는 배열(합산). 비중=share(RN/월전체가용, 조합·총계 정합). occ=요일가용대비(단일요일용).
 function agg(year,site,seg,dts){
-  if(typeof dts==='string') dts=(dts==='ALL'?ALLDT:[dts]);
+  if(typeof dts==='string') dts=(dts==='ALL'?['ALL']:[dts]);
+  if(Array.isArray(dts)&&dts.length===ALLDT.length&&ALLDT.every(d=>dts.includes(d))) dts=['ALL']; // 전체=DB총계 행
   const ms=months();
   let rn=0,avdt=0,avmon=0,ltw=0,adrw=0;
   for(const m of ms){

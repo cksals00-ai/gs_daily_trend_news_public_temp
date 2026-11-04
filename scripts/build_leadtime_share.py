@@ -116,8 +116,8 @@ def _num(s):
     try: return float(s) if s else 0.0
     except ValueError: return 0.0
 
-# acc[key] = [resv_rn, resv_lt_rn, resv_rate_rn, canc_rn, canc_lt_rn]
-acc = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0])
+# acc[key] = [resv_rn, resv_lt_rn, resv_rate_rn, canc_rn, canc_lt_rn, canc_rate_rn]
+acc = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
 def process(fp, is_cancel):
     fh = _open(fp)
@@ -137,30 +137,39 @@ def process(fp, is_cancel):
     i_nights = gi("박수")
     i_rooms = gi("객실수")
     i_rate = gi("1박객실료")
+    i_user = gi("이용자명")
+    i_mem = gi("회원번호")
+    i_rt = gi("객실타입")
+    i_cancel = gi("취소일자")
     if min(i_code, i_biz, i_first, i_ci, i_nights, i_rooms) < 0:
         print("  ! 필수열 누락:", fp.name); return 0
+    hi = max(i_code, i_biz, i_season, i_first, i_ci, i_nights, i_rooms, i_user, i_mem, i_rt, i_cancel)
     seen = set(); n = 0
     for ln in fh:
         p = ln.rstrip("\n").split(";")
-        if len(p) <= max(i_code, i_biz, i_season, i_first, i_ci, i_nights, i_rooms): continue
+        if len(p) <= hi: continue
         seg = _seg(p[i_code])
         if not seg: continue
         site = _site(p[i_biz])
         if not site: continue
         ci = _pdate(p[i_ci])
         if not ci or ci.year not in YEARS or ci.month not in mly(ci.year): continue
-        h = hash(ln)
-        if h in seen: continue
-        seen.add(h)
+        # 스냅샷 적층 중복 제거: 예약 라인 식별자(전체라인 해시 아님 — 상태필드만 다른 적층 제거)
+        key = (p[i_user] if i_user >= 0 else "", p[i_mem] if i_mem >= 0 else "",
+               p[i_rt] if i_rt >= 0 else "", p[i_ci], p[i_nights], p[i_rooms], p[i_code],
+               p[i_first] if i_first >= 0 else "", p[i_cancel] if i_cancel >= 0 else "")
+        if key in seen: continue
+        seen.add(key)
         rn = _num(p[i_nights]) * _num(p[i_rooms])
         if rn <= 0: continue
         fd = _pdate(p[i_first])
         lt = max((ci - fd).days, 0) if fd else 0
         dt = _daytype(p[i_season] if i_season >= 0 else "", ci)
         rate = _num(p[i_rate]) if i_rate >= 0 else 0.0
-        cell = acc[(ci.year, ci.month, site, seg, dt)]
-        if is_cancel: cell[3] += rn; cell[4] += lt * rn
-        else:         cell[0] += rn; cell[1] += lt * rn; cell[2] += rate * rn
+        for bucket in (dt, "__ALL__"):   # 요일별 + 전체(DB총계, 요일분류 무관) 동시 적재
+            cell = acc[(ci.year, ci.month, site, seg, bucket)]
+            if is_cancel: cell[3] += rn; cell[4] += lt * rn; cell[5] += rate * rn
+            else:         cell[0] += rn; cell[1] += lt * rn; cell[2] += rate * rn
         n += 1
     fh.close()
     return n
@@ -177,7 +186,7 @@ def select_files(year_dir):
     return resv, canc
 
 def net(y, m, site, seg, dt):
-    # 재전송 예약(27/43)은 이미 취소분 제외된 최종 온북 → 예약만 사용(취소 재차감 금지)
+    # 예약(최종 온북)만 사용 — 취소 데이터 미반영(사용자 지시)
     c = acc.get((y, m, site, seg, dt))
     if not c: return 0.0, 0.0, 0.0
     return c[0], c[1], c[2]
@@ -185,8 +194,8 @@ def net(y, m, site, seg, dt):
 def main():
     for y in YEARS:
         resv, _canc = select_files(str(RAW / str(y)))
-        print(f"[{y}] 예약(최종 온북) {len(resv)} 파일")
-        for fp in resv: print(f"   예약 {process(fp, False):>9,}행  {os.path.basename(fp)[:50]}")
+        print(f"[{y}] 예약 {len(resv)} 파일 (취소 미반영)")
+        for fp in resv: print(f"   예약 {process(fp, False):>9,}행  {os.path.basename(fp)[:46]}")
 
     sites = sorted(ROOMS.keys(), key=lambda s: -ROOMS[s])
     def dt_nights(y, m, dt):
@@ -214,7 +223,7 @@ def main():
                 for seg in SEG_OUT:
                     seg_list = SEG_GROUPS[seg]
                     for dt in DAYTYPES + ["ALL"]:
-                        dt_list = DAYTYPES if dt == "ALL" else [dt]
+                        dt_list = ["__ALL__"] if dt == "ALL" else [dt]  # 전체=DB총계 직접
                         rn = ltw = ratew = 0.0
                         for s in site_list:
                             for sg in seg_list:
