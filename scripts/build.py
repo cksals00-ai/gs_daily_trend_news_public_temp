@@ -1478,10 +1478,14 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
             # 부모 span 의 color 갱신 (data-tpl-otb-m{i}-today-net 바로 위 wrapper span)
             html = set_style_color(html, f"otb-m{m_idx}-today-net", net_clr, on_ancestor=True)
 
-        # 월 라벨 동적 주입 (하드코딩 방지)
+        # 월 라벨 동적 주입 (하드코딩 방지) — 13월↑ 는 다음해로 래핑 표기
+        def _mlabel(mk):
+            mi = int(mk); yr = datetime.now(KST).year; mm = mi
+            if mm > 12:
+                mm -= 12; yr += 1
+            return f"{mm}월" if yr == now.year else f"{yr}년 {mm}월"
         for m_idx, mkey in enumerate(month_keys):
-            m_label = f"{int(mkey)}월"
-            html = apply_tpl(html, f"otb-m{m_idx}-label", m_label)
+            html = apply_tpl(html, f"otb-m{m_idx}-label", _mlabel(mkey))
 
         # 당월 인사이트 주입
         cur_snap = all_months.get(str(cur_month), {})
@@ -1554,7 +1558,12 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         else:
             html = _re.sub(r'const TB_BY_MONTH\s*=\s*\{.*?\};', tb_replacement, html, count=1, flags=_re.DOTALL)
         # 월 라벨 주입
-        month_labels_json = _json.dumps({mkey: f"{int(mkey)}월" for mkey in month_keys}, ensure_ascii=False)
+        def _mlabel2(mk):
+            mi = int(mk); yr = datetime.now(KST).year; mm = mi
+            if mm > 12:
+                mm -= 12; yr += 1
+            return f"{mm}월" if yr == now.year else f"{yr}년 {mm}월"
+        month_labels_json = _json.dumps({mkey: _mlabel2(mkey) for mkey in month_keys}, ensure_ascii=False)
         ml_replacement = f"const TB_MONTH_LABELS = {month_labels_json};"
         if "/*__TB_MONTH_LABELS__*/" in html:
             html = html.replace("/*__TB_MONTH_LABELS__*/", ml_replacement)
