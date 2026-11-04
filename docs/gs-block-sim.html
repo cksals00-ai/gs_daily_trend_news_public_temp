@@ -156,6 +156,7 @@ function buildDtChips(){
   const paint=()=>{const isAll=F.dts.length===ALLDT.length;[...el.children].forEach(b=>{const v=b.dataset.v;b.classList.toggle('active',v==='__ALL__'?isAll:F.dts.includes(v));});};
   el.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const v=b.dataset.v;
     if(v==='__ALL__'){F.dts=ALLDT.slice();}
+    else if(F.dts.length===ALLDT.length){F.dts=[v];}            // 전체 → 그 요일만
     else{const i=F.dts.indexOf(v);if(i>=0)F.dts.splice(i,1);else F.dts=ALLDT.filter(d=>F.dts.includes(d)||d===v);if(!F.dts.length)F.dts=ALLDT.slice();}
     paint();render();};
   paint();
@@ -182,7 +183,12 @@ function agg(year,site,seg,dts){
   }
   const rooms=site==='전사'?0:(ROOMS[site]||0);
   const nights=rooms?avdt/rooms:0;
-  return {rn,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
+  // 비중 = 해당 선택 요일 가용 대비. 평일계(주중·금·토·일)만이면 그 요일 가용(avdt),
+  //        연휴·스페셜 포함(겹침) 또는 전체면 월 전체 가용(avmon)으로 자동.
+  const WD4=['주중','금','토','일'];
+  const allWD=dts.length>0&&dts.every(d=>WD4.includes(d));
+  const denom=allWD?avdt:avmon;
+  return {rn,rate:denom?rn/denom:0,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
 }
 function segKey(){return F.ib?'ALL':F.seg;}
 
@@ -221,7 +227,7 @@ function renderKPIs(seg,sc){
     {g:'',lb:`${sc==='전사'?'전사':SHORT(sc)} 객실수(실)`,vl:fmt(a.rn),dl:`${dtLabel()}·net 예약`},
     {g:'g3',lb:'ADR(천원)',vl:a.adr?fmt(a.adr/1000):'-',dl:p.adr?'전년 '+((a.adr/p.adr-1)*100).toFixed(0)+'%':''},
     {g:'g2',lb:'매출(백만원)',vl:fmt(rev/1e6),dl:prev?'전년 '+((rev/prev-1)*100).toFixed(0)+'%':''},
-    {g:'g4',lb:'가용대비 비중',vl:pct(a.share),dl:'전체가용대비 · 전년 '+((a.share-p.share)*100>=0?'+':'')+((a.share-p.share)*100).toFixed(1)+'%p'},
+    {g:'g4',lb:'가용대비 비중',vl:pct(a.rate),dl:'전체가용대비 · 전년 '+((a.rate-p.rate)*100>=0?'+':'')+((a.rate-p.rate)*100).toFixed(1)+'%p'},
     {g:'g5',lb:'리드타임',vl:a.lead!=null?a.lead.toFixed(0)+'일':'-',dl:'평균'},
   ];
   document.getElementById('kpis').innerHTML=k.map(x=>`<div class="kpi ${x.g}"><div class="lb">${x.lb}</div><div class="vl">${x.vl}</div><div class="dl">${x.dl}</div></div>`).join('');
@@ -241,7 +247,7 @@ function renderTable(seg){
       <td>${fmt(a.rn)}</td><td>${yoyPct(a.rn,p.rn)}</td>
       <td>${a.adr?fmt(a.adr/1000):'-'}</td><td>${yoyPct(a.adr,p.adr)}</td>
       <td>${fmt(mv(a)/1e6)}</td><td>${yoyPct(mv(a),mv(p))}</td>
-      <td style="font-weight:700;color:var(--gold-bright)">${pct(a.share)}</td><td>${yoyPp(a.share,p.share)}</td>
+      <td style="font-weight:700;color:var(--gold-bright)">${pct(a.rate)}</td><td>${yoyPp(a.rate,p.rate)}</td>
       <td>${a.lead!=null?a.lead.toFixed(0):'-'}</td><td>${yoyDays(a.lead,p.lead)}</td></tr>`;
   }
   let h=`<table><thead>
@@ -254,18 +260,18 @@ function renderTable(seg){
 }
 
 function renderRanking(seg){
-  const rows=SITES.map(s=>({s,a:agg(F.year,s,seg,F.dts)})).filter(r=>r.a.rn>0).sort((x,y)=>y.a.share-x.a.share);
-  const max=Math.max(...rows.map(r=>r.a.share),0.001);
+  const rows=SITES.map(s=>({s,a:agg(F.year,s,seg,F.dts)})).filter(r=>r.a.rn>0).sort((x,y)=>y.a.rate-x.a.rate);
+  const max=Math.max(...rows.map(r=>r.a.rate),0.001);
   let h='';
   rows.forEach((r,i)=>{const {s,a}=r;
     const col=i<rows.length/3?C.pos:(i<rows.length*2/3?C.gold:C.muted);
     const sel=s===F.site;
-    const w=Math.max(3,a.share/max*100).toFixed(1);
+    const w=Math.max(3,a.rate/max*100).toFixed(1);
     const lead=a.lead!=null?a.lead.toFixed(0):'-';
     h+=`<div onclick="selectSite('${s}')" title="${s}" style="display:grid;grid-template-columns:116px 1fr 126px;gap:8px;align-items:center;padding:3px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;${sel?'background:rgba(201,160,99,0.16);outline:1px solid var(--gold)':''}">
       <div style="font-size:11.5px;font-weight:${sel?700:600};color:${sel?'var(--gold-bright)':'var(--ink-soft)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${SHORT(s)}</div>
       <div style="background:var(--bg-deep);border-radius:3px;height:19px;position:relative;overflow:hidden"><div style="width:${w}%;height:100%;background:${col};opacity:.88"></div>
-        <span style="position:absolute;left:7px;top:0;line-height:19px;font-family:var(--mono);font-size:10.5px;font-weight:800;color:#f5f5f7;text-shadow:0 0 3px #000">${pct(a.share)}</span></div>
+        <span style="position:absolute;left:7px;top:0;line-height:19px;font-family:var(--mono);font-size:10.5px;font-weight:800;color:#f5f5f7;text-shadow:0 0 3px #000">${pct(a.rate)}</span></div>
       <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);text-align:right">간격 ${lead}일 · ${fmt(a.rn)}</div>
     </div>`;
   });
