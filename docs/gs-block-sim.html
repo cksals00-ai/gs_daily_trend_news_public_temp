@@ -194,7 +194,7 @@ function agg(year,site,seg,dts){
   const WD4=['주중','금','토','일'];
   const allWD=dts.length>0&&dts.every(d=>WD4.includes(d));
   const denom=allWD?avdt:avmon;
-  return {rn,rate:denom?rn/denom:0,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
+  return {rn,rate:denom?rn/denom:0,avail:denom,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
 }
 function segKey(){return F.ib?'ALL':F.seg;}
 
@@ -253,11 +253,13 @@ function renderTable(seg){
       <td>${fmt(a.rn)}</td><td>${yoyPct(a.rn,p.rn)}</td>
       <td>${a.adr?fmt(a.adr/1000):'-'}</td><td>${yoyPct(a.adr,p.adr)}</td>
       <td>${fmt(mv(a)/1e6)}</td><td>${yoyPct(mv(a),mv(p))}</td>
+      <td style="color:var(--ink-muted)">${fmt(a.avail)}</td>
       <td style="font-weight:700;color:var(--gold-bright)">${pct(a.rate)}</td><td>${yoyPp(a.rate,p.rate)}</td>
       <td>${a.lead!=null?a.lead.toFixed(0):'-'}</td><td>${yoyDays(a.lead,p.lead)}</td></tr>`;
   }
-  let h=`<table><thead>
-    <tr><th rowspan="2" class="site">사업장</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
+  let h=`<style>#perf-table td{text-align:right}#perf-table td.site{text-align:left}#perf-table th{text-align:center}</style>
+    <table><thead>
+    <tr><th rowspan="2" class="site">사업장</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th rowspan="2">가용객실수</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
     <tr><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>점유</th><th>전년비</th><th>일수</th><th>전년비</th></tr></thead><tbody>`;
   h+=row(null,tot,totp,true);
   for(const {s,a,p} of data) h+=row(s,a,p,false);
