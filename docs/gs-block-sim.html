@@ -470,13 +470,14 @@ function renderTable(seg){
 }
 function rowClick(s){ if(EXPANDED.has(s))EXPANDED.delete(s); else EXPANDED.add(s); renderTable(segKey()); }
 const ROOM_COL='#5a9fc4', PKG_COL='#c9a063', ADR_COL='#f0f0f3';   // 룸온니=블루, 패키지=골드, ADR선=화이트
-function paceDaily(year,month,site,seg){
+// months=월 배열([단일] 또는 전체월). 각 월 D0(1일) 기준 오프셋 정렬 배열을 월별 합산 → '전체' 추이.
+function paceDaily(year,months,site,seg){
   if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=paceSites(site);
   let rn=null,wkr=null,wkv=null,found=false;
-  for(const st of siteList)for(const sg of segs)for(const dt of F.dts){  // 사업장 · 선택 요일 · 구조(basis) 반영
-    const o=PACE.series[[year,month,st,sg,F.basis+':'+dt].join('|')];
+  for(const mo of months)for(const st of siteList)for(const sg of segs)for(const dt of F.dts){  // 월 · 사업장 · 선택 요일 · 구조(basis) 반영
+    const o=PACE.series[[year,mo,st,sg,F.basis+':'+dt].join('|')];
     if(o&&o.rn){found=true;
       if(!rn){rn=o.rn.slice();wkr=o.wkr.slice();wkv=o.wkv.slice();}
       else{o.rn.forEach((v,i)=>rn[i]+=v);o.wkr.forEach((v,i)=>wkr[i]+=v);o.wkv.forEach((v,i)=>wkv[i]+=v);}
@@ -485,26 +486,26 @@ function paceDaily(year,month,site,seg){
   return found?{rn,wkr,wkv}:null;
 }
 // 거래처(AGENT) net 비중 — (y,m,site,seg)별, dt무관. 선택 사업장·세그 합산.
-function paceChannels(year,month,site,seg){
+function paceChannels(year,months,site,seg){
   if(!PACE||!PACE.channels) return [];
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=paceSites(site);
   const m={};
-  for(const st of siteList)for(const sg of segs){
-    const arr=PACE.channels[[year,month,st,sg].join('|')];
+  for(const mo of months)for(const st of siteList)for(const sg of segs){
+    const arr=PACE.channels[[year,mo,st,sg].join('|')];
     if(arr)for(const r of arr){ m[r[0]]=(m[r[0]]||0)+r[1]; }
   }
   const tot=Object.values(m).reduce((a,b)=>a+Math.max(0,b),0);
   return Object.entries(m).filter(e=>e[1]>0).map(e=>({a:e[0],v:e[1],sh:tot?e[1]/tot:0})).sort((x,y)=>y.v-x.v);
 }
 // B) 거래처 주차 {거래처:{rn:[14],rev:[14]}} 합산
-function getChpace(year,month,site,seg){
+function getChpace(year,months,site,seg){
   if(!PACE||!PACE.chpace) return {};
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=paceSites(site);
   const m={};
-  for(const st of siteList)for(const sg of segs){
-    const o=PACE.chpace[[year,month,st,sg].join('|')];
+  for(const mo of months)for(const st of siteList)for(const sg of segs){
+    const o=PACE.chpace[[year,mo,st,sg].join('|')];
     if(o)for(const a in o){ const e=o[a];
       if(!m[a])m[a]={rn:e.rn.slice(),rev:e.rev.slice(),room:(e.room||e.rn.map(()=>0)).slice()};
       else {e.rn.forEach((v,i)=>m[a].rn[i]+=v);e.rev.forEach((v,i)=>m[a].rev[i]+=v);(e.room||[]).forEach((v,i)=>m[a].room[i]+=v);} }
@@ -512,35 +513,36 @@ function getChpace(year,month,site,seg){
   return m;
 }
 // D) 평형 티어 주차 {rn:[14],rev:[14]} 합산
-function getRtpace(year,month,site,seg,tier){
+function getRtpace(year,months,site,seg,tier){
   if(!PACE||!PACE.rtpace) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=paceSites(site);
   let rn=null,rev=null,room=null;
-  // 사업장 · 세그 · 선택 요일(F.dts)·구조(F.basis) 합산 → 평형 선택 시 요일 필터 반영 (paceDaily와 동일)
-  for(const st of siteList)for(const sg of segs)for(const dt of F.dts){
-    const o=PACE.rtpace[[year,month,st,sg,F.basis+':'+dt,tier].join('|')];
+  // 월 · 사업장 · 세그 · 선택 요일(F.dts)·구조(F.basis) 합산 → 평형 선택 시 요일 필터 + 전체월 합산 반영
+  for(const mo of months)for(const st of siteList)for(const sg of segs)for(const dt of F.dts){
+    const o=PACE.rtpace[[year,mo,st,sg,F.basis+':'+dt,tier].join('|')];
     if(o){ if(!rn){rn=o.rn.slice();rev=o.rev.slice();room=(o.room||o.rn.map(()=>0)).slice();}
            else {o.rn.forEach((v,i)=>rn[i]+=v);o.rev.forEach((v,i)=>rev[i]+=v);(o.room||[]).forEach((v,i)=>room[i]+=v);} }
   }
   return rn?{rn,rev,room}:null;
 }
 // 현재 월에 데이터 있는 티어(가격 저렴한 순)
-function availTiers(year,month,site,seg){
-  return TIER_ORDER.filter(t=>{const r=getRtpace(year,month,site,seg,t);return r&&r.rn[r.rn.length-1]>0;});
+function availTiers(year,months,site,seg){
+  return TIER_ORDER.filter(t=>{const r=getRtpace(year,months,site,seg,t);return r&&r.rn[r.rn.length-1]>0;});
 }
 function paceChSet(ch){ PACE_CH=(PACE_CH===ch?null:ch); if(PACE_CH)PACE_TIER='전체'; renderTable(segKey()); }
 function paceTierSet(v){ PACE_TIER=v; if(v!=='전체')PACE_CH=null; renderTable(segKey()); }
 function paceWeekClick(site,wi){ const c=PACE_WK.get(site); if(c===wi)PACE_WK.delete(site); else PACE_WK.set(site,wi); renderTable(segKey()); }
 function paceDetailHtml(site){
-  if(F.month==='전체') return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">◷ 특정 월을 선택하면 주차별 예약추이(동기간·취소반영)가 나옵니다.</div>';
+  const isAll=(F.month==='전체');          // 전체=월별 D0 정렬 합산 추이(총계 정합)
+  const PM=months();                        // 대상 월 배열(전체=해당연도 전 월)
   const seg=segKey(), OFF=PACE.meta.off_min, weeks=PACE.meta.weeks, N=weeks.length;
   const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
   const selWi=PACE_WK.get(site), BARH=92, TOPH=47;   // TOPH=막대 상단 라벨 높이(누적+증가+% 3줄)
   const tierMode=PACE_TIER!=='전체';
-  const d=paceDaily(F.year,+F.month,site,seg);
+  const d=paceDaily(F.year,PM,site,seg);
   // 거래처 10%↑ 칩(클릭 필터) + 색
-  const chs=paceChannels(F.year,+F.month,site,seg).filter(c=>c.sh>=0.10);
+  const chs=paceChannels(F.year,PM,site,seg).filter(c=>c.sh>=0.10);
   const chColMap={}; chs.forEach((c,k)=>chColMap[c.a]=CH_COLORS[k%CH_COLORS.length]);
   const chMode=(!!PACE_CH && chs.some(c=>c.a===PACE_CH));
   // 데이터 결정: wkRN(주차 총 RN) · adrs(주차 ADR천원) · stacks(주차별 스택 세그) · dailyRN(드릴용)
@@ -553,12 +555,12 @@ function paceDetailHtml(site){
       return [{c:ROOM_COL,v:rm,label:'룸온니'},{c:PKG_COL,v:Math.max(0,v-rm),label:'패키지'}];});
   };
   if(chMode){
-    const cp=getChpace(F.year,+F.month,site,seg), o=cp[PACE_CH];
-    if(!o) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 월 <b>${PACE_CH}</b> 데이터 없음</div>`;
+    const cp=getChpace(F.year,PM,site,seg), o=cp[PACE_CH];
+    if(!o) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 ${isAll?'기간':'월'} <b>${PACE_CH}</b> 데이터 없음</div>`;
     stackRP(o.rn, o.rev, o.room);
   }else if(tierMode){
-    const rt=getRtpace(F.year,+F.month,site,seg,PACE_TIER);
-    if(!rt) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 월 <b>${PACE_TIER}</b> 데이터 없음</div>`;
+    const rt=getRtpace(F.year,PM,site,seg,PACE_TIER);
+    if(!rt) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 ${isAll?'기간':'월'} <b>${PACE_TIER}</b> 데이터 없음</div>`;
     stackRP(rt.rn, rt.rev, rt.room);
   }else{
     if(!d||!d.rn) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">데이터 없음</div>';
@@ -622,22 +624,31 @@ function paceDetailHtml(site){
     const w=weeks[selWi], d0=new Date(F.year,+F.month-1,1), WD=['일','월','화','수','목','금','토'];
     const days=[]; for(let j=0;j<7;j++){const off=w*7+j; if(off-OFF>=0&&off-OFF<daily.length) days.push({off,v:daily[off-OFF]});}
     const maxd=Math.max(...days.map(d=>d.v),1), DBH=64;
+    const offLbl=o=>o===0?'D0':(o>0?'D+'+o:'D'+o);   // 전체: 날짜 대신 D-오프셋(월마다 날짜 달라서)
     let db='';
     days.forEach((d,j)=>{
-      const dt=new Date(d0); dt.setDate(1+d.off); const isD0=(d.off===0), wkend=(dt.getDay()===0||dt.getDay()===6);
+      const isD0=(d.off===0);
       const prev=j>0?days[j-1].v:(daily[w*7-1-OFF]||0), dl=d.v-prev;
       const dc=dl>0?'var(--positive)':(dl<0?'var(--negative)':'var(--ink-faint)');
-      const wdcol=isD0?'var(--gold-bright)':(dt.getDay()===0?'var(--negative)':(dt.getDay()===6?'var(--info)':'var(--ink-faint)'));
+      let lbl, wdRow='', barCol;
+      if(isAll){                                      // 전체=D0 오프셋 기준(날짜/요일 없음)
+        lbl=offLbl(d.off); barCol=isD0?'var(--gold)':'var(--warning)';
+      }else{
+        const dt=new Date(d0); dt.setDate(1+d.off); const wkend=(dt.getDay()===0||dt.getDay()===6);
+        const wdcol=isD0?'var(--gold-bright)':(dt.getDay()===0?'var(--negative)':(dt.getDay()===6?'var(--info)':'var(--ink-faint)'));
+        lbl=`${dt.getMonth()+1}/${dt.getDate()}`; barCol=isD0?'var(--gold)':(wkend?'var(--info)':'var(--warning)');
+        wdRow=`<div style="font-family:var(--mono);font-size:9.5px;color:${wdcol};font-weight:600">${WD[dt.getDay()]}</div>`;
+      }
       db+=`<div style="display:flex;flex-direction:column;align-items:center">
         <div style="font-family:var(--mono);font-size:11px;font-weight:${isD0?700:600};color:${isD0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.3">${fmt(d.v)}</div>
         <div style="font-family:var(--mono);font-size:9px;color:${dc};line-height:1.3;height:12px">${(dl>=0?'+':'')+fmt(dl)}</div>
-        <div style="width:100%;height:${DBH}px;display:flex;align-items:flex-end;justify-content:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)"><div style="width:52%;max-width:24px;height:${Math.max(3,Math.round(d.v/maxd*DBH))}px;background:${isD0?'var(--gold)':(wkend?'var(--info)':'var(--warning)')};border-radius:3px 3px 0 0;opacity:.85"></div></div>
-        <div style="font-family:var(--mono);font-size:10px;color:${isD0?'var(--gold-bright)':'var(--ink-soft)'};font-weight:${isD0?700:500}">${dt.getMonth()+1}/${dt.getDate()}</div>
-        <div style="font-family:var(--mono);font-size:9.5px;color:${wdcol};font-weight:600">${WD[dt.getDay()]}</div>
+        <div style="width:100%;height:${DBH}px;display:flex;align-items:flex-end;justify-content:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)"><div style="width:52%;max-width:24px;height:${Math.max(3,Math.round(d.v/maxd*DBH))}px;background:${barCol};border-radius:3px 3px 0 0;opacity:.85"></div></div>
+        <div style="font-family:var(--mono);font-size:10px;color:${isD0?'var(--gold-bright)':'var(--ink-soft)'};font-weight:${isD0?700:500}">${lbl}</div>
+        ${wdRow}
       </div>`;
     });
     dailyHtml=`<div style="margin-top:12px;padding:11px 10px;background:var(--bg-card);border-radius:7px;border:1px solid var(--rule)">
-      <div style="font-family:var(--mono);font-size:11px;color:var(--info);margin-bottom:9px;font-weight:600">└ ${wl(w)} 일별 순온북 (동기간·취소반영)</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--info);margin-bottom:9px;font-weight:600">└ ${wl(w)} 일별 순온북 (동기간·취소반영)${isAll?' · 전체(월별 D0 정렬 합산)':''}</div>
       <div style="display:grid;grid-template-columns:repeat(${days.length},1fr);gap:3px;align-items:end">${db}</div></div>`;
   }
   const sw=(c,t)=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${c};border-radius:2px;display:inline-block"></span>${t}</span>`;
@@ -647,11 +658,11 @@ function paceDetailHtml(site){
   const legend=sw(ROOM_COL,'룸온니')+sw(PKG_COL,'패키지')+adrLeg+scopeTag;
   // 컨트롤: 객실 평형 티어 (거래처는 아래 칩 클릭으로 필터)
   const chip=(label,active,on)=>`<button onclick="${on}" style="padding:2px 8px;border-radius:3px;border:1px solid ${active?'var(--gold)':'var(--rule-strong)'};background:${active?'rgba(201,160,99,0.18)':'transparent'};color:${active?'var(--gold-bright)':'var(--ink-muted)'};font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer">${label}</button>`;
-  const tiers=['전체'].concat(availTiers(F.year,+F.month,site,seg));
+  const tiers=['전체'].concat(availTiers(F.year,PM,site,seg));
   const tierCtrl=tiers.map(t=>chip(t,PACE_TIER===t,`paceTierSet('${t}')`)).join(' ');
   return `<div style="padding:13px 12px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:7px">
-      <div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);font-weight:600">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${basisLabel()}:${dtLabel()}</span></div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);font-weight:600">📅 ${SHORT(site)} · ${F.year}년 ${isAll?'전체(월별 D0정렬 합산)':F.month+'월'} · ${segKey()} · <span style="color:var(--gold-bright)">${basisLabel()}:${dtLabel()}</span></div>
       <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${legend}</div></div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint)">
       <span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap">객실(평형) ${tierCtrl}</span></div>
