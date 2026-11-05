@@ -301,6 +301,9 @@ function render(){
     <div class="card"><h3>📋 사업장별 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg}</span></h3>
       <div class="hint">객실수(RN)·ADR·매출·가용대비 비중 + 전년비 · 요일 <b>전체</b>=총계 일치 · 행 클릭=사업장 선택</div>
       <div style="overflow-x:auto"><div id="perf-table"></div></div></div>
+    <div class="card"><h3>🎯 의사결정 요약 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg} · 사업장별 권장 액션</span></h3>
+      <div class="hint">지표 합성 → <b style="color:var(--positive)">확대</b>/<b style="color:var(--gold-bright)">적정</b>/<b style="color:var(--ink-muted)">회원우선</b> · 권장 블록(일평균 온라인 소진) · 릴리즈 D-X(리드+7) · 넘길 채널(최다 거래처)</div>
+      <div style="overflow-x:auto"><div id="decision-table"></div></div></div>
     <div class="card" id="simcard"><h3>🧮 사전블록 시뮬레이터 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· 블록 N실·D-X일 → 예상 효과</span></h3>
       <div class="hint">과거 판매 볼륨·리드타임 기준으로, 블록을 받으면 얼마나 소진되고 매출 효과가 나는지 예측</div>
       <div class="sim-grid" id="sim-in"></div><div class="sim-out" id="sim-out"></div><div id="sim-verdict"></div></div>
@@ -312,7 +315,54 @@ function render(){
         <div class="hint">RN(막대) · 점유%(선) · 리드타임(선)</div>
         <div class="chart-wrap sm"><canvas id="trend"></canvas></div></div>
     </div>`;
-  const sc=scopeSite(); renderKPIs(seg,sc); renderTable(seg); renderSim(seg); renderRanking(seg); renderTrend(seg,sc);
+  const sc=scopeSite(); renderKPIs(seg,sc); renderTable(seg); renderDecision(seg); renderSim(seg); renderRanking(seg); renderTrend(seg,sc);
+}
+
+// 거래처(AGENT) net 비중 — 선택 기간(months) 합산
+function getChannels(year,site,seg){
+  if(!PACE||!PACE.channels) return [];
+  const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
+  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const m={};
+  for(const mm of months())for(const st of siteList)for(const sg of segs){
+    const arr=PACE.channels[[year,mm,st,sg].join('|')];
+    if(arr)for(const r of arr){ m[r[0]]=(m[r[0]]||0)+r[1]; }
+  }
+  const tot=Object.values(m).reduce((a,b)=>a+Math.max(0,b),0);
+  return Object.entries(m).filter(e=>e[1]>0).map(e=>({a:e[0],v:e[1],sh:tot?e[1]/tot:0})).sort((x,y)=>y.v-x.v);
+}
+// 의사결정 요약: 지표 합성 → 판정·권장블록·릴리즈·넘길채널
+function renderDecision(seg){
+  const y=F.year, dts=F.dts;
+  const comp=agg(y,'전사',seg,dts).rate||0.0001;    // 전사 비중 = 기준선(요일·월 자동 보정)
+  function vd(rate){
+    if(rate>=Math.max(comp*1.05,0.15)) return {t:'확대',c:'var(--positive)',bg:'rgba(76,175,111,0.10)'};
+    if(rate>=comp*0.6)                 return {t:'적정',c:'var(--gold-bright)',bg:'rgba(201,160,99,0.08)'};
+    return {t:'회원우선',c:'var(--ink-muted)',bg:'transparent'};
+  }
+  const rows=SITES.map(s=>({s,a:agg(y,s,seg,dts)})).filter(r=>r.a.rn>0).sort((x,z)=>z.a.rate-x.a.rate);
+  let h=`<style>#decision-table table{width:100%;table-layout:auto}#decision-table td{text-align:center}#decision-table td.site{text-align:left;width:16%}#decision-table td.ch{text-align:left}#decision-table th{text-align:center}</style>
+    <table><thead><tr>
+      <th class="site">사업장</th><th>판정</th><th>가용대비 비중</th><th>리드타임</th><th>권장 블록</th><th>릴리즈</th><th>넘길 채널(비중)</th>
+    </tr></thead><tbody>`;
+  for(const {s,a} of rows){
+    const v=vd(a.rate);
+    const perDay=a.nights?a.rn/a.nights:0;
+    const block=v.t==='확대'?Math.round(perDay*1.15):(v.t==='회원우선'?Math.round(perDay*0.6):Math.round(perDay));
+    const relDX=a.lead!=null?Math.round((a.lead+7)/5)*5:null;
+    const chs=getChannels(y,s,seg).slice(0,2);
+    const chtxt=chs.length?chs.map(c=>`${c.a} <span style="color:var(--gold-bright)">${Math.round(c.sh*100)}%</span>`).join(' · '):'<span style="color:var(--ink-faint)">–</span>';
+    h+=`<tr style="background:${v.bg};cursor:pointer" onclick="selectSite('${s}')">
+      <td class="site">${SHORT(s)}</td>
+      <td><span style="color:${v.c};font-weight:700;font-family:var(--mono);font-size:11px">${v.t}</span></td>
+      <td style="font-weight:700;color:var(--gold-bright)">${pct(a.rate)}</td>
+      <td>${a.lead!=null?a.lead.toFixed(0)+'일':'–'}</td>
+      <td style="font-weight:700">${block.toLocaleString()}<span style="color:var(--ink-faint);font-size:10px">실/일</span></td>
+      <td style="color:var(--info);font-weight:600">${relDX!=null?'D-'+relDX:'–'}</td>
+      <td class="ch" style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft)">${chtxt}</td></tr>`;
+  }
+  h+='</tbody></table>';
+  document.getElementById('decision-table').innerHTML=h;
 }
 
 function renderKPIs(seg,sc){
@@ -359,7 +409,7 @@ function renderTable(seg){
   document.getElementById('perf-table').innerHTML=h;
 }
 function rowClick(s){ if(EXPANDED.has(s))EXPANDED.delete(s); else EXPANDED.add(s); renderTable(segKey()); }
-const ROOM_COL='#5a9fc4', PKG_COL='#c9a063';   // 룸온니=블루, 패키지=골드
+const ROOM_COL='#5a9fc4', PKG_COL='#c9a063', ADR_COL='#f0f0f3';   // 룸온니=블루, 패키지=골드, ADR선=화이트
 function paceDaily(year,month,site,seg){
   if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
@@ -402,16 +452,17 @@ function paceDetailHtml(site){
   // 거래처 >10% 요약
   const chs=paceChannels(F.year,+F.month,site,segKey()).filter(c=>c.sh>=0.10);
   const chHtml=chs.length?chs.map(c=>`<span style="color:var(--ink-soft)">${c.a} <b style="color:var(--gold-bright)">${Math.round(c.sh*100)}%</b></span>`).join('<span style="color:var(--ink-faint)"> · </span>'):'<span style="color:var(--ink-faint)">10%↑ 거래처 없음</span>';
+  const TOPH=35;   // 상단 오프셋: 컬럼padding4 + 값16 + %12 + margin3 = 막대 영역 시작 y
+  const adrs=weeks.map((w,i)=>wkRN[i]>0?Math.round(wkv[i]/wkRN[i]):0);   // 주차별 ADR(천원)
   let bars='';
   weeks.forEach((w,i)=>{
     const v=wkRN[i], rm=Math.max(0,Math.min(v,wkr[i])), pk=Math.max(0,v-rm);
     const hgt=Math.max(3,Math.round(v/maxw*BARH));
     const rmH=v>0?Math.round(hgt*rm/v):0, pkH=Math.max(0,hgt-rmH);
-    const adr=v>0?Math.round(wkv[i]/v):0;                 // ADR(천원)=rev천원/rn
     const pf=finRN>0?Math.round(v/finRN*100):0;           // D+5w(final) 대비 비중
     const d0=(w===0), sel=(i===selWi);
     const pfcol=pf>=95?'var(--positive)':(pf>=70?'var(--gold-bright)':'var(--info)');
-    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="룸온니 ${fmt(rm)} · 패키지 ${fmt(pk)} · 클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
+    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="룸온니 ${fmt(rm)} · 패키지 ${fmt(pk)} · ADR ${adrs[i]||'–'}천원 · 클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
       <div style="font-family:var(--mono);font-size:12px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.3">${fmt(v)}</div>
       <div style="font-family:var(--mono);font-size:9.5px;color:${pfcol};line-height:1.25;height:12px">${pf}%</div>
       <div style="width:100%;height:${BARH}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)">
@@ -419,10 +470,19 @@ function paceDetailHtml(site){
           <div style="height:${pkH}px;background:${PKG_COL};border-radius:3px 3px 0 0;opacity:.92"></div>
           <div style="height:${rmH}px;background:${ROOM_COL};opacity:.92"></div>
         </div></div>
-      <div style="font-family:var(--mono);font-size:9px;color:var(--ink-muted);line-height:1.2;height:11px">${adr?adr:'–'}</div>
       <div style="font-family:var(--mono);font-size:10.5px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500};margin-top:1px">${wl(w)}</div>
     </div>`;
   });
+  // ── ADR 콤보 선그래프(막대 위 오버레이) ──
+  const N=weeks.length, pos=adrs.filter(a=>a>0);
+  const amin=pos.length?Math.min(...pos):0, amax=pos.length?Math.max(...pos):1, aspan=(amax-amin)||1, PAD=15;
+  const yOf=a=>a>0?(BARH-PAD-(a-amin)/aspan*(BARH-2*PAD)):null;
+  const P=adrs.map((a,i)=>({a,i,x:(i+0.5)/N*1000,y:yOf(a)}));
+  const poly=P.filter(p=>p.y!=null).map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const adrSvg=`<svg viewBox="0 0 1000 ${BARH}" preserveAspectRatio="none" style="position:absolute;left:0;top:${TOPH}px;width:100%;height:${BARH}px;pointer-events:none;overflow:visible">
+      <polyline points="${poly}" fill="none" stroke="${ADR_COL}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0.95"/></svg>`;
+  const adrDots=P.filter(p=>p.y!=null).map(p=>`<div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y)}px;width:5px;height:5px;border-radius:50%;background:${ADR_COL};border:1px solid #0b0f14;transform:translate(-50%,-50%);pointer-events:none"></div>
+    <div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y-14)}px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:700;color:${ADR_COL};text-shadow:0 0 3px #000,0 0 2px #000;pointer-events:none;white-space:nowrap">${p.a}</div>`).join('');
   const daily=rn;  // 일별 드릴용(총 net)
   let dailyHtml='';
   if(selWi!=null){
@@ -448,15 +508,19 @@ function paceDetailHtml(site){
       <div style="display:grid;grid-template-columns:repeat(${days.length},1fr);gap:3px;align-items:end">${db}</div></div>`;
   }
   const legend=`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:${ROOM_COL};border-radius:2px;display:inline-block"></span>룸온니</span>
-    <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${PKG_COL};border-radius:2px;display:inline-block"></span>패키지</span>`;
+    <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${PKG_COL};border-radius:2px;display:inline-block"></span>패키지</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:14px;height:2px;background:${ADR_COL};display:inline-block"></span>ADR(천원)</span>`;
   return `<div style="padding:13px 12px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px">
       <div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);font-weight:600">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${basisLabel()}:${dtLabel()}</span></div>
       <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${legend}</div></div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-bottom:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
       <span>거래처 10%↑: ${chHtml}</span>
-      <span>막대=룸온니/패키지 · 상단%=D+5w 대비 · 하단=ADR(천원) · D0=투숙월1일 · 클릭→일별</span></div>
-    <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>
+      <span>막대=룸온니/패키지 · 상단%=D+5w 대비 · <b style="color:var(--ink-muted)">흰선=ADR</b> · D0=투숙월1일 · 클릭→일별</span></div>
+    <div style="position:relative;">
+      <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>
+      ${adrSvg}${adrDots}
+    </div>
     ${dailyHtml}</div>`;
 }
 
