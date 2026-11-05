@@ -400,43 +400,47 @@ function paceDetailHtml(site){
   const maxw=Math.max(...wkVal,1);
   const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
   const selWi=PACE_WK.get(site);
+  const BARH=92;   // 막대 영역 높이(px)
   let bars='';
   weeks.forEach((w,i)=>{
-    const v=wkVal[i], hgt=Math.max(2,Math.round(v/maxw*56)), d0=(w===0), sel=(i===selWi);
-    const dlt=i>0?v-wkVal[i-1]:0, dltxt=i>0?((dlt>=0?'+':'')+fmt(dlt)):'';
+    const v=wkVal[i], hgt=Math.max(3,Math.round(v/maxw*BARH)), d0=(w===0), sel=(i===selWi);
+    const dlt=i>0?v-wkVal[i-1]:0, dltxt=i>0?((dlt>=0?'+':'')+fmt(dlt)):'·';
     const dcol=dlt>0?'var(--positive)':(dlt<0?'var(--negative)':'var(--ink-faint)');
-    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="클릭=일별" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;cursor:pointer;border-radius:4px;padding:2px 0;${sel?'background:rgba(90,159,196,0.18);outline:1px solid var(--info)':''}">
-      <div style="font-family:var(--mono);font-size:10.5px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'}">${fmt(v)}</div>
-      <div style="font-family:var(--mono);font-size:8.5px;color:${dcol}">${dltxt}</div>
-      <div style="width:24px;height:58px;display:flex;align-items:flex-end"><div style="width:100%;height:${hgt}px;background:${_barCol(d0)};border-radius:2px 2px 0 0;opacity:.85"></div></div>
-      <div style="font-family:var(--mono);font-size:9px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500}">${wl(w)}</div>
+    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
+      <div style="font-family:var(--mono);font-size:12px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.35">${fmt(v)}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:${dcol};line-height:1.3;height:14px">${dltxt}</div>
+      <div style="width:100%;height:${BARH}px;display:flex;align-items:flex-end;justify-content:center;margin:4px 0 5px;border-bottom:1px solid var(--rule)"><div style="width:58%;max-width:30px;height:${hgt}px;background:${_barCol(d0)};border-radius:3px 3px 0 0;opacity:.9${d0?';box-shadow:0 0 8px rgba(201,160,99,0.45)':''}"></div></div>
+      <div style="font-family:var(--mono);font-size:10.5px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500}">${wl(w)}</div>
     </div>`;
   });
   let dailyHtml='';
   if(selWi!=null){
     const w=weeks[selWi], d0=new Date(F.year,+F.month-1,1), WD=['일','월','화','수','목','금','토'];
     const days=[]; for(let j=0;j<7;j++){const off=w*7+j; if(off-OFF>=0&&off-OFF<daily.length) days.push({off,v:daily[off-OFF]});}
-    const maxd=Math.max(...days.map(d=>d.v),1);
+    const maxd=Math.max(...days.map(d=>d.v),1), DBH=64;
     let db='';
     days.forEach((d,j)=>{
-      const dt=new Date(d0); dt.setDate(1+d.off); const isD0=(d.off===0);
+      const dt=new Date(d0); dt.setDate(1+d.off); const isD0=(d.off===0), wkend=(dt.getDay()===0||dt.getDay()===6);
       const prev=j>0?days[j-1].v:(daily[w*7-1-OFF]||0), dl=d.v-prev;
       const dc=dl>0?'var(--positive)':(dl<0?'var(--negative)':'var(--ink-faint)');
-      db+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px">
-        <div style="font-family:var(--mono);font-size:10px;font-weight:${isD0?700:600};color:${isD0?'var(--gold-bright)':'var(--ink-soft)'}">${fmt(d.v)}</div>
-        <div style="font-family:var(--mono);font-size:8px;color:${dc}">${(dl>=0?'+':'')+fmt(dl)}</div>
-        <div style="width:18px;height:40px;display:flex;align-items:flex-end"><div style="width:100%;height:${Math.max(2,Math.round(d.v/maxd*38))}px;background:${isD0?'var(--gold)':'var(--warning)'};border-radius:2px 2px 0 0;opacity:.8"></div></div>
-        <div style="font-family:var(--mono);font-size:8.5px;color:${isD0?'var(--gold-bright)':'var(--ink-faint)'}">${dt.getMonth()+1}/${dt.getDate()}</div>
-        <div style="font-family:var(--mono);font-size:8px;color:var(--ink-faint)">${WD[dt.getDay()]}</div>
+      const wdcol=isD0?'var(--gold-bright)':(dt.getDay()===0?'var(--negative)':(dt.getDay()===6?'var(--info)':'var(--ink-faint)'));
+      db+=`<div style="display:flex;flex-direction:column;align-items:center">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:${isD0?700:600};color:${isD0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.3">${fmt(d.v)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:${dc};line-height:1.3;height:12px">${(dl>=0?'+':'')+fmt(dl)}</div>
+        <div style="width:100%;height:${DBH}px;display:flex;align-items:flex-end;justify-content:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)"><div style="width:52%;max-width:24px;height:${Math.max(3,Math.round(d.v/maxd*DBH))}px;background:${isD0?'var(--gold)':(wkend?'var(--info)':'var(--warning)')};border-radius:3px 3px 0 0;opacity:.85"></div></div>
+        <div style="font-family:var(--mono);font-size:10px;color:${isD0?'var(--gold-bright)':'var(--ink-soft)'};font-weight:${isD0?700:500}">${dt.getMonth()+1}/${dt.getDate()}</div>
+        <div style="font-family:var(--mono);font-size:9.5px;color:${wdcol};font-weight:600">${WD[dt.getDay()]}</div>
       </div>`;
     });
-    dailyHtml=`<div style="margin-top:10px;padding:9px 6px;background:var(--bg-card);border-radius:6px;border:1px solid var(--rule)">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--info);margin-bottom:7px">└ ${wl(w)} 일별 순온북(동기간·취소반영)</div>
-      <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:3px">${db}</div></div>`;
+    dailyHtml=`<div style="margin-top:12px;padding:11px 10px;background:var(--bg-card);border-radius:7px;border:1px solid var(--rule)">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--info);margin-bottom:9px;font-weight:600">└ ${wl(w)} 일별 순온북 (동기간·취소반영)</div>
+      <div style="display:grid;grid-template-columns:repeat(${days.length},1fr);gap:3px;align-items:end">${db}</div></div>`;
   }
-  return `<div style="padding:11px 8px">
-    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${dtLabel()}</span> — 주차별 순온북(동기간·취소반영) · D0 = 투숙월 1일 · 막대 클릭=일별</div>
-    <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:4px">${bars}</div>
+  return `<div style="padding:13px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:11px">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);font-weight:600">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${basisLabel()}:${dtLabel()}</span></div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">주차별 순온북(동기간·취소반영) · D0 = 투숙월 1일 · 막대 클릭 → 일별</div></div>
+    <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>
     ${dailyHtml}</div>`;
 }
 
