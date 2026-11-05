@@ -188,7 +188,10 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
 const DTS_WD=['주중','금','토','일'];
 const DTS_INT=['주중','금','토','연휴','스페셜'];   // 통합 구조(일→주중)
 function curDTS(){return F.basis==='WD'?DTS_WD:DTS_INT;}
-const F={year:2026, month:'전체', seg:'ONLINE', basis:'INT', dts:['주중','금','토','연휴','스페셜'], ib:false, site:'전체'};
+const F={year:2026, month:'전체', seg:'ONLINE', basis:'INT', dts:['주중','금','토','연휴','스페셜'], ib:false, site:'전체', blockPct:10};
+// GS 실적 리포트(PROPERTY_DEFS) 사업장 순서 — 실적표 정렬 기준
+const SITE_ORDER=['소노벨 비발디파크','소노캄 비발디파크','소노펫 비발디파크','소노펠리체 비발디파크','소노펠리체 빌리지 비발디파크','소노벨 양평','델피노','쏠비치 양양','쏠비치 삼척','소노벨 단양','소노캄 경주','소노벨 청송','소노벨 천안','소노벨 변산','소노캄 여수','소노캄 거제','쏠비치 진도','소노벨 제주','소노캄 제주','소노캄 고양','소노문 해운대','쏠비치 남해','르네블루'];
+const siteRank=s=>{const i=SITE_ORDER.indexOf(s);return i<0?999:i;};
 let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
 const EXPANDED=new Set();
 const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
@@ -199,7 +202,7 @@ const won=n=>n>=1e8?(n/1e8).toFixed(1)+'억':(n>=1e4?Math.round(n/1e4).toLocaleS
 
 fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
   DATA=d.rows; ROOMS=d.meta.rooms; META=d.meta;
-  SITES=Object.keys(ROOMS).sort((a,b)=>ROOMS[b]-ROOMS[a]);
+  SITES=Object.keys(ROOMS).sort((a,b)=>siteRank(a)-siteRank(b));   // GS실적 순서
   IDX={};
   for(const r of DATA){ IDX[[r.year,r.month,r.site,r.seg,(r.basis||'ALL'),r.daytype].join('|')]=r; }
   document.getElementById('meta-note').textContent='2026 객실수 고정 '+d.meta.company_rooms.toLocaleString()+'실 · 1~10월 · net 예약';
@@ -300,6 +303,12 @@ function render(){
     <div class="kpi-strip" id="kpis"></div>
     <div class="card"><h3>📋 사업장별 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg}</span></h3>
       <div class="hint">객실수(RN)·ADR·매출·가용대비 비중 + 전년비 · 요일 <b>전체</b>=총계 일치 · 행 클릭=사업장 선택</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 10px;padding:8px 11px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">
+        🧪 <b style="color:var(--ink-soft)">블록 소진 시뮬</b> · 사전블록 제공 =
+        <span style="display:inline-flex;align-items:center;gap:3px">가용 대비
+        <input type="number" id="blockpct" value="${F.blockPct}" min="0" max="100" step="5" oninput="F.blockPct=Math.max(0,Math.min(100,+this.value||0));renderTable(segKey())" style="width:54px;padding:4px 6px;background:var(--bg-deep);border:1px solid var(--rule-strong);border-radius:4px;color:var(--gold-bright);font-family:var(--mono);font-size:12px;font-weight:700;text-align:right">%</span>
+        <span style="color:var(--ink-faint)">→ 사업장 펼치면 주차 차트에 <b style="color:var(--positive)">받아야 소진 가능한 시점</b> 표시 (특정 월 선택 시)</span>
+      </div>
       <div style="overflow-x:auto"><div id="perf-table"></div></div></div>
     <div class="card"><h3>🎯 의사결정 요약 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg} · 사업장별 권장 액션</span></h3>
       <div class="hint">지표 합성 → <b style="color:var(--positive)">확대</b>/<b style="color:var(--gold-bright)">적정</b>/<b style="color:var(--ink-muted)">회원우선</b> · 권장 블록(일평균 온라인 소진) · 릴리즈 D-X(리드+7) · 넘길 채널(최다 거래처)</div>
@@ -380,7 +389,7 @@ function renderKPIs(seg,sc){
 
 function renderTable(seg){
   const y=F.year, dt=F.dts;
-  const data=SITES.map(s=>({s,a:agg(y,s,seg,dt),p:agg(y-1,s,seg,dt)})).filter(r=>r.a.rn>0||r.p.rn>0).sort((x,z)=>z.a.rn-x.a.rn);
+  const data=SITES.map(s=>({s,a:agg(y,s,seg,dt),p:agg(y-1,s,seg,dt)})).filter(r=>r.a.rn>0||r.p.rn>0);  // SITES=GS실적 순서 유지
   const tot=agg(y,'전사',seg,dt), totp=agg(y-1,'전사',seg,dt);
   const mv=o=>o.rn*o.adr;  // 매출(원)
   function row(label,a,p,isTot){
@@ -483,6 +492,22 @@ function paceDetailHtml(site){
       <polyline points="${poly}" fill="none" stroke="${ADR_COL}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0.95"/></svg>`;
   const adrDots=P.filter(p=>p.y!=null).map(p=>`<div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y)}px;width:5px;height:5px;border-radius:50%;background:${ADR_COL};border:1px solid #0b0f14;transform:translate(-50%,-50%);pointer-events:none"></div>
     <div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y-14)}px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:700;color:${ADR_COL};text-shadow:0 0 3px #000,0 0 2px #000;pointer-events:none;white-space:nowrap">${p.a}</div>`).join('');
+  // ── E: 블록 소진 시뮬 (가용 대비 blockPct% → 받아야 소진 가능한 최종 주차) ──
+  const availP=agg(F.year,site,segKey(),F.dts).avail||0;
+  const blockRN=Math.round((F.blockPct||0)/100*availP);
+  let soakW=null; for(let i=0;i<N;i++){ if(finRN-wkRN[i] >= blockRN) soakW=i; }  // 릴리즈 후 남은수요 ≥ 블록인 최종 주차
+  let soakMark='', soakNote='';
+  const BAND=TOPH+BARH;  // 막대 영역 하단 y
+  if(F.blockPct>0 && blockRN>0){
+    if(soakW==null){
+      soakNote=`<span style="color:var(--negative)">블록 ${F.blockPct}% = ${fmt(blockRN)}실 · 잔여수요 부족 → 전량 소진 어려움</span>`;
+    }else{
+      const xw=(soakW+0.5)/N*100, remHere=finRN-wkRN[soakW];
+      soakMark=`<div style="position:absolute;left:${xw}%;top:${TOPH}px;height:${BARH}px;border-left:2px dashed var(--positive);transform:translateX(-50%);pointer-events:none;opacity:.9;z-index:1"></div>
+        <div style="position:absolute;left:${xw}%;top:${TOPH-13}px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:700;color:var(--positive);background:var(--bg-deep);padding:0 4px;border-radius:3px;white-space:nowrap;pointer-events:none;z-index:3">소진 마지노선</div>`;
+      soakNote=`<span style="color:var(--positive)">블록 ${F.blockPct}% = ${fmt(blockRN)}실 → <b>${wl(weeks[soakW])}</b>까지 받으면 소진 가능</span> <span style="color:var(--ink-faint)">(그 시점 잔여수요 ${fmt(remHere)}실)</span>`;
+    }
+  }
   const daily=rn;  // 일별 드릴용(총 net)
   let dailyHtml='';
   if(selWi!=null){
@@ -517,9 +542,10 @@ function paceDetailHtml(site){
     <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-bottom:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
       <span>거래처 10%↑: ${chHtml}</span>
       <span>막대=룸온니/패키지 · 상단%=D+5w 대비 · <b style="color:var(--ink-muted)">흰선=ADR</b> · D0=투숙월1일 · 클릭→일별</span></div>
+    ${soakNote?`<div style="font-family:var(--mono);font-size:10.5px;margin-bottom:8px;padding:5px 9px;background:rgba(76,175,111,0.08);border-left:2px solid var(--positive);border-radius:3px">${soakNote}</div>`:''}
     <div style="position:relative;">
       <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>
-      ${adrSvg}${adrDots}
+      ${adrSvg}${adrDots}${soakMark}
     </div>
     ${dailyHtml}</div>`;
 }
