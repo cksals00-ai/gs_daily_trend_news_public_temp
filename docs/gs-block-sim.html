@@ -273,7 +273,7 @@ function buildDtChips(){
   paint();
 }
 function syncSiteChips(){const ss=document.getElementById('f-site');if(ss)ss.value=F.site;}
-function selectSite(s){F.site=(F.site===s?'전체':s);syncSiteChips();render();}
+function selectSite(s){if(BRAND_ORDER.includes(s))return;F.site=(F.site===s?'전체':s);syncSiteChips();render();}
 function SHORT(s){return s.replace(' 비발디파크',' 비발').replace('소노펠리체 빌리지 비발','펠리체빌리지비발');}
 function scopeSite(){return F.site==='전체'?'전사':F.site;}
 
@@ -398,10 +398,11 @@ function renderDecision(seg){
     if(rate>=comp*0.6)                 return {t:'적정',c:'var(--gold-bright)',bg:'rgba(201,160,99,0.08)'};
     return {t:'회원우선',c:'var(--ink-muted)',bg:'transparent'};
   }
-  const rows=SITES.map(s=>({s,a:agg(y,s,seg,dts)})).filter(r=>r.a.rn>0).sort((x,z)=>z.a.rate-x.a.rate);
+  const units=F.groupBy==='brand'?BRAND_ORDER:SITES;
+  const rows=units.map(s=>({s,a:agg(y,s,seg,dts)})).filter(r=>r.a.rn>0).sort((x,z)=>z.a.rate-x.a.rate);
   let h=`<style>#decision-table table{width:100%;table-layout:auto}#decision-table td{text-align:center}#decision-table td.site{text-align:left;width:16%}#decision-table td.ch{text-align:left}#decision-table th{text-align:center}</style>
     <table><thead><tr>
-      <th class="site">사업장</th><th>판정</th><th>가용대비 비중</th><th>리드타임</th><th>권장 블록</th><th>릴리즈</th><th>넘길 채널(비중)</th>
+      <th class="site">${F.groupBy==='brand'?'브랜드':'사업장'}</th><th>판정</th><th>가용대비 비중</th><th>리드타임</th><th>권장 블록</th><th>릴리즈</th><th>넘길 채널(비중)</th>
     </tr></thead><tbody>`;
   for(const {s,a} of rows){
     const v=vd(a.rate);
@@ -662,7 +663,8 @@ function paceDetailHtml(site){
 }
 
 function renderRanking(seg){
-  const rows=SITES.map(s=>({s,a:agg(F.year,s,seg,F.dts)})).filter(r=>r.a.rn>0).sort((x,y)=>y.a.rate-x.a.rate);
+  const units=F.groupBy==='brand'?BRAND_ORDER:SITES;
+  const rows=units.map(s=>({s,a:agg(F.year,s,seg,F.dts)})).filter(r=>r.a.rn>0).sort((x,y)=>y.a.rate-x.a.rate);
   const max=Math.max(...rows.map(r=>r.a.rate),0.001);
   let h='';
   rows.forEach((r,i)=>{const {s,a}=r;
