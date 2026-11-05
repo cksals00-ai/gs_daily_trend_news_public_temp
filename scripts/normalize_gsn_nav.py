@@ -28,9 +28,9 @@ COMP = "https://cksals00-ai.github.io/sono-competitor-crawler"
 # 순서 = 화면 노출 순서.
 CANONICAL_ITEMS = [
     ("trend",            f"{BASE}/",                        "트렌드 리포트", ""),
+    ("otb",              f"{BASE}/otb.html",                "GS 실적 리포트", ""),   # 트렌드 다음으로 이동(대표 지시)
     ("sales-kpi",        f"{BASE}/sales-kpi.html",          "세일즈 KPI 현황 리포트", ""),
-    ("strategy",         f"{BASE}/gs-strategy-report.html", "전략 리포트", ""),
-    ("otb",              f"{BASE}/otb.html",                "GS 실적 리포트", ""),
+    ("strategy",         f"{BASE}/gs-strategy-report.html", "전략 리포트", ""),       # 숨김(menu-visibility)
     ("block-sim",        f"{BASE}/gs-block-sim.html",       "주말 블록 시뮬", ""),
     ("ga-analytics",     f"{BASE}/ga-analytics.html",       "웹 애널리틱스", ""),
     ("closing",          f"{BASE}/gs-closing-report.html",  "마감리포트", ""),

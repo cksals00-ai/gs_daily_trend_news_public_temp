@@ -31,6 +31,12 @@
       label: '전년상품 (전년 동기간 상품)',
       reason: '미사용 — 전년 동기간 상품 비교.'
     },
+    {
+      key: 'strategy',
+      href: 'gs-strategy-report.html',
+      label: '전략 리포트',
+      reason: '대표 지시(2026-11) — 네비에서 숨김(파일 보존). 관리자 토글로 재노출 가능.'
+    },
   ];
 
   var LS_OVERRIDES = 'gsn_menu_overrides';
