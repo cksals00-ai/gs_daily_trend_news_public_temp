@@ -93,7 +93,7 @@ else
         find "$REPO" "$REPO/data" "$REPO/data/Daily Booking Report PDF" \
              -maxdepth 1 -type f -name "Daily Booking Report_*.pdf" 2>/dev/null \
         | while IFS= read -r f; do
-              d=$(basename "$f" | sed -E 's/^Daily Booking Report_([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.pdf$/\1/')
+              d=$(basename "$f" | sed -E 's/^Daily Booking Report_([0-9]{4}\.[0-9]{2}\.[0-9]{2})( ?\([0-9]+\))?\.pdf$/\1/')
               [ "$d" != "$(basename "$f")" ] && printf '%s\t%s\n' "$d" "$f"
           done \
         | sort -u | tail -1 | cut -f2-
@@ -101,7 +101,7 @@ else
     [ -n "$PDF" ] || die "Daily Booking Report PDF를 찾지 못했습니다 ('data/Daily Booking Report PDF/' 에 'Daily Booking Report_YYYY.MM.DD.pdf' 배치 필요)"
     ok "최신 PDF: $(basename "$PDF")"
 fi
-PDF_DATE="$(basename "$PDF" | sed -E 's/^Daily Booking Report_([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.pdf$/\1/' | tr '.' '-')"
+PDF_DATE="$(basename "$PDF" | sed -E 's/^Daily Booking Report_([0-9]{4}\.[0-9]{2}\.[0-9]{2})( ?\([0-9]+\))?\.pdf$/\1/' | tr '.' '-')"
 
 # 회귀 방지: 이미 반영된(HEAD) 보고일보다 과거 PDF면 거부(오늘 PDF 누락 시 옛수치 복귀 방지)
 HEAD_RPT="$(git show "HEAD:$DATA_JSON" 2>/dev/null | python3 -c "import json,sys
