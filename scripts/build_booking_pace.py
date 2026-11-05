@@ -18,7 +18,7 @@ from pathlib import Path
 # 공통 로직 재사용(사이트매핑·세그·파일선택·인코딩)
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate,
+from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate, _daytype,
                                    select_files, YEARS, MONTHS_BY_YEAR, mly, RAW)
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "data" / "booking_pace.json"
@@ -39,9 +39,10 @@ def _process(fp, is_cancel):
     i_code = g("변경예약집계코드", "예약집계코드"); i_biz = g("변경사업장명")
     i_first = g("최초입력일자"); i_ci = g("입실일자"); i_n = g("박수"); i_r = g("객실수")
     i_user = g("이용자명"); i_mem = g("회원번호"); i_rt = g("객실타입"); i_cancel = g("취소일자")
+    i_season = g("시즌명")
     if min(i_code, i_biz, i_first, i_ci, i_n, i_r) < 0:
         return 0
-    hi = max(i_code, i_biz, i_first, i_ci, i_n, i_r, i_user, i_mem, i_rt, i_cancel)
+    hi = max(i_code, i_biz, i_first, i_ci, i_n, i_r, i_user, i_mem, i_rt, i_cancel, i_season)
     seen = set(); n = 0
     for ln in fh:
         p = ln.rstrip("\n").split(";")
@@ -65,7 +66,8 @@ def _process(fp, is_cancel):
         d0 = date(ci.year, ci.month, 1)
         cs = (fd - d0).days                       # 최초입력 − D0 (일)
         xs = (xd - d0).days if xd else None        # 취소일 − D0
-        darr = acc[(ci.year, ci.month, site, seg)][1 if is_cancel else 0]
+        dt = _daytype(p[i_season] if i_season >= 0 else "", ci)
+        darr = acc[(ci.year, ci.month, site, seg, dt)][1 if is_cancel else 0]
         if is_cancel:
             if xs is None: continue
             s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
@@ -87,26 +89,35 @@ def main():
         for fp in canc: print(f"   취소 {_process(fp, True):>9,}행")
 
     out = {}
-    for (y, m, site, seg), (rv, cc) in acc.items():
+    for (y, m, site, seg, dt), (rv, cc) in acc.items():
         daily = []; run = 0.0
         for i in range(NDAYS):                       # 차분배열 누적 → 일별 as-of 순온북
             run += rv[i] + cc[i]
             daily.append(round(run))
-        out[f"{y}|{m}|{site}|{seg}"] = daily          # 98일(오프셋 OFF_MIN..OFF_MAX)
+        if any(daily):
+            out[f"{y}|{m}|{site}|{seg}|{dt}"] = daily  # 98일(오프셋 OFF_MIN..OFF_MAX)
     data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,
                      "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
-                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). 주차=7일 샘플"},
+                     "daytypes": ["주중", "금", "토", "일", "연휴", "스페셜"],
+                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). key=연|월|사업장|세그|요일, 주차=7일 샘플"},
             "series": out}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     print(f"✓ booking_pace.json: {len(out)} 계열")
-    # 검증: 천안 2026-01 OTA 주차 순온북
-    k = "2026|1|소노벨 천안|OTA"
-    if k in out:
-        dl = out[k]
-        wk = [dl[w * 7 - OFF_MIN] for w in WEEKS]
-        print("천안 2026-01 OTA 주차(-8..+5):", wk)
-        print("  D-1주 7일(일별):", dl[(-7) - OFF_MIN:(0) - OFF_MIN])
+    # 검증: 천안 2026-01 OTA — 요일 전체합 vs 토
+    DTS = ["주중", "금", "토", "일", "연휴", "스페셜"]
+    def sumdt(dts):
+        tot = None
+        for dt in dts:
+            a = out.get(f"2026|1|소노벨 천안|OTA|{dt}")
+            if a:
+                tot = a[:] if tot is None else [tot[i] + a[i] for i in range(len(a))]
+        return tot
+    allv = sumdt(DTS); tov = sumdt(["토"])
+    if allv:
+        print("천안 26-01 OTA 전체요일 주차(-8..+5):", [allv[w*7-OFF_MIN] for w in WEEKS])
+    if tov:
+        print("천안 26-01 OTA 토요일만 주차(-8..+5):", [tov[w*7-OFF_MIN] for w in WEEKS])
 
 if __name__ == "__main__":
     main()

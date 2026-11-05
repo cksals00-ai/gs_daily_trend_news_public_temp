@@ -297,7 +297,10 @@ function paceDaily(year,month,site,seg){
   if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   let net=null,found=false;
-  for(const sg of segs){const arr=PACE.series[[year,month,site,sg].join('|')];if(arr){found=true;if(!net)net=arr.slice();else arr.forEach((v,i)=>net[i]+=v);}}
+  for(const sg of segs)for(const dt of F.dts){            // 선택 요일(day-type) 반영
+    const arr=PACE.series[[year,month,site,sg,dt].join('|')];
+    if(arr){found=true;if(!net)net=arr.slice();else arr.forEach((v,i)=>net[i]+=v);}
+  }
   return found?net:null;
 }
 function paceWeekClick(site,wi){ const c=PACE_WK.get(site); if(c===wi)PACE_WK.delete(site); else PACE_WK.set(site,wi); renderTable(segKey()); }
@@ -346,7 +349,7 @@ function paceDetailHtml(site){
       <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:3px">${db}</div></div>`;
   }
   return `<div style="padding:11px 8px">
-    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} — 주차별 순온북(동기간·취소반영) · <span style="color:var(--gold-bright)">D0 = 투숙월 1일</span> · 막대 클릭=일별</div>
+    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${dtLabel()}</span> — 주차별 순온북(동기간·취소반영) · D0 = 투숙월 1일 · 막대 클릭=일별</div>
     <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:4px">${bars}</div>
     ${dailyHtml}</div>`;
 }
