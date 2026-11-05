@@ -141,6 +141,7 @@ const ALLDT=['주중','금','토','일','연휴','스페셜'];
 const F={year:2026, month:'전체', seg:'ONLINE', dts:['주중','금','토','일','연휴','스페셜'], ib:false, site:'전체'};
 let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
 const EXPANDED=new Set();
+const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(1)+'%';
@@ -292,34 +293,62 @@ function renderTable(seg){
   document.getElementById('perf-table').innerHTML=h;
 }
 function rowClick(s){ if(EXPANDED.has(s))EXPANDED.delete(s); else EXPANDED.add(s); renderTable(segKey()); }
-function paceSeries(year,month,site,seg){
-  if(!PACE||!PACE.series||!PACE.meta||!PACE.meta.weeks||!PACE.meta.weeks.length) return null;
+function paceDaily(year,month,site,seg){
+  if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const weeks=PACE.meta.weeks; let net=new Array(weeks.length).fill(0), found=false;
-  for(const sg of segs){const arr=PACE.series[[year,month,site,sg].join('|')];if(arr){found=true;arr.forEach((v,i)=>net[i]+=v);}}
-  return found?{weeks,net}:null;
+  let net=null,found=false;
+  for(const sg of segs){const arr=PACE.series[[year,month,site,sg].join('|')];if(arr){found=true;if(!net)net=arr.slice();else arr.forEach((v,i)=>net[i]+=v);}}
+  return found?net:null;
 }
+function paceWeekClick(site,wi){ const c=PACE_WK.get(site); if(c===wi)PACE_WK.delete(site); else PACE_WK.set(site,wi); renderTable(segKey()); }
+function _barCol(d0){return d0?'var(--gold)':'var(--info)';}
 function paceDetailHtml(site){
   if(F.month==='전체') return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">◷ 특정 월을 선택하면 주차별 예약추이(동기간·취소반영)가 나옵니다.</div>';
-  const ps=paceSeries(F.year,+F.month,site,segKey());
-  if(!ps) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">주차 데이터 없음</div>';
-  const max=Math.max(...ps.net,1);
+  const daily=paceDaily(F.year,+F.month,site,segKey());
+  if(!daily) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">데이터 없음</div>';
+  const OFF=PACE.meta.off_min, weeks=PACE.meta.weeks;
+  const wkVal=weeks.map(w=>daily[w*7-OFF]);
+  const maxw=Math.max(...wkVal,1);
   const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
+  const selWi=PACE_WK.get(site);
   let bars='';
-  ps.weeks.forEach((w,i)=>{
-    const v=ps.net[i], hgt=Math.max(2,Math.round(v/max*56)), d0=(w===0);
-    const dlt=i>0?v-ps.net[i-1]:0, dltxt=i>0?((dlt>=0?'+':'')+fmt(dlt)):'';
+  weeks.forEach((w,i)=>{
+    const v=wkVal[i], hgt=Math.max(2,Math.round(v/maxw*56)), d0=(w===0), sel=(i===selWi);
+    const dlt=i>0?v-wkVal[i-1]:0, dltxt=i>0?((dlt>=0?'+':'')+fmt(dlt)):'';
     const dcol=dlt>0?'var(--positive)':(dlt<0?'var(--negative)':'var(--ink-faint)');
-    bars+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px">
+    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="클릭=일별" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;cursor:pointer;border-radius:4px;padding:2px 0;${sel?'background:rgba(90,159,196,0.18);outline:1px solid var(--info)':''}">
       <div style="font-family:var(--mono);font-size:10.5px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'}">${fmt(v)}</div>
       <div style="font-family:var(--mono);font-size:8.5px;color:${dcol}">${dltxt}</div>
-      <div style="width:24px;height:58px;display:flex;align-items:flex-end"><div style="width:100%;height:${hgt}px;background:${d0?'var(--gold)':'var(--info)'};border-radius:2px 2px 0 0;opacity:.85"></div></div>
+      <div style="width:24px;height:58px;display:flex;align-items:flex-end"><div style="width:100%;height:${hgt}px;background:${_barCol(d0)};border-radius:2px 2px 0 0;opacity:.85"></div></div>
       <div style="font-family:var(--mono);font-size:9px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500}">${wl(w)}</div>
     </div>`;
   });
+  let dailyHtml='';
+  if(selWi!=null){
+    const w=weeks[selWi], d0=new Date(F.year,+F.month-1,1), WD=['일','월','화','수','목','금','토'];
+    const days=[]; for(let j=0;j<7;j++){const off=w*7+j; if(off-OFF>=0&&off-OFF<daily.length) days.push({off,v:daily[off-OFF]});}
+    const maxd=Math.max(...days.map(d=>d.v),1);
+    let db='';
+    days.forEach((d,j)=>{
+      const dt=new Date(d0); dt.setDate(1+d.off); const isD0=(d.off===0);
+      const prev=j>0?days[j-1].v:(daily[w*7-1-OFF]||0), dl=d.v-prev;
+      const dc=dl>0?'var(--positive)':(dl<0?'var(--negative)':'var(--ink-faint)');
+      db+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:${isD0?700:600};color:${isD0?'var(--gold-bright)':'var(--ink-soft)'}">${fmt(d.v)}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:${dc}">${(dl>=0?'+':'')+fmt(dl)}</div>
+        <div style="width:18px;height:40px;display:flex;align-items:flex-end"><div style="width:100%;height:${Math.max(2,Math.round(d.v/maxd*38))}px;background:${isD0?'var(--gold)':'var(--warning)'};border-radius:2px 2px 0 0;opacity:.8"></div></div>
+        <div style="font-family:var(--mono);font-size:8.5px;color:${isD0?'var(--gold-bright)':'var(--ink-faint)'}">${dt.getMonth()+1}/${dt.getDate()}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--ink-faint)">${WD[dt.getDay()]}</div>
+      </div>`;
+    });
+    dailyHtml=`<div style="margin-top:10px;padding:9px 6px;background:var(--bg-card);border-radius:6px;border:1px solid var(--rule)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--info);margin-bottom:7px">└ ${wl(w)} 일별 순온북(동기간·취소반영)</div>
+      <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:3px">${db}</div></div>`;
+  }
   return `<div style="padding:11px 8px">
-    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} — 주차별 순온북(동기간·취소반영) · <span style="color:var(--gold-bright)">D0 = 투숙월 1일</span> · 작은숫자=주간 증감</div>
-    <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:4px">${bars}</div></div>`;
+    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} — 주차별 순온북(동기간·취소반영) · <span style="color:var(--gold-bright)">D0 = 투숙월 1일</span> · 막대 클릭=일별</div>
+    <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:4px">${bars}</div>
+    ${dailyHtml}</div>`;
 }
 
 function renderRanking(seg){

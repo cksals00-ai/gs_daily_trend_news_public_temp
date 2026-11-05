@@ -22,10 +22,12 @@ from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate,
                                    select_files, YEARS, MONTHS_BY_YEAR, mly, RAW)
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "data" / "booking_pace.json"
-WEEKS = list(range(-8, 6))          # D-8주 … D+5주
+WEEKS = list(range(-8, 6))          # D-8주 … D+5주 (주차 샘플)
+OFF_MIN, OFF_MAX = -56, 41          # 일별 윈도 오프셋(D0 기준): D-8주 ~ D+5주(7일단위)
+NDAYS = OFF_MAX - OFF_MIN + 1       # 98일
 
-# acc[(year, month, site, seg)] = [resv_rn_by_week(14), canc_restore_by_week(14)]
-acc = defaultdict(lambda: [[0.0] * len(WEEKS), [0.0] * len(WEEKS)])
+# acc[(year, month, site, seg)] = [resv_diff(NDAYS+1), canc_diff(NDAYS+1)]  (차분배열)
+acc = defaultdict(lambda: [[0.0] * (NDAYS + 1), [0.0] * (NDAYS + 1)])
 
 def _process(fp, is_cancel):
     fh = _open(fp)
@@ -63,12 +65,16 @@ def _process(fp, is_cancel):
         d0 = date(ci.year, ci.month, 1)
         cs = (fd - d0).days                       # 최초입력 − D0 (일)
         xs = (xd - d0).days if xd else None        # 취소일 − D0
-        cell = acc[(ci.year, ci.month, site, seg)]
-        for wi, w in enumerate(WEEKS):
-            tw = w * 7                              # 컷오프(일, D0 기준)
-            if cs <= tw and (xs is None or xs > tw):
-                # 예약: 온북 가산 / 취소: 복원 가산(그 시점엔 아직 살아있던 예약)
-                cell[1 if is_cancel else 0][wi] += rn
+        darr = acc[(ci.year, ci.month, site, seg)][1 if is_cancel else 0]
+        if is_cancel:
+            if xs is None: continue
+            s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
+            if e < s: continue
+            darr[s - OFF_MIN] += rn; darr[e - OFF_MIN + 1] -= rn
+        else:
+            s = max(OFF_MIN, cs)                              # 예약(생존): [cs, 윈도끝]
+            if s > OFF_MAX: continue
+            darr[s - OFF_MIN] += rn
         n += 1
     fh.close()
     return n
@@ -82,10 +88,14 @@ def main():
 
     out = {}
     for (y, m, site, seg), (rv, cc) in acc.items():
-        net = [round(rv[i] + cc[i]) for i in range(len(WEEKS))]   # 예약 + 취소복원
-        out[f"{y}|{m}|{site}|{seg}"] = net
-    data = {"meta": {"weeks": WEEKS, "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
-                     "note": "주차별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷)"},
+        daily = []; run = 0.0
+        for i in range(NDAYS):                       # 차분배열 누적 → 일별 as-of 순온북
+            run += rv[i] + cc[i]
+            daily.append(round(run))
+        out[f"{y}|{m}|{site}|{seg}"] = daily          # 98일(오프셋 OFF_MIN..OFF_MAX)
+    data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,
+                     "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
+                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). 주차=7일 샘플"},
             "series": out}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
@@ -93,7 +103,10 @@ def main():
     # 검증: 천안 2026-01 OTA 주차 순온북
     k = "2026|1|소노벨 천안|OTA"
     if k in out:
-        print("천안 2026-01 OTA 주차(-8..+5):", out[k])
+        dl = out[k]
+        wk = [dl[w * 7 - OFF_MIN] for w in WEEKS]
+        print("천안 2026-01 OTA 주차(-8..+5):", wk)
+        print("  D-1주 7일(일별):", dl[(-7) - OFF_MIN:(0) - OFF_MIN])
 
 if __name__ == "__main__":
     main()
