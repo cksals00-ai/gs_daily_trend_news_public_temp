@@ -113,10 +113,9 @@ ROOMS = DATA["meta"]["rooms"]
 SITES = sorted(ROOMS, key=lambda s:-ROOMS[s])
 IDX = {(r["year"],r["month"],r["site"],r["seg"],r.get("basis","ALL"),r["daytype"]):r for r in DATA["rows"]}
 def _basis(dt):
-    # 금/토/일/주중 = 요일 기준(실제 입실요일), 연휴/스페셜 = 시즌 기준, ALL = 전체
+    # 통합 구조(INT): 주중(일 포함)/금/토/연휴/스페셜, ALL = 전체
     if dt == "ALL": return "ALL"
-    if dt in ("연휴","스페셜"): return "SZ"
-    return "WD"
+    return "INT"
 def agg(y,site,seg,dt):
     rn=avdt=ltw=0
     for m in range(1,11):
@@ -174,7 +173,7 @@ txt(sl,0.45,6.95,10.0,0.3,[("※ 점유 = 온라인 RN / (객실수×토요일�
 
 # ── 3. 사업장 × 요일 점유 ──
 sl=new_slide(); header(sl,3,"사업장 × 요일 점유 — 2026 · OTA+GOTA")
-dts=["주중","금","토","일","연휴","스페셜"]
+dts=["주중","금","토","연휴","스페셜"]
 rows3=[[("사업장",{})]+[(d,{}) for d in dts]+[("RN합",{})]]
 ordered=sorted(SITES,key=lambda s:-agg(2026,s,"ONLINE","ALL")["rn"])
 for s in ordered:
@@ -182,12 +181,12 @@ for s in ordered:
     for d in dts:
         a=agg(2026,s,"ONLINE",d); o=a["occ"]
         fill=None
-        if d in ("금","토","일","주중") and o>=0.18: fill=LGREEN
+        if d in ("금","토","주중") and o>=0.18: fill=LGREEN
         cells.append((p1(o),{"fill":fill,"b":o>=0.18,"color":BLUE if o>=0.18 else DARK}))
     cells.append((f(agg(2026,s,"ONLINE","ALL")["rn"]),{}))
     rows3.append(cells)
-make_table(sl,0.45,1.3,10.0,rows3,[2.6,1.0,1.0,1.0,1.0,1.0,1.0,1.2],row_h=0.218,font=8.5,hdr_font=9.5)
-txt(sl,0.45,6.95,10.0,0.3,[("※ 셀 = 점유(온라인 RN / 객실수×요일수) · 주중·금·토·일 = 실제 입실요일 기준 · 연휴·스페셜 = 요금시즌 기준(참고) · 초록=18%↑",8.5,False,GRAY)])
+make_table(sl,0.45,1.3,10.0,rows3,[3.0,1.1,1.1,1.1,1.1,1.1,1.4],row_h=0.218,font=8.5,hdr_font=9.5)
+txt(sl,0.45,6.95,10.0,0.3,[("※ 통합 구조(요금시즌, 일요일 주중편입) 기준 · 셀 = 점유(온라인 RN / 객실수×요일수) · 초록=18%↑ · 연휴·스페셜은 참고",8.5,False,GRAY)])
 
 # ── 4. 권고 ──
 sl=new_slide(); header(sl,4,"권고 — 블록 운영 전략")

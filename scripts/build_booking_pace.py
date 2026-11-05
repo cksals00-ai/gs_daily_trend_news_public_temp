@@ -19,7 +19,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate,
-                                   _daytype_sz, _daytype_wd,
+                                   _daytype_int, _daytype_wd,
                                    select_files, YEARS, MONTHS_BY_YEAR, mly, RAW)
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "data" / "booking_pace.json"
@@ -27,8 +27,19 @@ WEEKS = list(range(-8, 6))          # D-8주 … D+5주 (주차 샘플)
 OFF_MIN, OFF_MAX = -56, 41          # 일별 윈도 오프셋(D0 기준): D-8주 ~ D+5주(7일단위)
 NDAYS = OFF_MAX - OFF_MIN + 1       # 98일
 
-# acc[(year, month, site, seg)] = [resv_diff(NDAYS+1), canc_diff(NDAYS+1)]  (차분배열)
-acc = defaultdict(lambda: [[0.0] * (NDAYS + 1), [0.0] * (NDAYS + 1)])
+# acc[key] = 6개 차분배열: [rn예약, rn취소, room예약, room취소, rev예약, rev취소]
+#   rn=총 net, room=룸온니(회원번호 46/56) net, rev=매출(1박객실료×RN, 천원) → ADR=rev/rn
+#   pkg(패키지, 회원번호 86)=rn−room 로 대시보드에서 산출
+acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
+# ch_acc[(year,month,site,seg)][거래처] = net RN (거래처 비중용, dt 무관)
+ch_acc = defaultdict(lambda: defaultdict(float))
+
+_AGENT_ALIAS = {"놀유니버스": "야놀자"}
+def _agent(a):
+    a = re.sub(r"^G?OTA_", "", (a or "").strip())
+    a = re.sub(r"\([^)]*\)", "", a)               # 괄호내용 제거(스마트인피니(객실)→스마트인피니)
+    a = re.sub(r"컴퍼니$", "", a).strip()          # 여기어때컴퍼니 → 여기어때
+    return _AGENT_ALIAS.get(a, a)                  # 놀유니버스 → 야놀자
 
 def _process(fp, is_cancel):
     fh = _open(fp)
@@ -40,10 +51,10 @@ def _process(fp, is_cancel):
     i_code = g("변경예약집계코드", "예약집계코드"); i_biz = g("변경사업장명")
     i_first = g("최초입력일자"); i_ci = g("입실일자"); i_n = g("박수"); i_r = g("객실수")
     i_user = g("이용자명"); i_mem = g("회원번호"); i_rt = g("객실타입"); i_cancel = g("취소일자")
-    i_season = g("시즌명")
+    i_season = g("시즌명"); i_rate = g("1박객실료"); i_agent = g("AGENT명")
     if min(i_code, i_biz, i_first, i_ci, i_n, i_r) < 0:
         return 0
-    hi = max(i_code, i_biz, i_first, i_ci, i_n, i_r, i_user, i_mem, i_rt, i_cancel, i_season)
+    hi = max(i_code, i_biz, i_first, i_ci, i_n, i_r, i_user, i_mem, i_rt, i_cancel, i_season, i_rate, i_agent)
     seen = set(); n = 0
     for ln in fh:
         p = ln.rstrip("\n").split(";")
@@ -67,22 +78,44 @@ def _process(fp, is_cancel):
         d0 = date(ci.year, ci.month, 1)
         cs = (fd - d0).days                       # 최초입력 − D0 (일)
         xs = (xd - d0).days if xd else None        # 취소일 − D0
-        dt_sz = _daytype_sz(p[i_season] if i_season >= 0 else "", ci)  # 시즌 기준
-        dt_wd = _daytype_wd(ci)                                        # 요일 기준
-        for bkt in (f"SZ:{dt_sz}", f"WD:{dt_wd}"):   # 두 기준 동시 적재
-            darr = acc[(ci.year, ci.month, site, seg, bkt)][1 if is_cancel else 0]
-            if is_cancel:
-                if xs is None: continue
-                s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
-                if e < s: continue
-                darr[s - OFF_MIN] += rn; darr[e - OFF_MIN + 1] -= rn
-            else:
-                s = max(OFF_MIN, cs)                              # 예약(생존): [cs, 윈도끝]
-                if s > OFF_MAX: continue
-                darr[s - OFF_MIN] += rn
+        # 공통 윈도 구간(모든 가중치 동일)
+        if is_cancel:
+            if xs is None: continue
+            s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
+            if e < s: continue
+        else:
+            s = max(OFF_MIN, cs)                              # 예약(생존): [cs, 윈도끝]
+            if s > OFF_MAX: continue
+        mem = (p[i_mem] or "").strip() if i_mem >= 0 else ""
+        is_room = mem[:2] in ("46", "56")                    # 룸온니(46/56), 패키지(86)
+        rate = _num(p[i_rate]) if i_rate >= 0 else 0.0
+        revk = rate * rn / 1000.0                             # 매출(천원)
+        agent = _agent(p[i_agent]) if i_agent >= 0 else ""
+        dt_int = _daytype_int(p[i_season] if i_season >= 0 else "", ci)  # 통합 구조
+        dt_wd = _daytype_wd(ci)                                          # 요일 구조
+        sgn = -1.0 if is_cancel else 1.0
+        if agent:                                             # 거래처 net(최종, dt무관)
+            ch_acc[(ci.year, ci.month, site, seg)][agent] += sgn * rn
+        for bkt in (f"INT:{dt_int}", f"WD:{dt_wd}"):          # 두 구조 동시 적재
+            cell = acc[(ci.year, ci.month, site, seg, bkt)]
+            base = 1 if is_cancel else 0                      # 0/2/4=예약, 1/3/5=취소
+            # (배열, 가중치) — rn / room(룸온니만) / rev
+            for off, wt in ((0, rn), (2, rn if is_room else 0.0), (4, revk)):
+                if not wt: continue
+                arr = cell[off + base]
+                arr[s - OFF_MIN] += wt
+                if is_cancel: arr[e - OFF_MIN + 1] -= wt      # 취소복원 구간 닫기
         n += 1
     fh.close()
     return n
+
+def _cum(resv, canc):
+    """차분배열 2개(예약+취소복원) → 일별 as-of 누적 98개."""
+    out = []; run = 0.0
+    for i in range(NDAYS):
+        run += resv[i] + canc[i]
+        out.append(run)
+    return out
 
 def main():
     for y in YEARS:
@@ -91,39 +124,51 @@ def main():
         for fp in resv: print(f"   예약 {_process(fp, False):>9,}행")
         for fp in canc: print(f"   취소 {_process(fp, True):>9,}행")
 
+    # 거래처 비중(최종 net) — (y,m,site,seg)별 상위(≥5%)만 저장
+    channels = {}
+    for (y, m, site, seg), d in ch_acc.items():
+        tot = sum(v for v in d.values() if v > 0)
+        if tot <= 0: continue
+        top = [[a, round(v)] for a, v in sorted(d.items(), key=lambda kv: -kv[1]) if v > 0 and v / tot >= 0.05]
+        if top:
+            channels[f"{y}|{m}|{site}|{seg}"] = top
+
+    WI = [w * 7 - OFF_MIN for w in WEEKS]                     # 주차 샘플 인덱스(14)
     out = {}
-    for (y, m, site, seg, dt), (rv, cc) in acc.items():
-        daily = []; run = 0.0
-        for i in range(NDAYS):                       # 차분배열 누적 → 일별 as-of 순온북
-            run += rv[i] + cc[i]
-            daily.append(round(run))
-        if any(daily):
-            out[f"{y}|{m}|{site}|{seg}|{dt}"] = daily  # 98일(오프셋 OFF_MIN..OFF_MAX)
+    for (y, m, site, seg, dt), cell in acc.items():
+        rn = _cum(cell[0], cell[1]); room = _cum(cell[2], cell[3]); rev = _cum(cell[4], cell[5])
+        if not any(round(x) for x in rn): continue
+        out[f"{y}|{m}|{site}|{seg}|{dt}"] = {
+            "rn":  [round(x) for x in rn],                    # 총 net 일별(98) — 막대높이·%final·일별드릴
+            "wkr": [round(room[i]) for i in WI],              # 주차별 룸온니 net(14) — pkg=rn-wkr
+            "wkv": [round(rev[i]) for i in WI],               # 주차별 매출 천원(14) — ADR=wkv*1000/rn
+        }
     data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,
                      "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
-                     "bases": ["WD", "SZ"], "daytypes_wd": ["주중", "금", "토", "일"],
-                     "daytypes_sz": ["주중", "금", "토", "일", "연휴", "스페셜"],
-                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). "
-                             "key=연|월|사업장|세그|기준:요일(기준 WD=실제입실요일/SZ=요금시즌), 주차=7일 샘플"},
-            "series": out}
+                     "bases": ["INT", "WD"], "daytypes_int": ["주중", "금", "토", "연휴", "스페셜"],
+                     "daytypes_wd": ["주중", "금", "토", "일"],
+                     "note": "일별 동기간(as-of) 순온북. series[key]={rn:총net, room:룸온니(46/56), rev:매출천원}. "
+                             "pkg(패키지,86)=rn-room, ADR=rev*1000/rn. channels[y|m|site|seg]=[[거래처,net]…≥5%]. "
+                             "key=연|월|사업장|세그|구조:요일(INT=통합/일주중편입, WD=실제입실요일)"},
+            "series": out, "channels": channels}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    print(f"✓ booking_pace.json: {len(out)} 계열")
-    # 검증: 천안 2026-01 OTA — 요일기준 전체합 vs 일(요일) vs 일(시즌)
-    def sumkeys(keys):
-        tot = None
-        for k in keys:
-            a = out.get(k)
-            if a:
-                tot = a[:] if tot is None else [tot[i] + a[i] for i in range(len(a))]
-        return tot
+    sz = OUT.stat().st_size / 1e6
+    print(f"✓ booking_pace.json: {len(out)} 계열 · 거래처 {len(channels)} 스코프 · {sz:.1f}MB")
+    # 검증: 천안 2026-01 OTA — 통합 전체/룸온니/매출 + 거래처
     base = "2026|1|소노벨 천안|OTA"
-    allv = sumkeys([f"{base}|WD:{d}" for d in ("주중", "금", "토", "일")])
-    sunwd = out.get(f"{base}|WD:일"); sunsz = out.get(f"{base}|SZ:일")
-    if allv:
-        print("천안 26-01 OTA 요일기준 전체 주차(-8..+5):", [allv[w*7-OFF_MIN] for w in WEEKS])
-    print("천안 26-01 OTA 일(요일기준) D0:", (sunwd[-OFF_MIN] if sunwd else "없음"),
-          " / 일(시즌기준) D0:", (sunsz[-OFF_MIN] if sunsz else "없음(주중편입)"))
+    def wkvals(d, w):
+        return d[w * 7 - OFF_MIN] if d else None
+    intju = out.get(f"{base}|INT:주중")
+    if intju:
+        rn = intju["rn"]; wkr = intju["wkr"]; wkv = intju["wkv"]
+        d0w = WEEKS.index(0)              # D0 주차 위치
+        rn_d0 = rn[-OFF_MIN]; fin = rn[OFF_MAX - OFF_MIN]
+        adr = round(wkv[d0w] * 1000 / rn_d0) if rn_d0 else 0
+        print(f"천안 26-01 OTA 통합:주중 D0 rn={rn_d0} 룸온니={wkr[d0w]} pkg={rn_d0-wkr[d0w]} "
+              f"ADR={adr:,} finalRN={fin} (D0는 final의 {round(rn_d0/fin*100) if fin else 0}%)")
+    print("천안 26-01 OTA 거래처(≥5%):", channels.get("2026|1|소노벨 천안|OTA"))
+    print("천안 26-01 GOTA 거래처(≥5%):", channels.get("2026|1|소노벨 천안|GOTA"))
 
 if __name__ == "__main__":
     main()

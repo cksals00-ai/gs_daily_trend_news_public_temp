@@ -31,9 +31,9 @@ YEARS = [2024, 2025, 2026]
 MONTHS = list(range(1, 13))                       # 마감연도(2024·2025)는 11·12월 포함
 MONTHS_BY_YEAR = {2024: list(range(1, 13)), 2025: list(range(1, 13)), 2026: list(range(1, 11))}
 def mly(y): return MONTHS_BY_YEAR.get(y, MONTHS)
-DAYTYPES = ["주중", "금", "토", "일", "연휴", "스페셜"]   # 시즌 기준 전체 버킷
-DAYTYPES_SZ = ["주중", "금", "토", "일", "연휴", "스페셜"]  # 시즌(요금시즌) 기준
-DAYTYPES_WD = ["주중", "금", "토", "일"]                    # 요일(실제 입실요일) 기준
+DAYTYPES = ["주중", "금", "토", "연휴", "스페셜"]          # 통합 구조 전체 버킷
+DAYTYPES_INT = ["주중", "금", "토", "연휴", "스페셜"]       # 통합 구조(일→주중)
+DAYTYPES_WD = ["주중", "금", "토", "일"]                    # 요일 구조(실제 입실요일)
 SEGS = ["OTA", "GOTA", "IB"]          # 저장 단위 (IB=인바운드, 참고용)
 ONLINE = ["OTA", "GOTA"]              # 메인 = 온라인 채널
 SEG_OUT = ["ONLINE", "OTA", "GOTA", "IB", "ALL"]
@@ -95,29 +95,29 @@ def _site(changed_biz):
     hit = SITE_ROOMS.get(s)
     return hit[0] if hit else None
 
-def _daytype_sz(season, ci):
-    # 시즌(요금시즌) 기준 — 시즌명 우선, 공란이면 입실요일 폴백.
-    #  주의: 요금상 일요일이 '주중'으로 묶이는 경우가 많아 '일'(=주말요금) 버킷이 비는 특성 있음.
+def _daytype_int(season, ci):
+    # 통합 구조 — 요금시즌 기준, 일요일(주말요금)은 주중에 편입. 버킷: 주중/금/토/연휴/스페셜.
+    #  (시즌명으로 전 레코드 분류, 폴백 요일도 일→주중)
     s = season or ""
     if "연휴" in s: return "연휴"
     if "최성수기" in s: return "스페셜"
     if "금요일" in s: return "금"
     if "토요일" in s: return "토"
-    if "주말" in s: return "일"
+    if "주말" in s: return "주중"     # 일요일(주말요금) → 주중 편입
     if "주중" in s: return "주중"
     if ci:
-        return {4: "금", 5: "토", 6: "일"}.get(ci.weekday(), "주중")
+        return {4: "금", 5: "토"}.get(ci.weekday(), "주중")  # 월~목·일 = 주중
     return "주중"
 
 def _daytype_wd(ci):
-    # 요일(실제 입실일자 요일) 기준 — 월~목=주중, 금/토/일. 연휴/스페셜 구분 없음.
+    # 요일 구조 — 실제 입실일자 요일: 월~목=주중, 금/토/일. 연휴/스페셜 구분 없음.
     if ci:
         return {4: "금", 5: "토", 6: "일"}.get(ci.weekday(), "주중")
     return "주중"
 
-# 하위호환: 기존 임포트(build_booking_pace 등)용 — 시즌 기준을 기본으로 노출
+# 하위호환: 기존 임포트용 — 통합 구조를 기본으로 노출
 def _daytype(season, ci):
-    return _daytype_sz(season, ci)
+    return _daytype_int(season, ci)
 
 def _pdate(s):
     s = (s or "").strip()
@@ -178,11 +178,11 @@ def process(fp, is_cancel):
         if rn <= 0: continue
         fd = _pdate(p[i_first])
         lt = max((ci - fd).days, 0) if fd else 0
-        dt_sz = _daytype_sz(p[i_season] if i_season >= 0 else "", ci)   # 시즌 기준
-        dt_wd = _daytype_wd(ci)                                         # 요일 기준
+        dt_int = _daytype_int(p[i_season] if i_season >= 0 else "", ci)  # 통합 구조
+        dt_wd = _daytype_wd(ci)                                          # 요일 구조
         rate = _num(p[i_rate]) if i_rate >= 0 else 0.0
-        # 시즌 버킷 + 요일 버킷 + 전체(DB총계) 동시 적재 → 대시보드에서 기준 토글
-        for bucket in (f"SZ:{dt_sz}", f"WD:{dt_wd}", "__ALL__"):
+        # 통합 버킷 + 요일 버킷 + 전체(DB총계) 동시 적재 → 대시보드에서 구조 토글
+        for bucket in (f"INT:{dt_int}", f"WD:{dt_wd}", "__ALL__"):
             cell = acc[(ci.year, ci.month, site, seg, bucket)]
             if is_cancel: cell[3] += rn; cell[4] += lt * rn; cell[5] += rate * rn
             else:         cell[0] += rn; cell[1] += lt * rn; cell[2] += rate * rn
@@ -223,16 +223,16 @@ def main():
 
     data = {"meta": {"company_rooms": COMPANY_ROOMS, "years": YEARS, "months": MONTHS,
                      "months_by_year": {str(k): v for k, v in MONTHS_BY_YEAR.items()},
-                     "daytypes": DAYTYPES, "daytypes_sz": DAYTYPES_SZ, "daytypes_wd": DAYTYPES_WD,
-                     "bases": ["WD", "SZ"], "basis_default": "WD",
-                     "basis_label": {"WD": "요일 기준(실제 입실요일)", "SZ": "시즌 기준(요금시즌)"},
-                     "segs": SEGS, "rooms": ROOMS, "weekend": ["금", "토", "일"],
+                     "daytypes": DAYTYPES, "daytypes_int": DAYTYPES_INT, "daytypes_wd": DAYTYPES_WD,
+                     "bases": ["INT", "WD"], "basis_default": "INT",
+                     "basis_label": {"INT": "통합 구조", "WD": "요일 구조"},
+                     "segs": SEGS, "rooms": ROOMS, "weekend": ["금", "토"],
                      "note": "net=예약(취소 미반영), RN=박수×객실수, 입실월 귀속, 비중=RN/(객실수×월일수), 리드타임=입실−최초입력(net가중). "
-                             "daytype 기준 2종: WD=실제 입실요일(주중=월~목), SZ=요금시즌(일요일이 주중에 편입되면 SZ:일=0)"},
+                             "day-type 구조 2종: INT=통합(요금시즌, 일요일 주중편입, 주중/금/토/연휴/스페셜) · WD=요일(실제 입실요일, 주중/금/토/일)"},
             "rows": []}
 
-    # 기준(basis)별 day-type 집합 — ALL(전체 DB총계)은 기준 무관(공용)
-    BASIS_DTS = {"WD": DAYTYPES_WD, "SZ": DAYTYPES_SZ}
+    # 구조(basis)별 day-type 집합 — ALL(전체 DB총계)은 구조 무관(공용)
+    BASIS_DTS = {"INT": DAYTYPES_INT, "WD": DAYTYPES_WD}
 
     scope_sites = sites + ["전사"]
     for y in YEARS:
@@ -305,21 +305,21 @@ def build_xlsx(data, sites):
     wb = openpyxl.Workbook(); wb.remove(wb.active)
     thin = Side(style="thin", color="D9D9D9"); bd = Border(thin, thin, thin, thin)
     hf = PatternFill("solid", fgColor="305496"); hfont = Font(bold=True, color="FFFFFF", name="맑은 고딕")
-    gf = PatternFill("solid", fgColor="8497B0")  # 기준 그룹 헤더(요일/시즌)
+    gf = PatternFill("solid", fgColor="8497B0")  # 구조 그룹 헤더(통합/요일)
     idx = {(r["year"], r["month"], r["site"], r["seg"], r.get("basis"), r["daytype"]): r for r in data["rows"]}
-    # 컬럼: 요일기준 4 + 시즌기준 6 + 전체 1
-    COLS = [("WD", d) for d in DAYTYPES_WD] + [("SZ", d) for d in DAYTYPES_SZ] + [("ALL", "ALL")]
+    # 컬럼: 통합구조 5 + 요일구조 4 + 전체 1
+    COLS = [("INT", d) for d in DAYTYPES_INT] + [("WD", d) for d in DAYTYPES_WD] + [("ALL", "ALL")]
     def mk(metric, title, fmt):
         ws = wb.create_sheet(title)
-        # 1행: 기준 그룹 헤더, 2행: day-type
-        grp = ["", "", "", ""] + ["요일 기준"]*len(DAYTYPES_WD) + ["시즌 기준"]*len(DAYTYPES_SZ) + ["전체"]
-        sub = ["연도", "월", "사업장", "세그먼트"] + DAYTYPES_WD + DAYTYPES_SZ + ["전체"]
+        # 1행: 구조 그룹 헤더, 2행: day-type
+        grp = ["", "", "", ""] + ["통합 구조"]*len(DAYTYPES_INT) + ["요일 구조"]*len(DAYTYPES_WD) + ["전체"]
+        sub = ["연도", "월", "사업장", "세그먼트"] + DAYTYPES_INT + DAYTYPES_WD + ["전체"]
         ws.append(grp); ws.append(sub)
-        # 그룹 헤더 병합(요일 4 / 시즌 6)
+        # 그룹 헤더 병합(통합 5 / 요일 4)
         c0 = 5
-        ws.merge_cells(start_row=1, start_column=c0, end_row=1, end_column=c0+len(DAYTYPES_WD)-1)
-        ws.merge_cells(start_row=1, start_column=c0+len(DAYTYPES_WD), end_row=1,
-                       end_column=c0+len(DAYTYPES_WD)+len(DAYTYPES_SZ)-1)
+        ws.merge_cells(start_row=1, start_column=c0, end_row=1, end_column=c0+len(DAYTYPES_INT)-1)
+        ws.merge_cells(start_row=1, start_column=c0+len(DAYTYPES_INT), end_row=1,
+                       end_column=c0+len(DAYTYPES_INT)+len(DAYTYPES_WD)-1)
         for c in ws[1]:
             c.font = Font(bold=True, color="FFFFFF", name="맑은 고딕"); c.alignment = Alignment("center", "center")
             if c.column >= c0: c.fill = gf; c.border = bd
