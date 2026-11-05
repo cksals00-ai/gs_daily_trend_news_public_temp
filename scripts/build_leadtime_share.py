@@ -316,6 +316,11 @@ def build_xlsx(data, sites):
     YEAR_COL = {2026: 3, 2025: 8, 2024: 13}      # RNS 시작열: C · H · M
 
     def fill(ws, basis, dtkey):
+        # 데이터 영역 선-초기화(템플릿 1월 샘플값·ADR수식 제거 → 빈 월 #DIV/0! 방지)
+        for rr in range(6, 18):
+            for c in range(3, 18):                # C..Q
+                ws.cell(rr, c).value = None
+            ws.cell(rr, 20).value = None          # T(가용)
         for y in (2024, 2025, 2026):
             c0 = YEAR_COL[y]
             tot_av = 0.0

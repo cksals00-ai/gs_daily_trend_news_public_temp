@@ -214,6 +214,10 @@ fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
   return fetch('./data/booking_pace.json?t='+Date.now()).then(r=>r.json()).catch(()=>({series:{},meta:{weeks:[]}}));
 }).then(pd=>{
   PACE=pd;
+  // 다운로드 캐시버스터 — 최신 엑셀/PPT 받도록
+  const cb='?t='+Date.now();
+  const dlx=document.getElementById('dl-xlsx'); if(dlx)dlx.href='./data/gs_leadtime.xlsx'+cb;
+  const dlp=document.getElementById('dl-pptx'); if(dlp)dlp.href='./data/gs_leadtime.pptx'+cb;
   buildFilters(META);
   render();
 }).catch(e=>{document.getElementById('app').innerHTML='<div class="loading">로드 실패: '+e+'</div>';});
