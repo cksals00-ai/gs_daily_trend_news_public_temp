@@ -33,10 +33,10 @@ NDAYS = OFF_MAX - OFF_MIN + 1       # 98일
 acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 # ch_acc[(year,month,site,seg)][거래처] = net RN (거래처 비중용, dt 무관)
 ch_acc = defaultdict(lambda: defaultdict(float))
-# chpace_acc[(year,month,site,seg,거래처)] = [rn예약,rn취소,rev예약,rev취소] → 거래처 주차 rn+rev(B, dt무관)
-chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(4)])
-# rt_acc[(year,month,site,seg,티어)] = [rn예약,rn취소,rev예약,rev취소]  → 평형 티어 ADR(D, dt무관)
-rt_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(4)])
+# chpace_acc[...거래처] = [rn예약,rn취소,rev예약,rev취소,room예약,room취소] → 거래처 주차 rn+rev+룸온니(B)
+chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
+# rt_acc[...티어] = [rn예약,rn취소,rev예약,rev취소,room예약,room취소]  → 평형 티어 rn+rev+룸온니(D)
+rt_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 
 # 평형(객실 등급) → 티어 (가격 저렴한 순: 실버<골드<패밀리스위트<프레지덴셜)
 PYEONG_TIER = {"H": "실버", "I": "골드",
@@ -111,14 +111,17 @@ def _process(fp, is_cancel):
             if not wt: return
             arr[s - OFF_MIN] += wt
             if is_cancel: arr[e - OFF_MIN + 1] -= wt
+        roomw = rn if is_room else 0.0                        # 룸온니(46/56) 가중치
         if agent:                                             # 거래처 net(최종, dt무관)
             ch_acc[scope][agent] += sgn * rn
-            cp = chpace_acc[(ci.year, ci.month, site, seg, agent)]   # 거래처 주차 rn+rev(B)
+            cp = chpace_acc[(ci.year, ci.month, site, seg, agent)]   # 거래처 주차 rn+rev+룸온니(B)
             _put(cp[1 if is_cancel else 0], rn)
             _put(cp[3 if is_cancel else 2], revk)
-        rc = rt_acc[(ci.year, ci.month, site, seg, tier)]     # 평형 티어 rn+rev(D)
+            _put(cp[5 if is_cancel else 4], roomw)
+        rc = rt_acc[(ci.year, ci.month, site, seg, tier)]     # 평형 티어 rn+rev+룸온니(D)
         _put(rc[1 if is_cancel else 0], rn)
         _put(rc[3 if is_cancel else 2], revk)
+        _put(rc[5 if is_cancel else 4], roomw)
         for bkt in (f"INT:{dt_int}", f"WD:{dt_wd}"):          # 두 구조 동시 적재
             cell = acc[(ci.year, ci.month, site, seg, bkt)]
             base = 1 if is_cancel else 0                      # 0/2/4=예약, 1/3/5=취소
@@ -170,10 +173,12 @@ def main():
     # B) 거래처 주차추이 — chpace[y|m|site|seg] = {거래처:{rn:[14],rev:[14]}} (최종≥8%만)
     chp_week = defaultdict(dict)
     for (y, m, site, seg, agent), cell in chpace_acc.items():
-        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3]); fin = rnc[OFF_MAX - OFF_MIN]
+        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3]); rmc = _cum(cell[4], cell[5])
+        fin = rnc[OFF_MAX - OFF_MIN]
         if round(fin) <= 0: continue
         chp_week[(y, m, site, seg)][agent] = {"rn": [round(rnc[i]) for i in WI],
-                                              "rev": [round(revc[i]) for i in WI]}
+                                              "rev": [round(revc[i]) for i in WI],
+                                              "room": [round(rmc[i]) for i in WI]}
     chpace = {}
     for (y, m, site, seg), d in chp_week.items():
         tot = sum(v["rn"][-1] for v in d.values() if v["rn"][-1] > 0)
@@ -185,11 +190,12 @@ def main():
     # D) 평형 티어 주차 rn+rev — rtpace[y|m|site|seg|티어] = {rn:[14], rev:[14]}
     rtpace = {}
     for (y, m, site, seg, tier), cell in rt_acc.items():
-        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3])
+        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3]); rmc = _cum(cell[4], cell[5])
         if round(rnc[OFF_MAX - OFF_MIN]) <= 0: continue
         rtpace[f"{y}|{m}|{site}|{seg}|{tier}"] = {
             "rn":  [round(rnc[i]) for i in WI],
             "rev": [round(revc[i]) for i in WI],
+            "room": [round(rmc[i]) for i in WI],
         }
 
     data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,

@@ -464,8 +464,8 @@ function getChpace(year,month,site,seg){
   for(const st of siteList)for(const sg of segs){
     const o=PACE.chpace[[year,month,st,sg].join('|')];
     if(o)for(const a in o){ const e=o[a];
-      if(!m[a])m[a]={rn:e.rn.slice(),rev:e.rev.slice()};
-      else {e.rn.forEach((v,i)=>m[a].rn[i]+=v);e.rev.forEach((v,i)=>m[a].rev[i]+=v);} }
+      if(!m[a])m[a]={rn:e.rn.slice(),rev:e.rev.slice(),room:(e.room||e.rn.map(()=>0)).slice()};
+      else {e.rn.forEach((v,i)=>m[a].rn[i]+=v);e.rev.forEach((v,i)=>m[a].rev[i]+=v);(e.room||[]).forEach((v,i)=>m[a].room[i]+=v);} }
   }
   return m;
 }
@@ -474,12 +474,13 @@ function getRtpace(year,month,site,seg,tier){
   if(!PACE||!PACE.rtpace) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=(site==='전사'||site==='전체')?SITES:[site];
-  let rn=null,rev=null;
+  let rn=null,rev=null,room=null;
   for(const st of siteList)for(const sg of segs){
     const o=PACE.rtpace[[year,month,st,sg,tier].join('|')];
-    if(o){ if(!rn){rn=o.rn.slice();rev=o.rev.slice();} else {o.rn.forEach((v,i)=>rn[i]+=v);o.rev.forEach((v,i)=>rev[i]+=v);} }
+    if(o){ if(!rn){rn=o.rn.slice();rev=o.rev.slice();room=(o.room||o.rn.map(()=>0)).slice();}
+           else {o.rn.forEach((v,i)=>rn[i]+=v);o.rev.forEach((v,i)=>rev[i]+=v);(o.room||[]).forEach((v,i)=>room[i]+=v);} }
   }
-  return rn?{rn,rev}:null;
+  return rn?{rn,rev,room}:null;
 }
 // 현재 월에 데이터 있는 티어(가격 저렴한 순)
 function availTiers(year,month,site,seg){
@@ -501,20 +502,21 @@ function paceDetailHtml(site){
   const chMode=(!!PACE_CH && chs.some(c=>c.a===PACE_CH));
   // 데이터 결정: wkRN(주차 총 RN) · adrs(주차 ADR천원) · stacks(주차별 스택 세그) · dailyRN(드릴용)
   let wkRN, adrs, stacks, dailyRN=null;
+  // 공통: rn·rev·room(룸온니) 주차배열 → 룸온니/패키지 스택 + ADR (필터는 데이터 범위만 변경)
+  const stackRP=(rnA,revA,roomA)=>{
+    wkRN=rnA.slice();
+    adrs=rnA.map((v,i)=>v>0?Math.round(revA[i]/v):0);                 // ADR천원=rev천원/rn
+    stacks=rnA.map((v,i)=>{const rm=Math.max(0,Math.min(v,(roomA&&roomA[i])||0));
+      return [{c:ROOM_COL,v:rm,label:'룸온니'},{c:PKG_COL,v:Math.max(0,v-rm),label:'패키지'}];});
+  };
   if(chMode){
     const cp=getChpace(F.year,+F.month,site,seg), o=cp[PACE_CH];
     if(!o) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 월 <b>${PACE_CH}</b> 데이터 없음</div>`;
-    wkRN=o.rn.slice();
-    adrs=o.rn.map((v,i)=>v>0?Math.round(o.rev[i]/v):0);            // ADR천원=rev천원/rn
-    const col=chColMap[PACE_CH]||'#5a9fc4';
-    stacks=wkRN.map(v=>[{c:col,v,label:PACE_CH}]);
+    stackRP(o.rn, o.rev, o.room);
   }else if(tierMode){
     const rt=getRtpace(F.year,+F.month,site,seg,PACE_TIER);
     if(!rt) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 월 <b>${PACE_TIER}</b> 데이터 없음</div>`;
-    wkRN=rt.rn.slice();
-    adrs=rt.rn.map((v,i)=>v>0?Math.round(rt.rev[i]/v):0);          // ADR천원=rev천원/rn
-    const col=TIER_COLORS[PACE_TIER]||'#7a7e85';
-    stacks=wkRN.map(v=>[{c:col,v,label:PACE_TIER}]);
+    stackRP(rt.rn, rt.rev, rt.room);
   }else{
     if(!d||!d.rn) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">데이터 없음</div>';
     const rn=d.rn, wkr=d.wkr, wkv=d.wkv;
@@ -594,10 +596,9 @@ function paceDetailHtml(site){
   }
   const sw=(c,t)=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${c};border-radius:2px;display:inline-block"></span>${t}</span>`;
   const adrLeg=`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:14px;height:2px;background:${ADR_COL};display:inline-block"></span>ADR(천원)</span>`;
-  let legend;
-  if(chMode) legend=sw(chColMap[PACE_CH]||'#5a9fc4',PACE_CH)+adrLeg;
-  else if(tierMode) legend=sw(TIER_COLORS[PACE_TIER]||'#7a7e85',PACE_TIER)+adrLeg;
-  else legend=sw(ROOM_COL,'룸온니')+sw(PKG_COL,'패키지')+adrLeg;
+  // 범례: 항상 룸온니/패키지 + ADR (필터는 데이터 범위만 바꿈)
+  const scopeTag = chMode?`<span style="color:var(--gold-bright)">· ${PACE_CH} 채널</span>`:(tierMode?`<span style="color:var(--gold-bright)">· ${PACE_TIER}</span>`:'');
+  const legend=sw(ROOM_COL,'룸온니')+sw(PKG_COL,'패키지')+adrLeg+scopeTag;
   // 컨트롤: 객실 평형 티어 (거래처는 아래 칩 클릭으로 필터)
   const chip=(label,active,on)=>`<button onclick="${on}" style="padding:2px 8px;border-radius:3px;border:1px solid ${active?'var(--gold)':'var(--rule-strong)'};background:${active?'rgba(201,160,99,0.18)':'transparent'};color:${active?'var(--gold-bright)':'var(--ink-muted)'};font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer">${label}</button>`;
   const tiers=['전체'].concat(availTiers(F.year,+F.month,site,seg));
