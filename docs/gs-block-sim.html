@@ -171,11 +171,11 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
       <summary style="cursor:pointer;color:var(--ink-muted);list-style:none;display:flex;align-items:center;gap:5px;padding:2px 0;user-select:none;">
         <span style="color:var(--gold)">▸</span>🛏 객실 그룹핑 <span style="color:var(--ink-faint);font-size:10px">평형→티어</span></summary>
       <div style="margin-top:7px;padding:8px 10px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;line-height:1.7;">
-        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#9aa7b4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">스탠다드</b> <span style="color:var(--ink-faint);font-size:10px">H · ~188천원</span></div>
-        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#5a9fc4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">디럭스</b> <span style="color:var(--ink-faint);font-size:10px">I · ~231천원</span></div>
-        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#b06fb3;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">스위트</b> <span style="color:var(--ink-faint);font-size:10px">~331천원</span><br><span style="color:var(--ink-muted);font-size:10px">DX·SH·SU·C·J·SI·HG</span></div></div>
-        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#e0655f;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">프레지덴셜</b> <span style="color:var(--ink-faint);font-size:10px">~416천원</span><br><span style="color:var(--ink-muted);font-size:10px">PT·K·DS·PS·AH·VE·VS</span></div></div>
-        <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:9.5px;line-height:1.4">평형(객실등급) ADR 밴드순 묶음 · ADR=2026 전사 온라인</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#9aa7b4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">저가</b> <span style="color:var(--ink-faint);font-size:10px">H · ~190천원</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#5a9fc4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">중가</b> <span style="color:var(--ink-faint);font-size:10px">I · ~230천원</span></div>
+        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#b06fb3;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">고가</b> <span style="color:var(--ink-faint);font-size:10px">~330천원</span><br><span style="color:var(--ink-muted);font-size:10px">DX·SH·SU·C·J·SI·HG</span></div></div>
+        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#e0655f;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">최고가</b> <span style="color:var(--ink-faint);font-size:10px">~420천원↑</span><br><span style="color:var(--ink-muted);font-size:10px">PT·K·DS·PS·AH·VE·VS</span></div></div>
+        <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:9.5px;line-height:1.4">평형(객실등급) ADR 가격대순 묶음 · ADR=2026 전사 온라인</div>
       </div>
     </details></div>
     <div class="divider"></div>
@@ -208,8 +208,8 @@ const EXPANDED=new Set();
 const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
 let PACE_CH=null;          // 거래처 필터(칩 클릭): null=전체, 아니면 해당 채널만  [B]
 let PACE_TIER='전체';      // 객실 평형 티어: 전체|실버|골드|패밀리스위트|프레지덴셜  [D]
-const TIER_ORDER=['스탠다드','디럭스','스위트','프레지덴셜','기타'];
-const TIER_COLORS={'스탠다드':'#9aa7b4','디럭스':'#5a9fc4','스위트':'#b06fb3','프레지덴셜':'#e0655f','기타':'#7a7e85'};
+const TIER_ORDER=['저가','중가','고가','최고가','기타'];
+const TIER_COLORS={'저가':'#9aa7b4','중가':'#5a9fc4','고가':'#b06fb3','최고가':'#e0655f','기타':'#7a7e85'};
 const CH_COLORS=['#5a9fc4','#c9a063','#4caf6f','#e07a7a','#9b8cc4','#e8a256','#6fb3b8','#b0a0d0','#8aa0b0','#d0b060'];
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
