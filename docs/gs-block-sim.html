@@ -170,12 +170,12 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
     <div><details style="font-family:var(--mono);font-size:11px;">
       <summary style="cursor:pointer;color:var(--ink-muted);list-style:none;display:flex;align-items:center;gap:5px;padding:2px 0;user-select:none;">
         <span style="color:var(--gold)">▸</span>🛏 객실 그룹핑 <span style="color:var(--ink-faint);font-size:10px">평형→티어</span></summary>
-      <div style="margin-top:7px;padding:8px 10px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;line-height:1.7;">
-        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#9aa7b4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">저가</b> <span style="color:var(--ink-faint);font-size:10px">H · ~190천원</span></div>
-        <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#5a9fc4;display:inline-block;flex:none"></span><b style="color:var(--ink-soft)">중가</b> <span style="color:var(--ink-faint);font-size:10px">I · ~230천원</span></div>
-        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#b06fb3;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">고가</b> <span style="color:var(--ink-faint);font-size:10px">~330천원</span><br><span style="color:var(--ink-muted);font-size:10px">DX·SH·SU·C·J·SI·HG</span></div></div>
-        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#e0655f;display:inline-block;flex:none;margin-top:4px"></span><div><b style="color:var(--ink-soft)">최고가</b> <span style="color:var(--ink-faint);font-size:10px">~420천원↑</span><br><span style="color:var(--ink-muted);font-size:10px">PT·K·DS·PS·AH·VE·VS</span></div></div>
-        <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:9.5px;line-height:1.4">평형(객실등급) ADR 가격대순 묶음 · ADR=2026 전사 온라인</div>
+      <div style="margin-top:7px;padding:8px 10px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:5px;line-height:1.6;">
+        <div style="display:flex;align-items:flex-start;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#5a9fc4;display:inline-block;flex:none;margin-top:3px"></span><div><b style="color:var(--ink-soft)">패/스</b> <span style="color:var(--ink-faint);font-size:10px">~200·250천원</span><br><span style="color:var(--ink-muted);font-size:10px">패밀리 · 스위트</span></div></div>
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:3px"><span style="width:9px;height:9px;border-radius:2px;background:#9aa7b4;display:inline-block;flex:none;margin-top:3px"></span><div><b style="color:var(--ink-soft)">실버</b> <span style="color:var(--ink-faint);font-size:10px">300~390천원</span><br><span style="color:var(--ink-muted);font-size:10px">디럭스·소노캄A·슈페리어·51평·실버·소노캄B·소노한</span></div></div>
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:3px"><span style="width:9px;height:9px;border-radius:2px;background:#c9a063;display:inline-block;flex:none;margin-top:3px"></span><div><b style="color:var(--ink-soft)">골드</b> <span style="color:var(--ink-faint);font-size:10px">410~580천원</span><br><span style="color:var(--ink-muted);font-size:10px">프레스티지스위트·골드·디럭스스위트·프리미어스위트</span></div></div>
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:3px"><span style="width:9px;height:9px;border-radius:2px;background:#b06fb3;display:inline-block;flex:none;margin-top:3px"></span><div><b style="color:var(--ink-soft)">로얄</b> <span style="color:var(--ink-faint);font-size:10px">800천원↑</span><br><span style="color:var(--ink-muted);font-size:10px">로얄 · 빌라쏠레 · 빌라스텔라</span></div></div>
+        <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:9.5px;line-height:1.4">객실평형 실제 등급 · 단가(ADR)순 묶음 · ADR=2026 전사 온라인</div>
       </div>
     </details></div>
     <div class="divider"></div>
@@ -199,17 +199,22 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
 const DTS_WD=['주중','금','토','일'];
 const DTS_INT=['주중','금','토','연휴','스페셜'];   // 통합 구조(일→주중)
 function curDTS(){return F.basis==='WD'?DTS_WD:DTS_INT;}
-const F={year:2026, month:'전체', seg:'ONLINE', basis:'INT', dts:['주중','금','토','연휴','스페셜'], ib:false, site:'전체', blockPct:10};
+const F={year:2026, month:'전체', seg:'ONLINE', basis:'INT', dts:['주중','금','토','연휴','스페셜'], ib:false, site:'전체', blockPct:10, groupBy:'site'};
 // GS 실적 리포트(PROPERTY_DEFS) 사업장 순서 — 실적표 정렬 기준
 const SITE_ORDER=['소노벨 비발디파크','소노캄 비발디파크','소노펫 비발디파크','소노펠리체 비발디파크','소노펠리체 빌리지 비발디파크','소노벨 양평','델피노','쏠비치 양양','쏠비치 삼척','소노벨 단양','소노캄 경주','소노벨 청송','소노벨 천안','소노벨 변산','소노캄 여수','소노캄 거제','쏠비치 진도','소노벨 제주','소노캄 제주','소노캄 고양','소노문 해운대','쏠비치 남해','르네블루'];
 const siteRank=s=>{const i=SITE_ORDER.indexOf(s);return i<0?999:i;};
+// 브랜드 묶음(쏠비치/캄/벨/문/기타)
+const BRAND_ORDER=['쏠비치','캄','벨','문','기타'];
+function brandOf(s){ if(s.startsWith('쏠비치'))return '쏠비치'; if(s.startsWith('소노캄'))return '캄'; if(s.startsWith('소노벨'))return '벨'; if(s.startsWith('소노문'))return '문'; return '기타'; }
+function brandSites(b){ return SITES.filter(s=>brandOf(s)===b); }
+function paceSites(site){ if(site==='전사'||site==='전체')return SITES; if(BRAND_ORDER.includes(site))return brandSites(site); return [site]; }
 let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
 const EXPANDED=new Set();
 const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
 let PACE_CH=null;          // 거래처 필터(칩 클릭): null=전체, 아니면 해당 채널만  [B]
 let PACE_TIER='전체';      // 객실 평형 티어: 전체|실버|골드|패밀리스위트|프레지덴셜  [D]
-const TIER_ORDER=['저가','중가','고가','최고가','기타'];
-const TIER_COLORS={'저가':'#9aa7b4','중가':'#5a9fc4','고가':'#b06fb3','최고가':'#e0655f','기타':'#7a7e85'};
+const TIER_ORDER=['패/스','실버','골드','로얄','기타'];
+const TIER_COLORS={'패/스':'#5a9fc4','실버':'#9aa7b4','골드':'#c9a063','로얄':'#b06fb3','기타':'#7a7e85'};
 const CH_COLORS=['#5a9fc4','#c9a063','#4caf6f','#e07a7a','#9b8cc4','#e8a256','#6fb3b8','#b0a0d0','#8aa0b0','#d0b060'];
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
@@ -281,7 +286,29 @@ function buildMonthChips(){
 }
 function months(){return F.month==='전체'?monList():[+F.month];}
 // dts: 단일 문자열 또는 배열(합산). 비중=share(RN/월전체가용, 조합·총계 정합). occ=요일가용대비(단일요일용).
+// 여러 사업장 합산(브랜드용) — agg와 동일 산식, 사업장 리스트 순회
+function aggMulti(year,siteList,seg,dts){
+  if(typeof dts==='string') dts=(dts==='ALL'?['ALL']:[dts]);
+  const dset=curDTS();
+  if(Array.isArray(dts)&&dts.length===dset.length&&dset.every(d=>dts.includes(d))) dts=['ALL'];
+  const ms=months();
+  let rn=0,avdt=0,avmon=0,ltw=0,adrw=0,rooms=0;
+  var m;
+  const keyFor=(s,dt)=>(dt==='ALL'?[year,m,s,seg,'ALL','ALL']:[year,m,s,seg,F.basis,dt]).join('|');
+  for(const s of siteList){
+    rooms+=(ROOMS[s]||0);
+    for(m of ms){
+      const allrow=IDX[[year,m,s,seg,'ALL','ALL'].join('|')]; if(allrow)avmon+=allrow.av_mon;
+      for(const dt of dts){const r=IDX[keyFor(s,dt)];if(!r)continue;rn+=r.rn;avdt+=r.av_dt;if(r.lead!=null)ltw+=r.lead*r.rn;if(r.adr!=null)adrw+=r.adr*r.rn;}
+    }
+  }
+  const nights=rooms?avdt/rooms:0;
+  const allWD=dts.length>0&&dts.every(d=>['주중','금','토','일'].includes(d));
+  const denom=allWD?avdt:avmon;
+  return {rn,rate:denom?rn/denom:0,avail:denom,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
+}
 function agg(year,site,seg,dts){
+  if(BRAND_ORDER.includes(site)) return aggMulti(year,brandSites(site),seg,dts);  // 브랜드 = 소속 사업장 합산
   if(typeof dts==='string') dts=(dts==='ALL'?['ALL']:[dts]);
   const dset=curDTS();
   if(Array.isArray(dts)&&dts.length===dset.length&&dset.every(d=>dts.includes(d))) dts=['ALL']; // 전체=DB총계 행(기준무관)
@@ -321,8 +348,10 @@ function render(){
   const seg=segKey();
   document.getElementById('app').innerHTML=`
     <div class="kpi-strip" id="kpis"></div>
-    <div class="card"><h3>📋 사업장별 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg}</span></h3>
-      <div class="hint">객실수(RN)·ADR·매출·가용대비 비중 + 전년비 · 요일 <b>전체</b>=총계 일치 · 행 클릭=사업장 선택</div>
+    <div class="card"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 ${F.groupBy==='brand'?'브랜드별':'사업장별'} 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg}</span>
+        <span style="margin-left:auto;display:inline-flex;gap:4px;align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400">묶음
+          ${['site','brand'].map(g=>`<button onclick="F.groupBy='${g}';EXPANDED.clear();render()" style="padding:2px 9px;border-radius:3px;border:1px solid ${F.groupBy===g?'var(--gold)':'var(--rule-strong)'};background:${F.groupBy===g?'rgba(201,160,99,0.18)':'transparent'};color:${F.groupBy===g?'var(--gold-bright)':'var(--ink-muted)'};font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer">${g==='site'?'사업장':'브랜드'}</button>`).join('')}</span></h3>
+      <div class="hint">객실수(RN)·ADR·매출·가용대비 비중 + 전년비 · 요일 <b>전체</b>=총계 일치 · 행 클릭=${F.groupBy==='brand'?'브랜드 펼침':'사업장 선택'}</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 10px;padding:8px 11px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--ink-muted)">
         🧪 <b style="color:var(--ink-soft)">블록 소진 시뮬</b> · 사전블록 제공 =
         <span style="display:inline-flex;align-items:center;gap:3px">가용 대비
@@ -351,7 +380,7 @@ function render(){
 function getChannels(year,site,seg){
   if(!PACE||!PACE.channels) return [];
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const siteList=paceSites(site);
   const m={};
   for(const mm of months())for(const st of siteList)for(const sg of segs){
     const arr=PACE.channels[[year,mm,st,sg].join('|')];
@@ -409,7 +438,8 @@ function renderKPIs(seg,sc){
 
 function renderTable(seg){
   const y=F.year, dt=F.dts;
-  const data=SITES.map(s=>({s,a:agg(y,s,seg,dt),p:agg(y-1,s,seg,dt)})).filter(r=>r.a.rn>0||r.p.rn>0);  // SITES=GS실적 순서 유지
+  const units=F.groupBy==='brand'?BRAND_ORDER:SITES;     // 묶음: 브랜드 or 사업장
+  const data=units.map(s=>({s,a:agg(y,s,seg,dt),p:agg(y-1,s,seg,dt)})).filter(r=>r.a.rn>0||r.p.rn>0);
   const tot=agg(y,'전사',seg,dt), totp=agg(y-1,'전사',seg,dt);
   const mv=o=>o.rn*o.adr;  // 매출(원)
   function row(label,a,p,isTot){
@@ -426,7 +456,7 @@ function renderTable(seg){
   }
   let h=`<style>#perf-table table{width:100%;table-layout:auto}#perf-table td{text-align:right}#perf-table td.site{text-align:left;width:22%}#perf-table th{text-align:center}</style>
     <table><thead>
-    <tr><th rowspan="2" class="site">사업장</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th rowspan="2">가용객실수</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
+    <tr><th rowspan="2" class="site">${F.groupBy==='brand'?'브랜드':'사업장'}</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th rowspan="2">가용객실수</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
     <tr><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>점유</th><th>전년비</th><th>일수</th><th>전년비</th></tr></thead><tbody>`;
   h+=row('전사',tot,totp,true);
   if(EXPANDED.has('전사')) h+=`<tr><td colspan="12" style="padding:0;background:var(--bg-deep)">${paceDetailHtml('전사')}</td></tr>`;
@@ -442,7 +472,7 @@ const ROOM_COL='#5a9fc4', PKG_COL='#c9a063', ADR_COL='#f0f0f3';   // 룸온니=�
 function paceDaily(year,month,site,seg){
   if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const siteList=(site==='전사'||site==='전체')?SITES:[site];   // 전사=전 사업장 합산
+  const siteList=paceSites(site);
   let rn=null,wkr=null,wkv=null,found=false;
   for(const st of siteList)for(const sg of segs)for(const dt of F.dts){  // 사업장 · 선택 요일 · 구조(basis) 반영
     const o=PACE.series[[year,month,st,sg,F.basis+':'+dt].join('|')];
@@ -457,7 +487,7 @@ function paceDaily(year,month,site,seg){
 function paceChannels(year,month,site,seg){
   if(!PACE||!PACE.channels) return [];
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const siteList=paceSites(site);
   const m={};
   for(const st of siteList)for(const sg of segs){
     const arr=PACE.channels[[year,month,st,sg].join('|')];
@@ -470,7 +500,7 @@ function paceChannels(year,month,site,seg){
 function getChpace(year,month,site,seg){
   if(!PACE||!PACE.chpace) return {};
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const siteList=paceSites(site);
   const m={};
   for(const st of siteList)for(const sg of segs){
     const o=PACE.chpace[[year,month,st,sg].join('|')];
@@ -484,7 +514,7 @@ function getChpace(year,month,site,seg){
 function getRtpace(year,month,site,seg,tier){
   if(!PACE||!PACE.rtpace) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
-  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const siteList=paceSites(site);
   let rn=null,rev=null,room=null;
   for(const st of siteList)for(const sg of segs){
     const o=PACE.rtpace[[year,month,st,sg,tier].join('|')];
