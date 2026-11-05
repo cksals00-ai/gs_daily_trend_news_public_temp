@@ -25,9 +25,25 @@ TARGET_YM = ["202701", "202702"]
 SCOPE = {"53", "72", "A4", "A5", "58"}   # OTA(53,72)·GOTA(A4,A5)·Inbound(58)
 ENC = ["cp949", "euc-kr", "utf-8"]
 
+BUDGET_CACHE = ROOT / "docs" / "data" / "budget_2027_monthly.json"
+
 def _budget():
-    import openpyxl
     b = {ym: 0.0 for ym in TARGET_YM}
+    # 1순위: stdlib JSON 캐시(데몬 python3에 openpyxl 없어도 동작)
+    if BUDGET_CACHE.exists():
+        try:
+            j = json.loads(BUDGET_CACHE.read_text(encoding="utf-8"))
+            for ym in TARGET_YM:
+                b[ym] = float(j.get(ym, 0) or 0)
+            if any(b.values()):
+                return b
+        except Exception:
+            pass
+    # 폴백: 업로드 xlsx (openpyxl 있을 때만)
+    try:
+        import openpyxl
+    except ImportError:
+        return b
     if not BUDGET_XLSX.exists():
         return b
     wb = openpyxl.load_workbook(BUDGET_XLSX, read_only=True)

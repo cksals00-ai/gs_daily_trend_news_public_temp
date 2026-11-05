@@ -1429,11 +1429,7 @@ def inject_weekly_report(html: str, weekly: dict, agg_data: dict = None, otb_dat
         admin_fcst_keyin = (admin_data or {}).get("fcst_keyin", {})
 
         # 익익월이 차년도(13월↑)로 넘어가는 연말 보정 — 별도 산출본(온북·예산) 주입
-        _ny_path = Path(__file__).resolve().parent.parent / "docs" / "data" / "otb_nextyear.json"
-        try:
-            otb_nextyear = _json.loads(_ny_path.read_text(encoding="utf-8")) if _ny_path.exists() else {}
-        except Exception:
-            otb_nextyear = {}
+        otb_nextyear = load_json(DOCS_DIR / "data" / "otb_nextyear.json", {}) or {}
 
         for m_idx, mkey in enumerate(month_keys):
             s = all_months.get(mkey, {}).get("summary", {})
