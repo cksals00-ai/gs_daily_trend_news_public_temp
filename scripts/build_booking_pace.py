@@ -33,8 +33,8 @@ NDAYS = OFF_MAX - OFF_MIN + 1       # 98일
 acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 # ch_acc[(year,month,site,seg)][거래처] = net RN (거래처 비중용, dt 무관)
 ch_acc = defaultdict(lambda: defaultdict(float))
-# chpace_acc[(year,month,site,seg,거래처)] = [resv차분, canc차분]  → 거래처 주차추이(B, dt무관)
-chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1), [0.0] * (NDAYS + 1)])
+# chpace_acc[(year,month,site,seg,거래처)] = [rn예약,rn취소,rev예약,rev취소] → 거래처 주차 rn+rev(B, dt무관)
+chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(4)])
 # rt_acc[(year,month,site,seg,티어)] = [rn예약,rn취소,rev예약,rev취소]  → 평형 티어 ADR(D, dt무관)
 rt_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(4)])
 
@@ -113,8 +113,9 @@ def _process(fp, is_cancel):
             if is_cancel: arr[e - OFF_MIN + 1] -= wt
         if agent:                                             # 거래처 net(최종, dt무관)
             ch_acc[scope][agent] += sgn * rn
-            cp = chpace_acc[(ci.year, ci.month, site, seg, agent)]   # 거래처 주차추이(B)
+            cp = chpace_acc[(ci.year, ci.month, site, seg, agent)]   # 거래처 주차 rn+rev(B)
             _put(cp[1 if is_cancel else 0], rn)
+            _put(cp[3 if is_cancel else 2], revk)
         rc = rt_acc[(ci.year, ci.month, site, seg, tier)]     # 평형 티어 rn+rev(D)
         _put(rc[1 if is_cancel else 0], rn)
         _put(rc[3 if is_cancel else 2], revk)
@@ -166,17 +167,18 @@ def main():
             "wkv": [round(rev[i]) for i in WI],               # 주차별 매출 천원(14) — ADR=wkv*1000/rn
         }
 
-    # B) 거래처 주차추이 — chpace[y|m|site|seg] = {거래처: [14 주차 net]} (최종≥8%만)
+    # B) 거래처 주차추이 — chpace[y|m|site|seg] = {거래처:{rn:[14],rev:[14]}} (최종≥8%만)
     chp_week = defaultdict(dict)
-    for (y, m, site, seg, agent), (rv, cc) in chpace_acc.items():
-        cum = _cum(rv, cc); fin = cum[OFF_MAX - OFF_MIN]
+    for (y, m, site, seg, agent), cell in chpace_acc.items():
+        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3]); fin = rnc[OFF_MAX - OFF_MIN]
         if round(fin) <= 0: continue
-        chp_week[(y, m, site, seg)][agent] = [round(cum[i]) for i in WI]
+        chp_week[(y, m, site, seg)][agent] = {"rn": [round(rnc[i]) for i in WI],
+                                              "rev": [round(revc[i]) for i in WI]}
     chpace = {}
     for (y, m, site, seg), d in chp_week.items():
-        tot = sum(v[-1] for v in d.values() if v[-1] > 0)
+        tot = sum(v["rn"][-1] for v in d.values() if v["rn"][-1] > 0)
         if tot <= 0: continue
-        keep = {a: wk for a, wk in d.items() if wk[-1] > 0 and wk[-1] / tot >= 0.08}  # 최종 8%↑
+        keep = {a: wk for a, wk in d.items() if wk["rn"][-1] > 0 and wk["rn"][-1] / tot >= 0.08}  # 최종 8%↑
         if keep:
             chpace[f"{y}|{m}|{site}|{seg}"] = keep
 
@@ -213,7 +215,10 @@ def main():
             print(f"{t}={round(rt['rev'][-1]*1000/rt['rn'][-1])}", end="  ")
     print()
     cp = chpace.get("2026|1|소노벨 천안|OTA")
-    if cp: print("천안 26-01 OTA 거래처 주차추이 keys:", list(cp.keys()), "· 야놀자주차:", cp.get("야놀자"))
+    if cp:
+        ya = cp.get("야놀자", {})
+        adr = round(ya["rev"][-1] * 1000 / ya["rn"][-1]) if ya.get("rn") and ya["rn"][-1] else 0
+        print("천안 26-01 OTA 거래처:", list(cp.keys()), "· 야놀자 rn:", ya.get("rn"), f"ADR={adr}")
     # 검증: 천안 2026-01 OTA — 통합 전체/룸온니/매출 + 거래처
     base = "2026|1|소노벨 천안|OTA"
     def wkvals(d, w):
