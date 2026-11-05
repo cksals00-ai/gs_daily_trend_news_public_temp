@@ -38,12 +38,14 @@ chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 # rt_acc[...티어] = [rn예약,rn취소,rev예약,rev취소,room예약,room취소]  → 평형 티어 rn+rev+룸온니(D)
 rt_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 
-# 평형(객실 등급) → 티어 (가격 저렴한 순: 실버<골드<패밀리스위트<프레지덴셜)
-PYEONG_TIER = {"H": "실버", "I": "골드",
-               "J": "패밀리스위트", "K": "패밀리스위트", "DX": "패밀리스위트", "SH": "패밀리스위트",
-               "SI": "패밀리스위트", "SU": "패밀리스위트", "DS": "패밀리스위트",
-               "PS": "프레지덴셜", "PT": "프레지덴셜", "VS": "프레지덴셜"}
-TIER_ORDER = ["실버", "골드", "패밀리스위트", "프레지덴셜", "기타"]
+# 평형(객실 등급) → 티어 (ADR 밴드 오름차순: 스탠다드<디럭스<스위트<프레지덴셜)
+#  2026 온라인 평형별 ADR(천원): H202·I253 / DX303·SH315·SU330·C358·J364·SI372·HG394·PT413·K415 / DS521·PS583·AH806·VE812·VS873
+PYEONG_TIER = {"H": "스탠다드", "I": "디럭스",
+               "DX": "스위트", "SH": "스위트", "SU": "스위트", "C": "스위트", "J": "스위트",
+               "SI": "스위트", "HG": "스위트",
+               "PT": "프레지덴셜", "K": "프레지덴셜", "DS": "프레지덴셜", "PS": "프레지덴셜",
+               "AH": "프레지덴셜", "VE": "프레지덴셜", "VS": "프레지덴셜"}
+TIER_ORDER = ["스탠다드", "디럭스", "스위트", "프레지덴셜", "기타"]
 
 _AGENT_ALIAS = {"놀유니버스": "야놀자"}
 def _agent(a):
@@ -215,7 +217,7 @@ def main():
     # 티어 ADR(저렴한 순 확인) — 천안 2026-01 OTA
     d0w = WEEKS.index(0)
     print("천안 26-01 OTA 평형티어 final ADR(천원):", end=" ")
-    for t in ["실버", "골드", "패밀리스위트", "프레지덴셜", "기타"]:
+    for t in TIER_ORDER:
         rt = rtpace.get(f"2026|1|소노벨 천안|OTA|{t}")
         if rt and rt["rn"][-1]:
             print(f"{t}={round(rt['rev'][-1]*1000/rt['rn'][-1])}", end="  ")
