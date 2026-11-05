@@ -96,17 +96,17 @@ def _site(changed_biz):
     return hit[0] if hit else None
 
 def _daytype_int(season, ci):
-    # 통합 구조 — 요금시즌 기준, 일요일(주말요금)은 주중에 편입. 버킷: 주중/금/토/연휴/스페셜.
-    #  (시즌명으로 전 레코드 분류, 폴백 요일도 일→주중)
+    # 통합 구조 — 연휴·스페셜은 요금시즌, 금/토/주중은 실제 입실요일.
+    #  (시즌명 '주말'은 토·일을 뭉뚱그려 토요일을 주중에 흘리는 오류가 있어 입실요일로 분해)
+    #  버킷: 주중(월~목+일, 일요일 주중편입) / 금 / 토 / 연휴 / 스페셜
     s = season or ""
     if "연휴" in s: return "연휴"
     if "최성수기" in s: return "스페셜"
+    if ci:
+        return {4: "금", 5: "토"}.get(ci.weekday(), "주중")  # 금=금요일, 토=토요일, 월~목·일=주중
+    # 입실일자 파싱 불가 시에만 시즌명 토큰 폴백
     if "금요일" in s: return "금"
     if "토요일" in s: return "토"
-    if "주말" in s: return "주중"     # 일요일(주말요금) → 주중 편입
-    if "주중" in s: return "주중"
-    if ci:
-        return {4: "금", 5: "토"}.get(ci.weekday(), "주중")  # 월~목·일 = 주중
     return "주중"
 
 def _daytype_wd(ci):
