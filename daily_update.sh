@@ -288,4 +288,25 @@ else
     fi
 fi
 
+# ── [파나크 영덕] 매출 성과 대시보드 (competitor-crawler repo) ──────────────
+#   팔라티움과 파나크는 폴더만 다름: data/palatium_db/ · data/panaq_db/
+#   (팔라티움 매출성과는 refresh_dashboards 데몬, 파나크는 여기서 매일 함께 갱신)
+CURRENT_STAGE="panaq"
+PANAQ_REPO="/Users/chanminpark/Projects/sono-competitor-crawler"
+if ls data/panaq_db/*.xlsx >/dev/null 2>&1 && [ -f "$PANAQ_REPO/scripts/build_panaq.py" ]; then
+    print_header "파나크 영덕 대시보드 갱신"
+    if python3 "$PANAQ_REPO/scripts/build_panaq.py" "$(pwd)/data/panaq_db"; then
+        ( cd "$PANAQ_REPO" \
+          && git add docs/panaq.html docs/panaq-client.html docs/data/panaq_data.json.gz \
+                     scripts/parse_panaq.py scripts/build_panaq.py \
+          && git commit -m "chore(panaq): daily update $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null \
+          && { git pull --rebase --quiet origin main 2>/dev/null || true; } \
+          && git push --quiet origin main 2>/dev/null \
+          && echo -e "${GREEN}  ✅ 파나크 대시보드 푸시 완료${NC}" ) \
+        || echo -e "${YELLOW}  ⚠ 파나크 변경없음/푸시실패 — 확인 필요${NC}"
+    else
+        echo -e "${YELLOW}  ⚠ 파나크 빌드 실패 — 스킵(파이프라인 계속)${NC}"
+    fi
+fi
+
 print_header "완료: $(date '+%Y-%m-%d %H:%M:%S')"
