@@ -33,6 +33,17 @@ NDAYS = OFF_MAX - OFF_MIN + 1       # 98일
 acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(6)])
 # ch_acc[(year,month,site,seg)][거래처] = net RN (거래처 비중용, dt 무관)
 ch_acc = defaultdict(lambda: defaultdict(float))
+# chpace_acc[(year,month,site,seg,거래처)] = [resv차분, canc차분]  → 거래처 주차추이(B, dt무관)
+chpace_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1), [0.0] * (NDAYS + 1)])
+# rt_acc[(year,month,site,seg,티어)] = [rn예약,rn취소,rev예약,rev취소]  → 평형 티어 ADR(D, dt무관)
+rt_acc = defaultdict(lambda: [[0.0] * (NDAYS + 1) for _ in range(4)])
+
+# 평형(객실 등급) → 티어 (가격 저렴한 순: 실버<골드<패밀리스위트<프레지덴셜)
+PYEONG_TIER = {"H": "실버", "I": "골드",
+               "J": "패밀리스위트", "K": "패밀리스위트", "DX": "패밀리스위트", "SH": "패밀리스위트",
+               "SI": "패밀리스위트", "SU": "패밀리스위트", "DS": "패밀리스위트",
+               "PS": "프레지덴셜", "PT": "프레지덴셜", "VS": "프레지덴셜"}
+TIER_ORDER = ["실버", "골드", "패밀리스위트", "프레지덴셜", "기타"]
 
 _AGENT_ALIAS = {"놀유니버스": "야놀자"}
 def _agent(a):
@@ -51,7 +62,7 @@ def _process(fp, is_cancel):
     i_code = g("변경예약집계코드", "예약집계코드"); i_biz = g("변경사업장명")
     i_first = g("최초입력일자"); i_ci = g("입실일자"); i_n = g("박수"); i_r = g("객실수")
     i_user = g("이용자명"); i_mem = g("회원번호"); i_rt = g("객실타입"); i_cancel = g("취소일자")
-    i_season = g("시즌명"); i_rate = g("1박객실료"); i_agent = g("AGENT명")
+    i_season = g("시즌명"); i_rate = g("1박객실료"); i_agent = g("AGENT명"); i_py = g("평형")
     if min(i_code, i_biz, i_first, i_ci, i_n, i_r) < 0:
         return 0
     hi = max(i_code, i_biz, i_first, i_ci, i_n, i_r, i_user, i_mem, i_rt, i_cancel, i_season, i_rate, i_agent)
@@ -94,8 +105,19 @@ def _process(fp, is_cancel):
         dt_int = _daytype_int(p[i_season] if i_season >= 0 else "", ci)  # 통합 구조
         dt_wd = _daytype_wd(ci)                                          # 요일 구조
         sgn = -1.0 if is_cancel else 1.0
+        tier = PYEONG_TIER.get((p[i_py] or "").strip() if i_py >= 0 else "", "기타")  # 평형 티어
+        scope = (ci.year, ci.month, site, seg)
+        def _put(arr, wt):                                    # 차분배열에 as-of 가중치 적재
+            if not wt: return
+            arr[s - OFF_MIN] += wt
+            if is_cancel: arr[e - OFF_MIN + 1] -= wt
         if agent:                                             # 거래처 net(최종, dt무관)
-            ch_acc[(ci.year, ci.month, site, seg)][agent] += sgn * rn
+            ch_acc[scope][agent] += sgn * rn
+            cp = chpace_acc[(ci.year, ci.month, site, seg, agent)]   # 거래처 주차추이(B)
+            _put(cp[1 if is_cancel else 0], rn)
+        rc = rt_acc[(ci.year, ci.month, site, seg, tier)]     # 평형 티어 rn+rev(D)
+        _put(rc[1 if is_cancel else 0], rn)
+        _put(rc[3 if is_cancel else 2], revk)
         for bkt in (f"INT:{dt_int}", f"WD:{dt_wd}"):          # 두 구조 동시 적재
             cell = acc[(ci.year, ci.month, site, seg, bkt)]
             base = 1 if is_cancel else 0                      # 0/2/4=예약, 1/3/5=취소
@@ -143,18 +165,55 @@ def main():
             "wkr": [round(room[i]) for i in WI],              # 주차별 룸온니 net(14) — pkg=rn-wkr
             "wkv": [round(rev[i]) for i in WI],               # 주차별 매출 천원(14) — ADR=wkv*1000/rn
         }
+
+    # B) 거래처 주차추이 — chpace[y|m|site|seg] = {거래처: [14 주차 net]} (최종≥8%만)
+    chp_week = defaultdict(dict)
+    for (y, m, site, seg, agent), (rv, cc) in chpace_acc.items():
+        cum = _cum(rv, cc); fin = cum[OFF_MAX - OFF_MIN]
+        if round(fin) <= 0: continue
+        chp_week[(y, m, site, seg)][agent] = [round(cum[i]) for i in WI]
+    chpace = {}
+    for (y, m, site, seg), d in chp_week.items():
+        tot = sum(v[-1] for v in d.values() if v[-1] > 0)
+        if tot <= 0: continue
+        keep = {a: wk for a, wk in d.items() if wk[-1] > 0 and wk[-1] / tot >= 0.08}  # 최종 8%↑
+        if keep:
+            chpace[f"{y}|{m}|{site}|{seg}"] = keep
+
+    # D) 평형 티어 주차 rn+rev — rtpace[y|m|site|seg|티어] = {rn:[14], rev:[14]}
+    rtpace = {}
+    for (y, m, site, seg, tier), cell in rt_acc.items():
+        rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3])
+        if round(rnc[OFF_MAX - OFF_MIN]) <= 0: continue
+        rtpace[f"{y}|{m}|{site}|{seg}|{tier}"] = {
+            "rn":  [round(rnc[i]) for i in WI],
+            "rev": [round(revc[i]) for i in WI],
+        }
+
     data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,
                      "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
                      "bases": ["INT", "WD"], "daytypes_int": ["주중", "금", "토", "연휴", "스페셜"],
                      "daytypes_wd": ["주중", "금", "토", "일"],
-                     "note": "일별 동기간(as-of) 순온북. series[key]={rn:총net, room:룸온니(46/56), rev:매출천원}. "
-                             "pkg(패키지,86)=rn-room, ADR=rev*1000/rn. channels[y|m|site|seg]=[[거래처,net]…≥5%]. "
+                     "tiers": ["실버", "골드", "패밀리스위트", "프레지덴셜", "기타"],
+                     "note": "일별 동기간(as-of) 순온북. series[key]={rn:총net, wkr:주차룸온니(46/56), wkv:주차매출천원}. "
+                             "pkg(패키지,86)=rn-wkr, ADR=wkv*1000/rn. channels=최종거래처비중. "
+                             "chpace[y|m|site|seg]={거래처:[14주차net]}(B·최종8%↑). rtpace[y|m|site|seg|티어]={rn:[14],rev:[14]}(D·평형). "
                              "key=연|월|사업장|세그|구조:요일(INT=통합/일주중편입, WD=실제입실요일)"},
-            "series": out, "channels": channels}
+            "series": out, "channels": channels, "chpace": chpace, "rtpace": rtpace}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     sz = OUT.stat().st_size / 1e6
-    print(f"✓ booking_pace.json: {len(out)} 계열 · 거래처 {len(channels)} 스코프 · {sz:.1f}MB")
+    print(f"✓ booking_pace.json: {len(out)} 계열 · 거래처비중 {len(channels)} · chpace {len(chpace)} · rtpace {len(rtpace)} · {sz:.1f}MB")
+    # 티어 ADR(저렴한 순 확인) — 천안 2026-01 OTA
+    d0w = WEEKS.index(0)
+    print("천안 26-01 OTA 평형티어 final ADR(천원):", end=" ")
+    for t in ["실버", "골드", "패밀리스위트", "프레지덴셜", "기타"]:
+        rt = rtpace.get(f"2026|1|소노벨 천안|OTA|{t}")
+        if rt and rt["rn"][-1]:
+            print(f"{t}={round(rt['rev'][-1]*1000/rt['rn'][-1])}", end="  ")
+    print()
+    cp = chpace.get("2026|1|소노벨 천안|OTA")
+    if cp: print("천안 26-01 OTA 거래처 주차추이 keys:", list(cp.keys()), "· 야놀자주차:", cp.get("야놀자"))
     # 검증: 천안 2026-01 OTA — 통합 전체/룸온니/매출 + 거래처
     base = "2026|1|소노벨 천안|OTA"
     def wkvals(d, w):

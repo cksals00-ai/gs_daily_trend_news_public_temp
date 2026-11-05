@@ -195,6 +195,11 @@ const siteRank=s=>{const i=SITE_ORDER.indexOf(s);return i<0?999:i;};
 let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
 const EXPANDED=new Set();
 const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
+let PACE_MODE='상품';      // 막대 구분: 상품(룸/패키지) | 거래처(채널)   [B]
+let PACE_TIER='전체';      // 객실 평형 티어: 전체|실버|골드|패밀리스위트|프레지덴셜  [D]
+const TIER_ORDER=['실버','골드','패밀리스위트','프레지덴셜','기타'];
+const TIER_COLORS={'실버':'#9aa7b4','골드':'#c9a063','패밀리스위트':'#b06fb3','프레지덴셜':'#e0655f','기타':'#7a7e85'};
+const CH_COLORS=['#5a9fc4','#c9a063','#4caf6f','#e07a7a','#9b8cc4','#e8a256','#6fb3b8','#b0a0d0','#8aa0b0','#d0b060'];
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(1)+'%';
@@ -446,44 +451,93 @@ function paceChannels(year,month,site,seg){
   const tot=Object.values(m).reduce((a,b)=>a+Math.max(0,b),0);
   return Object.entries(m).filter(e=>e[1]>0).map(e=>({a:e[0],v:e[1],sh:tot?e[1]/tot:0})).sort((x,y)=>y.v-x.v);
 }
+// B) 거래처 주차추이 {거래처:[14]} 합산
+function getChpace(year,month,site,seg){
+  if(!PACE||!PACE.chpace) return {};
+  const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
+  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  const m={};
+  for(const st of siteList)for(const sg of segs){
+    const o=PACE.chpace[[year,month,st,sg].join('|')];
+    if(o)for(const a in o){ if(!m[a])m[a]=o[a].slice(); else o[a].forEach((v,i)=>m[a][i]+=v); }
+  }
+  return m;
+}
+// D) 평형 티어 주차 {rn:[14],rev:[14]} 합산
+function getRtpace(year,month,site,seg,tier){
+  if(!PACE||!PACE.rtpace) return null;
+  const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
+  const siteList=(site==='전사'||site==='전체')?SITES:[site];
+  let rn=null,rev=null;
+  for(const st of siteList)for(const sg of segs){
+    const o=PACE.rtpace[[year,month,st,sg,tier].join('|')];
+    if(o){ if(!rn){rn=o.rn.slice();rev=o.rev.slice();} else {o.rn.forEach((v,i)=>rn[i]+=v);o.rev.forEach((v,i)=>rev[i]+=v);} }
+  }
+  return rn?{rn,rev}:null;
+}
+// 현재 월에 데이터 있는 티어(가격 저렴한 순)
+function availTiers(year,month,site,seg){
+  return TIER_ORDER.filter(t=>{const r=getRtpace(year,month,site,seg,t);return r&&r.rn[r.rn.length-1]>0;});
+}
+function paceModeSet(v){ PACE_MODE=v; renderTable(segKey()); }
+function paceTierSet(v){ PACE_TIER=v; renderTable(segKey()); }
 function paceWeekClick(site,wi){ const c=PACE_WK.get(site); if(c===wi)PACE_WK.delete(site); else PACE_WK.set(site,wi); renderTable(segKey()); }
 function paceDetailHtml(site){
   if(F.month==='전체') return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">◷ 특정 월을 선택하면 주차별 예약추이(동기간·취소반영)가 나옵니다.</div>';
-  const d=paceDaily(F.year,+F.month,site,segKey());
-  if(!d||!d.rn) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">데이터 없음</div>';
-  const OFF=PACE.meta.off_min, weeks=PACE.meta.weeks, rn=d.rn, wkr=d.wkr, wkv=d.wkv;
-  const wkRN=weeks.map(w=>rn[w*7-OFF]);
-  const finRN=rn[PACE.meta.off_max-OFF]||wkRN[wkRN.length-1]||1;   // D+5w(final)
-  const maxw=Math.max(...wkRN,1);
+  const seg=segKey(), OFF=PACE.meta.off_min, weeks=PACE.meta.weeks, N=weeks.length;
   const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
-  const selWi=PACE_WK.get(site);
-  const BARH=92;
-  // 거래처 >10% 요약
-  const chs=paceChannels(F.year,+F.month,site,segKey()).filter(c=>c.sh>=0.10);
+  const selWi=PACE_WK.get(site), BARH=92, TOPH=35;
+  const tierMode=PACE_TIER!=='전체', chMode=(!tierMode&&PACE_MODE==='거래처');
+  const d=paceDaily(F.year,+F.month,site,seg);
+  // 데이터 결정: wkRN(주차 총 RN) · adrs(주차 ADR천원) · stacks(주차별 스택 세그) · dailyRN(드릴용)
+  let wkRN, adrs, stacks, dailyRN=null, chNames=null, chColOf=null;
+  if(tierMode){
+    const rt=getRtpace(F.year,+F.month,site,seg,PACE_TIER);
+    if(!rt) return `<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">해당 월 <b>${PACE_TIER}</b> 데이터 없음</div>`;
+    wkRN=rt.rn.slice();
+    adrs=rt.rn.map((v,i)=>v>0?Math.round(rt.rev[i]/v):0);          // ADR천원=rev천원/rn
+    const col=TIER_COLORS[PACE_TIER]||'#7a7e85';
+    stacks=wkRN.map(v=>[{c:col,v,label:PACE_TIER}]);
+  }else{
+    if(!d||!d.rn) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">데이터 없음</div>';
+    const rn=d.rn, wkr=d.wkr, wkv=d.wkv;
+    wkRN=weeks.map(w=>rn[w*7-OFF]);
+    adrs=weeks.map((w,i)=>wkRN[i]>0?Math.round(wkv[i]/wkRN[i]):0);
+    dailyRN=rn;
+    if(chMode){
+      const cp=getChpace(F.year,+F.month,site,seg);
+      chNames=Object.keys(cp).sort((a,b)=>cp[b][N-1]-cp[a][N-1]);
+      chColOf={}; chNames.forEach((nm,k)=>chColOf[nm]=CH_COLORS[k%CH_COLORS.length]);
+      stacks=weeks.map((w,i)=>{
+        const tot=chNames.reduce((s,nm)=>s+Math.max(0,cp[nm][i]),0)||1;   // 거래처 share→dt필터 총량에 적용(높이 일치)
+        return chNames.map(nm=>({c:chColOf[nm],v:Math.max(0,cp[nm][i])/tot*wkRN[i],label:nm}));
+      });
+    }else{
+      stacks=weeks.map((w,i)=>{const v=wkRN[i],rm=Math.max(0,Math.min(v,wkr[i]));return [{c:ROOM_COL,v:rm,label:'룸온니'},{c:PKG_COL,v:Math.max(0,v-rm),label:'패키지'}];});
+    }
+  }
+  const finRN=wkRN[N-1]||1, maxw=Math.max(...wkRN,1);
+  // 거래처 >10% 요약(항상)
+  const chs=paceChannels(F.year,+F.month,site,seg).filter(c=>c.sh>=0.10);
   const chHtml=chs.length?chs.map(c=>`<span style="color:var(--ink-soft)">${c.a} <b style="color:var(--gold-bright)">${Math.round(c.sh*100)}%</b></span>`).join('<span style="color:var(--ink-faint)"> · </span>'):'<span style="color:var(--ink-faint)">10%↑ 거래처 없음</span>';
-  const TOPH=35;   // 상단 오프셋: 컬럼padding4 + 값16 + %12 + margin3 = 막대 영역 시작 y
-  const adrs=weeks.map((w,i)=>wkRN[i]>0?Math.round(wkv[i]/wkRN[i]):0);   // 주차별 ADR(천원)
   let bars='';
   weeks.forEach((w,i)=>{
-    const v=wkRN[i], rm=Math.max(0,Math.min(v,wkr[i])), pk=Math.max(0,v-rm);
-    const hgt=Math.max(3,Math.round(v/maxw*BARH));
-    const rmH=v>0?Math.round(hgt*rm/v):0, pkH=Math.max(0,hgt-rmH);
-    const pf=finRN>0?Math.round(v/finRN*100):0;           // D+5w(final) 대비 비중
-    const d0=(w===0), sel=(i===selWi);
+    const v=wkRN[i], hgt=Math.max(3,Math.round(v/maxw*BARH));
+    const segsHere=stacks[i].filter(s=>s.v>0), ssum=segsHere.reduce((s,x)=>s+x.v,0)||1;
+    let stk=''; segsHere.forEach((sgm,k)=>{const h=Math.round(hgt*sgm.v/ssum); stk+=`<div style="height:${h}px;background:${sgm.c};opacity:.92;${k===0?'border-radius:3px 3px 0 0':''}"></div>`;});
+    const pf=finRN>0?Math.round(v/finRN*100):0, d0=(w===0), sel=(i===selWi);
     const pfcol=pf>=95?'var(--positive)':(pf>=70?'var(--gold-bright)':'var(--info)');
-    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="룸온니 ${fmt(rm)} · 패키지 ${fmt(pk)} · ADR ${adrs[i]||'–'}천원 · 클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
+    const tip=stacks[i].filter(s=>s.v>0).map(s=>`${s.label} ${fmt(s.v)}`).join(' · ')+` · ADR ${adrs[i]||'–'}천원`;
+    bars+=`<div onclick="paceWeekClick('${site}',${i})" title="${tip} · 클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
       <div style="font-family:var(--mono);font-size:12px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.3">${fmt(v)}</div>
       <div style="font-family:var(--mono);font-size:9.5px;color:${pfcol};line-height:1.25;height:12px">${pf}%</div>
       <div style="width:100%;height:${BARH}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)">
-        <div style="width:60%;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;height:${hgt}px;${d0?'box-shadow:0 0 8px rgba(201,160,99,0.4);border-radius:3px 3px 0 0':''}">
-          <div style="height:${pkH}px;background:${PKG_COL};border-radius:3px 3px 0 0;opacity:.92"></div>
-          <div style="height:${rmH}px;background:${ROOM_COL};opacity:.92"></div>
-        </div></div>
+        <div style="width:60%;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;height:${hgt}px;${d0?'box-shadow:0 0 8px rgba(201,160,99,0.4);border-radius:3px 3px 0 0':''}">${stk}</div></div>
       <div style="font-family:var(--mono);font-size:10.5px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500};margin-top:1px">${wl(w)}</div>
     </div>`;
   });
   // ── ADR 콤보 선그래프(막대 위 오버레이) ──
-  const N=weeks.length, pos=adrs.filter(a=>a>0);
+  const pos=adrs.filter(a=>a>0);
   const amin=pos.length?Math.min(...pos):0, amax=pos.length?Math.max(...pos):1, aspan=(amax-amin)||1, PAD=15;
   const yOf=a=>a>0?(BARH-PAD-(a-amin)/aspan*(BARH-2*PAD)):null;
   const P=adrs.map((a,i)=>({a,i,x:(i+0.5)/N*1000,y:yOf(a)}));
@@ -493,12 +547,11 @@ function paceDetailHtml(site){
   const adrDots=P.filter(p=>p.y!=null).map(p=>`<div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y)}px;width:5px;height:5px;border-radius:50%;background:${ADR_COL};border:1px solid #0b0f14;transform:translate(-50%,-50%);pointer-events:none"></div>
     <div style="position:absolute;left:${(p.i+0.5)/N*100}%;top:${(TOPH+p.y-14)}px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;font-weight:700;color:${ADR_COL};text-shadow:0 0 3px #000,0 0 2px #000;pointer-events:none;white-space:nowrap">${p.a}</div>`).join('');
   // ── E: 블록 소진 시뮬 (가용 대비 blockPct% → 받아야 소진 가능한 최종 주차) ──
-  const availP=agg(F.year,site,segKey(),F.dts).avail||0;
+  const availP=agg(F.year,site,seg,F.dts).avail||0;
   const blockRN=Math.round((F.blockPct||0)/100*availP);
   let soakW=null; for(let i=0;i<N;i++){ if(finRN-wkRN[i] >= blockRN) soakW=i; }  // 릴리즈 후 남은수요 ≥ 블록인 최종 주차
   let soakMark='', soakNote='';
-  const BAND=TOPH+BARH;  // 막대 영역 하단 y
-  if(F.blockPct>0 && blockRN>0){
+  if(!tierMode && F.blockPct>0 && blockRN>0){   // 블록 소진은 전체 기준(티어 선택 시 숨김)
     if(soakW==null){
       soakNote=`<span style="color:var(--negative)">블록 ${F.blockPct}% = ${fmt(blockRN)}실 · 잔여수요 부족 → 전량 소진 어려움</span>`;
     }else{
@@ -508,9 +561,9 @@ function paceDetailHtml(site){
       soakNote=`<span style="color:var(--positive)">블록 ${F.blockPct}% = ${fmt(blockRN)}실 → <b>${wl(weeks[soakW])}</b>까지 받으면 소진 가능</span> <span style="color:var(--ink-faint)">(그 시점 잔여수요 ${fmt(remHere)}실)</span>`;
     }
   }
-  const daily=rn;  // 일별 드릴용(총 net)
+  const daily=dailyRN;  // 일별 드릴용(총 net) — 전체(티어X)일 때만
   let dailyHtml='';
-  if(selWi!=null){
+  if(selWi!=null && daily){
     const w=weeks[selWi], d0=new Date(F.year,+F.month-1,1), WD=['일','월','화','수','목','금','토'];
     const days=[]; for(let j=0;j<7;j++){const off=w*7+j; if(off-OFF>=0&&off-OFF<daily.length) days.push({off,v:daily[off-OFF]});}
     const maxd=Math.max(...days.map(d=>d.v),1), DBH=64;
@@ -532,16 +585,27 @@ function paceDetailHtml(site){
       <div style="font-family:var(--mono);font-size:11px;color:var(--info);margin-bottom:9px;font-weight:600">└ ${wl(w)} 일별 순온북 (동기간·취소반영)</div>
       <div style="display:grid;grid-template-columns:repeat(${days.length},1fr);gap:3px;align-items:end">${db}</div></div>`;
   }
-  const legend=`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:9px;height:9px;background:${ROOM_COL};border-radius:2px;display:inline-block"></span>룸온니</span>
-    <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${PKG_COL};border-radius:2px;display:inline-block"></span>패키지</span>
-    <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:14px;height:2px;background:${ADR_COL};display:inline-block"></span>ADR(천원)</span>`;
+  const sw=(c,t)=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:9px;height:9px;background:${c};border-radius:2px;display:inline-block"></span>${t}</span>`;
+  const adrLeg=`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:14px;height:2px;background:${ADR_COL};display:inline-block"></span>ADR(천원)</span>`;
+  let legend;
+  if(tierMode) legend=sw(TIER_COLORS[PACE_TIER]||'#7a7e85',PACE_TIER)+adrLeg;
+  else if(chMode) legend=(chNames||[]).slice(0,8).map(nm=>sw(chColOf[nm],nm)).join('')+adrLeg;
+  else legend=sw(ROOM_COL,'룸온니')+sw(PKG_COL,'패키지')+adrLeg;
+  // 컨트롤: 구분(상품/거래처) · 객실 평형 티어
+  const chip=(label,active,on,dis)=>`<button ${dis?'disabled':`onclick="${on}"`} style="padding:2px 8px;border-radius:3px;border:1px solid ${active?'var(--gold)':'var(--rule-strong)'};background:${active?'rgba(201,160,99,0.18)':'transparent'};color:${dis?'var(--ink-faint)':(active?'var(--gold-bright)':'var(--ink-muted)')};font-family:var(--mono);font-size:10px;font-weight:600;cursor:${dis?'default':'pointer'};${dis?'opacity:.45':''}">${label}</button>`;
+  const modeCtrl=['상품','거래처'].map(m=>chip(m,!tierMode&&PACE_MODE===m,`paceModeSet('${m}')`,tierMode)).join(' ');
+  const tiers=['전체'].concat(availTiers(F.year,+F.month,site,seg));
+  const tierCtrl=tiers.map(t=>chip(t,PACE_TIER===t,`paceTierSet('${t}')`,false)).join(' ');
   return `<div style="padding:13px 12px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:7px">
       <div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);font-weight:600">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} · <span style="color:var(--gold-bright)">${basisLabel()}:${dtLabel()}</span></div>
       <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted)">${legend}</div></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint)">
+      <span style="display:inline-flex;align-items:center;gap:5px">막대 구분 ${modeCtrl}</span>
+      <span style="display:inline-flex;align-items:center;gap:5px">객실(평형) ${tierCtrl}</span></div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-bottom:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
       <span>거래처 10%↑: ${chHtml}</span>
-      <span>막대=룸온니/패키지 · 상단%=D+5w 대비 · <b style="color:var(--ink-muted)">흰선=ADR</b> · D0=투숙월1일 · 클릭→일별</span></div>
+      <span>상단%=D+5w 대비 · <b style="color:var(--ink-muted)">흰선=ADR</b> · ${tierMode?'<b>'+PACE_TIER+'</b> 티어(요일무관)':(chMode?'거래처 구성(요일무관 비율)':'룸/패키지')} · 클릭→일별</span></div>
     ${soakNote?`<div style="font-family:var(--mono);font-size:10.5px;margin-bottom:8px;padding:5px 9px;background:rgba(76,175,111,0.08);border-left:2px solid var(--positive);border-radius:3px">${soakNote}</div>`:''}
     <div style="position:relative;">
       <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>
