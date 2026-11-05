@@ -139,7 +139,8 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
 <script>
 const ALLDT=['주중','금','토','일','연휴','스페셜'];
 const F={year:2026, month:'전체', seg:'ONLINE', dts:['주중','금','토','일','연휴','스페셜'], ib:false, site:'전체'};
-let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null;
+let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
+const EXPANDED=new Set();
 const C={gold:'#c9a063',pos:'#4caf6f',warn:'#e8a256',neg:'#e57373',info:'#5a9fc4',muted:'#7a7e85',ink:'#e0e0e3'};
 const fmt=n=>Math.round(n).toLocaleString();
 const pct=n=>(n*100).toFixed(1)+'%';
@@ -151,7 +152,10 @@ fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
   IDX={};
   for(const r of DATA){ IDX[[r.year,r.month,r.site,r.seg,r.daytype].join('|')]=r; }
   document.getElementById('meta-note').textContent='2026 객실수 고정 '+d.meta.company_rooms.toLocaleString()+'실 · 1~10월 · net 예약';
-  buildFilters(d.meta);
+  return fetch('./data/booking_pace.json?t='+Date.now()).then(r=>r.json()).catch(()=>({series:{},meta:{weeks:[]}}));
+}).then(pd=>{
+  PACE=pd;
+  buildFilters(META);
   render();
 }).catch(e=>{document.getElementById('app').innerHTML='<div class="loading">로드 실패: '+e+'</div>';});
 
@@ -263,11 +267,11 @@ function renderTable(seg){
   const tot=agg(y,'전사',seg,dt), totp=agg(y-1,'전사',seg,dt);
   const mv=o=>o.rn*o.adr;  // 매출(원)
   function row(label,a,p,isTot){
-    const sel=label===F.site;
+    const sel=label===F.site; const exp=EXPANDED.has(label);
     const st=isTot?'background:var(--bg-soft);font-weight:700':(sel?'background:rgba(201,160,99,0.14);outline:1px solid var(--gold)':'');
-    const click=isTot?'':`onclick="selectSite('${label}')" style="cursor:pointer;${st}"`;
+    const click=isTot?'':`onclick="rowClick('${label}')" style="cursor:pointer;${st}"`;
     return `<tr ${isTot?'style="'+st+'"':click}>
-      <td class="site">${isTot?'전사 합계':SHORT(label)}</td>
+      <td class="site">${isTot?'전사 합계':((exp?'▾ ':'▸ ')+SHORT(label))}</td>
       <td>${fmt(a.rn)}</td><td>${yoyPct(a.rn,p.rn)}</td>
       <td>${a.adr?fmt(a.adr/1000):'-'}</td><td>${yoyPct(a.adr,p.adr)}</td>
       <td>${fmt(mv(a)/1e6)}</td><td>${yoyPct(mv(a),mv(p))}</td>
@@ -280,9 +284,42 @@ function renderTable(seg){
     <tr><th rowspan="2" class="site">사업장</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th rowspan="2">가용객실수</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
     <tr><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>점유</th><th>전년비</th><th>일수</th><th>전년비</th></tr></thead><tbody>`;
   h+=row(null,tot,totp,true);
-  for(const {s,a,p} of data) h+=row(s,a,p,false);
+  for(const {s,a,p} of data){
+    h+=row(s,a,p,false);
+    if(EXPANDED.has(s)) h+=`<tr><td colspan="12" style="padding:0;background:var(--bg-deep)">${paceDetailHtml(s)}</td></tr>`;
+  }
   h+='</tbody></table>';
   document.getElementById('perf-table').innerHTML=h;
+}
+function rowClick(s){ if(EXPANDED.has(s))EXPANDED.delete(s); else EXPANDED.add(s); renderTable(segKey()); }
+function paceSeries(year,month,site,seg){
+  if(!PACE||!PACE.series||!PACE.meta||!PACE.meta.weeks||!PACE.meta.weeks.length) return null;
+  const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
+  const weeks=PACE.meta.weeks; let net=new Array(weeks.length).fill(0), found=false;
+  for(const sg of segs){const arr=PACE.series[[year,month,site,sg].join('|')];if(arr){found=true;arr.forEach((v,i)=>net[i]+=v);}}
+  return found?{weeks,net}:null;
+}
+function paceDetailHtml(site){
+  if(F.month==='전체') return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">◷ 특정 월을 선택하면 주차별 예약추이(동기간·취소반영)가 나옵니다.</div>';
+  const ps=paceSeries(F.year,+F.month,site,segKey());
+  if(!ps) return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">주차 데이터 없음</div>';
+  const max=Math.max(...ps.net,1);
+  const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
+  let bars='';
+  ps.weeks.forEach((w,i)=>{
+    const v=ps.net[i], hgt=Math.max(2,Math.round(v/max*56)), d0=(w===0);
+    const dlt=i>0?v-ps.net[i-1]:0, dltxt=i>0?((dlt>=0?'+':'')+fmt(dlt)):'';
+    const dcol=dlt>0?'var(--positive)':(dlt<0?'var(--negative)':'var(--ink-faint)');
+    bars+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px">
+      <div style="font-family:var(--mono);font-size:10.5px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'}">${fmt(v)}</div>
+      <div style="font-family:var(--mono);font-size:8.5px;color:${dcol}">${dltxt}</div>
+      <div style="width:24px;height:58px;display:flex;align-items:flex-end"><div style="width:100%;height:${hgt}px;background:${d0?'var(--gold)':'var(--info)'};border-radius:2px 2px 0 0;opacity:.85"></div></div>
+      <div style="font-family:var(--mono);font-size:9px;color:${d0?'var(--gold-bright)':'var(--ink-faint)'};font-weight:${d0?700:500}">${wl(w)}</div>
+    </div>`;
+  });
+  return `<div style="padding:11px 8px">
+    <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);margin-bottom:9px">📅 ${SHORT(site)} · ${F.year}년 ${F.month}월 · ${segKey()} — 주차별 순온북(동기간·취소반영) · <span style="color:var(--gold-bright)">D0 = 투숙월 1일</span> · 작은숫자=주간 증감</div>
+    <div style="display:flex;gap:5px;overflow-x:auto;align-items:flex-end;padding-bottom:4px">${bars}</div></div>`;
 }
 
 function renderRanking(seg){
