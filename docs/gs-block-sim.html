@@ -517,8 +517,9 @@ function getRtpace(year,month,site,seg,tier){
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
   const siteList=paceSites(site);
   let rn=null,rev=null,room=null;
-  for(const st of siteList)for(const sg of segs){
-    const o=PACE.rtpace[[year,month,st,sg,tier].join('|')];
+  // 사업장 · 세그 · 선택 요일(F.dts)·구조(F.basis) 합산 → 평형 선택 시 요일 필터 반영 (paceDaily와 동일)
+  for(const st of siteList)for(const sg of segs)for(const dt of F.dts){
+    const o=PACE.rtpace[[year,month,st,sg,F.basis+':'+dt,tier].join('|')];
     if(o){ if(!rn){rn=o.rn.slice();rev=o.rev.slice();room=(o.room||o.rn.map(()=>0)).slice();}
            else {o.rn.forEach((v,i)=>rn[i]+=v);o.rev.forEach((v,i)=>rev[i]+=v);(o.room||[]).forEach((v,i)=>room[i]+=v);} }
   }
@@ -535,7 +536,7 @@ function paceDetailHtml(site){
   if(F.month==='전체') return '<div style="padding:12px;color:var(--ink-faint);font-family:var(--mono);font-size:11px">◷ 특정 월을 선택하면 주차별 예약추이(동기간·취소반영)가 나옵니다.</div>';
   const seg=segKey(), OFF=PACE.meta.off_min, weeks=PACE.meta.weeks, N=weeks.length;
   const wl=w=>w===0?'D0':(w<0?'D'+w+'w':'D+'+w+'w');
-  const selWi=PACE_WK.get(site), BARH=92, TOPH=35;
+  const selWi=PACE_WK.get(site), BARH=92, TOPH=47;   // TOPH=막대 상단 라벨 높이(누적+증가+% 3줄)
   const tierMode=PACE_TIER!=='전체';
   const d=paceDaily(F.year,+F.month,site,seg);
   // 거래처 10%↑ 칩(클릭 필터) + 색
@@ -578,9 +579,12 @@ function paceDetailHtml(site){
     let stk=''; segsHere.forEach((sgm,k)=>{const h=Math.round(hgt*sgm.v/ssum); stk+=`<div style="height:${h}px;background:${sgm.c};opacity:.92;${k===0?'border-radius:3px 3px 0 0':''}"></div>`;});
     const pf=finRN>0?Math.round(v/finRN*100):0, d0=(w===0), sel=(i===selWi);
     const pfcol=pf>=95?'var(--positive)':(pf>=70?'var(--gold-bright)':'var(--info)');
-    const tip=stacks[i].filter(s=>s.v>0).map(s=>`${s.label} ${fmt(s.v)}`).join(' · ')+` · ADR ${adrs[i]||'–'}천원`;
+    const dinc=i>0?v-wkRN[i-1]:v;                                   // 주차 추가(전주 대비 순증)
+    const dincCol=dinc>0?'var(--positive)':(dinc<0?'var(--negative)':'var(--ink-faint)');
+    const tip=stacks[i].filter(s=>s.v>0).map(s=>`${s.label} ${fmt(s.v)}`).join(' · ')+` · +${fmt(dinc)}추가 · ADR ${adrs[i]||'–'}천원`;
     bars+=`<div onclick="paceWeekClick('${site}',${i})" title="${tip} · 클릭=일별" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:5px;padding:4px 1px;${sel?'background:rgba(90,159,196,0.16);outline:1px solid var(--info)':''}">
       <div style="font-family:var(--mono);font-size:12px;font-weight:${d0?700:600};color:${d0?'var(--gold-bright)':'var(--ink-soft)'};line-height:1.3">${fmt(v)}</div>
+      <div style="font-family:var(--mono);font-size:9px;color:${dincCol};line-height:1.2;height:11px">${(dinc>=0?'+':'')+fmt(dinc)}</div>
       <div style="font-family:var(--mono);font-size:9.5px;color:${pfcol};line-height:1.25;height:12px">${pf}%</div>
       <div style="width:100%;height:${BARH}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;margin:3px 0 4px;border-bottom:1px solid var(--rule)">
         <div style="width:60%;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;height:${hgt}px;${d0?'box-shadow:0 0 8px rgba(201,160,99,0.4);border-radius:3px 3px 0 0':''}">${stk}</div></div>
@@ -653,7 +657,7 @@ function paceDetailHtml(site){
       <span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap">객실(평형) ${tierCtrl}</span></div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-bottom:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center">
       <span style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px">거래처(클릭=필터) ${chHtml}</span>
-      <span>상단%=D+5w 대비 · <b style="color:var(--ink-muted)">흰선=ADR</b> · ${chMode?'<b>'+PACE_CH+'</b> 채널만':(tierMode?'<b>'+PACE_TIER+'</b> 티어(요일무관)':'룸/패키지')} · 클릭→일별</span></div>
+      <span>상단=누적·<b style="color:var(--positive)">+추가</b>·%(D+5w 대비) · <b style="color:var(--ink-muted)">흰선=ADR</b> · ${chMode?'<b>'+PACE_CH+'</b> 채널만':(tierMode?'<b>'+PACE_TIER+'</b> 티어':'룸/패키지')} · 클릭→일별</span></div>
     ${soakNote?`<div style="font-family:var(--mono);font-size:10.5px;margin-bottom:8px;padding:5px 9px;background:rgba(76,175,111,0.08);border-left:2px solid var(--positive);border-radius:3px">${soakNote}</div>`:''}
     <div style="position:relative;margin-top:16px;">
       <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:end">${bars}</div>

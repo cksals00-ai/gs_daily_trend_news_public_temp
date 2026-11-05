@@ -124,10 +124,6 @@ def _process(fp, is_cancel):
             _put(cp[1 if is_cancel else 0], rn)
             _put(cp[3 if is_cancel else 2], revk)
             _put(cp[5 if is_cancel else 4], roomw)
-        rc = rt_acc[(ci.year, ci.month, site, seg, tier)]     # 평형 티어 rn+rev+룸온니(D)
-        _put(rc[1 if is_cancel else 0], rn)
-        _put(rc[3 if is_cancel else 2], revk)
-        _put(rc[5 if is_cancel else 4], roomw)
         for bkt in (f"INT:{dt_int}", f"WD:{dt_wd}"):          # 두 구조 동시 적재
             cell = acc[(ci.year, ci.month, site, seg, bkt)]
             base = 1 if is_cancel else 0                      # 0/2/4=예약, 1/3/5=취소
@@ -137,6 +133,11 @@ def _process(fp, is_cancel):
                 arr = cell[off + base]
                 arr[s - OFF_MIN] += wt
                 if is_cancel: arr[e - OFF_MIN + 1] -= wt      # 취소복원 구간 닫기
+            # 평형 티어도 요일(day-type)별로 적재 → 평형 선택 시 요일 필터 적용(D). 거래처(B)는 요일무관 유지
+            rc = rt_acc[(ci.year, ci.month, site, seg, bkt, tier)]
+            _put(rc[1 if is_cancel else 0], rn)
+            _put(rc[3 if is_cancel else 2], revk)
+            _put(rc[5 if is_cancel else 4], roomw)
         n += 1
     fh.close()
     return n
@@ -193,12 +194,13 @@ def main():
         if keep:
             chpace[f"{y}|{m}|{site}|{seg}"] = keep
 
-    # D) 평형 티어 주차 rn+rev — rtpace[y|m|site|seg|티어] = {rn:[14], rev:[14]}
+    # D) 평형 티어 주차 rn+rev — rtpace[y|m|site|seg|구조:요일|티어] = {rn:[14], rev:[14], room:[14]}
+    #    (요일 차원 포함 → 평형 선택 시에도 요일 필터 적용. getRtpace가 F.basis:dt로 조회·합산)
     rtpace = {}
-    for (y, m, site, seg, tier), cell in rt_acc.items():
+    for (y, m, site, seg, bkt, tier), cell in rt_acc.items():
         rnc = _cum(cell[0], cell[1]); revc = _cum(cell[2], cell[3]); rmc = _cum(cell[4], cell[5])
         if round(rnc[OFF_MAX - OFF_MIN]) <= 0: continue
-        rtpace[f"{y}|{m}|{site}|{seg}|{tier}"] = {
+        rtpace[f"{y}|{m}|{site}|{seg}|{bkt}|{tier}"] = {
             "rn":  [round(rnc[i]) for i in WI],
             "rev": [round(revc[i]) for i in WI],
             "room": [round(rmc[i]) for i in WI],
@@ -211,7 +213,7 @@ def main():
                      "tiers": TIER_ORDER,
                      "note": "일별 동기간(as-of) 순온북. series[key]={rn:총net, wkr:주차룸온니(46/56), wkv:주차매출천원}. "
                              "pkg(패키지,86)=rn-wkr, ADR=wkv*1000/rn. channels=최종거래처비중. "
-                             "chpace[y|m|site|seg]={거래처:[14주차net]}(B·최종8%↑). rtpace[y|m|site|seg|티어]={rn:[14],rev:[14]}(D·평형). "
+                             "chpace[y|m|site|seg]={거래처:[14주차net]}(B·최종8%↑). rtpace[y|m|site|seg|구조:요일|티어]={rn:[14],rev:[14],room:[14]}(D·평형, 요일차원 포함). "
                              "key=연|월|사업장|세그|구조:요일(INT=통합/일주중편입, WD=실제입실요일)"},
             "series": out, "channels": channels, "chpace": chpace, "rtpace": rtpace}
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -220,11 +222,14 @@ def main():
     print(f"✓ booking_pace.json: {len(out)} 계열 · 거래처비중 {len(channels)} · chpace {len(chpace)} · rtpace {len(rtpace)} · {sz:.1f}MB")
     # 티어 ADR(저렴한 순 확인) — 천안 2026-01 OTA
     d0w = WEEKS.index(0)
-    print("천안 26-01 OTA 평형티어 final ADR(천원):", end=" ")
+    print("천안 26-01 OTA 평형티어 final ADR(천원, INT 요일합):", end=" ")
     for t in TIER_ORDER:
-        rt = rtpace.get(f"2026|1|소노벨 천안|OTA|{t}")
-        if rt and rt["rn"][-1]:
-            print(f"{t}={round(rt['rev'][-1]*1000/rt['rn'][-1])}", end="  ")
+        rn_sum = rev_sum = 0
+        for dt in ("주중", "금", "토", "연휴", "스페셜"):
+            rt = rtpace.get(f"2026|1|소노벨 천안|OTA|INT:{dt}|{t}")
+            if rt: rn_sum += rt["rn"][-1]; rev_sum += rt["rev"][-1]
+        if rn_sum:
+            print(f"{t}={round(rev_sum*1000/rn_sum)}", end="  ")
     print()
     cp = chpace.get("2026|1|소노벨 천안|OTA")
     if cp:
