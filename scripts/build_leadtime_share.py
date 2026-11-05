@@ -297,59 +297,65 @@ def main():
     build_xlsx(data, sites)
 
 def build_xlsx(data, sites):
+    """제공 템플릿(data/templates/leadtime_xlsx_template.xlsx) 양식 그대로,
+       통합구조 day-type별 시트(전체·주중·금·토·연휴·스페셜)에 전사·ONLINE 데이터만 채운다."""
     try:
         import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter as L
     except ImportError:
         print("! openpyxl 없음 → xlsx 생략"); return
-    wb = openpyxl.Workbook(); wb.remove(wb.active)
-    thin = Side(style="thin", color="D9D9D9"); bd = Border(thin, thin, thin, thin)
-    hf = PatternFill("solid", fgColor="305496"); hfont = Font(bold=True, color="FFFFFF", name="맑은 고딕")
-    gf = PatternFill("solid", fgColor="8497B0")  # 구조 그룹 헤더(통합/요일)
+    TMPL = ROOT / "data" / "templates" / "leadtime_xlsx_template.xlsx"
+    if not TMPL.exists():
+        print("! xlsx 템플릿 없음 → 생략:", TMPL); return
+    wb = openpyxl.load_workbook(TMPL)
+    src = wb["DB"]
     idx = {(r["year"], r["month"], r["site"], r["seg"], r.get("basis"), r["daytype"]): r for r in data["rows"]}
-    # 컬럼: 통합구조 5 + 요일구조 4 + 전체 1
-    COLS = [("INT", d) for d in DAYTYPES_INT] + [("WD", d) for d in DAYTYPES_WD] + [("ALL", "ALL")]
-    def mk(metric, title, fmt):
-        ws = wb.create_sheet(title)
-        # 1행: 구조 그룹 헤더, 2행: day-type
-        grp = ["", "", "", ""] + ["통합 구조"]*len(DAYTYPES_INT) + ["요일 구조"]*len(DAYTYPES_WD) + ["전체"]
-        sub = ["연도", "월", "사업장", "세그먼트"] + DAYTYPES_INT + DAYTYPES_WD + ["전체"]
-        ws.append(grp); ws.append(sub)
-        # 그룹 헤더 병합(통합 5 / 요일 4)
-        c0 = 5
-        ws.merge_cells(start_row=1, start_column=c0, end_row=1, end_column=c0+len(DAYTYPES_INT)-1)
-        ws.merge_cells(start_row=1, start_column=c0+len(DAYTYPES_INT), end_row=1,
-                       end_column=c0+len(DAYTYPES_INT)+len(DAYTYPES_WD)-1)
-        for c in ws[1]:
-            c.font = Font(bold=True, color="FFFFFF", name="맑은 고딕"); c.alignment = Alignment("center", "center")
-            if c.column >= c0: c.fill = gf; c.border = bd
-        for c in ws[2]:
-            c.fill = hf; c.font = hfont; c.border = bd; c.alignment = Alignment("center", "center")
-        segname = {"ONLINE": "OTA+GOTA(온라인)", "ALL": "전체(+IB)", "OTA": "OTA", "GOTA": "GOTA", "IB": "IB(인바운드)"}
-        for y in YEARS:
-            for site in ["전사"] + sites:
-                for seg in SEG_OUT:
-                    sn = segname[seg]
-                    for m in mly(y):
-                        row = [y, f"{m}월", site, sn]
-                        for basis, dt in COLS:
-                            r = idx.get((y, m, site, seg, basis, dt), {})
-                            v = r.get(metric)
-                            row.append(v if v is not None else "")
-                        ws.append(row)
-        for rr in ws.iter_rows(min_row=3):
-            for c in rr:
-                c.border = bd; c.alignment = Alignment("center")
-                if c.column >= 5 and isinstance(c.value, (int, float)): c.number_format = fmt
-        for i, w in enumerate([7, 6, 22, 15] + [8]*len(COLS), 1):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
-        ws.freeze_panes = "E3"
-    mk("rn", "RN(실적)", "#,##0")
-    mk("share", "가용비중", "0.0%")
-    mk("lead", "리드타임(일)", "0.0")
+    SITE, SEG = "전사", "ONLINE"
+    SHEETS = [("전체", "ALL", "ALL"), ("주중", "INT", "주중"), ("금", "INT", "금"),
+              ("토", "INT", "토"), ("연휴", "INT", "연휴"), ("스페셜", "INT", "스페셜")]
+    YEAR_COL = {2026: 3, 2025: 8, 2024: 13}      # RNS 시작열: C · H · M
+
+    def fill(ws, basis, dtkey):
+        for y in (2024, 2025, 2026):
+            c0 = YEAR_COL[y]
+            tot_av = 0.0
+            for m in range(1, 13):
+                rr = 5 + m                        # 1월=6 … 12월=17
+                r = idx.get((y, m, SITE, SEG, basis, dtkey))
+                if not r or not r.get("rn"):
+                    continue
+                rn = r["rn"]; adr = r.get("adr") or 0; av = r.get("av_dt") or r.get("av_mon") or 0
+                ws.cell(rr, c0).value = round(rn)                                   # RNS
+                ws.cell(rr, c0+1).value = f"={L(c0+2)}{rr}/{L(c0)}{rr}*1000"        # ADR=REV/RNS*1000
+                ws.cell(rr, c0+2).value = round(rn * adr / 1e6)                     # REV(백만원)
+                cp = ws.cell(rr, c0+3); cp.value = (rn/av if av else 0); cp.number_format = "0.0%"  # 점유율
+                ws.cell(rr, c0+4).value = (f"{round(r['lead'])}일" if r.get("lead") is not None else "")  # 리드타임
+                if y == 2026:
+                    ws.cell(rr, 20).value = round(av); tot_av += av                 # 가용(T열, 2026 기준)
+            # Total 행: ADR 수식 + 점유율(값)
+            ws.cell(5, c0+1).value = f"={L(c0+2)}5/{L(c0)}5*1000"
+            trn = sum((idx.get((y, m, SITE, SEG, basis, dtkey)) or {}).get("rn", 0) for m in range(1, 13))
+            tav = sum((idx.get((y, m, SITE, SEG, basis, dtkey)) or {}).get("av_dt", 0) for m in range(1, 13))
+            if tav:
+                cp = ws.cell(5, c0+3); cp.value = trn/tav; cp.number_format = "0.0%"
+            if y == 2026 and tot_av:
+                ws.cell(5, 20).value = round(tot_av)
+
+    made = []
+    for name, basis, dtkey in SHEETS:
+        ws = wb.copy_worksheet(src)
+        ws.title = name
+        ws["B2"].value = f"- {name}"
+        fill(ws, basis, dtkey)
+        made.append(name)
+    wb.remove(src)
     OUT_XLSX.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT_XLSX)
-    print("✓ XLSX:", OUT_XLSX)
+    # 검증
+    chk = idx.get((2026, 1, "전사", "ONLINE", "INT", "토"))
+    print("✓ XLSX(템플릿 양식):", OUT_XLSX.name, "· 시트", made,
+          "· 검증 토 2026-01 RNS=", round(chk["rn"]) if chk else "N/A",
+          "(템플릿값 13828)")
 
 if __name__ == "__main__":
     main()
