@@ -31,7 +31,9 @@ YEARS = [2024, 2025, 2026]
 MONTHS = list(range(1, 13))                       # 마감연도(2024·2025)는 11·12월 포함
 MONTHS_BY_YEAR = {2024: list(range(1, 13)), 2025: list(range(1, 13)), 2026: list(range(1, 11))}
 def mly(y): return MONTHS_BY_YEAR.get(y, MONTHS)
-DAYTYPES = ["주중", "금", "토", "일", "연휴", "스페셜"]
+DAYTYPES = ["주중", "금", "토", "일", "연휴", "스페셜"]   # 시즌 기준 전체 버킷
+DAYTYPES_SZ = ["주중", "금", "토", "일", "연휴", "스페셜"]  # 시즌(요금시즌) 기준
+DAYTYPES_WD = ["주중", "금", "토", "일"]                    # 요일(실제 입실요일) 기준
 SEGS = ["OTA", "GOTA", "IB"]          # 저장 단위 (IB=인바운드, 참고용)
 ONLINE = ["OTA", "GOTA"]              # 메인 = 온라인 채널
 SEG_OUT = ["ONLINE", "OTA", "GOTA", "IB", "ALL"]
@@ -93,7 +95,9 @@ def _site(changed_biz):
     hit = SITE_ROOMS.get(s)
     return hit[0] if hit else None
 
-def _daytype(season, ci):
+def _daytype_sz(season, ci):
+    # 시즌(요금시즌) 기준 — 시즌명 우선, 공란이면 입실요일 폴백.
+    #  주의: 요금상 일요일이 '주중'으로 묶이는 경우가 많아 '일'(=주말요금) 버킷이 비는 특성 있음.
     s = season or ""
     if "연휴" in s: return "연휴"
     if "최성수기" in s: return "스페셜"
@@ -104,6 +108,16 @@ def _daytype(season, ci):
     if ci:
         return {4: "금", 5: "토", 6: "일"}.get(ci.weekday(), "주중")
     return "주중"
+
+def _daytype_wd(ci):
+    # 요일(실제 입실일자 요일) 기준 — 월~목=주중, 금/토/일. 연휴/스페셜 구분 없음.
+    if ci:
+        return {4: "금", 5: "토", 6: "일"}.get(ci.weekday(), "주중")
+    return "주중"
+
+# 하위호환: 기존 임포트(build_booking_pace 등)용 — 시즌 기준을 기본으로 노출
+def _daytype(season, ci):
+    return _daytype_sz(season, ci)
 
 def _pdate(s):
     s = (s or "").strip()
@@ -164,9 +178,11 @@ def process(fp, is_cancel):
         if rn <= 0: continue
         fd = _pdate(p[i_first])
         lt = max((ci - fd).days, 0) if fd else 0
-        dt = _daytype(p[i_season] if i_season >= 0 else "", ci)
+        dt_sz = _daytype_sz(p[i_season] if i_season >= 0 else "", ci)   # 시즌 기준
+        dt_wd = _daytype_wd(ci)                                         # 요일 기준
         rate = _num(p[i_rate]) if i_rate >= 0 else 0.0
-        for bucket in (dt, "__ALL__"):   # 요일별 + 전체(DB총계, 요일분류 무관) 동시 적재
+        # 시즌 버킷 + 요일 버킷 + 전체(DB총계) 동시 적재 → 대시보드에서 기준 토글
+        for bucket in (f"SZ:{dt_sz}", f"WD:{dt_wd}", "__ALL__"):
             cell = acc[(ci.year, ci.month, site, seg, bucket)]
             if is_cancel: cell[3] += rn; cell[4] += lt * rn; cell[5] += rate * rn
             else:         cell[0] += rn; cell[1] += lt * rn; cell[2] += rate * rn
@@ -207,10 +223,16 @@ def main():
 
     data = {"meta": {"company_rooms": COMPANY_ROOMS, "years": YEARS, "months": MONTHS,
                      "months_by_year": {str(k): v for k, v in MONTHS_BY_YEAR.items()},
-                     "daytypes": DAYTYPES, "segs": SEGS, "rooms": ROOMS,
-                     "weekend": ["금", "토", "일"],
-                     "note": "net=예약−취소, RN=박수×객실수, 입실월 귀속, 비중=RN/(객실수×월일수), 리드타임=입실−최초입력(net가중)"},
+                     "daytypes": DAYTYPES, "daytypes_sz": DAYTYPES_SZ, "daytypes_wd": DAYTYPES_WD,
+                     "bases": ["WD", "SZ"], "basis_default": "WD",
+                     "basis_label": {"WD": "요일 기준(실제 입실요일)", "SZ": "시즌 기준(요금시즌)"},
+                     "segs": SEGS, "rooms": ROOMS, "weekend": ["금", "토", "일"],
+                     "note": "net=예약(취소 미반영), RN=박수×객실수, 입실월 귀속, 비중=RN/(객실수×월일수), 리드타임=입실−최초입력(net가중). "
+                             "daytype 기준 2종: WD=실제 입실요일(주중=월~목), SZ=요금시즌(일요일이 주중에 편입되면 SZ:일=0)"},
             "rows": []}
+
+    # 기준(basis)별 day-type 집합 — ALL(전체 DB총계)은 기준 무관(공용)
+    BASIS_DTS = {"WD": DAYTYPES_WD, "SZ": DAYTYPES_SZ}
 
     scope_sites = sites + ["전사"]
     for y in YEARS:
@@ -222,18 +244,22 @@ def main():
                 site_list = sites if site == "전사" else [site]
                 for seg in SEG_OUT:
                     seg_list = SEG_GROUPS[seg]
-                    for dt in DAYTYPES + ["ALL"]:
-                        dt_list = ["__ALL__"] if dt == "ALL" else [dt]  # 전체=DB총계 직접
+                    # (basis, daytype, bucketkey) 목록 — ALL 1개 + WD 4개 + SZ 6개
+                    combos = [("ALL", "ALL", "__ALL__")]
+                    for basis, dts in BASIS_DTS.items():
+                        for dt in dts:
+                            combos.append((basis, dt, f"{basis}:{dt}"))
+                    for basis, dt, bucket in combos:
                         rn = ltw = ratew = 0.0
                         for s in site_list:
                             for sg in seg_list:
-                                for d in dt_list:
-                                    a, b, rt = net(y, m, s, sg, d); rn += a; ltw += b; ratew += rt
+                                a, b, rt = net(y, m, s, sg, bucket); rn += a; ltw += b; ratew += rt
                         lead = round(ltw / rn, 1) if rn > 0 else None
                         adr = round(ratew / rn) if rn > 0 else None
                         av_dt = av_mon if dt == "ALL" else rooms * dt_nights(y, m, dt)
                         data["rows"].append({"year": y, "month": m, "site": site, "seg": seg,
-                                             "daytype": dt, "rn": round(rn), "lead": lead, "adr": adr,
+                                             "basis": basis, "daytype": dt,
+                                             "rn": round(rn), "lead": lead, "adr": adr,
                                              "rooms": rooms, "av_dt": av_dt, "av_mon": av_mon,
                                              "share": round(rn/av_mon, 4) if av_mon else 0.0})
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -250,17 +276,15 @@ def main():
             line += f"  {seg}={tot:>9,}"
         print(line)
 
-    # 주말(토) 기회 랭킹: 2026 토요일 OTA+GOTA, 사업장별 비중·리드타임
-    print("\n── [2026·토요일·OTA+GOTA] 블록 기회 랭킹 (비중↓리드 = 확대 유리) ──")
-    rowmap = {(r["site"], r["seg"], r["daytype"]): r for r in data["rows"]
-              if r["year"]==2026 and r["month"]==0}  # placeholder
+    # 주말(토) 기회 랭킹: 2026 토요일(실제 입실요일) OTA+GOTA, 사업장별 비중·리드타임
+    print("\n── [2026·토요일(요일기준)·OTA+GOTA] 블록 기회 랭킹 (비중↓리드 = 확대 유리) ──")
     agg = {}
     for site in sites:
         rn = ltw = av = 0.0
         for m in mly(2026):
             a, b = 0.0, 0.0
             for sg in ONLINE:
-                x, y2, _ = net(2026, m, site, sg, "토"); a += x; b += y2
+                x, y2, _ = net(2026, m, site, sg, "WD:토"); a += x; b += y2
             rn += a; ltw += b
             av += ROOMS[site] * sum(1 for d in range(1, calendar.monthrange(2026, m)[1]+1) if date(2026, m, d).weekday()==5)
         lead = (ltw/rn) if rn>0 else None
@@ -281,13 +305,26 @@ def build_xlsx(data, sites):
     wb = openpyxl.Workbook(); wb.remove(wb.active)
     thin = Side(style="thin", color="D9D9D9"); bd = Border(thin, thin, thin, thin)
     hf = PatternFill("solid", fgColor="305496"); hfont = Font(bold=True, color="FFFFFF", name="맑은 고딕")
-    idx = {(r["year"], r["month"], r["site"], r["seg"], r["daytype"]): r for r in data["rows"]}
+    gf = PatternFill("solid", fgColor="8497B0")  # 기준 그룹 헤더(요일/시즌)
+    idx = {(r["year"], r["month"], r["site"], r["seg"], r.get("basis"), r["daytype"]): r for r in data["rows"]}
+    # 컬럼: 요일기준 4 + 시즌기준 6 + 전체 1
+    COLS = [("WD", d) for d in DAYTYPES_WD] + [("SZ", d) for d in DAYTYPES_SZ] + [("ALL", "ALL")]
     def mk(metric, title, fmt):
         ws = wb.create_sheet(title)
-        ws.append(["연도", "월", "사업장", "세그먼트"] + DAYTYPES + ["전체"])
+        # 1행: 기준 그룹 헤더, 2행: day-type
+        grp = ["", "", "", ""] + ["요일 기준"]*len(DAYTYPES_WD) + ["시즌 기준"]*len(DAYTYPES_SZ) + ["전체"]
+        sub = ["연도", "월", "사업장", "세그먼트"] + DAYTYPES_WD + DAYTYPES_SZ + ["전체"]
+        ws.append(grp); ws.append(sub)
+        # 그룹 헤더 병합(요일 4 / 시즌 6)
+        c0 = 5
+        ws.merge_cells(start_row=1, start_column=c0, end_row=1, end_column=c0+len(DAYTYPES_WD)-1)
+        ws.merge_cells(start_row=1, start_column=c0+len(DAYTYPES_WD), end_row=1,
+                       end_column=c0+len(DAYTYPES_WD)+len(DAYTYPES_SZ)-1)
         for c in ws[1]:
-            c.fill = hf; c.font = hfont; c.border = bd
-            c.alignment = Alignment("center", "center")
+            c.font = Font(bold=True, color="FFFFFF", name="맑은 고딕"); c.alignment = Alignment("center", "center")
+            if c.column >= c0: c.fill = gf; c.border = bd
+        for c in ws[2]:
+            c.fill = hf; c.font = hfont; c.border = bd; c.alignment = Alignment("center", "center")
         segname = {"ONLINE": "OTA+GOTA(온라인)", "ALL": "전체(+IB)", "OTA": "OTA", "GOTA": "GOTA", "IB": "IB(인바운드)"}
         for y in YEARS:
             for site in ["전사"] + sites:
@@ -295,18 +332,18 @@ def build_xlsx(data, sites):
                     sn = segname[seg]
                     for m in mly(y):
                         row = [y, f"{m}월", site, sn]
-                        for dt in DAYTYPES + ["ALL"]:
-                            r = idx.get((y, m, site, seg, dt), {})
+                        for basis, dt in COLS:
+                            r = idx.get((y, m, site, seg, basis, dt), {})
                             v = r.get(metric)
                             row.append(v if v is not None else "")
                         ws.append(row)
-        for rr in ws.iter_rows(min_row=2):
+        for rr in ws.iter_rows(min_row=3):
             for c in rr:
                 c.border = bd; c.alignment = Alignment("center")
                 if c.column >= 5 and isinstance(c.value, (int, float)): c.number_format = fmt
-        for i, w in enumerate([7, 6, 22, 11] + [10]*7, 1):
+        for i, w in enumerate([7, 6, 22, 15] + [8]*len(COLS), 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
-        ws.freeze_panes = "E2"
+        ws.freeze_panes = "E3"
     mk("rn", "RN(실적)", "#,##0")
     mk("share", "가용비중", "0.0%")
     mk("lead", "리드타임(일)", "0.0")

@@ -113,7 +113,9 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
     <div><div class="flabel">채널(세그먼트)</div><div class="chips" id="f-seg"></div>
       <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);cursor:pointer;">
         <input type="checkbox" id="f-ib"> 인바운드(IB) 참고 포함</label></div>
-    <div><div class="flabel">요일 (day-type)</div><div class="chips" id="f-dt"></div></div>
+    <div><div class="flabel">분류 기준</div><div class="chips" id="f-basis"></div></div>
+    <div><div class="flabel">요일 (day-type)</div><div class="chips" id="f-dt"></div>
+      <div id="dt-note" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:5px;line-height:1.45;"></div></div>
     <div><div class="flabel">사업장</div><select id="f-site" style="width:100%;padding:7px 9px;background:var(--bg-deep);border:1px solid var(--rule-strong);border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:12px;"></select></div>
     <div class="divider"></div>
     <div><div class="flabel">다운로드</div>
@@ -137,8 +139,11 @@ td.site{text-align:left;font-weight:600;color:var(--ink-soft);white-space:nowrap
 <script src="./js/menu-visibility.js"></script>
 <script src="./js/visit-log.js"></script>
 <script>
-const ALLDT=['주중','금','토','일','연휴','스페셜'];
-const F={year:2026, month:'전체', seg:'ONLINE', dts:['주중','금','토','일','연휴','스페셜'], ib:false, site:'전체'};
+// day-type 분류 기준 2종: WD=실제 입실요일(주중=월~목), SZ=요금시즌(일요일이 주중 편입 시 SZ:일=0)
+const DTS_WD=['주중','금','토','일'];
+const DTS_SZ=['주중','금','토','일','연휴','스페셜'];
+function curDTS(){return F.basis==='SZ'?DTS_SZ:DTS_WD;}
+const F={year:2026, month:'전체', seg:'ONLINE', basis:'WD', dts:['주중','금','토','일'], ib:false, site:'전체'};
 let DATA=null, IDX=null, SITES=null, ROOMS=null, META=null, PACE=null;
 const EXPANDED=new Set();
 const PACE_WK=new Map();   // site → 펼친 주차 index(데일리 드릴)
@@ -151,7 +156,7 @@ fetch('./data/leadtime_share.json?t='+Date.now()).then(r=>r.json()).then(d=>{
   DATA=d.rows; ROOMS=d.meta.rooms; META=d.meta;
   SITES=Object.keys(ROOMS).sort((a,b)=>ROOMS[b]-ROOMS[a]);
   IDX={};
-  for(const r of DATA){ IDX[[r.year,r.month,r.site,r.seg,r.daytype].join('|')]=r; }
+  for(const r of DATA){ IDX[[r.year,r.month,r.site,r.seg,(r.basis||'ALL'),r.daytype].join('|')]=r; }
   document.getElementById('meta-note').textContent='2026 객실수 고정 '+d.meta.company_rooms.toLocaleString()+'실 · 1~10월 · net 예약';
   return fetch('./data/booking_pace.json?t='+Date.now()).then(r=>r.json()).catch(()=>({series:{},meta:{weeks:[]}}));
 }).then(pd=>{
@@ -165,21 +170,51 @@ function buildFilters(meta){
   chipRow(document.getElementById('f-year'),meta.years.map(y=>({v:y,t:y})),F.year,v=>{F.year=v;buildMonthChips();render();});
   buildMonthChips();
   chipRow(document.getElementById('f-seg'),[{v:'ONLINE',t:'온라인합'},{v:'OTA',t:'OTA'},{v:'GOTA',t:'GOTA'}],F.seg,v=>{F.seg=v;render();});
+  chipRow(document.getElementById('f-basis'),[{v:'WD',t:'요일 기준'},{v:'SZ',t:'시즌 기준'}],F.basis,v=>{
+    F.basis=v; F.dts=curDTS().slice();  // 기준 전환 시 전체 선택으로 리셋
+    buildDtChips(); render();
+  });
   buildDtChips();
   document.getElementById('f-ib').onchange=e=>{F.ib=e.target.checked;render();};
   const ss=document.getElementById('f-site');
   ss.innerHTML='<option value="전체">전체(전사)</option>'+SITES.map(s=>`<option value="${s}">${s}</option>`).join('');
   ss.value=F.site; ss.onchange=e=>{F.site=e.target.value;render();};
 }
+// 시즌 기준에서 '일'(주말요금)이 현 연도 전 사업장에서 전부 0이면 일요일이 요금상 주중에 편입된 것 → 칩 제외
+function szSundayRN(year){
+  if(F.basis!=='SZ') return null;
+  let tot=0; const seg=segKey();
+  for(const s of SITES) for(const m of months()){   // 선택 기간(월) 기준
+    const r=IDX[[year,m,s,seg,'SZ','일'].join('|')]; if(r)tot+=r.rn;
+  }
+  return tot;
+}
 function buildDtChips(){
   const el=document.getElementById('f-dt'); el.innerHTML='';
+  let dset=curDTS().slice();
+  let note='';
+  if(F.basis==='SZ'){
+    const sun=szSundayRN(F.year);
+    if(sun!==null && sun<=0){
+      dset=dset.filter(d=>d!=='일');                 // 일요일 주중 편입 → 칩 제외
+      F.dts=F.dts.filter(d=>d!=='일'); if(!F.dts.length)F.dts=dset.slice();
+      note='※ 일요일: 이 기간 요금시즌상 <b style="color:var(--ink-muted)">주중에 편입</b>(별도 집계 없음). 일요일을 따로 보려면 <b style="color:var(--gold-bright)">요일 기준</b>으로.';
+    } else if(sun!==null){
+      note='※ 시즌 기준의 <b>일</b>=주말요금(토·일 중 주말요금 적용분). 실제 일요일 전량은 <b style="color:var(--gold-bright)">요일 기준</b> 참조.';
+    }
+  } else {
+    note='※ 요일 기준: 실제 입실요일(주중=월~목). 연휴·스페셜을 보려면 <b style="color:var(--gold-bright)">시즌 기준</b>으로.';
+  }
+  const noteEl=document.getElementById('dt-note'); if(noteEl)noteEl.innerHTML=note;
   const mk=(v,t)=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;el.appendChild(b);};
-  mk('__ALL__','전체'); ALLDT.forEach(d=>mk(d,d));
-  const paint=()=>{const isAll=F.dts.length===ALLDT.length;[...el.children].forEach(b=>{const v=b.dataset.v;b.classList.toggle('active',v==='__ALL__'?isAll:F.dts.includes(v));});};
+  mk('__ALL__','전체'); dset.forEach(d=>mk(d,d));
+  const full=()=>dset.length;
+  const paint=()=>{const isAll=F.dts.length===dset.length&&dset.every(d=>F.dts.includes(d));[...el.children].forEach(b=>{const v=b.dataset.v;b.classList.toggle('active',v==='__ALL__'?isAll:F.dts.includes(v));});};
   el.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const v=b.dataset.v;
-    if(v==='__ALL__'){F.dts=ALLDT.slice();}
-    else if(F.dts.length===ALLDT.length){F.dts=[v];}            // 전체 → 그 요일만
-    else{const i=F.dts.indexOf(v);if(i>=0)F.dts.splice(i,1);else F.dts=ALLDT.filter(d=>F.dts.includes(d)||d===v);if(!F.dts.length)F.dts=ALLDT.slice();}
+    const isFull=F.dts.length===full();
+    if(v==='__ALL__'){F.dts=dset.slice();}
+    else if(isFull){F.dts=[v];}                                  // 전체 → 그 요일만
+    else{const i=F.dts.indexOf(v);if(i>=0)F.dts.splice(i,1);else F.dts=dset.filter(d=>F.dts.includes(d)||d===v);if(!F.dts.length)F.dts=dset.slice();}
     paint();render();};
   paint();
 }
@@ -199,14 +234,17 @@ function months(){return F.month==='전체'?monList():[+F.month];}
 // dts: 단일 문자열 또는 배열(합산). 비중=share(RN/월전체가용, 조합·총계 정합). occ=요일가용대비(단일요일용).
 function agg(year,site,seg,dts){
   if(typeof dts==='string') dts=(dts==='ALL'?['ALL']:[dts]);
-  if(Array.isArray(dts)&&dts.length===ALLDT.length&&ALLDT.every(d=>dts.includes(d))) dts=['ALL']; // 전체=DB총계 행
+  const dset=curDTS();
+  if(Array.isArray(dts)&&dts.length===dset.length&&dset.every(d=>dts.includes(d))) dts=['ALL']; // 전체=DB총계 행(기준무관)
   const ms=months();
   let rn=0,avdt=0,avmon=0,ltw=0,adrw=0;
-  for(const m of ms){
-    const allrow=IDX[[year,m,site,seg,'ALL'].join('|')];
+  const keyFor=dt=>(dt==='ALL'?[year,m,site,seg,'ALL','ALL']:[year,m,site,seg,F.basis,dt]).join('|');
+  var m;
+  for(m of ms){
+    const allrow=IDX[[year,m,site,seg,'ALL','ALL'].join('|')];
     if(allrow) avmon+=allrow.av_mon;                 // 월 전체 가용 = 요일무관 1회
     for(const dt of dts){
-      const r=IDX[[year,m,site,seg,dt].join('|')];if(!r)continue;
+      const r=IDX[keyFor(dt)];if(!r)continue;
       rn+=r.rn;avdt+=r.av_dt;if(r.lead!=null)ltw+=r.lead*r.rn;if(r.adr!=null)adrw+=r.adr*r.rn;
     }
   }
@@ -222,17 +260,19 @@ function agg(year,site,seg,dts){
 function segKey(){return F.ib?'ALL':F.seg;}
 
 let charts={};
-function dtLabel(){return F.dts.length===ALLDT.length?'전체':F.dts.join('+');}
+function dtLabel(){const d=curDTS();return (F.dts.length===d.length&&d.every(x=>F.dts.includes(x)))?'전체':F.dts.join('+');}
+function basisLabel(){return F.basis==='SZ'?'시즌기준':'요일기준';}
 function monLabel(){return F.month==='전체'?'1~10월':F.month+'월';}
 function yoyPct(cur,prev){if(!prev)return '<span style="color:var(--ink-faint)">–</span>';const v=(cur/prev-1)*100;const c=v>=0?'var(--positive)':'var(--negative)';return `<span style="color:${c};font-family:var(--mono);font-size:10.5px">${v>=0?'+':''}${v.toFixed(0)}%</span>`;}
 function yoyPp(cur,prev){const v=(cur-prev)*100;const c=v>=0?'var(--positive)':'var(--negative)';return `<span style="color:${c};font-family:var(--mono);font-size:10.5px">${v>=0?'+':''}${v.toFixed(1)}%p</span>`;}
 function yoyDays(cur,prev){if(cur==null||prev==null)return '<span style="color:var(--ink-faint)">–</span>';const v=cur-prev;const c=v<=0?'var(--positive)':'var(--negative)';return `<span style="color:${c};font-family:var(--mono);font-size:10.5px">${v>=0?'+':''}${v.toFixed(0)}일</span>`;}
 
 function render(){
+  buildDtChips();   // 월·세그·연도 변경 시 day-type 칩/주석(일요일 주중편입) 갱신
   const seg=segKey();
   document.getElementById('app').innerHTML=`
     <div class="kpi-strip" id="kpis"></div>
-    <div class="card"><h3>📋 사업장별 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${dtLabel()} · ${seg}</span></h3>
+    <div class="card"><h3>📋 사업장별 실적 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· ${F.year} ${monLabel()} · ${basisLabel()}:${dtLabel()} · ${seg}</span></h3>
       <div class="hint">객실수(RN)·ADR·매출·가용대비 비중 + 전년비 · 요일 <b>전체</b>=총계 일치 · 행 클릭=사업장 선택</div>
       <div style="overflow-x:auto"><div id="perf-table"></div></div></div>
     <div class="card" id="simcard"><h3>🧮 사전블록 시뮬레이터 <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400;">· 블록 N실·D-X일 → 예상 효과</span></h3>
@@ -270,9 +310,8 @@ function renderTable(seg){
   function row(label,a,p,isTot){
     const sel=label===F.site; const exp=EXPANDED.has(label);
     const st=isTot?'background:var(--bg-soft);font-weight:700':(sel?'background:rgba(201,160,99,0.14);outline:1px solid var(--gold)':'');
-    const click=isTot?'':`onclick="rowClick('${label}')" style="cursor:pointer;${st}"`;
-    return `<tr ${isTot?'style="'+st+'"':click}>
-      <td class="site">${isTot?'전사 합계':((exp?'▾ ':'▸ ')+SHORT(label))}</td>
+    return `<tr onclick="rowClick('${label}')" style="cursor:pointer;${st}">
+      <td class="site">${(exp?'▾ ':'▸ ')+(isTot?'전사 합계':SHORT(label))}</td>
       <td>${fmt(a.rn)}</td><td>${yoyPct(a.rn,p.rn)}</td>
       <td>${a.adr?fmt(a.adr/1000):'-'}</td><td>${yoyPct(a.adr,p.adr)}</td>
       <td>${fmt(mv(a)/1e6)}</td><td>${yoyPct(mv(a),mv(p))}</td>
@@ -284,7 +323,8 @@ function renderTable(seg){
     <table><thead>
     <tr><th rowspan="2" class="site">사업장</th><th colspan="2">객실수(실)</th><th colspan="2">ADR(천원)</th><th colspan="2">매출(백만원)</th><th rowspan="2">가용객실수</th><th colspan="2">가용대비 비중</th><th colspan="2">리드타임</th></tr>
     <tr><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>실적</th><th>전년비</th><th>점유</th><th>전년비</th><th>일수</th><th>전년비</th></tr></thead><tbody>`;
-  h+=row(null,tot,totp,true);
+  h+=row('전사',tot,totp,true);
+  if(EXPANDED.has('전사')) h+=`<tr><td colspan="12" style="padding:0;background:var(--bg-deep)">${paceDetailHtml('전사')}</td></tr>`;
   for(const {s,a,p} of data){
     h+=row(s,a,p,false);
     if(EXPANDED.has(s)) h+=`<tr><td colspan="12" style="padding:0;background:var(--bg-deep)">${paceDetailHtml(s)}</td></tr>`;
@@ -296,9 +336,10 @@ function rowClick(s){ if(EXPANDED.has(s))EXPANDED.delete(s); else EXPANDED.add(s
 function paceDaily(year,month,site,seg){
   if(!PACE||!PACE.series||!PACE.meta||PACE.meta.off_min==null) return null;
   const segs=seg==='ONLINE'?['OTA','GOTA']:(seg==='ALL'?['OTA','GOTA','IB']:[seg]);
+  const siteList=(site==='전사'||site==='전체')?SITES:[site];   // 전사=전 사업장 합산
   let net=null,found=false;
-  for(const sg of segs)for(const dt of F.dts){            // 선택 요일(day-type) 반영
-    const arr=PACE.series[[year,month,site,sg,dt].join('|')];
+  for(const st of siteList)for(const sg of segs)for(const dt of F.dts){  // 사업장 · 선택 요일 · 기준(basis) 반영
+    const arr=PACE.series[[year,month,st,sg,F.basis+':'+dt].join('|')];
     if(arr){found=true;if(!net)net=arr.slice();else arr.forEach((v,i)=>net[i]+=v);}
   }
   return found?net:null;
@@ -394,7 +435,7 @@ function renderSim(seg){
   const defDt=(F.dts.length===1?F.dts[0]:'토');
   document.getElementById('sim-in').innerHTML=`
    <div class="sim-field"><label>사업장</label><select id="s-site">${SITES.map(s=>`<option ${s===defSite?'selected':''}>${s}</option>`).join('')}</select></div>
-   <div class="sim-field"><label>요일/기간</label><select id="s-dt">${ALLDT.map(d=>`<option ${d===defDt?'selected':''}>${d}</option>`).join('')}</select></div>
+   <div class="sim-field"><label>요일/기간 (${basisLabel()})</label><select id="s-dt">${curDTS().map(d=>`<option ${d===defDt?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="sim-field"><label>기준연도</label><select id="s-year">${[2026,2025,2024].map(y=>`<option>${y}</option>`).join('')}</select></div>
    <div class="sim-field"><label>받을 블록 (실/일)</label><input type="number" id="s-block" value="50" min="0" step="5"></div>
    <div class="sim-field"><label>회원선점 종료 (D-일 전 릴리즈)</label><input type="number" id="s-rel" value="30" min="0" step="1"></div>`;

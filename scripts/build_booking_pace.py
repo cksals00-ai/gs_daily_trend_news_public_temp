@@ -18,7 +18,8 @@ from pathlib import Path
 # 공통 로직 재사용(사이트매핑·세그·파일선택·인코딩)
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate, _daytype,
+from build_leadtime_share import (SITE_ROOMS, _seg, _site, _open, _num, _pdate,
+                                   _daytype_sz, _daytype_wd,
                                    select_files, YEARS, MONTHS_BY_YEAR, mly, RAW)
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "data" / "booking_pace.json"
@@ -66,17 +67,19 @@ def _process(fp, is_cancel):
         d0 = date(ci.year, ci.month, 1)
         cs = (fd - d0).days                       # 최초입력 − D0 (일)
         xs = (xd - d0).days if xd else None        # 취소일 − D0
-        dt = _daytype(p[i_season] if i_season >= 0 else "", ci)
-        darr = acc[(ci.year, ci.month, site, seg, dt)][1 if is_cancel else 0]
-        if is_cancel:
-            if xs is None: continue
-            s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
-            if e < s: continue
-            darr[s - OFF_MIN] += rn; darr[e - OFF_MIN + 1] -= rn
-        else:
-            s = max(OFF_MIN, cs)                              # 예약(생존): [cs, 윈도끝]
-            if s > OFF_MAX: continue
-            darr[s - OFF_MIN] += rn
+        dt_sz = _daytype_sz(p[i_season] if i_season >= 0 else "", ci)  # 시즌 기준
+        dt_wd = _daytype_wd(ci)                                        # 요일 기준
+        for bkt in (f"SZ:{dt_sz}", f"WD:{dt_wd}"):   # 두 기준 동시 적재
+            darr = acc[(ci.year, ci.month, site, seg, bkt)][1 if is_cancel else 0]
+            if is_cancel:
+                if xs is None: continue
+                s = max(OFF_MIN, cs); e = min(OFF_MAX, xs - 1)   # 복원: [cs, 취소일-1]
+                if e < s: continue
+                darr[s - OFF_MIN] += rn; darr[e - OFF_MIN + 1] -= rn
+            else:
+                s = max(OFF_MIN, cs)                              # 예약(생존): [cs, 윈도끝]
+                if s > OFF_MAX: continue
+                darr[s - OFF_MIN] += rn
         n += 1
     fh.close()
     return n
@@ -98,26 +101,29 @@ def main():
             out[f"{y}|{m}|{site}|{seg}|{dt}"] = daily  # 98일(오프셋 OFF_MIN..OFF_MAX)
     data = {"meta": {"weeks": WEEKS, "off_min": OFF_MIN, "off_max": OFF_MAX, "ndays": NDAYS,
                      "d0": "투숙월 1일", "segs": ["OTA", "GOTA", "IB"],
-                     "daytypes": ["주중", "금", "토", "일", "연휴", "스페셜"],
-                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). key=연|월|사업장|세그|요일, 주차=7일 샘플"},
+                     "bases": ["WD", "SZ"], "daytypes_wd": ["주중", "금", "토", "일"],
+                     "daytypes_sz": ["주중", "금", "토", "일", "연휴", "스페셜"],
+                     "note": "일별 동기간(as-of) 순온북 = 예약(최초입력≤컷)+취소복원(최초입력≤컷&취소일>컷). "
+                             "key=연|월|사업장|세그|기준:요일(기준 WD=실제입실요일/SZ=요금시즌), 주차=7일 샘플"},
             "series": out}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     print(f"✓ booking_pace.json: {len(out)} 계열")
-    # 검증: 천안 2026-01 OTA — 요일 전체합 vs 토
-    DTS = ["주중", "금", "토", "일", "연휴", "스페셜"]
-    def sumdt(dts):
+    # 검증: 천안 2026-01 OTA — 요일기준 전체합 vs 일(요일) vs 일(시즌)
+    def sumkeys(keys):
         tot = None
-        for dt in dts:
-            a = out.get(f"2026|1|소노벨 천안|OTA|{dt}")
+        for k in keys:
+            a = out.get(k)
             if a:
                 tot = a[:] if tot is None else [tot[i] + a[i] for i in range(len(a))]
         return tot
-    allv = sumdt(DTS); tov = sumdt(["토"])
+    base = "2026|1|소노벨 천안|OTA"
+    allv = sumkeys([f"{base}|WD:{d}" for d in ("주중", "금", "토", "일")])
+    sunwd = out.get(f"{base}|WD:일"); sunsz = out.get(f"{base}|SZ:일")
     if allv:
-        print("천안 26-01 OTA 전체요일 주차(-8..+5):", [allv[w*7-OFF_MIN] for w in WEEKS])
-    if tov:
-        print("천안 26-01 OTA 토요일만 주차(-8..+5):", [tov[w*7-OFF_MIN] for w in WEEKS])
+        print("천안 26-01 OTA 요일기준 전체 주차(-8..+5):", [allv[w*7-OFF_MIN] for w in WEEKS])
+    print("천안 26-01 OTA 일(요일기준) D0:", (sunwd[-OFF_MIN] if sunwd else "없음"),
+          " / 일(시즌기준) D0:", (sunsz[-OFF_MIN] if sunsz else "없음(주중편입)"))
 
 if __name__ == "__main__":
     main()
