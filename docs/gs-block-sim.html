@@ -303,8 +303,9 @@ function aggMulti(year,siteList,seg,dts){
     }
   }
   const nights=rooms?avdt/rooms:0;
-  const allWD=dts.length>0&&dts.every(d=>['주중','금','토','일'].includes(d));
-  const denom=allWD?avdt:avmon;
+  // 비중 = 선택 day-type 가용(av_dt) 대비. 전체(ALL)만 월 전체 가용(av_mon). 연휴·스페셜 포함 모든 day-type이 av_dt로 정확.
+  const isAll=dts.length===1&&dts[0]==='ALL';
+  const denom=isAll?avmon:avdt;
   return {rn,rate:denom?rn/denom:0,avail:denom,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
 }
 function agg(year,site,seg,dts){
@@ -326,11 +327,10 @@ function agg(year,site,seg,dts){
   }
   const rooms=site==='전사'?0:(ROOMS[site]||0);
   const nights=rooms?avdt/rooms:0;
-  // 비중 = 해당 선택 요일 가용 대비. 평일계(주중·금·토·일)만이면 그 요일 가용(avdt),
-  //        연휴·스페셜 포함(겹침) 또는 전체면 월 전체 가용(avmon)으로 자동.
-  const WD4=['주중','금','토','일'];
-  const allWD=dts.length>0&&dts.every(d=>WD4.includes(d));
-  const denom=allWD?avdt:avmon;
+  // 비중 = 선택 day-type 가용(av_dt) 대비. 전체(ALL)만 월 전체 가용(av_mon).
+  //  연휴·스페셜도 실제 날짜 기반 av_dt로 정확해져(빌더), 특정 day-type 선택 시 avdt를 분모로 사용.
+  const isAll=dts.length===1&&dts[0]==='ALL';
+  const denom=isAll?avmon:avdt;
   return {rn,rate:denom?rn/denom:0,avail:denom,occ:avdt?rn/avdt:0,share:avmon?rn/avmon:0,lead:rn?ltw/rn:null,adr:rn?adrw/rn:0,nights,nightsPerMonth:nights/ms.length,rooms};
 }
 function segKey(){return F.ib?'ALL':F.seg;}
@@ -431,7 +431,7 @@ function renderKPIs(seg,sc){
     {g:'',lb:`${sc==='전사'?'전사':SHORT(sc)} 객실수(실)`,vl:fmt(a.rn),dl:`${dtLabel()}·net 예약`},
     {g:'g3',lb:'ADR(천원)',vl:a.adr?fmt(a.adr/1000):'-',dl:p.adr?'전년 '+((a.adr/p.adr-1)*100).toFixed(0)+'%':''},
     {g:'g2',lb:'매출(백만원)',vl:fmt(rev/1e6),dl:prev?'전년 '+((rev/prev-1)*100).toFixed(0)+'%':''},
-    {g:'g4',lb:'가용대비 비중',vl:pct(a.rate),dl:'전체가용대비 · 전년 '+((a.rate-p.rate)*100>=0?'+':'')+((a.rate-p.rate)*100).toFixed(1)+'%p'},
+    {g:'g4',lb:'가용대비 비중',vl:pct(a.rate),dl:(dtLabel()==='전체'?'전체가용대비':dtLabel()+' 가용대비')+' · 전년 '+((a.rate-p.rate)*100>=0?'+':'')+((a.rate-p.rate)*100).toFixed(1)+'%p'},
     {g:'g5',lb:'리드타임',vl:a.lead!=null?a.lead.toFixed(0)+'일':'-',dl:'평균'},
   ];
   document.getElementById('kpis').innerHTML=k.map(x=>`<div class="kpi ${x.g}"><div class="lb">${x.lb}</div><div class="vl">${x.vl}</div><div class="dl">${x.dl}</div></div>`).join('');
@@ -685,7 +685,7 @@ function renderRanking(seg){
 function renderTrend(seg,sc){
   const yrs=[2024,2025,2026];
   const rn=yrs.map(y=>agg(y,sc,seg,F.dts).rn);
-  const occ=yrs.map(y=>+(agg(y,sc,seg,F.dts).share*100).toFixed(1));
+  const occ=yrs.map(y=>+(agg(y,sc,seg,F.dts).rate*100).toFixed(1));
   const lead=yrs.map(y=>{const l=agg(y,sc,seg,F.dts).lead;return l!=null?+l.toFixed(0):null;});
   if(charts.trend)charts.trend.destroy();
   charts.trend=new Chart(document.getElementById('trend'),{data:{labels:yrs.map(y=>y+''),

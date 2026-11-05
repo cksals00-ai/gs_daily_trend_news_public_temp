@@ -132,6 +132,10 @@ def _num(s):
 
 # acc[key] = [resv_rn, resv_lt_rn, resv_rate_rn, canc_rn, canc_lt_rn, canc_rate_rn]
 acc = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+# 연휴/스페셜 실제 입실일자 집합 (사업장·월별) — av_dt(연휴/스페셜) = 객실수 × 실제 날짜수.
+#   연휴·스페셜은 달력이 아니라 요금시즌 태깅이라 _daytype_int 분류 결과로 날짜를 수집한다.
+#   HOLDATES[(year, month, site, '연휴'|'스페셜')] = set(입실일자 ordinal)
+HOLDATES = defaultdict(set)
 
 def process(fp, is_cancel):
     fh = _open(fp)
@@ -180,6 +184,8 @@ def process(fp, is_cancel):
         lt = max((ci - fd).days, 0) if fd else 0
         dt_int = _daytype_int(p[i_season] if i_season >= 0 else "", ci)  # 통합 구조
         dt_wd = _daytype_wd(ci)                                          # 요일 구조
+        if dt_int in ("연휴", "스페셜"):   # 실제 연휴/스페셜 날짜 수집(가용 산출용)
+            HOLDATES[(ci.year, ci.month, site, dt_int)].add(ci.toordinal())
         rate = _num(p[i_rate]) if i_rate >= 0 else 0.0
         # 통합 버킷 + 요일 버킷 + 전체(DB총계) 동시 적재 → 대시보드에서 구조 토글
         for bucket in (f"INT:{dt_int}", f"WD:{dt_wd}", "__ALL__"):
@@ -219,7 +225,40 @@ def main():
         wd = {"금": 4, "토": 5, "일": 6}
         if dt in wd: return sum(1 for d in range(1, dim+1) if date(y, m, d).weekday() == wd[dt])
         if dt == "주중": return sum(1 for d in range(1, dim+1) if date(y, m, d).weekday() < 4)
-        return dim  # 연휴/스페셜/ALL fallback
+        return dim  # ALL fallback (연휴/스페셜은 avdt_for에서 실제 날짜수로 산출)
+
+    _intc_cache = {}
+    def _int_counts(y, m, site):
+        """통합구조(INT) day-type별 '날짜수'를 사업장 단위로 분할.
+          연휴/스페셜 = 실제 요금시즌 태깅 날짜(HOLDATES, 연휴 우선), 나머지 날짜는
+          입실요일로 금/토/주중(월~목+일) 배분 → 5버킷 날짜수 합 = 월 전체 일수(정합)."""
+        ck = (y, m, site)
+        if ck in _intc_cache: return _intc_cache[ck]
+        dim = calendar.monthrange(y, m)[1]
+        hol = HOLDATES.get((y, m, site, "연휴"), set())
+        spc = HOLDATES.get((y, m, site, "스페셜"), set()) - hol   # 연휴 우선
+        cnt = {"연휴": len(hol), "스페셜": len(spc), "금": 0, "토": 0, "주중": 0}
+        for d in range(1, dim + 1):
+            o = date(y, m, d).toordinal()
+            if o in hol or o in spc: continue
+            wd = date(y, m, d).weekday()
+            cnt["금" if wd == 4 else "토" if wd == 5 else "주중"] += 1   # 월~목·일 = 주중
+        _intc_cache[ck] = cnt
+        return cnt
+
+    def avdt_for(y, m, site, basis, dt, rooms, dim):
+        """day-type별 가용 객실·박 = 객실수 × 해당 day-type 날짜수.
+          · ALL           → 월 전체 (rooms × dim)
+          · WD 금/토/일/주중 → 순수 달력 날짜수 (주중=월~목)
+          · INT 5버킷      → 연휴/스페셜=실제 태깅 날짜, 금/토/주중=나머지 달력(일요일 주중 포함).
+          전사는 연휴 날짜가 사업장마다 달라 사업장별 av_dt 합산."""
+        if dt == "ALL":
+            return rooms * dim
+        if site == "전사":   # 사업장별 av_dt 합산 (요일계도 연휴 carve-out이 사업장별로 달라 동일 처리)
+            return sum(avdt_for(y, m, s, basis, dt, ROOMS[s], dim) for s in sites)
+        if basis == "INT":
+            return rooms * _int_counts(y, m, site).get(dt, 0)
+        return rooms * dt_nights(y, m, dt)   # WD = 순수 달력
 
     data = {"meta": {"company_rooms": COMPANY_ROOMS, "years": YEARS, "months": MONTHS,
                      "months_by_year": {str(k): v for k, v in MONTHS_BY_YEAR.items()},
@@ -256,7 +295,7 @@ def main():
                                 a, b, rt = net(y, m, s, sg, bucket); rn += a; ltw += b; ratew += rt
                         lead = round(ltw / rn, 1) if rn > 0 else None
                         adr = round(ratew / rn) if rn > 0 else None
-                        av_dt = av_mon if dt == "ALL" else rooms * dt_nights(y, m, dt)
+                        av_dt = avdt_for(y, m, site, basis, dt, rooms, dim)
                         data["rows"].append({"year": y, "month": m, "site": site, "seg": seg,
                                              "basis": basis, "daytype": dt,
                                              "rn": round(rn), "lead": lead, "adr": adr,
