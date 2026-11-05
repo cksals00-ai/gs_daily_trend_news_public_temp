@@ -858,7 +858,9 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
 
 <!-- MOBILE FILTER BAR (visible < 860px) -->
 <div class="mobile-filter-bar" id="mobile-filter-bar">
-  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">월:</span>
+  <span id="mobile-year-label" style="display:none;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">연:</span>
+  <div id="mobile-year-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">월:</span>
   <div id="mobile-month-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">세그:</span>
   <div id="mobile-seg-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
@@ -892,6 +894,11 @@ table.pivot tr.total-row td:first-child { color: var(--gold-bright); }
       </nav>
     </div>
     <div class="sidebar-divider"></div>
+    <div id="year-section" style="display:none;">
+      <div class="filter-section-label">연도</div>
+      <div class="filter-chips" id="year-chips"></div>
+      <div class="sidebar-divider"></div>
+    </div>
     <div>
       <div class="filter-section-label">투숙월</div>
       <div class="filter-chips" id="month-chips"></div>
@@ -1159,6 +1166,38 @@ let activeMonths = new Set([new Date().getMonth() + 1]);
 let activeSegs = new Set(['전체']);
 let activeRegion = '전체';
 let activeProps = new Set();  // empty = 전체 (no filter)
+let activeYear = '2026';   // 연도 토글(allMonthsByYear 존재 시). 기본 2026.
+
+// 선택 연도의 월 스냅샷/summary/byProperty를 rawData에 스왑(allMonthsByYear는 보존 → 되돌리기 가능)
+function setActiveYear(y) {
+  if (!rawData || !rawData.allMonthsByYear || !rawData.allMonthsByYear[y]) return;
+  activeYear = y;
+  const ay = rawData.allMonthsByYear[y];
+  rawData.allMonths = ay;
+  const snap = ay['summary'] || ay['0'];
+  if (snap) { rawData.summary = snap.summary; rawData.byProperty = snap.byProperty; }
+  // 월별 차트도 해당 연도 월 스냅샷으로 재구성 (무필터 경로가 data.monthly를 사용하므로)
+  if (!rawData._monthly2026) rawData._monthly2026 = rawData.monthly;   // 2026 원본 보존
+  if (y === '2026') {
+    rawData.monthly = rawData._monthly2026;
+  } else {
+    rawData.monthly = [];
+    for (let m = 1; m <= 12; m++) {
+      const ms = (ay[String(m)] || {}).summary || {};
+      rawData.monthly.push({ month: m, label: m + '월',
+        rns_budget: ms.rns_budget || 0, rns_actual: ms.rns_actual || 0, rns_last: ms.rns_last || 0 });
+    }
+  }
+  // 월 기본값: 미래연도는 1월(온북이 모이는 달), 당해연도는 기준일 월
+  const baseY = parseInt((rawData.meta && rawData.meta.baseDate || '2026').slice(0, 4), 10);
+  const baseM = parseInt((rawData.meta && rawData.meta.baseDate || '2026-11').slice(5, 7), 10) || (new Date().getMonth() + 1);
+  activeMonths = (parseInt(y, 10) > baseY) ? new Set([1]) : new Set([baseM]);
+  document.querySelectorAll('#month-chips .chip, #mobile-month-chips .chip').forEach(b => {
+    b.classList.toggle('active', activeMonths.has(parseInt(b.dataset.value, 10)));
+  });
+  buildYearChips();
+  applyFilters();
+}
 let rmFcstSegments = null;  // rm_fcst.json per-segment RM FCST
 
 // ─── REGION MAPPING ───
@@ -1739,6 +1778,28 @@ function setText(id, html) {
 }
 
 // ─── FILTER UI ───
+// ─── 연도 칩 (allMonthsByYear 존재 & 2개 이상일 때만 노출). 독립 함수 — 담당자축 리포트(sales-kpi)도 공유 ───
+function buildYearChips() {
+  if (!rawData) return;
+  const years = (rawData.meta && rawData.meta.years) || (rawData.allMonthsByYear ? Object.keys(rawData.allMonthsByYear) : []);
+  const showYear = years.length > 1;
+  const ySec = document.getElementById('year-section'); if (ySec) ySec.style.display = showYear ? '' : 'none';
+  const mYLbl = document.getElementById('mobile-year-label'); if (mYLbl) mYLbl.style.display = showYear ? '' : 'none';
+  [document.getElementById('year-chips'), document.getElementById('mobile-year-chips')].forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    if (!showYear) return;
+    years.forEach(y => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (y === activeYear ? ' active' : '');
+      btn.textContent = y + '년';
+      btn.dataset.value = y;
+      btn.addEventListener('click', () => { if (y !== activeYear) setActiveYear(y); });
+      c.appendChild(btn);
+    });
+  });
+}
+
 function buildFilterChips(data) {
   const monthContainer = document.getElementById('month-chips');
   const segContainer   = document.getElementById('seg-chips');
@@ -2198,6 +2259,7 @@ function render(data) {
   const ts = document.getElementById('refresh-badge');
   if (ts) ts.textContent = meta.refreshTime;
 
+  buildYearChips();
   buildFilterChips(data);
   applyFilters();
 }

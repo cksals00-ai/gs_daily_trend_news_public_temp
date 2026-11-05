@@ -120,10 +120,12 @@ BUDGET_SEGMENT_KEYS = ["OTA", "G-OTA", "Inbound"]
 SEGMENT_KEYS = ["OTA", "G-OTA", "Inbound"]  # 초기값, main()에서 DB 기반 동적 확장
 SEGMENT_ROW_OFFSETS = {"OTA": -6, "G-OTA": -5, "Inbound": -9}
 
-MONTHS_26 = ["202601","202602","202603","202604","202605","202606",
-             "202607","202608","202609","202610","202611","202612"]
-MONTHS_25 = ["202501","202502","202503","202504","202505","202506",
-             "202507","202508","202509","202510","202511","202512"]
+def months_for(year):
+    """해당 연도의 월키 리스트 ['YYYY01'..'YYYY12'] — 연도 하드코딩 제거용."""
+    return [f"{year}{m:02d}" for m in range(1, 13)]
+
+MONTHS_26 = months_for(2026)
+MONTHS_25 = months_for(2025)
 MONTH_LABEL = {
     "202601":"1월","202602":"2월","202603":"3월","202604":"4월",
     "202605":"5월","202606":"6월","202607":"7월","202608":"8월",
@@ -178,6 +180,89 @@ def load_budget(wb):
                 }
         budgets[display_name] = monthly
         seg_budgets[display_name] = monthly_seg
+    return budgets, seg_budgets
+
+
+# 2027 예산 업로드본(롱포맷) 영업장코드 → GS display_name 매핑.
+#   (raw 예약자료의 영업장(col)↔변경사업장명(GS집계명) 대조로 도출, 영업장코드 1:1·23사업장 전부 커버)
+BUDGET27_CODE2DISPLAY = {
+    "02": "01.벨비발디",
+    "07": "02.캄비발디",
+    "08": "03.펫비발디",
+    "19": "04.펠리체비발디",
+    "50": "05.빌리지비발디",
+    "03": "06.양평",
+    "01": "07.델피노", "25": "07.델피노", "27": "07.델피노", "46": "07.델피노",
+    "10": "08.쏠비치양양",
+    "61": "09.쏠비치삼척", "62": "09.쏠비치삼척", "63": "09.쏠비치삼척",
+    "06": "10.소노벨단양", "86": "10.소노벨단양",
+    "05": "11.소노캄경주",
+    "66": "12.소노벨청송",
+    "73": "13.소노벨천안", "74": "13.소노벨천안",
+    "16": "14.소노벨변산", "18": "14.소노벨변산",
+    "22": "15.소노캄여수",
+    "24": "16.소노캄거제",
+    "77": "17.쏠비치진도", "78": "17.쏠비치진도",
+    "15": "18.소노벨제주",
+    "87": "19.소노캄제주", "89": "19.소노캄제주",
+    "29": "20.소노캄고양",
+    "58": "21.소노문해운대",
+    "85": "22.쏠비치남해", "90": "22.쏠비치남해",
+    "94": "23.르네블루",
+}
+# 업로드본 세그먼트 라벨 → 내부 세그 키
+BUDGET27_SEG = {"OTA": "OTA", "GOTA": "G-OTA", "IB": "Inbound"}
+BUDGET_2027_XLSX = DATA_DIR / "raw_db" / "budget" / "2027" / "gs_budget_2027_upload.xlsx"
+
+
+def load_budget_2027():
+    """2027 예산 업로드본(롱포맷) → load_budget()과 동일 형태 반환.
+      롱포맷 열: 년월 | 목표구분(BU) | 지표(RNS/ADR/REV) | 세그(OTA/GOTA/IB) | 지역코드 | 영업장코드 | 목표수치
+      단위: RNS=실, ADR=천원, REV=백만원.  display_name은 PROPERTY_DEFS 2번째 필드.
+    Returns: (budgets, seg_budgets) — 없으면 ({}, {}).
+    """
+    display_names = [dn for _, dn, _, _ in PROPERTY_DEFS]
+    budgets = {dn: {} for dn in display_names}
+    seg_budgets = {dn: {s: {} for s in SEGMENT_KEYS} for dn in display_names}
+    if not BUDGET_2027_XLSX.exists():
+        print(f"  ⚠ 2027 예산 파일 없음: {BUDGET_2027_XLSX}")
+        return {}, {}
+    wb = openpyxl.load_workbook(BUDGET_2027_XLSX, read_only=True, data_only=True)
+    ws = wb["샘플"] if "샘플" in wb.sheetnames else wb.worksheets[0]
+    # (display, seg, month_label) → {rn, rev_m, adr천원}
+    acc = defaultdict(lambda: {"rn": 0.0, "rev_m": 0.0, "adr_k": 0.0, "n_adr": 0})
+    for r in ws.iter_rows(min_row=2, values_only=True):
+        if not r or len(r) < 7 or r[0] is None:
+            continue
+        ym = str(r[0]).strip(); metric = str(r[2]).strip(); seg_raw = str(r[3]).strip()
+        biz = str(r[5]).strip(); val = r[6]
+        if not ym.startswith("2027") or len(ym) != 6:
+            continue
+        disp = BUDGET27_CODE2DISPLAY.get(biz)
+        seg = BUDGET27_SEG.get(seg_raw)
+        if disp is None or seg is None:
+            continue
+        try: v = float(val or 0)
+        except (TypeError, ValueError): v = 0.0
+        m_label = BUDGET_MONTH_LABEL[int(ym[4:6]) - 1]
+        cell = acc[(disp, seg, m_label)]
+        if metric == "RNS":   cell["rn"]   += v
+        elif metric == "REV": cell["rev_m"] += v            # 백만원 그대로
+        elif metric == "ADR": cell["adr_k"] += v; cell["n_adr"] += 1
+    wb.close()
+    for (disp, seg, m_label), c in acc.items():
+        rn = int(round(c["rn"]))
+        rev_m = round(c["rev_m"], 2)
+        # ADR: rev/rn 우선(sum_seg_budget과 동일 산식), 없으면 업로드 ADR(천원→원) 평균
+        adr = round(rev_m * 1_000_000 / rn) if rn > 0 else round(c["adr_k"] * 1000 / c["n_adr"]) if c["n_adr"] else 0
+        seg_budgets[disp][seg][m_label] = {"rn": rn, "adr": adr, "rev_m": rev_m}
+    # 사업장 월합(세그 OTA+G-OTA+Inbound)
+    for disp in display_names:
+        for m_label in BUDGET_MONTH_LABEL:
+            rn = sum(seg_budgets[disp][s].get(m_label, {}).get("rn", 0) for s in SEGMENT_KEYS)
+            rev_m = sum(seg_budgets[disp][s].get(m_label, {}).get("rev_m", 0.0) for s in SEGMENT_KEYS)
+            if rn or rev_m:
+                budgets[disp][m_label] = {"rn": rn, "adr": round(rev_m * 1_000_000 / rn) if rn > 0 else 0, "rev_m": rev_m}
     return budgets, seg_budgets
 
 
@@ -1278,21 +1363,24 @@ def build_yoy_table(db_bp, budgets, seg_budgets, db_bps, adj_by_prop, holiday_fa
     return rows
 
 
-def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, now_kst=None):
+def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, now_kst=None, year=2026):
     """전체 세그먼트별 budget vs actual 요약 (예산 없는 세그먼트는 budget=0)
-    adj_by_segment: 세그먼트별 동기간 보정 데이터 (2025년)
+    adj_by_segment: 세그먼트별 동기간 보정 데이터 (전년)
     now_kst: 현재 KST 시간 (미래월 판별용)
+    year: 대상 연도(기본 2026). 전년=year-1.
     """
     if now_kst is None:
         now_kst = datetime.now(KST)
 
+    cur_keys  = months_for(year)
+    prev_keys = months_for(year - 1)
     if month_idx == 0:
-        target_keys = MONTHS_26
-        ly_keys     = MONTHS_25
+        target_keys = cur_keys
+        ly_keys     = prev_keys
         bud_labels  = BUDGET_MONTH_LABEL
     else:
-        target_keys = [MONTHS_26[month_idx - 1]]
-        ly_keys     = [MONTHS_25[month_idx - 1]]
+        target_keys = [cur_keys[month_idx - 1]]
+        ly_keys     = [prev_keys[month_idx - 1]]
         bud_labels  = [BUDGET_MONTH_LABEL[month_idx - 1]]
 
     result = {}
@@ -1355,10 +1443,14 @@ def build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=None, 
 def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=None, db_bps=None,
                          adj_by_prop=None, adj_by_segment=None, adj_by_prop_seg=None,
                          holiday_factors=None, lead_time_by_prop=None, now_kst=None,
-                         rm_fcst_props=None, rm_trend_snapshots=None, seg_fcst_data=None):
+                         rm_fcst_props=None, rm_trend_snapshots=None, seg_fcst_data=None,
+                         year=2026):
     """특정 월(0=전체, 1~12=해당월)에 대한 byProperty + summary + segmentData 반환
     실적/목표 모두 OTA+G-OTA+Inbound 세그먼트만 합산.
 
+    year: 대상 연도(기본 2026). 전년=year-1.
+      year > 현재연도(미래연도, 예: 2027)면 동기간/AI/RM FCST 기반이 없으므로
+      FCST=목표(budget)·AI/RM 스킵하는 간결 경로로 처리(2026 로직은 불변).
     seg_fcst_data: load_segment_fcst() 결과. 세그별 FCST는 분배 X, 원본 데이터 직접 사용.
     """
     if now_kst is None:
@@ -1368,13 +1460,17 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     if seg_fcst_data is None:
         seg_fcst_data = {"manager_keyin": {}, "rm_seg_fcst": {}, "ratios": {}}
 
+    cur_keys    = months_for(year)
+    prev_keys   = months_for(year - 1)
+    future_year = (year > now_kst.year)   # 전체 연도가 미래(예산만 존재) → 간결 FCST 경로
+
     if month_idx == 0:
-        target_keys = MONTHS_26
-        last_keys   = MONTHS_25
+        target_keys = cur_keys
+        last_keys   = prev_keys
         bud_labels  = BUDGET_MONTH_LABEL
     else:
-        target_keys = [MONTHS_26[month_idx - 1]]
-        last_keys   = [MONTHS_25[month_idx - 1]]
+        target_keys = [cur_keys[month_idx - 1]]
+        last_keys   = [prev_keys[month_idx - 1]]
         bud_labels  = [BUDGET_MONTH_LABEL[month_idx - 1]]
 
     props = []
@@ -1488,7 +1584,15 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         rm_budget_prop = None
         rm_ach_prop = None
 
-        if month_idx > 0:
+        if future_year:
+            # 미래연도(예: 2027): 동기간/AI/RM 기반이 없어 FCST=목표(budget). AI/RM 스킵.
+            rns_fcst = bud_rn
+            rev_fcst = bud_rev
+            adr_fcst = round(bud_rev * 1_000_000 / bud_rn) if bud_rn > 0 else 0
+            fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
+            rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
+            _prop_fcst_source = "budget"
+        elif month_idx > 0:
             # OTB pickup ratio (LY 풀년 / LY 동기간 OTB) — 진행 중인 월 FCST 산출용
             pickup_ratio = _compute_ly_pickup_ratio(
                 adj_by_prop, db_bps, db_bp, db_props, last_keys
@@ -1757,7 +1861,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
     }
     seg_data = {}
     if db_seg is not None and seg_budgets is not None:
-        seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=adj_by_segment, now_kst=now_kst)
+        seg_data = build_segment_snapshot(db_seg, seg_budgets, month_idx, adj_by_segment=adj_by_segment, now_kst=now_kst, year=year)
 
     # ── 세그먼트별 byProperty (각 세그먼트 단독 기준) ──
     # FCST는 분배/추정하지 않고 ORIGINAL 데이터를 직접 사용:
@@ -1861,7 +1965,11 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 is_current_single_month = (month_idx > 0 and month_idx == now_kst.month)
                 fcst_source = None  # debug/audit용
 
-                if is_past_single_month:
+                if future_year:
+                    # 미래연도: 세그 FCST=목표(budget)
+                    s_rns_f = s_bud_rn
+                    fcst_source = "budget"
+                elif is_past_single_month:
                     # 과거월: actual = fcst
                     s_rns_f = s_act_rn
                     fcst_source = "past_actual"
@@ -1946,8 +2054,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_rev_fcst_ach = round(s_rev_f / s_bud_rev * 100, 1) if s_bud_rev > 0 else 0.0
                 s_adr_fcst = round((s_rev_f * 1_000_000) / s_rns_f) if s_rns_f > 0 else 0
 
-                # RM FCST: PDF segments 원본 셀 (해당 세그 단일값)
-                s_rm_rn, s_rm_bud = _rm_seg(display_name, seg)
+                # RM FCST: PDF segments 원본 셀 (해당 세그 단일값). 미래연도는 2027 RM 부재 → 스킵.
+                s_rm_rn, s_rm_bud = (None, None) if future_year else _rm_seg(display_name, seg)
                 s_rm_ach = round(s_rm_rn / s_rm_bud * 100, 1) if (s_rm_rn is not None and s_rm_bud and s_rm_bud > 0) else None
 
                 seg_props.append({
@@ -2624,6 +2732,40 @@ def main():
         daily_bk=daily_bk, rm_trend_snapshots=rm_trend_snapshots, adj_by_prop_seg=adj_by_prop_seg,
     )
 
+    # ── 차년도(2027) 스냅샷: 예산(gs_budget_2027) + 현 온북(db_bps 2027키) + 전년(2026) ──
+    #   미래연도는 동기간/AI/RM 기반이 없어 FCST=목표. adj_*=None → 전년=2026 마감실적.
+    all_months_by_year = {"2026": {**all_months, "0": all_months["summary"]}}
+    budgets_27, seg_budgets_27 = load_budget_2027()
+    if budgets_27 and seg_budgets_27:
+        print("차년도(2027) 스냅샷 생성 중...")
+        def _snap27(mi):
+            return build_month_snapshot(
+                db_bp, budgets_27, mi,
+                db_seg=db_seg, seg_budgets=seg_budgets_27, db_bps=db_bps,
+                adj_by_prop=None, adj_by_segment=None, adj_by_prop_seg=None,
+                holiday_factors=holiday_factors,
+                lead_time_by_prop=None, now_kst=now_kst,
+                rm_fcst_props={}, rm_trend_snapshots=[], seg_fcst_data=None,
+                year=2027,
+            )
+        am27 = {SUMMARY_KEY: _snap27(0)}
+        for m in range(1, 13):
+            am27[str(m)] = _snap27(m)
+        # today(현 온북 전일 순증) 주입 — 2027 투숙월
+        for m_str, snap in am27.items():
+            if m_str == SUMMARY_KEY:
+                continue
+            stay_month = f"2027{int(m_str):02d}"
+            mb, mc, mn = get_today_summary_by_month(db, now_kst, stay_month)
+            snap["summary"]["today_booking"] = mb
+            snap["summary"]["today_cancel"]  = mc
+            snap["summary"]["today_net"]     = mn
+        am27["0"] = am27[SUMMARY_KEY]
+        all_months_by_year["2027"] = am27
+        print(f"  2027 전사 목표 RNS: {am27['summary']['summary']['rns_budget']:,} · 온북 RNS: {am27['summary']['summary']['rns_actual']:,}")
+
+    avail_years = sorted(all_months_by_year.keys())
+
     output = {
         "meta": {
             "refreshTime":  now_kst.strftime("%Y-%m-%d %H:%M KST"),
@@ -2633,12 +2775,15 @@ def main():
             "dataSource":   "온북 DB + 사업계획 Budget",
             "samePeriodBasis": "yoy_adjusted(예약일 cutoff)",
             "samePeriodRule": f"과거월=풀마감, 현재월·미래월(>={cur_month}월)=yoy_adjusted 예약일 cutoff(기준일 {cur_month}/{cur_day}) 동기간 OTB",
+            "years": avail_years,
+            "defaultYear": "2026",
         },
         "filters": {
             "months": [{"value": 0, "label": "전체"}] + [
                 {"value": i+1, "label": f"{i+1}월"} for i in range(12)
             ],
             "segments": ["전체"] + SEGMENT_KEYS,
+            "years": avail_years,
         },
         # 전체(기본) 스냅샷 (월 필터=전체 상태)
         "summary":    all_months["summary"]["summary"],
@@ -2647,6 +2792,8 @@ def main():
         #   "summary" = 전체 합산 / "1".."12" = 해당 월
         #   하위 호환성: "0"은 "summary"의 별칭 (구 소비처 보호용; 신규 코드는 "summary" 사용)
         "allMonths":  {**all_months, "0": all_months["summary"]},
+        # 연도별 월 스냅샷 {"2026": {...}, "2027": {...}} — 연도 토글용
+        "allMonthsByYear": all_months_by_year,
         # Chart
         "monthly":    monthly_chart,
         # YoY 사업장별 추이
