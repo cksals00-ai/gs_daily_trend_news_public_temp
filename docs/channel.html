@@ -686,7 +686,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="table-card" style="margin-bottom:20px;">
       <div class="table-card-header">
-        <span class="table-card-title">채널별 비중 상세 (월별 · 팀 전체 대비 %)</span>
+        <span class="table-card-title">사업장별 채널 비중 (사업장 × 채널 · 팀 전체 대비 %)</span>
         <span id="cshare-table-unit" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);"></span>
       </div>
       <div class="table-wrap">
@@ -1336,27 +1336,63 @@ function buildChannelShare() {
     },
   });
 
-  // ---- 표: 전 채널 세그순, 월별 비중% + 기간 실적/비중 ----
+  // ---- 표: 사업장(행) × 채널(열) 매트릭스, 셀 = 팀 전체 대비 % ----
   if (tbl) {
     const segCls = s => s === 'OTA' ? 'ota' : s === 'G-OTA' ? 'gota' : 'inbound';
-    let head = '<thead><tr><th style="text-align:left;">채널</th><th>세그</th>';
-    for (const m of months) head += `<th>${parseInt(m.slice(4), 10)}월</th>`;
-    head += `<th class="border-left-group">기간 ${unit}</th><th>비중%</th></tr></thead>`;
-    let body = '<tbody>';
-    for (const c of channels) {
-      body += `<tr><td style="text-align:left;">${c}</td><td><span class="seg-tag ${segCls(chSeg[c])}">${chSeg[c]}</span></td>`;
-      for (const m of months) {
-        const pm = perMonth[m];
-        const sh = pm.team > 0 ? (pm.chVals[c] || 0) / pm.team * 100 : null;
-        body += `<td>${sh == null || !(pm.chVals[c] > 0) ? '—' : sh.toFixed(1) + '%'}</td>`;
+    const props = (getActiveTargetProps() || db.meta.properties);
+
+    // 사업장×채널 기간 집계 (by_property_channel net 직접; 세그=OTA+G-OTA+Inbound만)
+    const cellPC = {};          // prop -> {ch -> val}
+    const propTotal = {};       // prop -> 사업장 team 합
+    const chTeam = {};          // ch -> 팀 전체 채널 합
+    const chSegMap = {};
+    let teamTotal = 0;
+    for (const p of props) {
+      const pc = db.by_property_channel && db.by_property_channel[p];
+      if (!pc) continue;
+      const row = {}; let pt = 0;
+      for (const c of Object.keys(pc)) {
+        const seg = getChannelSegment(c);
+        if (!CSHARE_SEG_ORDER.includes(seg)) continue;
+        let v = 0; for (const m of months) { if (pc[c][m]) v += pc[c][m][metric] || 0; }
+        if (v <= 0) continue;
+        row[c] = v; pt += v;
+        chTeam[c] = (chTeam[c] || 0) + v; chSegMap[c] = seg;
       }
-      const pSh = periodTeam > 0 ? chTotals[c] / periodTeam * 100 : 0;
-      body += `<td class="border-left-group">${fmtVal(chTotals[c])}</td><td>${pSh.toFixed(1)}%</td></tr>`;
+      if (pt > 0) { cellPC[p] = row; propTotal[p] = pt; teamTotal += pt; }
     }
-    // 팀 전체 합계행
-    body += '<tr class="total-row"><td style="text-align:left;">팀 전체 (OTA+G-OTA+인바운드)</td><td>—</td>';
-    for (const m of months) body += `<td>${perMonth[m].team > 0 ? '100.0%' : '—'}</td>`;
-    body += `<td class="border-left-group">${fmtVal(periodTeam)}</td><td>100.0%</td></tr>`;
+
+    // 열 채널: 팀 전체 상위 N (세그순 → 합 내림차순), 나머지는 기타 열
+    const COLN = 10;
+    const colSet = new Set(Object.keys(chTeam).sort((a, b) => chTeam[b] - chTeam[a]).slice(0, COLN));
+    const colChannels = Object.keys(chTeam).filter(c => colSet.has(c)).sort((a, b) => {
+      const sa = CSHARE_SEG_ORDER.indexOf(chSegMap[a]), sb = CSHARE_SEG_ORDER.indexOf(chSegMap[b]);
+      return sa !== sb ? sa - sb : chTeam[b] - chTeam[a];
+    });
+    const propRows = Object.keys(cellPC).sort((a, b) => propTotal[b] - propTotal[a]);
+    const pct = (num, den) => den > 0 && num > 0 ? (num / den * 100).toFixed(1) + '%' : '—';
+    const etcOf = row => { let t = 0; for (const c of colChannels) t += (row[c] || 0); return (Object.values(row).reduce((s, v) => s + v, 0)) - t; };
+
+    // 헤더
+    let head = '<thead><tr><th style="text-align:left;">사업장</th>';
+    for (const c of colChannels) head += `<th title="${c}"><span class="seg-tag ${segCls(chSegMap[c])}" style="margin:0 0 2px;display:block;">${chSegMap[c]}</span>${c.length > 7 ? c.slice(0, 6) + '…' : c}</th>`;
+    head += '<th>기타</th>';
+    head += `<th class="border-left-group">${unit}</th><th>사업장 비중%</th></tr></thead>`;
+
+    let body = '<tbody>';
+    for (const p of propRows) {
+      const row = cellPC[p];
+      body += `<tr><td style="text-align:left;">${p}</td>`;
+      for (const c of colChannels) body += `<td>${pct(row[c], teamTotal)}</td>`;
+      body += `<td>${pct(etcOf(row), teamTotal)}</td>`;
+      body += `<td class="border-left-group">${fmtVal(propTotal[p])}</td><td>${pct(propTotal[p], teamTotal)}</td></tr>`;
+    }
+    // 채널 합계 행 (= 채널 팀 전체 비중, 합 100%)
+    let etcTeam = teamTotal; for (const c of colChannels) etcTeam -= (chTeam[c] || 0);
+    body += '<tr class="total-row"><td style="text-align:left;">채널 합계 (팀 전체)</td>';
+    for (const c of colChannels) body += `<td>${pct(chTeam[c], teamTotal)}</td>`;
+    body += `<td>${pct(etcTeam, teamTotal)}</td>`;
+    body += `<td class="border-left-group">${fmtVal(teamTotal)}</td><td>100.0%</td></tr>`;
     body += '</tbody>';
     tbl.innerHTML = head + body;
   }
