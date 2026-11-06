@@ -106,6 +106,8 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
 .seg-tag.ota{background:rgba(230,185,112,0.15);color:#e6b970;}
 .seg-tag.gota{background:rgba(90,159,196,0.15);color:#5a9fc4;}
 .seg-tag.inbound{background:rgba(76,175,111,0.15);color:#4caf6f;}
+.cshare-btn{background:var(--surface);border:1px solid var(--rule);color:var(--ink-faint);font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:0.05em;}
+.cshare-btn.active{background:rgba(201,160,99,0.15);border-color:var(--gold);color:var(--gold-bright);}
 .prop-chips .chip{font-size:9px;padding:3px 7px;}
 .date-input{background:var(--bg-soft);border:1px solid var(--rule-strong);border-radius:3px;color:var(--ink-muted);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;width:100%;max-width:140px;color-scheme:dark;}
 .date-input:focus{border-color:var(--gold);color:var(--ink);}
@@ -666,6 +668,32 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
       </div>
     </div>
 
+    <!-- SECTION 10: 월별 채널 비중 (팀 전체 대비) -->
+    <div class="chart-card" style="margin-bottom:14px;margin-top:8px;">
+      <div class="chart-card-header">
+        <span class="chart-card-title">SECTION 10 · 월별 채널 비중 (팀 전체 OTA+G-OTA+인바운드 대비)</span>
+        <div style="display:flex;gap:6px;" id="cshare-basis-toggle">
+          <button class="cshare-btn active" data-basis="rn" onclick="setChannelShareBasis('rn')">RN 기준</button>
+          <button class="cshare-btn" data-basis="rev" onclick="setChannelShareBasis('rev')">매출 기준</button>
+        </div>
+      </div>
+      <div style="padding:0 2px 8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.03em;line-height:1.5;">
+        분모 = 선택 사업장·월의 팀 전체 실적(OTA+G-OTA+인바운드 합) · 분자 = 각 채널 실적. 막대 100% = 해당 월 팀 전체. 상위 12개 채널 + 기타.
+      </div>
+      <div class="chart-canvas-wrap" style="height:320px;">
+        <canvas id="channel-share-chart"></canvas>
+      </div>
+    </div>
+    <div class="table-card" style="margin-bottom:20px;">
+      <div class="table-card-header">
+        <span class="table-card-title">채널별 비중 상세 (월별 · 팀 전체 대비 %)</span>
+        <span id="cshare-table-unit" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="pivot" id="channel-share-table"></table>
+      </div>
+    </div>
+
     <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
       DATA: 온북 DB 파싱 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
     </div>
@@ -1193,6 +1221,145 @@ function render() {
 
   // 연도별 추이 차트
   buildYoYTrendChart();
+
+  // 월별 채널 비중 (팀 전체 대비)
+  buildChannelShare();
+}
+
+// ===== 섹션 10: 월별 채널 비중 (팀 전체 OTA+G-OTA+인바운드 대비) =====
+let channelShareBasis = 'rn';
+let channelShareChart = null;
+const CSHARE_SEG_ORDER = ['OTA', 'G-OTA', 'Inbound'];
+const CSHARE_RAMP = {
+  'OTA':   ['#e6b970', '#d9a74f', '#c89339', '#b8822b', '#a7731f', '#f0cf96'],
+  'G-OTA': ['#5a9fc4', '#4789b0', '#3a7aa0', '#6fb3d4', '#8ac6e0', '#2f6a90'],
+  'Inbound':['#4caf6f', '#3c9f5e', '#5fc082', '#2f8f50', '#72cf95', '#258045'],
+};
+const CSHARE_OTHER = '#888888';
+
+function setChannelShareBasis(b) {
+  channelShareBasis = b;
+  document.querySelectorAll('#cshare-basis-toggle .cshare-btn').forEach(el =>
+    el.classList.toggle('active', el.dataset.basis === b));
+  buildChannelShare();
+}
+
+function buildChannelShare() {
+  const canvas = document.getElementById('channel-share-chart');
+  const tbl = document.getElementById('channel-share-table');
+  if (!canvas || !db) return;
+  const isRev = channelShareBasis === 'rev';
+  const metric = isRev ? 'net_rev' : 'net_rn';
+  const unit = isRev ? '매출(억)' : 'RN(박)';
+  const fmtVal = v => isRev ? fmt.rev(v) : fmt.num(v);
+  const unitEl = document.getElementById('cshare-table-unit');
+  if (unitEl) unitEl.textContent = '단위: ' + unit + ' · 비중 = 팀 전체 대비 %';
+
+  const months = getMonthsForPeriod();
+  if (!months.length) {
+    if (channelShareChart) { channelShareChart.destroy(); channelShareChart = null; }
+    if (tbl) tbl.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--ink-faint);">선택된 월이 없습니다.</td></tr></tbody>';
+    return;
+  }
+
+  // 월별 팀 전체(OTA+G-OTA+Inbound) 및 채널값 집계 (사업장/예약일자 필터는 aggregateChannels가 반영)
+  const perMonth = {};      // m -> { team, chVals:{ch->val} }
+  const chTotals = {};      // ch -> 기간 합
+  const chSeg = {};         // ch -> segment
+  let periodTeam = 0;
+  for (const m of months) {
+    const agg = aggregateChannels([m]);
+    let team = 0; const chVals = {};
+    for (const [ch, d] of Object.entries(agg)) {
+      if (!CSHARE_SEG_ORDER.includes(d.segment)) continue; // 팀 전체 = OTA+G-OTA+Inbound
+      const v = d[metric] || 0;
+      if (v <= 0) continue;
+      chVals[ch] = v; team += v;
+      chTotals[ch] = (chTotals[ch] || 0) + v;
+      chSeg[ch] = d.segment;
+    }
+    perMonth[m] = { team, chVals };
+    periodTeam += team;
+  }
+
+  // 세그 순서 → 기간합 내림차순
+  const channels = Object.keys(chTotals).sort((a, b) => {
+    const sa = CSHARE_SEG_ORDER.indexOf(chSeg[a]), sb = CSHARE_SEG_ORDER.indexOf(chSeg[b]);
+    return sa !== sb ? sa - sb : chTotals[b] - chTotals[a];
+  });
+
+  // ---- 차트: 상위 12개(기간합) + 기타, 세그 색 램프, 100% 스택 ----
+  const TOPN = 12;
+  const topSet = new Set([...channels].sort((a, b) => chTotals[b] - chTotals[a]).slice(0, TOPN));
+  const chartChannels = channels.filter(c => topSet.has(c)); // 세그 순서 유지
+  const segIdx = {}, colorOf = {};
+  for (const c of chartChannels) {
+    const s = chSeg[c];
+    const i = (segIdx[s] = (segIdx[s] || 0)); segIdx[s] = i + 1;
+    const ramp = CSHARE_RAMP[s] || ['#999'];
+    colorOf[c] = ramp[i % ramp.length];
+  }
+  const labels = months.map(m => parseInt(m.slice(4), 10) + '월');
+  const datasets = chartChannels.map(c => ({
+    label: c,
+    data: months.map(m => { const pm = perMonth[m]; return pm.team > 0 ? (pm.chVals[c] || 0) / pm.team * 100 : 0; }),
+    _raw: months.map(m => perMonth[m].chVals[c] || 0),
+    backgroundColor: colorOf[c], stack: 'share', borderWidth: 0,
+  }));
+  const etcShare = months.map(m => { const pm = perMonth[m]; if (pm.team <= 0) return 0; let t = 0; for (const c of chartChannels) t += (pm.chVals[c] || 0); return (pm.team - t) / pm.team * 100; });
+  const etcRaw = months.map(m => { const pm = perMonth[m]; let t = 0; for (const c of chartChannels) t += (pm.chVals[c] || 0); return pm.team - t; });
+  if (etcShare.some(v => v > 0.05)) datasets.push({ label: '기타', data: etcShare, _raw: etcRaw, backgroundColor: CSHARE_OTHER, stack: 'share', borderWidth: 0 });
+
+  if (channelShareChart) channelShareChart.destroy();
+  channelShareChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#9a9488', font: { size: 11 } } },
+        y: { stacked: true, min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9a9488', font: { size: 10 }, callback: v => v + '%' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#c9c3b6', font: { size: 10 }, boxWidth: 10, boxHeight: 10, padding: 8 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const raw = ctx.dataset._raw ? ctx.dataset._raw[ctx.dataIndex] : null;
+              const pct = ctx.parsed.y.toFixed(1);
+              return `${ctx.dataset.label}: ${pct}%` + (raw != null ? ` (${fmtVal(raw)}${isRev ? '억' : '박'})` : '');
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // ---- 표: 전 채널 세그순, 월별 비중% + 기간 실적/비중 ----
+  if (tbl) {
+    const segCls = s => s === 'OTA' ? 'ota' : s === 'G-OTA' ? 'gota' : 'inbound';
+    let head = '<thead><tr><th style="text-align:left;">채널</th><th>세그</th>';
+    for (const m of months) head += `<th>${parseInt(m.slice(4), 10)}월</th>`;
+    head += `<th class="border-left-group">기간 ${unit}</th><th>비중%</th></tr></thead>`;
+    let body = '<tbody>';
+    for (const c of channels) {
+      body += `<tr><td style="text-align:left;">${c}</td><td><span class="seg-tag ${segCls(chSeg[c])}">${chSeg[c]}</span></td>`;
+      for (const m of months) {
+        const pm = perMonth[m];
+        const sh = pm.team > 0 ? (pm.chVals[c] || 0) / pm.team * 100 : null;
+        body += `<td>${sh == null || !(pm.chVals[c] > 0) ? '—' : sh.toFixed(1) + '%'}</td>`;
+      }
+      const pSh = periodTeam > 0 ? chTotals[c] / periodTeam * 100 : 0;
+      body += `<td class="border-left-group">${fmtVal(chTotals[c])}</td><td>${pSh.toFixed(1)}%</td></tr>`;
+    }
+    // 팀 전체 합계행
+    body += '<tr class="total-row"><td style="text-align:left;">팀 전체 (OTA+G-OTA+인바운드)</td><td>—</td>';
+    for (const m of months) body += `<td>${perMonth[m].team > 0 ? '100.0%' : '—'}</td>`;
+    body += `<td class="border-left-group">${fmtVal(periodTeam)}</td><td>100.0%</td></tr>`;
+    body += '</tbody>';
+    tbl.innerHTML = head + body;
+  }
 }
 
 // ===== 섹션 3: 역할별 성과 =====
