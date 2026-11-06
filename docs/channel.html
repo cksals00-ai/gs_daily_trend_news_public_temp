@@ -686,7 +686,7 @@ table.pivot tr.total-row td:first-child{color:var(--gold-bright);}
     </div>
     <div class="table-card" style="margin-bottom:20px;">
       <div class="table-card-header">
-        <span class="table-card-title">사업장별 채널 비중 (사업장 × 채널 · 팀 전체 대비 %)</span>
+        <span class="table-card-title">사업장별 채널 비중 (사업장 × 채널 · 사업장 내 %)</span>
         <span id="cshare-table-unit" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);"></span>
       </div>
       <div class="table-wrap">
@@ -1253,7 +1253,7 @@ function buildChannelShare() {
   const unit = isRev ? '매출(억)' : 'RN(박)';
   const fmtVal = v => isRev ? fmt.rev(v) : fmt.num(v);
   const unitEl = document.getElementById('cshare-table-unit');
-  if (unitEl) unitEl.textContent = '단위: ' + unit + ' · 비중 = 팀 전체 대비 %';
+  if (unitEl) unitEl.textContent = '단위: ' + unit + ' · 각 셀 = 사업장 내 채널 비중(그 사업장 총실적 대비), 행 합 100% · 하단 = 팀 전체 채널 믹스';
 
   const months = getMonthsForPeriod();
   if (!months.length) {
@@ -1383,13 +1383,13 @@ function buildChannelShare() {
     for (const p of propRows) {
       const row = cellPC[p];
       body += `<tr><td style="text-align:left;">${p}</td>`;
-      for (const c of colChannels) body += `<td>${pct(row[c], teamTotal)}</td>`;
-      body += `<td>${pct(etcOf(row), teamTotal)}</td>`;
+      for (const c of colChannels) body += `<td>${pct(row[c], propTotal[p])}</td>`;   // 사업장 내 비중 = 채널 / 그 사업장 총실적
+      body += `<td>${pct(etcOf(row), propTotal[p])}</td>`;
       body += `<td class="border-left-group">${fmtVal(propTotal[p])}</td><td>${pct(propTotal[p], teamTotal)}</td></tr>`;
     }
     // 채널 합계 행 (= 채널 팀 전체 비중, 합 100%)
     let etcTeam = teamTotal; for (const c of colChannels) etcTeam -= (chTeam[c] || 0);
-    body += '<tr class="total-row"><td style="text-align:left;">채널 합계 (팀 전체)</td>';
+    body += '<tr class="total-row"><td style="text-align:left;">전체 (팀 채널 믹스)</td>';
     for (const c of colChannels) body += `<td>${pct(chTeam[c], teamTotal)}</td>`;
     body += `<td>${pct(etcTeam, teamTotal)}</td>`;
     body += `<td class="border-left-group">${fmtVal(teamTotal)}</td><td>100.0%</td></tr>`;
