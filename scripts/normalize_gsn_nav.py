@@ -36,6 +36,7 @@ CANONICAL_ITEMS = [
     ("closing",          f"{BASE}/gs-closing-report.html",  "마감리포트", ""),
     ("monitor",          f"{COMP}/",                        "경쟁사 모니터링", ""),
     ("palatium",         f"{COMP}/palatium.html",           "팔라티움 해운대 by sonofelice 현황 리포트", ""),
+    ("panaq",            f"{COMP}/panaq.html",              "파나크 영덕 by 소노벨 현황 리포트", ""),
     # 2026-10-22 대표 지시: 「아웃바운드」(외부 sono-overseas-dash) 네비에서 제거
 ]
 
@@ -51,8 +52,9 @@ CANONICAL_SCRIPT = (
     "else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;"
     "else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;"
     "else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;"
-    "else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1;"
+    "else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1&&h.indexOf('panaq')===-1;"
     "else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;"
+    "else if(k==='panaq')hit=h.indexOf('panaq.html')!==-1;"
     "if(hit)a.classList.add('active');});})();</script>"
 )
 
