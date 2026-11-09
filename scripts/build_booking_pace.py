@@ -58,7 +58,8 @@ def _agent(a):
     a = re.sub(r"컴퍼니$", "", a).strip()          # 여기어때컴퍼니 → 여기어때
     return _AGENT_ALIAS.get(a, a)                  # 놀유니버스 → 야놀자
 
-def _process(fp, is_cancel):
+def _process(fp, is_cancel, win=(None, None)):
+    _wmin, _wmax = win
     fh = _open(fp)
     if not fh:
         return 0
@@ -82,6 +83,9 @@ def _process(fp, is_cancel):
         if not site: continue
         ci = _pdate(p[i_ci])
         if not ci or ci.year not in YEARS or ci.month not in mly(ci.year): continue
+        _sm = f"{ci.year}{ci.month:02d}"
+        if _wmin and _sm < _wmin: continue
+        if _wmax and _sm > _wmax: continue
         key = (p[i_user] if i_user >= 0 else "", p[i_mem] if i_mem >= 0 else "",
                p[i_rt] if i_rt >= 0 else "", p[i_ci], p[i_n], p[i_r], p[i_code],
                p[i_first] if i_first >= 0 else "", p[i_cancel] if i_cancel >= 0 else "")
@@ -153,9 +157,9 @@ def _cum(resv, canc):
 def main():
     for y in YEARS:
         resv, canc = select_files(str(RAW / str(y)))
-        print(f"[{y}] 예약 {len(resv)} · 취소 {len(canc)} 파일")
-        for fp in resv: print(f"   예약 {_process(fp, False):>9,}행")
-        for fp in canc: print(f"   취소 {_process(fp, True):>9,}행")
+        print(f"[{y}] 예약 {len(resv)} · 취소 {len(canc)} 파일 (재전송+최신스냅샷 결합)")
+        for fp, win in resv: print(f"   예약 {_process(fp, False, win):>9,}행")
+        for fp, win in canc: print(f"   취소 {_process(fp, True, win):>9,}행")
 
     # 거래처 비중(최종 net) — (y,m,site,seg)별 상위(≥5%)만 저장
     channels = {}

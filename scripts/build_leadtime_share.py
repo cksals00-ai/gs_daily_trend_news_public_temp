@@ -137,10 +137,11 @@ acc = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 #   HOLDATES[(year, month, site, '연휴'|'스페셜')] = set(입실일자 ordinal)
 HOLDATES = defaultdict(set)
 
-def process(fp, is_cancel):
+def process(fp, is_cancel, win=(None, None)):
     fh = _open(fp)
     if not fh:
         print("  ! 인코딩 실패:", fp.name); return 0
+    _wmin, _wmax = win
     hdr = [h.strip() for h in fh.readline().split(";")]
     idx = {h: i for i, h in enumerate(hdr)}
     def gi(*names):
@@ -172,6 +173,9 @@ def process(fp, is_cancel):
         if not site: continue
         ci = _pdate(p[i_ci])
         if not ci or ci.year not in YEARS or ci.month not in mly(ci.year): continue
+        _sm = f"{ci.year}{ci.month:02d}"   # 재전송/스냅샷 월경계 윈도우
+        if _wmin and _sm < _wmin: continue
+        if _wmax and _sm > _wmax: continue
         # 스냅샷 적층 중복 제거: 예약 라인 식별자(전체라인 해시 아님 — 상태필드만 다른 적층 제거)
         key = (p[i_user] if i_user >= 0 else "", p[i_mem] if i_mem >= 0 else "",
                p[i_rt] if i_rt >= 0 else "", p[i_ci], p[i_nights], p[i_rooms], p[i_code],
@@ -196,16 +200,59 @@ def process(fp, is_cancel):
     fh.close()
     return n
 
+def _prev_month(ym):
+    y, m = int(ym[:4]), int(ym[4:6]); m -= 1
+    if m == 0: y, m = y - 1, 12
+    return f"{y}{m:02d}"
+
+def _snap_min_month(snaps, min_rows=500):
+    """스냅샷이 실제 보유한 최소 stay_month(입실일자[:6], ≥202601). live 스냅샷은
+       마감 과거월을 버리므로, 그 직전월까지는 재전송이 커버해야 누락이 없다."""
+    cnt = {}
+    for fp in snaps:
+        fh = _open(fp)
+        if not fh: continue
+        hdr = [h.strip() for h in fh.readline().split(";")]; ix = {h: i for i, h in enumerate(hdr)}
+        ii = ix.get("판매일자", ix.get("입실일자", -1))
+        if ii < 0: fh.close(); continue
+        for ln in fh:
+            p = ln.split(";")
+            if ii < len(p):
+                d = p[ii].strip()
+                if len(d) >= 6 and d[:6].isdigit() and d[:6] >= "202601":
+                    cnt[d[:6]] = cnt.get(d[:6], 0) + 1
+        fh.close()
+    valid = [ym for ym, c in cnt.items() if c >= min_rows]
+    return min(valid) if valid else (min(cnt) if cnt else None)
+
+def _windowed(ret, snap):
+    """재전송(≤경계직전월) + 최신 스냅샷(≥경계월) → [(fp,(min,max))]. 경계월 stale 방지."""
+    if snap:
+        def _sd(fp):
+            m = re.search(r"_(\d{8})_생성시간", os.path.basename(fp)); return m.group(1) if m else "00000000"
+        latest = {}
+        for fp in sorted(snap, key=_sd, reverse=True):
+            latest.setdefault(os.path.basename(fp).split(".")[0], fp)
+        snap = list(latest.values())
+    out = []
+    if ret and snap:
+        sm = _snap_min_month(snap); rmax = _prev_month(sm) if sm else None
+        for fp in ret: out.append((fp, (None, rmax)))
+        for fp in snap: out.append((fp, (sm, None)))
+    else:
+        for fp in ret + snap: out.append((fp, (None, None)))
+    return out
+
 def select_files(year_dir):
-    resv, canc = [], []
+    """(resv, canc) 반환 — 각 [(파일, (min_month, max_month))].
+       재전송(마감 과거월) + 최신 스냅샷(최근월) 월경계 분리 결합 → OTB(parse_raw_db)와 동일 소스."""
+    rr, rs, cr, cs = [], [], [], []
     for fp in sorted(glob.glob(os.path.join(year_dir, "*.txt"))):
-        b = os.path.basename(fp)
-        if not re.search(r"\(\d{8}-\d{8}\)", b):  # 재전송만, 스냅샷 제외
-            continue
-        t = b.split(".")[0]
-        if t in ("27", "43"): resv.append(fp)
-        elif t in ("28", "44"): canc.append(fp)
-    return resv, canc
+        t = os.path.basename(fp).split(".")[0]
+        is_ret = bool(re.search(r"\(\d{8}-\d{8}\)", os.path.basename(fp)))
+        if t in ("27", "43"): (rr if is_ret else rs).append(fp)
+        elif t in ("28", "44"): (cr if is_ret else cs).append(fp)
+    return _windowed(rr, rs), _windowed(cr, cs)
 
 def net(y, m, site, seg, dt):
     # 예약(최종 온북)만 사용 — 취소 데이터 미반영(사용자 지시)
@@ -216,8 +263,9 @@ def net(y, m, site, seg, dt):
 def main():
     for y in YEARS:
         resv, _canc = select_files(str(RAW / str(y)))
-        print(f"[{y}] 예약 {len(resv)} 파일 (취소 미반영)")
-        for fp in resv: print(f"   예약 {process(fp, False):>9,}행  {os.path.basename(fp)[:46]}")
+        print(f"[{y}] 예약 {len(resv)} 파일 (취소 미반영, 재전송+최신스냅샷 결합)")
+        for fp, win in resv:
+            print(f"   예약 {process(fp, False, win):>9,}행  {os.path.basename(fp)[:44]}  win={win}")
 
     sites = sorted(ROOMS.keys(), key=lambda s: -ROOMS[s])
     def dt_nights(y, m, dt):
