@@ -1178,7 +1178,7 @@ def build_news_html(news_data: dict) -> str:
     region_labels = {"vivaldi": "비발디", "central": "중부", "south": "남부", "apac": "APAC", "general": "일반"}
 
     # 카테고리 순서
-    category_order = ["소노", "호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
+    category_order = ["소노", "호텔/리조트", "OTA/여행", "종합여행사", "항공/공항", "관광/지역", "정책/예산", "레저/휴양", "거시지표", "업계동향", "IT/플랫폼"]
 
     sections = []
     seen_titles: set[str] = set()
