@@ -290,7 +290,7 @@ fi
 
 # ── [파나크 영덕] 매출 성과 대시보드 (competitor-crawler repo) ──────────────
 #   팔라티움과 파나크는 폴더만 다름: data/palatium_db/ · data/panaq_db/
-#   (팔라티움 매출성과는 refresh_dashboards 데몬, 파나크는 여기서 매일 함께 갱신)
+#   (팔라티움·파나크 둘 다 여기서 매일 함께 갱신 — 아래 팔라티움 스텝 참고)
 CURRENT_STAGE="panaq"
 PANAQ_REPO="/Users/chanminpark/Projects/sono-competitor-crawler"
 if ls data/panaq_db/*.xlsx >/dev/null 2>&1 && [ -f "$PANAQ_REPO/scripts/build_panaq.py" ]; then
@@ -306,6 +306,29 @@ if ls data/panaq_db/*.xlsx >/dev/null 2>&1 && [ -f "$PANAQ_REPO/scripts/build_pa
         || echo -e "${YELLOW}  ⚠ 파나크 변경없음/푸시실패 — 확인 필요${NC}"
     else
         echo -e "${YELLOW}  ⚠ 파나크 빌드 실패 — 스킵(파이프라인 계속)${NC}"
+    fi
+fi
+
+# ── [팔라티움 해운대] 매출 성과 대시보드 (competitor-crawler repo) ──────────────
+#   파나크와 동일 폴더 패턴: data/palatium_db/ 예약정보조회*.xlsx 로 매일 갱신.
+#   (과거엔 refresh_dashboards 데몬에 의존했으나 불안정 → 아침 명령어에서 직접 갱신)
+#   팔라티움은 parse_palatium.py(소스→캐시) → build_palatium.py(캐시→HTML) 2단계.
+CURRENT_STAGE="palatium"
+PALAT_REPO="/Users/chanminpark/Projects/sono-competitor-crawler"
+if ls data/palatium_db/예약정보조회*.xlsx >/dev/null 2>&1 && [ -f "$PALAT_REPO/scripts/parse_palatium.py" ]; then
+    print_header "팔라티움 해운대 대시보드 갱신"
+    if python3 "$PALAT_REPO/scripts/parse_palatium.py" "$(pwd)/data/palatium_db" \
+       && python3 "$PALAT_REPO/scripts/build_palatium.py"; then
+        ( cd "$PALAT_REPO" \
+          && git add docs/palatium.html docs/palatium-client.html data/palatium_data.json \
+                     scripts/parse_palatium.py scripts/build_palatium.py \
+          && git commit -m "chore(palatium): daily update $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null \
+          && { git pull --rebase --quiet origin main 2>/dev/null || true; } \
+          && git push --quiet origin main 2>/dev/null \
+          && echo -e "${GREEN}  ✅ 팔라티움 대시보드 푸시 완료${NC}" ) \
+        || echo -e "${YELLOW}  ⚠ 팔라티움 변경없음/푸시실패 — 확인 필요${NC}"
+    else
+        echo -e "${YELLOW}  ⚠ 팔라티움 빌드 실패 — 스킵(파이프라인 계속)${NC}"
     fi
 fi
 
