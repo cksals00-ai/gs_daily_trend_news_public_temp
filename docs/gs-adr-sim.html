@@ -39,6 +39,9 @@ input[type=range]{flex:1;min-width:200px;accent-color:var(--gold)}
 .mbtn.on{background:#1c2d3f;color:#58a6ff;border-color:#58a6ff}
 .chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--tx);cursor:pointer;margin-left:8px}
 .chk input{accent-color:var(--grn)}
+#ratiocard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#ratiocard .rlab{font-weight:700;font-size:12.5px;color:var(--dim)}
+#ratiocard .rval{font-size:14px;color:var(--tx)}#ratiocard .rval b{color:var(--tx)}#ratiocard .rval .chg{color:var(--gold)}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
@@ -134,6 +137,7 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
   <span class="hint">이 ADR만 올릴 때 → 목표(매출) 달성에 필요한 <b style="color:var(--red)">객실수 인상률</b>을 자동 산출. "어느 시즌" = 선택한 인상대상 시즌.</span></div>
 </div>
 <div class="kpis" id="kpis"></div>
+<div id="ratiocard" style="display:none"></div>
 <div class="seasons"><div class="st">■ 인상 대상 시즌 선택 <span style="color:var(--dim);font-weight:400">(클릭해서 고정/인상 전환 · <span style="color:var(--gold)">노랑=인상</span>, 회색=고정)</span></div>
  <div class="chips" id="chips"></div></div>
 <div class="dimbar">
@@ -239,27 +243,34 @@ function compute(){
     RNbase+=rn; REVbase+=rev;
   }
   const LV=[...leaves.values()];
-  let L=0, RNPCT=0; const targetREV=T*1000*RNbase;
+  let L=0, RNPCT=0, SHIFT=0, DF=0; const targetREV=T*1000*RNbase;
   if(MODE==='adr'){
     let RNnew=0,REVfix=0,REVrai0=0,W=0;
     for(const lf of LV){ RNnew+=lf.frn+lf.rrn*volf; REVfix+=lf.frev; REVrai0+=lf.rrev*volf; W+=lf.rrev*volf*lf.occ; }
     L = W>0? (T*1000*RNnew-REVfix-REVrai0)/W : 0;
-    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*volf; lf.nrr=lf.rrev*volf*(1+L*lf.occ);
+    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*volf; lf.nrr=lf.rrev*volf*(1+L*lf.occ); lf.nfrev=lf.frev;
       for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se]; s.nrn=isR?s.rn*volf:s.rn; s.nrev=isR?s.rev*volf*(1+L*lf.occ):s.rev;} }
   } else {
-    const adr=1+ADRPCT/100; let REVfix=0,REVrai0=0; for(const lf of LV){REVfix+=lf.frev;REVrai0+=lf.rrev;}
-    RNPCT = REVrai0>0? ((targetREV-REVfix)/(REVrai0*adr)-1) : 0; LASTRNPCT=RNPCT; const rnf=1+RNPCT;
-    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*rnf; lf.nrr=lf.rrev*adr*rnf; lf._adr=adr; lf._rnf=rnf;
-      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se]; s.nrn=isR?s.rn*rnf:s.rn; s.nrev=isR?s.rev*adr*rnf:s.rev;} }
+    // 옵션2: 전체 RN 고정 · 고정↔인상 시즌 물량 비율 이동(고정↓·인상↑) + 선택ADR 인상률 → 목표 ADR
+    const adr=1+ADRPCT/100;
+    let RNfix=0,RNrai=0,REVfix=0,REVrai=0; for(const lf of LV){RNfix+=lf.frn;RNrai+=lf.rrn;REVfix+=lf.frev;REVrai+=lf.rrev;}
+    const ADRfix=RNfix?REVfix/RNfix:0, ADRrai=RNrai?REVrai/RNrai:0, den=ADRrai*adr-ADRfix;
+    let dRN = den!==0? (targetREV-REVfix-REVrai*adr)/den : 0;
+    if(dRN>RNfix*0.98) dRN=RNfix*0.98; if(dRN<-RNrai*0.98) dRN=-RNrai*0.98;
+    const dr=RNrai?dRN/RNrai:0, df=RNfix?dRN/RNfix:0; RNPCT=dr; LASTRNPCT=dr; SHIFT=dRN; DF=df;
+    for(const lf of LV){ lf.nrn=lf.frn*(1-df)+lf.rrn*(1+dr); lf.nrr=lf.rrev*(1+dr)*adr; lf.nfrev=lf.frev*(1-df);
+      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se];
+        if(isR){s.nrn=s.rn*(1+dr); s.nrev=s.rev*(1+dr)*adr;} else {s.nrn=s.rn*(1-df); s.nrev=s.rev*(1-df);} } }
   }
-  return {leaves:LV, L, RNPCT, RNbase, REVbase, targetREV, T};
+  return {leaves:LV, L, RNPCT, SHIFT, DF, RNbase, REVbase, targetREV, T};
 }
-function aggLeaves(arr){const a={frn:0,frev:0,rrn:0,rrev:0,nrr:0,nrn:0,occw:0,rn:0,seas:{}};
-  for(const lf of arr){a.frn+=lf.frn;a.frev+=lf.frev;a.rrn+=lf.rrn;a.rrev+=lf.rrev;a.nrr+=lf.nrr;a.nrn+=(lf.nrn||0);const rn=lf.frn+lf.rrn;a.occw+=lf.occ*rn;a.rn+=rn;
+function aggLeaves(arr){const a={frn:0,frev:0,rrn:0,rrev:0,nrr:0,nrn:0,nfrev:0,occw:0,rn:0,seas:{}};
+  for(const lf of arr){a.frn+=lf.frn;a.frev+=lf.frev;a.rrn+=lf.rrn;a.rrev+=lf.rrev;a.nrr+=lf.nrr;a.nrn+=(lf.nrn||0);a.nfrev+=(lf.nfrev!=null?lf.nfrev:lf.frev);const rn=lf.frn+lf.rrn;a.occw+=lf.occ*rn;a.rn+=rn;
     for(const se in lf.seas){const s=lf.seas[se];const t=(a.seas[se]=a.seas[se]||{rn:0,rev:0,nrn:0,nrev:0});t.rn+=s.rn;t.rev+=s.rev;t.nrn+=(s.nrn||0);t.nrev+=s.nrev;}}return a;}
 function rowCells(a){
-  const rn=a.rn, rrn_new=a.nrn-a.frn, occ=rn?a.occw/rn:0;
-  const cadr=adr(a.frev+a.rrev,rn), nadr=adr(a.frev+a.nrr,a.nrn||rn), rcadr=adr(a.rrev,a.rrn), rnadr=adr(a.nrr,rrn_new);
+  const rn=a.rn, occ=rn?a.occw/rn:0;
+  let rrn_new=0; for(const se in a.seas){ if(RAISE[se]) rrn_new+=(a.seas[se].nrn||0); }
+  const cadr=adr(a.frev+a.rrev,rn), nadr=adr(a.nfrev+a.nrr,a.nrn||rn), rcadr=adr(a.rrev,a.rrn), rnadr=adr(a.nrr,rrn_new);
   const up=rcadr>0?(rnadr/rcadr-1)*100:0;
   const rncell = MODE==='mix' ? `${fmt(rn)}<span class="arr">→</span><b style="color:var(--grn)">${fmt(Math.round(a.nrn||rn))}</b>` : fmt(rn);
   let c=`<td class="mono">${rncell}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
@@ -279,7 +290,7 @@ function render(){
   const R=compute(); const leaves=R.leaves;
   const A=aggLeaves(leaves);
   const curADR=R.RNbase?R.REVbase/R.RNbase/1000:0;
-  const newTotRN=A.nrn||R.RNbase, newTotREV=A.frev+A.nrr, newADR=newTotRN?newTotREV/newTotRN/1000:0;
+  const newTotRN=A.nrn||R.RNbase, newTotREV=A.nfrev+A.nrr, newADR=newTotRN?newTotREV/newTotRN/1000:0;
   let kpi;
   if(MODE==='adr'){
     const rrnNew=(A.nrn-A.frn)||1; const avgUp=A.rrev>0?((A.nrr/rrnNew)/(A.rrev/A.rrn)-1)*100:0;
@@ -288,13 +299,19 @@ function render(){
      ['추가 증가 REV',fmt((newTotREV-R.REVbase)/1e6)+'<span style="font-size:12px"> 백만</span>',''],
      ['인상대상 평균 ADR인상율',(avgUp>=0?'+':'')+f1(avgUp)+'%','red']];
   } else {
-    const addRN=A.nrn-A.rn;
     kpi=[['ADR 인상률 (입력)','+'+f1(ADRPCT)+'%','gold'],
-     ['필요 객실수 인상률',(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'%','red'],
-     ['★ 추가 필요 객실수 (RN)',(addRN>=0?'+':'')+fmt(addRN)+'<span style="font-size:12px"> 실</span>','red'],
+     ['인상시즌 물량 인상률',(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'%','red'],
+     ['★ 이동 객실수 (고정→인상)',(R.SHIFT>=0?'+':'')+fmt(R.SHIFT)+'<span style="font-size:12px"> 실</span>','red'],
      ['결과 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn']];
   }
   document.getElementById('kpis').innerHTML=kpi.map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
+  // 고정:인상 비율 카드 (옵션2)
+  const rc=document.getElementById('ratiocard');
+  if(MODE==='mix'){ const fx=A.frn, rx=A.rrn, tot=fx+rx||1, fx2=fx-R.SHIFT, rx2=rx+R.SHIFT;
+    const rr=(a,b)=>{const t=a+b||1;let x=Math.round(a/t*10);x=Math.max(0,Math.min(10,x));return x+':'+(10-x);};
+    rc.style.display=''; rc.innerHTML=`<span class="rlab">고정 : 인상 비율 (전체 RN · 총량 고정)</span>`
+     +`<span class="rval">기존 <b>${fmt(fx)} : ${fmt(rx)}</b>실 (<b>${rr(fx,rx)}</b>) &nbsp;→&nbsp; 변경 <b class="chg">${fmt(Math.round(fx2))} : ${fmt(Math.round(rx2))}</b>실 (<b class="chg">${rr(fx2,rx2)}</b>)</span>`;
+  } else rc.style.display='none';
   const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
   let hd=['',MODE==='mix'?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',MODE==='mix'?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
@@ -338,8 +355,9 @@ function exportXlsx(){
   const title='2026년 ADR 인상 시뮬레이터 · 대외비·관리자용 · '+modestr+' · 세그 OTA·GOTA'+(INBOUND?'·Inbound':'')+' · 인상대상: '+raise;
   const aoa=[[title],header];
   const ls=leaves.slice().sort((a,b)=> a.dims[0]-b.dims[0] || a.dims[1]-b.dims[1] || a.dims[2]-b.dims[2] || (aggLeaves([b]).rn-aggLeaves([a]).rn));
-  for(const lf of ls){const rn=lf.frn+lf.rrn; if(!rn)continue; const rrnN=(lf.nrn||rn)-lf.frn;
-    const cadr=adr(lf.frev+lf.rrev,rn),nadr=adr(lf.frev+lf.nrr,lf.nrn||rn),rcadr=adr(lf.rrev,lf.rrn),rnadr=adr(lf.nrr,rrnN);
+  for(const lf of ls){const rn=lf.frn+lf.rrn; if(!rn)continue; let rrnN=0; for(const se in lf.seas){if(RAISE[se])rrnN+=(lf.seas[se].nrn||0);}
+    const nfrev=(lf.nfrev!=null?lf.nfrev:lf.frev);
+    const cadr=adr(lf.frev+lf.rrev,rn),nadr=adr(nfrev+lf.nrr,lf.nrn||rn),rcadr=adr(lf.rrev,lf.rrn),rnadr=adr(lf.nrr,rrnN);
     const up=rcadr>0?(rnadr/rcadr-1)*100:0;
     aoa.push([D.sites[lf.dims[0]],lf.dims[1],D.segs[lf.dims[2]],D.rts[lf.dims[3]],rn,Math.round(lf.nrn||rn),+(lf.occ*100).toFixed(1),+cadr.toFixed(1),lf.rrn?+rcadr.toFixed(1):null,lf.rrn?+up.toFixed(1):null,lf.rrn?+rnadr.toFixed(1):null,+nadr.toFixed(1)]);
   }
