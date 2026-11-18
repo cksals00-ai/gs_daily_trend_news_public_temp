@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>객실타입별 실적 · SONO & TRINITY GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200;padding-top:env(safe-area-inset-top,0px)}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:1100px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:860px){.gsn{position:sticky;top:0;z-index:200}}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+
+:root{--bg:#0f1420;--card:#1a2130;--card2:#222b3d;--line:#2d3850;--tx:#e6ebf5;--dim:#8a97b0;--acc:#4e9de8;--gold:#e6b970;--red:#ff6b6b;--grn:#4caf6f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px}
+.wrap{max-width:1280px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+.badge{display:inline-block;background:#3a2530;color:var(--red);border:1px solid #5a3540;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:8px;vertical-align:middle}
+.ctrl{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fg{display:flex;align-items:center;gap:7px}
+.fg label{font-weight:700;font-size:12.5px;color:var(--dim)}
+select{background:#0c1017;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:600;font-family:inherit}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--tx);cursor:pointer}
+.chk input{accent-color:var(--grn)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .lab{color:var(--dim);font-size:11px;margin-bottom:4px}.kpi .val{font-size:21px;font-weight:800}
+.kpi .val.gold{color:var(--gold)}.kpi .val.grn{color:var(--grn)}.kpi .val.acc{color:var(--acc)}
+.sec{margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sec .st{font-weight:700;font-size:14px}
+.mbtn{background:#141b28;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.mbtn.on{background:#1c2d3f;color:#58a6ff;border-color:#58a6ff}
+button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:#182033;color:var(--dim);font-weight:700;position:sticky;top:0;z-index:2;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:68vh;margin-bottom:18px}
+tr.gr{cursor:pointer}tr.gr:hover{background:#1e2738}tr.gr>td:first-child{font-weight:700}
+tr.site{background:#10151f}tr.site>td:first-child{color:var(--dim)}
+tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold)}tr.tot td{border-bottom:2px solid #4e6180}
+.mono{font-variant-numeric:tabular-nums}
+.bar{display:inline-block;height:8px;background:var(--gold);border-radius:3px;vertical-align:middle;opacity:.6}
+.exp{display:inline-block;width:12px;color:var(--dim)}
+.pad{padding-left:26px}
+.mtx td,.mtx th{text-align:center;padding:6px 8px;font-size:12px}
+.mtx td:first-child,.mtx th:first-child{text-align:left;font-weight:700}
+.mtx td.hot{color:#0c1017;font-weight:700;border-radius:3px}
+.foot{color:var(--dim);font-size:11px;margin-top:4px;line-height:1.6}
+</style></head><body>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-roomtype.html" data-gsn="roomtype">객실타입별 실적</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-block-sim.html" data-gsn="block-sim">주말 블록 시뮬</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-adr-sim.html" data-gsn="adr-sim">ADR 인상 시뮬</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/ga-analytics.html" data-gsn="ga-analytics">웹 애널리틱스</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 해운대 by sonofelice 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/panaq.html" data-gsn="panaq">파나크 영덕 by 소노벨 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;else if(k==='roomtype')hit=h.indexOf('gs-roomtype.html')!==-1;else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;else if(k==='adr-sim')hit=h.indexOf('gs-adr-sim.html')!==-1;else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1&&h.indexOf('panaq')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;else if(k==='panaq')hit=h.indexOf('panaq.html')!==-1;if(hit)a.classList.add('active');});})();</script>
+<div class="wrap">
+<h1>객실타입별 실적 <span class="badge">대외비 · 관리자용</span></h1>
+<div class="sub">2026년 실적 기준 · 객실타입(등급)별 RN·ADR·매출 · 세그 OTA·G-OTA·Inbound · 사업장/월 필터 · 오션월드빌리지 제외</div>
+<div class="ctrl">
+ <div class="fg"><label>사업장</label><select id="fsite"></select></div>
+ <div class="fg"><label>월</label><select id="fmonth"></select></div>
+ <div class="fg"><label>세그</label>
+  <label class="chk"><input type="checkbox" id="s0" checked onchange="render()"> OTA</label>
+  <label class="chk"><input type="checkbox" id="s1" checked onchange="render()"> G-OTA</label>
+  <label class="chk"><input type="checkbox" id="s2" checked onchange="render()"> Inbound</label></div>
+ <button class="exp-csv" style="margin-left:auto" onclick="exportXlsx()">엑셀 내보내기</button>
+</div>
+<div class="kpis" id="kpis"></div>
+
+<div class="sec"><span class="st">■ 객실타입별 요약</span><span class="foot" style="margin:0">행 클릭 → 사업장별 분해 · RN 내림차순</span></div>
+<div class="tbl-wrap"><table id="tblSum">
+<thead><tr><th id="sumc0">객실타입</th><th>RN</th><th>구성비</th><th>매출(백만)</th><th>ADR(천)</th><th>RN 분포</th></tr></thead>
+<tbody id="tbSum"></tbody></table></div>
+
+<div class="sec"><span class="st">■ 사업장 × 객실타입 매트릭스</span>
+ <span style="color:var(--dim);font-size:11.5px">지표</span>
+ <button class="mbtn on" id="mRN" onclick="setMetric('rn')">RN</button>
+ <button class="mbtn" id="mADR" onclick="setMetric('adr')">ADR(천)</button>
+ <button class="mbtn" id="mREV" onclick="setMetric('rev')">매출(백만)</button>
+ <span class="foot" style="margin:0">상위 객실타입 + 기타 · 색이 진할수록 큼</span></div>
+<div class="tbl-wrap"><table id="tblMtx" class="mtx">
+<thead id="thMtx"></thead><tbody id="tbMtx"></tbody></table></div>
+
+<div class="foot">
+※ ADR = Σ(1박객실료×객실수÷1.1) ÷ Σ객실수 (VAT 제외). RN = 룸나이트(판매일자 1박 전개). <b>세그 OTA·G-OTA·Inbound만 집계</b>(회원·직판·단체 등 기타 제외).<br>
+※ 객실타입명 = PMS 객실유형코드 302종을 등급명(스위트·패밀리·골드·실버·디럭스 등 22종)으로 그룹핑. 매트릭스는 상위 객실타입만 열로 표시(나머지는 "기타"로 합산).
+</div>
+</div>
+<script src="./js/menu-visibility.js"></script>
+<script src="./js/visit-log.js"></script>
+<script>
+let D=null, METRIC='rn', EXP=new Set();
+const fmt=n=>Math.round(n).toLocaleString();
+const f1=n=>n.toFixed(1);
+const adr=(rev,rn)=>rn>0?rev/rn/1000:0;
+function segOn(){return [document.getElementById('s0').checked,document.getElementById('s1').checked,document.getElementById('s2').checked];}
+async function boot(){
+  const res=await fetch('data/adr_sim.json?t='+Date.now()); D=await res.json();
+  const fs=document.getElementById('fsite');
+  fs.innerHTML='<option value="-1">전체 사업장</option>'+D.sites.map((s,i)=>`<option value="${i}">${s}</option>`).join('');
+  const fm=document.getElementById('fmonth');
+  fm.innerHTML='<option value="0">전체 월</option>'+Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join('');
+  fs.onchange=()=>{EXP.clear();render();}; fm.onchange=render;
+  render();
+}
+function setMetric(m){METRIC=m;
+  document.getElementById('mRN').classList.toggle('on',m==='rn');
+  document.getElementById('mADR').classList.toggle('on',m==='adr');
+  document.getElementById('mREV').classList.toggle('on',m==='rev');
+  renderMatrix();}
+// 현재 필터로 셀 추출 → {grade:{rn,rev}}, {site:{grade:{rn,rev}}}, 사이트별/등급별/전체 합
+function slice(){
+  const fs=+document.getElementById('fsite').value, fm=+document.getElementById('fmonth').value, so=segOn();
+  const byG={}, bySG={}, bySite={}; let tR=0,tV=0;
+  for(const c of D.cells){ const si=c[0],mo=c[1],sg=c[2],gr=c[3],rn=c[5],rev=c[6];
+    if(!so[sg]) continue; if(fs>=0&&si!==fs) continue; if(fm>0&&mo!==fm) continue;
+    const g=byG[gr]=byG[gr]||{rn:0,rev:0}; g.rn+=rn; g.rev+=rev;
+    (bySite[si]=bySite[si]||{rn:0,rev:0}); bySite[si].rn+=rn; bySite[si].rev+=rev;
+    const kk=si+'_'+gr; const sgc=bySG[kk]=bySG[kk]||{rn:0,rev:0}; sgc.rn+=rn; sgc.rev+=rev;
+    tR+=rn; tV+=rev;
+  }
+  return {byG,bySG,bySite,tR,tV};
+}
+function render(){ if(!D)return; const S=slice();
+  // KPI
+  const nG=Object.values(S.byG).filter(g=>g.rn>0).length;
+  document.getElementById('kpis').innerHTML=[
+    ['총 RN',fmt(S.tR)+'<span style="font-size:12px"> 실</span>','acc'],
+    ['총 매출',fmt(S.tV/1e6)+'<span style="font-size:12px"> 백만</span>','gold'],
+    ['평균 ADR',f1(adr(S.tV,S.tR))+'<span style="font-size:12px"> 천</span>','grn'],
+    ['활성 객실타입',nG+'<span style="font-size:12px"> 종</span>','']
+  ].map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
+  // 요약 테이블
+  const gids=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
+  const maxRN=gids.length?S.byG[gids[0]].rn:1;
+  let h=`<tr class="tot"><td>■ 전체</td><td class="mono">${fmt(S.tR)}</td><td class="mono">100.0%</td><td class="mono">${fmt(S.tV/1e6)}</td><td class="mono">${f1(adr(S.tV,S.tR))}</td><td></td></tr>`;
+  for(const gr of gids){ const g=S.byG[gr]; const p='/'+gr; const ex=EXP.has(p);
+    const w=Math.round(g.rn/maxRN*120);
+    h+=`<tr class="gr" onclick="togG(${gr})"><td><span class="exp">${ex?'▾':'▸'}</span>${D.rts[gr]}</td>`
+      +`<td class="mono">${fmt(g.rn)}</td><td class="mono">${f1(g.rn/S.tR*100)}%</td><td class="mono">${fmt(g.rev/1e6)}</td>`
+      +`<td class="mono" style="color:var(--gold)">${f1(adr(g.rev,g.rn))}</td>`
+      +`<td><span class="bar" style="width:${w}px"></span></td></tr>`;
+    if(ex){ // 사업장 분해
+      const rows=[]; for(const k in S.bySG){ const [si,gg]=k.split('_').map(Number); if(gg!==gr)continue; const c=S.bySG[k]; if(c.rn>0) rows.push([si,c]); }
+      rows.sort((a,b)=>b[1].rn-a[1].rn);
+      for(const [si,c] of rows) h+=`<tr class="site"><td class="pad">${D.sites[si]}</td>`
+        +`<td class="mono">${fmt(c.rn)}</td><td class="mono">${f1(c.rn/g.rn*100)}%</td><td class="mono">${fmt(c.rev/1e6)}</td>`
+        +`<td class="mono">${f1(adr(c.rev,c.rn))}</td><td></td></tr>`;
+    }
+  }
+  document.getElementById('tbSum').innerHTML=h;
+  document.getElementById('sumc0').textContent= (+document.getElementById('fsite').value>=0)? D.sites[+document.getElementById('fsite').value]+' · 객실타입':'객실타입';
+  renderMatrix(S);
+}
+function togG(gr){const p='/'+gr; if(EXP.has(p))EXP.delete(p);else EXP.add(p); render();}
+function renderMatrix(S){ if(!S)S=slice();
+  // 상위 N 등급 열 + 기타
+  const N=10;
+  const gorder=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
+  const topG=gorder.slice(0,N), restG=gorder.slice(N);
+  const cols=topG.map(g=>({gr:g,name:D.rts[g]})); const hasRest=restG.length>0;
+  // 행: 데이터 있는 사업장(캐노니컬 순서=인덱스 순)
+  const sids=Object.keys(S.bySite).map(Number).filter(si=>S.bySite[si].rn>0).sort((a,b)=>a-b);
+  const val=(si,gr)=>{ if(gr==='rest'){let v={rn:0,rev:0};for(const g of restG){const c=S.bySG[si+'_'+g];if(c){v.rn+=c.rn;v.rev+=c.rev;}}return v;} const c=S.bySG[si+'_'+gr];return c||{rn:0,rev:0}; };
+  const mv=(v)=> METRIC==='rn'?v.rn : METRIC==='rev'?v.rev/1e6 : adr(v.rev,v.rn);
+  const disp=(v)=>{ const x=mv(v); if(!v.rn) return '·'; return METRIC==='adr'?f1(x):fmt(x); };
+  // 열별 최대(색상 스케일): ADR은 전체공통, RN/REV는 열별
+  let hh='<tr><th>사업장</th>'+cols.map(c=>`<th>${c.name}</th>`).join('')+(hasRest?'<th>기타</th>':'')+'<th>합계</th></tr>';
+  document.getElementById('thMtx').innerHTML=hh;
+  // 스케일 기준
+  const allcols=cols.map(c=>c.gr).concat(hasRest?['rest']:[]);
+  const colMax={}; for(const g of allcols){let mx=0;for(const si of sids){const x=mv(val(si,g));if(x>mx)mx=x;}colMax[g]=mx||1;}
+  let gmax=0; if(METRIC==='adr'){for(const si of sids)for(const g of allcols){const x=mv(val(si,g));if(x>gmax)gmax=x;}gmax=gmax||1;}
+  let b='';
+  for(const si of sids){ const sr=S.bySite[si];
+    b+=`<tr><td>${D.sites[si]}</td>`;
+    for(const g of allcols){ const v=val(si,g); const x=mv(v);
+      const base=METRIC==='adr'?gmax:colMax[g]; const t=v.rn?Math.min(x/base,1):0;
+      const bg=v.rn?`background:rgba(230,185,112,${(0.12+t*0.68).toFixed(2)})`:''; const cl=t>0.45?' hot':'';
+      b+=`<td class="mono${cl}" style="${bg}">${disp(v)}</td>`;
+    }
+    const tot=METRIC==='adr'?adr(sr.rev,sr.rn):(METRIC==='rev'?sr.rev/1e6:sr.rn);
+    b+=`<td class="mono" style="color:var(--gold);font-weight:700">${METRIC==='adr'?f1(tot):fmt(tot)}</td></tr>`;
+  }
+  // 합계 행
+  b+='<tr class="tot"><td>합계</td>';
+  for(const g of allcols){ let v={rn:0,rev:0}; for(const si of sids){const c=val(si,g);v.rn+=c.rn;v.rev+=c.rev;} b+=`<td class="mono">${v.rn?(METRIC==='adr'?f1(adr(v.rev,v.rn)):METRIC==='rev'?fmt(v.rev/1e6):fmt(v.rn)):'·'}</td>`; }
+  b+=`<td class="mono">${METRIC==='adr'?f1(adr(S.tV,S.tR)):METRIC==='rev'?fmt(S.tV/1e6):fmt(S.tR)}</td></tr>`;
+  document.getElementById('tbMtx').innerHTML=b;
+}
+function exportXlsx(){
+  if(typeof XLSX==='undefined'){alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 눌러주세요.');return;}
+  const S=slice();
+  const fs=+document.getElementById('fsite').value, fm=+document.getElementById('fmonth').value, so=segOn();
+  const segs=['OTA','G-OTA','Inbound'].filter((_,i)=>so[i]).join('·');
+  const scope=(fs>=0?D.sites[fs]:'전체 사업장')+' · '+(fm>0?fm+'월':'전체 월')+' · 세그 '+segs;
+  const F='맑은 고딕', thin={style:'thin',color:{rgb:'BFBFBF'}}, bAll={top:thin,bottom:thin,left:thin,right:thin};
+  const wb=XLSX.utils.book_new();
+  function styleSheet(ws,aoa,nc,merge,zmap,leftCols){
+    const er=aoa.length-1;
+    if(merge) ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:nc-1}}];
+    const C=(r,c)=>{const a=XLSX.utils.encode_cell({r,c});return ws[a]||(ws[a]={t:'s',v:''});};
+    C(0,0).s={font:{name:F,sz:12,bold:true,color:{rgb:'222222'}},alignment:{horizontal:'left',vertical:'center'}};
+    for(let c=0;c<nc;c++){C(1,c).s={font:{name:F,sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7F7F7F'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:bAll};}
+    for(let r=2;r<=er;r++)for(let c=0;c<nc;c++){const cc=C(r,c);
+      cc.s={font:{name:F,sz:10,color:{rgb:'222222'}},border:bAll,alignment:{horizontal:c<leftCols?'left':'right',vertical:'center'}};
+      if(zmap[c]&&typeof cc.v==='number'){cc.t='n';cc.z=zmap[c];}}
+    ws['!rows']=[{hpt:24},{hpt:20}];
+  }
+  // 시트1: 객실타입 요약
+  const gids=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
+  let a1=[['객실타입별 실적 요약 · 대외비·관리자용 · '+scope],['객실타입','RN','구성비(%)','매출(백만)','ADR(천)']];
+  for(const gr of gids){const g=S.byG[gr];a1.push([D.rts[gr],g.rn,+ (g.rn/S.tR*100).toFixed(1),Math.round(g.rev/1e6),+adr(g.rev,g.rn).toFixed(1)]);}
+  a1.push(['합계',S.tR,100,Math.round(S.tV/1e6),+adr(S.tV,S.tR).toFixed(1)]);
+  const ws1=XLSX.utils.aoa_to_sheet(a1); ws1['!cols']=[{wch:18},{wch:11},{wch:10},{wch:12},{wch:10}];
+  styleSheet(ws1,a1,5,true,{1:'#,##0',2:'0.0',3:'#,##0',4:'#,##0.0'},1); XLSX.utils.book_append_sheet(wb,ws1,'객실타입 요약');
+  // 시트2·3: 사업장×객실타입 (RN / ADR)
+  const sids=Object.keys(S.bySite).map(Number).filter(si=>S.bySite[si].rn>0).sort((a,b)=>a-b);
+  function mtxSheet(title,mode,z){ const head=['사업장'].concat(gids.map(g=>D.rts[g])).concat(['합계']);
+    const aoa=[[title+' · '+scope],head];
+    for(const si of sids){const row=[D.sites[si]]; for(const gr of gids){const c=S.bySG[si+'_'+gr]; row.push(c&&c.rn?(mode==='adr'?+adr(c.rev,c.rn).toFixed(1):mode==='rev'?Math.round(c.rev/1e6):c.rn):0);} const sr=S.bySite[si]; row.push(mode==='adr'?+adr(sr.rev,sr.rn).toFixed(1):mode==='rev'?Math.round(sr.rev/1e6):sr.rn); aoa.push(row);}
+    const tot=['합계']; for(const gr of gids){const g=S.byG[gr]; tot.push(mode==='adr'?+adr(g.rev,g.rn).toFixed(1):mode==='rev'?Math.round(g.rev/1e6):g.rn);} tot.push(mode==='adr'?+adr(S.tV,S.tR).toFixed(1):mode==='rev'?Math.round(S.tV/1e6):S.tR); aoa.push(tot);
+    const nc=head.length; const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:18}].concat(gids.map(()=>({wch:10}))).concat([{wch:11}]);
+    const zm={}; for(let c=1;c<nc;c++)zm[c]=z; styleSheet(ws,aoa,nc,true,zm,1); return ws; }
+  XLSX.utils.book_append_sheet(wb,mtxSheet('사업장×객실타입 RN','rn','#,##0'),'사업장x타입 RN');
+  XLSX.utils.book_append_sheet(wb,mtxSheet('사업장×객실타입 ADR(천)','adr','#,##0.0'),'사업장x타입 ADR');
+  XLSX.writeFile(wb,'2026_객실타입별_실적(대외비).xlsx');
+}
+boot();
+</script>
+</body></html>

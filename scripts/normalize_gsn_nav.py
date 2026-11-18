@@ -30,6 +30,7 @@ CANONICAL_ITEMS = [
     ("trend",            f"{BASE}/",                        "트렌드 리포트", ""),
     ("otb",              f"{BASE}/otb.html",                "GS 실적 리포트", ""),   # 트렌드 다음으로 이동(대표 지시)
     ("sales-kpi",        f"{BASE}/sales-kpi.html",          "세일즈 KPI 현황 리포트", ""),
+    ("roomtype",         f"{BASE}/gs-roomtype.html",        "객실타입별 실적", ""),
     ("strategy",         f"{BASE}/gs-strategy-report.html", "전략 리포트", ""),       # 숨김(menu-visibility)
     ("block-sim",        f"{BASE}/gs-block-sim.html",       "주말 블록 시뮬", ""),
     ("adr-sim",          f"{BASE}/gs-adr-sim.html",         "ADR 인상 시뮬", ""),
@@ -48,6 +49,7 @@ CANONICAL_SCRIPT = (
     "if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&"
     "(h.match(/\\/(?:index\\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\\/?$/));"
     "else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;"
+    "else if(k==='roomtype')hit=h.indexOf('gs-roomtype.html')!==-1;"
     "else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;"
     "else if(k==='otb')hit=h.indexOf('otb.html')!==-1;"
     "else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;"
