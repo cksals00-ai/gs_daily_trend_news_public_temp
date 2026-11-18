@@ -319,14 +319,23 @@ if ls data/palatium_db/예약정보조회*.xlsx >/dev/null 2>&1 && [ -f "$PALAT_
     print_header "팔라티움 해운대 대시보드 갱신"
     if python3 "$PALAT_REPO/scripts/parse_palatium.py" "$(pwd)/data/palatium_db" \
        && python3 "$PALAT_REPO/scripts/build_palatium.py"; then
-        ( cd "$PALAT_REPO" \
-          && git add docs/palatium.html docs/palatium-client.html data/palatium_data.json \
-                     scripts/parse_palatium.py scripts/build_palatium.py \
-          && git commit -m "chore(palatium): daily update $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null \
-          && { git pull --rebase --quiet origin main 2>/dev/null || true; } \
-          && git push --quiet origin main 2>/dev/null \
-          && echo -e "${GREEN}  ✅ 팔라티움 대시보드 푸시 완료${NC}" ) \
-        || echo -e "${YELLOW}  ⚠ 팔라티움 변경없음/푸시실패 — 확인 필요${NC}"
+        (
+          cd "$PALAT_REPO" || exit 1
+          # 팔라티움 소유 파일만 명시적 스테이징 (경쟁사 repo의 무관한 dirty 파일 수백개는 건드리지 않음)
+          git add docs/palatium.html docs/palatium-client.html data/palatium_data.json \
+                  scripts/parse_palatium.py scripts/build_palatium.py
+          if git diff --cached --quiet; then
+              # 스테이징된 변경이 없음 = 이미 최신(데몬 백업이 먼저 반영했을 수 있음). 정상 상태.
+              echo -e "${YELLOW}  ℹ 팔라티움 변경없음 (이미 최신)${NC}"
+          elif git commit -m "chore(palatium): daily update $(date '+%Y-%m-%d %H:%M')" --quiet \
+               && { git -c rebase.autoStash=true pull --rebase --quiet origin main 2>/dev/null \
+                    || { git rebase --abort 2>/dev/null; true; } ; } \
+               && git push --quiet origin main 2>/dev/null; then
+              echo -e "${GREEN}  ✅ 팔라티움 대시보드 푸시 완료${NC}"
+          else
+              echo -e "${YELLOW}  ⚠ 팔라티움 푸시 실패 — 확인 필요${NC}"
+          fi
+        )
     else
         echo -e "${YELLOW}  ⚠ 팔라티움 빌드 실패 — 스킵(파이프라인 계속)${NC}"
     fi
