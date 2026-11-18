@@ -468,6 +468,9 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 let DATA = null;
 let PKG_DATA = null; // package_series_trend.json
 let DB_DATA = null;  // db_aggregated.json (채널 거래처별)
+let CLOSING_TOTAL = null;  // closing_total.json: 총액/객실료 비율 {채널:{세그:{YYYYMM:비율}}}
+let REV_BASIS = 'room';    // 'room'=객실료 기준(1박객실료), 'total'=총액 기준(객실+조식+부대)
+function revRatio(ch, seg, mk){ if(REV_BASIS!=='total') return 1; try{ var r=CLOSING_TOTAL[ch][seg][mk]; return (r&&r>0)?r:1; }catch(e){ return 1; } }
 const SEGMENTS = ['OTA', 'G-OTA', 'Inbound'];
 const CATEGORIES = ['룸온니/프로모션','연박/투나잇','올인클루시브','조식패키지','세일/기획전','워터풀/오션','시즌패키지','액티비티/레저','기타'];
 const MONTH_KO = ['전체','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -857,8 +860,8 @@ function getChannelDetailData(months) {
     // Use segment-filtered data from by_channel_segment instead of total by_channel
     const chData = cs[chName][seg] || {};
     let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
-    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
-    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += (chData[mk].net_rev || 0) * revRatio(chName, seg, mk); } });
+    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += (chData[mk].net_rev || 0) * revRatio(chName, seg, mk); } });
     const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
     const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
     const rnsYoy = rn25 > 0 ? (rn26 - rn25) / rn25 * 100 : null;
@@ -917,8 +920,8 @@ function getChannelPropertyData(chName, months, segment) {
     }
 
     let rn26 = 0, rev26 = 0, rn25 = 0, rev25 = 0;
-    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += chData[mk].net_rev || 0; } });
-    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += chData[mk].net_rev || 0; } });
+    monthKeys26.forEach(mk => { if (chData[mk]) { rn26 += chData[mk].net_rn || 0; rev26 += (chData[mk].net_rev || 0) * revRatio(chName, segment, mk); } });
+    monthKeys25.forEach(mk => { if (chData[mk]) { rn25 += chData[mk].net_rn || 0; rev25 += (chData[mk].net_rev || 0) * revRatio(chName, segment, mk); } });
     if (rn26 === 0 && rn25 === 0) return;
     const adr26 = rn26 > 0 ? Math.round((rev26 * 1000000) / rn26) : 0;
     const adr25 = rn25 > 0 ? Math.round((rev25 * 1000000) / rn25) : 0;
@@ -1006,6 +1009,10 @@ function renderChannelDetailTable(months, containerId) {
     <div style="position:relative;flex:1;max-width:280px;">
       <input type="text" id="cd-search-${containerId}" value="${escapedQuery}" placeholder="거래처 검색..." oninput="_cdGetState('${containerId}').searchQuery=this.value;renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="width:100%;padding:7px 12px 7px 32px;background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule-strong);border-radius:6px;font-family:inherit;font-size:12px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--rule-strong)'" />
       <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink-faint)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-muted)">매출 기준:
+      <button onclick="REV_BASIS='room';renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="padding:5px 11px;border-radius:6px;border:1px solid ${REV_BASIS==='room'?'var(--gold)':'var(--rule-strong)'};background:${REV_BASIS==='room'?'var(--bg-hover)':'var(--bg-soft)'};color:${REV_BASIS==='room'?'var(--gold-bright)':'var(--ink-soft)'};font-size:11.5px;font-weight:700;cursor:pointer">객실료</button>
+      <button onclick="REV_BASIS='total';renderChannelDetailTable(_cdGetState('${containerId}').months,'${containerId}')" style="padding:5px 11px;border-radius:6px;border:1px solid ${REV_BASIS==='total'?'var(--gold)':'var(--rule-strong)'};background:${REV_BASIS==='total'?'var(--bg-hover)':'var(--bg-soft)'};color:${REV_BASIS==='total'?'var(--gold-bright)':'var(--ink-soft)'};font-size:11.5px;font-weight:700;cursor:pointer" title="패키지는 객실+조식+부대 총액">총액</button>
     </div>
     <button onclick="downloadChannelDetailExcel(_cdGetState('${containerId}').months||[1,2,3,4])" style="background:var(--bg-soft);color:var(--ink-soft);border:1px solid var(--rule-strong);padding:6px 14px;border-radius:6px;font-family:'Batang','바탕',serif;font-weight:400;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--gold-bright)'" onmouseout="this.style.background='var(--bg-soft)';this.style.color='var(--ink-soft)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -2289,13 +2296,15 @@ Promise.all([
   fetch('data/otb_data.json?t=' + Date.now()).then(r => r.json()),
   fetch('data/package_series_trend.json?t=' + Date.now()).then(r => r.json()).catch(() => null),
   fetch('data/db_aggregated.json?v=' + new Date().toISOString().slice(0,10)).then(r => r.json()).catch(() => null),
-  fetch('data/inbound_kpi.json?t=' + Date.now()).then(r => r.json()).catch(() => null)
+  fetch('data/inbound_kpi.json?t=' + Date.now()).then(r => r.json()).catch(() => null),
+  fetch('data/closing_total.json?t=' + Date.now()).then(r => r.json()).catch(() => null)
 ])
-  .then(([otbData, pkgData, dbData, ibKpiData]) => {
+  .then(([otbData, pkgData, dbData, ibKpiData, closingTotal]) => {
     DATA = otbData;
     PKG_DATA = pkgData;
     DB_DATA = dbData;
     window.IB_KPI_DATA = ibKpiData;
+    CLOSING_TOTAL = closingTotal;
     document.getElementById('refreshTime').textContent = DATA.meta?.refreshTime || '—';
     switchPeriod('monthly');
   })
