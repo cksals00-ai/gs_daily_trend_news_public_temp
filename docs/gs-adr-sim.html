@@ -47,7 +47,13 @@ input[type=range]{flex:1;min-width:200px;accent-color:var(--gold)}
 .dbrow2{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
 .hint2{color:var(--dim);font-size:11.5px}
 #scbtn{padding:5px 12px;font-size:11.5px}
-.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips{display:flex;flex-direction:column;gap:0}
+.cgroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 0}
+.cgroup+.cgroup{border-top:1px solid #1c2534}
+.cglab{font-weight:700;color:var(--tx);min-width:118px;font-size:12.5px}
+.cglab .cgrn{color:var(--dim);font-weight:400;font-size:10.5px}
+.cgall{font-size:10.5px;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:2px 8px;color:var(--dim);user-select:none}
+.cgall:hover{color:var(--tx)}.cgall.rai:hover{color:var(--gold);border-color:var(--gold)}
 .chip{border:1px solid var(--line);border-radius:16px;padding:4px 11px;font-size:12px;cursor:pointer;user-select:none;transition:.12s;background:#141b28;color:var(--dim)}
 .chip .rn{font-size:10.5px;opacity:.7;margin-left:4px}
 .chip.fix{border-color:#3a4254;color:var(--dim);background:#141b28}
@@ -153,11 +159,24 @@ const sp=n=>(n>=0?'+':'')+f1(n)+'%';
 const sd=n=>(n>=0?'+':'')+f1(n);
 const adr=(rev,rn)=>rn>0?rev/rn/1000:0;
 const nameOf=(dk,v)=>dk==='site'?D.sites[v]:dk==='month'?v+'월':dk==='seg'?D.segs[v]:D.rts[v];
+function seasonGroup(s){ if(s.includes('주중'))return '주중'; if(s.includes('금요일'))return '금요일'; if(s.includes('토요일')||s.includes('주말'))return '토·주말'; if(s.includes('연휴')||s.includes('최성수기'))return '연휴·최성수기'; return '기타'; }
+const CGROUPS=['주중','금요일','토·주말','연휴·최성수기','기타'];
 function renderChips(){
-  document.getElementById('chips').innerHTML=D.seasons.map((s,i)=>
-    `<span class="chip ${RAISE[i]?'rai':'fix'}" onclick="togSeason(${i})">${RAISE[i]?'인상':'고정'} · ${s}<span class="rn">${fmt(D.seasonRN[i])}</span></span>`).join('');
+  const byg={}; D.seasons.forEach((s,i)=>{(byg[seasonGroup(s)]=byg[seasonGroup(s)]||[]).push(i);});
+  let h='';
+  for(const g of CGROUPS){ if(!byg[g])continue;
+    const grn=byg[g].reduce((t,i)=>t+D.seasonRN[i],0);
+    const anyR=byg[g].some(i=>RAISE[i]);
+    h+=`<div class="cgroup"><span class="cglab">${g} <span class="cgrn">${fmt(grn)}</span></span>`
+     +`<span class="cgall" onclick="setGroup('${g}',false)">모두 고정</span><span class="cgall rai" onclick="setGroup('${g}',true)">모두 인상</span>`;
+    for(const i of byg[g].slice().sort((a,b)=>D.seasonRN[b]-D.seasonRN[a]))
+      h+=`<span class="chip ${RAISE[i]?'rai':'fix'}" onclick="togSeason(${i})">${D.seasons[i]}<span class="rn">${fmt(D.seasonRN[i])}</span></span>`;
+    h+='</div>';
+  }
+  document.getElementById('chips').innerHTML=h;
 }
 function togSeason(i){RAISE[i]=!RAISE[i];renderChips();render();}
+function setGroup(g,raise){ D.seasons.forEach((s,i)=>{ if(seasonGroup(s)===g) RAISE[i]=raise; }); renderChips(); render(); }
 function renderDimChips(){
   document.getElementById('dimchips').innerHTML=ORDER.map((dk,i)=>
     `<span class="dchip">${DIMLABEL[dk]}${i>0?` <b onclick="promote(${i})" title="앞으로">▲</b>`:''}</span>`+(i<ORDER.length-1?'<span class="dsep">›</span>':'')).join('');
