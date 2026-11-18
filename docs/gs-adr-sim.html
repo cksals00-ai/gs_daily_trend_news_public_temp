@@ -261,11 +261,15 @@ function rowCells(a){
   const rn=a.rn, rrn_new=a.nrn-a.frn, occ=rn?a.occw/rn:0;
   const cadr=adr(a.frev+a.rrev,rn), nadr=adr(a.frev+a.nrr,a.nrn||rn), rcadr=adr(a.rrev,a.rrn), rnadr=adr(a.nrr,rrn_new);
   const up=rcadr>0?(rnadr/rcadr-1)*100:0;
-  let c=`<td class="mono">${fmt(rn)}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
+  const rncell = MODE==='mix' ? `${fmt(rn)}<span class="arr">→</span><b style="color:var(--grn)">${fmt(Math.round(a.nrn||rn))}</b>` : fmt(rn);
+  let c=`<td class="mono">${rncell}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
    +`<td class="mono">${a.rrn?f1(rcadr):'-'}</td><td class="mono up">${a.rrn?sp(up):'-'}</td>`
    +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
   if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
-    c+= (s&&s.rn)? `<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b></td>` : `<td class="mono seacol">-</td>`; } }
+    if(!(s&&s.rn)){ c+=`<td class="mono seacol">-</td>`; continue; }
+    if(MODE==='mix') c+=`<td class="mono seacol">${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></td>`;
+    else c+=`<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b></td>`;
+  } }
   c+=`<td class="mono">${f1(nadr)}</td><td class="mono" style="color:var(--gold)">${sd(nadr-cadr)}</td>`;
   return c;
 }
@@ -284,16 +288,17 @@ function render(){
      ['추가 증가 REV',fmt((newTotREV-R.REVbase)/1e6)+'<span style="font-size:12px"> 백만</span>',''],
      ['인상대상 평균 ADR인상율',(avgUp>=0?'+':'')+f1(avgUp)+'%','red']];
   } else {
-    kpi=[['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
-     ['ADR 인상률 (입력)','+'+f1(ADRPCT)+'%','gold'],
-     ['★ 필요 객실수(RN) 인상률',(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'%','red'],
+    const addRN=A.nrn-A.rn;
+    kpi=[['ADR 인상률 (입력)','+'+f1(ADRPCT)+'%','gold'],
+     ['필요 객실수 인상률',(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'%','red'],
+     ['★ 추가 필요 객실수 (RN)',(addRN>=0?'+':'')+fmt(addRN)+'<span style="font-size:12px"> 실</span>','red'],
      ['결과 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn']];
   }
   document.getElementById('kpis').innerHTML=kpi.map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
   const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
-  let hd=['','현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR','인상율','인상대상<br>인상후 ADR'];
-  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]);
+  let hd=['',MODE==='mix'?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',MODE==='mix'?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
+  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(MODE==='mix'?'<br>(객실수)':''));
   hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
   document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(SEASONCOLS&&i>=7&&i<7+RSEAS.length)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
   let h=`<tr class="tot"><td>■ 전체 (전사${INBOUND?' · OTA·GOTA·Inbound':' · OTA·GOTA'})</td>`+rowCells(A)+`</tr>`;
