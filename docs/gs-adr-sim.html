@@ -277,6 +277,8 @@ function rowCells(a){
   let c=`<td class="mono">${rncell}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
    +`<td class="mono">${a.rrn?f1(rcadr):'-'}</td><td class="mono up">${a.rrn?sp(up):'-'}</td>`
    +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
+  if(MODE==='mix'){ const uprn=a.rrn?(rrn_new/a.rrn-1)*100:0;
+    c+=`<td class="mono">${a.rrn?fmt(a.rrn):'-'}</td><td class="mono up" style="color:var(--red)">${a.rrn?sp(uprn):'-'}</td><td class="mono" style="color:var(--grn);font-weight:700">${a.rrn?fmt(Math.round(rrn_new)):'-'}</td>`; }
   if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
     if(!(s&&s.rn)){ c+=`<td class="mono seacol">-</td>`; continue; }
     if(MODE==='mix') c+=`<td class="mono seacol"><div>${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></div><div class="subadr">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b>천</div></td>`;
@@ -316,9 +318,11 @@ function render(){
   const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
   let hd=['',MODE==='mix'?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',MODE==='mix'?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
+  if(MODE==='mix') hd.push('인상대상<br>현재 객실수','객실수<br>인상률','인상대상<br>인상후 객실수');
   if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(MODE==='mix'?'<br>(객실수 / ADR)':''));
   hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
-  document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(SEASONCOLS&&i>=7&&i<7+RSEAS.length)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
+  const scStart=7+(MODE==='mix'?3:0), scCount=(SEASONCOLS?RSEAS.length:0);
+  document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(i>=scStart&&i<scStart+scCount)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
   let h=`<tr class="tot"><td>■ 전체 (전사${INBOUND?' · OTA·GOTA·Inbound':' · OTA·GOTA'})</td>`+rowCells(A)+`</tr>`;
   h+=renderRows(leaves,0,'',R.L);
   document.getElementById('tb').innerHTML=h;
