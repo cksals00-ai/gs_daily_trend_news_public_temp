@@ -35,6 +35,10 @@ h1{font-size:19px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bot
 #target{width:110px;font-size:22px;font-weight:800;color:var(--gold);background:#0c1017;border:2px solid var(--gold);border-radius:8px;padding:6px 10px;text-align:center}
 input[type=range]{flex:1;min-width:200px;accent-color:var(--gold)}
 .hint{color:var(--dim);font-size:11.5px}
+.mbtn{background:#141b28;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.mbtn.on{background:#1c2d3f;color:#58a6ff;border-color:#58a6ff}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--tx);cursor:pointer;margin-left:8px}
+.chk input{accent-color:var(--grn)}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
@@ -109,13 +113,26 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
 <div class="wrap">
 <h1>2026년 ADR 인상 시뮬레이터 <span class="badge">대외비 · 관리자용</span></h1>
 <div class="sub">실적 기반 · 수요 가중 배분 모델 · 세그 OTA·GOTA·Inbound만 · 주중·금 고정(기본) · 드릴: 사업장·월·세그·객실타입(순서 조절)</div>
-<div class="ctrl"><label>목표 전체 ADR (천원)</label>
- <div class="tinput">
-  <input type="number" id="target" min="200" max="400" step="1" value="252">
-  <input type="range" id="slider" min="200" max="380" step="1" value="252">
-  <span class="hint">← 목표만 바꾸면 전체 재계산 (디폴트 252)</span>
-  <button class="exp-csv" onclick="exportXlsx()">엑셀 내보내기</button>
- </div></div>
+<div class="ctrl">
+ <div class="tinput" style="margin-bottom:10px">
+  <span class="st">시뮬 모드</span>
+  <button class="mbtn on" id="mode1" onclick="setMode('adr')">옵션1 · ADR 인상</button>
+  <button class="mbtn" id="mode2" onclick="setMode('mix')">옵션2 · ADR+물량 복합</button>
+  <label class="chk"><input type="checkbox" id="inb" onchange="toggleInbound()"> Inbound 포함</label>
+  <button class="exp-csv" style="margin-left:auto" onclick="exportXlsx()">엑셀 내보내기</button>
+ </div>
+ <div class="tinput"><label>목표 전체 ADR (천원)</label>
+  <input type="number" id="target" min="180" max="400" step="1" value="252">
+  <input type="range" id="slider" min="180" max="380" step="1" value="252">
+  <span class="hint" id="thint">← 목표 (옵션2에선 매출환산 기준)</span></div>
+ <div class="tinput" id="opt1row"><label>물량(RN) 조정</label>
+  <input type="range" id="volr" min="-20" max="50" step="1" value="0" style="flex:0 0 260px"><b id="volv" style="color:var(--gold);min-width:44px">0%</b>
+  <span class="hint">선택 시즌 객실수를 ±% (더 팔면 수요지수·매출 반영)</span></div>
+ <div class="tinput" id="opt2row" style="display:none"><label>ADR 인상률 (%)</label>
+  <input type="number" id="adrp" min="0" max="60" step="0.5" value="10" style="width:84px;font-size:18px;font-weight:800;color:var(--gold);background:#0c1017;border:2px solid var(--gold);border-radius:8px;padding:5px 8px;text-align:center">
+  <input type="range" id="adrpr" min="0" max="60" step="0.5" value="10" style="flex:0 0 260px">
+  <span class="hint">이 ADR만 올릴 때 → 목표(매출) 달성에 필요한 <b style="color:var(--red)">객실수 인상률</b>을 자동 산출. "어느 시즌" = 선택한 인상대상 시즌.</span></div>
+</div>
 <div class="kpis" id="kpis"></div>
 <div class="seasons"><div class="st">■ 인상 대상 시즌 선택 <span style="color:var(--dim);font-weight:400">(클릭해서 고정/인상 전환 · <span style="color:var(--gold)">노랑=인상</span>, 회색=고정)</span></div>
  <div class="chips" id="chips"></div></div>
@@ -144,6 +161,12 @@ const DIMIDX={site:0,month:1,seg:2,grade:3};
 const DIMLABEL={site:'사업장',month:'월',seg:'세그',grade:'객실타입'};
 let ORDER=['site','month','seg','grade'];
 let EXP=new Set(); let SEASONCOLS=true, RSEAS=[];
+let INBOUND=false;   // Inbound 포함 여부(디폴트 제외)
+let VOLPCT=0;        // 옵션1: 선택 시즌 물량(RN) 조정 %
+let MODE='adr';      // 'adr'=옵션1(ADR 인상), 'mix'=옵션2(ADR+물량 복합)
+let ADRPCT=10;       // 옵션2: ADR 인상률 입력 %
+let LASTRNPCT=0;     // 옵션2 산출된 필요 RN%
+function incSeg(sg){ return sg<=1 || (INBOUND && sg===2); }  // OTA=0,G-OTA=1,Inbound=2
 async function boot(){
   const res=await fetch('data/adr_sim.json?t='+Date.now());
   D=await res.json();
@@ -151,8 +174,21 @@ async function boot(){
   renderChips(); renderDimChips();
   const ti=document.getElementById('target'),sl=document.getElementById('slider');
   ti.oninput=()=>{sl.value=ti.value;render();}; sl.oninput=()=>{ti.value=sl.value;render();};
+  const vr=document.getElementById('volr');
+  vr.oninput=()=>{VOLPCT=+vr.value;document.getElementById('volv').textContent=(VOLPCT>=0?'+':'')+VOLPCT+'%';render();};
+  const ap=document.getElementById('adrp'),apr=document.getElementById('adrpr');
+  ap.oninput=()=>{ADRPCT=+ap.value;apr.value=ap.value;render();};
+  apr.oninput=()=>{ADRPCT=+apr.value;ap.value=apr.value;render();};
   render();
 }
+function setMode(m){ MODE=m;
+  document.getElementById('mode1').classList.toggle('on',m==='adr');
+  document.getElementById('mode2').classList.toggle('on',m==='mix');
+  document.getElementById('opt1row').style.display=(m==='adr')?'':'none';
+  document.getElementById('opt2row').style.display=(m==='mix')?'':'none';
+  render();
+}
+function toggleInbound(){ INBOUND=document.getElementById('inb').checked; render(); }
 const fmt=n=>Math.round(n).toLocaleString();
 const f1=n=>n.toFixed(1);
 const sp=n=>(n>=0?'+':'')+f1(n)+'%';
@@ -182,60 +218,86 @@ function renderDimChips(){
     `<span class="dchip">${DIMLABEL[dk]}${i>0?` <b onclick="promote(${i})" title="앞으로">▲</b>`:''}</span>`+(i<ORDER.length-1?'<span class="dsep">›</span>':'')).join('');
 }
 function promote(i){ if(i<1)return; const t=ORDER[i-1];ORDER[i-1]=ORDER[i];ORDER[i]=t; EXP.clear(); renderDimChips(); render(); }
-function compute(T){
-  const {cells,occ,RN,REV}=D; let W=0;
-  for(const c of cells){ if(RAISE[c[4]]) W+=c[6]*(occ[c[0]+'_'+c[1]]||0); }
-  const L=W>0?(T*1000*RN-REV)/W:0;
-  const leaves=new Map();
-  for(const c of cells){
-    const si=c[0],mo=c[1],sg=c[2],gr=c[3],se=c[4],rn=c[5],rev=c[6]; const o=occ[si+'_'+mo]||0;
-    const key=si+'|'+mo+'|'+sg+'|'+gr;
-    let lf=leaves.get(key);
-    if(!lf){lf={dims:[si,mo,sg,gr],occ:o,frn:0,frev:0,rrn:0,rrev:0,seas:{}};leaves.set(key,lf);}
-    if(RAISE[se]){lf.rrn+=rn;lf.rrev+=rev;} else {lf.frn+=rn;lf.frev+=rev;}
-    const sO=(lf.seas[se]=lf.seas[se]||{rn:0,rev:0,nrev:0}); sO.rn+=rn; sO.rev+=rev; sO.nrev+= RAISE[se]? rev*(1+L*o):rev;
+function compute(){
+  const T=+document.getElementById('target').value;
+  const cells=D.cells, avail=D.avail||{}; const volf=1+VOLPCT/100;
+  // 동적 수요지수: (site,month)별 "선택 시즌 + 포함 세그" RN
+  const num={};
+  for(const c of cells){ if(!incSeg(c[2])||!RAISE[c[4]]) continue; const k=c[0]+'_'+c[1]; num[k]=(num[k]||0)+c[5]; }
+  const mNum={},mDen={};
+  for(const k in avail){ const m=k.split('_')[1]; mDen[m]=(mDen[m]||0)+avail[k]; mNum[m]=(mNum[m]||0)+(num[k]||0); }
+  const vf=(MODE==='adr'?volf:1);  // occ 분자 물량반영은 옵션1만(옵션2는 RN%가 산출물)
+  function occOf(k){ const av=avail[k]||0,m=k.split('_')[1];
+    if(av>0) return Math.min((num[k]||0)*vf/av,1.2);
+    return mDen[m]? Math.min(mNum[m]*vf/mDen[m],1.2):0.3; }
+  const leaves=new Map(); let RNbase=0,REVbase=0;
+  for(const c of cells){ const sg=c[2]; if(!incSeg(sg)) continue;
+    const si=c[0],mo=c[1],gr=c[3],se=c[4],rn=c[5],rev=c[6]; const key=si+'|'+mo+'|'+sg+'|'+gr;
+    let lf=leaves.get(key); if(!lf){lf={dims:[si,mo,sg,gr],occ:occOf(si+'_'+mo),frn:0,frev:0,rrn:0,rrev:0,seas:{}};leaves.set(key,lf);}
+    if(RAISE[se]){lf.rrn+=rn;lf.rrev+=rev;}else{lf.frn+=rn;lf.frev+=rev;}
+    const s=(lf.seas[se]=lf.seas[se]||{rn:0,rev:0,nrn:0,nrev:0}); s.rn+=rn; s.rev+=rev;
+    RNbase+=rn; REVbase+=rev;
   }
-  for(const lf of leaves.values()) lf.nrr=lf.rrev*(1+L*lf.occ);
-  return {L, leaves:[...leaves.values()]};
+  const LV=[...leaves.values()];
+  let L=0, RNPCT=0; const targetREV=T*1000*RNbase;
+  if(MODE==='adr'){
+    let RNnew=0,REVfix=0,REVrai0=0,W=0;
+    for(const lf of LV){ RNnew+=lf.frn+lf.rrn*volf; REVfix+=lf.frev; REVrai0+=lf.rrev*volf; W+=lf.rrev*volf*lf.occ; }
+    L = W>0? (T*1000*RNnew-REVfix-REVrai0)/W : 0;
+    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*volf; lf.nrr=lf.rrev*volf*(1+L*lf.occ);
+      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se]; s.nrn=isR?s.rn*volf:s.rn; s.nrev=isR?s.rev*volf*(1+L*lf.occ):s.rev;} }
+  } else {
+    const adr=1+ADRPCT/100; let REVfix=0,REVrai0=0; for(const lf of LV){REVfix+=lf.frev;REVrai0+=lf.rrev;}
+    RNPCT = REVrai0>0? ((targetREV-REVfix)/(REVrai0*adr)-1) : 0; LASTRNPCT=RNPCT; const rnf=1+RNPCT;
+    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*rnf; lf.nrr=lf.rrev*adr*rnf; lf._adr=adr; lf._rnf=rnf;
+      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se]; s.nrn=isR?s.rn*rnf:s.rn; s.nrev=isR?s.rev*adr*rnf:s.rev;} }
+  }
+  return {leaves:LV, L, RNPCT, RNbase, REVbase, targetREV, T};
 }
-function aggLeaves(arr){const a={frn:0,frev:0,rrn:0,rrev:0,nrr:0,occw:0,rn:0,seas:{}};
-  for(const lf of arr){a.frn+=lf.frn;a.frev+=lf.frev;a.rrn+=lf.rrn;a.rrev+=lf.rrev;a.nrr+=lf.nrr;const rn=lf.frn+lf.rrn;a.occw+=lf.occ*rn;a.rn+=rn;
-    for(const se in lf.seas){const s=lf.seas[se];const t=(a.seas[se]=a.seas[se]||{rn:0,rev:0,nrev:0});t.rn+=s.rn;t.rev+=s.rev;t.nrev+=s.nrev;}}return a;}
+function aggLeaves(arr){const a={frn:0,frev:0,rrn:0,rrev:0,nrr:0,nrn:0,occw:0,rn:0,seas:{}};
+  for(const lf of arr){a.frn+=lf.frn;a.frev+=lf.frev;a.rrn+=lf.rrn;a.rrev+=lf.rrev;a.nrr+=lf.nrr;a.nrn+=(lf.nrn||0);const rn=lf.frn+lf.rrn;a.occw+=lf.occ*rn;a.rn+=rn;
+    for(const se in lf.seas){const s=lf.seas[se];const t=(a.seas[se]=a.seas[se]||{rn:0,rev:0,nrn:0,nrev:0});t.rn+=s.rn;t.rev+=s.rev;t.nrn+=(s.nrn||0);t.nrev+=s.nrev;}}return a;}
 function rowCells(a){
-  const occ=a.rn?a.occw/a.rn:0;
-  const cadr=adr(a.frev+a.rrev,a.rn),nadr=adr(a.frev+a.nrr,a.rn),rcadr=adr(a.rrev,a.rrn),rnadr=adr(a.nrr,a.rrn);
-  const up=a.rrev>0?(a.nrr/a.rrev-1)*100:0;
-  let c=`<td class="mono">${fmt(a.rn)}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
+  const rn=a.rn, rrn_new=a.nrn-a.frn, occ=rn?a.occw/rn:0;
+  const cadr=adr(a.frev+a.rrev,rn), nadr=adr(a.frev+a.nrr,a.nrn||rn), rcadr=adr(a.rrev,a.rrn), rnadr=adr(a.nrr,rrn_new);
+  const up=rcadr>0?(rnadr/rcadr-1)*100:0;
+  let c=`<td class="mono">${fmt(rn)}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
    +`<td class="mono">${a.rrn?f1(rcadr):'-'}</td><td class="mono up">${a.rrn?sp(up):'-'}</td>`
    +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
   if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
-    c+= (s&&s.rn)? `<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.rn))}</b></td>` : `<td class="mono seacol">-</td>`; } }
+    c+= (s&&s.rn)? `<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b></td>` : `<td class="mono seacol">-</td>`; } }
   c+=`<td class="mono">${f1(nadr)}</td><td class="mono" style="color:var(--gold)">${sd(nadr-cadr)}</td>`;
   return c;
 }
 const PAD=['','pad','pad2','pad3'];
 function render(){
   if(!D)return;
-  const T=+document.getElementById('target').value;
-  const {L,leaves}=compute(T); const {RN,REV}=D;
-  let tf=0,tnr=0,tr=0; for(const lf of leaves){tf+=lf.frev;tnr+=lf.nrr;tr+=lf.rrev;}
-  const newADR=(tf+tnr)/RN/1000, curADR=REV/RN/1000, avgUp=tr>0?(tnr/tr-1)*100:0, needM=(T*1000*RN-REV)/1e6;
-  document.getElementById('kpis').innerHTML=[
-   ['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
-   ['인상후 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn'],
-   ['추가 증가 REV',fmt(needM)+'<span style="font-size:12px"> 백만</span>',''],
-   ['인상대상 평균 인상율',(avgUp>=0?'+':'')+f1(avgUp)+'%','red'],
-  ].map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
-  const le=document.getElementById('lamval'); if(le) le.textContent='현재 λ = '+L.toFixed(2);
+  const R=compute(); const leaves=R.leaves;
+  const A=aggLeaves(leaves);
+  const curADR=R.RNbase?R.REVbase/R.RNbase/1000:0;
+  const newTotRN=A.nrn||R.RNbase, newTotREV=A.frev+A.nrr, newADR=newTotRN?newTotREV/newTotRN/1000:0;
+  let kpi;
+  if(MODE==='adr'){
+    const rrnNew=(A.nrn-A.frn)||1; const avgUp=A.rrev>0?((A.nrr/rrnNew)/(A.rrev/A.rrn)-1)*100:0;
+    kpi=[['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
+     ['인상후 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn'],
+     ['추가 증가 REV',fmt((newTotREV-R.REVbase)/1e6)+'<span style="font-size:12px"> 백만</span>',''],
+     ['인상대상 평균 ADR인상율',(avgUp>=0?'+':'')+f1(avgUp)+'%','red']];
+  } else {
+    kpi=[['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
+     ['ADR 인상률 (입력)','+'+f1(ADRPCT)+'%','gold'],
+     ['★ 필요 객실수(RN) 인상률',(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'%','red'],
+     ['결과 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn']];
+  }
+  document.getElementById('kpis').innerHTML=kpi.map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
+  const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
   let hd=['','현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR','인상율','인상대상<br>인상후 ADR'];
   if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]);
   hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
   document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(SEASONCOLS&&i>=7&&i<7+RSEAS.length)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
-  // 전체 행
-  const A=aggLeaves(leaves);
-  let h=`<tr class="tot"><td>■ 전체 (전사 · OTA·GOTA·Inbound)</td>`+rowCells(A)+`</tr>`;
-  h+=renderRows(leaves,0,'',L);
+  let h=`<tr class="tot"><td>■ 전체 (전사${INBOUND?' · OTA·GOTA·Inbound':' · OTA·GOTA'})</td>`+rowCells(A)+`</tr>`;
+  h+=renderRows(leaves,0,'',R.L);
   document.getElementById('tb').innerHTML=h;
 }
 function renderRows(leaves,depth,path,L){
@@ -264,34 +326,35 @@ function togP(p){ if(EXP.has(p))EXP.delete(p); else EXP.add(p); render(); }
 function toggleSeasonCols(){ SEASONCOLS=!SEASONCOLS; document.getElementById('scbtn').textContent=SEASONCOLS?'－ 인상대상 시즌별 ADR 열 접기':'＋ 인상대상 시즌별 ADR 열 펼치기'; render(); }
 function exportXlsx(){
   if(typeof XLSX==='undefined'){alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 눌러주세요.');return;}
-  const T=+document.getElementById('target').value; const {L,leaves}=compute(T);
+  const R=compute(); const leaves=R.leaves;
   const raise=D.seasons.filter((_,i)=>RAISE[i]).join(' / ');
-  const header=['사업장','월','세그','객실타입','현재 RN','수요지수','현재 ADR(천)','인상대상 현재ADR(천)','인상율','인상대상 인상후ADR(천)','인상후 전체ADR(천)'];
-  const title='2026년 ADR 인상 시뮬레이터   ·   대외비·관리자용   ·   목표 '+T+'천   ·   세그 OTA·GOTA·Inbound   ·   인상대상: '+raise;
+  const modestr=MODE==='adr'?('옵션1·ADR인상 목표'+R.T+'천'+(VOLPCT?(' 물량'+(VOLPCT>=0?'+':'')+VOLPCT+'%'):'')):('옵션2·ADR+'+ADRPCT+'% → 객실수'+(R.RNPCT>=0?'+':'')+(R.RNPCT*100).toFixed(1)+'%');
+  const header=['사업장','월','세그','객실타입','현재 RN','새 RN','수요지수','현재 ADR(천)','인상대상 현재ADR(천)','ADR인상율','인상대상 인상후ADR(천)','인상후 전체ADR(천)'];
+  const title='2026년 ADR 인상 시뮬레이터 · 대외비·관리자용 · '+modestr+' · 세그 OTA·GOTA'+(INBOUND?'·Inbound':'')+' · 인상대상: '+raise;
   const aoa=[[title],header];
   const ls=leaves.slice().sort((a,b)=> a.dims[0]-b.dims[0] || a.dims[1]-b.dims[1] || a.dims[2]-b.dims[2] || (aggLeaves([b]).rn-aggLeaves([a]).rn));
-  for(const lf of ls){const rn=lf.frn+lf.rrn; if(!rn)continue;
-    const cadr=adr(lf.frev+lf.rrev,rn),nadr=adr(lf.frev+lf.nrr,rn),rcadr=adr(lf.rrev,lf.rrn),rnadr=adr(lf.nrr,lf.rrn);
-    const up=lf.rrev>0?(lf.nrr/lf.rrev-1)*100:0;
-    aoa.push([D.sites[lf.dims[0]],lf.dims[1],D.segs[lf.dims[2]],D.rts[lf.dims[3]],rn,+(lf.occ*100).toFixed(1),+cadr.toFixed(1),lf.rrn?+rcadr.toFixed(1):null,lf.rrn?+up.toFixed(1):null,lf.rrn?+rnadr.toFixed(1):null,+nadr.toFixed(1)]);
+  for(const lf of ls){const rn=lf.frn+lf.rrn; if(!rn)continue; const rrnN=(lf.nrn||rn)-lf.frn;
+    const cadr=adr(lf.frev+lf.rrev,rn),nadr=adr(lf.frev+lf.nrr,lf.nrn||rn),rcadr=adr(lf.rrev,lf.rrn),rnadr=adr(lf.nrr,rrnN);
+    const up=rcadr>0?(rnadr/rcadr-1)*100:0;
+    aoa.push([D.sites[lf.dims[0]],lf.dims[1],D.segs[lf.dims[2]],D.rts[lf.dims[3]],rn,Math.round(lf.nrn||rn),+(lf.occ*100).toFixed(1),+cadr.toFixed(1),lf.rrn?+rcadr.toFixed(1):null,lf.rrn?+up.toFixed(1):null,lf.rrn?+rnadr.toFixed(1):null,+nadr.toFixed(1)]);
   }
   const ws=XLSX.utils.aoa_to_sheet(aoa); const nc=header.length, er=aoa.length-1;
   ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:nc-1}}];
-  ws['!cols']=[{wch:20},{wch:5},{wch:8},{wch:16},{wch:11},{wch:10},{wch:12},{wch:16},{wch:9},{wch:16},{wch:15}];
+  ws['!cols']=[{wch:20},{wch:5},{wch:8},{wch:16},{wch:11},{wch:11},{wch:10},{wch:12},{wch:16},{wch:10},{wch:16},{wch:15}];
   ws['!rows']=[{hpt:24},{hpt:22}];
   const F='맑은 고딕', thin={style:'thin',color:{rgb:'BFBFBF'}}, bAll={top:thin,bottom:thin,left:thin,right:thin};
   const C=(r,c)=>{const a=XLSX.utils.encode_cell({r,c});return ws[a]||(ws[a]={t:'s',v:''});};
   C(0,0).s={font:{name:F,sz:12,bold:true,color:{rgb:'222222'}},alignment:{horizontal:'left',vertical:'center'}};
   for(let c=0;c<nc;c++){C(1,c).s={font:{name:F,sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7F7F7F'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:bAll};}
-  const zf={4:'#,##0',5:'0.0"%"',6:'#,##0.0',7:'#,##0.0',8:'+0.0"%";-0.0"%"',9:'#,##0.0',10:'#,##0.0'};
+  const zf={4:'#,##0',5:'#,##0',6:'0.0"%"',7:'#,##0.0',8:'#,##0.0',9:'+0.0"%";-0.0"%"',10:'#,##0.0',11:'#,##0.0'};
   for(let r=2;r<=er;r++){for(let c=0;c<nc;c++){const cc=C(r,c);
     cc.s={font:{name:F,sz:10,color:{rgb:'222222'}},border:bAll,alignment:{horizontal:c<4?'left':'right',vertical:'center'}};
     if(zf[c]&&typeof cc.v==='number'){cc.t='n';cc.z=zf[c];}
-    if(c===8&&typeof cc.v==='number')cc.s.font={name:F,sz:10,bold:true,color:{rgb:cc.v<0?'C00000':'1F4E79'}};
+    if(c===9&&typeof cc.v==='number')cc.s.font={name:F,sz:10,bold:true,color:{rgb:cc.v<0?'C00000':'1F4E79'}};
   }}
   ws['!freeze']={xSplit:0,ySplit:2};
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ADR 인상 시뮬');
-  XLSX.writeFile(wb,'2026_ADR_인상_시뮬_목표'+T+'(대외비).xlsx');
+  XLSX.writeFile(wb,'2026_ADR_인상_시뮬(대외비).xlsx');
 }
 boot();
 </script>
