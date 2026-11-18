@@ -81,6 +81,7 @@ tr.rt{background:#10151f}
 tr.seas{background:#0c1119;color:var(--dim);font-size:12px}
 th.seacolh{background:#14241a;color:#9fd3af;font-size:11px}
 td.seacol{background:#101a12;font-size:11.5px}td.seacol .arr{color:var(--dim);margin:0 3px}td.seacol b{color:var(--grn)}
+td.seacol .subadr{font-size:10px;color:var(--dim);border-top:1px dotted #273243;margin-top:2px;padding-top:2px}td.seacol .subadr b{color:var(--gold)}
 tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold)}tr.tot td{border-bottom:2px solid #4e6180}
 .tw{color:var(--acc)}.up{color:var(--gold);font-weight:700}.new{color:var(--grn);font-weight:700}
 .exp{display:inline-block;width:12px;color:var(--dim)}
@@ -278,7 +279,7 @@ function rowCells(a){
    +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
   if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
     if(!(s&&s.rn)){ c+=`<td class="mono seacol">-</td>`; continue; }
-    if(MODE==='mix') c+=`<td class="mono seacol">${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></td>`;
+    if(MODE==='mix') c+=`<td class="mono seacol"><div>${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></div><div class="subadr">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b>천</div></td>`;
     else c+=`<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b></td>`;
   } }
   c+=`<td class="mono">${f1(nadr)}</td><td class="mono" style="color:var(--gold)">${sd(nadr-cadr)}</td>`;
@@ -315,7 +316,7 @@ function render(){
   const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
   let hd=['',MODE==='mix'?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',MODE==='mix'?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
-  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(MODE==='mix'?'<br>(객실수)':''));
+  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(MODE==='mix'?'<br>(객실수 / ADR)':''));
   hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
   document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(SEASONCOLS&&i>=7&&i<7+RSEAS.length)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
   let h=`<tr class="tot"><td>■ 전체 (전사${INBOUND?' · OTA·GOTA·Inbound':' · OTA·GOTA'})</td>`+rowCells(A)+`</tr>`;
