@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta name="auth-required" content="executive">
+<script src="./js/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ADR 인상 시뮬레이터 · SONO & TRINITY GS팀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+.gsn{background:#0b0f14;border-bottom:1px solid #1e2530;font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px;position:relative;z-index:200;padding-top:env(safe-area-inset-top,0px)}
+.gsn-wrap{max-width:1400px;margin:0 auto;padding:0 20px;height:42px;display:flex;align-items:center}
+.gsn-brand{color:#7a8794;text-decoration:none;font-weight:600;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap;margin-right:24px;padding-right:24px;border-right:1px solid #1e2530}
+.gsn-brand:hover{color:#c9d1d9}.gsn-brand-dot{color:#58a6ff}
+.gsn-links{display:flex;align-items:center;gap:2px;flex:1}
+.gsn-item{color:#7d8590;text-decoration:none;padding:4px 12px;border-radius:6px;white-space:nowrap;font-size:13px;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.gsn-item:hover{background:#1a2232;color:#c9d1d9}
+.gsn-item.active{background:#1c2d3f;color:#58a6ff;font-weight:600}
+.gsn-toggle{display:none;background:none;border:none;color:#7d8590;cursor:pointer;padding:5px;border-radius:4px;margin-left:auto}
+.gsn-toggle:hover{color:#c9d1d9;background:#1e2530}
+@media(max-width:1100px){.gsn-links{display:none;flex-direction:column;position:absolute;top:42px;left:0;right:0;background:#0b0f14;border-bottom:1px solid #1e2530;padding:8px 12px;gap:3px;z-index:300}
+.gsn-links.open{display:flex}.gsn-item[style*="display:none"]{display:none!important}.gsn-item{padding:8px 12px}.gsn-toggle{display:flex;align-items:center;justify-content:center}}
+@media(max-width:860px){.gsn{position:sticky;top:0;z-index:200}}
+@media(max-width:480px){.gsn-wrap{padding:0 10px}.gsn-brand{margin-right:12px;padding-right:12px;font-size:11px}}
+
+:root{--bg:#0f1420;--card:#1a2130;--card2:#222b3d;--line:#2d3850;--tx:#e6ebf5;--dim:#8a97b0;--acc:#4e9de8;--gold:#e6b970;--red:#ff6b6b;--grn:#4caf6f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:'Noto Sans KR',-apple-system,sans-serif;font-size:13px}
+.wrap{max-width:1280px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+.badge{display:inline-block;background:#3a2530;color:var(--red);border:1px solid #5a3540;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:8px;vertical-align:middle}
+.ctrl{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.ctrl label{font-weight:700;font-size:14px}
+.tinput{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+#target{width:110px;font-size:22px;font-weight:800;color:var(--gold);background:#0c1017;border:2px solid var(--gold);border-radius:8px;padding:6px 10px;text-align:center}
+input[type=range]{flex:1;min-width:200px;accent-color:var(--gold)}
+.hint{color:var(--dim);font-size:11.5px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .lab{color:var(--dim);font-size:11px;margin-bottom:4px}.kpi .val{font-size:21px;font-weight:800}
+.kpi .val.red{color:var(--red)}.kpi .val.gold{color:var(--gold)}.kpi .val.grn{color:var(--grn)}
+.seasons,.dimbar{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.seasons .st{font-weight:700;font-size:13px;margin-bottom:9px}
+.dimbar .st{font-weight:700;font-size:13px;white-space:nowrap}
+.dbrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dbrow2{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.hint2{color:var(--dim);font-size:11.5px}
+#scbtn{padding:5px 12px;font-size:11.5px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line);border-radius:16px;padding:4px 11px;font-size:12px;cursor:pointer;user-select:none;transition:.12s;background:#141b28;color:var(--dim)}
+.chip .rn{font-size:10.5px;opacity:.7;margin-left:4px}
+.chip.fix{border-color:#3a4254;color:var(--dim);background:#141b28}
+.chip.rai{border-color:var(--gold);color:var(--gold);background:#2a2415}
+.dchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--acc);border-radius:8px;padding:4px 10px;font-size:12.5px;color:var(--tx);background:#15243a}
+.dchip b{color:var(--gold);cursor:pointer;font-size:13px;padding:0 2px}.dchip b:hover{color:#fff}
+.dsep{color:var(--dim);margin:0 5px}
+.model{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--dim);line-height:1.6}
+.model b{color:var(--tx)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:#182033;color:var(--dim);font-weight:700;position:sticky;top:0;z-index:2;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:72vh}
+tr.site{cursor:pointer}tr.site:hover{background:#1e2738}tr.site>td:first-child{font-weight:700}
+tr.mon{background:#141b28;cursor:pointer}tr.mon:hover{background:#1a2232}
+tr.rt{background:#10151f}
+tr.seas{background:#0c1119;color:var(--dim);font-size:12px}
+th.seacolh{background:#14241a;color:#9fd3af;font-size:11px}
+td.seacol{background:#101a12;font-size:11.5px}td.seacol .arr{color:var(--dim);margin:0 3px}td.seacol b{color:var(--grn)}
+tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold)}tr.tot td{border-bottom:2px solid #4e6180}
+.tw{color:var(--acc)}.up{color:var(--gold);font-weight:700}.new{color:var(--grn);font-weight:700}
+.exp{display:inline-block;width:12px;color:var(--dim)}
+.exp.mo{width:auto;color:var(--acc);cursor:pointer;font-size:11px;margin-left:6px;font-weight:600}
+.exp.mo:hover{color:#8fc4f5}
+.mono{font-variant-numeric:tabular-nums}
+.bar{display:inline-block;height:7px;background:var(--gold);border-radius:3px;vertical-align:middle;margin-left:5px;opacity:.55}
+button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;margin-left:10px}
+.foot{color:var(--dim);font-size:11px;margin-top:10px;line-height:1.6}
+.pad{padding-left:16px}.pad2{padding-left:30px}.pad3{padding-left:44px}.pad4{padding-left:58px}
+</style></head><body>
+<nav class="gsn">
+  <div class="gsn-wrap">
+    <a class="gsn-brand" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/"><span class="gsn-brand-dot">◈</span> SONO GS팀</a>
+    <div class="gsn-links" id="gsn-links">
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-block-sim.html" data-gsn="block-sim">주말 블록 시뮬</a>
+      <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-adr-sim.html" data-gsn="adr-sim">ADR 인상 시뮬</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/ga-analytics.html" data-gsn="ga-analytics">웹 애널리틱스</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/palatium.html" data-gsn="palatium">팔라티움 해운대 by sonofelice 현황 리포트</a>
+      <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/panaq.html" data-gsn="panaq">파나크 영덕 by 소노벨 현황 리포트</a>
+    </div>
+    <button class="gsn-toggle" onclick="document.getElementById('gsn-links').classList.toggle('open')" aria-label="메뉴">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="wrap">
+<h1>2026년 ADR 인상 시뮬레이터 <span class="badge">대외비 · 관리자용</span></h1>
+<div class="sub">실적 기반 · 수요 가중 배분 모델 · 세그 OTA·GOTA·Inbound만 · 주중·금 고정(기본) · 드릴: 사업장·월·세그·객실타입(순서 조절)</div>
+<div class="ctrl"><label>목표 전체 ADR (천원)</label>
+ <div class="tinput">
+  <input type="number" id="target" min="200" max="400" step="1" value="252">
+  <input type="range" id="slider" min="200" max="380" step="1" value="252">
+  <span class="hint">← 목표만 바꾸면 전체 재계산 (디폴트 252)</span>
+  <button class="exp-csv" onclick="exportXlsx()">엑셀 내보내기</button>
+ </div></div>
+<div class="kpis" id="kpis"></div>
+<div class="seasons"><div class="st">■ 인상 대상 시즌 선택 <span style="color:var(--dim);font-weight:400">(클릭해서 고정/인상 전환 · <span style="color:var(--gold)">노랑=인상</span>, 회색=고정)</span></div>
+ <div class="chips" id="chips"></div></div>
+<div class="dimbar">
+ <div class="dbrow"><span class="st">■ 드릴다운 순서</span><span class="hint2">▲ 눌러 앞으로 이동 → 그룹핑 순서 변경</span><span id="dimchips" style="margin-left:auto"></span></div>
+ <div class="dbrow dbrow2"><span class="st">■ 인상대상 시즌별 ADR 열</span><span class="hint2">인상대상 묶음 → 시즌별 "현재 → 인상후" 분리</span>
+  <button class="exp-csv" id="scbtn" style="margin-left:auto" onclick="toggleSeasonCols()">－ 시즌별 열 접기</button></div></div>
+<div class="model"><b>모델</b> — 선택한 인상대상 시즌의 ADR을 <b>인상율 = λ × 수요지수</b> 로 올림 (수요지수 높은 사업장·월일수록 더 인상). <b>λ(람다)는 전부 합쳤을 때 전체 ADR이 목표치에 정확히 떨어지도록 자동 산출되는 공통 배율</b> — <span id="lamval" style="color:var(--gold);font-weight:700"></span>. 예) 수요지수 50% × λ → 인상율. 미선택(고정) 시즌 ADR은 유지.
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--acc)">수요지수란?</b> &nbsp;<b>온라인(OTA·GOTA)·인바운드 실적 RN ÷ 사업계획 가용객실수</b> — 그 사업장·월이 <b>얼마나 찼는지(수요 강도)</b>. 100%에 가까울수록 거의 다 팔린 것이라 <b>가격을 더 올려도 수요가 버팀</b> → 인상폭↑. 낮으면 수요 약함 → 인상폭↓ (약한 곳 보호). <b>주의:</b> 회원·직판·단체 등은 제외(OTA·GOTA·Inbound만)이라 <b>호텔 전체 점유율(OCC)과는 다릅니다</b>.</div></div>
+<div class="tbl-wrap"><table id="tbl">
+<thead><tr>
+<th id="col0head">사업장 / 월 / 세그 / 객실타입</th><th>현재 RN</th><th>수요지수</th><th>현재 ADR</th>
+<th>인상대상<br>현재 ADR</th><th>인상율</th><th>인상대상<br>인상후 ADR</th><th>인상후<br>전체 ADR</th><th>Δ ADR</th>
+</tr></thead><tbody id="tb"></tbody></table></div>
+<div class="foot">
+※ 전체 ADR = Σ(1박객실료×객실수÷1.1) ÷ Σ객실수 (VAT 제외). RN=룸나이트(판매일자 1박 전개). <b>세그 OTA·GOTA·Inbound만 집계</b>(회원·직판·단체 등 기타 제외).<br>
+※ 수요지수 = 온라인(OTA·GOTA)·인바운드 실적 RN ÷ 사업계획 가용객실수 — 호텔 전체 점유율(OCC)과 다름. 용량 폴백(극소 비중)은 월평균 수요지수 적용.<br>
+※ <span style="color:var(--acc)">[＋ 인상대상 시즌별 ADR 열 펼치기]</span> = "인상대상" 묶음을 시즌(토·주말·연휴·최성수기 등)별로 쪼개 <b>현재→인상후 ADR</b>(시즌별로 얼마를 올려야 하는지)을 열로 표시. 가로 스크롤.
+</div>
+</div>
+<script src="./js/menu-visibility.js"></script>
+<script src="./js/visit-log.js"></script>
+<script>
+let D=null, RAISE=[];
+const DIMIDX={site:0,month:1,seg:2,grade:3};
+const DIMLABEL={site:'사업장',month:'월',seg:'세그',grade:'객실타입'};
+let ORDER=['site','month','seg','grade'];
+let EXP=new Set(); let SEASONCOLS=true, RSEAS=[];
+async function boot(){
+  const res=await fetch('data/adr_sim.json?t='+Date.now());
+  D=await res.json();
+  RAISE=D.seasons.map((_,i)=>!D.seasonFixed[i]);
+  renderChips(); renderDimChips();
+  const ti=document.getElementById('target'),sl=document.getElementById('slider');
+  ti.oninput=()=>{sl.value=ti.value;render();}; sl.oninput=()=>{ti.value=sl.value;render();};
+  render();
+}
+const fmt=n=>Math.round(n).toLocaleString();
+const f1=n=>n.toFixed(1);
+const sp=n=>(n>=0?'+':'')+f1(n)+'%';
+const sd=n=>(n>=0?'+':'')+f1(n);
+const adr=(rev,rn)=>rn>0?rev/rn/1000:0;
+const nameOf=(dk,v)=>dk==='site'?D.sites[v]:dk==='month'?v+'월':dk==='seg'?D.segs[v]:D.rts[v];
+function renderChips(){
+  document.getElementById('chips').innerHTML=D.seasons.map((s,i)=>
+    `<span class="chip ${RAISE[i]?'rai':'fix'}" onclick="togSeason(${i})">${RAISE[i]?'인상':'고정'} · ${s}<span class="rn">${fmt(D.seasonRN[i])}</span></span>`).join('');
+}
+function togSeason(i){RAISE[i]=!RAISE[i];renderChips();render();}
+function renderDimChips(){
+  document.getElementById('dimchips').innerHTML=ORDER.map((dk,i)=>
+    `<span class="dchip">${DIMLABEL[dk]}${i>0?` <b onclick="promote(${i})" title="앞으로">▲</b>`:''}</span>`+(i<ORDER.length-1?'<span class="dsep">›</span>':'')).join('');
+}
+function promote(i){ if(i<1)return; const t=ORDER[i-1];ORDER[i-1]=ORDER[i];ORDER[i]=t; EXP.clear(); renderDimChips(); render(); }
+function compute(T){
+  const {cells,occ,RN,REV}=D; let W=0;
+  for(const c of cells){ if(RAISE[c[4]]) W+=c[6]*(occ[c[0]+'_'+c[1]]||0); }
+  const L=W>0?(T*1000*RN-REV)/W:0;
+  const leaves=new Map();
+  for(const c of cells){
+    const si=c[0],mo=c[1],sg=c[2],gr=c[3],se=c[4],rn=c[5],rev=c[6]; const o=occ[si+'_'+mo]||0;
+    const key=si+'|'+mo+'|'+sg+'|'+gr;
+    let lf=leaves.get(key);
+    if(!lf){lf={dims:[si,mo,sg,gr],occ:o,frn:0,frev:0,rrn:0,rrev:0,seas:{}};leaves.set(key,lf);}
+    if(RAISE[se]){lf.rrn+=rn;lf.rrev+=rev;} else {lf.frn+=rn;lf.frev+=rev;}
+    const sO=(lf.seas[se]=lf.seas[se]||{rn:0,rev:0,nrev:0}); sO.rn+=rn; sO.rev+=rev; sO.nrev+= RAISE[se]? rev*(1+L*o):rev;
+  }
+  for(const lf of leaves.values()) lf.nrr=lf.rrev*(1+L*lf.occ);
+  return {L, leaves:[...leaves.values()]};
+}
+function aggLeaves(arr){const a={frn:0,frev:0,rrn:0,rrev:0,nrr:0,occw:0,rn:0,seas:{}};
+  for(const lf of arr){a.frn+=lf.frn;a.frev+=lf.frev;a.rrn+=lf.rrn;a.rrev+=lf.rrev;a.nrr+=lf.nrr;const rn=lf.frn+lf.rrn;a.occw+=lf.occ*rn;a.rn+=rn;
+    for(const se in lf.seas){const s=lf.seas[se];const t=(a.seas[se]=a.seas[se]||{rn:0,rev:0,nrev:0});t.rn+=s.rn;t.rev+=s.rev;t.nrev+=s.nrev;}}return a;}
+function rowCells(a){
+  const occ=a.rn?a.occw/a.rn:0;
+  const cadr=adr(a.frev+a.rrev,a.rn),nadr=adr(a.frev+a.nrr,a.rn),rcadr=adr(a.rrev,a.rrn),rnadr=adr(a.nrr,a.rrn);
+  const up=a.rrev>0?(a.nrr/a.rrev-1)*100:0;
+  let c=`<td class="mono">${fmt(a.rn)}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
+   +`<td class="mono">${a.rrn?f1(rcadr):'-'}</td><td class="mono up">${a.rrn?sp(up):'-'}</td>`
+   +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
+  if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
+    c+= (s&&s.rn)? `<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.rn))}</b></td>` : `<td class="mono seacol">-</td>`; } }
+  c+=`<td class="mono">${f1(nadr)}</td><td class="mono" style="color:var(--gold)">${sd(nadr-cadr)}</td>`;
+  return c;
+}
+const PAD=['','pad','pad2','pad3'];
+function render(){
+  if(!D)return;
+  const T=+document.getElementById('target').value;
+  const {L,leaves}=compute(T); const {RN,REV}=D;
+  let tf=0,tnr=0,tr=0; for(const lf of leaves){tf+=lf.frev;tnr+=lf.nrr;tr+=lf.rrev;}
+  const newADR=(tf+tnr)/RN/1000, curADR=REV/RN/1000, avgUp=tr>0?(tnr/tr-1)*100:0, needM=(T*1000*RN-REV)/1e6;
+  document.getElementById('kpis').innerHTML=[
+   ['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
+   ['인상후 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn'],
+   ['추가 증가 REV',fmt(needM)+'<span style="font-size:12px"> 백만</span>',''],
+   ['인상대상 평균 인상율',(avgUp>=0?'+':'')+f1(avgUp)+'%','red'],
+  ].map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
+  const le=document.getElementById('lamval'); if(le) le.textContent='현재 λ = '+L.toFixed(2);
+  RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
+  let hd=['','현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR','인상율','인상대상<br>인상후 ADR'];
+  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]);
+  hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
+  document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(SEASONCOLS&&i>=7&&i<7+RSEAS.length)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
+  // 전체 행
+  const A=aggLeaves(leaves);
+  let h=`<tr class="tot"><td>■ 전체 (전사 · OTA·GOTA·Inbound)</td>`+rowCells(A)+`</tr>`;
+  h+=renderRows(leaves,0,'',L);
+  document.getElementById('tb').innerHTML=h;
+}
+function renderRows(leaves,depth,path,L){
+  const dk=ORDER[depth], last=depth===ORDER.length-1;
+  const groups=new Map();
+  for(const lf of leaves){const v=lf.dims[DIMIDX[dk]]; if(!groups.has(v))groups.set(v,[]); groups.get(v).push(lf);}
+  let keys=[...groups.keys()];
+  if(dk==='grade') keys.sort((a,b)=>aggLeaves(groups.get(b)).rn-aggLeaves(groups.get(a)).rn);
+  else keys.sort((a,b)=>a-b);
+  let h='';
+  for(const v of keys){
+    const arr=groups.get(v); const a=aggLeaves(arr); if(!a.rn)continue;
+    const p=path+'/'+v; const ex=EXP.has(p);
+    const cls=depth===0?'site':last?'rt':'mon';
+    const label=nameOf(dk,v);
+    if(last){
+      h+=`<tr class="${cls}"><td class="${PAD[depth]}">${label}</td>`+rowCells(a)+`</tr>`;
+    }else{
+      h+=`<tr class="${cls}" onclick="togP('${p}')"><td class="${PAD[depth]}"><span class="exp">${ex?'▾':'▸'}</span>${label}</td>`+rowCells(a)+`</tr>`;
+      if(ex) h+=renderRows(arr,depth+1,p,L);
+    }
+  }
+  return h;
+}
+function togP(p){ if(EXP.has(p))EXP.delete(p); else EXP.add(p); render(); }
+function toggleSeasonCols(){ SEASONCOLS=!SEASONCOLS; document.getElementById('scbtn').textContent=SEASONCOLS?'－ 인상대상 시즌별 ADR 열 접기':'＋ 인상대상 시즌별 ADR 열 펼치기'; render(); }
+function exportXlsx(){
+  if(typeof XLSX==='undefined'){alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 눌러주세요.');return;}
+  const T=+document.getElementById('target').value; const {L,leaves}=compute(T);
+  const raise=D.seasons.filter((_,i)=>RAISE[i]).join(' / ');
+  const header=['사업장','월','세그','객실타입','현재 RN','수요지수','현재 ADR(천)','인상대상 현재ADR(천)','인상율','인상대상 인상후ADR(천)','인상후 전체ADR(천)'];
+  const title='2026년 ADR 인상 시뮬레이터   ·   대외비·관리자용   ·   목표 '+T+'천   ·   세그 OTA·GOTA·Inbound   ·   인상대상: '+raise;
+  const aoa=[[title],header];
+  const ls=leaves.slice().sort((a,b)=> a.dims[0]-b.dims[0] || a.dims[1]-b.dims[1] || a.dims[2]-b.dims[2] || (aggLeaves([b]).rn-aggLeaves([a]).rn));
+  for(const lf of ls){const rn=lf.frn+lf.rrn; if(!rn)continue;
+    const cadr=adr(lf.frev+lf.rrev,rn),nadr=adr(lf.frev+lf.nrr,rn),rcadr=adr(lf.rrev,lf.rrn),rnadr=adr(lf.nrr,lf.rrn);
+    const up=lf.rrev>0?(lf.nrr/lf.rrev-1)*100:0;
+    aoa.push([D.sites[lf.dims[0]],lf.dims[1],D.segs[lf.dims[2]],D.rts[lf.dims[3]],rn,+(lf.occ*100).toFixed(1),+cadr.toFixed(1),lf.rrn?+rcadr.toFixed(1):null,lf.rrn?+up.toFixed(1):null,lf.rrn?+rnadr.toFixed(1):null,+nadr.toFixed(1)]);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const nc=header.length, er=aoa.length-1;
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:nc-1}}];
+  ws['!cols']=[{wch:20},{wch:5},{wch:8},{wch:16},{wch:11},{wch:10},{wch:12},{wch:16},{wch:9},{wch:16},{wch:15}];
+  ws['!rows']=[{hpt:24},{hpt:22}];
+  const F='맑은 고딕', thin={style:'thin',color:{rgb:'BFBFBF'}}, bAll={top:thin,bottom:thin,left:thin,right:thin};
+  const C=(r,c)=>{const a=XLSX.utils.encode_cell({r,c});return ws[a]||(ws[a]={t:'s',v:''});};
+  C(0,0).s={font:{name:F,sz:12,bold:true,color:{rgb:'222222'}},alignment:{horizontal:'left',vertical:'center'}};
+  for(let c=0;c<nc;c++){C(1,c).s={font:{name:F,sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7F7F7F'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:bAll};}
+  const zf={4:'#,##0',5:'0.0"%"',6:'#,##0.0',7:'#,##0.0',8:'+0.0"%";-0.0"%"',9:'#,##0.0',10:'#,##0.0'};
+  for(let r=2;r<=er;r++){for(let c=0;c<nc;c++){const cc=C(r,c);
+    cc.s={font:{name:F,sz:10,color:{rgb:'222222'}},border:bAll,alignment:{horizontal:c<4?'left':'right',vertical:'center'}};
+    if(zf[c]&&typeof cc.v==='number'){cc.t='n';cc.z=zf[c];}
+    if(c===8&&typeof cc.v==='number')cc.s.font={name:F,sz:10,bold:true,color:{rgb:cc.v<0?'C00000':'1F4E79'}};
+  }}
+  ws['!freeze']={xSplit:0,ySplit:2};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ADR 인상 시뮬');
+  XLSX.writeFile(wb,'2026_ADR_인상_시뮬_목표'+T+'(대외비).xlsx');
+}
+boot();
+</script>
+</body></html>
