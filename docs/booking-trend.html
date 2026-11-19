@@ -347,6 +347,62 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
+    <!-- ===== 전략 처방: 채널 진단 → 요금 시뮬 ===== -->
+    <style>
+    #strat .strat-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px}
+    #strat .sv{border-radius:8px;padding:13px 16px;margin-bottom:14px;position:relative;overflow:hidden;border:1px solid var(--rule)}
+    #strat .sv::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+    #strat .sv.ok::before{background:var(--positive)}#strat .sv.warn::before{background:var(--gold)}#strat .sv.bad::before{background:var(--negative)}
+    #strat .sv.ok{background:linear-gradient(90deg,rgba(76,175,111,.10),transparent)}
+    #strat .sv.warn{background:linear-gradient(90deg,rgba(201,160,99,.12),transparent)}
+    #strat .sv.bad{background:linear-gradient(90deg,rgba(229,115,115,.12),transparent)}
+    #strat .svtag{font-size:11px;font-weight:800;padding:2px 10px;border-radius:12px;margin-right:8px}
+    #strat .sv.ok .svtag{background:#1f3a28;color:#7fd8a0}#strat .sv.warn .svtag{background:#3a2f1a;color:var(--gold-bright)}#strat .sv.bad .svtag{background:#3d1f1f;color:#ef9a9a}
+    #strat .svmain{font-size:15px;font-weight:800;line-height:1.5;display:inline}
+    #strat .svmain .mono{font-family:var(--mono)}
+    #strat .pos{color:var(--positive)}#strat .neg{color:var(--negative)}#strat .neu{color:var(--ink-muted)}
+    #strat .issue{font-size:13.5px;font-weight:700;margin:4px 0 12px;line-height:1.5}#strat .issue .bad{color:#ef9a9a}#strat .issue .ok{color:#7fd8a0}
+    #strat table.strat-tb{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
+    #strat .strat-tb th,#strat .strat-tb td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono)}
+    #strat .strat-tb th{color:var(--ink-faint);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+    #strat .strat-tb td:first-child,#strat .strat-tb th:first-child{text-align:left;font-family:var(--sans);font-weight:700}
+    #strat .strat-tb tr.seg td:first-child{color:var(--ink)}
+    #strat .strat-tb tr.part td:first-child{padding-left:22px;color:var(--ink-muted);font-weight:500;font-size:11px}
+    #strat .strat-tb tr.worst td:first-child{color:#ef9a9a}
+    #strat .strat-tb .bar{display:inline-block;height:8px;border-radius:3px;vertical-align:middle;margin-left:6px}
+    #strat .strat-sim{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;margin-top:14px;background:linear-gradient(180deg,rgba(201,160,99,.06),transparent)}
+    #strat .strat-simhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    #strat .strat-slider{display:flex;align-items:center;gap:12px;margin:8px 0}
+    #strat .strat-slider input[type=range]{flex:1;accent-color:var(--gold)}
+    #strat .strat-adrv{font-family:var(--mono);font-size:19px;font-weight:800;color:var(--gold-bright);min-width:110px;text-align:right}
+    #strat .strat-action{background:var(--bg-deep);border:1px solid var(--rule);border-radius:7px;padding:13px 15px;font-size:14px;line-height:1.55;font-weight:600}
+    #strat .strat-action .big{font-family:var(--mono);font-size:21px;font-weight:800;color:var(--gold-bright)}
+    #strat .strat-action .em{color:var(--info);font-weight:800}
+    #strat .strat-feas{margin-top:8px;font-size:12px;font-family:var(--mono)}
+    #strat .strat-gauge{height:11px;background:var(--bg-deep);border-radius:6px;overflow:hidden;margin:10px 0 3px;position:relative}
+    #strat .strat-gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8a6a2e,#e6b970);border-radius:6px}
+    #strat .strat-gauge .cur{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--positive)}
+    #strat .glab{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-faint);font-family:var(--mono)}
+    </style>
+    <div class="chart-card" id="strat">
+      <div class="chart-card-header">
+        <span class="chart-card-title">전략 처방 · 채널 진단 → 요금 시뮬</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)" id="strat-base"></span>
+      </div>
+      <div style="margin-bottom:12px"><div class="strat-lab">투숙월</div><div class="filter-chips" id="strat-mos"></div></div>
+      <div id="strat-verdict"></div>
+      <div id="strat-diag"></div>
+      <div class="strat-sim">
+        <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span><div class="filter-chips" id="strat-tgts"></div></div>
+        <div class="strat-slider"><span style="color:var(--ink-muted);font-size:12px">요금(ADR)</span>
+          <input type="range" id="strat-adr" min="0" max="100" value="100"><span class="strat-adrv" id="strat-adrv">–</span></div>
+        <div class="strat-action" id="strat-action"></div>
+        <div class="strat-gauge" id="strat-gauge"><i id="strat-gfill"></i><div class="cur" id="strat-gcur"></div></div>
+        <div class="glab"><span>현재 온북 <b id="strat-gcurl"></b></span><span>필요 <b id="strat-gneedl"></b></span></div>
+        <div class="strat-feas" id="strat-feas"></div>
+      </div>
+    </div>
+
     <!-- 예약일자별 누적실적 비교 차트 -->
     <div class="chart-card">
       <div class="chart-card-header">
@@ -1126,6 +1182,102 @@ document.querySelectorAll('.dy-ty').forEach(function(el) { el.textContent = _TY;
 document.querySelectorAll('.dy-ly').forEach(function(el) { el.textContent = _LY; });
 
 document.addEventListener('DOMContentLoaded', loadData);
+</script>
+
+<!-- ===== 전략 처방 섹션 스크립트 (자기완결) ===== -->
+<script>
+(function(){
+  let OTB=null, AG=null, SY='2026', SM=11, STGT='ALL', SADR=0;
+  const SEGS=['OTA','G-OTA','Inbound'];
+  const nfmt=n=>Math.round(n).toLocaleString('ko-KR');
+  const eok=w=>w/1e8, f1=n=>n.toFixed(1), sg=n=>(n>=0?'+':'')+n.toFixed(1);
+  const smd=()=>{ const y=OTB&&OTB.allMonthsByYear[SY]; return (y&&y[String(SM)])||null; };
+  const segYoy=x=>x.rev_last>0?(x.rev_actual-x.rev_last)/x.rev_last*100:0;
+  const tgtData=()=>{ const d=smd(); if(!d)return null; return STGT==='ALL'?d.summary:(d.segmentData&&d.segmentData[STGT]); };
+  const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
+  const ym=()=>SY+String(SM).padStart(2,'0');
+  function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
+  function resetSlider(){ const t=tgtData(); if(!t)return; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); document.getElementById('strat-adr').value=Math.round((c-lo)/(hi-lo)*100); SADR=c; }
+  async function sboot(){
+    try{
+      OTB=await (await fetch('data/otb_data.json?t='+Date.now())).json();
+      AG=await (await fetch('data/strategy_agent.json?t='+Date.now())).json();
+    }catch(e){ document.getElementById('strat-verdict').innerHTML='데이터 로드 실패'; return; }
+    const bd=(OTB.meta.baseDate||'2026-11-01').split('-'); SY=bd[0]; SM=+bd[1]||11;
+    document.getElementById('strat-base').textContent='기준일 '+OTB.meta.baseDate+' · 온북 vs 목표·전년';
+    document.getElementById('strat-mos').innerHTML=Array.from({length:12},(_,i)=>`<button class="chip" data-m="${i+1}">${i+1}월</button>`).join('');
+    document.getElementById('strat-tgts').innerHTML=['ALL'].concat(SEGS).map(t=>`<button class="chip" data-t="${t}">${t==='ALL'?'전체':t}</button>`).join('');
+    document.querySelectorAll('#strat-mos .chip').forEach(b=>b.onclick=()=>{SM=+b.dataset.m;syncChips();srender();});
+    document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.onclick=()=>{STGT=b.dataset.t;syncChips();resetSlider();ssim();});
+    document.getElementById('strat-adr').oninput=()=>{SADR=sADR(+document.getElementById('strat-adr').value);ssim();};
+    syncChips(); srender();
+  }
+  function syncChips(){
+    document.querySelectorAll('#strat-mos .chip').forEach(b=>b.classList.toggle('active',+b.dataset.m===SM));
+    document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.classList.toggle('active',b.dataset.t===STGT));
+  }
+  function srender(){ const d=smd();
+    if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
+    const s=d.summary, ach=s.rev_achievement||0, yoy=s.rev_yoy||0, gap=s.rev_budget-s.rev_actual;
+    const v=ach>=100?['ok','양호']:ach>=88?['warn','주의']:['bad','미달'];
+    let msg=v[0]==='ok'?`목표 매출 ${ach>=100?'상회':'근접'} — 현 페이스 유지 시 달성.`
+      :`목표까지 <b class="mono">${f1(eok(gap))}억</b> 부족 — ${v[0]==='bad'?'현 페이스 미달 위험, ':''}아래 처방으로 보완.`;
+    document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
+      +`<span class="svmain">${SY}년 ${SM}월 투숙 · 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · 전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b></span>`
+      +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
+    srenderDiag(d);
+    resetSlider(); ssim();
+  }
+  function srenderDiag(d){
+    const sd=d.segmentData||{}; const segs=SEGS.filter(x=>sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
+    let worst=null,wa=1e9; segs.forEach(x=>{const a=sd[x].rev_achievement||0; if(a<wa){wa=a;worst=x;}});
+    const maxB=Math.max(...segs.map(x=>Math.max(sd[x].rev_budget||0,sd[x].rev_actual||0)),1);
+    // 이슈 헤드라인
+    let head='';
+    if(worst){ const w=sd[worst]; const wy=segYoy(w); const g=(w.rev_budget||0)-(w.rev_actual||0);
+      head=(w.rev_achievement||0)>=100
+        ? `<div class="issue"><span class="ok">✔ 전 채널 목표권</span> — 큰 이슈 없음.</div>`
+        : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
+    }
+    // 테이블
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성/비중</th><th>전년比</th><th>온북RN</th></tr></thead><tbody>`;
+    segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0; const yy=segYoy(o);
+      const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
+      const bw=Math.max(2,(o.rev_actual||0)/maxB*60);
+      t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}<span class="bar" style="width:${bw}px;background:${col}"></span></td>`
+        +`<td>${f1(eok(o.rev_actual||0))}억</td><td>${f1(eok(o.rev_budget||0))}억</td>`
+        +`<td style="color:${col};font-weight:700">${f1(ach)}%</td><td class="${yy>=0?'pos':'neg'}">${sg(yy)}%</td><td>${nfmt(o.rns_actual||0)}</td></tr>`;
+      if((x==='OTA'||x==='G-OTA')&&AG[ym()]&&AG[ym()][x]){
+        const ps=Object.entries(AG[ym()][x]); const tot=ps.reduce((a,[,vv])=>a+vv[0],0)||1;
+        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm}</td><td>${f1(eok(vv[1]))}억</td><td>–</td><td>${(vv[0]/tot*100).toFixed(0)}%</td><td>–</td><td>${nfmt(vv[0])}</td></tr>`; });
+        if(ps.length>5) t+=`<tr class="part"><td>기타 ${ps.length-5}곳</td><td colspan="5"></td></tr>`;
+      }
+    });
+    t+=`</tbody></table>`;
+    document.getElementById('strat-diag').innerHTML=head+t;
+  }
+  function ssim(){ const t=tgtData(), av=document.getElementById('strat-adrv');
+    if(!t||!t.rev_budget){ av.textContent='–'; document.getElementById('strat-action').innerHTML='대상 데이터 없음'; return; }
+    const goal=t.rev_budget, curRN=t.rns_actual||0, cadr=curADR(t), setA=SADR||cadr;
+    av.textContent=nfmt(Math.round(setA/1000))+' 천';
+    const needTot=setA>0?goal/setA:0, needAdd=needTot-curRN, dp=cadr>0?(setA/cadr-1)*100:0, name=STGT==='ALL'?'전체':STGT;
+    document.getElementById('strat-action').innerHTML= needAdd>0
+      ? `<span class="em">${name}</span> ADR을 <b class="mono">${nfmt(Math.round(setA/1000))}천원</b>(${sg(dp)}%)으로 → 목표매출 <b class="mono">${f1(eok(goal))}억</b> 달성에 <span class="big">추가 ${nfmt(needAdd)}실</span> 판매 필요`
+      : `<span class="em">${name}</span> ADR <b class="mono">${nfmt(Math.round(setA/1000))}천원</b> 기준 현 온북으로 <b>달성 가능</b> <span class="big">(여유 ${nfmt(-needAdd)}실)</span>`;
+    const mx=Math.max(needTot,curRN)*1.05||1;
+    document.getElementById('strat-gfill').style.width=(needTot/mx*100).toFixed(1)+'%';
+    document.getElementById('strat-gcur').style.left=(curRN/mx*100).toFixed(1)+'%';
+    document.getElementById('strat-gcurl').textContent=nfmt(curRN)+'실';
+    document.getElementById('strat-gneedl').textContent=nfmt(Math.round(needTot))+'실';
+    const ap=curRN>0?needAdd/curRN*100:0; let fe,fc;
+    if(needAdd<=0){fe='현 온북으로 충분';fc='pos';}
+    else if(ap<=15){fe=`현재 온북 대비 +${f1(ap)}% — 현실적으로 달성 가능`;fc='pos';}
+    else if(ap<=40){fe=`현재 온북 대비 +${f1(ap)}% — 집중 영업 시 가능`;fc='neu';}
+    else {fe=`현재 온북 대비 +${f1(ap)}% — 요금만으론 무리, 프로모·채널 확대 병행 필요`;fc='neg';}
+    document.getElementById('strat-feas').innerHTML=`<span class="${fc}">실현성: ${fe}</span>`;
+  }
+  document.addEventListener('DOMContentLoaded', sboot);
+})();
 </script>
 
 <!-- ============ COPYRIGHT FOOTER ============ -->
