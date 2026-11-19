@@ -349,6 +349,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .strat-tb tr.seg td:first-child{color:var(--ink)}
     #strat .strat-tb tr.part td:first-child{padding-left:22px;color:var(--ink-muted);font-weight:500;font-size:11px}
     #strat .strat-tb .sh{display:inline-block;background:var(--bg-soft);border-radius:10px;padding:0 7px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px}
+    #strat .strat-tb .sh2{font-size:9.5px;font-family:var(--mono);margin-left:3px}
     #strat .strat-tb tr.worst td:first-child{color:#ef9a9a}
     #strat .strat-tb .bar{display:inline-block;height:8px;border-radius:3px;vertical-align:middle;margin-left:6px}
     #strat .strat-sim{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;margin-top:14px;background:linear-gradient(180deg,rgba(201,160,99,.06),transparent)}
@@ -687,7 +688,7 @@ function render() {
   const _ay = parseInt(activeYear);
   const datasets = years.map(y => {
     const cur = y === activeYear, yy = parseInt(y);
-    const alpha = cur ? '' : (yy === _ay - 1 ? '99' : '2e');
+    const alpha = cur ? '' : (yy === _ay - 1 ? 'cc' : '72');
     return {
       label: y + '년',
       data: getYearData(y),
@@ -985,13 +986,14 @@ function renderPaceChart() {
 
     const color = YEAR_COLORS[y] || '#888';
     const isCur = y === activeYear, yy = parseInt(y);
-    const alpha = isCur ? '' : (yy === _pay - 1 ? '99' : '2e');
+    const alpha = isCur ? '' : (yy === _pay - 1 ? 'cc' : '72');
+    const bw0 = isCur ? 2.8 : (yy === _pay - 1 ? 1.5 : 1.1);
     datasets.push({
       label: y + '년 ' + activePaceMonth + '월',
       data: points,
       borderColor: color + alpha,
       backgroundColor: color + '10',
-      borderWidth: isCur ? 2.8 : (yy === _pay - 1 ? 1.4 : 0.8),
+      borderWidth: bw0,
       pointRadius: 0,
       pointHoverRadius: 4,
       tension: 0.2,
@@ -999,6 +1001,24 @@ function renderPaceChart() {
       borderDash: isCur ? [] : [4, 3]
     });
   });
+
+  // 예상(FCST) 파이널까지 투영: 현재 온북 끝점 → 예상 마감
+  try {
+    const curDs = datasets.find(ds => ds.label && ds.label.indexOf(activeYear) === 0);
+    if (curDs && curDs.data.length && OTBD && OTBD.allMonthsByYear[activeYear]) {
+      const _md = OTBD.allMonthsByYear[activeYear][mm];
+      let fcstRN = null;
+      if (_md) fcstRN = activeSegment === '전체' ? (_md.summary && _md.summary.rns_fcst)
+                      : (_md.segmentData && _md.segmentData[activeSegment] && _md.segmentData[activeSegment].rns_fcst);
+      if (fcstRN) {
+        const lp = curDs.data[curDs.data.length - 1];
+        const endD = new Date(parseInt(activeYear), activePaceMonth, 0).getDate() - 1;
+        datasets.push({ label: '예상 마감(FCST)', data: [{ x: lp.x, y: lp.y }, { x: endD, y: fcstRN }],
+          borderColor: '#e6b970', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 4],
+          pointRadius: c => c.dataIndex === 1 ? 4 : 0, pointBackgroundColor: '#e6b970', tension: 0, fill: false });
+      }
+    }
+  } catch (_) {}
 
   if (paceChart) paceChart.destroy();
   const ctx = document.getElementById('pace-chart');
@@ -1026,10 +1046,14 @@ function renderPaceChart() {
       }
       if (scales.x && dToday >= scales.x.min && dToday <= scales.x.max) {
         const px = scales.x.getPixelForValue(dToday);
-        cx.save(); cx.strokeStyle = '#4caf6f'; cx.lineWidth = 1.5;
+        cx.save(); cx.strokeStyle = '#4caf6f'; cx.lineWidth = 2;
         cx.beginPath(); cx.moveTo(px, ca.top); cx.lineTo(px, ca.bottom); cx.stroke();
-        cx.fillStyle = '#4caf6f'; cx.font = '700 10px JetBrains Mono'; cx.textAlign = 'center';
-        cx.fillText('오늘', px, ca.top + 11); cx.restore();
+        cx.font = '800 11px JetBrains Mono'; const lb = '오늘', tw = cx.measureText(lb).width;
+        const bx = px - tw / 2 - 7, by = ca.top + 2, bw = tw + 14, bh = 18;
+        cx.fillStyle = '#4caf6f'; cx.beginPath();
+        if (cx.roundRect) cx.roundRect(bx, by, bw, bh, 4); else cx.rect(bx, by, bw, bh); cx.fill();
+        cx.fillStyle = '#10140d'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.fillText(lb, px, by + bh / 2 + 0.5); cx.restore();
       }
     }
   };
@@ -1337,7 +1361,6 @@ document.addEventListener('DOMContentLoaded', loadData);
   function srenderDiag(d){
     const sd=d.segmentData||{}; const segs=SEGS.filter(x=>sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
     let worst=null,wa=1e9; segs.forEach(x=>{const a=sd[x].rev_achievement||0; if(a<wa){wa=a;worst=x;}});
-    const maxB=Math.max(...segs.map(x=>Math.max(sd[x].rev_budget||0,sd[x].rev_actual||0)),1);
     // 이슈 헤드라인
     let head='';
     if(worst){ const w=sd[worst]; const wy=segYoy(w); const g=(w.rev_budget||0)-(w.rev_actual||0);
@@ -1345,21 +1368,25 @@ document.addEventListener('DOMContentLoaded', loadData);
         ? `<div class="issue"><span class="ok">✔ 전 채널 목표권</span> — 큰 이슈 없음.</div>`
         : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
     }
-    // 테이블
-    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성률</th><th>전년比</th><th>예상마감</th><th>예상 전년比</th><th>온북RN</th></tr></thead><tbody>`;
-    segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0; const yy=segYoy(o);
+    const A=AG[ym()]||{};
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th>전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th><th>온북RN</th></tr></thead><tbody>`;
+    segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0;
       const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
-      const bw=Math.max(2,(o.rev_actual||0)/maxB*60);
-      const fc=o.rev_fcst||0, fyoy=o.rev_last>0?(fc-o.rev_last)/o.rev_last*100:0;
-      t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}<span class="bar" style="width:${bw}px;background:${col}"></span></td>`
-        +`<td>${f1(eok(o.rev_actual||0))}억</td><td>${f1(eok(o.rev_budget||0))}억</td>`
-        +`<td style="color:${col};font-weight:700">${f1(ach)}%</td><td class="${yy>=0?'pos':'neg'}">${sg(yy)}%</td>`
-        +`<td>${fc?f1(eok(fc))+'억':'–'}</td><td class="${fyoy>=0?'pos':'neg'}">${fc?sg(fyoy)+'%':'–'}</td>`
-        +`<td>${nfmt(o.rns_actual||0)}</td></tr>`;
-      if((x==='OTA'||x==='G-OTA')&&AG[ym()]&&AG[ym()][x]){
-        const ps=Object.entries(AG[ym()][x]); const tot=ps.reduce((a,[,vv])=>a+vv[0],0)||1;
-        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm} <span class="sh">${(vv[0]/tot*100).toFixed(0)}%</span></td><td>${f1(eok(vv[1]))}억</td><td></td><td></td><td></td><td></td><td></td><td>${nfmt(vv[0])}</td></tr>`; });
-        if(ps.length>5) t+=`<tr class="part"><td>기타 ${ps.length-5}곳</td><td colspan="7"></td></tr>`;
+      const A2=A[x]||{}; const lys=(A2.lys&&A2.lys[1])||o.rev_last||0, lyf=(A2.lyf&&A2.lyf[1])||0;
+      const on=o.rev_actual||0, bud=o.rev_budget||0, fc=o.rev_fcst||0; const yoy=lys>0?(on-lys)/lys*100:0;
+      t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}</td>`
+        +`<td style="color:${col};font-weight:700">${f1(eok(on))}억</td>`
+        +`<td>${lys?f1(eok(lys))+'억':'–'}${lys?' <span class="sh2 '+(yoy>=0?'pos':'neg')+'">'+sg(yoy)+'%</span>':''}</td>`
+        +`<td>${lyf?f1(eok(lyf))+'억':'–'}</td>`
+        +`<td>${f1(eok(bud))}억</td><td>${fc?f1(eok(fc))+'억':'–'}</td><td>${nfmt(o.rns_actual||0)}</td></tr>`;
+      const ags=A2.agents||{};
+      if((x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
+        const ents=Object.entries(ags); const tot=ents.reduce((a,[,v])=>a+((v.cur&&v.cur[0])||0),0)||1;
+        ents.slice(0,5).forEach(([nm,v])=>{ const c=v.cur||[0,0],ls=v.lys||[0,0],lf=v.lyf||[0,0]; const ay=ls[1]>0?(c[1]-ls[1])/ls[1]*100:0;
+          t+=`<tr class="part"><td>${nm} <span class="sh">${(c[0]/tot*100).toFixed(0)}%</span></td>`
+            +`<td>${f1(eok(c[1]))}억</td><td>${ls[1]?f1(eok(ls[1]))+'억':'–'}${ls[1]?' <span class="sh2 '+(ay>=0?'pos':'neg')+'">'+sg(ay)+'%</span>':''}</td>`
+            +`<td>${lf[1]?f1(eok(lf[1]))+'억':'–'}</td><td></td><td></td><td>${nfmt(c[0])}</td></tr>`; });
+        if(ents.length>5) t+=`<tr class="part"><td>기타 ${ents.length-5}곳</td><td colspan="6"></td></tr>`;
       }
     });
     t+=`</tbody></table>`;
