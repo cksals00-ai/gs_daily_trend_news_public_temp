@@ -111,10 +111,9 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-roomtype.html" data-gsn="roomtype">객실타입별 실적</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-block-sim.html" data-gsn="block-sim">주말 블록 시뮬</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-adr-sim.html" data-gsn="adr-sim">ADR 인상 시뮬</a>
+      <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-adr-sim.html" data-gsn="adr-sim">ADR 인상 시뮬</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/ga-analytics.html" data-gsn="ga-analytics">웹 애널리틱스</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-closing-report.html" data-gsn="closing">마감리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/sono-competitor-crawler/" data-gsn="monitor">경쟁사 모니터링</a>
@@ -126,7 +125,6 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
     </button>
   </div>
 </nav>
-<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;else if(k==='roomtype')hit=h.indexOf('gs-roomtype.html')!==-1;else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;else if(k==='adr-sim')hit=h.indexOf('gs-adr-sim.html')!==-1;else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1&&h.indexOf('panaq')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;else if(k==='panaq')hit=h.indexOf('panaq.html')!==-1;if(hit)a.classList.add('active');});})();</script>
 <div class="wrap">
 <h1>2026년 ADR 인상 시뮬레이터 <span class="badge">대외비 · 관리자용</span></h1>
 <div class="sub">실적 기반 · 수요 가중 배분 모델 · 세그 OTA·GOTA·Inbound만 · 주중·금 고정(기본) · 드릴: 사업장·월·세그·객실타입(순서 조절)</div>
@@ -136,6 +134,7 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
   <button class="mbtn on" id="mode1" onclick="setMode('adr')">옵션1 · ADR 인상</button>
   <button class="mbtn" id="mode2" onclick="setMode('mix')">옵션2 · ADR+물량 복합</button>
   <button class="mbtn" id="mode3" onclick="setMode('mix3')">옵션3 · 고정시즌 ADR 가산</button>
+  <button class="mbtn" id="mode4" onclick="setMode('adr4')">옵션4 · 고정가산+나머지ADR 역산</button>
   <label class="chk"><input type="checkbox" id="inb" onchange="toggleInbound()"> Inbound 포함</label>
   <button class="exp-csv" style="margin-left:auto" onclick="exportXlsx()">엑셀 내보내기</button>
  </div>
@@ -152,7 +151,7 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
   <span class="hint">이 ADR만 올릴 때 → 목표(매출) 달성에 필요한 <b style="color:var(--red)">객실수 인상률</b>을 자동 산출. "어느 시즌" = 선택한 인상대상 시즌.</span></div>
  <div id="opt3row" style="display:none;margin-top:4px;border-top:1px solid var(--line);padding-top:10px">
   <div class="fixhead"><label>고정시즌 ADR 가산 (천원)</label>
-   <span class="hint">고정시즌 ADR에 절대금액을 더함(+5=5천원, +10=1만원) → 목표 달성에 필요한 이동 객실수를 자동 재계산</span>
+   <span class="hint" id="fixhint">고정시즌 ADR에 절대금액을 더함(+5=5천원, +10=1만원) → 목표 달성에 필요한 이동 객실수를 자동 재계산</span>
    <span style="margin-left:auto;display:flex;align-items:center;gap:7px"><span class="hint">적용 범위</span>
     <select class="fscope" id="bscope" onchange="setScope(this.value)"></select>
     <button class="mbtn" onclick="setAllFix(5)">+5천 일괄</button><button class="mbtn" onclick="setAllFix(10)">+1만 일괄</button><button class="mbtn" onclick="setAllFix(0)">0</button></span></div>
@@ -168,7 +167,7 @@ button.exp-csv{background:var(--acc);color:#fff;border:0;border-radius:6px;paddi
  <div class="dbrow"><span class="st">■ 드릴다운 순서</span><span class="hint2">▲ 눌러 앞으로 이동 → 그룹핑 순서 변경</span><span id="dimchips" style="margin-left:auto"></span></div>
  <div class="dbrow dbrow2"><span class="st">■ 인상대상 시즌별 ADR 열</span><span class="hint2">인상대상 묶음 → 시즌별 "현재 → 인상후" 분리</span>
   <button class="exp-csv" id="scbtn" style="margin-left:auto" onclick="toggleSeasonCols()">－ 시즌별 열 접기</button></div></div>
-<div class="model"><b>모델</b> — 선택한 인상대상 시즌의 ADR을 <b>인상율 = λ × 수요지수</b> 로 올림 (수요지수 높은 사업장·월일수록 더 인상). <b>λ(람다)는 전부 합쳤을 때 전체 ADR이 목표치에 정확히 떨어지도록 자동 산출되는 공통 배율</b> — <span id="lamval" style="color:var(--gold);font-weight:700"></span>. 예) 수요지수 50% × λ → 인상율. 미선택(고정) 시즌 ADR은 유지.
+<div class="model"><b>모델</b> — 선택한 인상대상 시즌의 ADR을 <b>인상율 = λ × 수요지수</b> 로 올림 (수요지수 높은 사업장·월일수록 더 인상). <b>λ(람다)는 전부 합쳤을 때 전체 ADR이 목표치에 정확히 떨어지도록 자동 산출되는 공통 배율</b> — <span id="lamval" style="color:var(--gold);font-weight:700"></span>. 예) 수요지수 50% × λ → 인상율. <span id="fixnote">미선택(고정) 시즌 ADR은 유지.</span>
 <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--acc)">수요지수란?</b> &nbsp;<b>온라인(OTA·GOTA)·인바운드 실적 RN ÷ 사업계획 가용객실수</b> — 그 사업장·월이 <b>얼마나 찼는지(수요 강도)</b>. 100%에 가까울수록 거의 다 팔린 것이라 <b>가격을 더 올려도 수요가 버팀</b> → 인상폭↑. 낮으면 수요 약함 → 인상폭↓ (약한 곳 보호). <b>주의:</b> 회원·직판·단체 등은 제외(OTA·GOTA·Inbound만)이라 <b>호텔 전체 점유율(OCC)과는 다릅니다</b>.</div></div>
 <div class="tbl-wrap"><table id="tbl">
 <thead><tr>
@@ -196,6 +195,7 @@ let ADRPCT=10;       // 옵션2: ADR 인상률 입력 %
 let LASTRNPCT=0;     // 옵션2 산출된 필요 RN%
 let FIXBUMP={}, BUMPSCOPE=-1;   // 옵션3: 고정시즌 ADR 가산(천원). {'*':{se:v}, siteIdx:{se:v}} · BUMPSCOPE -1=전체
 function incSeg(sg){ return sg<=1 || (INBOUND && sg===2); }  // OTA=0,G-OTA=1,Inbound=2
+function isLam(){ return MODE==='adr'||MODE==='adr4'; }  // λ-역산 계열(옵션1·4) vs 믹스전환(옵션2·3)
 async function boot(){
   const res=await fetch('data/adr_sim.json?t='+Date.now());
   D=await res.json();
@@ -214,9 +214,16 @@ function setMode(m){ MODE=m;
   document.getElementById('mode1').classList.toggle('on',m==='adr');
   document.getElementById('mode2').classList.toggle('on',m==='mix');
   document.getElementById('mode3').classList.toggle('on',m==='mix3');
+  document.getElementById('mode4').classList.toggle('on',m==='adr4');
   document.getElementById('opt1row').style.display=(m==='adr')?'':'none';
   document.getElementById('opt2row').style.display=(m==='mix'||m==='mix3')?'':'none';
-  document.getElementById('opt3row').style.display=(m==='mix3')?'':'none';
+  document.getElementById('opt3row').style.display=(m==='mix3'||m==='adr4')?'':'none';
+  const fh=document.getElementById('fixhint'); if(fh) fh.textContent=(m==='adr4')
+    ?'고정시즌 ADR에 절대금액을 더함(+5=5천원, +10=1만원) → 목표 달성에 필요한 나머지(인상)시즌 ADR 인상율을 자동 역산(물량·믹스 이동 없음, RN 고정)'
+    :'고정시즌 ADR에 절대금액을 더함(+5=5천원, +10=1만원) → 목표 달성에 필요한 이동 객실수를 자동 재계산';
+  const fn=document.getElementById('fixnote'); if(fn) fn.textContent=(m==='adr4')
+    ?"미선택(고정) 시즌 ADR은 아래 '고정시즌 ADR 가산'만큼 더하고(인상 아님), 그 상태에서 인상대상 ADR 인상율을 역산."
+    :'미선택(고정) 시즌 ADR은 유지.';
   renderFixBumps();
   render();
 }
@@ -298,12 +305,20 @@ function compute(){
   }
   const LV=[...leaves.values()];
   let L=0, RNPCT=0, SHIFT=0, DF=0; const targetREV=T*1000*RNbase;
-  if(MODE==='adr'){
-    let RNnew=0,REVfix=0,REVrai0=0,W=0;
-    for(const lf of LV){ RNnew+=lf.frn+lf.rrn*volf; REVfix+=lf.frev; REVrai0+=lf.rrev*volf; W+=lf.rrev*volf*lf.occ; }
-    L = W>0? (T*1000*RNnew-REVfix-REVrai0)/W : 0;
-    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*volf; lf.nrr=lf.rrev*volf*(1+L*lf.occ); lf.nfrev=lf.frev;
-      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se]; s.nrn=isR?s.rn*volf:s.rn; s.nrev=isR?s.rev*volf*(1+L*lf.occ):s.rev;} }
+  if(MODE==='adr'||MODE==='adr4'){
+    // 옵션1·4: 전체 RN 고정(옵션1은 물량 what-if 허용) · 인상대상 ADR = λ×수요지수 역산
+    //          옵션4 = 옵션3처럼 고정시즌 ADR 절대가산 선반영 후, 나머지(인상) ADR 역산(믹스 이동 없음)
+    const useVol=(MODE==='adr'), useB=(MODE==='adr4'), vfac=useVol?volf:1;
+    let RNnew=0,REVfix=0,REVrai0=0,W=0,B=0;
+    for(const lf of LV){ RNnew+=lf.frn+lf.rrn*vfac; REVfix+=lf.frev; REVrai0+=lf.rrev*vfac; W+=lf.rrev*vfac*lf.occ;
+      if(useB) for(const se in lf.seas){ if(!RAISE[se]){ const b=effBump(lf.dims[0],+se); if(b) B+=b*1000*lf.seas[se].rn; } } }
+    const FB=REVfix+B;
+    L = W>0? (T*1000*RNnew-FB-REVrai0)/W : 0;
+    for(const lf of LV){ lf.nrn=lf.frn+lf.rrn*vfac; lf.nrr=lf.rrev*vfac*(1+L*lf.occ); let fnew=0;
+      for(const se in lf.seas){const s=lf.seas[se];const isR=RAISE[se];
+        if(isR){ s.nrn=s.rn*vfac; s.nrev=s.rev*vfac*(1+L*lf.occ); }
+        else { const b=useB?effBump(lf.dims[0],+se):0; s.nrn=s.rn; s.nrev=s.rev+b*1000*s.rn; fnew+=s.nrev; } }
+      lf.nfrev=fnew; }
   } else {
     // 옵션2/3: 전체 RN 고정 · 고정↔인상 물량 비율 이동 + 인상시즌 ADR% (+옵션3: 고정시즌 ADR 절대가산) → 목표 ADR
     const adr=1+ADRPCT/100, useB=(MODE==='mix3');
@@ -331,15 +346,15 @@ function rowCells(a){
   let rrn_new=0; for(const se in a.seas){ if(RAISE[se]) rrn_new+=(a.seas[se].nrn||0); }
   const cadr=adr(a.frev+a.rrev,rn), nadr=adr(a.nfrev+a.nrr,a.nrn||rn), rcadr=adr(a.rrev,a.rrn), rnadr=adr(a.nrr,rrn_new);
   const up=rcadr>0?(rnadr/rcadr-1)*100:0;
-  const rncell = MODE!=='adr' ? `${fmt(rn)}<span class="arr">→</span><b style="color:var(--grn)">${fmt(Math.round(a.nrn||rn))}</b>` : fmt(rn);
+  const rncell = !isLam() ? `${fmt(rn)}<span class="arr">→</span><b style="color:var(--grn)">${fmt(Math.round(a.nrn||rn))}</b>` : fmt(rn);
   let c=`<td class="mono">${rncell}</td><td class="mono tw">${f1(occ*100)}%</td><td class="mono">${f1(cadr)}</td>`
    +`<td class="mono">${a.rrn?f1(rcadr):'-'}</td><td class="mono up">${a.rrn?sp(up):'-'}</td>`
    +`<td class="mono new">${a.rrn?f1(rnadr):'-'}</td>`;
-  if(MODE!=='adr'){ const uprn=a.rrn?(rrn_new/a.rrn-1)*100:0;
+  if(!isLam()){ const uprn=a.rrn?(rrn_new/a.rrn-1)*100:0;
     c+=`<td class="mono">${a.rrn?fmt(a.rrn):'-'}</td><td class="mono up" style="color:var(--red)">${a.rrn?sp(uprn):'-'}</td><td class="mono" style="color:var(--grn);font-weight:700">${a.rrn?fmt(Math.round(rrn_new)):'-'}</td>`; }
   if(SEASONCOLS){ for(const se of RSEAS){ const s=a.seas[se];
     if(!(s&&s.rn)){ c+=`<td class="mono seacol">-</td>`; continue; }
-    if(MODE!=='adr') c+=`<td class="mono seacol"><div>${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></div><div class="subadr">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b>천</div></td>`;
+    if(!isLam()) c+=`<td class="mono seacol"><div>${fmt(s.rn)}<span class="arr">→</span><b>${fmt(Math.round(s.nrn||s.rn))}</b></div><div class="subadr">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b>천</div></td>`;
     else c+=`<td class="mono seacol">${f1(adr(s.rev,s.rn))}<span class="arr">→</span><b>${f1(adr(s.nrev,s.nrn||s.rn))}</b></td>`;
   } }
   c+=`<td class="mono">${f1(nadr)}</td><td class="mono" style="color:var(--gold)">${sd(nadr-cadr)}</td>`;
@@ -353,7 +368,7 @@ function render(){
   const curADR=R.RNbase?R.REVbase/R.RNbase/1000:0;
   const newTotRN=A.nrn||R.RNbase, newTotREV=A.nfrev+A.nrr, newADR=newTotRN?newTotREV/newTotRN/1000:0;
   let kpi;
-  if(MODE==='adr'){
+  if(isLam()){
     const rrnNew=(A.nrn-A.frn)||1; const avgUp=A.rrev>0?((A.nrr/rrnNew)/(A.rrev/A.rrn)-1)*100:0;
     kpi=[['현재 전체 ADR',f1(curADR)+'<span style="font-size:12px"> 천</span>',''],
      ['인상후 전체 ADR',f1(newADR)+'<span style="font-size:12px"> 천</span>','grn'],
@@ -368,18 +383,18 @@ function render(){
   document.getElementById('kpis').innerHTML=kpi.map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
   // 고정:인상 비율 카드 (옵션2)
   const rc=document.getElementById('ratiocard');
-  if(MODE!=='adr'){ const fx=A.frn, rx=A.rrn, tot=fx+rx||1, fx2=fx-R.SHIFT, rx2=rx+R.SHIFT;
+  if(!isLam()){ const fx=A.frn, rx=A.rrn, tot=fx+rx||1, fx2=fx-R.SHIFT, rx2=rx+R.SHIFT;
     const rr=(a,b)=>{const t=a+b||1;let x=Math.round(a/t*10);x=Math.max(0,Math.min(10,x));return x+':'+(10-x);};
     rc.style.display=''; rc.innerHTML=`<span class="rlab">고정 : 인상 비율 (전체 RN · 총량 고정)</span>`
      +`<span class="rval">기존 <b>${fmt(fx)} : ${fmt(rx)}</b>실 (<b>${rr(fx,rx)}</b>) &nbsp;→&nbsp; 변경 <b class="chg">${fmt(Math.round(fx2))} : ${fmt(Math.round(rx2))}</b>실 (<b class="chg">${rr(fx2,rx2)}</b>)</span>`;
   } else rc.style.display='none';
-  const le=document.getElementById('lamval'); if(le) le.textContent= MODE==='adr'? ('현재 λ = '+R.L.toFixed(2)) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
+  const le=document.getElementById('lamval'); if(le) le.textContent= isLam()? ('현재 λ = '+R.L.toFixed(2)+(MODE==='adr4'?' · 고정시즌 ADR 가산 선반영 후 역산':'')) : ('목표매출 '+fmt(R.targetREV/1e6)+'백만(전체ADR '+f1(R.T)+'천 환산) · ADR +'+f1(ADRPCT)+'% → 객실수 '+(R.RNPCT>=0?'+':'')+f1(R.RNPCT*100)+'% 필요');
   RSEAS=D.seasons.map((s,i)=>i).filter(i=>RAISE[i]);
-  let hd=['',MODE!=='adr'?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',MODE!=='adr'?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
-  if(MODE!=='adr') hd.push('인상대상<br>현재 객실수','객실수<br>인상률','인상대상<br>인상후 객실수');
-  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(MODE!=='adr'?'<br>(객실수 / ADR)':''));
+  let hd=['',!isLam()?'현재→필요 RN':'현재 RN','수요지수','현재 ADR','인상대상<br>현재 ADR',!isLam()?'ADR 인상율':'인상율','인상대상<br>인상후 ADR'];
+  if(!isLam()) hd.push('인상대상<br>현재 객실수','객실수<br>인상률','인상대상<br>인상후 객실수');
+  if(SEASONCOLS) for(const se of RSEAS) hd.push('↑ '+D.seasons[se]+(!isLam()?'<br>(객실수 / ADR)':''));
   hd.push('인상후<br>전체 ADR','Δ ADR'); hd[0]=ORDER.map(dk=>DIMLABEL[dk]).join(' › ');
-  const scStart=7+(MODE!=='adr'?3:0), scCount=(SEASONCOLS?RSEAS.length:0);
+  const scStart=7+(!isLam()?3:0), scCount=(SEASONCOLS?RSEAS.length:0);
   document.querySelector('#tbl thead').innerHTML='<tr>'+hd.map((t,i)=>`<th${i===0?' id="col0head"':''}${(i>=scStart&&i<scStart+scCount)?' class="seacolh"':''}>${t}</th>`).join('')+'</tr>';
   let h=`<tr class="tot"><td>■ 전체 (전사${INBOUND?' · OTA·GOTA·Inbound':' · OTA·GOTA'})</td>`+rowCells(A)+`</tr>`;
   h+=renderRows(leaves,0,'',R.L);
@@ -413,7 +428,7 @@ function exportXlsx(){
   if(typeof XLSX==='undefined'){alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 눌러주세요.');return;}
   const R=compute(); const leaves=R.leaves;
   const raise=D.seasons.filter((_,i)=>RAISE[i]).join(' / ');
-  const modestr=MODE==='adr'?('옵션1·ADR인상 목표'+R.T+'천'+(VOLPCT?(' 물량'+(VOLPCT>=0?'+':'')+VOLPCT+'%'):'')):((MODE==='mix3'?'옵션3':'옵션2')+'·ADR+'+ADRPCT+'% → 객실수'+(R.RNPCT>=0?'+':'')+(R.RNPCT*100).toFixed(1)+'%'+(MODE==='mix3'?' · 고정시즌ADR가산':''));
+  const modestr=MODE==='adr'?('옵션1·ADR인상 목표'+R.T+'천'+(VOLPCT?(' 물량'+(VOLPCT>=0?'+':'')+VOLPCT+'%'):'')):MODE==='adr4'?('옵션4·고정가산+나머지ADR역산 목표'+R.T+'천'):((MODE==='mix3'?'옵션3':'옵션2')+'·ADR+'+ADRPCT+'% → 객실수'+(R.RNPCT>=0?'+':'')+(R.RNPCT*100).toFixed(1)+'%'+(MODE==='mix3'?' · 고정시즌ADR가산':''));
   const header=['사업장','월','세그','객실타입','현재 RN','새 RN','수요지수','현재 ADR(천)','인상대상 현재ADR(천)','ADR인상율','인상대상 인상후ADR(천)','인상후 전체ADR(천)'];
   const title='2026년 ADR 인상 시뮬레이터 · 대외비·관리자용 · '+modestr+' · 세그 OTA·GOTA'+(INBOUND?'·Inbound':'')+' · 인상대상: '+raise;
   const aoa=[[title],header];
