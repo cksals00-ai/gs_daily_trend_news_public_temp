@@ -333,8 +333,9 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .svmain .mono{font-family:var(--mono)}
     #strat .pos{color:var(--positive)}#strat .neg{color:var(--negative)}#strat .neu{color:var(--ink-muted)}
     #strat .issue{font-size:13.5px;font-weight:700;margin:4px 0 12px;line-height:1.5}#strat .issue .bad{color:#ef9a9a}#strat .issue .ok{color:#7fd8a0}
-    #strat .strat-minis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-    @media(max-width:640px){#strat .strat-minis{grid-template-columns:1fr}}
+    #strat .strat-minis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+    @media(max-width:860px){#strat .strat-minis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){#strat .strat-minis{grid-template-columns:1fr}}
     #strat .smini{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;position:relative;overflow:hidden}
     #strat .smini::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
     #strat .smini.b::before{background:var(--info)}#strat .smini.g::before{background:var(--positive)}
@@ -392,6 +393,10 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
         </div>
       </div>
       <div style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:12px;" id="pace-month-chips"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);">D-범위 줌</span>
+        <div class="filter-chips" id="pace-range"></div>
+      </div>
       <div class="chart-canvas-wrap" style="height:380px;">
         <canvas id="pace-chart"></canvas>
       </div>
@@ -678,20 +683,24 @@ function render() {
   setText('table-label', years.join(' · ') + ' 비교');
 
   // Chart
-  // 핵심만: 기준연도(굵게) + 직전연도(흐릿). 옛해는 숨김.
-  const shownYears = years.filter(y => parseInt(y) >= parseInt(activeYear) - 1);
-  const datasets = shownYears.map(y => ({
-    label: y + '년',
-    data: getYearData(y),
-    borderColor: (YEAR_COLORS[y] || '#888') + (y === activeYear ? '' : '55'),
-    backgroundColor: (YEAR_COLORS[y] || '#888') + '14',
-    borderWidth: y === activeYear ? 3 : 1.3,
-    pointRadius: y === activeYear ? 3 : 0,
-    pointHoverRadius: 5,
-    tension: 0.3,
-    fill: false,
-    borderDash: y === activeYear ? [] : [4, 3]
-  }));
+  // 기준연도 굵게 · 직전연도 흐릿 · 옛해는 아주 흐릿(사라지지 않게)
+  const _ay = parseInt(activeYear);
+  const datasets = years.map(y => {
+    const cur = y === activeYear, yy = parseInt(y);
+    const alpha = cur ? '' : (yy === _ay - 1 ? '99' : '2e');
+    return {
+      label: y + '년',
+      data: getYearData(y),
+      borderColor: (YEAR_COLORS[y] || '#888') + alpha,
+      backgroundColor: (YEAR_COLORS[y] || '#888') + '10',
+      borderWidth: cur ? 3 : (yy === _ay - 1 ? 1.4 : 0.8),
+      pointRadius: cur ? 3 : 0,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      fill: false,
+      borderDash: cur ? [] : [4, 3]
+    };
+  });
 
   // ── 목표·예상(FCST) 오버레이: 기준연도 · 전체 권역 ──────────────
   let overlayLabels = [];
@@ -738,8 +747,8 @@ function render() {
   // Legend
   const legend = document.getElementById('trend-legend');
   if (legend) {
-    legend.innerHTML = shownYears.map(y =>
-      `<div class="chart-legend-item"><div class="legend-dot" style="background:${YEAR_COLORS[y] || '#888'};${y === activeYear ? '' : 'opacity:0.5;'}"></div>${y}년${y === activeYear ? ' ★' : ''}</div>`
+    legend.innerHTML = years.map(y =>
+      `<div class="chart-legend-item"><div class="legend-dot" style="background:${YEAR_COLORS[y] || '#888'};${y === activeYear ? '' : (parseInt(y) === _ay - 1 ? 'opacity:0.6;' : 'opacity:0.28;')}"></div>${y}년${y === activeYear ? ' ★' : ''}</div>`
     ).join('') + overlayLabels.map(([lb, c]) =>
       `<div class="chart-legend-item"><div class="legend-dot" style="background:${c};border-radius:1px;width:14px;height:0;border-top:2px dashed ${c};"></div>${lb}</div>`
     ).join('');
@@ -873,6 +882,18 @@ function setText(id, v) {
 // ── 예약 페이스 차트 ──
 let paceChart = null;
 let activePaceMonth = new Date().getMonth() + 1; // 현재 월 기본
+let PACE_XMIN = -90; // 페이스 D-범위 줌(좌측 시작). null=전체
+function buildPaceRange() {
+  const el = document.getElementById('pace-range');
+  if (!el) return;
+  const opts = [{ l: 'D-30', v: -30 }, { l: 'D-60', v: -60 }, { l: 'D-90', v: -90 }, { l: '전체', v: null }];
+  el.innerHTML = opts.map(o => `<button class="chip${o.v === PACE_XMIN ? ' active' : ''}" data-v="${o.v}">${o.l}</button>`).join('');
+  el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+    PACE_XMIN = b.dataset.v === 'null' ? null : parseInt(b.dataset.v, 10);
+    el.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === b));
+    renderPaceChart();
+  }));
+}
 
 function buildPaceMonthChips() {
   const c = document.getElementById('pace-month-chips');
@@ -941,8 +962,8 @@ function renderPaceChart() {
     return any ? acc : null;
   }
 
+  const _pay = parseInt(activeYear);
   years.forEach(y => {
-    if (parseInt(y) < parseInt(activeYear) - 1) return; // 핵심만: 기준연도 + 직전연도
     const monthKey = y + mm;
     const monthData = _getMonthData(monthKey);
     if (!monthData) return;
@@ -963,13 +984,14 @@ function renderPaceChart() {
     });
 
     const color = YEAR_COLORS[y] || '#888';
-    const isCur = y === activeYear;
+    const isCur = y === activeYear, yy = parseInt(y);
+    const alpha = isCur ? '' : (yy === _pay - 1 ? '99' : '2e');
     datasets.push({
       label: y + '년 ' + activePaceMonth + '월',
       data: points,
-      borderColor: color,
-      backgroundColor: color + '22',
-      borderWidth: isCur ? 2.5 : 1.5,
+      borderColor: color + alpha,
+      backgroundColor: color + '10',
+      borderWidth: isCur ? 2.8 : (yy === _pay - 1 ? 1.4 : 0.8),
       pointRadius: 0,
       pointHoverRadius: 4,
       tension: 0.2,
@@ -1037,6 +1059,7 @@ function renderPaceChart() {
       scales: {
         x: {
           type: 'linear',
+          min: (PACE_XMIN == null ? undefined : PACE_XMIN),
           title: { display: true, text: '투숙월 1일 기준 (일)', color: 'rgba(255,255,255,0.3)', font: { family: 'JetBrains Mono', size: 10 } },
           grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: {
@@ -1237,6 +1260,7 @@ async function loadData() {
     buildFilters();
     render();
     buildPaceMonthChips();
+    buildPaceRange();
     renderPaceChart();
     loadSameMonthRatio();
   } catch (e) {
@@ -1305,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', loadData);
       ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', '', ach>=100?'pos':ach>=88?'neu':'neg'],
       ['온북 객실수', nfmt(s.rns_actual)+'<span style="font-size:11px">실</span>', '목표 '+nfmt(s.rns_budget)+' · '+f1(s.rns_achievement||0)+'%', 'b', (s.rns_achievement||0)>=100?'pos':(s.rns_achievement||0)>=88?'neu':'neg'],
       ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(s.adr_yoy||0)+'%', 'g', (s.adr_yoy||0)>=0?'pos':'neg'],
+      ['예상 마감', f1(eok(s.rev_fcst||0))+'<span style="font-size:11px">억</span>', '전년 '+f1(eok(s.rev_last||0))+'억 · 예상 '+sg(s.rev_last>0?(s.rev_fcst-s.rev_last)/s.rev_last*100:0)+'%', '', (s.rev_last>0&&(s.rev_fcst||0)>=s.rev_last)?'pos':'neg'],
     ].map(k=>`<div class="smini ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
     resetSlider(); ssim();
@@ -1321,17 +1346,20 @@ document.addEventListener('DOMContentLoaded', loadData);
         : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
     }
     // 테이블
-    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성률</th><th>전년比</th><th>온북RN</th></tr></thead><tbody>`;
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성률</th><th>전년比</th><th>예상마감</th><th>예상 전년比</th><th>온북RN</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0; const yy=segYoy(o);
       const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
       const bw=Math.max(2,(o.rev_actual||0)/maxB*60);
+      const fc=o.rev_fcst||0, fyoy=o.rev_last>0?(fc-o.rev_last)/o.rev_last*100:0;
       t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}<span class="bar" style="width:${bw}px;background:${col}"></span></td>`
         +`<td>${f1(eok(o.rev_actual||0))}억</td><td>${f1(eok(o.rev_budget||0))}억</td>`
-        +`<td style="color:${col};font-weight:700">${f1(ach)}%</td><td class="${yy>=0?'pos':'neg'}">${sg(yy)}%</td><td>${nfmt(o.rns_actual||0)}</td></tr>`;
+        +`<td style="color:${col};font-weight:700">${f1(ach)}%</td><td class="${yy>=0?'pos':'neg'}">${sg(yy)}%</td>`
+        +`<td>${fc?f1(eok(fc))+'억':'–'}</td><td class="${fyoy>=0?'pos':'neg'}">${fc?sg(fyoy)+'%':'–'}</td>`
+        +`<td>${nfmt(o.rns_actual||0)}</td></tr>`;
       if((x==='OTA'||x==='G-OTA')&&AG[ym()]&&AG[ym()][x]){
         const ps=Object.entries(AG[ym()][x]); const tot=ps.reduce((a,[,vv])=>a+vv[0],0)||1;
-        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm} <span class="sh">${(vv[0]/tot*100).toFixed(0)}%</span></td><td>${f1(eok(vv[1]))}억</td><td></td><td></td><td></td><td>${nfmt(vv[0])}</td></tr>`; });
-        if(ps.length>5) t+=`<tr class="part"><td>기타 ${ps.length-5}곳</td><td colspan="5"></td></tr>`;
+        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm} <span class="sh">${(vv[0]/tot*100).toFixed(0)}%</span></td><td>${f1(eok(vv[1]))}억</td><td></td><td></td><td></td><td></td><td></td><td>${nfmt(vv[0])}</td></tr>`; });
+        if(ps.length>5) t+=`<tr class="part"><td>기타 ${ps.length-5}곳</td><td colspan="7"></td></tr>`;
       }
     });
     t+=`</tbody></table>`;
