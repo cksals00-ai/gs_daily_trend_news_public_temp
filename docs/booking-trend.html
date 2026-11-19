@@ -375,7 +375,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       <div id="strat-minis" class="strat-minis"></div>
       <div id="strat-diag"></div>
       <div class="strat-sim">
-        <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span><div class="filter-chips" id="strat-tgts"></div></div>
+        <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span> <span id="strat-tgtlabel" style="font-family:var(--mono);font-size:13px;color:var(--gold-bright);font-weight:800">전체</span> <span style="font-size:10.5px;color:var(--ink-faint)">← 좌측 세그먼트와 연동</span></div>
         <div class="strat-slider"><span style="color:var(--ink-muted);font-size:12px">요금(ADR)</span>
           <input type="range" id="strat-adr" min="0" max="100" value="100"><span class="strat-adrv" id="strat-adrv">–</span></div>
         <div class="strat-action" id="strat-action"></div>
@@ -773,6 +773,7 @@ function buildSegChips() {
           .forEach(b => b.classList.toggle('active', b.textContent === activeSegment));
         render();
         renderPaceChart();
+        if (window.stratRefresh) window.stratRefresh();
       });
       c.appendChild(btn);
     });
@@ -1304,13 +1305,16 @@ document.addEventListener('DOMContentLoaded', loadData);
 <!-- ===== 전략 처방 섹션 스크립트 (자기완결) ===== -->
 <script>
 (function(){
-  let OTB=null, AG=null, SY='2026', SM=11, STGT='ALL', SADR=0;
+  let OTB=null, AG=null, SY='2026', SM=11, SADR=0;
   const SEGS=['OTA','G-OTA','Inbound'];
   const nfmt=n=>Math.round(n).toLocaleString('ko-KR');
   const eok=w=>w/1e8, f1=n=>n.toFixed(1), sg=n=>(n>=0?'+':'')+n.toFixed(1);
   const smd=()=>{ const y=OTB&&OTB.allMonthsByYear[SY]; return (y&&y[String(SM)])||null; };
   const segYoy=x=>x.rev_last>0?(x.rev_actual-x.rev_last)/x.rev_last*100:0;
-  const tgtData=()=>{ const d=smd(); if(!d)return null; return STGT==='ALL'?d.summary:(d.segmentData&&d.segmentData[STGT]); };
+  // 세그먼트 = 좌측 사이드바(activeSegment) 단일 소스
+  const curSeg=()=> (typeof activeSegment!=='undefined' && activeSegment && activeSegment!=='전체') ? activeSegment : 'ALL';
+  const segLabel=()=>{ const s=curSeg(); return s==='ALL'?'전체':s; };
+  const tgtData=()=>{ const d=smd(); if(!d)return null; const s=curSeg(); return s==='ALL'?d.summary:(d.segmentData&&d.segmentData[s]); };
   const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
@@ -1323,15 +1327,15 @@ document.addEventListener('DOMContentLoaded', loadData);
     const bd=(OTB.meta.baseDate||'2026-11-01').split('-'); SY=bd[0]; SM=+bd[1]||11;
     document.getElementById('strat-base').textContent='기준일 '+OTB.meta.baseDate+' · 온북 vs 목표·전년';
     const umos=document.getElementById('uni-mos'); if(umos) umos.innerHTML=Array.from({length:12},(_,i)=>`<button class="chip" data-m="${i+1}">${i+1}월</button>`).join('');
-    document.getElementById('strat-tgts').innerHTML=['ALL'].concat(SEGS).map(t=>`<button class="chip" data-t="${t}">${t==='ALL'?'전체':t}</button>`).join('');
     document.querySelectorAll('#uni-mos .chip').forEach(b=>b.onclick=()=>window.stratSetMonth(+b.dataset.m));
-    document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.onclick=()=>{STGT=b.dataset.t;syncChips();resetSlider();ssim();});
     document.getElementById('strat-adr').oninput=()=>{SADR=sADR(+document.getElementById('strat-adr').value);ssim();};
     syncChips(); srender();
   }
+  // 좌측 세그먼트 변경 시 전략 섹션 전체 갱신
+  window.stratRefresh=function(){ const lbl=document.getElementById('strat-tgtlabel'); if(lbl) lbl.textContent=segLabel(); resetSlider(); srender(); };
   function syncChips(){
     document.querySelectorAll('#uni-mos .chip').forEach(b=>b.classList.toggle('active',+b.dataset.m===SM));
-    document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.classList.toggle('active',b.dataset.t===STGT));
+    const lbl=document.getElementById('strat-tgtlabel'); if(lbl) lbl.textContent=segLabel();
   }
   // 월 하나로 구동: 전략 섹션 + 사업장별 상세(START 드릴) 동시 연동
   window.stratSetMonth=function(m){ SM=m; syncChips(); srender();
@@ -1342,17 +1346,21 @@ document.addEventListener('DOMContentLoaded', loadData);
   };
   function srender(){ const d=smd();
     if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
-    const s=d.summary, ach=s.rev_achievement||0, yoy=s.rev_yoy||0, gap=s.rev_budget-s.rev_actual;
+    const base=tgtData()||d.summary, s=base;
+    const ach=s.rev_achievement||0;
+    const yoy = s.rev_yoy!=null ? s.rev_yoy : (s.rev_last>0?(s.rev_actual-s.rev_last)/s.rev_last*100:0);
+    const adrYoy = s.adr_yoy!=null ? s.adr_yoy : (s.adr_last>0?(s.adr_actual/s.adr_last-1)*100:0);
+    const gap=(s.rev_budget||0)-(s.rev_actual||0), sgl=segLabel();
     const v=ach>=100?['ok','양호']:ach>=88?['warn','주의']:['bad','미달'];
     let msg=v[0]==='ok'?`목표 매출 ${ach>=100?'상회':'근접'} — 현 페이스 유지 시 달성.`
       :`목표까지 <b class="mono">${f1(eok(gap))}억</b> 부족 — ${v[0]==='bad'?'현 페이스 미달 위험, ':''}아래 처방으로 보완.`;
     document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
-      +`<span class="svmain">${SY}년 ${SM}월 투숙 · 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · 전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b></span>`
+      +`<span class="svmain">${SY}년 ${SM}월 투숙 · <b>${sgl}</b> 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · 전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b></span>`
       +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
     document.getElementById('strat-minis').innerHTML=[
       ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', '', ach>=100?'pos':ach>=88?'neu':'neg'],
       ['온북 객실수', nfmt(s.rns_actual)+'<span style="font-size:11px">실</span>', '목표 '+nfmt(s.rns_budget)+' · '+f1(s.rns_achievement||0)+'%', 'b', (s.rns_achievement||0)>=100?'pos':(s.rns_achievement||0)>=88?'neu':'neg'],
-      ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(s.adr_yoy||0)+'%', 'g', (s.adr_yoy||0)>=0?'pos':'neg'],
+      ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(adrYoy)+'%', 'g', adrYoy>=0?'pos':'neg'],
       ['예상 마감', f1(eok(s.rev_fcst||0))+'<span style="font-size:11px">억</span>', '전년 '+f1(eok(s.rev_last||0))+'억 · 예상 '+sg(s.rev_last>0?(s.rev_fcst-s.rev_last)/s.rev_last*100:0)+'%', '', (s.rev_last>0&&(s.rev_fcst||0)>=s.rev_last)?'pos':'neg'],
     ].map(k=>`<div class="smini ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
@@ -1396,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', loadData);
     if(!t||!t.rev_budget){ av.textContent='–'; document.getElementById('strat-action').innerHTML='대상 데이터 없음'; return; }
     const goal=t.rev_budget, curRN=t.rns_actual||0, cadr=curADR(t), setA=SADR||cadr;
     av.textContent=nfmt(Math.round(setA/1000))+' 천';
-    const needTot=setA>0?goal/setA:0, needAdd=needTot-curRN, dp=cadr>0?(setA/cadr-1)*100:0, name=STGT==='ALL'?'전체':STGT;
+    const needTot=setA>0?goal/setA:0, needAdd=needTot-curRN, dp=cadr>0?(setA/cadr-1)*100:0, name=segLabel();
     document.getElementById('strat-action').innerHTML= needAdd>0
       ? `<span class="em">${name}</span> ADR을 <b class="mono">${nfmt(Math.round(setA/1000))}천원</b>(${sg(dp)}%)으로 → 목표매출 <b class="mono">${f1(eok(goal))}억</b> 달성에 <span class="big">추가 ${nfmt(needAdd)}실</span> 판매 필요`
       : `<span class="em">${name}</span> ADR <b class="mono">${nfmt(Math.round(setA/1000))}천원</b> 기준 현 온북으로 <b>달성 가능</b> <span class="big">(여유 ${nfmt(-needAdd)}실)</span>`;
