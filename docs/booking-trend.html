@@ -257,11 +257,6 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     </div>
     <div class="sidebar-divider"></div>
     <div>
-      <div class="filter-section-label">기준 연도</div>
-      <div class="filter-chips" id="year-chips"></div>
-    </div>
-    <div class="sidebar-divider"></div>
-    <div>
       <div class="filter-section-label">세그먼트</div>
       <div class="filter-chips" id="seg-chips"></div>
     </div>
@@ -294,24 +289,10 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
-    <!-- Start 달성률 카드 -->
-    <div class="smr-card">
-      <div class="smr-card-header">
-        <span class="smr-card-title">Start 달성률 (OTA + G-OTA)</span>
-        <span class="smr-card-desc">투숙월 시작 전 사전예약 달성률 · 목표 대비 · <span id="smr-base-date">—</span> 기준</span>
-      </div>
-      <div class="smr-grid" id="smr-grid"><!-- JS 렌더 (월 클릭 → 사업장별 상세) --></div>
-      <div class="smr-drill">
-        <button class="smr-drill-toggle" id="smr-drill-toggle"><span id="smr-drill-arrow">▸</span> 사업장별 상세 <span class="smr-drill-month" id="smr-drill-month"></span></button>
-        <div class="smr-drill-body" id="smr-drill-body" style="display:none;">
-          <div class="table-wrap">
-            <table class="pivot" id="smr-prop-table">
-              <thead><tr><th>사업장</th><th>사전예약</th><th>목표(budget)</th><th>Start 달성률</th><th>전년</th><th>마감실적</th><th>비중</th></tr></thead>
-              <tbody id="smr-prop-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+    <!-- 연도 + 투숙월 통합 선택 -->
+    <div class="chart-card" style="padding:12px 16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+      <div><div class="filter-section-label" style="margin-bottom:6px;">기준 연도</div><div class="filter-chips" id="year-chips"></div></div>
+      <div><div class="filter-section-label" style="margin-bottom:6px;">투숙월 <span style="font-weight:400;opacity:.6;">(선택 시 전략·사업장 상세 연동)</span></div><div class="filter-chips" id="uni-mos"></div></div>
     </div>
 
     <div class="kpi-strip">
@@ -368,6 +349,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .strat-tb td:first-child,#strat .strat-tb th:first-child{text-align:left;font-family:var(--sans);font-weight:700}
     #strat .strat-tb tr.seg td:first-child{color:var(--ink)}
     #strat .strat-tb tr.part td:first-child{padding-left:22px;color:var(--ink-muted);font-weight:500;font-size:11px}
+    #strat .strat-tb .sh{display:inline-block;background:var(--bg-soft);border-radius:10px;padding:0 7px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:4px}
     #strat .strat-tb tr.worst td:first-child{color:#ef9a9a}
     #strat .strat-tb .bar{display:inline-block;height:8px;border-radius:3px;vertical-align:middle;margin-left:6px}
     #strat .strat-sim{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;margin-top:14px;background:linear-gradient(180deg,rgba(201,160,99,.06),transparent)}
@@ -389,7 +371,6 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
         <span class="chart-card-title">전략 처방 · 채널 진단 → 요금 시뮬</span>
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)" id="strat-base"></span>
       </div>
-      <div style="margin-bottom:12px"><div class="strat-lab">투숙월</div><div class="filter-chips" id="strat-mos"></div></div>
       <div id="strat-verdict"></div>
       <div id="strat-diag"></div>
       <div class="strat-sim">
@@ -443,6 +424,26 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
+    <!-- Start 달성률 카드 (하단 이동) -->
+    <div class="smr-card">
+      <div class="smr-card-header">
+        <span class="smr-card-title">Start 달성률 (OTA + G-OTA)</span>
+        <span class="smr-card-desc">투숙월 시작 전 사전예약 달성률 · 목표 대비 · <span id="smr-base-date">—</span> 기준</span>
+      </div>
+      <div class="smr-grid" id="smr-grid"><!-- JS 렌더 (월 클릭 → 사업장별 상세) --></div>
+      <div class="smr-drill">
+        <button class="smr-drill-toggle" id="smr-drill-toggle"><span id="smr-drill-arrow">▸</span> 사업장별 상세 <span class="smr-drill-month" id="smr-drill-month"></span></button>
+        <div class="smr-drill-body" id="smr-drill-body" style="display:none;">
+          <div class="table-wrap">
+            <table class="pivot" id="smr-prop-table">
+              <thead><tr><th>사업장</th><th>사전예약</th><th>목표(budget)</th><th>Start 달성률</th><th>전년</th><th>마감실적</th><th>비중</th></tr></thead>
+              <tbody id="smr-prop-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="padding:12px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.08em;text-align:center;border-top:1px solid var(--rule);">
       DATA: 온북 DB 파싱 (db_aggregated.json) &nbsp;·&nbsp; <a href="otb.html" style="color:var(--gold);text-decoration:none;">당일현황 ↗</a>
     </div>
@@ -457,6 +458,7 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 let db = null;
 let activeYear = new Date().getFullYear().toString();
 let trendChart = null;
+let OTBD = null;   // otb_data.json — 목표·FCST 오버레이용
 let activeSegment = '전체';
 let activeRegion = '전체';
 let activeProps = new Set();
@@ -679,6 +681,25 @@ function render() {
     borderDash: y === activeYear ? [] : (parseInt(y) < parseInt(activeYear) ? [4, 3] : [])
   }));
 
+  // ── 목표·예상(FCST) 오버레이: 기준연도 · 전체 권역 ──────────────
+  let overlayLabels = [];
+  if (OTBD && OTBD.allMonthsByYear[activeYear] && activeRegion === '전체') {
+    const amy = OTBD.allMonthsByYear[activeYear], seg = activeSegment;
+    const budArr = [], fcstArr = [];
+    for (let m = 1; m <= 12; m++) {
+      const md = amy[String(m)];
+      if (!md || !md.summary) { budArr.push(null); fcstArr.push(null); continue; }
+      if (seg === '전체') { budArr.push(md.summary.rns_budget || null); fcstArr.push(md.summary.rns_fcst || null); }
+      else { const sd = (md.segmentData || {})[seg]; budArr.push(sd ? (sd.rns_budget || null) : null); fcstArr.push(null); }
+    }
+    datasets.push({ label: '목표', data: budArr, borderColor: '#cfd3da', backgroundColor: 'transparent', borderWidth: 2, borderDash: [7, 4], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
+    overlayLabels.push(['목표', '#cfd3da']);
+    if (seg === '전체' && fcstArr.some(v => v != null)) {
+      datasets.push({ label: '예상(FCST)', data: fcstArr, borderColor: '#5a9fc4', backgroundColor: 'transparent', borderWidth: 2, borderDash: [2, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
+      overlayLabels.push(['예상(FCST)', '#5a9fc4']);
+    }
+  }
+
   if (trendChart) trendChart.destroy();
   const ctx = document.getElementById('trend-chart');
   if (ctx) {
@@ -707,6 +728,8 @@ function render() {
   if (legend) {
     legend.innerHTML = years.map(y =>
       `<div class="chart-legend-item"><div class="legend-dot" style="background:${YEAR_COLORS[y] || '#888'};${y === activeYear ? '' : 'opacity:0.6;'}"></div>${y}년${y === activeYear ? ' ★' : ''}</div>`
+    ).join('') + overlayLabels.map(([lb, c]) =>
+      `<div class="chart-legend-item"><div class="legend-dot" style="background:${c};border-radius:1px;width:14px;height:0;border-top:2px dashed ${c};"></div>${lb}</div>`
     ).join('');
   }
 
@@ -1068,6 +1091,7 @@ function renderSmrGrid() {
       grid.querySelectorAll('.smr-cell').forEach(c => c.classList.remove('selected'));
       cell.classList.add('selected');
       renderSmrDrill();
+      if (window.stratSetMonth) window.stratSetMonth(selectedSmrMonth);
     });
   });
 }
@@ -1163,6 +1187,7 @@ async function loadData() {
   try {
     const res = await fetch('data/db_aggregated.json?t=' + Date.now());
     db = await res.json();
+    try { OTBD = await (await fetch('data/otb_data.json?t=' + Date.now())).json(); } catch (_) { OTBD = null; }
     setText('sidebar-refresh', db.generated_at || '—');
     setText('refresh-badge', db.generated_at || '—');
     buildFilters();
@@ -1205,17 +1230,22 @@ document.addEventListener('DOMContentLoaded', loadData);
     }catch(e){ document.getElementById('strat-verdict').innerHTML='데이터 로드 실패'; return; }
     const bd=(OTB.meta.baseDate||'2026-11-01').split('-'); SY=bd[0]; SM=+bd[1]||11;
     document.getElementById('strat-base').textContent='기준일 '+OTB.meta.baseDate+' · 온북 vs 목표·전년';
-    document.getElementById('strat-mos').innerHTML=Array.from({length:12},(_,i)=>`<button class="chip" data-m="${i+1}">${i+1}월</button>`).join('');
+    const umos=document.getElementById('uni-mos'); if(umos) umos.innerHTML=Array.from({length:12},(_,i)=>`<button class="chip" data-m="${i+1}">${i+1}월</button>`).join('');
     document.getElementById('strat-tgts').innerHTML=['ALL'].concat(SEGS).map(t=>`<button class="chip" data-t="${t}">${t==='ALL'?'전체':t}</button>`).join('');
-    document.querySelectorAll('#strat-mos .chip').forEach(b=>b.onclick=()=>{SM=+b.dataset.m;syncChips();srender();});
+    document.querySelectorAll('#uni-mos .chip').forEach(b=>b.onclick=()=>window.stratSetMonth(+b.dataset.m));
     document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.onclick=()=>{STGT=b.dataset.t;syncChips();resetSlider();ssim();});
     document.getElementById('strat-adr').oninput=()=>{SADR=sADR(+document.getElementById('strat-adr').value);ssim();};
     syncChips(); srender();
   }
   function syncChips(){
-    document.querySelectorAll('#strat-mos .chip').forEach(b=>b.classList.toggle('active',+b.dataset.m===SM));
+    document.querySelectorAll('#uni-mos .chip').forEach(b=>b.classList.toggle('active',+b.dataset.m===SM));
     document.querySelectorAll('#strat-tgts .chip').forEach(b=>b.classList.toggle('active',b.dataset.t===STGT));
   }
+  // 월 하나로 구동: 전략 섹션 + 사업장별 상세(START 드릴) 동시 연동
+  window.stratSetMonth=function(m){ SM=m; syncChips(); srender();
+    try{ selectedSmrMonth=m; if(typeof renderSmrDrill==='function') renderSmrDrill();
+      document.querySelectorAll('#smr-grid .smr-cell').forEach(c=>c.classList.toggle('selected',parseInt(c.getAttribute('data-month'),10)===m)); }catch(_){}
+  };
   function srender(){ const d=smd();
     if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
     const s=d.summary, ach=s.rev_achievement||0, yoy=s.rev_yoy||0, gap=s.rev_budget-s.rev_actual;
@@ -1240,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', loadData);
         : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
     }
     // 테이블
-    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성/비중</th><th>전년比</th><th>온북RN</th></tr></thead><tbody>`;
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북매출</th><th>목표</th><th>달성률</th><th>전년比</th><th>온북RN</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0; const yy=segYoy(o);
       const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
       const bw=Math.max(2,(o.rev_actual||0)/maxB*60);
@@ -1249,7 +1279,7 @@ document.addEventListener('DOMContentLoaded', loadData);
         +`<td style="color:${col};font-weight:700">${f1(ach)}%</td><td class="${yy>=0?'pos':'neg'}">${sg(yy)}%</td><td>${nfmt(o.rns_actual||0)}</td></tr>`;
       if((x==='OTA'||x==='G-OTA')&&AG[ym()]&&AG[ym()][x]){
         const ps=Object.entries(AG[ym()][x]); const tot=ps.reduce((a,[,vv])=>a+vv[0],0)||1;
-        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm}</td><td>${f1(eok(vv[1]))}억</td><td>–</td><td>${(vv[0]/tot*100).toFixed(0)}%</td><td>–</td><td>${nfmt(vv[0])}</td></tr>`; });
+        ps.slice(0,5).forEach(([nm,vv])=>{ t+=`<tr class="part"><td>${nm} <span class="sh">${(vv[0]/tot*100).toFixed(0)}%</span></td><td>${f1(eok(vv[1]))}억</td><td></td><td></td><td></td><td>${nfmt(vv[0])}</td></tr>`; });
         if(ps.length>5) t+=`<tr class="part"><td>기타 ${ps.length-5}곳</td><td colspan="5"></td></tr>`;
       }
     });
