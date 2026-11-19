@@ -1005,12 +1005,12 @@ function renderPaceChart() {
   // 예상(FCST) 파이널까지 투영: 현재 온북 끝점 → 예상 마감
   try {
     const curDs = datasets.find(ds => ds.label && ds.label.indexOf(activeYear) === 0);
-    if (curDs && curDs.data.length && OTBD && OTBD.allMonthsByYear[activeYear]) {
-      const _md = OTBD.allMonthsByYear[activeYear][mm];
-      let fcstRN = null;
-      if (_md) fcstRN = activeSegment === '전체' ? (_md.summary && _md.summary.rns_fcst)
-                      : (_md.segmentData && _md.segmentData[activeSegment] && _md.segmentData[activeSegment].rns_fcst);
-      if (fcstRN) {
+    const _md = OTBD && OTBD.allMonthsByYear[activeYear] && OTBD.allMonthsByYear[activeYear][String(activePaceMonth)]; // otb 월키=비패딩
+    if (curDs && curDs.data.length && _md && _md.segmentData) {
+      let fcstRN = 0;
+      if (activeSegment === '전체') ['OTA', 'G-OTA', 'Inbound'].forEach(sg => { fcstRN += (_md.segmentData[sg] || {}).rns_fcst || 0; });
+      else fcstRN = (_md.segmentData[activeSegment] || {}).rns_fcst || 0;
+      if (fcstRN > 0) {
         const lp = curDs.data[curDs.data.length - 1];
         const endD = new Date(parseInt(activeYear), activePaceMonth, 0).getDate() - 1;
         datasets.push({ label: '예상 마감(FCST)', data: [{ x: lp.x, y: lp.y }, { x: endD, y: fcstRN }],
