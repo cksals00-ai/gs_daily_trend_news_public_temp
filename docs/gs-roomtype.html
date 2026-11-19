@@ -35,6 +35,12 @@ h1{font-size:19px;margin:0 0 2px}.sub{color:var(--dim);font-size:12px;margin-bot
 select{background:#0c1017;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:600;font-family:inherit}
 .chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--tx);cursor:pointer}
 .chk input{accent-color:var(--grn)}
+.fchips{display:flex;flex-wrap:wrap;gap:5px}
+.fchip{padding:4px 10px;border-radius:5px;border:1px solid var(--line);background:transparent;color:var(--dim);font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s;font-variant-numeric:tabular-nums}
+.fchip:hover{background:#1e2738;color:var(--tx)}
+.fchip.on{background:rgba(230,185,112,0.18);border-color:var(--gold);color:var(--gold)}
+.fchip.seg.on{background:rgba(78,157,232,0.18);border-color:var(--acc);color:#7ec8e3}
+@media(max-width:720px){.fchips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.fchips::-webkit-scrollbar{display:none}}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
@@ -58,9 +64,11 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
 .bar{display:inline-block;height:8px;background:var(--gold);border-radius:3px;vertical-align:middle;opacity:.6}
 .exp{display:inline-block;width:12px;color:var(--dim)}
 .pad{padding-left:26px}
+.subadr{font-size:10.5px;color:#aab6cc;font-weight:600;margin-top:1px}
 .mtx td,.mtx th{text-align:center;padding:6px 8px;font-size:12px}
 .mtx td:first-child,.mtx th:first-child{text-align:left;font-weight:700}
 .mtx td.hot{color:#0c1017;font-weight:700;border-radius:3px}
+.mtx td.hot .subadr{color:#4a3410;font-weight:700}
 .foot{color:var(--dim);font-size:11px;margin-top:4px;line-height:1.6}
 </style></head><body>
 <nav class="gsn">
@@ -90,11 +98,8 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
 <div class="sub">2026년 실적 기준 · 등급 › 객실타입 명칭별 RN·ADR·매출 · 세그 OTA·G-OTA·Inbound · 사업장/월 필터 · 오션월드빌리지 제외</div>
 <div class="ctrl">
  <div class="fg"><label>사업장</label><select id="fsite"></select></div>
- <div class="fg"><label>월</label><select id="fmonth"></select></div>
- <div class="fg"><label>세그</label>
-  <label class="chk"><input type="checkbox" id="s0" checked onchange="render()"> OTA</label>
-  <label class="chk"><input type="checkbox" id="s1" checked onchange="render()"> G-OTA</label>
-  <label class="chk"><input type="checkbox" id="s2" checked onchange="render()"> Inbound</label></div>
+ <div class="fg"><label>월</label><div class="fchips" id="mchips"></div></div>
+ <div class="fg"><label>채널</label><div class="fchips" id="schips"></div></div>
  <button class="exp-csv" style="margin-left:auto" onclick="exportXlsx()">엑셀 내보내기</button>
 </div>
 <div class="kpis" id="kpis"></div>
@@ -109,7 +114,7 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
  <button class="mbtn on" id="mRN" onclick="setMetric('rn')">RN</button>
  <button class="mbtn" id="mADR" onclick="setMetric('adr')">ADR(천)</button>
  <button class="mbtn" id="mREV" onclick="setMetric('rev')">매출(백만)</button>
- <span class="foot" style="margin:0">상위 객실타입 + 기타 · 색이 진할수록 큼</span></div>
+ <span class="foot" style="margin:0">상위 등급 + 기타 · 셀 하단에 ADR(천) 병기 · 색이 진할수록 큼</span></div>
 <div class="tbl-wrap"><table id="tblMtx" class="mtx">
 <thead id="thMtx"></thead><tbody id="tbMtx"></tbody></table></div>
 
@@ -123,21 +128,31 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
 <script src="./js/visit-log.js"></script>
 <script>
 let D=null, METRIC='rn', EXP=new Set();
+let MSEL=new Set();              // 월 선택(비어있음=전체 월) · 멀티선택
+const SEGLABEL=['OTA','G-OTA','Inbound'];
+let SSEL=new Set([0,1,2]);       // 채널(세그) 선택 · 멀티선택(최소 1개 유지)
 const fmt=n=>Math.round(n).toLocaleString();
 const f1=n=>n.toFixed(1);
 const adr=(rev,rn)=>rn>0?rev/rn/1000:0;
-function segOn(){return [document.getElementById('s0').checked,document.getElementById('s1').checked,document.getElementById('s2').checked];}
 // 전체명에서 등급 접두어 제거 → 괄호 상세만(중복 축소)
 function rtLabel(rt){ const g=D.grades[D.rtLead[rt]]; let s=D.rts[rt]; return s.startsWith(g+' ')?s.slice(g.length+1):s; }
 async function boot(){
   const res=await fetch('data/roomtype_detail.json?t='+Date.now()); D=await res.json();
   const fs=document.getElementById('fsite');
   fs.innerHTML='<option value="-1">전체 사업장</option>'+D.sites.map((s,i)=>`<option value="${i}">${s}</option>`).join('');
-  const fm=document.getElementById('fmonth');
-  fm.innerHTML='<option value="0">전체 월</option>'+Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join('');
-  fs.onchange=()=>{EXP.clear();render();}; fm.onchange=render;
+  fs.onchange=()=>{EXP.clear();render();};
+  document.getElementById('mchips').innerHTML='<button class="fchip" data-m="0" onclick="togMonth(0)">전체 월</button>'
+    +Array.from({length:12},(_,i)=>`<button class="fchip" data-m="${i+1}" onclick="togMonth(${i+1})">${i+1}월</button>`).join('');
+  document.getElementById('schips').innerHTML=SEGLABEL.map((s,i)=>`<button class="fchip seg" data-s="${i}" onclick="togSeg(${i})">${s}</button>`).join('');
+  syncChips();
   render();
 }
+function syncChips(){
+  document.querySelectorAll('#mchips .fchip').forEach(b=>{const m=+b.dataset.m; b.classList.toggle('on', m===0?MSEL.size===0:MSEL.has(m));});
+  document.querySelectorAll('#schips .fchip').forEach(b=>b.classList.toggle('on', SSEL.has(+b.dataset.s)));
+}
+function togMonth(m){ if(m===0) MSEL.clear(); else { MSEL.has(m)?MSEL.delete(m):MSEL.add(m); } syncChips(); render(); }
+function togSeg(s){ if(SSEL.has(s)){ if(SSEL.size>1) SSEL.delete(s); } else SSEL.add(s); syncChips(); render(); }
 function setMetric(m){METRIC=m;
   document.getElementById('mRN').classList.toggle('on',m==='rn');
   document.getElementById('mADR').classList.toggle('on',m==='adr');
@@ -146,10 +161,10 @@ function setMetric(m){METRIC=m;
 // 현재 필터로 셀 추출 → 등급/전체명(()명칭)/사업장 교차 합
 // cells=[si,mo,seg,rtIdx,rn,rev] · 등급=D.rtLead[rt]
 function slice(){
-  const fs=+document.getElementById('fsite').value, fm=+document.getElementById('fmonth').value, so=segOn();
+  const fs=+document.getElementById('fsite').value;
   const byG={}, byRT={}, bySG={}, byRTSite={}, bySite={}; let tR=0,tV=0;
   for(const c of D.cells){ const si=c[0],mo=c[1],sg=c[2],rt=c[3],rn=c[4],rev=c[5];
-    if(!so[sg]) continue; if(fs>=0&&si!==fs) continue; if(fm>0&&mo!==fm) continue;
+    if(!SSEL.has(sg)) continue; if(fs>=0&&si!==fs) continue; if(MSEL.size&&!MSEL.has(mo)) continue;
     const g=D.rtLead[rt];
     (byG[g]=byG[g]||{rn:0,rev:0}); byG[g].rn+=rn; byG[g].rev+=rev;
     (byRT[rt]=byRT[rt]||{rn:0,rev:0}); byRT[rt].rn+=rn; byRT[rt].rev+=rev;
@@ -213,7 +228,9 @@ function renderMatrix(S){ if(!S)S=slice();
   const sids=Object.keys(S.bySite).map(Number).filter(si=>S.bySite[si].rn>0).sort((a,b)=>a-b);
   const val=(si,gr)=>{ if(gr==='rest'){let v={rn:0,rev:0};for(const g of restG){const c=S.bySG[si+'_'+g];if(c){v.rn+=c.rn;v.rev+=c.rev;}}return v;} const c=S.bySG[si+'_'+gr];return c||{rn:0,rev:0}; };
   const mv=(v)=> METRIC==='rn'?v.rn : METRIC==='rev'?v.rev/1e6 : adr(v.rev,v.rn);
-  const disp=(v)=>{ const x=mv(v); if(!v.rn) return '·'; return METRIC==='adr'?f1(x):fmt(x); };
+  // 셀: 선택 지표(상단) + ADR 병기(하단) · ADR 지표일 땐 ADR만
+  const cellHTML=(v)=>{ if(!v.rn) return '·'; const main=METRIC==='adr'?f1(adr(v.rev,v.rn)):fmt(mv(v));
+    return METRIC==='adr'?main:`${main}<div class="subadr">${f1(adr(v.rev,v.rn))}천</div>`; };
   // 열별 최대(색상 스케일): ADR은 전체공통, RN/REV는 열별
   let hh='<tr><th>사업장</th>'+cols.map(c=>`<th>${c.name}</th>`).join('')+(hasRest?'<th>기타</th>':'')+'<th>합계</th></tr>';
   document.getElementById('thMtx').innerHTML=hh;
@@ -226,24 +243,24 @@ function renderMatrix(S){ if(!S)S=slice();
     b+=`<tr><td>${D.sites[si]}</td>`;
     for(const g of allcols){ const v=val(si,g); const x=mv(v);
       const base=METRIC==='adr'?gmax:colMax[g]; const t=v.rn?Math.min(x/base,1):0;
-      const bg=v.rn?`background:rgba(230,185,112,${(0.12+t*0.68).toFixed(2)})`:''; const cl=t>0.45?' hot':'';
-      b+=`<td class="mono${cl}" style="${bg}">${disp(v)}</td>`;
+      const bg=v.rn?`background:rgba(230,185,112,${(0.10+t*0.62).toFixed(2)})`:''; const cl=t>0.5?' hot':'';
+      b+=`<td class="mono${cl}" style="${bg}">${cellHTML(v)}</td>`;
     }
-    const tot=METRIC==='adr'?adr(sr.rev,sr.rn):(METRIC==='rev'?sr.rev/1e6:sr.rn);
-    b+=`<td class="mono" style="color:var(--gold);font-weight:700">${METRIC==='adr'?f1(tot):fmt(tot)}</td></tr>`;
+    b+=`<td class="mono" style="color:var(--gold);font-weight:700">${cellHTML(sr)}</td></tr>`;
   }
   // 합계 행
   b+='<tr class="tot"><td>합계</td>';
-  for(const g of allcols){ let v={rn:0,rev:0}; for(const si of sids){const c=val(si,g);v.rn+=c.rn;v.rev+=c.rev;} b+=`<td class="mono">${v.rn?(METRIC==='adr'?f1(adr(v.rev,v.rn)):METRIC==='rev'?fmt(v.rev/1e6):fmt(v.rn)):'·'}</td>`; }
-  b+=`<td class="mono">${METRIC==='adr'?f1(adr(S.tV,S.tR)):METRIC==='rev'?fmt(S.tV/1e6):fmt(S.tR)}</td></tr>`;
+  for(const g of allcols){ let v={rn:0,rev:0}; for(const si of sids){const c=val(si,g);v.rn+=c.rn;v.rev+=c.rev;} b+=`<td class="mono">${cellHTML(v)}</td>`; }
+  b+=`<td class="mono">${cellHTML({rn:S.tR,rev:S.tV})}</td></tr>`;
   document.getElementById('tbMtx').innerHTML=b;
 }
 function exportXlsx(){
   if(typeof XLSX==='undefined'){alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 눌러주세요.');return;}
   const S=slice();
-  const fs=+document.getElementById('fsite').value, fm=+document.getElementById('fmonth').value, so=segOn();
-  const segs=['OTA','G-OTA','Inbound'].filter((_,i)=>so[i]).join('·');
-  const scope=(fs>=0?D.sites[fs]:'전체 사업장')+' · '+(fm>0?fm+'월':'전체 월')+' · 세그 '+segs;
+  const fs=+document.getElementById('fsite').value;
+  const segs=SEGLABEL.filter((_,i)=>SSEL.has(i)).join('·');
+  const monthLabel=MSEL.size?[...MSEL].sort((a,b)=>a-b).map(m=>m+'월').join('+'):'전체 월';
+  const scope=(fs>=0?D.sites[fs]:'전체 사업장')+' · '+monthLabel+' · 세그 '+segs;
   const F='맑은 고딕', thin={style:'thin',color:{rgb:'BFBFBF'}}, bAll={top:thin,bottom:thin,left:thin,right:thin};
   const wb=XLSX.utils.book_new();
   function styleSheet(ws,aoa,nc,merge,zmap,leftCols){
