@@ -295,7 +295,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       <div><div class="filter-section-label" style="margin-bottom:6px;">투숙월 <span style="font-weight:400;opacity:.6;">(선택 시 전략·사업장 상세 연동)</span></div><div class="filter-chips" id="uni-mos"></div></div>
     </div>
 
-    <div class="kpi-strip">
+    <div class="kpi-strip" style="display:none;">
       <div class="kpi-card achievement">
         <div class="kpi-card-label">기준연도 RNS</div>
         <div class="kpi-card-value" id="kpi-cur">—<span class="unit">실</span></div>
@@ -318,16 +318,6 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       </div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <span class="chart-card-title">월별 RNS 추이 (연도별 비교)</span>
-        <div class="chart-legend" id="trend-legend"></div>
-      </div>
-      <div class="chart-canvas-wrap" style="height:340px;">
-        <canvas id="trend-chart"></canvas>
-      </div>
-    </div>
-
     <!-- ===== 전략 처방: 채널 진단 → 요금 시뮬 ===== -->
     <style>
     #strat .strat-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px}
@@ -343,6 +333,14 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .svmain .mono{font-family:var(--mono)}
     #strat .pos{color:var(--positive)}#strat .neg{color:var(--negative)}#strat .neu{color:var(--ink-muted)}
     #strat .issue{font-size:13.5px;font-weight:700;margin:4px 0 12px;line-height:1.5}#strat .issue .bad{color:#ef9a9a}#strat .issue .ok{color:#7fd8a0}
+    #strat .strat-minis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+    @media(max-width:640px){#strat .strat-minis{grid-template-columns:1fr}}
+    #strat .smini{background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;position:relative;overflow:hidden}
+    #strat .smini::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
+    #strat .smini.b::before{background:var(--info)}#strat .smini.g::before{background:var(--positive)}
+    #strat .smini .l{color:var(--ink-faint);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--mono);margin-bottom:5px}
+    #strat .smini .v{font-size:19px;font-weight:700;font-family:var(--mono)}
+    #strat .smini .d{font-size:11px;margin-top:3px;font-family:var(--mono)}
     #strat table.strat-tb{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
     #strat .strat-tb th,#strat .strat-tb td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono)}
     #strat .strat-tb th{color:var(--ink-faint);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
@@ -372,6 +370,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
         <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)" id="strat-base"></span>
       </div>
       <div id="strat-verdict"></div>
+      <div id="strat-minis" class="strat-minis"></div>
       <div id="strat-diag"></div>
       <div class="strat-sim">
         <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span><div class="filter-chips" id="strat-tgts"></div></div>
@@ -392,12 +391,23 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
           <div class="chart-legend" id="pace-legend"></div>
         </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;" id="pace-month-chips"></div>
+      <div style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:12px;" id="pace-month-chips"></div>
       <div class="chart-canvas-wrap" style="height:380px;">
         <canvas id="pace-chart"></canvas>
       </div>
       <div style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);">
-        X축 = 투숙월 1일 기준 D-일 (음수: 사전예약, 양수: 당월예약) · 취소 반영 순예약 누계
+        X축 = 투숙월 1일 기준 D-일 (음수: 사전예약, 양수: 당월예약) · 취소 반영 순예약 누계 · <span style="color:#4caf6f;">오늘</span> 세로선, <span style="color:#cfd3da;">목표 마감</span> 가로선
+      </div>
+    </div>
+
+    <!-- 월별 추이 (하단 이동) -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-title">월별 RNS 추이 (연도별 비교)</span>
+        <div class="chart-legend" id="trend-legend"></div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:340px;">
+        <canvas id="trend-chart"></canvas>
       </div>
     </div>
 
@@ -668,17 +678,19 @@ function render() {
   setText('table-label', years.join(' · ') + ' 비교');
 
   // Chart
-  const datasets = years.map(y => ({
+  // 핵심만: 기준연도(굵게) + 직전연도(흐릿). 옛해는 숨김.
+  const shownYears = years.filter(y => parseInt(y) >= parseInt(activeYear) - 1);
+  const datasets = shownYears.map(y => ({
     label: y + '년',
     data: getYearData(y),
-    borderColor: YEAR_COLORS[y] || '#888',
-    backgroundColor: (YEAR_COLORS[y] || '#888') + '22',
-    borderWidth: y === activeYear ? 2.5 : 1.5,
-    pointRadius: 3,
+    borderColor: (YEAR_COLORS[y] || '#888') + (y === activeYear ? '' : '55'),
+    backgroundColor: (YEAR_COLORS[y] || '#888') + '14',
+    borderWidth: y === activeYear ? 3 : 1.3,
+    pointRadius: y === activeYear ? 3 : 0,
     pointHoverRadius: 5,
     tension: 0.3,
     fill: false,
-    borderDash: y === activeYear ? [] : (parseInt(y) < parseInt(activeYear) ? [4, 3] : [])
+    borderDash: y === activeYear ? [] : [4, 3]
   }));
 
   // ── 목표·예상(FCST) 오버레이: 기준연도 · 전체 권역 ──────────────
@@ -726,8 +738,8 @@ function render() {
   // Legend
   const legend = document.getElementById('trend-legend');
   if (legend) {
-    legend.innerHTML = years.map(y =>
-      `<div class="chart-legend-item"><div class="legend-dot" style="background:${YEAR_COLORS[y] || '#888'};${y === activeYear ? '' : 'opacity:0.6;'}"></div>${y}년${y === activeYear ? ' ★' : ''}</div>`
+    legend.innerHTML = shownYears.map(y =>
+      `<div class="chart-legend-item"><div class="legend-dot" style="background:${YEAR_COLORS[y] || '#888'};${y === activeYear ? '' : 'opacity:0.5;'}"></div>${y}년${y === activeYear ? ' ★' : ''}</div>`
     ).join('') + overlayLabels.map(([lb, c]) =>
       `<div class="chart-legend-item"><div class="legend-dot" style="background:${c};border-radius:1px;width:14px;height:0;border-top:2px dashed ${c};"></div>${lb}</div>`
     ).join('');
@@ -930,6 +942,7 @@ function renderPaceChart() {
   }
 
   years.forEach(y => {
+    if (parseInt(y) < parseInt(activeYear) - 1) return; // 핵심만: 기준연도 + 직전연도
     const monthKey = y + mm;
     const monthData = _getMonthData(monthKey);
     if (!monthData) return;
@@ -969,9 +982,40 @@ function renderPaceChart() {
   const ctx = document.getElementById('pace-chart');
   if (!ctx) return;
 
+  // 오늘(D-일) + 목표 마감 레퍼런스
+  const _today = new Date();
+  const _mStart = new Date(parseInt(activeYear), activePaceMonth - 1, 1);
+  const dToday = daysDiff(_today, _mStart);
+  let targetRN = null;
+  try { const bn = smrData && smrData.by_year && smrData.by_year[activeYear] && smrData.by_year[activeYear][mm]; if (bn && bn.budget_rn) targetRN = bn.budget_rn; } catch (_) {}
+  const refPlugin = {
+    id: 'paceRefs',
+    afterDraw(chart) {
+      const cx = chart.ctx, ca = chart.chartArea, scales = chart.scales;
+      if (targetRN != null && scales.y) {
+        const py = scales.y.getPixelForValue(targetRN);
+        if (py >= ca.top && py <= ca.bottom) {
+          cx.save(); cx.strokeStyle = '#cfd3da'; cx.lineWidth = 1.5; cx.setLineDash([7, 4]);
+          cx.beginPath(); cx.moveTo(ca.left, py); cx.lineTo(ca.right, py); cx.stroke();
+          cx.setLineDash([]); cx.fillStyle = '#cfd3da'; cx.font = '700 10px JetBrains Mono';
+          cx.textAlign = 'right'; cx.fillText('목표 마감 ' + targetRN.toLocaleString('ko-KR'), ca.right - 4, py - 4);
+          cx.restore();
+        }
+      }
+      if (scales.x && dToday >= scales.x.min && dToday <= scales.x.max) {
+        const px = scales.x.getPixelForValue(dToday);
+        cx.save(); cx.strokeStyle = '#4caf6f'; cx.lineWidth = 1.5;
+        cx.beginPath(); cx.moveTo(px, ca.top); cx.lineTo(px, ca.bottom); cx.stroke();
+        cx.fillStyle = '#4caf6f'; cx.font = '700 10px JetBrains Mono'; cx.textAlign = 'center';
+        cx.fillText('오늘', px, ca.top + 11); cx.restore();
+      }
+    }
+  };
+
   paceChart = new Chart(ctx, {
     type: 'line',
     data: { datasets },
+    plugins: [refPlugin],
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'nearest', intersect: false },
@@ -1245,6 +1289,8 @@ document.addEventListener('DOMContentLoaded', loadData);
   window.stratSetMonth=function(m){ SM=m; syncChips(); srender();
     try{ selectedSmrMonth=m; if(typeof renderSmrDrill==='function') renderSmrDrill();
       document.querySelectorAll('#smr-grid .smr-cell').forEach(c=>c.classList.toggle('selected',parseInt(c.getAttribute('data-month'),10)===m)); }catch(_){}
+    try{ activePaceMonth=m; if(typeof renderPaceChart==='function') renderPaceChart();
+      document.querySelectorAll('#pace-month-chips .chip').forEach(c=>c.classList.toggle('active',parseInt((c.textContent||'').replace('월',''),10)===m)); }catch(_){}
   };
   function srender(){ const d=smd();
     if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
@@ -1255,6 +1301,11 @@ document.addEventListener('DOMContentLoaded', loadData);
     document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
       +`<span class="svmain">${SY}년 ${SM}월 투숙 · 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · 전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b></span>`
       +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
+    document.getElementById('strat-minis').innerHTML=[
+      ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', '', ach>=100?'pos':ach>=88?'neu':'neg'],
+      ['온북 객실수', nfmt(s.rns_actual)+'<span style="font-size:11px">실</span>', '목표 '+nfmt(s.rns_budget)+' · '+f1(s.rns_achievement||0)+'%', 'b', (s.rns_achievement||0)>=100?'pos':(s.rns_achievement||0)>=88?'neu':'neg'],
+      ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(s.adr_yoy||0)+'%', 'g', (s.adr_yoy||0)>=0?'pos':'neg'],
+    ].map(k=>`<div class="smini ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
     resetSlider(); ssim();
   }
