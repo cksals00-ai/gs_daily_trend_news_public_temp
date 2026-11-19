@@ -51,6 +51,7 @@ th{background:#182033;color:var(--dim);font-weight:700;position:sticky;top:0;z-i
 th:first-child,td:first-child{text-align:left}
 .tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:68vh;margin-bottom:18px}
 tr.gr{cursor:pointer}tr.gr:hover{background:#1e2738}tr.gr>td:first-child{font-weight:700}
+tr.rt2{cursor:pointer;background:#131a26}tr.rt2:hover{background:#1a2333}tr.rt2>td:first-child{color:var(--tx)}
 tr.site{background:#10151f}tr.site>td:first-child{color:var(--dim)}
 tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold)}tr.tot td{border-bottom:2px solid #4e6180}
 .mono{font-variant-numeric:tabular-nums}
@@ -69,7 +70,7 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/" data-gsn="trend">트렌드 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/otb.html" data-gsn="otb">GS 실적 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/sales-kpi.html" data-gsn="sales-kpi">세일즈 KPI 현황 리포트</a>
-      <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-roomtype.html" data-gsn="roomtype">객실타입별 실적</a>
+      <a class="gsn-item active" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-roomtype.html" data-gsn="roomtype">객실타입별 실적</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-strategy-report.html" data-gsn="strategy">전략 리포트</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-block-sim.html" data-gsn="block-sim">주말 블록 시뮬</a>
       <a class="gsn-item" href="https://cksals00-ai.github.io/gs_daily_trend_news_public_temp/gs-adr-sim.html" data-gsn="adr-sim">ADR 인상 시뮬</a>
@@ -84,10 +85,9 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
     </button>
   </div>
 </nav>
-<script>(function(){var h=location.href;document.querySelectorAll('.gsn-item[data-gsn]').forEach(function(a){var k=a.getAttribute('data-gsn'),hit=false;if(k==='trend')hit=h.indexOf('gs_daily_trend_news_public_temp')!==-1&&(h.match(/\/(?:index\.html)?(?:[?#]|$)/)||h.match(/gs_daily_trend_news_public_temp\/?$/));else if(k==='sales-kpi')hit=h.indexOf('sales-kpi.html')!==-1;else if(k==='roomtype')hit=h.indexOf('gs-roomtype.html')!==-1;else if(k==='strategy')hit=h.indexOf('gs-strategy-report.html')!==-1;else if(k==='otb')hit=h.indexOf('otb.html')!==-1;else if(k==='block-sim')hit=h.indexOf('gs-block-sim.html')!==-1;else if(k==='adr-sim')hit=h.indexOf('gs-adr-sim.html')!==-1;else if(k==='ga-analytics')hit=h.indexOf('ga-analytics.html')!==-1;else if(k==='closing')hit=h.indexOf('gs-closing-report.html')!==-1;else if(k==='monitor')hit=h.indexOf('sono-competitor-crawler')!==-1&&h.indexOf('palatium')===-1&&h.indexOf('panaq')===-1;else if(k==='palatium')hit=h.indexOf('palatium.html')!==-1;else if(k==='panaq')hit=h.indexOf('panaq.html')!==-1;if(hit)a.classList.add('active');});})();</script>
 <div class="wrap">
 <h1>객실타입별 실적 <span class="badge">대외비 · 관리자용</span></h1>
-<div class="sub">2026년 실적 기준 · 객실타입(등급)별 RN·ADR·매출 · 세그 OTA·G-OTA·Inbound · 사업장/월 필터 · 오션월드빌리지 제외</div>
+<div class="sub">2026년 실적 기준 · 등급 › 객실타입 명칭별 RN·ADR·매출 · 세그 OTA·G-OTA·Inbound · 사업장/월 필터 · 오션월드빌리지 제외</div>
 <div class="ctrl">
  <div class="fg"><label>사업장</label><select id="fsite"></select></div>
  <div class="fg"><label>월</label><select id="fmonth"></select></div>
@@ -99,7 +99,7 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
 </div>
 <div class="kpis" id="kpis"></div>
 
-<div class="sec"><span class="st">■ 객실타입별 요약</span><span class="foot" style="margin:0">행 클릭 → 사업장별 분해 · RN 내림차순</span></div>
+<div class="sec"><span class="st">■ 객실타입별 요약</span><span class="foot" style="margin:0">등급 클릭 → 객실타입 명칭(괄호 상세) → 다시 클릭 → 사업장 분해 · RN 내림차순</span></div>
 <div class="tbl-wrap"><table id="tblSum">
 <thead><tr><th id="sumc0">객실타입</th><th>RN</th><th>구성비</th><th>매출(백만)</th><th>ADR(천)</th><th>RN 분포</th></tr></thead>
 <tbody id="tbSum"></tbody></table></div>
@@ -115,7 +115,8 @@ tr.tot{background:#1c2535;font-weight:700}tr.tot>td:first-child{color:var(--gold
 
 <div class="foot">
 ※ ADR = Σ(1박객실료×객실수÷1.1) ÷ Σ객실수 (VAT 제외). RN = 룸나이트(판매일자 1박 전개). <b>세그 OTA·G-OTA·Inbound만 집계</b>(회원·직판·단체 등 기타 제외).<br>
-※ 객실타입명 = PMS 객실유형코드 302종을 등급명(스위트·패밀리·골드·실버·디럭스 등 22종)으로 그룹핑. 매트릭스는 상위 객실타입만 열로 표시(나머지는 "기타"로 합산).
+※ 요약은 <b>등급(스위트·패밀리·골드·실버·디럭스 등)</b> 아래로 <b>객실타입 명칭(괄호 상세·동/뷰/구성)</b>, 그 아래 <b>사업장</b>까지 펼쳐집니다. 매트릭스는 상위 등급만 열로 표시(나머지는 "기타"로 합산).<br>
+※ 일부 객실타입은 상세 명칭이 코드로 표기될 수 있습니다(명칭 보강 예정).
 </div>
 </div>
 <script src="./js/menu-visibility.js"></script>
@@ -126,8 +127,10 @@ const fmt=n=>Math.round(n).toLocaleString();
 const f1=n=>n.toFixed(1);
 const adr=(rev,rn)=>rn>0?rev/rn/1000:0;
 function segOn(){return [document.getElementById('s0').checked,document.getElementById('s1').checked,document.getElementById('s2').checked];}
+// 전체명에서 등급 접두어 제거 → 괄호 상세만(중복 축소)
+function rtLabel(rt){ const g=D.grades[D.rtLead[rt]]; let s=D.rts[rt]; return s.startsWith(g+' ')?s.slice(g.length+1):s; }
 async function boot(){
-  const res=await fetch('data/adr_sim.json?t='+Date.now()); D=await res.json();
+  const res=await fetch('data/roomtype_detail.json?t='+Date.now()); D=await res.json();
   const fs=document.getElementById('fsite');
   fs.innerHTML='<option value="-1">전체 사업장</option>'+D.sites.map((s,i)=>`<option value="${i}">${s}</option>`).join('');
   const fm=document.getElementById('fmonth');
@@ -140,57 +143,72 @@ function setMetric(m){METRIC=m;
   document.getElementById('mADR').classList.toggle('on',m==='adr');
   document.getElementById('mREV').classList.toggle('on',m==='rev');
   renderMatrix();}
-// 현재 필터로 셀 추출 → {grade:{rn,rev}}, {site:{grade:{rn,rev}}}, 사이트별/등급별/전체 합
+// 현재 필터로 셀 추출 → 등급/전체명(()명칭)/사업장 교차 합
+// cells=[si,mo,seg,rtIdx,rn,rev] · 등급=D.rtLead[rt]
 function slice(){
   const fs=+document.getElementById('fsite').value, fm=+document.getElementById('fmonth').value, so=segOn();
-  const byG={}, bySG={}, bySite={}; let tR=0,tV=0;
-  for(const c of D.cells){ const si=c[0],mo=c[1],sg=c[2],gr=c[3],rn=c[5],rev=c[6];
+  const byG={}, byRT={}, bySG={}, byRTSite={}, bySite={}; let tR=0,tV=0;
+  for(const c of D.cells){ const si=c[0],mo=c[1],sg=c[2],rt=c[3],rn=c[4],rev=c[5];
     if(!so[sg]) continue; if(fs>=0&&si!==fs) continue; if(fm>0&&mo!==fm) continue;
-    const g=byG[gr]=byG[gr]||{rn:0,rev:0}; g.rn+=rn; g.rev+=rev;
+    const g=D.rtLead[rt];
+    (byG[g]=byG[g]||{rn:0,rev:0}); byG[g].rn+=rn; byG[g].rev+=rev;
+    (byRT[rt]=byRT[rt]||{rn:0,rev:0}); byRT[rt].rn+=rn; byRT[rt].rev+=rev;
     (bySite[si]=bySite[si]||{rn:0,rev:0}); bySite[si].rn+=rn; bySite[si].rev+=rev;
-    const kk=si+'_'+gr; const sgc=bySG[kk]=bySG[kk]||{rn:0,rev:0}; sgc.rn+=rn; sgc.rev+=rev;
+    const gk=si+'_'+g; (bySG[gk]=bySG[gk]||{rn:0,rev:0}); bySG[gk].rn+=rn; bySG[gk].rev+=rev;
+    const rk=si+'_'+rt; (byRTSite[rk]=byRTSite[rk]||{rn:0,rev:0}); byRTSite[rk].rn+=rn; byRTSite[rk].rev+=rev;
     tR+=rn; tV+=rev;
   }
-  return {byG,bySG,bySite,tR,tV};
+  return {byG,byRT,bySG,byRTSite,bySite,tR,tV};
 }
 function render(){ if(!D)return; const S=slice();
   // KPI
-  const nG=Object.values(S.byG).filter(g=>g.rn>0).length;
+  const nRT=Object.values(S.byRT).filter(v=>v.rn>0).length;
   document.getElementById('kpis').innerHTML=[
     ['총 RN',fmt(S.tR)+'<span style="font-size:12px"> 실</span>','acc'],
     ['총 매출',fmt(S.tV/1e6)+'<span style="font-size:12px"> 백만</span>','gold'],
     ['평균 ADR',f1(adr(S.tV,S.tR))+'<span style="font-size:12px"> 천</span>','grn'],
-    ['활성 객실타입',nG+'<span style="font-size:12px"> 종</span>','']
+    ['활성 객실타입(명칭)',nRT+'<span style="font-size:12px"> 종</span>','']
   ].map(k=>`<div class="kpi"><div class="lab">${k[0]}</div><div class="val ${k[2]}">${k[1]}</div></div>`).join('');
-  // 요약 테이블
+  // 요약 테이블: 등급 → ()명칭 → 사업장 (3단 드릴)
   const gids=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
   const maxRN=gids.length?S.byG[gids[0]].rn:1;
+  // 등급별 전체명(rt) 목록
+  const rtByG={}; for(const k in S.byRT){ if(S.byRT[k].rn<=0)continue; const rt=+k,g=D.rtLead[rt]; (rtByG[g]=rtByG[g]||[]).push(rt); }
   let h=`<tr class="tot"><td>■ 전체</td><td class="mono">${fmt(S.tR)}</td><td class="mono">100.0%</td><td class="mono">${fmt(S.tV/1e6)}</td><td class="mono">${f1(adr(S.tV,S.tR))}</td><td></td></tr>`;
   for(const gr of gids){ const g=S.byG[gr]; const p='/'+gr; const ex=EXP.has(p);
     const w=Math.round(g.rn/maxRN*120);
-    h+=`<tr class="gr" onclick="togG(${gr})"><td><span class="exp">${ex?'▾':'▸'}</span>${D.rts[gr]}</td>`
+    h+=`<tr class="gr" onclick="togG(${gr})"><td><span class="exp">${ex?'▾':'▸'}</span>${D.grades[gr]}</td>`
       +`<td class="mono">${fmt(g.rn)}</td><td class="mono">${f1(g.rn/S.tR*100)}%</td><td class="mono">${fmt(g.rev/1e6)}</td>`
       +`<td class="mono" style="color:var(--gold)">${f1(adr(g.rev,g.rn))}</td>`
       +`<td><span class="bar" style="width:${w}px"></span></td></tr>`;
-    if(ex){ // 사업장 분해
-      const rows=[]; for(const k in S.bySG){ const [si,gg]=k.split('_').map(Number); if(gg!==gr)continue; const c=S.bySG[k]; if(c.rn>0) rows.push([si,c]); }
-      rows.sort((a,b)=>b[1].rn-a[1].rn);
-      for(const [si,c] of rows) h+=`<tr class="site"><td class="pad">${D.sites[si]}</td>`
-        +`<td class="mono">${fmt(c.rn)}</td><td class="mono">${f1(c.rn/g.rn*100)}%</td><td class="mono">${fmt(c.rev/1e6)}</td>`
-        +`<td class="mono">${f1(adr(c.rev,c.rn))}</td><td></td></tr>`;
+    if(ex){ // 전체명(()명칭) 분해
+      const rts=(rtByG[gr]||[]).slice().sort((a,b)=>S.byRT[b].rn-S.byRT[a].rn);
+      for(const rt of rts){ const rv=S.byRT[rt]; const p2=p+'/'+rt; const ex2=EXP.has(p2);
+        h+=`<tr class="rt2" onclick="togR(${gr},${rt})"><td class="pad"><span class="exp">${ex2?'▾':'▸'}</span>${rtLabel(rt)}</td>`
+          +`<td class="mono">${fmt(rv.rn)}</td><td class="mono">${f1(rv.rn/g.rn*100)}%</td><td class="mono">${fmt(rv.rev/1e6)}</td>`
+          +`<td class="mono">${f1(adr(rv.rev,rv.rn))}</td><td></td></tr>`;
+        if(ex2){ // 사업장 분해
+          const rows=[]; for(const k in S.byRTSite){ const [si,rr]=k.split('_').map(Number); if(rr!==rt)continue; const c=S.byRTSite[k]; if(c.rn>0) rows.push([si,c]); }
+          rows.sort((a,b)=>b[1].rn-a[1].rn);
+          for(const [si,c] of rows) h+=`<tr class="site"><td style="padding-left:44px;color:var(--dim)">${D.sites[si]}</td>`
+            +`<td class="mono">${fmt(c.rn)}</td><td class="mono">${f1(c.rn/rv.rn*100)}%</td><td class="mono">${fmt(c.rev/1e6)}</td>`
+            +`<td class="mono">${f1(adr(c.rev,c.rn))}</td><td></td></tr>`;
+        }
+      }
     }
   }
   document.getElementById('tbSum').innerHTML=h;
-  document.getElementById('sumc0').textContent= (+document.getElementById('fsite').value>=0)? D.sites[+document.getElementById('fsite').value]+' · 객실타입':'객실타입';
+  document.getElementById('sumc0').textContent= (+document.getElementById('fsite').value>=0)? D.sites[+document.getElementById('fsite').value]+' · 객실타입':'객실타입(등급 › 명칭)';
   renderMatrix(S);
 }
 function togG(gr){const p='/'+gr; if(EXP.has(p))EXP.delete(p);else EXP.add(p); render();}
+function togR(gr,rt){const p='/'+gr+'/'+rt; if(EXP.has(p))EXP.delete(p);else EXP.add(p); render();}
 function renderMatrix(S){ if(!S)S=slice();
   // 상위 N 등급 열 + 기타
   const N=10;
   const gorder=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
   const topG=gorder.slice(0,N), restG=gorder.slice(N);
-  const cols=topG.map(g=>({gr:g,name:D.rts[g]})); const hasRest=restG.length>0;
+  const cols=topG.map(g=>({gr:g,name:D.grades[g]})); const hasRest=restG.length>0;
   // 행: 데이터 있는 사업장(캐노니컬 순서=인덱스 순)
   const sids=Object.keys(S.bySite).map(Number).filter(si=>S.bySite[si].rn>0).sort((a,b)=>a-b);
   const val=(si,gr)=>{ if(gr==='rest'){let v={rn:0,rev:0};for(const g of restG){const c=S.bySG[si+'_'+g];if(c){v.rn+=c.rn;v.rev+=c.rev;}}return v;} const c=S.bySG[si+'_'+gr];return c||{rn:0,rev:0}; };
@@ -241,14 +259,22 @@ function exportXlsx(){
   }
   // 시트1: 객실타입 요약
   const gids=Object.keys(S.byG).map(Number).filter(g=>S.byG[g].rn>0).sort((a,b)=>S.byG[b].rn-S.byG[a].rn);
-  let a1=[['객실타입별 실적 요약 · 대외비·관리자용 · '+scope],['객실타입','RN','구성비(%)','매출(백만)','ADR(천)']];
-  for(const gr of gids){const g=S.byG[gr];a1.push([D.rts[gr],g.rn,+ (g.rn/S.tR*100).toFixed(1),Math.round(g.rev/1e6),+adr(g.rev,g.rn).toFixed(1)]);}
+  let a1=[['객실타입(등급) 요약 · 대외비·관리자용 · '+scope],['등급','RN','구성비(%)','매출(백만)','ADR(천)']];
+  for(const gr of gids){const g=S.byG[gr];a1.push([D.grades[gr],g.rn,+ (g.rn/S.tR*100).toFixed(1),Math.round(g.rev/1e6),+adr(g.rev,g.rn).toFixed(1)]);}
   a1.push(['합계',S.tR,100,Math.round(S.tV/1e6),+adr(S.tV,S.tR).toFixed(1)]);
   const ws1=XLSX.utils.aoa_to_sheet(a1); ws1['!cols']=[{wch:18},{wch:11},{wch:10},{wch:12},{wch:10}];
-  styleSheet(ws1,a1,5,true,{1:'#,##0',2:'0.0',3:'#,##0',4:'#,##0.0'},1); XLSX.utils.book_append_sheet(wb,ws1,'객실타입 요약');
+  styleSheet(ws1,a1,5,true,{1:'#,##0',2:'0.0',3:'#,##0',4:'#,##0.0'},1); XLSX.utils.book_append_sheet(wb,ws1,'등급 요약');
+  // 시트2: 객실타입 상세(전체 명칭) — 등급 › 명칭
+  const rtAll=Object.keys(S.byRT).map(Number).filter(rt=>S.byRT[rt].rn>0)
+    .sort((a,b)=> (S.byG[D.rtLead[b]].rn-S.byG[D.rtLead[a]].rn) || D.rtLead[a]-D.rtLead[b] || S.byRT[b].rn-S.byRT[a].rn);
+  let a2=[['객실타입 상세(전체 명칭) · 대외비·관리자용 · '+scope],['등급','객실타입 명칭','RN','구성비(%)','매출(백만)','ADR(천)']];
+  for(const rt of rtAll){const v=S.byRT[rt];a2.push([D.grades[D.rtLead[rt]],D.rts[rt],v.rn,+(v.rn/S.tR*100).toFixed(1),Math.round(v.rev/1e6),+adr(v.rev,v.rn).toFixed(1)]);}
+  a2.push(['합계','',S.tR,100,Math.round(S.tV/1e6),+adr(S.tV,S.tR).toFixed(1)]);
+  const ws2=XLSX.utils.aoa_to_sheet(a2); ws2['!cols']=[{wch:14},{wch:34},{wch:11},{wch:10},{wch:12},{wch:10}];
+  styleSheet(ws2,a2,6,true,{2:'#,##0',3:'0.0',4:'#,##0',5:'#,##0.0'},2); XLSX.utils.book_append_sheet(wb,ws2,'객실타입 명칭 상세');
   // 시트2·3: 사업장×객실타입 (RN / ADR)
   const sids=Object.keys(S.bySite).map(Number).filter(si=>S.bySite[si].rn>0).sort((a,b)=>a-b);
-  function mtxSheet(title,mode,z){ const head=['사업장'].concat(gids.map(g=>D.rts[g])).concat(['합계']);
+  function mtxSheet(title,mode,z){ const head=['사업장'].concat(gids.map(g=>D.grades[g])).concat(['합계']);
     const aoa=[[title+' · '+scope],head];
     for(const si of sids){const row=[D.sites[si]]; for(const gr of gids){const c=S.bySG[si+'_'+gr]; row.push(c&&c.rn?(mode==='adr'?+adr(c.rev,c.rn).toFixed(1):mode==='rev'?Math.round(c.rev/1e6):c.rn):0);} const sr=S.bySite[si]; row.push(mode==='adr'?+adr(sr.rev,sr.rn).toFixed(1):mode==='rev'?Math.round(sr.rev/1e6):sr.rn); aoa.push(row);}
     const tot=['합계']; for(const gr of gids){const g=S.byG[gr]; tot.push(mode==='adr'?+adr(g.rev,g.rn).toFixed(1):mode==='rev'?Math.round(g.rev/1e6):g.rn);} tot.push(mode==='adr'?+adr(S.tV,S.tR).toFixed(1):mode==='rev'?Math.round(S.tV/1e6):S.tR); aoa.push(tot);
