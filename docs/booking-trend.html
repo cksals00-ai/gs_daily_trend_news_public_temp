@@ -860,6 +860,7 @@ function buildFilters() {
         document.querySelectorAll('#year-chips .chip,#mobile-year-chips .chip')
           .forEach(b => b.classList.toggle('active', b.textContent === activeYear));
         render();
+        if (window.stratSetYear) window.stratSetYear(y);
       });
       c.appendChild(btn);
     });
@@ -1331,8 +1332,10 @@ document.addEventListener('DOMContentLoaded', loadData);
     document.getElementById('strat-adr').oninput=()=>{SADR=sADR(+document.getElementById('strat-adr').value);ssim();};
     syncChips(); srender();
   }
-  // 좌측 세그먼트 변경 시 전략 섹션 전체 갱신
-  window.stratRefresh=function(){ const lbl=document.getElementById('strat-tgtlabel'); if(lbl) lbl.textContent=segLabel(); resetSlider(); srender(); };
+  // 좌측 세그먼트 변경 시 전략 섹션 전체 갱신 (연도도 항상 상단 필터와 동기화)
+  window.stratRefresh=function(){ if(typeof activeYear!=='undefined'&&activeYear)SY=String(activeYear); const lbl=document.getElementById('strat-tgtlabel'); if(lbl) lbl.textContent=segLabel(); resetSlider(); srender(); };
+  // 상단 연도 칩 → 전략 섹션 연동
+  window.stratSetYear=function(y){ SY=String(y); syncChips(); srender(); };
   function syncChips(){
     document.querySelectorAll('#uni-mos .chip').forEach(b=>b.classList.toggle('active',+b.dataset.m===SM));
     const lbl=document.getElementById('strat-tgtlabel'); if(lbl) lbl.textContent=segLabel();
@@ -1347,15 +1350,21 @@ document.addEventListener('DOMContentLoaded', loadData);
   function srender(){ const d=smd();
     if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
     const base=tgtData()||d.summary, s=base;
+    const futureYr = parseInt(SY) > parseInt((OTB.meta.baseDate||'2026-01').slice(0,4));
     const ach=s.rev_achievement||0;
-    const yoy = s.rev_yoy!=null ? s.rev_yoy : (s.rev_last>0?(s.rev_actual-s.rev_last)/s.rev_last*100:0);
+    const yoy = futureYr ? null : (s.rev_yoy!=null ? s.rev_yoy : (s.rev_last>0?(s.rev_actual-s.rev_last)/s.rev_last*100:0));
     const adrYoy = s.adr_yoy!=null ? s.adr_yoy : (s.adr_last>0?(s.adr_actual/s.adr_last-1)*100:0);
     const gap=(s.rev_budget||0)-(s.rev_actual||0), sgl=segLabel();
     const v=ach>=100?['ok','양호']:ach>=88?['warn','주의']:['bad','미달'];
     let msg=v[0]==='ok'?`목표 매출 ${ach>=100?'상회':'근접'} — 현 페이스 유지 시 달성.`
       :`목표까지 <b class="mono">${f1(eok(gap))}억</b> 부족 — ${v[0]==='bad'?'현 페이스 미달 위험, ':''}아래 처방으로 보완.`;
+    // 미래연도(전년동기 스냅샷 없음)는 전년동기 제외 → 전년마감 대비 진행률로 대체
+    const prog = (s.rev_last>0)?(s.rev_actual/s.rev_last*100):0;
+    const tail = futureYr
+      ? `전년마감 <b class="mono">${f1(eok(s.rev_last||0))}억</b> 대비 진행 <b class="mono">${f1(prog)}%</b> <span class="sh2">(동기간 비교 보류)</span>`
+      : `전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b>`;
     document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
-      +`<span class="svmain">${SY}년 ${SM}월 투숙 · <b>${sgl}</b> 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · 전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b></span>`
+      +`<span class="svmain">${SY}년 ${SM}월 투숙 · <b>${sgl}</b> 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · ${tail}</span>`
       +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
     document.getElementById('strat-minis').innerHTML=[
       ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', '', ach>=100?'pos':ach>=88?'neu':'neg'],
@@ -1377,10 +1386,14 @@ document.addEventListener('DOMContentLoaded', loadData);
         : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
     }
     const A=AG[ym()]||{};
+    const futureYr = parseInt(SY) > parseInt((OTB.meta.baseDate||'2026-01').slice(0,4));
     let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th>전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th><th>온북RN</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0;
       const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
-      const A2=A[x]||{}; const lys=(A2.lys&&A2.lys[1])||o.rev_last||0, lyf=(A2.lyf&&A2.lyf[1])||0;
+      const A2=A[x]||{};
+      // 전년동기: 미래연도는 동기 스냅샷 없음 → 제외(–), 전년마감 폴백 금지. 전년마감: 거래처 집계 없으면 otb 전년마감으로 폴백
+      const lys = futureYr ? 0 : ((A2.lys&&A2.lys[1])||o.rev_last||0);
+      const lyf = (A2.lyf&&A2.lyf[1])||o.rev_last||0;
       const on=o.rev_actual||0, bud=o.rev_budget||0, fc=o.rev_fcst||0; const yoy=lys>0?(on-lys)/lys*100:0;
       t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}</td>`
         +`<td style="color:${col};font-weight:700">${f1(eok(on))}억</td>`
