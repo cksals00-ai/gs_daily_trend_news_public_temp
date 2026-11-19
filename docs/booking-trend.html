@@ -475,7 +475,12 @@ let db = null;
 let activeYear = new Date().getFullYear().toString();
 let trendChart = null;
 let OTBD = null;   // otb_data.json — 목표·FCST 오버레이용
-let activeSegment = '전체';
+let activeSegment = '전체';   // (호환용) segLabelTxt()로 동기화
+// 세그먼트 멀티선택: selectedSegs = GS_SEGS 부분집합. 전체(또는 3개 전부)=전체 모드
+let selectedSegs = ['OTA', 'G-OTA', 'Inbound'];
+const segIsAll = () => selectedSegs.length === 0 || selectedSegs.length >= 3;
+const segList = () => segIsAll() ? ['OTA', 'G-OTA', 'Inbound'] : selectedSegs.slice();
+const segLabelTxt = () => segIsAll() ? '전체' : selectedSegs.join('+');
 let activeRegion = '전체';
 let activeProps = new Set();
 
@@ -514,12 +519,12 @@ function sumGsSegments(monthKey, sourceObj) {
 }
 
 function getMonthData(key) {
-  // 특정 세그먼트 선택: 해당 세그먼트만 사용
-  if (activeSegment !== '전체') {
-    if (activeRegion !== '전체') {
-      return ((db.by_region_segment[activeRegion] || {})[activeSegment] || {})[key] || null;
-    }
-    return (db.by_segment[activeSegment] || {})[key] || null;
+  // 세그먼트 부분선택(멀티): 선택 세그먼트만 합산
+  if (!segIsAll()) {
+    const src = activeRegion !== '전체' ? (db.by_region_segment[activeRegion] || {}) : db.by_segment;
+    let r = { net_rn: 0, net_rev: 0 };
+    segList().forEach(sg => { const d = (src[sg] || {})[key]; if (d) { r.net_rn += d.net_rn || 0; r.net_rev += d.net_rev || 0; } });
+    return r;
   }
 
   // 권역 선택 + 세그먼트 전체: 해당 권역의 GS만 합산
@@ -668,7 +673,7 @@ function render() {
 
   // Build period display with filters
   let periodStr = activeYear + '년 기준';
-  if (activeSegment !== '전체') periodStr += ' · ' + activeSegment;
+  if (!segIsAll()) periodStr += ' · ' + segLabelTxt();
   if (activeRegion !== '전체') periodStr += ' · ' + REGION_LABEL[activeRegion];
   setText('period-display', periodStr);
 
@@ -706,17 +711,17 @@ function render() {
   // ── 목표·예상(FCST) 오버레이: 기준연도 · 전체 권역 ──────────────
   let overlayLabels = [];
   if (OTBD && OTBD.allMonthsByYear[activeYear] && activeRegion === '전체') {
-    const amy = OTBD.allMonthsByYear[activeYear], seg = activeSegment;
+    const amy = OTBD.allMonthsByYear[activeYear], all = segIsAll();
     const budArr = [], fcstArr = [];
     for (let m = 1; m <= 12; m++) {
       const md = amy[String(m)];
       if (!md || !md.summary) { budArr.push(null); fcstArr.push(null); continue; }
-      if (seg === '전체') { budArr.push(md.summary.rns_budget || null); fcstArr.push(md.summary.rns_fcst || null); }
-      else { const sd = (md.segmentData || {})[seg]; budArr.push(sd ? (sd.rns_budget || null) : null); fcstArr.push(null); }
+      if (all) { budArr.push(md.summary.rns_budget || null); fcstArr.push(md.summary.rns_fcst || null); }
+      else { let b = 0, f = 0; segList().forEach(sg => { const sd = (md.segmentData || {})[sg]; if (sd) { b += sd.rns_budget || 0; f += sd.rns_fcst || 0; } }); budArr.push(b || null); fcstArr.push(f || null); }
     }
     datasets.push({ label: '목표', data: budArr, borderColor: '#cfd3da', backgroundColor: 'transparent', borderWidth: 2, borderDash: [7, 4], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
     overlayLabels.push(['목표', '#cfd3da']);
-    if (seg === '전체' && fcstArr.some(v => v != null)) {
+    if (fcstArr.some(v => v != null)) {
       datasets.push({ label: '예상(FCST)', data: fcstArr, borderColor: '#5a9fc4', backgroundColor: 'transparent', borderWidth: 2, borderDash: [2, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
       overlayLabels.push(['예상(FCST)', '#5a9fc4']);
     }
@@ -759,25 +764,49 @@ function render() {
   renderWeeklyTable();
 }
 
+function syncSegChips() {
+  // '전체' = 전체모드일 때만 활성. 개별칩은 selectedSegs 포함 시 활성(전체모드면 개별칩 비활성 표시)
+  document.querySelectorAll('#seg-chips .chip,#mobile-seg-chips .chip').forEach(b => {
+    const s = b.textContent;
+    const on = s === '전체' ? segIsAll() : (!segIsAll() && selectedSegs.includes(s));
+    b.classList.toggle('active', on);
+  });
+  activeSegment = segLabelTxt(); // 호환 동기화
+}
+function applySegChange() {
+  syncSegChips();
+  render();
+  renderPaceChart();
+  if (window.stratRefresh) window.stratRefresh();
+}
 function buildSegChips() {
   [document.getElementById('seg-chips'), document.getElementById('mobile-seg-chips')].forEach(c => {
     if (!c) return;
     c.innerHTML = '';
     ALLOWED_SEGS.forEach(seg => {
       const btn = document.createElement('button');
-      btn.className = 'chip' + (seg === activeSegment ? ' active' : '');
+      btn.className = 'chip';
       btn.textContent = seg;
       btn.addEventListener('click', () => {
-        activeSegment = seg;
-        document.querySelectorAll('#seg-chips .chip,#mobile-seg-chips .chip')
-          .forEach(b => b.classList.toggle('active', b.textContent === activeSegment));
-        render();
-        renderPaceChart();
-        if (window.stratRefresh) window.stratRefresh();
+        if (seg === '전체') {
+          selectedSegs = ['OTA', 'G-OTA', 'Inbound']; // 전체 모드
+        } else {
+          if (segIsAll()) {
+            // 전체모드 → 특정 칩 단독 선택으로 전환
+            selectedSegs = [seg];
+          } else {
+            // 토글: 있으면 빼고 없으면 추가
+            const i = selectedSegs.indexOf(seg);
+            if (i >= 0) selectedSegs.splice(i, 1); else selectedSegs.push(seg);
+            if (selectedSegs.length === 0) selectedSegs = ['OTA', 'G-OTA', 'Inbound']; // 전부 해제=전체
+          }
+        }
+        applySegChange();
       });
       c.appendChild(btn);
     });
   });
+  syncSegChips();
 }
 
 function buildRegionChips() {
@@ -932,10 +961,8 @@ function renderPaceChart() {
   const datasets = [];
   const legendEl = document.getElementById('pace-legend');
 
-  // activeSegment에 따라 합산 대상 결정:
-  //  - '전체' → OTA+G-OTA+Inbound (GS 합계)
-  //  - 개별 세그먼트 → 해당 세그먼트만
-  const targetSegs = activeSegment === '전체' ? GS_SEGS : [activeSegment];
+  // 멀티선택: 선택된 세그먼트만 합산 (전체=OTA+G-OTA+Inbound)
+  const targetSegs = segList();
   const pickupBySeg = db.pickup_daily_by_segment_month || {};
   const cancelBySeg = db.cancel_daily_by_segment_month || {};
 
@@ -1010,8 +1037,7 @@ function renderPaceChart() {
     const _md = OTBD && OTBD.allMonthsByYear[activeYear] && OTBD.allMonthsByYear[activeYear][String(activePaceMonth)]; // otb 월키=비패딩
     if (curDs && curDs.data.length && _md && _md.segmentData) {
       let fcstRN = 0;
-      if (activeSegment === '전체') ['OTA', 'G-OTA', 'Inbound'].forEach(sg => { fcstRN += (_md.segmentData[sg] || {}).rns_fcst || 0; });
-      else fcstRN = (_md.segmentData[activeSegment] || {}).rns_fcst || 0;
+      segList().forEach(sg => { fcstRN += (_md.segmentData[sg] || {}).rns_fcst || 0; });
       if (fcstRN > 0) {
         const lp = curDs.data[curDs.data.length - 1];
         const endD = new Date(parseInt(activeYear), activePaceMonth, 0).getDate() - 1;
@@ -1312,10 +1338,26 @@ document.addEventListener('DOMContentLoaded', loadData);
   const eok=w=>w/1e8, f1=n=>n.toFixed(1), sg=n=>(n>=0?'+':'')+n.toFixed(1);
   const smd=()=>{ const y=OTB&&OTB.allMonthsByYear[SY]; return (y&&y[String(SM)])||null; };
   const segYoy=x=>x.rev_last>0?(x.rev_actual-x.rev_last)/x.rev_last*100:0;
-  // 세그먼트 = 좌측 사이드바(activeSegment) 단일 소스
-  const curSeg=()=> (typeof activeSegment!=='undefined' && activeSegment && activeSegment!=='전체') ? activeSegment : 'ALL';
-  const segLabel=()=>{ const s=curSeg(); return s==='ALL'?'전체':s; };
-  const tgtData=()=>{ const d=smd(); if(!d)return null; const s=curSeg(); return s==='ALL'?d.summary:(d.segmentData&&d.segmentData[s]); };
+  // 세그먼트 = 좌측 사이드바 멀티선택(selectedSegs) 단일 소스
+  const segSel=()=> (typeof segList==='function') ? segList() : SEGS;
+  const segAllOn=()=> (typeof segIsAll==='function') ? segIsAll() : true;
+  const segLabel=()=> (typeof segLabelTxt==='function') ? segLabelTxt() : '전체';
+  // 선택 세그먼트 합산 → summary 형태 객체
+  function aggSeg(sd, segs){
+    const o={rev_actual:0,rev_budget:0,rev_last:0,rev_fcst:0,rns_actual:0,rns_budget:0,rns_last:0,rns_fcst:0};
+    segs.forEach(x=>{const s=sd&&sd[x]; if(!s)return;
+      o.rev_actual+=s.rev_actual||0;o.rev_budget+=s.rev_budget||0;o.rev_last+=s.rev_last||0;o.rev_fcst+=s.rev_fcst||0;
+      o.rns_actual+=s.rns_actual||0;o.rns_budget+=s.rns_budget||0;o.rns_last+=s.rns_last||0;o.rns_fcst+=s.rns_fcst||0;});
+    o.rev_achievement=o.rev_budget>0?o.rev_actual/o.rev_budget*100:0;
+    o.rns_achievement=o.rns_budget>0?o.rns_actual/o.rns_budget*100:0;
+    o.adr_actual=o.rns_actual>0?o.rev_actual/o.rns_actual:0;
+    o.adr_budget=o.rns_budget>0?o.rev_budget/o.rns_budget:0;
+    o.adr_last=o.rns_last>0?o.rev_last/o.rns_last:0;
+    o.rev_yoy=o.rev_last>0?(o.rev_actual-o.rev_last)/o.rev_last*100:null;
+    o.adr_yoy=o.adr_last>0?(o.adr_actual/o.adr_last-1)*100:null;
+    return o;
+  }
+  const tgtData=()=>{ const d=smd(); if(!d)return null; if(segAllOn())return d.summary; return aggSeg(d.segmentData||{}, segSel()); };
   const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
@@ -1376,7 +1418,7 @@ document.addEventListener('DOMContentLoaded', loadData);
     resetSlider(); ssim();
   }
   function srenderDiag(d){
-    const sd=d.segmentData||{}; const segs=SEGS.filter(x=>sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
+    const sd=d.segmentData||{}; const pick=segSel(); const segs=SEGS.filter(x=>pick.includes(x)&&sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
     let worst=null,wa=1e9; segs.forEach(x=>{const a=sd[x].rev_achievement||0; if(a<wa){wa=a;worst=x;}});
     // 이슈 헤드라인
     let head='';
