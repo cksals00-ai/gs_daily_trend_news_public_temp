@@ -1358,6 +1358,8 @@ document.addEventListener('DOMContentLoaded', loadData);
     return o;
   }
   const tgtData=()=>{ const d=smd(); if(!d)return null; if(segAllOn())return d.summary; return aggSeg(d.segmentData||{}, segSel()); };
+  // AG(거래처/세그) 전년동기(lys)·전년마감(lyf)을 선택 세그 합산 → [rn,rev]
+  function agAgg(key){ const A=AG&&AG[ym()]||{}; let rn=0,rev=0; segSel().forEach(x=>{ const a=A[x]; if(a&&a[key]){ rn+=a[key][0]||0; rev+=a[key][1]||0; } }); return [rn,rev]; }
   const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
@@ -1392,19 +1394,19 @@ document.addEventListener('DOMContentLoaded', loadData);
   function srender(){ const d=smd();
     if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
     const base=tgtData()||d.summary, s=base;
-    const futureYr = parseInt(SY) > parseInt((OTB.meta.baseDate||'2026-01').slice(0,4));
     const ach=s.rev_achievement||0;
-    const yoy = futureYr ? null : (s.rev_yoy!=null ? s.rev_yoy : (s.rev_last>0?(s.rev_actual-s.rev_last)/s.rev_last*100:0));
+    // 전년동기 = AG(예약−취소복원, 동일 리드타임 as-of) 선택세그 합산. 온북(otb)과 스코프 정합.
+    const lysAgg=agAgg('lys'), lysRev=lysAgg[1];
+    const yoy = lysRev>0 ? (s.rev_actual-lysRev)/lysRev*100 : null;
     const adrYoy = s.adr_yoy!=null ? s.adr_yoy : (s.adr_last>0?(s.adr_actual/s.adr_last-1)*100:0);
     const gap=(s.rev_budget||0)-(s.rev_actual||0), sgl=segLabel();
     const v=ach>=100?['ok','양호']:ach>=88?['warn','주의']:['bad','미달'];
     let msg=v[0]==='ok'?`목표 매출 ${ach>=100?'상회':'근접'} — 현 페이스 유지 시 달성.`
       :`목표까지 <b class="mono">${f1(eok(gap))}억</b> 부족 — ${v[0]==='bad'?'현 페이스 미달 위험, ':''}아래 처방으로 보완.`;
-    // 미래연도(전년동기 스냅샷 없음)는 전년동기 제외 → 전년마감 대비 진행률로 대체
     const prog = (s.rev_last>0)?(s.rev_actual/s.rev_last*100):0;
-    const tail = futureYr
-      ? `전년마감 <b class="mono">${f1(eok(s.rev_last||0))}억</b> 대비 진행 <b class="mono">${f1(prog)}%</b> <span class="sh2">(동기간 비교 보류)</span>`
-      : `전년동기 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b>`;
+    const tail = yoy!=null
+      ? `전년동기 <b class="mono">${f1(eok(lysRev))}억</b> 대비 <b class="mono ${yoy>=0?'pos':'neg'}">${sg(yoy)}%</b>`
+      : `전년마감 <b class="mono">${f1(eok(s.rev_last||0))}억</b> 대비 진행 <b class="mono">${f1(prog)}%</b> <span class="sh2">(동기 데이터 없음)</span>`;
     document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
       +`<span class="svmain">${SY}년 ${SM}월 투숙 · <b>${sgl}</b> 목표매출 대비 온북 <b class="mono">${f1(ach)}%</b> · ${tail}</span>`
       +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
@@ -1419,22 +1421,22 @@ document.addEventListener('DOMContentLoaded', loadData);
   }
   function srenderDiag(d){
     const sd=d.segmentData||{}; const pick=segSel(); const segs=SEGS.filter(x=>pick.includes(x)&&sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
+    const A=AG[ym()]||{};
+    const agLys=x=>{const a=A[x]; return (a&&a.lys&&a.lys[1])||0;};
     let worst=null,wa=1e9; segs.forEach(x=>{const a=sd[x].rev_achievement||0; if(a<wa){wa=a;worst=x;}});
-    // 이슈 헤드라인
+    // 이슈 헤드라인 (전년 = 전년동기 net)
     let head='';
-    if(worst){ const w=sd[worst]; const wy=segYoy(w); const g=(w.rev_budget||0)-(w.rev_actual||0);
+    if(worst){ const w=sd[worst]; const wl=agLys(worst); const wy=wl>0?(w.rev_actual-wl)/wl*100:null; const g=(w.rev_budget||0)-(w.rev_actual||0);
       head=(w.rev_achievement||0)>=100
         ? `<div class="issue"><span class="ok">✔ 전 채널 목표권</span> — 큰 이슈 없음.</div>`
-        : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${wy<0?' · 전년 '+sg(wy)+'%':''}</b></span></div>`;
+        : `<div class="issue"><span class="bad">▼ 발목: <b>${worst}</b> — 온북 ${f1(eok(w.rev_actual||0))}억 / 목표 ${f1(eok(w.rev_budget||0))}억 (−${f1(eok(g))}억·${f1(w.rev_achievement||0)}%)${(wy!=null&&wy<0)?' · 전년동기 '+sg(wy)+'%':''}</b></span></div>`;
     }
-    const A=AG[ym()]||{};
-    const futureYr = parseInt(SY) > parseInt((OTB.meta.baseDate||'2026-01').slice(0,4));
     let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th>전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th><th>온북RN</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const ach=o.rev_achievement||0;
       const col=ach>=100?'var(--positive)':ach>=88?'var(--gold)':'var(--negative)';
       const A2=A[x]||{};
-      // 전년동기: 미래연도는 동기 스냅샷 없음 → 제외(–), 전년마감 폴백 금지. 전년마감: 거래처 집계 없으면 otb 전년마감으로 폴백
-      const lys = futureYr ? 0 : ((A2.lys&&A2.lys[1])||o.rev_last||0);
+      // 전년동기 = AG(예약−취소복원) 그대로. 없으면 '–'(otb 마감 폴백 금지). 전년마감은 집계 없으면 otb 전년마감 폴백
+      const lys = (A2.lys&&A2.lys[1])||0;
       const lyf = (A2.lyf&&A2.lyf[1])||o.rev_last||0;
       const on=o.rev_actual||0, bud=o.rev_budget||0, fc=o.rev_fcst||0; const yoy=lys>0?(on-lys)/lys*100:0;
       t+=`<tr class="seg ${x===worst&&ach<100?'worst':''}"><td>${x}</td>`
