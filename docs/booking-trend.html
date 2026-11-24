@@ -1468,24 +1468,27 @@ document.addEventListener('DOMContentLoaded', loadData);
           +`<div class="st-sub rev"><span class="l">매출</span><span>${f1(eok(rev))}<span class="u">억</span></span></div>`
         : '';
       return `<td class="stcell${kc}"><div class="st-rn"><span ${cl}>${nfmt(rn)}</span><span class="u">실</span>${pill}</div>${subs}</td>`; };
-    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th class="col-key">전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th></tr></thead><tbody>`;
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>목표</th><th>온북</th><th class="col-key">전년동기</th><th>전년마감</th><th>예상마감</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const rach=o.rns_achievement||0;
       const col=rach>=100?'var(--positive)':rach>=88?'var(--gold)':'var(--negative)';
       const lys=agP(x,'lys'), lyf=agP(x,'lyf');
       const lyfRn=lyf[0]||o.rns_last||0, lyfRev=lyf[1]||o.rev_last||0;
       const yb=lys[0]>0?(o.rns_actual-lys[0])/lys[0]*100:null;
       t+=`<tr class="seg ${x===worst&&wyMin<0?'worst':''}"><td><b>${x}</b></td>`
+        +cel(o.rns_budget||0,o.rev_budget||0,{})
         +cel(o.rns_actual||0,o.rev_actual||0,{color:col})
         +cel(lys[0],lys[1],{yoy:yb,key:1})
         +cel(lyfRn,lyfRev,{})
-        +cel(o.rns_budget||0,o.rev_budget||0,{})
         +cel(o.rns_fcst||0,o.rev_fcst||0,{})+`</tr>`;
       const ags=(A[x]&&A[x].agents)||{};
       if((x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
         const ents=Object.entries(ags); const tot=ents.reduce((a,[,v])=>a+((v.cur&&v.cur[0])||0),0)||1;
+        const fR=o.rns_fcst||0, fV=o.rev_fcst||0;   // 거래처 예상마감 = 채널 예상마감 × 온북비중
         ents.slice(0,5).forEach(([nm,v])=>{ const c=v.cur||[0,0],ls=v.lys||[0,0],lf=v.lyf||[0,0]; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
-          t+=`<tr class="part"><td>${nm} <span class="sh">${(c[0]/tot*100).toFixed(0)}%</span></td>`
-            +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+`<td></td><td></td></tr>`; });
+          const sh=c[0]/tot; const afR=Math.round(fR*sh), afV=Math.round(fV*sh);
+          t+=`<tr class="part"><td>${nm} <span class="sh">${(sh*100).toFixed(0)}%</span></td>`
+            +`<td class="stcell">–</td>`
+            +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+cel(afR,afV,{})+`</tr>`; });
         if(ents.length>5) t+=`<tr class="part"><td>기타 ${ents.length-5}곳</td><td colspan="5"></td></tr>`;
       }
     });
