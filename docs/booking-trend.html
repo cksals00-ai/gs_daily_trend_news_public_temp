@@ -234,7 +234,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;margin-left:8px;">권역:</span>
   <div id="mobile-region-chips" class="filter-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
-<div class="mobile-filter-bar" id="mobile-prop-bar" style="display:none;">
+<div class="mobile-filter-bar" id="mobile-prop-bar">
   <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.12em;">사업장:</span>
   <div id="mobile-prop-chips" class="filter-chips prop-chips" style="flex-wrap:nowrap;overflow-x:auto;"></div>
 </div>
@@ -271,7 +271,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       <div class="filter-section-label">권역</div>
       <div class="filter-chips" id="region-chips"></div>
     </div>
-    <div id="prop-filter-wrap" style="display:none;">
+    <div id="prop-filter-wrap">
       <div class="sidebar-divider"></div>
       <div>
         <div class="filter-section-label">사업장 <span id="prop-region-label" style="font-weight:400;opacity:0.6;"></span></div>
@@ -503,6 +503,25 @@ const REGION_DEFS = [
   { key: 'apac', label: 'APAC' },
 ];
 const REGION_LABEL = { vivaldi: '비발디', central: '중부', south: '남부', apac: 'APAC' };
+// ── 사업장 선택 헬퍼 (by_property_segment 기반) ──
+const _REGION_ORDER = ['vivaldi', 'central', 'south', 'apac'];
+function propMap() { return (db && db.meta && db.meta.property_region_map) || {}; }
+function propsOfRegion(rk) { const m = propMap(); return Object.keys(m).filter(p => m[p] === rk); }
+function allPropsOrdered() { const m = propMap(); return _REGION_ORDER.flatMap(rk => Object.keys(m).filter(p => m[p] === rk).sort()); }
+function setEq(a, b) { if (a.size !== b.size) return false; for (const x of a) if (!b.has(x)) return false; return true; }
+// 현재 선택 = 어느 권역과 일치? (전체=''·특정권역·custom)
+function regionFromProps() {
+  if (!activeProps.size) return '전체';
+  for (const rk of _REGION_ORDER) { if (setEq(activeProps, new Set(propsOfRegion(rk)))) return rk; }
+  return 'custom';
+}
+function selLabel() {
+  if (!activeProps.size) return '';
+  const rk = regionFromProps();
+  if (rk !== 'custom' && rk !== '전체') return REGION_LABEL[rk];
+  if (activeProps.size === 1) return [...activeProps][0];
+  return activeProps.size + '개 사업장';
+}
 const ALLOWED_SEGS = ['전체', 'OTA', 'G-OTA', 'Inbound'];
 const GS_SEGS = ['OTA', 'G-OTA', 'Inbound']; // GS 기준 세그먼트
 
@@ -525,29 +544,23 @@ function sumGsSegments(monthKey, sourceObj) {
 }
 
 function getMonthData(key) {
-  // 세그먼트 부분선택(멀티): 선택 세그먼트만 합산
-  if (!segIsAll()) {
-    const src = activeRegion !== '전체' ? (db.by_region_segment[activeRegion] || {}) : db.by_segment;
+  const segs = segIsAll() ? GS_SEGS : segList();
+  // 사업장 선택(우선): by_property_segment 에서 선택 사업장 × 선택 세그 합산
+  if (activeProps && activeProps.size) {
     let r = { net_rn: 0, net_rev: 0 };
-    segList().forEach(sg => { const d = (src[sg] || {})[key]; if (d) { r.net_rn += d.net_rn || 0; r.net_rev += d.net_rev || 0; } });
+    const bps = db.by_property_segment || {};
+    activeProps.forEach(p => {
+      const pd = bps[p] || {};
+      segs.forEach(sg => { const d = (pd[sg] || {})[key]; if (d) { r.net_rn += d.net_rn || 0; r.net_rev += d.net_rev || 0; } });
+    });
     return r;
   }
-
-  // 권역 선택 + 세그먼트 전체: 해당 권역의 GS만 합산
-  if (activeRegion !== '전체') {
-    // by_region_segment[region][seg][key] 구조에서 GS만 합산
-    let result = { net_rn: 0, net_rev: 0 };
-    const regionData = db.by_region_segment[activeRegion] || {};
-    GS_SEGS.forEach(seg => {
-      const data = (regionData[seg] || {})[key];
-      if (data) {
-        result.net_rn += data.net_rn || 0;
-        result.net_rev += data.net_rev || 0;
-      }
-    });
-    return result;
+  // 세그먼트 부분선택(사업장 전체): by_segment 에서 선택 세그만
+  if (!segIsAll()) {
+    let r = { net_rn: 0, net_rev: 0 };
+    segList().forEach(sg => { const d = (db.by_segment[sg] || {})[key]; if (d) { r.net_rn += d.net_rn || 0; r.net_rev += d.net_rev || 0; } });
+    return r;
   }
-
   // 필터 없을 때: GS 세그먼트만 합산
   return sumGsSegments(key, db.by_segment);
 }
@@ -680,7 +693,7 @@ function render() {
   // Build period display with filters
   let periodStr = activeYear + '년 기준';
   if (!segIsAll()) periodStr += ' · ' + segLabelTxt();
-  if (activeRegion !== '전체') periodStr += ' · ' + REGION_LABEL[activeRegion];
+  if (activeProps.size) periodStr += ' · ' + selLabel();
   setText('period-display', periodStr);
 
   setText('kpi-cur', fmt.num(curData.rns));
@@ -716,7 +729,7 @@ function render() {
 
   // ── 목표·예상(FCST) 오버레이: 기준연도 · 전체 권역 ──────────────
   let overlayLabels = [];
-  if (OTBD && OTBD.allMonthsByYear[activeYear] && activeRegion === '전체') {
+  if (OTBD && OTBD.allMonthsByYear[activeYear] && !activeProps.size) {
     const amy = OTBD.allMonthsByYear[activeYear], all = segIsAll();
     const budArr = [], fcstArr = [];
     for (let m = 1; m <= 12; m++) {
@@ -815,6 +828,17 @@ function buildSegChips() {
   syncSegChips();
 }
 
+// 선택 상태(activeProps) → 권역/사업장 칩 active 동기화 + 라벨 갱신
+function refreshFilterUI() {
+  activeRegion = regionFromProps();   // 선택 사업장으로부터 권역 역산('전체'/권역/custom)
+  document.querySelectorAll('#region-chips .chip,#mobile-region-chips .chip')
+    .forEach(b => b.classList.toggle('active', b.dataset.region === activeRegion));
+  document.querySelectorAll('#prop-chips .chip,#mobile-prop-chips .chip')
+    .forEach(b => b.classList.toggle('active', activeProps.has(b.dataset.prop)));
+  const propLabel = document.getElementById('prop-region-label');
+  if (propLabel) propLabel.textContent = activeProps.size ? '(' + activeProps.size + '개 선택)' : '(전체)';
+}
+
 function buildRegionChips() {
   [document.getElementById('region-chips'), document.getElementById('mobile-region-chips')].forEach(c => {
     if (!c) return;
@@ -822,63 +846,38 @@ function buildRegionChips() {
     REGION_DEFS.forEach(r => {
       const btn = document.createElement('button');
       btn.className = 'chip' + (r.key === activeRegion ? ' active' : '');
+      btn.dataset.region = r.key;
       btn.textContent = r.label;
       btn.addEventListener('click', () => {
-        activeRegion = r.key;
-        document.querySelectorAll('#region-chips .chip,#mobile-region-chips .chip')
-          .forEach(b => b.classList.toggle('active', b.textContent === r.label));
-        buildPropChips();
-        render();
-        renderSmrDrill();
+        if (r.key === '전체') activeProps.clear();            // 권역 클릭 = 해당 사업장 일괄선택
+        else activeProps = new Set(propsOfRegion(r.key));
+        refreshFilterUI(); render(); renderSmrDrill();
       });
       c.appendChild(btn);
     });
   });
 }
 
+// 사업장 칩: 항상 표시, 전체 사업장 직접 멀티선택 (권역 순서 정렬)
 function buildPropChips() {
-  const propWrap = document.getElementById('prop-filter-wrap');
-  const mobileBar = document.getElementById('mobile-prop-bar');
-  const propLabel = document.getElementById('prop-region-label');
-
-  if (activeRegion === '전체') {
-    if (propWrap) propWrap.style.display = 'none';
-    if (mobileBar) mobileBar.style.display = 'none';
-    return;
-  }
-
-  if (propWrap) propWrap.style.display = 'block';
-  if (mobileBar) mobileBar.style.display = 'flex';
-  if (propLabel) propLabel.textContent = '(' + REGION_LABEL[activeRegion] + ')';
-
-  const props = db.meta.property_region_map && db.meta.property_region_map[activeRegion]
-    ? Object.keys(db.meta.property_region_map[activeRegion])
-    : [];
-
+  // 표시 여부는 CSS(사이드바=항상, 모바일바=미디어쿼리)가 담당 — JS는 칩만 채움
+  const props = allPropsOrdered();
   [document.getElementById('prop-chips'), document.getElementById('mobile-prop-chips')].forEach(c => {
     if (!c) return;
     c.innerHTML = '';
     props.forEach(p => {
       const btn = document.createElement('button');
       btn.className = 'chip' + (activeProps.has(p) ? ' active' : '');
+      btn.dataset.prop = p;
       btn.textContent = p;
       btn.addEventListener('click', () => {
-        if (activeProps.has(p)) {
-          activeProps.delete(p);
-        } else {
-          activeProps.add(p);
-        }
-        document.querySelectorAll('#prop-chips .chip,#mobile-prop-chips .chip')
-          .forEach(b => {
-            if (props.includes(b.textContent)) {
-              b.classList.toggle('active', activeProps.has(b.textContent));
-            }
-          });
-        render();
+        if (activeProps.has(p)) activeProps.delete(p); else activeProps.add(p);
+        refreshFilterUI(); render(); renderSmrDrill();
       });
       c.appendChild(btn);
     });
   });
+  refreshFilterUI();
 }
 
 function buildFilters() {
@@ -1235,7 +1234,7 @@ function renderSmrDrill() {
   let totAdv = 0, totBud = 0, totTotal = 0, totClosing = 0, hasBudget = false;
   Object.keys(smrData.by_property).forEach(name => {
     const node = smrData.by_property[name];
-    if (activeRegion !== '전체' && node.region !== activeRegion) return;
+    if (activeProps.size && !activeProps.has(name)) return;
     const tyM = (node[ty] || {})[mm];
     if (!tyM) return;
     const lyM = (node[ly] || {})[mm];
