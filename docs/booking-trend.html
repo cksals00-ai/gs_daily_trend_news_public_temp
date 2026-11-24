@@ -358,6 +358,24 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .strat-tb .sh2{font-size:9.5px;font-family:var(--mono);margin-left:3px}
     #strat .strat-tb tr.worst td:first-child{color:#ef9a9a}
     #strat .strat-tb .bar{display:inline-block;height:8px;border-radius:3px;vertical-align:middle;margin-left:6px}
+    /* 스택 셀: RN(메인) / ADR / 매출 3줄 정렬 */
+    #strat .strat-tb td.stcell{padding:7px 10px;vertical-align:top;line-height:1.25}
+    #strat .st-rn{font-size:13.5px;font-weight:700;white-space:nowrap}
+    #strat .st-rn .u{font-size:9px;color:var(--ink-muted);margin-left:1px;font-weight:400}
+    #strat .st-sub{display:flex;justify-content:flex-end;align-items:baseline;gap:6px;font-size:10px;color:var(--ink-muted);margin-top:2px}
+    #strat .st-sub .l{color:var(--ink-faint);font-size:8px;letter-spacing:.06em;font-weight:700}
+    #strat .st-sub .u{font-size:8.5px;margin-left:1px;color:var(--ink-faint)}
+    #strat .st-sub.rev{color:var(--ink);font-size:10.5px}
+    /* 전년동기 YoY 강조 pill + 핵심열 틴트 + 발목행 */
+    #strat .yoy-pill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:800;font-family:var(--mono);vertical-align:middle;margin-left:4px}
+    #strat .yoy-pill.g{background:#1f3a28;color:#7fd8a0}
+    #strat .yoy-pill.w{background:#3a2f1a;color:var(--gold-bright)}
+    #strat .yoy-pill.b{background:#3d1f1f;color:#ef9a9a}
+    #strat .strat-tb th.col-key,#strat .strat-tb td.col-key{background:rgba(201,160,99,.06);box-shadow:inset 1px 0 0 rgba(201,160,99,.22),inset -1px 0 0 rgba(201,160,99,.22)}
+    #strat .strat-tb th.col-key{color:var(--gold-bright)}
+    #strat .strat-tb tr.worst{background:linear-gradient(90deg,rgba(229,115,115,.10),transparent)}
+    #strat .strat-tb tr.worst td.col-key{background:rgba(229,115,115,.07)}
+    #strat .strat-tb tr.worst td:first-child::before{content:'▶ ';color:#ef9a9a;font-size:9px}
     #strat .strat-sim{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;margin-top:14px;background:linear-gradient(180deg,rgba(201,160,99,.06),transparent)}
     #strat .strat-simhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
     #strat .strat-slider{display:flex;align-items:center;gap:12px;margin:8px 0}
@@ -1439,30 +1457,35 @@ document.addEventListener('DOMContentLoaded', loadData);
       head=`<div class="issue"><span class="bad">⚠ 전년동기 하회 · <b>${worst}</b> <span class="mono">${sg(wyMin)}%</span></span> <span class="sh2">(온북 ${nfmt(w.rns_actual||0)}실 vs 전년동기 ${nfmt(l)}실)</span></div>`;
     } else if(worst){ head=`<div class="issue"><span class="ok">✔ 전 채널 전년동기 상회</span> — 페이스 양호 (최저 ${worst} ${sg(wyMin)}%).</div>`;
     } else { head=`<div class="issue">전년동기 데이터 없음 — 목표 대비로만 판단.</div>`; }
-    const cel=(rn,rev,badge,color)=>{ if(!rn&&!rev) return '<td>–</td>';
-      const bd=(badge!=null)?` <span class="sh2 ${badge>=0?'pos':'neg'}">${sg(badge)}%</span>`:'';
+    const yoyCls=y=>y>=3?'g':y>=-8?'w':'b';
+    const cel=(rn,rev,opt)=>{ opt=opt||{}; const kc=opt.key?' col-key':'';
+      if(!rn&&!rev) return `<td class="stcell${kc}">–</td>`;
       const adr=(rn&&rev)?Math.round(rev/rn/1000):0;
-      const sub=rev?`<span style="display:block;font-family:var(--mono);font-size:10px;color:var(--ink-muted);margin-top:1px">${adr?'<span style="color:var(--ink-faint)">ADR</span> '+nfmt(adr)+'천 · ':''}${f1(eok(rev))}억</span>`:'';
-      const cl=color?`color:${color};`:'';
-      return `<td><span style="${cl}font-family:var(--mono);font-weight:700;font-size:13px">${nfmt(rn)}</span><span style="font-size:9px;color:var(--ink-muted);margin-left:1px">실</span>${bd}${sub}</td>`; };
-    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th>전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th></tr></thead><tbody>`;
+      const cl=opt.color?`style="color:${opt.color}"`:'';
+      const pill=(opt.yoy!=null)?`<span class="yoy-pill ${yoyCls(opt.yoy)}">${sg(opt.yoy)}%</span>`:'';
+      const subs=rev
+        ? `<div class="st-sub"><span class="l">ADR</span><span>${nfmt(adr)}<span class="u">천</span></span></div>`
+          +`<div class="st-sub rev"><span class="l">매출</span><span>${f1(eok(rev))}<span class="u">억</span></span></div>`
+        : '';
+      return `<td class="stcell${kc}"><div class="st-rn"><span ${cl}>${nfmt(rn)}</span><span class="u">실</span>${pill}</div>${subs}</td>`; };
+    let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>온북</th><th class="col-key">전년동기</th><th>전년마감</th><th>목표</th><th>예상마감</th></tr></thead><tbody>`;
     segs.forEach(x=>{const o=sd[x]; const rach=o.rns_achievement||0;
       const col=rach>=100?'var(--positive)':rach>=88?'var(--gold)':'var(--negative)';
       const lys=agP(x,'lys'), lyf=agP(x,'lyf');
       const lyfRn=lyf[0]||o.rns_last||0, lyfRev=lyf[1]||o.rev_last||0;
       const yb=lys[0]>0?(o.rns_actual-lys[0])/lys[0]*100:null;
       t+=`<tr class="seg ${x===worst&&wyMin<0?'worst':''}"><td><b>${x}</b></td>`
-        +cel(o.rns_actual||0,o.rev_actual||0,null,col)
-        +cel(lys[0],lys[1],yb,null)
-        +cel(lyfRn,lyfRev,null,null)
-        +cel(o.rns_budget||0,o.rev_budget||0,null,null)
-        +cel(o.rns_fcst||0,o.rev_fcst||0,null,null)+`</tr>`;
+        +cel(o.rns_actual||0,o.rev_actual||0,{color:col})
+        +cel(lys[0],lys[1],{yoy:yb,key:1})
+        +cel(lyfRn,lyfRev,{})
+        +cel(o.rns_budget||0,o.rev_budget||0,{})
+        +cel(o.rns_fcst||0,o.rev_fcst||0,{})+`</tr>`;
       const ags=(A[x]&&A[x].agents)||{};
       if((x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
         const ents=Object.entries(ags); const tot=ents.reduce((a,[,v])=>a+((v.cur&&v.cur[0])||0),0)||1;
         ents.slice(0,5).forEach(([nm,v])=>{ const c=v.cur||[0,0],ls=v.lys||[0,0],lf=v.lyf||[0,0]; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
           t+=`<tr class="part"><td>${nm} <span class="sh">${(c[0]/tot*100).toFixed(0)}%</span></td>`
-            +cel(c[0],c[1],null,null)+cel(ls[0],ls[1],ay,null)+cel(lf[0],lf[1],null,null)+`<td></td><td></td></tr>`; });
+            +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+`<td></td><td></td></tr>`; });
         if(ents.length>5) t+=`<tr class="part"><td>기타 ${ents.length-5}곳</td><td colspan="5"></td></tr>`;
       }
     });
