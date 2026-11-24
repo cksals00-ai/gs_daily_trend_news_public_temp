@@ -869,7 +869,7 @@ function buildRegionChips() {
       btn.addEventListener('click', () => {
         if (r.key === '전체') activeProps.clear();            // 권역 클릭 = 해당 사업장 일괄선택
         else activeProps = new Set(propsOfRegion(r.key));
-        refreshFilterUI(); render(); renderSmrDrill();
+        refreshFilterUI(); render(); renderSmrDrill(); if(window.stratRefresh) window.stratRefresh();
       });
       c.appendChild(btn);
     });
@@ -890,7 +890,7 @@ function buildPropChips() {
       btn.textContent = p;
       btn.addEventListener('click', () => {
         if (activeProps.has(p)) activeProps.delete(p); else activeProps.add(p);
-        refreshFilterUI(); render(); renderSmrDrill();
+        refreshFilterUI(); render(); renderSmrDrill(); if(window.stratRefresh) window.stratRefresh();
       });
       c.appendChild(btn);
     });
@@ -1380,9 +1380,28 @@ document.addEventListener('DOMContentLoaded', loadData);
     o.adr_yoy=o.adr_last>0?(o.adr_actual/o.adr_last-1)*100:null;
     return o;
   }
-  const tgtData=()=>{ const d=smd(); if(!d)return null; if(segAllOn())return d.summary; return aggSeg(d.segmentData||{}, segSel()); };
-  // AG(거래처/세그) 전년동기(lys)·전년마감(lyf)을 선택 세그 합산 → [rn,rev]
-  function agAgg(key){ const A=AG&&AG[ym()]||{}; let rn=0,rev=0; segSel().forEach(x=>{ const a=A[x]; if(a&&a[key]){ rn+=a[key][0]||0; rev+=a[key][1]||0; } }); return [rn,rev]; }
+  // ── 사업장 필터(activeProps=db명) → otb byProperty display명 매핑 ──
+  const DBPROP2DISP={"소노벨 비발디파크":"01.벨비발디","소노문 비발디파크":"01.벨비발디","소노캄 비발디파크":"02.캄비발디","소노펫 비발디파크":"03.펫비발디","소노펠리체 비발디파크":"04.펠리체비발디","소노펠리체 빌리지 비발디파크":"05.빌리지비발디","소노휴 양평":"06.양평","소노벨 양평":"06.양평","델피노":"07.델피노","쏠비치 양양":"08.쏠비치양양","쏠비치 삼척":"09.쏠비치삼척","소노문 단양":"10.소노벨단양","소노벨 단양":"10.소노벨단양","소노벨 경주":"11.소노캄경주","소노캄 경주":"11.소노캄경주","소노벨 청송":"12.소노벨청송","소노벨 천안":"13.소노벨천안","소노벨 변산":"14.소노벨변산","소노캄 여수":"15.소노캄여수","소노캄 거제":"16.소노캄거제","쏠비치 진도":"17.쏠비치진도","소노벨 제주":"18.소노벨제주","소노캄 제주":"19.소노캄제주","소노캄 고양":"20.소노캄고양","소노문 해운대":"21.소노문해운대","쏠비치 남해":"22.쏠비치남해","르네블루":"23.르네블루"};
+  const propSel=()=>{ if(typeof activeProps==='undefined'||!activeProps||!activeProps.size)return null; const s=new Set(); activeProps.forEach(p=>{const d=DBPROP2DISP[p]; if(d)s.add(d);}); return s.size?s:null; };
+  // byPropertySegment(선택 display×선택 seg) 합산 → summary 형태
+  function aggProp(dispSet, segs){ const d=smd(); if(!d||!d.byPropertySegment)return null;
+    const o={rev_actual:0,rev_budget:0,rev_last:0,rev_fcst:0,rns_actual:0,rns_budget:0,rns_last:0,rns_fcst:0};
+    segs.forEach(seg=>{(d.byPropertySegment[seg]||[]).forEach(x=>{ if(!dispSet.has(x.name))return;
+      o.rev_actual+=x.rev_actual||0;o.rev_budget+=x.rev_budget||0;o.rev_last+=x.rev_last||0;o.rev_fcst+=x.rev_fcst||0;
+      o.rns_actual+=x.rns_actual||0;o.rns_budget+=x.rns_budget||0;o.rns_last+=x.rns_last||0;o.rns_fcst+=x.rns_fcst||0;});});
+    o.rev_achievement=o.rev_budget>0?o.rev_actual/o.rev_budget*100:0; o.rns_achievement=o.rns_budget>0?o.rns_actual/o.rns_budget*100:0;
+    o.adr_actual=o.rns_actual>0?o.rev_actual/o.rns_actual:0; o.adr_budget=o.rns_budget>0?o.rev_budget/o.rns_budget:0; o.adr_last=o.rns_last>0?o.rev_last/o.rns_last:0;
+    o.rev_yoy=o.rev_last>0?(o.rev_actual-o.rev_last)/o.rev_last*100:null; o.adr_yoy=o.adr_last>0?(o.adr_actual/o.adr_last-1)*100:null;
+    return o; }
+  // 사업장×세그 전년동기/전년마감 (_prop) 합산
+  function propAg(dispSet, segs, key){ const P=(AG&&AG._prop&&AG._prop[ym()])||{}; let rn=0,rev=0;
+    dispSet.forEach(disp=>{ const dd=P[disp]||{}; segs.forEach(seg=>{ const a=dd[seg]; if(a&&a[key]){rn+=a[key][0]||0;rev+=a[key][1]||0;} }); }); return [rn,rev]; }
+  const tgtData=()=>{ const d=smd(); if(!d)return null; const ps=propSel();
+    if(ps) return aggProp(ps, segSel());
+    if(segAllOn())return d.summary; return aggSeg(d.segmentData||{}, segSel()); };
+  // AG 전년동기(lys)·전년마감(lyf) 선택 세그(사업장 선택 시 _prop) 합산 → [rn,rev]
+  function agAgg(key){ const ps=propSel(); if(ps) return propAg(ps, segSel(), key);
+    const A=AG&&AG[ym()]||{}; let rn=0,rev=0; segSel().forEach(x=>{ const a=A[x]; if(a&&a[key]){ rn+=a[key][0]||0; rev+=a[key][1]||0; } }); return [rn,rev]; }
   const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
@@ -1423,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', loadData);
     const yoyRn = lysRn>0 ? (s.rns_actual-lysRn)/lysRn*100 : null;
     const yoyRev = lysRev>0 ? (s.rev_actual-lysRev)/lysRev*100 : null;
     const adrYoy = s.adr_yoy!=null ? s.adr_yoy : (s.adr_last>0?(s.adr_actual/s.adr_last-1)*100:0);
-    const gap=(s.rev_budget||0)-(s.rev_actual||0), sgl=segLabel();
+    const _pL=(typeof selLabel==='function')?selLabel():''; const gap=(s.rev_budget||0)-(s.rev_actual||0), sgl=segLabel()+(_pL?' · '+_pL:'');
     // 판정 = 객실수 전년동기 페이스(데이터 있으면). 없으면 객실수 목표달성률.
     const v = yoyRn!=null
       ? (yoyRn>=3?['ok','양호']:yoyRn>=-8?['warn','주의']:['bad','미달'])
@@ -1446,9 +1465,17 @@ document.addEventListener('DOMContentLoaded', loadData);
     resetSlider(); ssim();
   }
   function srenderDiag(d){
-    const sd=d.segmentData||{}; const pick=segSel(); const segs=SEGS.filter(x=>pick.includes(x)&&sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
+    const ps=propSel(); const pick=segSel();
+    let sd, agP, hasAgents;
+    if(ps){  // 사업장 선택: byPropertySegment + _prop (거래처 분해는 사업장별 데이터 없어 생략)
+      sd={}; SEGS.forEach(seg=>{ const o=aggProp(ps,[seg]); if(o&&(o.rns_budget||o.rns_actual)) sd[seg]=o; });
+      agP=(x,k)=>propAg(ps,[x],k); hasAgents=false;
+    } else {
+      sd=d.segmentData||{}; const AA=AG[ym()]||{};
+      agP=(x,k)=>{const a=AA[x]; return (a&&a[k])||[0,0];}; hasAgents=true;
+    }
+    const segs=SEGS.filter(x=>pick.includes(x)&&sd[x]&&(sd[x].rev_budget||sd[x].rev_actual));
     const A=AG[ym()]||{};
-    const agP=(x,k)=>{const a=A[x]; return (a&&a[k])||[0,0];};
     // 전년동기 RN 페이스 최저 채널 = 주의(전년동기 하회) 대상. 목표달성률 아님(예약 초기엔 전부 낮음).
     let worst=null, wyMin=1e9;
     segs.forEach(x=>{ const l=agP(x,'lys')[0]; if(l>0){ const y=(sd[x].rns_actual-l)/l*100; if(y<wyMin){wyMin=y;worst=x;} } });
@@ -1481,7 +1508,7 @@ document.addEventListener('DOMContentLoaded', loadData);
         +cel(lyfRn,lyfRev,{})
         +cel(o.rns_fcst||0,o.rev_fcst||0,{})+`</tr>`;
       const ags=(A[x]&&A[x].agents)||{};
-      if((x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
+      if(hasAgents&&(x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
         const ents=Object.entries(ags); const tot=ents.reduce((a,[,v])=>a+((v.cur&&v.cur[0])||0),0)||1;
         const fR=o.rns_fcst||0, fV=o.rev_fcst||0;   // 거래처 예상마감 = 채널 예상마감 × 온북비중
         ents.slice(0,5).forEach(([nm,v])=>{ const c=v.cur||[0,0],ls=v.lys||[0,0],lf=v.lyf||[0,0]; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
