@@ -99,6 +99,20 @@ td,th{font-weight:600}th{font-weight:800}
 @media(max-width:900px){.chart-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:repeat(3,1fr)}.rank-grid{grid-template-columns:1fr}}
 @media(max-width:900px){.mast{padding:0 14px}.mast-sub{display:none}.wrap{padding:0 12px 36px}.card{padding:14px}.summary-row{grid-template-columns:1fr 1fr}}
 </style>
+<style id="gs-side-nav-css">
+.gs-side-nav{display:flex;flex-direction:column;gap:2px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--rule,#2a3140);}
+.gs-side-label{font-family:var(--mono,'JetBrains Mono',ui-monospace,monospace);font-size:10px;letter-spacing:.18em;color:var(--ink-faint,#6b7280);text-transform:uppercase;margin-bottom:6px;}
+.gs-side-nav .otb-nav-link{display:block;padding:6px 10px;border-radius:4px;font-family:var(--mono,'JetBrains Mono',ui-monospace,monospace);font-size:11px;color:var(--ink-muted,#9aa3b2);text-decoration:none;transition:all .15s;letter-spacing:.03em;white-space:nowrap;}
+.gs-side-nav .otb-nav-link:hover{background:var(--bg-soft,#161b24);color:var(--ink,#e6e9ef);}
+.gs-side-nav .otb-nav-link.active{background:rgba(201,160,99,.18);color:var(--gold-bright,#e6b970);}
+.gs-side-nav .otb-nav-link.shine{color:var(--gold-bright,#e6b970)!important;background:linear-gradient(90deg,rgba(201,160,99,.22),rgba(201,160,99,.05));box-shadow:0 0 0 1px rgba(201,160,99,.35),0 0 12px rgba(201,160,99,.40);animation:gsNavShine 2.1s ease-in-out infinite;}
+@keyframes gsNavShine{0%,100%{box-shadow:0 0 0 1px rgba(201,160,99,.26),0 0 6px rgba(201,160,99,.20);}50%{box-shadow:0 0 0 1px rgba(201,160,99,.60),0 0 18px rgba(201,160,99,.60);}}
+.gs-app-shell{display:flex;align-items:flex-start;}
+.gs-sidebar{width:200px;flex-shrink:0;background:var(--bg-deep,#0b0f14);border-right:1px solid var(--rule,#2a3140);padding:18px 14px;position:sticky;top:42px;height:calc(100vh - 42px);overflow-y:auto;}
+.gs-app-shell>main{flex:1;min-width:0;}
+@media(max-width:860px){.gs-side-nav{flex-direction:row;flex-wrap:wrap;gap:4px;border-bottom:0;padding-bottom:6px;}.gs-side-label{width:100%;}
+.gs-app-shell{flex-direction:column;}.gs-sidebar{width:100%;position:static;height:auto;border-right:0;border-bottom:1px solid var(--rule,#2a3140);padding:10px 12px;}}
+</style>
 </head>
 <body>
 
@@ -148,7 +162,26 @@ td,th{font-weight:600}th{font-weight:800}
 <main class="wrap">
   <!-- ═══ LEFT SIDEBAR ═══ -->
   <aside class="sidebar">
-    <div class="sb-section">
+        <!-- GS 실적 리포트 공통 사이드바 (scripts/inject_gs_sidebar.py) -->
+    <div class="gs-side-nav" id="gs-side-nav">
+      <div class="gs-side-label">GS 실적 리포트</div>
+      <a href="otb.html" class="otb-nav-link">당일현황</a>
+      <a href="booking-trend.html" class="otb-nav-link shine">예약추이</a>
+      <a href="product-detail.html" class="otb-nav-link shine">상품상세</a>
+      <a href="weekly-compare.html" class="otb-nav-link">금주비교</a>
+      <a href="channel.html" class="otb-nav-link">채널별</a>
+      <a href="stay-date.html" class="otb-nav-link">투숙일기준</a>
+      <a href="booking-status.html" class="otb-nav-link">Booking Status</a>
+      <a href="manager-analysis.html" class="otb-nav-link">담당자 분석</a>
+      <a href="property-report.html" class="otb-nav-link">사업장별 리포트</a>
+      <a href="fcst-trend.html" class="otb-nav-link active">FCST 추이</a>
+      <a href="action_plan_dashboard.html" class="otb-nav-link">Action Plan</a>
+      <a href="gs-weekly.html" class="otb-nav-link">국내 영업 실적</a>
+      <a href="gs-sales-report.html" class="otb-nav-link">영업활동 보고</a>
+      <a href="gs-strategy-report.html" class="otb-nav-link">전략 리포트</a>
+      <a href="gs-closing-report.html" class="otb-nav-link">마감 보고</a>
+    </div>
+<div class="sb-section">
       <div class="sb-label">연도</div>
       <div class="sb-chips" id="year-chips"></div>
     </div>
