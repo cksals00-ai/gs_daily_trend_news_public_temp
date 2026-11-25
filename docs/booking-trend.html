@@ -403,6 +403,12 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
         <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span> <span id="strat-tgtlabel" style="font-family:var(--mono);font-size:13px;color:var(--gold-bright);font-weight:800">전체</span> <span style="font-size:10.5px;color:var(--ink-faint)">← 좌측 세그먼트와 연동</span></div>
         <div class="strat-slider"><span style="color:var(--ink-muted);font-size:12px">요금(ADR)</span>
           <input type="range" id="strat-adr" min="0" max="100" value="100"><span class="strat-adrv" id="strat-adrv">–</span></div>
+        <div class="strat-simmode" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 2px;font-size:11px;color:var(--ink-faint)">
+          <span>ADR 기준</span>
+          <button type="button" class="chip active" data-simmode="add" id="strat-mode-add">추가 판매분</button>
+          <button type="button" class="chip" data-simmode="all" id="strat-mode-all">월 전체 평균</button>
+          <span id="strat-mode-help">추가 판매분 = 이미 들어온 온북 매출은 그대로 두고, 남은 목표를 새로 들어올 예약의 ADR로 채움(현실적) · 월 전체 평균 = 온북 포함 그 달 평균 ADR을 그 값으로 가정</span>
+        </div>
         <div class="strat-action" id="strat-action"></div>
         <div class="strat-gauge" id="strat-gauge"><i id="strat-gfill"></i><div class="cur" id="strat-gcur"></div></div>
         <div class="glab"><span>현재 온북 <b id="strat-gcurl"></b></span><span>필요 <b id="strat-gneedl"></b></span></div>
@@ -1460,7 +1466,11 @@ document.addEventListener('DOMContentLoaded', loadData);
       ['온북 객실수', nfmt(s.rns_actual)+'<span style="font-size:11px">실</span>', '목표 '+nfmt(s.rns_budget)+' · '+f1(rnsAch)+'%', '', rnsAch>=100?'pos':rnsAch>=88?'neu':'neg'],
       ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', 'b', ach>=100?'pos':ach>=88?'neu':'neg'],
       ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(adrYoy)+'%', 'g', adrYoy>=0?'pos':'neg'],
-      ['예상 마감', f1(eok(s.rev_fcst||0))+'<span style="font-size:11px">억</span>', '전년 '+f1(eok(s.rev_last||0))+'억 · 예상 '+sg(s.rev_last>0?(s.rev_fcst-s.rev_last)/s.rev_last*100:0)+'%', '', (s.rev_last>0&&(s.rev_fcst||0)>=s.rev_last)?'pos':'neg'],
+      // 예상 마감: 매출 + 객실수·ADR 예상 + 목표대비 (요청: 송예건 CM 2026-11-26)
+      (function(){ const fr=s.rns_fcst||0, fv=s.rev_fcst||0, fadr=fr>0?fv/fr:0, rnAch=s.rns_budget>0?fr/s.rns_budget*100:null, revAch=s.rev_budget>0?fv/s.rev_budget*100:null;
+        return ['예상 마감', f1(eok(fv))+'<span style="font-size:11px">억</span>'+(revAch!=null?' <span style="font-size:11px;font-weight:600;color:'+(revAch>=100?'#7fd8a0':revAch>=88?'#e6b970':'#ef9a9a')+'">목표 '+f1(revAch)+'%</span>':''),
+          '객실 '+nfmt(fr)+'실'+(rnAch!=null?' ('+f1(rnAch)+'%)':'')+' · ADR '+nfmt(Math.round(fadr/1000))+'천 · 전년 '+f1(eok(s.rev_last||0))+'억 · '+sg(s.rev_last>0?(fv-s.rev_last)/s.rev_last*100:0)+'%',
+          '', (revAch!=null?(revAch>=100?'pos':revAch>=88?'neu':'neg'):((s.rev_last>0&&fv>=s.rev_last)?'pos':'neg'))]; })(),
     ].map(k=>`<div class="smini ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
     resetSlider(); ssim();
@@ -1523,14 +1533,22 @@ document.addEventListener('DOMContentLoaded', loadData);
     t+=`</tbody></table>`;
     document.getElementById('strat-diag').innerHTML=head+t;
   }
+  var SIMMODE='add';   // 'add' = 추가 판매분 ADR(온북 매출 고정) / 'all' = 월 전체 평균 ADR
+  document.addEventListener('click', function(e){ const b=e.target.closest('[data-simmode]'); if(!b) return; SIMMODE=b.dataset.simmode;
+    document.querySelectorAll('[data-simmode]').forEach(x=>x.classList.toggle('active', x===b)); ssim(); });
   function ssim(){ const t=tgtData(), av=document.getElementById('strat-adrv');
     if(!t||!t.rev_budget){ av.textContent='–'; document.getElementById('strat-action').innerHTML='대상 데이터 없음'; return; }
-    const goal=t.rev_budget, curRN=t.rns_actual||0, cadr=curADR(t), setA=SADR||cadr;
+    const goal=t.rev_budget, curRN=t.rns_actual||0, curRev=t.rev_actual||0, cadr=curADR(t), setA=SADR||cadr;
     av.textContent=nfmt(Math.round(setA/1000))+' 천';
-    const needTot=setA>0?goal/setA:0, needAdd=needTot-curRN, dp=cadr>0?(setA/cadr-1)*100:0, name=segLabel();
+    let needTot, needAdd; const dp=cadr>0?(setA/cadr-1)*100:0, name=segLabel();
+    if(SIMMODE==='add'){ needAdd = setA>0 ? (goal-curRev)/setA : 0; needTot = curRN+needAdd; }
+    else { needTot = setA>0 ? goal/setA : 0; needAdd = needTot-curRN; }
+    const remain=goal-curRev, modeTxt = SIMMODE==='add' ? '추가 판매분' : '월 전체 평균';
     document.getElementById('strat-action').innerHTML= needAdd>0
-      ? `<span class="em">${name}</span> ADR을 <b class="mono">${nfmt(Math.round(setA/1000))}천원</b>(${sg(dp)}%)으로 → 목표매출 <b class="mono">${f1(eok(goal))}억</b> 달성에 <span class="big">추가 ${nfmt(needAdd)}실</span> 판매 필요`
-      : `<span class="em">${name}</span> ADR <b class="mono">${nfmt(Math.round(setA/1000))}천원</b> 기준 현 온북으로 <b>달성 가능</b> <span class="big">(여유 ${nfmt(-needAdd)}실)</span>`;
+      ? (SIMMODE==='add'
+          ? `<span class="em">${name}</span> 남은 목표 <b class="mono">${f1(eok(remain))}억</b>(목표 ${f1(eok(goal))}억 − 온북 ${f1(eok(curRev))}억)을 <b>추가 판매분 ADR <span class="mono">${nfmt(Math.round(setA/1000))}천원</span></b>(현 온북 ADR 대비 ${sg(dp)}%)으로 채우려면 → <span class="big">추가 ${nfmt(Math.round(needAdd))}실</span> 필요`
+          : `<span class="em">${name}</span> <b>월 전체 평균 ADR</b>을 <b class="mono">${nfmt(Math.round(setA/1000))}천원</b>(${sg(dp)}%)으로 가정 → 목표매출 <b class="mono">${f1(eok(goal))}억</b> 달성에 <span class="big">추가 ${nfmt(Math.round(needAdd))}실</span> 판매 필요`)
+      : `<span class="em">${name}</span> ${modeTxt} ADR <b class="mono">${nfmt(Math.round(setA/1000))}천원</b> 기준 현 온북으로 <b>달성 가능</b> <span class="big">(여유 ${nfmt(Math.round(-needAdd))}실)</span>`;
     const mx=Math.max(needTot,curRN)*1.05||1;
     document.getElementById('strat-gfill').style.width=(needTot/mx*100).toFixed(1)+'%';
     document.getElementById('strat-gcur').style.left=(curRN/mx*100).toFixed(1)+'%';

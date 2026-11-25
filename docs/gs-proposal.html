@@ -783,9 +783,19 @@ async function loadForecastData(){
 /* ── Data helpers (from pumui.html) ── */
 function getOtbYoy(otbName, month){
   if(!FCST_DATA.otb) return null;
-  const row = FCST_DATA.otb.yoyTable.find(r=>r.name===otbName);
-  if(!row) return null;
-  return row.months[String(month)] || null;
+  const mo = _mo(month);
+  const baseYear = parseInt((FCST_DATA.otb.meta&&FCST_DATA.otb.meta.baseDate||'2026').slice(0,4)) || 2026;
+  if(mo.y===baseYear || !FCST_DATA.otb.allMonthsByYear){
+    const row = (FCST_DATA.otb.yoyTable||[]).find(r=>r.name===otbName);
+    if(!row) return null;
+    return row.months[String(mo.m)] || null;
+  }
+  // 다른 연도(예: 2027-01): allMonthsByYear[year][month].byProperty → yoyTable 필드명으로 매핑
+  const ym = (FCST_DATA.otb.allMonthsByYear[String(mo.y)]||{})[String(mo.m)];
+  const bp = ym && (ym.byProperty||[]).find(r=>r.name===otbName);
+  if(!bp) return null;
+  return {act_rn: bp.rns_actual||0, last_rn: bp.rns_last||0, ly_full_rn: bp.ly_full_rn||bp.rns_last||0, bud_rn: bp.rns_budget||0,
+          rns_fcst: bp.rns_fcst||0, yoy: bp.rns_yoy, fcst_ach: bp.fcst_achievement, fcst_source: bp.fcst_source, adr_budget: bp.adr_budget, adr_actual: bp.adr_actual};
 }
 function getOtbByProp(otbName){
   if(!FCST_DATA.otb) return null;
@@ -793,7 +803,7 @@ function getOtbByProp(otbName){
 }
 function getOcc(occName, month){
   if(!FCST_DATA.occ) return null;
-  const key = '2026-'+String(month).padStart(2,'0');
+  const key = _mo(month).key;
   const props = FCST_DATA.occ.properties || {};
   if(props[occName]) return props[occName][key] ?? null;
   return null;
@@ -809,7 +819,7 @@ function getGsData(dbName, month, segs){
   if(!FCST_DATA.db) return null;
   const bps = FCST_DATA.db.by_property_segment;
   if(!bps[dbName]) return null;
-  const mKey = '2026'+String(month).padStart(2,'0');
+  const mKey = _mo(month).key.replace('-','');
   let totalRn=0, totalRev=0;
   segs.forEach(seg=>{
     if(bps[dbName][seg] && bps[dbName][seg][mKey]){
@@ -824,18 +834,21 @@ function getGsData(dbName, month, segs){
 function getRmFcst(otbName, month){
   if(!FCST_DATA.fcst) return null;
   const props = FCST_DATA.fcst.properties || {};
-  const key = '2026-'+String(month).padStart(2,'0');
+  const key = _mo(month).key;
   if(props[otbName] && props[otbName][key]) return props[otbName][key];
   return null;
 }
 function getRmTotal(month){
   if(!FCST_DATA.fcst || !FCST_DATA.fcst.total) return null;
-  const key = '2026-'+String(month).padStart(2,'0');
+  const key = _mo(month).key;
   return FCST_DATA.fcst.total[key] || null;
 }
 function getDailyBooking(prop, month){
   if(!FCST_DATA.daily) return null;
-  const md = (FCST_DATA.daily.months_detail||[]).find(m=>m.month===month);
+  const mo = _mo(month);
+  const all = (FCST_DATA.daily.months_detail||[]).filter(m=>m.month===mo.m);
+  // 연도 일치 우선, 없으면 월만 일치(daily_booking 연도 라벨이 부정확한 경우 대비)
+  const md = all.find(m=>m.year===mo.y) || all[0];
   if(!md) return null;
   const name = prop.daily || prop.db;
   return (md.properties||[]).find(x=>x.name===name) || null;
@@ -848,16 +861,24 @@ const fmtRev = (n)=>{if(n==null||isNaN(n)) return '—';return Math.round(n).toL
 const pctClass = (v)=> v==null?'':v>=100?'pos':'neg';
 
 /* ── Determine selected months from date range ── */
+/* 연도 인식: 투숙기간이 해를 넘겨도(12월→1월) 모든 월을 {y,m}로 반환. (과거엔 월 숫자만 써서 2027년 1월이 2026-01로 조회되거나 누락됨) */
 function getSelectedMonths(){
   const s = document.getElementById('date-start')?.value;
   const e = document.getElementById('date-end')?.value;
   if(!s||!e) return [];
-  const sm = parseInt(s.split('-')[1]);
-  const em = parseInt(e.split('-')[1]);
+  const sy = parseInt(s.split('-')[0]), sm = parseInt(s.split('-')[1]);
+  const ey = parseInt(e.split('-')[0]), em = parseInt(e.split('-')[1]);
+  if(isNaN(sy)||isNaN(sm)||isNaN(ey)||isNaN(em)) return [];
   const months = [];
-  for(let m=sm; m<=em; m++) months.push(m);
+  for(let y=sy, m=sm; (y<ey)||(y===ey&&m<=em); ){
+    months.push({y, m, key: y+'-'+String(m).padStart(2,'0')});
+    if(months.length>24) break;
+    m++; if(m>12){m=1;y++;}
+  }
   return months;
 }
+/* 월 인자 정규화: 숫자(구형, 2026년 가정) 또는 {y,m} */
+function _mo(month){ return (month&&typeof month==='object') ? month : {y:2026, m:month, key:'2026-'+String(month).padStart(2,'0')}; }
 
 /* ── Get selected property IDs mapped to PROPERTIES ── */
 function getSelectedPropObjects(){
@@ -1018,7 +1039,7 @@ async function generateForecastTables(){
     const gs_rev_f_diff = (gs_rev_fcst!=null&&gs_rev_bud!=null) ? gs_rev_fcst-gs_rev_bud : null;
     const gs_rev_f_ach = (gs_rev_bud&&gs_rev_fcst) ? gs_rev_fcst/gs_rev_bud*100 : null;
 
-    return {month, fcst_fallback,
+    return {month: _mo(month).m, year: _mo(month).y, fcst_fallback,
       t_bud_occ_avg, t_otb_occ_avg, t_occ_ach, t_fcst_occ, t_occ_f_diff, t_occ_f_ach,
       t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
       t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
@@ -1049,7 +1070,7 @@ async function generateForecastTables(){
     if(d.fcst_fallback) anyFallback = true;
     const monthMark = d.fcst_fallback ? '<span style="display:inline-block;background:var(--info);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:4px;vertical-align:middle;" title="RM FCST 미제공 — 현재 OTB 기준">OTB</span>' : '';
     rows += '<tr style="'+border+'">'
-      +'<td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">'+d.month+'월'+monthMark+'</td>'
+      +'<td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">'+((d.year&&d.year!==new Date().getFullYear())?'<span style="font-size:10px;color:var(--ink-faint);display:block">'+d.year+'년</span>':'')+d.month+'월'+monthMark+'</td>'
       +'<td class="row-label">OCC</td>'
       +'<td>'+fmtPct(d.t_bud_occ_avg)+'</td><td>'+fmtPct(d.t_otb_occ_avg)+'</td>'+pctCell(d.t_occ_ach)
       +'<td>'+fmtPct(d.t_fcst_occ)+'</td>'+diffCell(d.t_occ_f_diff,v=>v.toFixed(1)+'%p')+pctCell(d.t_occ_f_ach)

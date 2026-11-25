@@ -275,8 +275,9 @@ const PROPERTIES = [
 
 const GS_SEGMENTS = ['OTA','G-OTA','Inbound'];
 const ALL_SEGMENTS = ['OTA','G-OTA','Inbound','D멤버스','FIT','GSA','H/U','네트웍스 일반단체','단체COMP','법인주중(회원사)','비회원COMP','연간계약사','인바운드COMP','일반단체','임차','자사 패키지','제휴사PKG','학생단체','할인권 예약부일반','회원PKG'];
-let AVAIL_MONTHS = []; // months we have RM data for — derived from rm_fcst.json at load
-// rm_fcst.json._months_covered (["2026-06",...]) → [6,7,8]. Fallback: scan properties keys.
+let AVAIL_MONTHS = []; // months we have RM data for — derived from rm_fcst.json at load ([{y,m,key,k6}])
+// rm_fcst.json._months_covered (["2026-06",…,"2027-01"]) → [{y:2026,m:6,key:'2026-06'},…,{y:2027,m:1,key:'2027-01'}].
+// 연도 경계(12월→익년 1월)를 넘겨도 월 번호만 남기지 않고 YYYY-MM을 보존한다(이전엔 '1'로 접혀 2026-01 데이터를 읽는 오류). Fallback: scan properties keys.
 function deriveAvailMonths(fcst){
   if(!fcst) return [];
   let yms = Array.isArray(fcst._months_covered) ? fcst._months_covered.slice() : [];
@@ -285,8 +286,39 @@ function deriveAvailMonths(fcst){
     Object.values(fcst.properties||{}).forEach(p=>Object.keys(p).forEach(k=>set.add(k)));
     yms = [...set];
   }
-  const months = [...new Set(yms.map(ym=>parseInt(String(ym).split('-')[1],10)).filter(m=>!isNaN(m)))];
-  return months.sort((a,b)=>a-b);
+  const out = [], seen = new Set();
+  yms.forEach(ym=>{
+    const mo = _mo(ym);
+    if(!mo || seen.has(mo.key)) return;
+    seen.add(mo.key); out.push(mo);
+  });
+  return out.sort((a,b)=>a.key<b.key?-1:a.key>b.key?1:0);
+}
+// 기준연도 = OTB 산출 기준일의 연도(없으면 오늘)
+function baseYear(){
+  const bd = DATA.otb && DATA.otb.meta && DATA.otb.meta.baseDate;
+  const y = bd ? parseInt(String(bd).slice(0,4),10) : NaN;
+  return isNaN(y) ? new Date().getFullYear() : y;
+}
+// 'YYYY-MM' | 'YYYYMM' | {key} | 월번호 → {y, m, key:'YYYY-MM', k6:'YYYYMM'} (월 번호만 오면 기준연도로 보정)
+function _mo(v){
+  if(v && typeof v==='object' && v.key) return v;
+  const s = String(v).trim();
+  const mt = s.match(/^(\d{4})-?(\d{1,2})$/);
+  let y, m;
+  if(mt){ y=parseInt(mt[1],10); m=parseInt(mt[2],10); }
+  else { m=parseInt(s,10); y=baseYear(); }
+  if(isNaN(y)||isNaN(m)||m<1||m>12) return null;
+  const mm = String(m).padStart(2,'0');
+  return {y, m, key:`${y}-${mm}`, k6:`${y}${mm}`};
+}
+// 월 라벨: 기준연도는 'N월', 다른 연도는 '2027년 1월'(html=true면 연도를 윗줄 소형 텍스트로)
+function monthLabel(mo, html){
+  mo = _mo(mo); if(!mo) return '—';
+  if(mo.y===baseYear()) return mo.m+'월';
+  return html
+    ? `<div style="font-size:10px;font-weight:600;color:var(--ink-muted);line-height:1.1;">${mo.y}년</div>${mo.m}월`
+    : `${mo.y}년 ${mo.m}월`;
 }
 
 let DATA = {otb:null, db:null, occ:null, fcst:null, daily:null};
@@ -332,14 +364,15 @@ function initUI(){
 
   // Month chips
   const monthChips = document.getElementById('month-chips');
-  AVAIL_MONTHS.forEach(m=>{
+  AVAIL_MONTHS.forEach(mo=>{
     const chip = document.createElement('div');
     chip.className='chip';
-    chip.textContent=m+'월';
-    chip.dataset.month=m;
+    chip.textContent=monthLabel(mo);
+    chip.dataset.month=mo.key; // 'YYYY-MM'
+    chip.title=mo.key;
     chip.addEventListener('click',()=>{
-      if(selectedMonths.has(m)) selectedMonths.delete(m); else selectedMonths.add(m);
-      chip.classList.toggle('active',selectedMonths.has(m));
+      if(selectedMonths.has(mo.key)) selectedMonths.delete(mo.key); else selectedMonths.add(mo.key);
+      chip.classList.toggle('active',selectedMonths.has(mo.key));
     });
     monthChips.appendChild(chip);
   });
@@ -370,19 +403,31 @@ function initUI(){
   document.getElementById('btn-month-all').addEventListener('click',()=>{
     const allSelected = selectedMonths.size===AVAIL_MONTHS.length;
     document.querySelectorAll('#month-chips .chip').forEach(c=>{
-      const m=parseInt(c.dataset.month);
+      const m=c.dataset.month; // 'YYYY-MM'
       if(!allSelected){selectedMonths.add(m);c.classList.add('active');}
       else{selectedMonths.delete(m);c.classList.remove('active');}
     });
   });
 }
 
-/* ─── Data helpers ─── */
+/* ─── Data helpers ─── (month 인자는 'YYYY-MM' 키 — _mo()로 정규화) */
+// 사업장×월 OTB 요약(act_rn/bud_rn/rns_fcst…). 기준연도는 yoyTable(월 번호 키, 전년동기 포함),
+// 그 외 연도(익년 1월 등)는 allMonthsByYear[연도][월].byProperty를 같은 모양으로 변환해 반환.
 function getOtbYoy(otbName, month){
   if(!DATA.otb) return null;
-  const row = DATA.otb.yoyTable.find(r=>r.name===otbName);
-  if(!row) return null;
-  return row.months[String(month)] || null;
+  const mo = _mo(month); if(!mo) return null;
+  if(mo.y===baseYear()){
+    const row = (DATA.otb.yoyTable||[]).find(r=>r.name===otbName);
+    const v = row && row.months ? row.months[String(mo.m)] : null;
+    if(v) return v;
+  }
+  const amy = DATA.otb.allMonthsByYear || {};
+  const blk = amy[String(mo.y)] && amy[String(mo.y)][String(mo.m)];
+  const bp = blk && (blk.byProperty||[]).find(r=>r.name===otbName);
+  if(!bp) return null;
+  return {act_rn:bp.rns_actual, last_rn:bp.rns_last, ly_full_rn:bp.ly_full_rn, yoy:bp.rns_yoy,
+          bud_rn:bp.rns_budget, rns_fcst:bp.rns_fcst, fcst_ach:bp.fcst_achievement, fcst_source:bp.fcst_source,
+          rm_fcst_rn:bp.rm_fcst_rn, rm_budget_rn:bp.rm_budget_rn, rm_fcst_ach:bp.rm_fcst_ach};
 }
 
 function getOtbByProp(otbName){
@@ -392,9 +437,9 @@ function getOtbByProp(otbName){
 
 function getOcc(occName, month){
   if(!DATA.occ) return null;
-  const key = `2026-${String(month).padStart(2,'0')}`;
+  const mo = _mo(month); if(!mo) return null;
   const props = DATA.occ.properties || {};
-  if(props[occName]) return props[occName][key] ?? null;
+  if(props[occName]) return props[occName][mo.key] ?? null;
   return null;
 }
 
@@ -403,8 +448,8 @@ function getTotalMonthly(dbName, month){
   if(!DATA.db) return null;
   const bp = DATA.db.by_property;
   if(!bp[dbName]) return null;
-  const mKey = `2026${String(month).padStart(2,'0')}`;
-  return bp[dbName][mKey] || null;
+  const mo = _mo(month); if(!mo) return null;
+  return bp[dbName][mo.k6] || null;
 }
 
 // GS segments monthly
@@ -412,7 +457,8 @@ function getGsData(dbName, month, segs){
   if(!DATA.db) return null;
   const bps = DATA.db.by_property_segment;
   if(!bps[dbName]) return null;
-  const mKey = `2026${String(month).padStart(2,'0')}`;
+  const mo = _mo(month); if(!mo) return null;
+  const mKey = mo.k6;
   let totalRn=0, totalRev=0;
   segs.forEach(seg=>{
     if(bps[dbName][seg] && bps[dbName][seg][mKey]){
@@ -430,23 +476,39 @@ function getGsData(dbName, month, segs){
 function getRmFcst(otbName, month){
   if(!DATA.fcst) return null;
   const props = DATA.fcst.properties || {};
-  const key = `2026-${String(month).padStart(2,'0')}`;
-  if(props[otbName] && props[otbName][key]) return props[otbName][key];
+  const mo = _mo(month); if(!mo) return null;
+  if(props[otbName] && props[otbName][mo.key]) return props[otbName][mo.key];
   return null;
 }
 function getRmTotal(month){
   if(!DATA.fcst || !DATA.fcst.total) return null;
-  const key = `2026-${String(month).padStart(2,'0')}`;
-  return DATA.fcst.total[key] || null;
+  const mo = _mo(month); if(!mo) return null;
+  return DATA.fcst.total[mo.key] || null;
 }
 
-// daily_booking.json: Booking Status (Budget RN/Actual RN + Budget OCC/Actual OCC)
+// daily_booking.json months_detail의 연도 보정: 파일의 year 필드는 고정값(1·2월도 전년으로 기재)이라 신뢰하지 않고,
+// 리포트 기준일 연도 + "첫 월보다 작은 월 번호는 익년" 규칙으로 산출([11,12,1,2] → 2026,2026,2027,2027).
+function _dailyMonthsWithYear(){
+  const list = (DATA.daily && DATA.daily.months_detail) || [];
+  if(!list.length) return [];
+  const rd = list[0].report_date || (DATA.daily.meta && DATA.daily.meta.report_date) || '';
+  let y0 = parseInt(String(rd).slice(0,4),10); if(isNaN(y0)) y0 = baseYear();
+  const first = list[0].month;
+  return list.map(md=>({md, y: (md.month < first) ? y0+1 : y0}));
+}
+// Booking Status (Budget RN/Actual RN + Budget OCC/Actual OCC)
 function getDailyBooking(prop, month){
   if(!DATA.daily) return null;
-  const md = (DATA.daily.months_detail||[]).find(m=>m.month===month);
-  if(!md) return null;
+  const mo = _mo(month); if(!mo) return null;
+  const withY = _dailyMonthsWithYear();
+  let hit = withY.find(e=>e.md.month===mo.m && e.y===mo.y);
+  if(!hit){ // 연도 추정이 어긋나면 월만 일치하는 항목이 유일할 때만 사용
+    const cands = withY.filter(e=>e.md.month===mo.m);
+    if(cands.length===1) hit = cands[0];
+  }
+  if(!hit) return null;
   const name = prop.daily || prop.db;
-  return (md.properties||[]).find(x=>x.name===name) || null;
+  return (hit.md.properties||[]).find(x=>x.name===name) || null;
 }
 
 /* ─── Format helpers ─── */
@@ -480,12 +542,13 @@ function generateTables(){
   }
 
   const selPropsArr = PROPERTIES.filter(p=>selectedProps.has(p.id));
-  const selMonthsArr = [...selectedMonths].sort((a,b)=>a-b);
+  const selMonthsArr = [...selectedMonths].map(k=>_mo(k)).filter(Boolean).sort((a,b)=>a.key<b.key?-1:a.key>b.key?1:0);
   const segsArr = [...selectedSegs];
   const propLabel = selPropsArr.length>1 ? selPropsArr.map(p=>p.label).join(' + ') : selPropsArr[0].label;
 
-  // Build per-month aggregated data
-  lastMonthData = selMonthsArr.map(month=>{
+  // Build per-month aggregated data (month = 'YYYY-MM' 키 — 연도 경계 안전)
+  lastMonthData = selMonthsArr.map(mo=>{
+    const month = mo.key;
     /* ── 전체 (Booking Status + Revenue Meeting) ── */
     let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
     let t_otb_rn=0, t_otb_occ=0;
@@ -621,7 +684,7 @@ function generateTables(){
     const gs_rev_f_diff = (gs_rev_fcst!=null&&gs_rev_bud!=null) ? gs_rev_fcst-gs_rev_bud : null;
     const gs_rev_f_ach = (gs_rev_bud&&gs_rev_fcst) ? gs_rev_fcst/gs_rev_bud*100 : null;
 
-    return {month,
+    return {month: mo.m, year: mo.y, key: mo.key, label: monthLabel(mo),
       t_bud_occ_avg, t_otb_occ_avg, t_occ_ach, t_fcst_occ, t_occ_f_diff, t_occ_f_ach,
       t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
       t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
@@ -652,7 +715,7 @@ function generateTables(){
 
     rows += `
       <tr style="${border}">
-        <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;">${d.month}월</td>
+        <td class="row-label" rowspan="4" style="vertical-align:middle;font-size:14px;font-weight:800;color:var(--gold);text-align:center;" title="${d.key}">${monthLabel(d.key,true)}</td>
         <td class="row-label">OCC</td>
         <td>${fmtPct(d.t_bud_occ_avg)}</td><td>${fmtPct(d.t_otb_occ_avg)}</td>${pctCell(d.t_occ_ach)}
         <td>${fmtPct(d.t_fcst_occ)}</td>${diffCell(d.t_occ_f_diff,v=>v.toFixed(1)+'%')}${pctCell(d.t_occ_f_ach)}
@@ -686,7 +749,7 @@ function generateTables(){
   <div class="table-block">
     <div class="table-block-header">
       <span class="table-block-title">품의서 작성 — ${propLabel}</span>
-      <span class="table-block-sub">2026년 · 전체=Booking Status · GS=온북대시보드</span>
+      <span class="table-block-sub">${(()=>{const ys=[...new Set(lastMonthData.map(d=>d.year))].sort(); return ys.length>1?`${ys[0]}~${ys[ys.length-1]}년`:`${ys[0]||baseYear()}년`;})()} · 전체=Booking Status · GS=온북대시보드</span>
     </div>
     <div class="table-wrap">
       <table class="forecast-table" id="forecast-main-table">

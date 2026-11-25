@@ -106,6 +106,23 @@ table.pivot td.wrap{white-space:normal;line-height:1.35;}
 table.pivot th.grp{text-align:center;border-left:1px solid var(--rule);}
 table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
 table.pivot td.est{color:#e6b970;}
+table.cm-matrix th,table.cm-matrix td{padding:6px 8px;font-size:11px;text-align:left;vertical-align:top;}
+table.cm-matrix th.m{text-align:center;}
+table.cm-matrix td.cm-cell{cursor:pointer;min-width:96px;max-width:150px;white-space:normal;line-height:1.3;border-left:1px solid var(--rule);}
+table.cm-matrix td.cm-cell:hover{outline:1px solid var(--gold-bright,#e6b970);}
+table.cm-matrix td.cm-cell.sel{outline:2px solid var(--gold-bright,#e6b970);}
+table.cm-matrix td.cm-cell .rn{font-weight:700;color:var(--ink);}
+table.cm-matrix td.cm-cell .lb{display:block;color:var(--ink-muted);font-size:10.5px;}
+table.cm-matrix td.cm-cell .lb.s{color:var(--ink-faint);font-size:10px;}
+table.cm-matrix td.cm-tot{color:var(--ink-faint);font-size:10.5px;}
+table.cm-matrix tr.cm-all td{background:rgba(201,160,99,.06);}
+.cm-ctrl{padding:10px 20px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--rule);}
+.cm-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cm-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;min-width:34px;}
+.cm-help{font-family:var(--mono);font-size:11px;color:var(--ink-faint);line-height:1.5;}
+.cm-title{font-family:var(--mono);font-size:12px;color:var(--gold-bright,#e6b970);}
+table.cm-matrix td.cm-cell .rn{display:block;font-size:12px;}
+
 .pl-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:5px;vertical-align:middle;}
 .pl-badge.ap{background:rgba(90,159,196,.18);color:#5a9fc4;} .pl-badge.map{background:rgba(201,160,99,.18);color:#e6b970;} .pl-badge.se{background:rgba(168,146,200,.18);color:#a892c8;}
 .pl-flag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-top:3px;}
@@ -601,31 +618,35 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
       </div>
     </section>
 
-    <!-- ===== SEC 12. 거래처별 월 상품 Top ===== -->
+    <!-- ===== SEC 12. 월별·사업장별 인기 상품 ===== -->
     <section class="prod-section" id="sec12">
       <div class="section-header">
         <span class="section-num">SEC 12</span>
-        <h2 class="section-title">거래처별 월 상품 Top — "N월에 어느 거래처로 어떤 상품이 제일 많이 들어왔나"</h2>
+        <h2 class="section-title">월별 · 사업장별 인기 상품 — 어느 달, 어느 사업장에서 무슨 상품이 많이 들어왔나</h2>
         <span class="section-sub" id="sec12-sub">—</span>
       </div>
       <div class="table-card">
-        <div class="drill-bar" style="gap:8px;">
-          <span class="drill-sep">기준</span>
-          <select id="cm-basis" class="chip" style="padding:2px 6px;"><option value="stay">투숙월</option><option value="book">예약월(최초입력)</option></select>
-          <span class="drill-sep">월</span><select id="cm-ym" class="chip" style="padding:2px 6px;"></select>
-          <span class="drill-sep">거래처</span><select id="cm-chan" class="chip" style="padding:2px 6px;"></select>
-          <span class="drill-sep">단위</span>
-          <select id="cm-unit" class="chip" style="padding:2px 6px;"><option value="code">상품코드</option><option value="campaign">기획전(묶음)</option><option value="series">상품명(정규화)</option></select>
-          <span class="drill-sep">상위</span><select id="cm-topn" class="chip" style="padding:2px 6px;"><option>10</option><option selected>20</option><option>50</option><option>200</option></select>
-          <button class="chip" id="cm-xlsx" type="button" style="margin-left:auto;">📥 엑셀 다운로드</button>
+        <div class="cm-ctrl">
+          <div class="cm-row"><span class="cm-lbl">연도</span><div class="filter-chips" id="cm-year-chips"></div>
+            <span class="cm-lbl" style="margin-left:18px;">기준</span><div class="filter-chips" id="cm-basis-chips"></div></div>
+          <div class="cm-row"><span class="cm-lbl">세그</span><div class="filter-chips" id="cm-seg-chips"></div>
+            <span class="cm-lbl" style="margin-left:18px;">거래처</span><select id="cm-chan" class="chip" style="padding:3px 8px;"></select></div>
+          <div class="cm-row"><span class="cm-lbl">묶음</span><div class="filter-chips" id="cm-unit-chips"></div>
+            <button class="chip" id="cm-xlsx" type="button" style="margin-left:auto;">📥 엑셀</button></div>
+          <div class="cm-help">칸 = 그 달 가장 많이 들어온 상품 · 숫자 = 객실수(RN) · 색이 진할수록 많음 · <b>칸을 누르면 아래에 그 사업장·그 달의 전체 순위</b> · 좌측 사업장 필터 적용 · 대외비·관리자용</div>
         </div>
-        <div class="drill-bar" style="border-bottom:0;">
-          <span class="drill-sep">RN = 객실수 · REV = 1박객실료×객실수÷1.1(VAT 제외) · 비중 = 해당 월·거래처 합 대비 · 전년동월 = 같은 거래처의 12개월 전 · 좌측 사업장 필터 적용 · 대외비·관리자용</span>
+        <div class="table-wrap">
+          <table class="pivot cm-matrix" id="cm-matrix"><thead id="cm-mhead"></thead><tbody id="cm-mbody"><tr><td style="padding:24px;color:var(--ink-faint);">—</td></tr></tbody></table>
+        </div>
+        <div class="cm-ctrl" id="cm-detail-bar" style="border-top:1px solid var(--rule);">
+          <div class="cm-row"><span class="cm-lbl">순위</span><span id="cm-detail-title" class="cm-title">칸을 눌러 주세요</span>
+            <button class="chip" id="cm-detail-clear" type="button" style="margin-left:10px;">전체 사업장</button>
+            <select id="cm-ym" style="display:none;"></select><select id="cm-topn" style="display:none;"><option selected>30</option></select></div>
         </div>
         <div class="table-wrap">
           <table class="pivot" id="cm-table">
-            <thead><tr><th>#</th><th>상품</th><th>사업장</th><th>기획전</th><th>RN</th><th>비중</th><th>REV(백만)</th><th>ADR(천)</th><th>전년동월 RN</th><th>YoY</th></tr></thead>
-            <tbody id="cm-tbody"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--ink-faint);">—</td></tr></tbody>
+            <thead><tr><th>#</th><th>상품</th><th>사업장</th><th>RN</th><th>비중</th><th>매출(백만)</th><th>ADR(천)</th></tr></thead>
+            <tbody id="cm-tbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-faint);">—</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1571,88 +1592,130 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
     return '';
   }
 
-  // ===== SEC 12 · 거래처별 월 상품 Top (data/product_channel_month.json) =====
+  // ===== SEC 12 · 월별·사업장별 인기 상품 (data/product_channel_month.json) =====
   var chm = null;
+  var cmS = {year: '2026', basis: 'stay', seg: '', chan: '', unit: 'series', ym: '', prop: ''};
   function fetchChm() {
     var base = 'data/product_channel_month.json';
     var plain = function() { return fetch(base + '?t=' + Date.now()).then(function(r) { if (!r.ok) throw new Error('chm ' + r.status); return r.json(); }); };
     if (!window.DecompressionStream) return plain();
     return fetch(base + '.gz?t=' + Date.now()).then(function(r) { if (!r.ok) throw new Error('gz ' + r.status); return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json(); }).catch(plain);
   }
-  function chmYms(basis) {
-    var s = {}; Object.keys(chm[basis]).forEach(function(ch) { Object.keys(chm[basis][ch]).forEach(function(ym) { s[ym] = 1; }); });
-    return Object.keys(s).sort().reverse();
+  function cmChips(id, items, cur, onpick) {
+    var box = el(id); box.innerHTML = '';
+    items.forEach(function(it) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (it.v === cur ? ' active' : ''); b.textContent = it.t;
+      b.onclick = function() { onpick(it.v); }; box.appendChild(b);
+    });
   }
-  function chmChans(basis, ym) {
-    var tot = {};
-    Object.keys(chm[basis]).forEach(function(ch) { (chm[basis][ch][ym] || []).forEach(function(r) { tot[ch] = (tot[ch] || 0) + r[1]; }); });
-    return Object.keys(tot).sort(function(a, b) { return tot[b] - tot[a]; }).map(function(ch) { return {ch: ch, rn: tot[ch]}; });
-  }
-  function initChmUI() {
-    var basisSel = el('cm-basis');
-    function fillYm() {
-      var yms = chmYms(basisSel.value), cur = el('cm-ym').value;
-      el('cm-ym').innerHTML = yms.map(function(ym) { return '<option value="' + ym + '">' + ym.slice(0, 4) + '-' + ym.slice(4) + '</option>'; }).join('');
-      if (yms.indexOf(cur) >= 0) el('cm-ym').value = cur; else if (yms.indexOf('202601') >= 0) el('cm-ym').value = '202601';
-      fillChan();
-    }
-    function fillChan() {
-      var cur = el('cm-chan').value, list = chmChans(basisSel.value, el('cm-ym').value);
-      el('cm-chan').innerHTML = '<option value="">전체 거래처</option>' + list.map(function(x) { return '<option value="' + x.ch + '">' + x.ch + ' (' + fmtN(x.rn) + ')</option>'; }).join('');
-      if (list.some(function(x) { return x.ch === cur; })) el('cm-chan').value = cur; else if (list.some(function(x) { return x.ch === '아고다'; })) el('cm-chan').value = '아고다';
-    }
-    basisSel.onchange = function() { fillYm(); renderChm(); };
-    el('cm-ym').onchange = function() { fillChan(); renderChm(); };
-    ['cm-chan', 'cm-unit', 'cm-topn'].forEach(function(id) { el(id).onchange = renderChm; });
-    el('cm-xlsx').onclick = exportChmXlsx;
-    fillYm();
-  }
-  function chmRows(basis, ym, chan, unit) {
-    var props = activeDisplayProps(), agg = {}, tot = 0;
-    var src = chan ? {c: chm[basis][chan] || {}} : chm[basis];
+  // 기간·세그·거래처 조건에 맞는 [code, rn, rev] 흐름을 콜백으로 전달
+  function cmEach(ym, fn) {
+    var src = cmS.chan ? {c: chm[cmS.basis][cmS.chan] || {}} : chm[cmS.basis], props = activeDisplayProps();
     Object.keys(src).forEach(function(ch) {
       (src[ch][ym] || []).forEach(function(r) {
         var c = cube.codes[r[0]]; if (!c) return;
+        if (cmS.seg && c.seg !== cmS.seg) return;
         if (props.size && !props.has(c.prop)) return;
-        var key = unit === 'code' ? r[0] : unit === 'campaign' ? c.campaign : (c.prop + '|' + c.series);
-        var a = agg[key] || (agg[key] = {key: key, rn: 0, rev: 0, codes: 0, label: unit === 'code' ? c.series : unit === 'campaign' ? campShort(c.campaign) : c.series,
-                                           code: unit === 'code' ? r[0] : '', prop: unit === 'campaign' ? '' : c.prop, props: {}, camp: unit === 'campaign' ? '' : campShort(c.campaign), name: c.name});
-        a.rn += r[1]; a.rev += r[2]; a.codes += 1; a.props[c.prop] = 1; tot += r[1];
+        fn(r, c);
       });
     });
+  }
+  function cmKey(r, c) { return cmS.unit === 'campaign' ? [c.campaign, campShort(c.campaign)] : [c.prop + '|' + c.series, c.series]; }
+  function cmYears() { var ys = {}; Object.keys(chm[cmS.basis]).forEach(function(ch) { Object.keys(chm[cmS.basis][ch]).forEach(function(ym) { ys[ym.slice(0, 4)] = 1; }); }); return Object.keys(ys).sort().reverse(); }
+  function cmChanList() {
+    var tot = {}, props = activeDisplayProps();
+    Object.keys(chm[cmS.basis]).forEach(function(ch) { Object.keys(chm[cmS.basis][ch]).forEach(function(ym) { if (ym.slice(0, 4) !== cmS.year) return;
+      chm[cmS.basis][ch][ym].forEach(function(r) { var c = cube.codes[r[0]]; if (!c || (cmS.seg && c.seg !== cmS.seg) || (props.size && !props.has(c.prop))) return; tot[ch] = (tot[ch] || 0) + r[1]; }); }); });
+    return Object.keys(tot).sort(function(a, b) { return tot[b] - tot[a]; }).map(function(ch) { return {ch: ch, rn: tot[ch]}; });
+  }
+  function initChmUI() {
+    el('cm-chan').onchange = function() { cmS.chan = el('cm-chan').value; renderChm(); };
+    el('cm-detail-clear').onclick = function() { cmS.prop = ''; renderChm(); };
+    el('cm-xlsx').onclick = exportChmXlsx;
+    var ys = cmYears(); if (ys.indexOf(cmS.year) < 0) cmS.year = ys[0];
+  }
+  function cmFillControls() {
+    cmChips('cm-year-chips', cmYears().map(function(y) { return {v: y, t: y}; }), cmS.year, function(v) { cmS.year = v; cmS.ym = ''; renderChm(); });
+    cmChips('cm-basis-chips', [{v: 'stay', t: '투숙월'}, {v: 'book', t: '예약월'}], cmS.basis, function(v) { cmS.basis = v; renderChm(); });
+    cmChips('cm-seg-chips', [{v: '', t: '전체'}, {v: 'OTA', t: 'OTA'}, {v: 'G-OTA', t: 'G-OTA'}, {v: 'Inbound', t: 'Inbound'}], cmS.seg, function(v) { cmS.seg = v; cmS.chan = ''; renderChm(); });
+    cmChips('cm-unit-chips', [{v: 'series', t: '상품명'}, {v: 'campaign', t: '기획전'}], cmS.unit, function(v) { cmS.unit = v; renderChm(); });
+    var list = cmChanList(), sel = el('cm-chan');
+    sel.innerHTML = '<option value="">전체 거래처</option>' + list.map(function(x) { return '<option value="' + x.ch + '">' + x.ch + ' · ' + fmtN(x.rn) + '</option>'; }).join('');
+    if (!list.some(function(x) { return x.ch === cmS.chan; })) cmS.chan = '';
+    sel.value = cmS.chan;
+  }
+  // 사업장 × 월: 각 칸 1위 상품 + 합계
+  function cmMatrix() {
+    var months = [], m; for (m = 1; m <= 12; m++) months.push(cmS.year + ('0' + m).slice(-2));
+    var cell = {}, allc = {};
+    function bump(store, key, label, rn) { var a = store[key] || (store[key] = {key: key, label: label, rn: 0}); a.rn += rn; }
+    months.forEach(function(ym) { cmEach(ym, function(r, c) { var kl = cmKey(r, c); bump(cell[c.prop + '|' + ym] || (cell[c.prop + '|' + ym] = {}), kl[0], kl[1], r[1]); bump(allc[ym] || (allc[ym] = {}), kl[0], kl[1], r[1]); }); });
+    function finish(store) { var arr = Object.values(store).sort(function(a, b) { return b.rn - a.rn; }); return {tot: arr.reduce(function(s, x) { return s + x.rn; }, 0), top: arr.slice(0, 3)}; }
+    var rows = {}, props = activeDisplayProps();
+    cube.dims.properties.forEach(function(p) { if (props.size && !props.has(p.display)) return; var row = {}, any = false;
+      months.forEach(function(ym) { var st = cell[p.display + '|' + ym]; if (st) { row[ym] = finish(st); any = true; } }); if (any) rows[p.display] = row; });
+    var all = {}; months.forEach(function(ym) { if (allc[ym]) all[ym] = finish(allc[ym]); });
+    return {months: months, rows: rows, all: all};
+  }
+  function renderChmMatrix() {
+    var M = cmMatrix(), months = M.months, maxTot = 1;
+    Object.keys(M.rows).forEach(function(p) { months.forEach(function(ym) { var c = M.rows[p][ym]; if (c && c.tot > maxTot) maxTot = c.tot; }); });
+    el('cm-mhead').innerHTML = '<tr><th>사업장</th>' + months.map(function(ym) { return '<th class="m">' + parseInt(ym.slice(4), 10) + '월</th>'; }).join('') + '<th class="m">연 합계</th></tr>';
+    function cellHtml(c, prop, ym) {
+      var selc = (prop === (cmS.prop || '__all') && ym === cmS.ym) ? ' sel' : '';
+      if (!c || !c.tot) return '<td class="cm-cell' + selc + '" style="color:var(--ink-faint)" data-p="' + prop + '" data-ym="' + ym + '">–</td>';
+      var alpha = (0.05 + 0.45 * (c.tot / maxTot)).toFixed(2), t = c.top[0];
+      var tip = c.top.map(function(x, i) { return (i + 1) + '. ' + x.label + ' ' + fmtN(x.rn) + '실'; }).join('\n') + '\n합계 ' + fmtN(c.tot) + '실 · 클릭하면 전체 순위';
+      return '<td class="cm-cell' + selc + '" style="background:rgba(201,160,99,' + alpha + ')" data-p="' + prop + '" data-ym="' + ym + '" title="' + tip.replace(/"/g, '') + '">' +
+        '<span class="rn">' + fmtN(t.rn) + '</span><span class="lb">' + t.label.slice(0, 18) + '</span></td>';
+    }
+    var html = '<tr class="cm-all"><td>전체</td>' + months.map(function(ym) { return cellHtml(M.all[ym], '__all', ym); }).join('') + '<td class="cm-tot">' + fmtN(months.reduce(function(s, ym) { return s + (M.all[ym] ? M.all[ym].tot : 0); }, 0)) + '</td></tr>';
+    Object.keys(M.rows).forEach(function(p) { var r = M.rows[p];
+      html += '<tr><td>' + p + '</td>' + months.map(function(ym) { return cellHtml(r[ym], p, ym); }).join('') + '<td class="cm-tot">' + fmtN(months.reduce(function(s, ym) { return s + (r[ym] ? r[ym].tot : 0); }, 0)) + '</td></tr>'; });
+    el('cm-mbody').innerHTML = html;
+    el('cm-mbody').querySelectorAll('td.cm-cell').forEach(function(td) {
+      td.onclick = function() { cmS.prop = td.dataset.p === '__all' ? '' : td.dataset.p; cmS.ym = td.dataset.ym; renderChm(); el('cm-detail-bar').scrollIntoView({block: 'center', behavior: 'smooth'}); };
+    });
+    return M;
+  }
+  function cmRows(ym) {
+    var agg = {}, tot = 0;
+    cmEach(ym, function(r, c) { if (cmS.prop && c.prop !== cmS.prop) return; var kl = cmKey(r, c);
+      var a = agg[kl[0]] || (agg[kl[0]] = {key: kl[0], label: kl[1], rn: 0, rev: 0, props: {}, name: c.name}); a.rn += r[1]; a.rev += r[2]; a.props[c.prop] = 1; tot += r[1]; });
     var rows = Object.values(agg).sort(function(a, b) { return b.rn - a.rn; });
-    rows.forEach(function(a) { if (unit === 'campaign') a.prop = Object.keys(a.props).length > 1 ? Object.keys(a.props).length + '개 사업장' : Object.keys(a.props)[0] || ''; });
+    rows.forEach(function(a) { var ps = Object.keys(a.props); a.prop = ps.length > 1 ? ps.length + '개 사업장' : (ps[0] || ''); });
     return {rows: rows, tot: tot};
   }
-  function prevYm(ym) { return String(parseInt(ym.slice(0, 4), 10) - 1) + ym.slice(4); }
   function renderChm() {
     if (!chm || !cube) return;
-    var basis = el('cm-basis').value, ym = el('cm-ym').value, chan = el('cm-chan').value, unit = el('cm-unit').value, topN = parseInt(el('cm-topn').value, 10);
-    var cur = chmRows(basis, ym, chan, unit), prev = chmRows(basis, prevYm(ym), chan, unit), prevMap = {};
-    prev.rows.forEach(function(r) { prevMap[r.key] = r.rn; });
+    cmFillControls();
+    var M = renderChmMatrix();
+    if (!cmS.ym || cmS.ym.slice(0, 4) !== cmS.year) { var wd = M.months.filter(function(m) { return M.all[m] && M.all[m].tot; }); cmS.ym = wd.length ? wd[wd.length - 1] : M.months[0]; }
+    el('cm-ym').innerHTML = '<option value="' + cmS.ym + '">' + cmS.ym + '</option>';
+    var cur = cmRows(cmS.ym), topN = 30;
+    el('cm-detail-title').textContent = (cmS.prop || '전체 사업장') + ' · ' + cmS.ym.slice(0, 4) + '년 ' + parseInt(cmS.ym.slice(4), 10) + '월 · ' + (cmS.seg || '전 세그') + ' · ' + (cmS.chan || '전체 거래처') + ' · ' + fmtN(cur.tot) + '실';
     var html = cur.rows.slice(0, topN).map(function(r, i) {
-      var pv = prevMap[r.key] || 0;
-      return '<tr><td>' + (i + 1) + '</td><td class="wrap" style="min-width:200px;" title="' + r.name.replace(/"/g, '') + '">' + r.label + (r.code ? ' <span class="rt-conf">' + r.code + '</span>' : (unit !== 'code' ? ' <span class="rt-conf">' + r.codes + '코드</span>' : '')) + '</td>' +
-        '<td>' + (r.prop || '') + '</td><td class="wrap" style="min-width:160px;color:var(--ink-faint)">' + (r.camp || '') + '</td>' +
-        '<td>' + fmtN(r.rn) + '</td><td>' + (cur.tot ? (r.rn / cur.tot * 100).toFixed(1) + '%' : '–') + '</td><td>' + fmtR(r.rev / 1e6) + '</td><td>' + (r.rn ? fmtN(r.rev / r.rn / 1000) : '–') + '</td>' +
-        '<td>' + (pv ? fmtN(pv) : '–') + '</td><td>' + yoyCell(r.rn, pv) + '</td></tr>';
+      return '<tr><td>' + (i + 1) + '</td><td class="wrap" style="min-width:220px;" title="' + r.name.replace(/"/g, '') + '">' + r.label + '</td><td>' + r.prop + '</td>' +
+        '<td>' + fmtN(r.rn) + '</td><td>' + (cur.tot ? (r.rn / cur.tot * 100).toFixed(1) + '%' : '–') + '</td><td>' + fmtR(r.rev / 1e6) + '</td><td>' + (r.rn ? fmtN(r.rev / r.rn / 1000) : '–') + '</td></tr>';
     }).join('');
-    html += '<tr class="total-row"><td colspan="4">합계 (' + cur.rows.length + '개 중 상위 ' + Math.min(topN, cur.rows.length) + ')</td><td>' + fmtN(cur.tot) + '</td><td>100%</td><td>' + fmtR(cur.rows.reduce(function(s, r) { return s + r.rev; }, 0) / 1e6) + '</td><td></td><td>' + fmtN(prev.tot) + '</td><td>' + yoyCell(cur.tot, prev.tot) + '</td></tr>';
-    el('cm-tbody').innerHTML = cur.rows.length ? html : '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--ink-faint);">해당 월·거래처 데이터 없음</td></tr>';
-    el('sec12-sub').textContent = (basis === 'stay' ? '투숙월 ' : '예약월 ') + ym.slice(0, 4) + '-' + ym.slice(4) + ' · ' + (chan || '전체 거래처') + ' · ' + fmtN(cur.tot) + '실 · ' + cur.rows.length + (unit === 'code' ? '개 코드' : unit === 'campaign' ? '개 기획전' : '개 상품명') + ' · 기준일 ' + (chm.meta.base_date || '');
+    html += '<tr class="total-row"><td colspan="3">합계 (' + cur.rows.length + '개 중 상위 ' + Math.min(topN, cur.rows.length) + ')</td><td>' + fmtN(cur.tot) + '</td><td>100%</td><td>' + fmtR(cur.rows.reduce(function(s, r) { return s + r.rev; }, 0) / 1e6) + '</td><td></td></tr>';
+    el('cm-tbody').innerHTML = cur.rows.length ? html : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-faint);">해당 조건 데이터 없음</td></tr>';
+    var yearTot = M.months.reduce(function(s, m) { return s + (M.all[m] ? M.all[m].tot : 0); }, 0);
+    el('sec12-sub').textContent = cmS.year + '년 ' + (cmS.basis === 'stay' ? '투숙' : '예약') + ' · ' + (cmS.seg || '전 세그') + ' · ' + (cmS.chan || '전체 거래처') + ' · 연 ' + fmtN(yearTot) + '실 · 기준일 ' + (chm.meta.base_date || '');
   }
   function exportChmXlsx() {
     if (!chm || typeof XLSX === 'undefined') return;
-    var basis = el('cm-basis').value, ym = el('cm-ym').value, chan = el('cm-chan').value, unit = el('cm-unit').value;
-    var cur = chmRows(basis, ym, chan, unit), prev = chmRows(basis, prevYm(ym), chan, unit), prevMap = {};
-    prev.rows.forEach(function(r) { prevMap[r.key] = r.rn; });
-    var aoa = [['(GS) 거래처별 월 상품 Top — ' + (basis === 'stay' ? '투숙월' : '예약월') + ' ' + ym + ' · ' + (chan || '전체 거래처') + ' · 단위 ' + unit + ' (대외비·관리자용)'], [chm.meta.rule || ''], [],
-               ['#', '상품', '코드', '회원명(원문)', '사업장', '기획전', 'RN', '비중', 'REV(백만)', 'ADR(천)', '전년동월 RN', 'YoY%']];
-    cur.rows.forEach(function(r, i) { var pv = prevMap[r.key] || 0;
-      aoa.push([i + 1, r.label, r.code || '', unit === 'code' ? r.name : '', r.prop || '', r.camp || '', r.rn, cur.tot ? Math.round(r.rn / cur.tot * 1000) / 10 : '', Math.round(r.rev / 1e6 * 10) / 10, r.rn ? Math.round(r.rev / r.rn / 1000) : '', pv || '', pv ? Math.round((r.rn / pv - 1) * 1000) / 10 : '']); });
-    var ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch: 5}, {wch: 34}, {wch: 11}, {wch: 40}, {wch: 14}, {wch: 36}, {wch: 8}, {wch: 8}, {wch: 10}, {wch: 9}, {wch: 11}, {wch: 8}];
-    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '거래처 월 상품 Top');
-    XLSX.writeFile(wb, 'GS_거래처별_상품Top_' + ym + '_' + (chan || '전체') + '.xlsx');
+    var M = cmMatrix(), months = M.months, label = cmS.year + ' · ' + (cmS.basis === 'stay' ? '투숙월' : '예약월') + ' · ' + (cmS.seg || '전 세그') + ' · ' + (cmS.chan || '전체 거래처') + ' · ' + (cmS.unit === 'campaign' ? '기획전' : '상품명');
+    var head = ['사업장'].concat(months.map(function(m) { return parseInt(m.slice(4), 10) + '월 1위'; })).concat(months.map(function(m) { return parseInt(m.slice(4), 10) + '월 1위 RN'; })).concat(months.map(function(m) { return parseInt(m.slice(4), 10) + '월 합 RN'; }));
+    var aoa = [['(GS) 월별·사업장별 인기 상품 — ' + label + ' (대외비·관리자용)'], [chm.meta.rule || ''], [], head];
+    function rowOf(name, r) { return [name].concat(months.map(function(m) { return r[m] && r[m].top[0] ? r[m].top[0].label : ''; })).concat(months.map(function(m) { return r[m] && r[m].top[0] ? r[m].top[0].rn : ''; })).concat(months.map(function(m) { return r[m] ? r[m].tot : ''; })); }
+    aoa.push(rowOf('전체', M.all)); Object.keys(M.rows).forEach(function(p) { aoa.push(rowOf(p, M.rows[p])); });
+    var ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch: 16}].concat(months.map(function() { return {wch: 24}; })).concat(months.map(function() { return {wch: 9}; })).concat(months.map(function() { return {wch: 9}; }));
+    var cur = cmRows(cmS.ym), det = [['순위 — ' + (cmS.prop || '전체 사업장') + ' · ' + cmS.ym + ' · ' + label], [], ['#', '상품', '회원명(원문)', '사업장', 'RN', '비중%', '매출(백만)', 'ADR(천)']];
+    cur.rows.forEach(function(r, i) { det.push([i + 1, r.label, r.name, r.prop, r.rn, cur.tot ? Math.round(r.rn / cur.tot * 1000) / 10 : '', Math.round(r.rev / 1e6 * 10) / 10, r.rn ? Math.round(r.rev / r.rn / 1000) : '']); });
+    var ws2 = XLSX.utils.aoa_to_sheet(det); ws2['!cols'] = [{wch: 5}, {wch: 34}, {wch: 40}, {wch: 14}, {wch: 8}, {wch: 8}, {wch: 10}, {wch: 9}];
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '월×사업장 1위 상품'); XLSX.utils.book_append_sheet(wb, ws2, '순위');
+    XLSX.writeFile(wb, 'GS_월별사업장별_인기상품_' + cmS.year + '_' + (cmS.seg || '전세그') + '_' + (cmS.chan || '전체거래처') + '.xlsx');
   }
 
   // ===== SEC 11 · 시트 일정 × 실적 매칭 현황 =====
