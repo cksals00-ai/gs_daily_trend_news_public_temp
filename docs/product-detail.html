@@ -105,6 +105,13 @@ table.pivot td.drill-name:hover{color:var(--gold-bright,#c9a063);}
 table.pivot td.wrap{white-space:normal;line-height:1.35;}
 table.pivot th.grp{text-align:center;border-left:1px solid var(--rule);}
 table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
+table.pivot td.est{color:#e6b970;}
+.pl-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:5px;vertical-align:middle;}
+.pl-badge.ap{background:rgba(90,159,196,.18);color:#5a9fc4;} .pl-badge.map{background:rgba(201,160,99,.18);color:#e6b970;}
+.pl-flag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-top:3px;}
+.pl-flag.ok{background:#1f3a28;color:#7fd8a0;} .pl-flag.warn{background:#3d1f1f;color:#ef9a9a;}
+input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);color:var(--ink);font-family:var(--mono);font-size:11px;padding:3px 5px;border-radius:3px;text-align:right;}
+.rt-conf{font-size:9px;color:var(--ink-faint);margin-left:4px;}
 .rank-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700;background:var(--bg-soft);color:var(--ink-faint);margin-right:6px;flex-shrink:0;}
 .rank-num.gold{background:rgba(201,160,99,0.2);color:var(--gold-bright);}
 .rank-num.silver{background:rgba(192,192,192,0.15);color:#c0c0c0;}
@@ -559,8 +566,42 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
       </div>
     </section>
 
+    <!-- ===== SEC 10. 2027 상품 기획 매트릭스 ===== -->
+    <section class="prod-section" id="sec10">
+      <div class="section-header">
+        <span class="section-num">SEC 10</span>
+        <h2 class="section-title">2027 상품 기획 매트릭스 — 언제 · 채널 · 상품(구성) · 사업장 · 목표 · 수수료 · 비용 · 공헌</h2>
+        <span class="section-sub" id="sec10-sub">—</span>
+      </div>
+      <div class="table-card">
+        <div class="drill-bar" style="gap:8px;">
+          <span class="drill-sep">사업장</span><select id="pl-prop" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
+          <span class="drill-sep">투숙월</span><select id="pl-month" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
+          <span class="drill-sep">카테고리</span><select id="pl-cat" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
+          <span class="drill-sep">출처</span><select id="pl-src" class="chip" style="padding:2px 6px;"><option value="">전체</option><option value="action_plan">Action Plan 시트</option><option value="map">수기 기획전</option><option value="auto">자동 그룹</option></select>
+          <label class="drill-sep" style="cursor:pointer;"><input type="checkbox" id="pl-hide-adr"> ADR 미달 숨김</label>
+          <label class="drill-sep" style="cursor:pointer;"><input type="checkbox" id="pl-hide-can"> 주말 잠식 의심 숨김</label>
+          <span class="drill-sep">상위</span><select id="pl-topn" class="chip" style="padding:2px 6px;"><option>30</option><option selected>60</option><option>120</option><option>300</option></select>
+          <button class="chip" id="pl-xlsx" type="button" style="margin-left:auto;">📥 엑셀 다운로드</button>
+        </div>
+        <div class="drill-bar" style="border-bottom:0;">
+          <span class="drill-sep">목표 열은 <b>추정</b>(실적 × 2027 예산 성장률, ADR은 베이스라인 이상) · 비용은 직접 입력(백만원, 이 브라우저에 저장) · 공헌 = 목표 REV − 수수료 − 비용 · 배치 = 전년 판매·투숙기간 +1년 요일 정렬 · 대외비·관리자용</span>
+        </div>
+        <div class="table-wrap">
+          <table class="pivot" id="pl-table" style="font-size:11.5px;">
+            <thead><tr>
+              <th>#</th><th>사업장</th><th>상품(기획전)</th><th>구성</th><th>2027 판매기간</th><th>2027 투숙기간</th><th>채널</th>
+              <th>목표 RN<br><span style="font-weight:400;">(추정)</span></th><th>목표 ADR(천)</th><th>목표 REV(백만)</th><th>주중 RN</th><th>수수료(백만)</th>
+              <th>비용(백만)<br><span style="font-weight:400;">입력</span></th><th>예상 공헌(백만)</th><th>웹 구매(건)</th><th>근거 · 플래그</th>
+            </tr></thead>
+            <tbody id="pl-tbody"><tr><td colspan="16" style="text-align:center;padding:24px;color:var(--ink-faint);">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <div style="padding:10px 0 2px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-align:center;border-top:1px solid var(--rule);">
-      DATA: db_aggregated.json + package_series_trend.json + product_cube.json &middot; 온북 DB 27번 FIT예약 · 변경예약집계코드명 기준 (2022&ndash;2026)
+      DATA: db_aggregated.json + package_series_trend.json + product_cube.json + product_plan_2027.json &middot; 온북 DB 27번 FIT예약 · 변경예약집계코드명 기준 (2022&ndash;2026)
     </div>
   </main>
 </div>
@@ -1246,10 +1287,15 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
   function propIndex(disp) { return cube.dims.properties.findIndex(function(p) { return p.display === disp; }); }
   function drillRows(year) {
     var level = drillPath.length, rows = {}, items = cubeFilterCodes(year).filter(matchesPath);
-    if (level === 5) {   // 객실타입: 코드의 rt(연도 무관 누적) — 라벨에 명시
+    if (level === 5) {   // 객실타입: 코드의 rt(연도 무관 누적) — 코드→명칭은 cube.dims.roomtypes (exact/soft/grade/alias)
       var it = items[0]; if (!it) return [];
-      return Object.keys(it.c.rt).map(function(rt) { var v = it.c.rt[rt]; return Object.assign(emptyAgg(), {key: rt, label: rt + ' (코드 누적)', rn: v[0], rev: v[1], dow: null}); })
-        .sort(function(a, b) { return b.rn - a.rn; });
+      var rtm = (cube.dims.roomtypes || {}), byProp = rtm[it.c.prop] || {}, alias = rtm._alias || {};
+      return Object.keys(it.c.rt).map(function(rt) {
+        var v = it.c.rt[rt], m = byProp[rt] || alias[rt];
+        var nm = m ? m.name : rt, conf = m ? m.conf : 'none';
+        var mark = conf === 'exact' ? '' : conf === 'soft' ? '≈' : conf === 'alias' ? '≈타사업장' : conf === 'grade' ? '등급만' : '코드';
+        return Object.assign(emptyAgg(), {key: rt, label: nm + (m && conf !== 'grade' ? ' <span class="rt-conf">' + rt + (mark ? ' · ' + mark : '') + '</span>' : (mark ? ' <span class="rt-conf">' + mark + '</span>' : '')) + ' <span class="rt-conf">누적</span>', rn: v[0], rev: v[1], dow: null});
+      }).sort(function(a, b) { return b.rn - a.rn; });
     }
     items.forEach(function(item) {
       Object.keys(item.yms).forEach(function(ym) {
@@ -1371,44 +1417,62 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
     Object.keys(rows).forEach(function(k) { rows[k].sort(function(a, b) { return b.rn - a.rn; }); rows[k] = rows[k].slice(0, topN); });
     return rows;
   }
+  // 2027Y(다음해) 열: 기획 매트릭스(plan) 행을 전사업장/사업장 그룹으로 상위 N (목표=추정). 전사업장 = 10개 사업장 이상 기획전 합산
+  function planRowsByGroup(topN) {
+    var out = {'전사업장': []};
+    if (!plan || !cube) return out;
+    var props = activeDisplayProps();
+    cube.dims.properties.forEach(function(p) { if (!props.size || props.has(p.display)) out[p.display] = []; });
+    var agg = {};
+    plan.rows.forEach(function(r) {
+      var camp = cube.campaigns[r.campaign], wide = camp && camp.props.length >= 10;
+      var item = {name: campShort(r.campaign), comp: r.composition || compAutoText(r.composition_auto), sale: planRange(r.plan.sale_from, r.plan.sale_to),
+                  rn: r.plan.target_rn, rev: r.plan.target_rev, note: r.flags.join(' · ')};
+      if (wide) { var a = agg[r.campaign] || (agg[r.campaign] = Object.assign({}, item, {rn: 0, rev: 0})); a.rn += r.plan.target_rn; a.rev += r.plan.target_rev; }
+      else if (out[r.prop]) out[r.prop].push(item);
+    });
+    Object.keys(agg).forEach(function(k) { out['전사업장'].push(agg[k]); });
+    Object.keys(out).forEach(function(k) { out[k].sort(function(a, b) { return b.rn - a.rn; }); out[k] = out[k].slice(0, topN); });
+    return out;
+  }
   function renderMatrix() {
     if (!cube || !el('mx-tbody')) return;
     var y0 = parseInt(selYear, 10), y1 = y0 - 1, y2 = y0 + 1, topN = parseInt(el('mx-topn').value, 10);
     el('mx-y0').textContent = y0; el('mx-y1').textContent = y1; el('mx-y2').textContent = y2;
-    var ys = [y2, y0, y1];
-    el('mx-h2').innerHTML = ys.map(function(y) { return '<th>' + y + 'Y</th>'; }).join('') + ys.map(function(y) { return '<th>' + y + 'Y</th>'; }).join('') +
-      ys.map(function(y) { return '<th>' + y + 'Y</th>'; }).join('') + ys.map(function(y) { return '<th>' + y + 'Y RNs</th><th>' + y + 'Y REV(백만)</th>'; }).join('');
-    var r0 = matrixRows(y0, topN), r1 = matrixRows(y1, topN), html = '', n = 0;
+    var ys = [y2, y0, y1], hasPlan = !!plan && y2 === 2027;
+    el('mx-h2').innerHTML = ys.map(function(y) { return '<th>' + y + 'Y' + (y === y2 && hasPlan ? ' (기획)' : '') + '</th>'; }).join('') + ys.map(function(y) { return '<th>' + y + 'Y</th>'; }).join('') +
+      ys.map(function(y) { return '<th>' + y + 'Y</th>'; }).join('') + ys.map(function(y) { return '<th>' + y + 'Y RNs' + (y === y2 && hasPlan ? '(목표)' : '') + '</th><th>' + y + 'Y REV(백만)' + (y === y2 && hasPlan ? '(목표)' : '') + '</th>'; }).join('');
+    var r0 = matrixRows(y0, topN), r1 = matrixRows(y1, topN), r2 = hasPlan ? planRowsByGroup(topN) : {}, html = '', n = 0;
     Object.keys(r0).forEach(function(group) {
-      var a = r0[group], b = r1[group], len = Math.max(a.length, b.length);
+      var a = r0[group], b = r1[group], c = r2[group] || [], len = Math.max(a.length, b.length, c.length);
       if (!len) return;
       for (var i = 0; i < len; i++) {
-        var x = a[i], z = b[i]; n++;
+        var x = a[i], z = b[i], w = c[i]; n++;
         html += '<tr>' + (i === 0 ? '<td rowspan="' + len + '" style="vertical-align:top;">' + group + '</td>' : '') +
-          '<td class="mx-plan">(기획)</td><td class="wrap" style="min-width:170px;">' + (x ? x.name : '') + '</td><td class="wrap" style="min-width:170px;">' + (z ? z.name : '') + '</td>' +
-          '<td></td><td class="wrap" style="min-width:200px;">' + (x ? x.comp : '') + '</td><td class="wrap" style="min-width:200px;">' + (z ? z.comp : '') + '</td>' +
-          '<td></td><td>' + (x ? x.sale : '') + '</td><td>' + (z ? z.sale : '') + '</td>' +
-          '<td></td><td></td><td>' + (x ? fmtN(x.rn) : '') + '</td><td>' + (x ? fmtR(x.rev / 1e6) : '') + '</td><td>' + (z ? fmtN(z.rn) : '') + '</td><td>' + (z ? fmtR(z.rev / 1e6) : '') + '</td>' +
-          '<td class="wrap">' + ((x && x.note) || (z && z.note) || '') + '</td></tr>';
+          '<td class="wrap est" style="min-width:170px;">' + (w ? w.name : (hasPlan ? '' : '(기획)')) + '</td><td class="wrap" style="min-width:170px;">' + (x ? x.name : '') + '</td><td class="wrap" style="min-width:170px;">' + (z ? z.name : '') + '</td>' +
+          '<td class="wrap est" style="min-width:180px;">' + (w ? w.comp : '') + '</td><td class="wrap" style="min-width:200px;">' + (x ? x.comp : '') + '</td><td class="wrap" style="min-width:200px;">' + (z ? z.comp : '') + '</td>' +
+          '<td class="est">' + (w ? w.sale : '') + '</td><td>' + (x ? x.sale : '') + '</td><td>' + (z ? z.sale : '') + '</td>' +
+          '<td class="est">' + (w ? fmtN(w.rn) : '') + '</td><td class="est">' + (w ? fmtR(w.rev / 1e6) : '') + '</td><td>' + (x ? fmtN(x.rn) : '') + '</td><td>' + (x ? fmtR(x.rev / 1e6) : '') + '</td><td>' + (z ? fmtN(z.rn) : '') + '</td><td>' + (z ? fmtR(z.rev / 1e6) : '') + '</td>' +
+          '<td class="wrap">' + ((w && w.note) || (x && x.note) || (z && z.note) || '') + '</td></tr>';
       }
     });
     el('mx-tbody').innerHTML = html || '<tr><td colspan="17" style="text-align:center;padding:24px;color:var(--ink-faint);">데이터 없음</td></tr>';
-    el('sec9-sub').textContent = n + '행 · 세그 ' + drillSegs.join('/') + ' · ' + y0 + 'Y·' + y1 + 'Y = 기획(판매) 연도 기준 자동 집계(전 투숙월 합), ' + y2 + 'Y 기획 열(2차) · 대외비·관리자용';
+    el('sec9-sub').textContent = n + '행 · 세그 ' + drillSegs.join('/') + ' · ' + y0 + 'Y·' + y1 + 'Y = 기획(판매) 연도 기준 자동 집계(전 투숙월 합)' + (hasPlan ? ' · ' + y2 + 'Y = 기획 매트릭스 목표(추정, 금색)' : ' · ' + y2 + 'Y 기획 열') + ' · 대외비·관리자용';
   }
   function exportMatrixXlsx() {
     if (!cube || typeof XLSX === 'undefined') { alert('엑셀 모듈 로드 전입니다. 잠시 후 다시 시도하세요.'); return; }
-    var y0 = parseInt(selYear, 10), y1 = y0 - 1, y2 = y0 + 1, topN = parseInt(el('mx-topn').value, 10);
-    var r0 = matrixRows(y0, topN), r1 = matrixRows(y1, topN);
+    var y0 = parseInt(selYear, 10), y1 = y0 - 1, y2 = y0 + 1, topN = parseInt(el('mx-topn').value, 10), hasPlan = !!plan && y2 === 2027;
+    var r0 = matrixRows(y0, topN), r1 = matrixRows(y1, topN), r2 = hasPlan ? planRowsByGroup(topN) : {};
     var head1 = ['구분', '전략 상품', '', '', '상품 구성', '', '', '판매일자', '', '', '판매 실적', '', '', '', '', '', '비고'];
-    var head2 = ['', y2 + 'Y', y0 + 'Y', y1 + 'Y', y2 + 'Y', y0 + 'Y', y1 + 'Y', y2 + 'Y', y0 + 'Y', y1 + 'Y', y2 + 'Y RNs', y2 + 'Y REV', y0 + 'Y RNs', y0 + 'Y REV', y1 + 'Y RNs', y1 + 'Y REV', ''];
-    var aoa = [['(GS) ' + y2 + '년 영업활성화 전략 — 사업장별 상품 분석 (대외비·관리자용)'], ['기준일 ' + cube.meta.base_date + ' · REV 백만원 VAT제외 · 세그 ' + drillSegs.join('/')], [], head1, head2];
+    var head2 = ['', y2 + 'Y' + (hasPlan ? '(기획)' : ''), y0 + 'Y', y1 + 'Y', y2 + 'Y', y0 + 'Y', y1 + 'Y', y2 + 'Y', y0 + 'Y', y1 + 'Y', y2 + 'Y RNs' + (hasPlan ? '(목표)' : ''), y2 + 'Y REV' + (hasPlan ? '(목표)' : ''), y0 + 'Y RNs', y0 + 'Y REV', y1 + 'Y RNs', y1 + 'Y REV', ''];
+    var aoa = [['(GS) ' + y2 + '년 영업활성화 전략 — 사업장별 상품 분석 (대외비·관리자용)'], ['기준일 ' + cube.meta.base_date + ' · REV 백만원 VAT제외 · 세그 ' + drillSegs.join('/') + (hasPlan ? ' · ' + y2 + 'Y 열은 기획 매트릭스 목표(추정)' : '')], [], head1, head2];
     var merges = [{s: {r: 3, c: 0}, e: {r: 4, c: 0}}, {s: {r: 3, c: 1}, e: {r: 3, c: 3}}, {s: {r: 3, c: 4}, e: {r: 3, c: 6}}, {s: {r: 3, c: 7}, e: {r: 3, c: 9}}, {s: {r: 3, c: 10}, e: {r: 3, c: 15}}, {s: {r: 3, c: 16}, e: {r: 4, c: 16}}];
     Object.keys(r0).forEach(function(group) {
-      var a = r0[group], b = r1[group], len = Math.max(a.length, b.length), start = aoa.length;
+      var a = r0[group], b = r1[group], c = r2[group] || [], len = Math.max(a.length, b.length, c.length), start = aoa.length;
       for (var i = 0; i < len; i++) {
-        var x = a[i], z = b[i];
-        aoa.push([i === 0 ? group : '', '', x ? x.name : '', z ? z.name : '', '', x ? x.comp : '', z ? z.comp : '', '', x ? x.sale : '', z ? z.sale : '',
-                  '', '', x ? x.rn : '', x ? Math.round(x.rev / 1e6 * 10) / 10 : '', z ? z.rn : '', z ? Math.round(z.rev / 1e6 * 10) / 10 : '', (x && x.note) || (z && z.note) || '']);
+        var x = a[i], z = b[i], w = c[i];
+        aoa.push([i === 0 ? group : '', w ? w.name : '', x ? x.name : '', z ? z.name : '', w ? w.comp : '', x ? x.comp : '', z ? z.comp : '', w ? w.sale : '', x ? x.sale : '', z ? z.sale : '',
+                  w ? w.rn : '', w ? Math.round(w.rev / 1e6 * 10) / 10 : '', x ? x.rn : '', x ? Math.round(x.rev / 1e6 * 10) / 10 : '', z ? z.rn : '', z ? Math.round(z.rev / 1e6 * 10) / 10 : '', (w && w.note) || (x && x.note) || (z && z.note) || '']);
       }
       if (len > 1) merges.push({s: {r: start, c: 0}, e: {r: start + len - 1, c: 0}});
     });
@@ -1428,6 +1492,95 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), '기획전 상세');
     var d = new Date(), tag = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
     XLSX.writeFile(wb, 'GS_사업장별_상품분석_' + tag + '.xlsx');
+  }
+
+  // ===== SEC 10 · 2027 기획 매트릭스 (data/product_plan_2027.json) =====
+  var plan = null, planCost = {};
+  try { planCost = JSON.parse(localStorage.getItem('gsn_plan27_cost') || '{}') || {}; } catch (e) { planCost = {}; }
+  function fmtD8(s) { return s ? s.slice(2, 4) + '.' + s.slice(4, 6) + '.' + s.slice(6, 8) : ''; }
+  function planRange(a, b) { return (a || b) ? fmtD8(a) + '~' + fmtD8(b) : '—'; }
+  function campShort(name) { return (name || '').replace(/\s*\(\d{4}\)\s*$/, ''); }
+  function compAutoText(a) { var ks = Object.keys(a || {}); return ks.length ? '객실+' + ks.map(function(k) { return k + ' ' + Math.round(a[k] * 100) + '%'; }).join('·') : '객실'; }
+  function srcBadge(src) { return src === 'action_plan' ? '<span class="pl-badge ap" title="Action Plan 시트">AP</span>' : src === 'map' ? '<span class="pl-badge map" title="수기 기획전 맵">맵</span>' : ''; }
+  function initPlanUI() {
+    el('pl-prop').innerHTML = '<option value="">전체</option>' + plan.props.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+    el('pl-month').innerHTML = '<option value="">전체</option>' + plan.months.map(function(m) { return '<option value="' + m + '">' + parseInt(m.slice(4), 10) + '월</option>'; }).join('');
+    var cats = {}; plan.rows.forEach(function(r) { if (r.category) cats[r.category] = 1; });
+    el('pl-cat').innerHTML = '<option value="">전체</option>' + Object.keys(cats).sort().map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    ['pl-prop', 'pl-month', 'pl-cat', 'pl-src', 'pl-hide-adr', 'pl-hide-can', 'pl-topn'].forEach(function(id) { el(id).onchange = renderPlan; });
+    el('pl-xlsx').onclick = exportPlanXlsx;
+  }
+  function planFiltered() {
+    if (!plan) return [];
+    var p = el('pl-prop').value, m = el('pl-month').value, c = el('pl-cat').value, s = el('pl-src').value;
+    var hideAdr = el('pl-hide-adr').checked, hideCan = el('pl-hide-can').checked, props = activeDisplayProps();
+    return plan.rows.filter(function(r) {
+      if (p && r.prop !== p) return false;
+      if (!p && props.size && !props.has(r.prop)) return false;
+      if (m && r.plan.month !== m) return false;
+      if (c && r.category !== c) return false;
+      if (s && r.source !== s) return false;
+      if (hideAdr && !r.guard.adr_ok) return false;
+      if (hideCan && r.guard.cannibal) return false;
+      return true;
+    });
+  }
+  function costOf(r) { var v = planCost[r.id]; return (v === undefined || v === null || v === '') ? null : Number(v); }
+  function contribOf(r) { return r.plan.target_rev - r.plan.comm - (costOf(r) || 0) * 1e6; }
+  function renderPlan() {
+    if (!plan) return;
+    var rows = planFiltered(), topN = parseInt(el('pl-topn').value, 10), shown = rows.slice(0, topN);
+    var tot = {rn: 0, rev: 0, comm: 0, wk: 0, cost: 0, contrib: 0, web: 0};
+    var html = shown.map(function(r) {
+      var cst = costOf(r), contrib = contribOf(r);
+      tot.rn += r.plan.target_rn; tot.rev += r.plan.target_rev; tot.comm += r.plan.comm; tot.wk += r.plan.weekday_rn; tot.cost += (cst || 0); tot.contrib += contrib; tot.web += r.web.purchases;
+      var mix = Object.keys(r.actual.seg_mix).map(function(k) { return k + ' ' + Math.round(r.actual.seg_mix[k] * 100) + '%'; }).join(' · ') +
+        (r.actual.top_chan.length ? '<br><span style="color:var(--ink-faint)">' + r.actual.top_chan.join(' / ') + '</span>' : '');
+      var flags = r.flags.map(function(f) { return '<span class="pl-flag ' + ((f.indexOf('미달') >= 0 || f.indexOf('잠식') >= 0) ? 'warn' : 'ok') + '">' + f + '</span>'; }).join(' ');
+      return '<tr data-id="' + encodeURIComponent(r.id) + '"><td>' + r.rank + '</td><td>' + r.prop + '</td>' +
+        '<td class="wrap" style="min-width:180px;">' + srcBadge(r.source) + campShort(r.campaign) + '</td>' +
+        '<td class="wrap" style="min-width:160px;color:var(--ink-muted)">' + (r.composition || compAutoText(r.composition_auto)) + '</td>' +
+        '<td>' + planRange(r.plan.sale_from, r.plan.sale_to) + '</td><td>' + planRange(r.plan.stay_from, r.plan.stay_to) + '</td>' +
+        '<td class="wrap" style="min-width:120px;">' + mix + '</td>' +
+        '<td class="est">' + fmtN(r.plan.target_rn) + '</td><td class="est">' + fmtN(r.plan.target_adr / 1000) + '</td><td class="est">' + fmtR(r.plan.target_rev / 1e6) + '</td>' +
+        '<td class="est">' + fmtN(r.plan.weekday_rn) + '</td><td class="est">' + fmtR(r.plan.comm / 1e6) + '</td>' +
+        '<td><input type="number" class="pl-cost" min="0" step="0.1" value="' + (cst === null ? '' : cst) + '" placeholder="입력" style="width:72px;"></td>' +
+        '<td class="est pl-contrib">' + fmtR(contrib / 1e6) + '</td><td>' + (r.web.purchases ? fmtN(r.web.purchases) : '–') + '</td>' +
+        '<td class="wrap" style="min-width:220px;color:var(--ink-faint)">' + r.basis + (flags ? '<br>' + flags : '') + '</td></tr>';
+    }).join('');
+    html += '<tr class="total-row"><td colspan="7">합계 (표시 ' + shown.length + '행 / 필터 ' + rows.length + '행)</td><td>' + fmtN(tot.rn) + '</td><td></td><td>' + fmtR(tot.rev / 1e6) + '</td><td>' + fmtN(tot.wk) + '</td><td>' + fmtR(tot.comm / 1e6) + '</td><td>' + fmtR(tot.cost) + '</td><td>' + fmtR(tot.contrib / 1e6) + '</td><td>' + fmtN(tot.web) + '</td><td></td></tr>';
+    el('pl-tbody').innerHTML = shown.length ? html : '<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--ink-faint);">조건에 맞는 행 없음</td></tr>';
+    el('sec10-sub').textContent = '후보 ' + plan.rows.length + '행 · 필터 ' + rows.length + '행 · 기준일 ' + (plan.meta.base_date || '') + ' · 성장률: ' + plan.meta.growth_rule + ' · 대외비·관리자용';
+    el('pl-tbody').querySelectorAll('input.pl-cost').forEach(function(inp) {
+      inp.onchange = function() {
+        var id = decodeURIComponent(inp.closest('tr').dataset.id);
+        if (inp.value === '') delete planCost[id]; else planCost[id] = Number(inp.value);
+        try { localStorage.setItem('gsn_plan27_cost', JSON.stringify(planCost)); } catch (e) {}
+        renderPlan();
+      };
+    });
+  }
+  function exportPlanXlsx() {
+    if (!plan || typeof XLSX === 'undefined') { alert('데이터 또는 엑셀 모듈 로드 전입니다.'); return; }
+    var rows = planFiltered();
+    var head = ['#', '사업장', '상품(기획전)', '출처', '카테고리', '구성', '2027 판매기간', '2027 투숙기간', '2027 투숙월', '채널 믹스', '주요 거래처',
+                '목표 RN(추정)', '목표 ADR(천)', '목표 REV(백만)', '주중 RN', '수수료(백만)', '비용(백만, 입력)', '예상 공헌(백만)', '웹 구매(건)',
+                '실적연도', '실적 RN', '실적 ADR(천)', '실적 주중비중', '구성가치/예약(천)', '수수료율', '베이스라인 ADR(천)', 'ADR 가드', '주말 YoY', '플래그', '근거'];
+    var aoa = [['(GS) 2027년 상품 기획 매트릭스 (대외비·관리자용)'], ['기준일 ' + (plan.meta.base_date || '') + ' · 목표 열은 추정 · ' + plan.meta.growth_rule + ' · ' + plan.meta.adr_rule], [], head];
+    rows.forEach(function(r) {
+      var cst = costOf(r);
+      aoa.push([r.rank, r.prop, campShort(r.campaign), r.source, r.category, r.composition || compAutoText(r.composition_auto), planRange(r.plan.sale_from, r.plan.sale_to), planRange(r.plan.stay_from, r.plan.stay_to),
+                r.plan.month || '', Object.keys(r.actual.seg_mix).map(function(k) { return k + ' ' + Math.round(r.actual.seg_mix[k] * 100) + '%'; }).join(' · '), r.actual.top_chan.join(' / '),
+                r.plan.target_rn, Math.round(r.plan.target_adr / 1000), Math.round(r.plan.target_rev / 1e6 * 10) / 10, r.plan.weekday_rn, Math.round(r.plan.comm / 1e6 * 10) / 10,
+                cst === null ? '' : cst, Math.round(contribOf(r) / 1e6 * 10) / 10, r.web.purchases || '',
+                r.year, r.actual.rn, Math.round(r.actual.adr / 1000), Math.round(r.actual.weekday_share * 100) + '%', Math.round(r.actual.comp_bk / 1000), Math.round(r.actual.comm_rate * 1000) / 10 + '%',
+                r.guard.baseline_adr ? Math.round(r.guard.baseline_adr / 1000) : '', r.guard.adr_ok ? 'OK' : '미달', r.guard.weekend_yoy == null ? '' : Math.round(r.guard.weekend_yoy * 100) + '%', r.flags.join(' · '), r.basis]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = head.map(function(h, i) { return {wch: i === 2 || i === 5 || i === 29 ? 40 : i === 9 || i === 10 ? 22 : 12}; });
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '2027 기획 매트릭스');
+    var d = new Date(), tag = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+    XLSX.writeFile(wb, 'GS_2027_상품기획매트릭스_' + tag + '.xlsx');
   }
 
   function buildFilters() {
@@ -1507,6 +1660,9 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
       el('mx-topn').onchange = renderMatrix;
       drillPath = [];
       renderDrill();
+      return fetch('data/product_plan_2027.json?t=' + Date.now()).then(function(r) { if (!r.ok) throw new Error('plan ' + r.status); return r.json(); })
+        .then(function(p) { plan = p; window.__plan = p; initPlanUI(); renderPlan(); renderMatrix(); })
+        .catch(function(e) { console.warn('plan', e); el('sec10-sub').textContent = '2027 기획 데이터 없음'; });
     }).catch(function(e) { console.error('cube', e); el('sec8-sub').textContent = '큐브 로드 실패'; el('sec9-sub').textContent = '큐브 로드 실패'; });
   }).catch(function(e) {
     console.error(e);
