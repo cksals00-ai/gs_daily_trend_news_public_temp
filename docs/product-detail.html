@@ -1287,8 +1287,10 @@ table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
     var p = (cur / prev - 1) * 100;
     return '<span class="' + (p >= 0 ? 'yoy-up' : 'yoy-dn') + '">' + (p >= 0 ? '+' : '') + p.toFixed(1) + '%</span>';
   }
+  var drillYear = null;
   function renderDrill() {
     if (!cube) return;
+    if (drillYear !== selYear) { drillPath = []; drillYear = selYear; }   // 연도 변경 시 경로 초기화(타 연도 코드 잔존 방지)
     var y = parseInt(selYear, 10), rows = drillRows(y), prevRows = {};
     drillRows(y - 1).forEach(function(r) { prevRows[r.key] = r; });
     var level = drillPath.length;
