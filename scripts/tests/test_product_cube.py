@@ -178,6 +178,55 @@ class Finalize(unittest.TestCase):
         self.assertEqual(merged['meta']['수기 기획전']['source'], 'map')
         self.assertEqual(bpc.load_action_plan_map(str(Path(self.tmp) / 'none.json')), {'by_code': {}, 'meta': {}})
 
+    def test_match_sheet_events_scoring(self):
+        lines = [row(KEY_RSV_NO='A1', 판매일자='20260310', 최초입력일자='20260305', 회원번호='86100001', 회원명='[벨비발디] 스프링 올인_쿠팡', 변경예약집계코드='72'),
+                 row(KEY_RSV_NO='A2', 판매일자='20260312', 최초입력일자='20260306', 회원번호='86100002', 회원명='[벨비발디] 스프링 올인_G15', 변경예약집계코드='A5', AGENT명='GOTA_아고다'),
+                 row(KEY_RSV_NO='A3', 판매일자='20260320', 최초입력일자='20260304', 회원번호='86100003', 회원명='[벨비발디] 조식패키지_OTA', 변경예약집계코드='72'),
+                 row(KEY_RSV_NO='A4', 판매일자='20260501', 최초입력일자='20260420', 회원번호='86100004', 회원명='[벨비발디] 썸머 쿠팡딜', 변경예약집계코드='72')]
+        p = write_raw(self.tmp, '27.x_재전송(20260101-20261231).txt', lines)
+        b = bpc.CubeBuilder()
+        for r in bpc.iter_rows(p, None, None):
+            b.add(r)
+        events = [{'key': '4', '구분': '비발디파크', '사업장': '비발디', '영업장': '벨', '채널': '쿠팡', '채널카테고리': '쿠팡', '판매시작': '2026-03-04', '판매종료': '2026-03-10',
+                   '투숙시작': '2026-03-04', '투숙종료': '2026-05-31', '상품': '객실+올인클루시브(오션+액티비티)', 'KPI_RN': '300'},
+                  {'key': '9', '사업장': '진도', '영업장': '진도', '채널': '티딜', '채널카테고리': '티딜/톡딜', '판매시작': '2026-03-04', '판매종료': '2026-03-10', '상품': '협의중'}]
+        import sheet_event_matcher as sem
+        by_code, meta, recs = sem.match_events(b.codes, events, taken={'86100002'})
+        self.assertIn('86100001', by_code)                       # 쿠팡 채널명+3·AGENT(쿠팡 없음)·구성(아쿠아=오션 ✓ 부대 기대? '액티비티'→스포츠 ✗)·OTA 세그+1·판매일±1 +2
+        self.assertNotIn('86100002', by_code)                    # taken(AP 코드) 제외
+        self.assertNotIn('86100004', by_code)                    # 판매기간 밖(4/20)
+        self.assertNotIn('86100003', by_code)                    # 조식: 채널·구성 불일치 → 점수 부족
+        name = by_code['86100001']
+        self.assertTrue(name.startswith('SE4 비발디 쿠팡'), name)
+        self.assertEqual(meta[name]['source'], 'sheet_event'); self.assertIn(meta[name]['conf'], ('high', 'medium'))
+        self.assertEqual(recs[0]['codes'], ['86100001']); self.assertIn('채널명', recs[0]['why']); self.assertEqual(recs[0]['pass'], 1)
+        self.assertEqual(recs[1]['conf'], 'none'); self.assertEqual(recs[1]['props'], ['17.쏠비치진도'])
+        merged = bpc.merge_campaign_maps(pn.load_campaign_map('/nonexistent.json'), {'by_code': {'86100001': 'AP행'}, 'meta': {'AP행': {}}}, {'by_code': by_code, 'meta': meta})
+        self.assertEqual(merged['by_code']['86100001'], 'AP행')   # AP > 시트 추정
+
+    def test_event_props(self):
+        import sheet_event_matcher as sem
+        self.assertEqual(sem.event_props('비발디', '벨/캄'), {'01.벨비발디', '02.캄비발디'})
+        self.assertEqual(sem.event_props('비발디', ''), {'01.벨비발디', '02.캄비발디', '03.펫비발디', '04.펠리체비발디', '05.빌리지비발디'})
+        self.assertEqual(sem.event_props('양양/삼척/르네', ''), {'08.쏠비치양양', '09.쏠비치삼척', '23.르네블루'})
+        self.assertEqual(sem.event_props('캄제주', ''), {'19.소노캄제주'})
+        self.assertEqual(sem.event_props('벨,캄 제주', ''), {'18.소노벨제주', '19.소노캄제주'})
+        self.assertEqual(sem.event_props('비발디', '펫'), {'03.펫비발디'})
+        self.assertEqual(len(sem.event_props('전체', '')), 23)
+
+    def test_score_pair_signals(self):
+        import sheet_event_matcher as sem
+        from datetime import datetime
+        class FakeCI:
+            code = '86'; prop = '01.벨비발디'; name = '[벨비발디] 스프링 올인(오션+조식)_쿠팡'; name_l = name.lower(); seg = 'OTA'; chan = '쿠팡'
+            fs = datetime(2026, 3, 4); stay_lo = datetime(2026, 3, 10); stay_hi = datetime(2026, 5, 20); rn = 100; pkg_price = 150000
+            parts = {'아쿠아': 0.6, '식음': 0.4}; parts_set = {'아쿠아', '식음'}
+        ev = {'채널카테고리': '쿠팡', '채널': '쿠팡', '상품': '객실+조식+오션 149,000원', '판매시작': '2026-03-04', '판매종료': '2026-03-10', '투숙시작': '2026-03-04', '투숙종료': '2026-05-31'}
+        sc, why = sem.score_pair(ev, FakeCI(), {}, {})
+        self.assertGreaterEqual(sc, 11)   # 채널명3+AGENT2+구성4+판매일2+투숙1+가격2+세그1 = 15 (명칭 토큰 포함 시 +)
+        for w in ('채널명', 'AGENT', '구성2/2', '판매일±1', '투숙겹침', '가격±15%', '세그'):
+            self.assertIn(w, why)
+
     def test_write_outputs_json_and_gz(self):
         out = Path(self.tmp) / 'product_cube.json'
         n1, n2 = bpc.write_outputs({'meta': {'x': 1}, 'codes': {}}, out)

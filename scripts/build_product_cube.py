@@ -261,11 +261,12 @@ def load_action_plan_map(path):
     return {'by_code': by_code, 'meta': meta}
 
 
-def merge_campaign_maps(manual, ap):
-    """수기 맵(product_campaign_map.json)이 Action Plan보다 우선. rules는 수기 맵만."""
-    return {'by_code': {**ap['by_code'], **manual['by_code']},
+def merge_campaign_maps(manual, ap, sheet=None):
+    """우선순위: 수기 맵 > Action Plan(코드 행) > 시트 일정 추정 매칭. rules는 수기 맵만."""
+    sheet = sheet or {'by_code': {}, 'meta': {}}
+    return {'by_code': {**sheet['by_code'], **ap['by_code'], **manual['by_code']},
             'rules': manual['rules'],
-            'meta': {**ap['meta'], **manual['meta']}}
+            'meta': {**sheet['meta'], **ap['meta'], **manual['meta']}}
 
 
 # ---------------------------------------------------------------- 마무리
@@ -354,7 +355,7 @@ def finalize(builder, cmap, years, base_date):
             'composition': {'auto': auto, 'text': meta.get('composition') or ''},
             'sale_window': _window(camp['sale_days']), 'stay_window': _window(camp['stay_days']),
             'sale_text': meta.get('sale') or '', 'note': meta.get('note') or '', 'by_year': by_year,
-            'source': meta.get('source') or 'auto', 'ap_row': meta.get('ap_row'),
+            'source': meta.get('source') or 'auto', 'ap_row': meta.get('ap_row'), 'conf': meta.get('conf'), 'event_key': meta.get('event_key'),
         }
 
     baseline = {p: {ym: {s: {'rn': v[0], 'rev': round(v[1]), 'adr': round(v[1] / v[0]) if v[0] else 0}
@@ -407,6 +408,8 @@ def main():
     ap.add_argument('--campaign-map', default=str(ROOT / 'data' / 'product_campaign_map.json'))
     ap.add_argument('--action-plan', default=str(ROOT / 'docs' / 'data' / 'action_plan_performance.json'),
                     help='Action Plan 시트 JSON(기획전 일정·코드). 없으면 생략')
+    ap.add_argument('--sheet-events', default=str(ROOT / 'docs' / 'data' / 'campaign_data.json'),
+                    help='시트 일정 행(코드 없음) JSON → 추정 매칭. 없으면 생략')
     ap.add_argument('--max-rows', type=int, default=None)
     a = ap.parse_args()
     t0 = time.time()
@@ -424,12 +427,26 @@ def main():
             b.add(r)
         print(f'  {p.name[:60]:60s} [{lo or "-"}..{hi or "-"}] rows={b.rows_parsed - n0:,} ({time.time()-t0:.0f}s)', flush=True)
     apm = load_action_plan_map(a.action_plan)
-    cmap = merge_campaign_maps(pn.load_campaign_map(a.campaign_map), apm)
+    manual = pn.load_campaign_map(a.campaign_map)
+    sheet_map, sheet_events = {'by_code': {}, 'meta': {}}, []
+    if a.sheet_events and Path(a.sheet_events).exists():
+        from sheet_event_matcher import match_events
+        events = json.loads(Path(a.sheet_events).read_text(encoding='utf-8')).get('events', [])
+        taken = set(apm['by_code']) | set(manual['by_code'])
+        sb, sm, sheet_events = match_events(b.codes, events, taken)
+        sheet_map = {'by_code': sb, 'meta': sm}
+    cmap = merge_campaign_maps(manual, apm, sheet_map)
     cube = finalize(b, cmap, a.years, base_date or datetime.now().strftime('%Y-%m-%d'))
+    cube['schedule'] = sheet_events
+    conf_cnt = Counter(e['conf'] for e in sheet_events)
+    cube['meta']['schedule'] = {'events': len(sheet_events), 'matched': sum(1 for e in sheet_events if e['codes']), 'conf': dict(conf_cnt),
+                                'rule': '4패스 추정매칭: 채널명+3·AGENT+2·구성(식음/아쿠아/부대/스포츠)≤+4·명칭≤+2·판매일±1/3d +2/+1·투숙겹침+1·가격±15/30% +2/+1·세그+1 · high≥9/medium≥6/low≥4'}
     n_ap = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'action_plan')
+    n_se = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'sheet_event')
     n1, n2 = write_outputs(cube, a.out)
-    print(f'codes={cube["meta"]["codes"]:,} campaigns={cube["meta"]["campaigns"]:,} (action_plan {n_ap}, '
-          f'AP codes {len(apm["by_code"])}) json={n1/1e6:.1f}MB gz={n2/1e6:.1f}MB total {time.time()-t0:.0f}s')
+    print(f'codes={cube["meta"]["codes"]:,} campaigns={cube["meta"]["campaigns"]:,} (action_plan {n_ap}, sheet_event {n_se}, '
+          f'AP codes {len(apm["by_code"])}, sheet matched {cube["meta"]["schedule"]["matched"]}/{len(sheet_events)} {dict(conf_cnt)}) '
+          f'json={n1/1e6:.1f}MB gz={n2/1e6:.1f}MB total {time.time()-t0:.0f}s')
 
 
 if __name__ == '__main__':
