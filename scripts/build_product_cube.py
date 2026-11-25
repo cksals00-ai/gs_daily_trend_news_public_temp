@@ -258,8 +258,9 @@ def finalize(builder, cmap, years, base_date):
         seg = c['seg_counts'].most_common(1)[0][0] if c['seg_counts'] else '기타'
         chan = c['chan_counts'].most_common(1)[0][0] if c['chan_counts'] else seg
         sale_days = [d for d in c['sale_days'] if d]
-        sale_year = int(min(sale_days)[:4]) if sale_days else int(min(c['by_ym'])[:4])
-        campaign = pn.assign_campaign(cmap, code, name, sale_year)
+        first_sale = min(sale_days) if sale_days else None
+        sale_year = int(first_sale[:4]) if first_sale else int(min(c['by_ym'])[:4])
+        campaign = pn.assign_campaign(cmap, code, name, sale_year, first_sale)
         clean = pn.clean_product_name(name)
         by_ym = {}
         for ym, node in sorted(c['by_ym'].items()):

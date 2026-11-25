@@ -73,10 +73,12 @@ def clean_product_name(name):
     s = s.replace('패키지', 'PKG')
     s = _MEMBER_RE.sub('', s)
     s = _CHAN_RE.sub(' ', s)
-    s = s.replace('패키지', 'PKG')
+    s = re.sub(r'[\[(（【]\s*\d{1,2}\s*[\])）】]', ' ', s)   # '(GOTA15)' → '( 15)' 잔여 숫자 괄호
     s = _EMPTY_PAREN_RE.sub(' ', s)
     s = _SEP_RE.sub(' ', s).strip(' -_·')
     s = re.sub(r'\s*\(\s*\)', '', s).strip()
+    s = re.sub(r'^[)\]）】]+\s*', '', s)                     # 'New)SONO…' 선행 닫는 괄호
+    s = re.sub(r'\s*[(\[（【]+$', '', s).strip()              # 후행 여는 괄호
     return s
 
 
@@ -116,18 +118,31 @@ def load_campaign_map(path):
         out['meta'][c['name']] = {k: c.get(k) for k in ('year', 'composition', 'sale', 'stay', 'note', 'scope')}
         for code in c.get('match', {}).get('codes', []):
             out['by_code'][str(code)] = c['name']
-        rx = c.get('match', {}).get('regex')
+        m = c.get('match', {})
+        rx = m.get('regex')
         if rx:
-            out['rules'].append((re.compile(rx, re.I), c['name'], c.get('year')))
+            out['rules'].append((re.compile(rx, re.I), c['name'], c.get('year'),
+                                 (m.get('sale_from') or None), (m.get('sale_to') or None)))
     return out
 
 
-def assign_campaign(cmap, code, name, sale_year):
-    """수기 코드 매핑 → 정규식 규칙(연도 일치 또는 규칙에 연도 없음) → 자동 '{정규화명} ({판매연도})'."""
+def assign_campaign(cmap, code, name, sale_year, sale_date=None):
+    """수기 코드 매핑 → 정규식 규칙(연도 일치 + 판매시작일 범위) → 자동 '{정규화명} ({판매연도})'.
+    sale_date = 코드의 최초 판매일(YYYYMMDD). 규칙에 sale_from/sale_to가 있으면 그 범위 안일 때만 매칭."""
     if code in cmap['by_code']:
         return cmap['by_code'][code]
-    for rx, cname, yr in cmap['rules']:
-        if rx.search(name or '') and (yr is None or yr == sale_year):
-            return cname
+    for rx, cname, yr, s_from, s_to in cmap['rules']:
+        if not rx.search(name or ''):
+            continue
+        if yr is not None and yr != sale_year:
+            continue
+        if (s_from or s_to):
+            if not sale_date:
+                continue
+            if s_from and sale_date < s_from:
+                continue
+            if s_to and sale_date > s_to:
+                continue
+        return cname
     base = clean_product_name(name) or '미상'
     return f'{base} ({sale_year})'
