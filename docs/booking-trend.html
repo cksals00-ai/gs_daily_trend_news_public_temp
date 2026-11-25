@@ -1564,7 +1564,8 @@ document.addEventListener('DOMContentLoaded', loadData);
     // 예상 마감 객실수 = 온북 + 목표 달성에 필요한 추가 객실(설정 ADR 기준) 로 즉시 재계산. FCST는 참고로 병기.
     (function(){ const card=document.getElementById('strat-close'); if(!card) return;
       const fr=t.rns_fcst||0, fv=t.rev_fcst||0, hit=needAdd<=0;
-      const simRN=hit?curRN:needTot, simRev=hit?curRev:goal, simADR=simRN>0?simRev/simRN:0;
+      // 목표 초과(hit) 시: 추가분 기준=온북 매출 그대로 / 월 평균 기준=온북 객실 전체를 설정 ADR로 재평가
+      const simRN=hit?curRN:needTot, simRev=hit?(SIMMODE==='all'?curRN*setA:curRev):goal, simADR=simRN>0?simRev/simRN:0;
       const rnAch=t.rns_budget>0?simRN/t.rns_budget*100:null, dF=fr>0?(simRN-fr)/fr*100:null;
       const kc = v=>v>=100?'#7fd8a0':v>=88?'#e6b970':'#ef9a9a';
       const adrTxt = SIMMODE==='add'
@@ -1572,10 +1573,12 @@ document.addEventListener('DOMContentLoaded', loadData);
         : `월 평균 ADR ${nfmt(Math.round(setA/1000))}천 가정`;
       card.querySelector('.l').innerHTML='예상 마감 <span style="color:var(--gold-bright);letter-spacing:0">· ADR 시뮬 연동</span>';
       card.querySelector('.v').innerHTML=nfmt(Math.round(simRN))+'<span style="font-size:11px">실</span>'
-        +(rnAch!=null?` <span style="font-size:11px;font-weight:600;color:${kc(rnAch)}">목표객실 ${f1(rnAch)}%</span>`:'');
+        +(rnAch!=null?` <span style="font-size:11px;font-weight:600;color:${kc(rnAch)}">목표 ${f1(rnAch)}%</span>`:'');
       const dd=card.querySelector('.d'); dd.className='d '+fc;
-      dd.innerHTML=(hit?`현 온북으로 목표 ${f1(eok(goal))}억 달성 · 마감 ${f1(eok(simRev))}억`:`목표 ${f1(eok(goal))}억 달성 시 · 추가 ${nfmt(Math.round(needAdd))}실`)
-        +` · ${adrTxt}`+(fr>0?` · FCST ${nfmt(fr)}실·${f1(eok(fv))}억 대비 ${sg(dF)}%`:'');
+      const fAdr=fr>0?fv/fr:0, fAch=goal>0?fv/goal*100:null, fRnAch=t.rns_budget>0?fr/t.rns_budget*100:null;
+      dd.innerHTML=(hit?`현 온북 객실로 목표 ${f1(eok(goal))}억 달성 · 마감 ${f1(eok(simRev))}억`:`목표 ${f1(eok(goal))}억 달성 시 · 추가 ${nfmt(Math.round(needAdd))}실`)
+        +` · ${adrTxt}`
+        +(fr>0?`<br><span style="color:var(--ink-faint)">FCST ${nfmt(fr)}실${fRnAch!=null?'('+f1(fRnAch)+'%)':''} · ADR ${nfmt(Math.round(fAdr/1000))}천 · ${f1(eok(fv))}억${fAch!=null?'(목표 '+f1(fAch)+'%)':''}</span>`:'');
     })();
   }
   document.addEventListener('DOMContentLoaded', sboot);
