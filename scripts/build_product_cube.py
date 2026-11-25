@@ -31,9 +31,10 @@ from parse_package_trend import classify_v4  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 GS_CODES = {'72', '53', 'A4', 'A5', '58'}
+# 'PKG영업장'은 식음+부대+스포츠+아쿠아+기타의 소계 컬럼이므로 구성 분해에서 제외(중복 방지)
 PKG_PART_COLS = {'식음': ('PKG영업장식음',), '부대': ('PKG영업장부대', '부대'), '스포츠': ('PKG영업장스포츠', '스포츠'),
                  '아쿠아': ('PKG영업장아쿠아', '아쿠아'), '골프': ('PKG골프',),
-                 '기타': ('PKG영업장기타', 'PKG기타', '기타', 'PKG영업장')}
+                 '기타': ('PKG영업장기타', 'PKG기타', '기타')}
 _RETRANS_RE = re.compile(r'\((\d{8})-(\d{8})\)')
 _SNAP_RE = re.compile(r'_(\d{8})_생성시간')
 
