@@ -203,6 +203,20 @@ class Finalize(unittest.TestCase):
         self.assertEqual(recs[1]['conf'], 'none'); self.assertEqual(recs[1]['props'], ['17.쏠비치진도'])
         merged = bpc.merge_campaign_maps(pn.load_campaign_map('/nonexistent.json'), {'by_code': {'86100001': 'AP행'}, 'meta': {'AP행': {}}}, {'by_code': by_code, 'meta': meta})
         self.assertEqual(merged['by_code']['86100001'], 'AP행')   # AP > 시트 추정
+        # AP 행 연결(확정): 같은 사업장·시작일·인플루언서명 → 코드 확정, 추정 안 함
+        ap_rows = [{'row': 40, 'codes': ['86100002'], '시작일': '2026-03-04', '종료일': '2026-03-08', '채널': 'GOTA', '사업장': '비발디', '인플루언서': '@제이드아이', '상품': '객실+올인'}]
+        ev2 = [{'key': '7', '사업장': '비발디', '영업장': '벨', '채널': '인플루언서x트립비토즈(제이드아이)', '채널카테고리': '인플루언서', '판매시작': '2026-03-04', '판매종료': '2026-03-08', '상품': '올인클루시브'}]
+        bc2, m2, r2 = sem.match_events(b.codes, ev2, taken={'86100002'}, ap_rows=ap_rows, ap_by_code={'86100002': 'AP40 비발디 객실+올인 (GOTA · @제이드아이, 26.03)'})
+        self.assertEqual(r2[0]['conf'], 'ap'); self.assertEqual(r2[0]['codes'], ['86100002']); self.assertEqual(r2[0]['ap_row'], 40)
+        self.assertTrue(r2[0]['campaign'].startswith('AP40')); self.assertEqual(bc2, {})   # 확정 연결은 새 캠페인 생성 없음
+        # 타채널 페널티: 11번가 이벤트에 '_쿠팡' 코드는 −3
+        ev3 = [{'key': '8', '사업장': '비발디', '영업장': '벨', '채널': '11번가(스마트인피니)', '채널카테고리': '11번가', '판매시작': '2026-03-04', '판매종료': '2026-03-05', '상품': '객실+올인클루시브(오션+액티비티)'}]
+        bc3, m3, r3 = sem.match_events(b.codes, ev3, taken=set())
+        self.assertNotIn('86100001', r3[0]['codes'])   # 쿠팡 코드가 11번가 이벤트로 가지 않음
+        # '협의중' 행은 채널 증거 없이는 매칭 안 함
+        ev4 = [{'key': '9', '사업장': '비발디', '영업장': '벨', '채널': '맘맘', '채널카테고리': '맘맘', '판매시작': '2026-03-04', '판매종료': '2026-03-05', '상품': '협의중'}]
+        bc4, m4, r4 = sem.match_events(b.codes, ev4, taken=set())
+        self.assertEqual(r4[0]['conf'], 'none')
 
     def test_event_props(self):
         import sheet_event_matcher as sem
@@ -221,11 +235,16 @@ class Finalize(unittest.TestCase):
             code = '86'; prop = '01.벨비발디'; name = '[벨비발디] 스프링 올인(오션+조식)_쿠팡'; name_l = name.lower(); seg = 'OTA'; chan = '쿠팡'
             fs = datetime(2026, 3, 4); stay_lo = datetime(2026, 3, 10); stay_hi = datetime(2026, 5, 20); rn = 100; pkg_price = 150000
             parts = {'아쿠아': 0.6, '식음': 0.4}; parts_set = {'아쿠아', '식음'}
+            sale_days = {datetime(2026, 3, 4): 60, datetime(2026, 3, 6): 30, datetime(2026, 4, 20): 10}; sale_span = 47
+            def sale_concentration(self, s0, s1): return sum(n for d, n in self.sale_days.items() if s0 <= d <= s1) / 100
         ev = {'채널카테고리': '쿠팡', '채널': '쿠팡', '상품': '객실+조식+오션 149,000원', '판매시작': '2026-03-04', '판매종료': '2026-03-10', '투숙시작': '2026-03-04', '투숙종료': '2026-05-31'}
         sc, why = sem.score_pair(ev, FakeCI(), {}, {})
-        self.assertGreaterEqual(sc, 11)   # 채널명3+AGENT2+구성4+판매일2+투숙1+가격2+세그1 = 15 (명칭 토큰 포함 시 +)
-        for w in ('채널명', 'AGENT', '구성2/2', '판매일±1', '투숙겹침', '가격±15%', '세그'):
+        self.assertGreaterEqual(sc, 13)   # 채널명3+AGENT2+구성4+판매일2+판매집중2+투숙1+가격2+세그1
+        for w in ('채널명', 'AGENT', '구성2/2', '판매일±1', '판매집중70%', '투숙겹침', '가격±15%', '세그'):
             self.assertIn(w, why)
+        ev11 = dict(ev, **{'채널카테고리': '11번가', '채널': '11번가(스마트인피니)'})
+        sc2, why2 = sem.score_pair(ev11, FakeCI(), {}, {})
+        self.assertIn('타채널(쿠팡)', why2); self.assertLess(sc2, sc - 5)
 
     def test_write_outputs_json_and_gz(self):
         out = Path(self.tmp) / 'product_cube.json'

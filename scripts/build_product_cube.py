@@ -433,14 +433,17 @@ def main():
         from sheet_event_matcher import match_events
         events = json.loads(Path(a.sheet_events).read_text(encoding='utf-8')).get('events', [])
         taken = set(apm['by_code']) | set(manual['by_code'])
-        sb, sm, sheet_events = match_events(b.codes, events, taken)
+        ap_rows = []
+        if a.action_plan and Path(a.action_plan).exists():
+            ap_rows = json.loads(Path(a.action_plan).read_text(encoding='utf-8')).get('rows', [])
+        sb, sm, sheet_events = match_events(b.codes, events, taken, ap_rows=ap_rows, ap_by_code=apm['by_code'])
         sheet_map = {'by_code': sb, 'meta': sm}
     cmap = merge_campaign_maps(manual, apm, sheet_map)
     cube = finalize(b, cmap, a.years, base_date or datetime.now().strftime('%Y-%m-%d'))
     cube['schedule'] = sheet_events
     conf_cnt = Counter(e['conf'] for e in sheet_events)
     cube['meta']['schedule'] = {'events': len(sheet_events), 'matched': sum(1 for e in sheet_events if e['codes']), 'conf': dict(conf_cnt),
-                                'rule': '4패스 추정매칭: 채널명+3·AGENT+2·구성(식음/아쿠아/부대/스포츠)≤+4·명칭≤+2·판매일±1/3d +2/+1·투숙겹침+1·가격±15/30% +2/+1·세그+1 · high≥9/medium≥6/low≥4'}
+                                'rule': 'AP 코드행 연결(확정) → 4패스 추정: 인플명+4·채널명+3·AGENT+2·타채널−3·구성≤+4·명칭≤+2·판매일±1/3d·판매집중70/40%+2/+1·상시코드−2·투숙겹침·가격·세그 · high≥9/medium≥6/low≥4'}
     n_ap = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'action_plan')
     n_se = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'sheet_event')
     n1, n2 = write_outputs(cube, a.out)

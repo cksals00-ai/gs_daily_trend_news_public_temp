@@ -610,7 +610,7 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
       <div class="table-card">
         <div class="drill-bar" style="gap:8px;">
           <span class="drill-sep">사업장</span><select id="sc-prop" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
-          <span class="drill-sep">신뢰도</span><select id="sc-conf" class="chip" style="padding:2px 6px;"><option value="">전체</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="none">미매칭</option></select>
+          <span class="drill-sep">신뢰도</span><select id="sc-conf" class="chip" style="padding:2px 6px;"><option value="">전체</option><option value="ap">AP 확정</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="none">미매칭</option></select>
           <span class="drill-sep">채널</span><select id="sc-ch" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
           <button class="chip" id="sc-xlsx" type="button" style="margin-left:auto;">📥 엑셀 다운로드</button>
         </div>
@@ -1566,6 +1566,7 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
   }
   function confBadge(e) {
     if (!e.codes || !e.codes.length) return '<span class="pl-flag warn">미매칭</span>';
+    if (e.conf === 'ap') return '<span class="pl-flag ok" title="Action Plan 코드 행과 같은 기획전">AP 확정 · ' + e.codes.length + '코드' + (e.ap_row ? ' · 행' + e.ap_row : '') + '</span>';
     var cls = e.conf === 'high' ? 'ok' : e.conf === 'medium' ? '' : 'warn';
     return '<span class="pl-flag ' + cls + '" title="' + (e.why || []).join(' · ') + '">' + e.conf + ' · ' + e.codes.length + '코드 · 점수 ' + e.score + ' · P' + e.pass + '</span>';
   }
@@ -1585,7 +1586,7 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
     html += '<tr class="total-row"><td colspan="7">합계 (' + tot.n + '행 중 매칭 ' + tot.m + ')</td><td></td><td>' + fmtN(tot.rn) + '</td><td>' + fmtR(tot.rev / 1e6) + '</td><td>' + (tot.rn ? fmtN(tot.rev / tot.rn / 1000) : '–') + '</td><td></td></tr>';
     el('sc-tbody').innerHTML = rows.length ? html : '<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--ink-faint);">행 없음</td></tr>';
     var ms = cube.meta.schedule || {};
-    el('sec11-sub').textContent = '시트 ' + (ms.events || 0) + '행 · 매칭 ' + (ms.matched || 0) + ' (high ' + ((ms.conf || {}).high || 0) + ' · medium ' + ((ms.conf || {}).medium || 0) + ' · low ' + ((ms.conf || {}).low || 0) + ' · 미매칭 ' + ((ms.conf || {}).none || 0) + ') · 표시 ' + rows.length + '행';
+    el('sec11-sub').textContent = '시트 ' + (ms.events || 0) + '행 · 매칭 ' + (ms.matched || 0) + ' (AP확정 ' + ((ms.conf || {}).ap || 0) + ' · high ' + ((ms.conf || {}).high || 0) + ' · medium ' + ((ms.conf || {}).medium || 0) + ' · low ' + ((ms.conf || {}).low || 0) + ' · 미매칭 ' + ((ms.conf || {}).none || 0) + ') · 표시 ' + rows.length + '행';
   }
   function exportScheduleXlsx() {
     if (!cube || typeof XLSX === 'undefined') return;
