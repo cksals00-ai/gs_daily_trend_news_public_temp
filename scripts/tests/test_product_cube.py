@@ -101,8 +101,8 @@ class ParseAndAggregate(unittest.TestCase):
         self.assertEqual(dict(c['seg_counts']), {'OTA': 2, 'G-OTA': 1})
         self.assertEqual(c['ag']['놀유니버스(야놀자)'][0], 2); self.assertEqual(c['ag']['아고다'][0], 2)
         # 41: R1 1행(1실) + R2(2실) + R3(비86, 1실) = 4 / 43: R1 2행째 1실. 팔라티움(R4) 제외
-        self.assertEqual(b.baseline['01.벨비발디']['2025']['41'][0], 4)
-        self.assertEqual(b.baseline['01.벨비발디']['2025']['43'][0], 1)
+        self.assertEqual(b.baseline['01.벨비발디']['202510']['41'][0], 4)
+        self.assertEqual(b.baseline['01.벨비발디']['202510']['43'][0], 1)
         self.assertNotIn('25.팔라티움', b.baseline)
 
     def test_month_filter_applied(self):
@@ -148,7 +148,7 @@ class Finalize(unittest.TestCase):
         self.assertEqual(camp['stay_window'], {'from': '20251010', 'to': '20251110'})
         self.assertEqual(camp['composition']['text'], '객실+사우나2인')
         self.assertIn('부대', camp['composition']['auto'])
-        self.assertEqual(cube['baseline']['01.벨비발디']['2025']['41']['rn'], 1)
+        self.assertEqual(cube['baseline']['01.벨비발디']['202510']['41']['rn'], 1)
         self.assertEqual(cube['dims']['properties'][0]['display'], '01.벨비발디')
         self.assertIn('소노벨 비발디파크', cube['dims']['prop_alias'])
 

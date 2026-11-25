@@ -158,7 +158,7 @@ def _ymd(s):
 class CubeBuilder:
     def __init__(self):
         self.codes = {}
-        # prop → year → season → [rn, rev]
+        # prop → 투숙월(YYYYMM) → season → [rn, rev]  (GS 세그 전 행, ADR 가드레일·주중/주말 베이스라인)
         self.baseline = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0])))
         self.rows_parsed = 0
         self._seen = set()  # (code, key): 구성가치·예약건수·리드타임 1회 가산
@@ -183,7 +183,7 @@ class CubeBuilder:
         rev = r['rate'] * rn / 1.1
         year, ym = r['stay'][:4], r['stay'][:6]
         if r['seg_code'] in GS_CODES:
-            b = self.baseline[prop][year][r['season'] or '00']
+            b = self.baseline[prop][ym][r['season'] or '00']   # prop → 투숙월(YYYYMM) → 요금시즌
             b[0] += rn
             b[1] += rev
         if not r['code'].startswith('86'):
@@ -357,13 +357,24 @@ def finalize(builder, cmap, years, base_date):
             'source': meta.get('source') or 'auto', 'ap_row': meta.get('ap_row'),
         }
 
-    baseline = {p: {y: {s: {'rn': v[0], 'rev': round(v[1]), 'adr': round(v[1] / v[0]) if v[0] else 0}
-                        for s, v in ss.items()} for y, ss in ys.items()} for p, ys in builder.baseline.items()}
+    baseline = {p: {ym: {s: {'rn': v[0], 'rev': round(v[1]), 'adr': round(v[1] / v[0]) if v[0] else 0}
+                         for s, v in sorted(ss.items())} for ym, ss in sorted(yms.items())} for p, yms in builder.baseline.items()}
     prop_alias = {}
     for _bi, disp, _reg, dbs in pn.PROPERTY_DEFS:
         for n in dbs:
             prop_alias[n] = disp
         prop_alias[disp] = disp
+    # 객실타입 코드 → 명칭 (data/roomtype_code_map.json, build_roomtype_code_map.py 산출). display → code → {name, conf}
+    roomtypes = {}
+    rt_path = ROOT / 'data' / 'roomtype_code_map.json'
+    if rt_path.exists():
+        rtm = json.loads(rt_path.read_text(encoding='utf-8'))
+        for key, v in rtm.get('map', {}).items():
+            site, code = key.split('|', 1)
+            disp = pn.prop_display(site)
+            if disp:
+                roomtypes.setdefault(disp, {})[code] = {'name': v['name'], 'conf': v['conf']}
+        roomtypes['_alias'] = {c: {'name': n, 'conf': 'alias'} for c, n in rtm.get('code_alias', {}).items()}
     return {
         'meta': {'built': datetime.now().strftime('%Y-%m-%d %H:%M'), 'years': list(years), 'base_date': base_date,
                  'rows_parsed': builder.rows_parsed, 'codes': len(codes_out), 'campaigns': len(camps_out),
@@ -372,7 +383,7 @@ def finalize(builder, cmap, years, base_date):
                  'label': '대외비·관리자용'},
         'dims': {'seasons': pn.SEASONS, 'gs_segs': list(pn.GS_SEGS),
                  'properties': [{'display': d[1], 'region': d[2]} for d in pn.PROPERTY_DEFS], 'prop_alias': prop_alias,
-                 'categories': sorted({v['category'] for v in codes_out.values()})},
+                 'categories': sorted({v['category'] for v in codes_out.values()}), 'roomtypes': roomtypes},
         'codes': codes_out, 'campaigns': camps_out, 'baseline': baseline,
     }
 
