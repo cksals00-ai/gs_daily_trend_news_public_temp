@@ -107,7 +107,7 @@ table.pivot th.grp{text-align:center;border-left:1px solid var(--rule);}
 table.pivot td.mx-plan{color:var(--ink-faint);font-style:italic;}
 table.pivot td.est{color:#e6b970;}
 .pl-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:5px;vertical-align:middle;}
-.pl-badge.ap{background:rgba(90,159,196,.18);color:#5a9fc4;} .pl-badge.map{background:rgba(201,160,99,.18);color:#e6b970;}
+.pl-badge.ap{background:rgba(90,159,196,.18);color:#5a9fc4;} .pl-badge.map{background:rgba(201,160,99,.18);color:#e6b970;} .pl-badge.se{background:rgba(168,146,200,.18);color:#a892c8;}
 .pl-flag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-top:3px;}
 .pl-flag.ok{background:#1f3a28;color:#7fd8a0;} .pl-flag.warn{background:#3d1f1f;color:#ef9a9a;}
 input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);color:var(--ink);font-family:var(--mono);font-size:11px;padding:3px 5px;border-radius:3px;text-align:right;}
@@ -595,6 +595,35 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
               <th>비용(백만)<br><span style="font-weight:400;">입력</span></th><th>예상 공헌(백만)</th><th>웹 구매(건)</th><th>근거 · 플래그</th>
             </tr></thead>
             <tbody id="pl-tbody"><tr><td colspan="16" style="text-align:center;padding:24px;color:var(--ink-faint);">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SEC 11. 기획전 일정(시트) × 실적 매칭 현황 ===== -->
+    <section class="prod-section" id="sec11">
+      <div class="section-header">
+        <span class="section-num">SEC 11</span>
+        <h2 class="section-title">기획전 일정(Action Plan 시트) × 실적 추정 매칭 현황</h2>
+        <span class="section-sub" id="sec11-sub">—</span>
+      </div>
+      <div class="table-card">
+        <div class="drill-bar" style="gap:8px;">
+          <span class="drill-sep">사업장</span><select id="sc-prop" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
+          <span class="drill-sep">신뢰도</span><select id="sc-conf" class="chip" style="padding:2px 6px;"><option value="">전체</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="none">미매칭</option></select>
+          <span class="drill-sep">채널</span><select id="sc-ch" class="chip" style="padding:2px 6px;"><option value="">전체</option></select>
+          <button class="chip" id="sc-xlsx" type="button" style="margin-left:auto;">📥 엑셀 다운로드</button>
+        </div>
+        <div class="drill-bar" style="border-bottom:0;">
+          <span class="drill-sep" id="sc-rule">시트의 코드 없는 일정 행을 raw 상품코드와 추정 매칭(채널·AGENT·구성·명칭·판매일·투숙·가격·세그 점수, 4패스). 신뢰도는 점수 기준이며 실적은 매칭 코드 합 · 대외비·관리자용</span>
+        </div>
+        <div class="table-wrap">
+          <table class="pivot" id="sc-table" style="font-size:11.5px;">
+            <thead><tr>
+              <th>#</th><th>사업장 / 영업장</th><th>채널</th><th>판매기간</th><th>투숙기간</th><th>상품(시트)</th><th>KPI RN</th>
+              <th>매칭</th><th>실적 RN</th><th>REV(백만)</th><th>ADR(천)</th><th>매칭 코드(회원명)</th>
+            </tr></thead>
+            <tbody id="sc-tbody"><tr><td colspan="12" style="text-align:center;padding:24px;color:var(--ink-faint);">—</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1501,7 +1530,80 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
   function planRange(a, b) { return (a || b) ? fmtD8(a) + '~' + fmtD8(b) : '—'; }
   function campShort(name) { return (name || '').replace(/\s*\(\d{4}\)\s*$/, ''); }
   function compAutoText(a) { var ks = Object.keys(a || {}); return ks.length ? '객실+' + ks.map(function(k) { return k + ' ' + Math.round(a[k] * 100) + '%'; }).join('·') : '객실'; }
-  function srcBadge(src) { return src === 'action_plan' ? '<span class="pl-badge ap" title="Action Plan 시트">AP</span>' : src === 'map' ? '<span class="pl-badge map" title="수기 기획전 맵">맵</span>' : ''; }
+  function srcBadge(src, conf) {
+    if (src === 'action_plan') return '<span class="pl-badge ap" title="Action Plan 시트(코드 행)">AP</span>';
+    if (src === 'map') return '<span class="pl-badge map" title="수기 기획전 맵">맵</span>';
+    if (src === 'sheet_event') return '<span class="pl-badge se" title="시트 일정 추정매칭 ' + (conf || '') + '">시트' + (conf ? '·' + conf : '') + '</span>';
+    return '';
+  }
+
+  // ===== SEC 11 · 시트 일정 × 실적 매칭 현황 =====
+  function evPerf(ev) {
+    var rn = 0, rev = 0;
+    (ev.codes || []).forEach(function(code) { var c = cube.codes[code]; if (!c) return;
+      Object.keys(c.by_ym).forEach(function(ym) { Object.keys(c.by_ym[ym].s).forEach(function(sk) { var v = c.by_ym[ym].s[sk]; rn += v[0]; rev += v[1]; }); }); });
+    return {rn: rn, rev: rev};
+  }
+  function initScheduleUI() {
+    var sch = cube.schedule || [];
+    var props = {}, chs = {};
+    sch.forEach(function(e) { (e.props || []).forEach(function(p) { props[p] = 1; }); if (e['채널카테고리']) chs[e['채널카테고리']] = 1; });
+    el('sc-prop').innerHTML = '<option value="">전체</option>' + Object.keys(props).sort().map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+    el('sc-ch').innerHTML = '<option value="">전체</option>' + Object.keys(chs).sort().map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    ['sc-prop', 'sc-conf', 'sc-ch'].forEach(function(id) { el(id).onchange = renderSchedule; });
+    el('sc-xlsx').onclick = exportScheduleXlsx;
+    if (cube.meta.schedule && cube.meta.schedule.rule) el('sc-rule').textContent = cube.meta.schedule.rule + ' · 대외비·관리자용';
+  }
+  function scheduleFiltered() {
+    var sch = cube.schedule || [], p = el('sc-prop').value, cf = el('sc-conf').value, ch = el('sc-ch').value, aprops = activeDisplayProps();
+    return sch.filter(function(e) {
+      if (p && (e.props || []).indexOf(p) < 0) return false;
+      if (!p && aprops.size && !(e.props || []).some(function(x) { return aprops.has(x); })) return false;
+      if (cf && (cf === 'none' ? !!(e.codes && e.codes.length) : e.conf !== cf)) return false;
+      if (ch && e['채널카테고리'] !== ch) return false;
+      return true;
+    }).sort(function(a, b) { return (a['판매시작'] || '').localeCompare(b['판매시작'] || ''); });
+  }
+  function confBadge(e) {
+    if (!e.codes || !e.codes.length) return '<span class="pl-flag warn">미매칭</span>';
+    var cls = e.conf === 'high' ? 'ok' : e.conf === 'medium' ? '' : 'warn';
+    return '<span class="pl-flag ' + cls + '" title="' + (e.why || []).join(' · ') + '">' + e.conf + ' · ' + e.codes.length + '코드 · 점수 ' + e.score + ' · P' + e.pass + '</span>';
+  }
+  function renderSchedule() {
+    if (!cube || !cube.schedule) return;
+    var rows = scheduleFiltered(), tot = {n: rows.length, m: 0, rn: 0, rev: 0};
+    var html = rows.map(function(e) {
+      var pf = evPerf(e); if (e.codes && e.codes.length) { tot.m++; tot.rn += pf.rn; tot.rev += pf.rev; }
+      var names = (e.codes || []).slice(0, 4).map(function(c) { return cube.codes[c] ? cube.codes[c].name : c; }).join(' / ') + ((e.codes || []).length > 4 ? ' 외 ' + (e.codes.length - 4) : '');
+      return '<tr><td>' + e.key + '</td><td class="wrap" style="min-width:90px;">' + (e['사업장'] || '') + (e['영업장'] && e['영업장'] !== e['사업장'] ? ' / ' + e['영업장'] : '') + '</td>' +
+        '<td class="wrap" style="min-width:140px;">' + (e['채널'] || '') + (e['채널카테고리'] ? '<br><span style="color:var(--ink-faint)">' + e['채널카테고리'] + '</span>' : '') + '</td>' +
+        '<td>' + (e['판매시작'] || '').slice(2) + '~' + (e['판매종료'] || '').slice(5) + '</td><td>' + (e['투숙시작'] || '').slice(2) + '~' + (e['투숙종료'] || '').slice(5) + '</td>' +
+        '<td class="wrap" style="min-width:200px;">' + (e['상품'] || '') + '</td><td>' + (e.KPI_RN || '') + '</td><td class="wrap" style="min-width:150px;">' + confBadge(e) + '</td>' +
+        '<td>' + (pf.rn ? fmtN(pf.rn) : '–') + '</td><td>' + (pf.rn ? fmtR(pf.rev / 1e6) : '–') + '</td><td>' + (pf.rn ? fmtN(pf.rev / pf.rn / 1000) : '–') + '</td>' +
+        '<td class="wrap" style="min-width:220px;color:var(--ink-faint)">' + names + '</td></tr>';
+    }).join('');
+    html += '<tr class="total-row"><td colspan="7">합계 (' + tot.n + '행 중 매칭 ' + tot.m + ')</td><td></td><td>' + fmtN(tot.rn) + '</td><td>' + fmtR(tot.rev / 1e6) + '</td><td>' + (tot.rn ? fmtN(tot.rev / tot.rn / 1000) : '–') + '</td><td></td></tr>';
+    el('sc-tbody').innerHTML = rows.length ? html : '<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--ink-faint);">행 없음</td></tr>';
+    var ms = cube.meta.schedule || {};
+    el('sec11-sub').textContent = '시트 ' + (ms.events || 0) + '행 · 매칭 ' + (ms.matched || 0) + ' (high ' + ((ms.conf || {}).high || 0) + ' · medium ' + ((ms.conf || {}).medium || 0) + ' · low ' + ((ms.conf || {}).low || 0) + ' · 미매칭 ' + ((ms.conf || {}).none || 0) + ') · 표시 ' + rows.length + '행';
+  }
+  function exportScheduleXlsx() {
+    if (!cube || typeof XLSX === 'undefined') return;
+    var rows = scheduleFiltered();
+    var aoa = [['(GS) 기획전 일정(시트) × 실적 추정 매칭 (대외비·관리자용)'], [(cube.meta.schedule || {}).rule || ''], [],
+               ['#', '사업장', '영업장', '채널', '채널카테고리', '판매시작', '판매종료', '투숙시작', '투숙종료', '상품(시트)', 'KPI RN', '매칭 신뢰도', '점수', '패스', '근거', '매칭 코드 수', '실적 RN', 'REV(백만)', 'ADR(천)', '매칭 코드', '코드 회원명', '큐브 캠페인']];
+    rows.forEach(function(e) {
+      var pf = evPerf(e);
+      aoa.push([e.key, e['사업장'] || '', e['영업장'] || '', e['채널'] || '', e['채널카테고리'] || '', e['판매시작'] || '', e['판매종료'] || '', e['투숙시작'] || '', e['투숙종료'] || '', e['상품'] || '', e.KPI_RN || '',
+                (e.codes && e.codes.length) ? e.conf : '미매칭', e.score || '', e.pass || '', (e.why || []).join(' · '), (e.codes || []).length,
+                pf.rn || '', pf.rn ? Math.round(pf.rev / 1e6 * 10) / 10 : '', pf.rn ? Math.round(pf.rev / pf.rn / 1000) : '', (e.codes || []).join(' '),
+                (e.codes || []).map(function(c) { return cube.codes[c] ? cube.codes[c].name : c; }).join(' / '), e.campaign || '']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = aoa[3].map(function(h, i) { return {wch: (i === 9 || i === 20) ? 44 : i === 14 ? 30 : 12}; });
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '시트 일정 매칭');
+    var d = new Date(), tag = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+    XLSX.writeFile(wb, 'GS_기획전일정_실적매칭_' + tag + '.xlsx');
+  }
   function initPlanUI() {
     el('pl-prop').innerHTML = '<option value="">전체</option>' + plan.props.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
     el('pl-month').innerHTML = '<option value="">전체</option>' + plan.months.map(function(m) { return '<option value="' + m + '">' + parseInt(m.slice(4), 10) + '월</option>'; }).join('');
@@ -1538,7 +1640,7 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
         (r.actual.top_chan.length ? '<br><span style="color:var(--ink-faint)">' + r.actual.top_chan.join(' / ') + '</span>' : '');
       var flags = r.flags.map(function(f) { return '<span class="pl-flag ' + ((f.indexOf('미달') >= 0 || f.indexOf('잠식') >= 0) ? 'warn' : 'ok') + '">' + f + '</span>'; }).join(' ');
       return '<tr data-id="' + encodeURIComponent(r.id) + '"><td>' + r.rank + '</td><td>' + r.prop + '</td>' +
-        '<td class="wrap" style="min-width:180px;">' + srcBadge(r.source) + campShort(r.campaign) + '</td>' +
+        '<td class="wrap" style="min-width:180px;">' + srcBadge(r.source, r.conf) + campShort(r.campaign) + '</td>' +
         '<td class="wrap" style="min-width:160px;color:var(--ink-muted)">' + (r.composition || compAutoText(r.composition_auto)) + '</td>' +
         '<td>' + planRange(r.plan.sale_from, r.plan.sale_to) + '</td><td>' + planRange(r.plan.stay_from, r.plan.stay_to) + '</td>' +
         '<td class="wrap" style="min-width:120px;">' + mix + '</td>' +
@@ -1660,6 +1762,7 @@ input.pl-cost{background:var(--bg-deep);border:1px solid var(--rule-strong);colo
       el('mx-topn').onchange = renderMatrix;
       drillPath = [];
       renderDrill();
+      if (cube.schedule) { initScheduleUI(); renderSchedule(); }
       return fetch('data/product_plan_2027.json?t=' + Date.now()).then(function(r) { if (!r.ok) throw new Error('plan ' + r.status); return r.json(); })
         .then(function(p) { plan = p; window.__plan = p; initPlanUI(); renderPlan(); renderMatrix(); })
         .catch(function(e) { console.warn('plan', e); el('sec10-sub').textContent = '2027 기획 데이터 없음'; });

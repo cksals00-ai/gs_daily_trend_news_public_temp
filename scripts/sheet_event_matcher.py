@@ -183,6 +183,9 @@ def match_events(builder_codes, events, taken, passes=4):
     for code, c in builder_codes.items():
         if code in taken or not c['sale_days'] or not c['by_ym']:
             continue
+        nm0 = c['names'].most_common(1)[0][0]
+        if '매출조정' in nm0 or '조정' in nm0[:6]:   # 매출조정·정산 조정 코드는 상품이 아님
+            continue
         ci = CodeInfo(code, c)
         if ci.fs:
             infos[code] = ci
