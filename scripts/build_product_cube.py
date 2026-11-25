@@ -227,6 +227,47 @@ class CubeBuilder:
             c['pkg_class'][r['pkg_class']] += 1
 
 
+# ---------------------------------------------------------------- Action Plan 시트(기획전 일정) 매핑
+def load_action_plan_map(path):
+    """docs/data/action_plan_performance.json(사이드바 Action Plan에 연결된 시트) → 기획전 매핑.
+    행 = 기획전 1건(코드 목록·시작/종료일·채널·사업장·상품 구성·인플루언서). 코드가 여러 행에 공유되면
+    시작일이 빠른 행이 가져간다. 반환 구조는 product_naming.load_campaign_map과 호환(by_code, meta)."""
+    p = Path(path) if path else None
+    if not p or not p.exists():
+        return {'by_code': {}, 'meta': {}}
+    doc = json.loads(p.read_text(encoding='utf-8'))
+    rows = sorted(doc.get('rows', []), key=lambda r: ((r.get('시작일') or '9999'), r.get('row', 0)))
+    by_code, meta = {}, {}
+    for r in rows:
+        codes = [str(c).strip() for c in r.get('codes', []) if str(c).strip().startswith('86')]
+        if not codes:
+            continue
+        prod_full = (r.get('상품') or '').strip()
+        prod_line = prod_full.splitlines()[0].strip() if prod_full else '상품 미기재'
+        short = re.sub(r'\s+', ' ', prod_line)[:28]
+        start, end = (r.get('시작일') or '')[:10], (r.get('종료일') or '')[:10]
+        inf = (r.get('인플루언서') or '').strip()
+        chan = (r.get('채널') or '').strip()
+        tag = f"{start[2:7].replace('-', '.')}" if start else '?'
+        name = f"AP{r.get('row', '')} {r.get('사업장', '')} {short} ({chan}{' · ' + inf if inf else ''}, {tag})"
+        meta[name] = {
+            'year': int(start[:4]) if start[:4].isdigit() else None,
+            'composition': prod_full, 'stay': '', 'scope': r.get('사업장', ''),
+            'sale': f"{start[2:].replace('-', '.')}~{end[2:].replace('-', '.')}" if start and end else '',
+            'note': ('인플루언서 ' + inf) if inf else '', 'source': 'action_plan', 'ap_row': r.get('row'),
+        }
+        for c in codes:
+            by_code.setdefault(c, name)
+    return {'by_code': by_code, 'meta': meta}
+
+
+def merge_campaign_maps(manual, ap):
+    """수기 맵(product_campaign_map.json)이 Action Plan보다 우선. rules는 수기 맵만."""
+    return {'by_code': {**ap['by_code'], **manual['by_code']},
+            'rules': manual['rules'],
+            'meta': {**ap['meta'], **manual['meta']}}
+
+
 # ---------------------------------------------------------------- 마무리
 def _pct(sorted_list, q):
     if not sorted_list:
@@ -313,6 +354,7 @@ def finalize(builder, cmap, years, base_date):
             'composition': {'auto': auto, 'text': meta.get('composition') or ''},
             'sale_window': _window(camp['sale_days']), 'stay_window': _window(camp['stay_days']),
             'sale_text': meta.get('sale') or '', 'note': meta.get('note') or '', 'by_year': by_year,
+            'source': meta.get('source') or 'auto', 'ap_row': meta.get('ap_row'),
         }
 
     baseline = {p: {y: {s: {'rn': v[0], 'rev': round(v[1]), 'adr': round(v[1] / v[0]) if v[0] else 0}
@@ -352,6 +394,8 @@ def main():
     ap.add_argument('--raw-dir', default=str(ROOT / 'data' / 'raw_db'))
     ap.add_argument('--out', default=str(ROOT / 'docs' / 'data' / 'product_cube.json'))
     ap.add_argument('--campaign-map', default=str(ROOT / 'data' / 'product_campaign_map.json'))
+    ap.add_argument('--action-plan', default=str(ROOT / 'docs' / 'data' / 'action_plan_performance.json'),
+                    help='Action Plan 시트 JSON(기획전 일정·코드). 없으면 생략')
     ap.add_argument('--max-rows', type=int, default=None)
     a = ap.parse_args()
     t0 = time.time()
@@ -368,10 +412,13 @@ def main():
         for r in iter_rows(p, lo, hi, a.max_rows):
             b.add(r)
         print(f'  {p.name[:60]:60s} [{lo or "-"}..{hi or "-"}] rows={b.rows_parsed - n0:,} ({time.time()-t0:.0f}s)', flush=True)
-    cube = finalize(b, pn.load_campaign_map(a.campaign_map), a.years, base_date or datetime.now().strftime('%Y-%m-%d'))
+    apm = load_action_plan_map(a.action_plan)
+    cmap = merge_campaign_maps(pn.load_campaign_map(a.campaign_map), apm)
+    cube = finalize(b, cmap, a.years, base_date or datetime.now().strftime('%Y-%m-%d'))
+    n_ap = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'action_plan')
     n1, n2 = write_outputs(cube, a.out)
-    print(f'codes={cube["meta"]["codes"]:,} campaigns={cube["meta"]["campaigns"]:,} '
-          f'json={n1/1e6:.1f}MB gz={n2/1e6:.1f}MB total {time.time()-t0:.0f}s')
+    print(f'codes={cube["meta"]["codes"]:,} campaigns={cube["meta"]["campaigns"]:,} (action_plan {n_ap}, '
+          f'AP codes {len(apm["by_code"])}) json={n1/1e6:.1f}MB gz={n2/1e6:.1f}MB total {time.time()-t0:.0f}s')
 
 
 if __name__ == '__main__':

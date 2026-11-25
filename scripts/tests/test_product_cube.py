@@ -152,6 +152,32 @@ class Finalize(unittest.TestCase):
         self.assertEqual(cube['dims']['properties'][0]['display'], '01.벨비발디')
         self.assertIn('소노벨 비발디파크', cube['dims']['prop_alias'])
 
+    def test_action_plan_map_and_precedence(self):
+        ap_path = Path(self.tmp) / 'ap.json'
+        ap_path.write_text(json.dumps({"rows": [
+            {"row": 29, "codes": ["86000010", "86000011"], "시작일": "2026-02-23", "종료일": "2026-02-25", "채널": "OTA",
+             "사업장": "거제", "인플루언서": "", "상품": "① 2+1 모닝 인클루시브 : 객실 + 조식 + 오션\n② 2박"},
+            {"row": 30, "codes": ["86000011", "86000012"], "시작일": "2026-03-01", "종료일": "2026-03-03", "채널": "GOTA",
+             "사업장": "진도", "인플루언서": "@요미맘", "상품": "객실+오션"},
+            {"row": 31, "codes": [], "시작일": "2026-03-05", "종료일": "", "채널": "OTA", "사업장": "천안", "상품": "협의중"},
+        ]}), encoding='utf-8')
+        ap = bpc.load_action_plan_map(str(ap_path))
+        self.assertEqual(len(ap['meta']), 2)                      # 코드 없는 행 제외
+        n29 = ap['by_code']['86000010']
+        self.assertTrue(n29.startswith('AP29 거제 ① 2+1 모닝 인클루시브'), n29)
+        self.assertEqual(ap['by_code']['86000011'], n29)          # 공유 코드 → 시작일 빠른 행
+        self.assertTrue(ap['by_code']['86000012'].startswith('AP30 진도'))
+        self.assertEqual(ap['meta'][n29]['sale'], '26.02.23~26.02.25')
+        self.assertEqual(ap['meta'][n29]['source'], 'action_plan'); self.assertEqual(ap['meta'][n29]['year'], 2026)
+        self.assertIn('인플루언서 @요미맘', ap['meta'][ap['by_code']['86000012']]['note'])
+        manual_path = Path(self.tmp) / 'map.json'
+        manual_path.write_text(json.dumps({"campaigns": [{"name": "수기 기획전", "year": 2026, "match": {"codes": ["86000012"]}}]}), encoding='utf-8')
+        merged = bpc.merge_campaign_maps(pn.load_campaign_map(str(manual_path)), ap)
+        self.assertEqual(merged['by_code']['86000012'], '수기 기획전')   # 수기 맵 우선
+        self.assertEqual(merged['by_code']['86000010'], n29)
+        self.assertEqual(merged['meta']['수기 기획전']['source'], 'map')
+        self.assertEqual(bpc.load_action_plan_map(str(Path(self.tmp) / 'none.json')), {'by_code': {}, 'meta': {}})
+
     def test_write_outputs_json_and_gz(self):
         out = Path(self.tmp) / 'product_cube.json'
         n1, n2 = bpc.write_outputs({'meta': {'x': 1}, 'codes': {}}, out)

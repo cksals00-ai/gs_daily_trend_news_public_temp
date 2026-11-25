@@ -116,6 +116,7 @@ def load_campaign_map(path):
     out = {'by_code': {}, 'rules': [], 'meta': {}}
     for c in doc.get('campaigns', []):
         out['meta'][c['name']] = {k: c.get(k) for k in ('year', 'composition', 'sale', 'stay', 'note', 'scope')}
+        out['meta'][c['name']]['source'] = 'map'
         for code in c.get('match', {}).get('codes', []):
             out['by_code'][str(code)] = c['name']
         m = c.get('match', {})
