@@ -1470,8 +1470,8 @@ document.addEventListener('DOMContentLoaded', loadData);
       (function(){ const fr=s.rns_fcst||0, fv=s.rev_fcst||0, fadr=fr>0?fv/fr:0, rnAch=s.rns_budget>0?fr/s.rns_budget*100:null, revAch=s.rev_budget>0?fv/s.rev_budget*100:null;
         return ['예상 마감', f1(eok(fv))+'<span style="font-size:11px">억</span>'+(revAch!=null?' <span style="font-size:11px;font-weight:600;color:'+(revAch>=100?'#7fd8a0':revAch>=88?'#e6b970':'#ef9a9a')+'">목표 '+f1(revAch)+'%</span>':''),
           '객실 '+nfmt(fr)+'실'+(rnAch!=null?' ('+f1(rnAch)+'%)':'')+' · ADR '+nfmt(Math.round(fadr/1000))+'천 · 전년 '+f1(eok(s.rev_last||0))+'억 · '+sg(s.rev_last>0?(fv-s.rev_last)/s.rev_last*100:0)+'%',
-          '', (revAch!=null?(revAch>=100?'pos':revAch>=88?'neu':'neg'):((s.rev_last>0&&fv>=s.rev_last)?'pos':'neg'))]; })(),
-    ].map(k=>`<div class="smini ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
+          '', (revAch!=null?(revAch>=100?'pos':revAch>=88?'neu':'neg'):((s.rev_last>0&&fv>=s.rev_last)?'pos':'neg')), 'strat-close']; })(),
+    ].map(k=>`<div class="smini ${k[3]}"${k[5]?` id="${k[5]}"`:''}><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
     resetSlider(); ssim();
   }
@@ -1560,6 +1560,23 @@ document.addEventListener('DOMContentLoaded', loadData);
     else if(ap<=40){fe=`현재 온북 대비 +${f1(ap)}% — 집중 영업 시 가능`;fc='neu';}
     else {fe=`현재 온북 대비 +${f1(ap)}% — 요금만으론 무리, 프로모·채널 확대 병행 필요`;fc='neg';}
     document.getElementById('strat-feas').innerHTML=`<span class="${fc}">실현성: ${fe}</span>`;
+    // 예상 마감 카드 ↔ ADR 시뮬 연동 (요청 2026-11-26): 슬라이더 ADR·기준(추가분/월평균)이 바뀌면
+    // 예상 마감 객실수 = 온북 + 목표 달성에 필요한 추가 객실(설정 ADR 기준) 로 즉시 재계산. FCST는 참고로 병기.
+    (function(){ const card=document.getElementById('strat-close'); if(!card) return;
+      const fr=t.rns_fcst||0, fv=t.rev_fcst||0, hit=needAdd<=0;
+      const simRN=hit?curRN:needTot, simRev=hit?curRev:goal, simADR=simRN>0?simRev/simRN:0;
+      const rnAch=t.rns_budget>0?simRN/t.rns_budget*100:null, dF=fr>0?(simRN-fr)/fr*100:null;
+      const kc = v=>v>=100?'#7fd8a0':v>=88?'#e6b970':'#ef9a9a';
+      const adrTxt = SIMMODE==='add'
+        ? `추가분 ADR ${nfmt(Math.round(setA/1000))}천 → 마감 평균 ${nfmt(Math.round(simADR/1000))}천`
+        : `월 평균 ADR ${nfmt(Math.round(setA/1000))}천 가정`;
+      card.querySelector('.l').innerHTML='예상 마감 <span style="color:var(--gold-bright);letter-spacing:0">· ADR 시뮬 연동</span>';
+      card.querySelector('.v').innerHTML=nfmt(Math.round(simRN))+'<span style="font-size:11px">실</span>'
+        +(rnAch!=null?` <span style="font-size:11px;font-weight:600;color:${kc(rnAch)}">목표객실 ${f1(rnAch)}%</span>`:'');
+      const dd=card.querySelector('.d'); dd.className='d '+fc;
+      dd.innerHTML=(hit?`현 온북으로 목표 ${f1(eok(goal))}억 달성 · 마감 ${f1(eok(simRev))}억`:`목표 ${f1(eok(goal))}억 달성 시 · 추가 ${nfmt(Math.round(needAdd))}실`)
+        +` · ${adrTxt}`+(fr>0?` · FCST ${nfmt(fr)}실·${f1(eok(fv))}억 대비 ${sg(dF)}%`:'');
+    })();
   }
   document.addEventListener('DOMContentLoaded', sboot);
 })();
