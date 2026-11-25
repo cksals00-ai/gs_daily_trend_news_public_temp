@@ -56,8 +56,8 @@ _CHAN_WORDS = ['GOTA', 'G-OTA', 'OTA', 'D멤버스', '디멤버스', 'D_PKG', 'D
                '아고다', '트립닷컴', '익스피디아', '부킹닷컴', '트립비토즈', '놀유니버스', '맥스모바일',
                '타이드스퀘어', '스마트인피니', '인터파크', '마이리얼트립', '수수료', '신규', 'N']
 _CHAN_RE = re.compile(
-    r'(?<![가-힣A-Za-z])(?:' + '|'.join(re.escape(w) for w in sorted(_CHAN_WORDS, key=len, reverse=True))
-    + r'|G\d{1,2}|\d{1,2}(?:\.\d)?%|0\.1)(?![가-힣A-Za-z])', re.I)
+    r'(?<![가-힣A-Za-z])(?:(?:' + '|'.join(re.escape(w) for w in sorted(_CHAN_WORDS, key=len, reverse=True))
+    + r')(?:[_\-\s]?\d{1,2}(?:\.\d)?%?)?|G\d{1,2}%?|\d{1,2}(?:\.\d)?%|0\.1)(?![가-힣A-Za-z])', re.I)
 _SEP_RE = re.compile(r'[\s_/,+·]+')
 _EMPTY_PAREN_RE = re.compile(r'[\[(（【]\s*[\])）】]')
 # 회원구분 토큰은 한글에 붙어 나오는 경우가 많음('노블리안무기명PKG') → PKG/구분자/끝 앞에서만 제거
@@ -73,7 +73,7 @@ def clean_product_name(name):
     s = s.replace('패키지', 'PKG')
     s = _MEMBER_RE.sub('', s)
     s = _CHAN_RE.sub(' ', s)
-    s = re.sub(r'[\[(（【]\s*\d{1,2}\s*[\])）】]', ' ', s)   # '(GOTA15)' → '( 15)' 잔여 숫자 괄호
+    s = re.sub(r'[\[(（【][\s_\-]*\d{0,2}(?:\.\d)?%?[\s_\-]*[\])）】]', ' ', s)   # '(GOTA_15)'→'(_15)', '(GOTA-15)'→'( -15)' 잔여 괄호
     s = _EMPTY_PAREN_RE.sub(' ', s)
     s = _SEP_RE.sub(' ', s).strip(' -_·')
     s = re.sub(r'\s*\(\s*\)', '', s).strip()

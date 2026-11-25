@@ -170,6 +170,7 @@ class CubeBuilder:
                 'prop': prop, 'by_ym': {}, 'rt': defaultdict(lambda: [0, 0.0]), 'ag': defaultdict(lambda: [0, 0.0]),
                 'seg_counts': Counter(), 'chan_counts': Counter(), 'comm_ratios': [], 'parts': Counter(),
                 'pkg_class': Counter(), 'sale_days': Counter(), 'stay_days': Counter(), 'names': Counter(),
+                'agym': defaultdict(lambda: [0, 0.0]), 'agbm': defaultdict(lambda: [0, 0.0]),
             }
         return c
 
@@ -221,6 +222,11 @@ class CubeBuilder:
         c['rt'][r['roomtype']][1] += rev
         c['ag'][chan][0] += rn
         c['ag'][chan][1] += rev
+        # 거래처 × 월(투숙월 / 예약월) — "N월에 아고다로 어떤 상품이 들어왔나" 질의용
+        a1 = c['agym'][(ym, chan)]; a1[0] += rn; a1[1] += rev
+        bm = r['booked'][:6]
+        if len(bm) == 6 and bm.isdigit():
+            a2 = c['agbm'][(bm, chan)]; a2[0] += rn; a2[1] += rev
         c['seg_counts'][seg] += 1
         c['chan_counts'][chan] += 1
         if r['pkg_class']:
@@ -389,6 +395,21 @@ def finalize(builder, cmap, years, base_date):
     }
 
 
+def build_channel_month(builder, min_ym='202401'):
+    """거래처 × 월 × 코드 랭킹 산출물: {'stay': {chan: {ym: [[code, rn, rev], …(rn desc)]}}, 'book': {...}}"""
+    out = {'stay': defaultdict(lambda: defaultdict(list)), 'book': defaultdict(lambda: defaultdict(list))}
+    for code, c in builder.codes.items():
+        for key, tgt in (('agym', 'stay'), ('agbm', 'book')):
+            for (ym, chan), v in c[key].items():
+                if ym < min_ym or not v[0]:
+                    continue
+                out[tgt][chan][ym].append([code, v[0], round(v[1])])
+    res = {}
+    for tgt in ('stay', 'book'):
+        res[tgt] = {chan: {ym: sorted(rows, key=lambda x: -x[1]) for ym, rows in sorted(yms.items())} for chan, yms in out[tgt].items()}
+    return res
+
+
 def write_outputs(cube, out_path):
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -447,6 +468,12 @@ def main():
     n_ap = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'action_plan')
     n_se = sum(1 for v in cube['campaigns'].values() if v.get('source') == 'sheet_event')
     n1, n2 = write_outputs(cube, a.out)
+    cm = build_channel_month(b)
+    cm['meta'] = {'built': cube['meta']['built'], 'base_date': cube['meta'].get('base_date'), 'min_ym': '202401',
+                  'rule': 'stay=투숙월(판매일자) / book=예약월(최초입력일자) × 거래처(AGENT) × 코드, RN=객실수, REV=1박객실료×객실수÷1.1', 'label': '대외비·관리자용'}
+    cm_path = Path(a.out).with_name('product_channel_month.json')
+    m1, m2 = write_outputs(cm, cm_path)
+    print(f'channel_month: chans={len(cm["stay"])} json={m1/1e6:.1f}MB gz={m2/1e6:.1f}MB → {cm_path.name}')
     print(f'codes={cube["meta"]["codes"]:,} campaigns={cube["meta"]["campaigns"]:,} (action_plan {n_ap}, sheet_event {n_se}, '
           f'AP codes {len(apm["by_code"])}, sheet matched {cube["meta"]["schedule"]["matched"]}/{len(sheet_events)} {dict(conf_cnt)}) '
           f'json={n1/1e6:.1f}MB gz={n2/1e6:.1f}MB total {time.time()-t0:.0f}s')

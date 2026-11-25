@@ -79,6 +79,11 @@ class CampaignMap(unittest.TestCase):
     def test_clean_leftover_brackets(self):
         self.assertEqual(pn.clean_product_name('(New)SONO Water-ful PKG (GOTA15)'), 'SONO Water-ful PKG')
         self.assertEqual(pn.clean_product_name(')SONOWaterfulPKG'), 'SONOWaterfulPKG')
+        self.assertEqual(pn.clean_product_name('23Y_SONO Water-ful_(GOTA_15)'), 'SONO Water-ful')
+        self.assertEqual(pn.clean_product_name('진도_25Y하반기올인2박(GOTA-15)'), '진도 하반기올인2박')
+        self.assertEqual(pn.clean_product_name('[벨비발디]2Nights Privilege_GOTA15'), '2Nights Privilege')
+        self.assertEqual(pn.clean_product_name('(델) 온가을패키지_G15'), '온가을PKG')
+        self.assertEqual(pn.clean_product_name('[소노펫]1차 스프링 올인 조식_쿠팡9.9'), '1차 스프링 올인 조식')
 
 
 if __name__ == '__main__':

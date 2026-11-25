@@ -105,6 +105,23 @@ class ParseAndAggregate(unittest.TestCase):
         self.assertEqual(b.baseline['01.벨비발디']['202510']['43'][0], 1)
         self.assertNotIn('25.팔라티움', b.baseline)
 
+    def test_channel_month_aggregation(self):
+        lines = [row(KEY_RSV_NO='A', 판매일자='20260110', 최초입력일자='20251220', 회원번호='86100001', AGENT명='GOTA_아고다', 변경예약집계코드='A5'),
+                 row(KEY_RSV_NO='B', 판매일자='20260111', 최초입력일자='20260105', 회원번호='86100001', AGENT명='GOTA_아고다', 변경예약집계코드='A5', 객실수='2'),
+                 row(KEY_RSV_NO='C', 판매일자='20260112', 최초입력일자='20260105', 회원번호='86100002', AGENT명='GOTA_아고다', 변경예약집계코드='A5'),
+                 row(KEY_RSV_NO='D', 판매일자='20260112', 최초입력일자='20260105', 회원번호='86100001', AGENT명='OTA_쿠팡', 변경예약집계코드='72')]
+        p = write_raw(self.tmp, '27.x_재전송(20260101-20261231).txt', lines)
+        b = bpc.CubeBuilder()
+        for r in bpc.iter_rows(p, None, None):
+            b.add(r)
+        cm = bpc.build_channel_month(b)
+        stay = cm['stay']['아고다']['202601']
+        self.assertEqual([x[0] for x in stay], ['86100001', '86100002'])      # RN 내림차순 (3 vs 1)
+        self.assertEqual(stay[0][1], 3); self.assertEqual(stay[0][2], round(330000 / 1.1))
+        self.assertEqual(cm['book']['아고다']['202512'], [['86100001', 1, round(110000 / 1.1)]])   # 예약월 12월 1건
+        self.assertEqual(cm['book']['아고다']['202601'][0][1] + cm['book']['아고다']['202601'][1][1], 3)
+        self.assertEqual(cm['stay']['쿠팡']['202601'], [['86100001', 1, round(110000 / 1.1)]])
+
     def test_month_filter_applied(self):
         lines = [row(KEY_RSV_NO='A', 판매일자='20261001'), row(KEY_RSV_NO='B', 판매일자='20261101')]
         p = write_raw(self.tmp, '27.x_20261125_생성시간(1).txt', lines)
