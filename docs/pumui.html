@@ -321,7 +321,7 @@ function monthLabel(mo, html){
     : `${mo.y}년 ${mo.m}월`;
 }
 
-let DATA = {otb:null, db:null, occ:null, fcst:null, daily:null};
+let DATA = {otb:null, db:null, occ:null, fcst:null, daily:null, bs:null};
 let selectedProps = new Set();
 let selectedMonths = new Set();
 let selectedSegs = new Set(GS_SEGMENTS);
@@ -341,14 +341,20 @@ async function loadData(){
   DATA.occ = await load('data/occ_data.json' + cb);
   DATA.fcst = await load('data/rm_fcst.json' + cb);
   DATA.daily = await load('data/daily_booking.json' + cb);
+  DATA.bs = await load('data/booking_status_detail.json' + cb); // 사업장별 실제 온북·목표 ADR/매출
   console.log('DATA loaded:', {otb:!!DATA.otb, db:!!DATA.db, occ:!!DATA.occ, fcst:!!DATA.fcst, daily:!!DATA.daily});
   if(DATA.occ) console.log('OCC props:', Object.keys(DATA.occ.properties||{}));
   initUI();
 }
 
 function initUI(){
-  AVAIL_MONTHS = deriveAvailMonths(DATA.fcst);
-  console.log('AVAIL_MONTHS:', AVAIL_MONTHS);
+  // 품의는 당월부터만 작성 → 기준일(OTB 산출일)이 속한 달 이후만 노출 (예: 11/26 기준 → 11월·12월·2027년 1월)
+  const _allMonths = deriveAvailMonths(DATA.fcst);
+  const _bd = (DATA.otb && DATA.otb.meta && DATA.otb.meta.baseDate) || new Date().toISOString().slice(0,10);
+  const _curKey = String(_bd).slice(0,7);
+  AVAIL_MONTHS = _allMonths.filter(mo=>mo.key>=_curKey);
+  if(!AVAIL_MONTHS.length) AVAIL_MONTHS = _allMonths; // RM 자료가 기준월보다 과거뿐이면 전체 노출(빈 화면 방지)
+  console.log('AVAIL_MONTHS:', AVAIL_MONTHS.map(m=>m.key));
   // Property list
   const propList = document.getElementById('prop-list');
   PROPERTIES.forEach(p=>{
@@ -497,6 +503,16 @@ function _dailyMonthsWithYear(){
   return list.map(md=>({md, y: (md.month < first) ? y0+1 : y0}));
 }
 // Booking Status (Budget RN/Actual RN + Budget OCC/Actual OCC)
+// 사업장 페이지(Booking Status) 실제 온북·목표 ADR/매출. daily_booking과 같은 보고일일 때만 사용(날짜 혼합 방지).
+function _bsNorm(s){ return String(s||'').replace(/\s*(바이|by)\s.*$/i,'').replace(/\s+/g,''); }
+function getBookingStatus(prop, month){
+  const bs = DATA.bs; if(!bs || !bs.properties) return null;
+  const md0 = (DATA.daily && DATA.daily.months_detail && DATA.daily.months_detail[0]) || {};
+  if(md0.report_date && bs.report_date && md0.report_date !== bs.report_date) return null;
+  const mo = _mo(month); if(!mo) return null;
+  const e = bs.properties[_bsNorm(prop.daily || prop.db)];
+  return (e && e.months && e.months[mo.key]) || null;
+}
 function getDailyBooking(prop, month){
   if(!DATA.daily) return null;
   const mo = _mo(month); if(!mo) return null;
@@ -552,6 +568,7 @@ function generateTables(){
     /* ── 전체 (Booking Status + Revenue Meeting) ── */
     let t_bud_rn=0, t_bud_occ=0, t_bud_adr_w=0, t_bud_rev=0;
     let t_otb_rn=0, t_otb_occ=0;
+    let bs_otb_rn=0, bs_otb_rev_k=0, bs_cnt=0; // 사업장 페이지 실제 온북(RN·매출 천원)
     let t_fcst_rn=0;
     let rm_cnt=0;
 
@@ -567,6 +584,8 @@ function generateTables(){
     let t_bud_adr_rn=0;
     selPropsArr.forEach(p=>{
       // 전체 RNs/OCC: Booking Status (daily_booking.json)
+      const bsx = getBookingStatus(p, month);
+      if(bsx && bsx.otb){ bs_otb_rn += bsx.otb.rn||0; bs_otb_rev_k += bsx.otb.rev_k||0; bs_cnt++; }
       const db = getDailyBooking(p, month);
       if(db){
         t_bud_rn += db.budget_rns||0;
@@ -607,9 +626,20 @@ function generateTables(){
         gs_otb_rn += gs.rn;
         gs_otb_rev += gs.rev;
       }
-      // GS Budget/FCST: yoyTable 전체 대비 세그먼트 비율로 안분
+      // GS 목표/FCST RN: Revenue Meeting 세그먼트별 Budget·Forecast를 선택 세그만큼 그대로 합산(정본).
+      //  - 과거 방식(GS 실적 리포트 목표 × 세그 온북비율 안분)은 두 소스 온북 범위가 다른 사업장(예: 벨비발디)에서
+      //    목표가 축소 표시되고, 2027년 1월처럼 RM 전망이 있는 달에도 FCST=목표로 채워지는 문제가 있어 RM 세그값 우선.
       const yoy = getOtbYoy(p.otb, month);
-      if(yoy && gs){
+      const rmSegs = (rm && rm.segments) ? segsArr.map(s=>rm.segments[s]).filter(Boolean) : [];
+      const hasSegBud  = rmSegs.some(s=>s.rm_budget_rn!=null);
+      const hasSegFcst = rmSegs.some(s=>s.rm_fcst_rn!=null);
+      if(hasSegBud || hasSegFcst){
+        if(hasSegBud)  gs_bud_rn  += rmSegs.reduce((a,s)=>a+(s.rm_budget_rn||0),0);
+        if(hasSegFcst) gs_fcst_rn += rmSegs.reduce((a,s)=>a+(s.rm_fcst_rn||0),0);
+        // 한쪽만 RM에 있으면 나머지는 기존 방식으로 보완
+        if(!hasSegBud && yoy)  gs_bud_rn  += (gs && yoy.act_rn) ? Math.round((yoy.bud_rn||0)*gs.rn/yoy.act_rn) : (yoy.bud_rn||0);
+        if(!hasSegFcst && yoy) gs_fcst_rn += (gs && yoy.act_rn) ? Math.round((yoy.rns_fcst||0)*gs.rn/yoy.act_rn) : (yoy.rns_fcst||0);
+      } else if(yoy && gs){
         const totalOtb = yoy.act_rn||1;
         const segRatio = gs.rn / totalOtb;
         gs_bud_rn += Math.round((yoy.bud_rn||0) * segRatio);
@@ -640,17 +670,18 @@ function generateTables(){
     const t_rn_ach = t_bud_rn>0 ? t_otb_rn/t_bud_rn*100 : null;
     const t_fcst_ach_rn = t_bud_rn>0 ? t_fcst_rn/t_bud_rn*100 : null;
     const t_fcst_diff_rn = t_fcst_rn>0 ? t_fcst_rn - t_bud_rn : null;
-    // ADR (원 → 천원). OTB ADR ≈ Budget ADR (Booking Status PDF에 OTB ADR 없음)
+    // ADR (원 → 천원). OTB ADR = 사업장 페이지 실제 온북 매출÷객실 (선택 사업장 전부 있을 때). 없으면 목표 ADR로 추정(각주 표시)
     const t_adr_bud = t_bud_adr_rn>0 ? Math.round(t_bud_adr_w/t_bud_adr_rn/1000) : null;
-    const t_adr_otb = t_adr_bud;
-    const t_adr_ach = t_adr_bud ? 100 : null;
+    const t_otb_real = bs_cnt===selPropsArr.length && bs_otb_rn>0;
+    const t_adr_otb = t_otb_real ? Math.round(bs_otb_rev_k/bs_otb_rn) : t_adr_bud;
+    const t_adr_ach = (t_adr_bud&&t_adr_otb) ? t_adr_otb/t_adr_bud*100 : null;
     // FCST ADR = FCST REV(천원) / FCST RN (rm_fcst 실제 Forecast 데이터)
     const t_adr_fcst = (t_fcst_rn>0 && t_fcst_rev_k>0) ? Math.round(t_fcst_rev_k/t_fcst_rn) : t_adr_bud;
     const t_adr_f_diff = (t_adr_fcst!=null&&t_adr_bud!=null) ? t_adr_fcst-t_adr_bud : null;
     const t_adr_f_ach = (t_adr_bud&&t_adr_fcst) ? t_adr_fcst/t_adr_bud*100 : null;
-    // REV (천원 → 백만원 표시). OTB REV = OTB RN × Budget ADR (proxy)
+    // REV (천원 → 백만원 표시). OTB REV = 사업장 페이지 실제 온북 매출 (없으면 OTB RN × 목표 ADR 추정)
     const t_rev_bud = t_bud_rev>0 ? Math.round(t_bud_rev/1000) : null;
-    const t_rev_otb = (t_otb_rn>0&&t_adr_bud) ? Math.round(t_otb_rn*t_adr_bud/1000) : null;
+    const t_rev_otb = t_otb_real ? Math.round(bs_otb_rev_k/1000) : ((t_otb_rn>0&&t_adr_bud) ? Math.round(t_otb_rn*t_adr_bud/1000) : null);
     const t_rev_ach = (t_rev_bud&&t_rev_otb) ? t_rev_otb/t_rev_bud*100 : null;
     const t_rev_fcst = t_fcst_rev_k>0 ? Math.round(t_fcst_rev_k/1000) : null;
     const t_rev_f_diff = (t_rev_fcst!=null&&t_rev_bud!=null) ? t_rev_fcst-t_rev_bud : null;
@@ -688,7 +719,7 @@ function generateTables(){
       t_bud_occ_avg, t_otb_occ_avg, t_occ_ach, t_fcst_occ, t_occ_f_diff, t_occ_f_ach,
       t_bud_rn, t_otb_rn, t_rn_ach, t_fcst_rn, t_fcst_diff_rn, t_fcst_ach_rn,
       t_adr_bud, t_adr_otb, t_adr_ach, t_adr_fcst, t_adr_f_diff, t_adr_f_ach,
-      t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_f_diff, t_rev_f_ach,
+      t_rev_bud, t_rev_otb, t_rev_ach, t_rev_fcst, t_rev_f_diff, t_rev_f_ach, t_otb_real,
       gs_occ_bud, gs_occ_otb, gs_occ_ach, gs_occ_fcst, gs_occ_f_diff, gs_occ_f_ach,
       gs_bud_rn, gs_otb_rn, gs_rn_ach, gs_fcst_rn, gs_fcst_diff_rn, gs_fcst_ach_rn,
       gs_adr_bud, gs_adr_otb, gs_adr_ach, gs_adr_fcst, gs_adr_f_diff, gs_adr_f_ach,
@@ -770,6 +801,7 @@ function generateTables(){
         <tbody>${rows}</tbody>
       </table>
     </div>
+    ${monthData.some(d=>!d.t_otb_real)?`<div style="padding:6px 12px;font-size:10.5px;color:var(--ink-faint);">※ ${monthData.filter(d=>!d.t_otb_real).map(d=>d.label).join('·')} 전체 현재OTB의 ADR·REV는 사업장별 실제값이 없어 목표 ADR을 적용한 추정치입니다.</div>`:''}
   </div>`;
 
   output.innerHTML = html;

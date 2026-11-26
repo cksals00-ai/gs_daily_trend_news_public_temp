@@ -381,6 +381,26 @@ def main():
     )
     logger.info(f"✓ docs/data 동기화: {docs_output}")
 
+    # 같은 날짜의 Booking Status Report(사업장별 페이지)도 파싱 → docs/data/booking_status_detail.json
+    #   (품의 페이지 '전체' 온북 ADR·매출 실제값용). 실패해도 본 파싱 결과에는 영향 없음.
+    try:
+        bs_pdf = Path(pdf_path).with_name(Path(pdf_path).name.replace("Daily Booking Report", "Booking Status Report"))
+        if bs_pdf != Path(pdf_path) and bs_pdf.exists():
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("parse_booking_status", Path(__file__).with_name("parse_booking_status.py"))
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            bs = mod.parse(bs_pdf)
+            if len(bs.get("properties", {})) >= 20:
+                mod.OUT.write_text(json.dumps(bs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                logger.info(f"✓ 사업장별 상세 동기화: {mod.OUT} ({bs.get('report_date')}, {len(bs['properties'])}개)")
+            else:
+                logger.warning(f"사업장별 상세 파싱 {len(bs.get('properties', {}))}개뿐 — 기존 파일 유지")
+        else:
+            logger.info(f"Booking Status Report 없음({bs_pdf.name}) — 사업장별 상세 스킵")
+    except Exception as e:
+        logger.warning(f"사업장별 상세 파싱 실패(무시): {e}")
+
 
 if __name__ == "__main__":
     main()

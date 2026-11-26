@@ -61,6 +61,7 @@ PARSER="scripts/parse_daily_booking.py"
 BUILDER="scripts/build.py"
 DATA_JSON="data/daily_booking.json"
 DOCS_JSON="docs/data/daily_booking.json"
+BS_JSON="docs/data/booking_status_detail.json"   # 파서가 같은 날짜 Booking Status Report로 함께 생성(품의 전체 온북 ADR·매출)
 INDEX_HTML="docs/index.html"
 
 command -v python3 >/dev/null 2>&1 || die "python3 가 없습니다"
@@ -217,6 +218,7 @@ cleanup_locks
 resolve_unmerged_generated   # 동시 작업이 남긴 unmerged 로 commit 이 막히지 않도록 선정리
 
 COMMIT_PATHS=("$PDF" "$DATA_JSON" "$DOCS_JSON" "$INDEX_HTML")
+[ -f "$BS_JSON" ] && COMMIT_PATHS+=("$BS_JSON")
 git add -- "${COMMIT_PATHS[@]}" 2>/dev/null || true
 
 COMMITTED=0
@@ -235,7 +237,7 @@ fi
 # =============================================================================
 is_owned() {
     case "$1" in
-        "$DATA_JSON"|"$DOCS_JSON"|"$INDEX_HTML") return 0 ;;
+        "$DATA_JSON"|"$DOCS_JSON"|"$INDEX_HTML"|"$BS_JSON") return 0 ;;
         *"Daily Booking Report_"*.pdf) return 0 ;;
         *) return 1 ;;
     esac
