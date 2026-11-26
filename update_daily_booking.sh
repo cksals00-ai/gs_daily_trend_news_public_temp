@@ -62,6 +62,9 @@ BUILDER="scripts/build.py"
 DATA_JSON="data/daily_booking.json"
 DOCS_JSON="docs/data/daily_booking.json"
 BS_JSON="docs/data/booking_status_detail.json"   # 파서가 같은 날짜 Booking Status Report로 함께 생성(품의 전체 온북 ADR·매출)
+HIST_JSON="data/daily_occ_history.json"          # 파서가 보고일별 날짜 단위 재고(온북 RN·OCC·보유객실) 누적
+GUIDE_JSON="docs/data/adr_guide.json"            # build.py → 예약추이 ADR 가이드
+AGENT_JSON="docs/data/strategy_agent.json"       # build.py → 예약추이 거래처 전년동기
 INDEX_HTML="docs/index.html"
 
 command -v python3 >/dev/null 2>&1 || die "python3 가 없습니다"
@@ -218,7 +221,7 @@ cleanup_locks
 resolve_unmerged_generated   # 동시 작업이 남긴 unmerged 로 commit 이 막히지 않도록 선정리
 
 COMMIT_PATHS=("$PDF" "$DATA_JSON" "$DOCS_JSON" "$INDEX_HTML")
-[ -f "$BS_JSON" ] && COMMIT_PATHS+=("$BS_JSON")
+for _f in "$BS_JSON" "$HIST_JSON" "$GUIDE_JSON" "$AGENT_JSON"; do [ -f "$_f" ] && COMMIT_PATHS+=("$_f"); done
 git add -- "${COMMIT_PATHS[@]}" 2>/dev/null || true
 
 COMMITTED=0
@@ -237,7 +240,7 @@ fi
 # =============================================================================
 is_owned() {
     case "$1" in
-        "$DATA_JSON"|"$DOCS_JSON"|"$INDEX_HTML"|"$BS_JSON") return 0 ;;
+        "$DATA_JSON"|"$DOCS_JSON"|"$INDEX_HTML"|"$BS_JSON"|"$HIST_JSON"|"$GUIDE_JSON"|"$AGENT_JSON") return 0 ;;
         *"Daily Booking Report_"*.pdf) return 0 ;;
         *) return 1 ;;
     esac

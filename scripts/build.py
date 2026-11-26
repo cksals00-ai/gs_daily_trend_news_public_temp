@@ -3233,6 +3233,23 @@ def main():
         except Exception as e:
             logger.warning(f"✗ build_inbound_enriched 실행 오류: {e}")
 
+    # ── 예약추이 전략 섹션: 거래처 전년동기(strategy_agent.json) + ADR 가이드(adr_guide.json) ──
+    # 전년동기 기준일이 매일 하루씩 이동하므로 매일 재생성(이전엔 수동이라 며칠씩 묵음).
+    # ADR 가이드 = 작년 같은 시점 이후 판매 흐름 + 올해 남은 날짜별 빈 객실(data/daily_occ_history.json 최신 보고일).
+    for _name, _timeout in (("build_strategy_agent.py", 300), ("build_adr_guide.py", 300)):
+        _sc = Path(__file__).resolve().parent / _name
+        if not _sc.exists():
+            continue
+        try:
+            result = subprocess.run([sys.executable, str(_sc)], capture_output=True, text=True,
+                                    timeout=_timeout, cwd=str(Path(__file__).resolve().parent.parent))
+            if result.returncode == 0:
+                logger.info(f"✓ {_name} 완료")
+            else:
+                logger.warning(f"✗ {_name} 실패: {result.stderr.strip()[-300:]}")
+        except Exception as e:
+            logger.warning(f"✗ {_name} 실행 오류: {e}")
+
     rmx_script = Path(__file__).resolve().parent / "build_rm_fcst_excel.py"
     if rmx_script.exists():
         try:

@@ -19,6 +19,7 @@ import fs_utils  # macOS NFD→NFC 유니코드 정규화
 import logging
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 logging.basicConfig(
@@ -124,6 +125,61 @@ def parse_rns_row(row: list) -> dict:
     return result
 
 
+def parse_capacity(occ_row: list) -> tuple:
+    """OCC 행 앞쪽 셀의 '월 RN 용량 일 객실수'(예: '43,369 1,399') → (43369, 1399). 없으면 (0, 0)."""
+    for c in occ_row[1:3]:
+        m = re.search(r'([\d,]{3,})\s+([\d,]{2,})\s*$', _safe_str(c))
+        if m:
+            return _to_int(m.group(1)), _to_int(m.group(2))
+    return 0, 0
+
+
+def parse_daily_rns(rns_row: list, days_in_month: int) -> list:
+    """RNs 행 일자 셀('1,071 ▼2', '560 0', '58▲ 2') → 날짜별 온북 RN 정수 리스트(1일부터)."""
+    out = []
+    for d in range(days_in_month):
+        idx = 8 + d
+        s = _safe_str(rns_row[idx]) if idx < len(rns_row) else ''
+        m = re.match(r'\s*([\d,]+)', s)
+        out.append(_to_int(m.group(1)) if m else 0)
+    return out
+
+
+def ym_with_year(months_detail: list) -> list:
+    """months_detail 월 번호 → 'YYYY-MM' (보고일 연도 기준, 첫 월보다 작은 월은 익년). year 필드는 고정값이라 쓰지 않음."""
+    if not months_detail:
+        return []
+    rd = months_detail[0].get("report_date") or ""
+    y0 = int(rd[:4]) if rd[:4].isdigit() else datetime.now().year
+    first = months_detail[0]["month"]
+    return [f"{y0 + (1 if md['month'] < first else 0)}-{md['month']:02d}" for md in months_detail]
+
+
+def save_daily_history(result: dict, path) -> int:
+    """보고일별 날짜 단위 재고 이력 누적 저장: {보고일: {YYYY-MM: {사업장: {cap, rn[], occ[]}}}}. 같은 보고일은 덮어씀."""
+    mds = result.get("months_detail") or []
+    if not mds:
+        return 0
+    rd = mds[0].get("report_date") or ""
+    if not rd:
+        return 0
+    path = Path(path)
+    hist = {}
+    if path.exists():
+        try:
+            hist = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            hist = {}
+    snap = {}
+    for ym, md in zip(ym_with_year(mds), mds):
+        snap[ym] = {p["name"]: {"cap": p.get("cap_day", 0), "rn": p.get("daily_rn", []), "occ": p.get("daily_occ", [])}
+                    for p in md.get("properties", [])}
+    hist[rd] = snap
+    hist = dict(sorted(hist.items()))
+    path.write_text(json.dumps(hist, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return len(hist)
+
+
 def parse_occ_row(row: list, days_in_month: int = 31) -> dict:
     """테이블 OCC 행에서 OCC Budget%, LY%, YoY 변동, Actual%, 일별OCC% 추출
 
@@ -215,6 +271,11 @@ def parse_page(page, page_idx: int) -> dict:
 
         rns_data = parse_rns_row(rns_rows[i])
         occ_data = parse_occ_row(occ_rows[i], days_in_month)
+        # 날짜별 온북 RN(전 세그) + 보유객실(월 RN 용량·일 객실수) — ADR 가이드(남은 주말/주중 재고)용
+        cap = parse_capacity(occ_rows[i])
+        occ_data["total_rn_capacity"] = cap[0] or occ_data["total_rn_capacity"]
+        occ_data["cap_day"] = cap[1]
+        occ_data["daily_rn"] = parse_daily_rns(rns_rows[i], days_in_month)
 
         # Budget 달성률
         budget_ach = 0.0
@@ -247,6 +308,8 @@ def parse_page(page, page_idx: int) -> dict:
             "occ_yoy_change": occ_data["occ_yoy_change"],
             "occ_actual": occ_data["occ_actual"],
             "daily_occ": occ_data.get("daily_occ", []),
+            "daily_rn": occ_data.get("daily_rn", []),
+            "cap_day": occ_data.get("cap_day", 0),
         }
         properties.append(prop)
 
@@ -380,6 +443,13 @@ def main():
         encoding="utf-8",
     )
     logger.info(f"✓ docs/data 동기화: {docs_output}")
+
+    # 날짜 단위 재고(온북 RN·OCC·보유객실) 보고일별 이력 누적 → data/daily_occ_history.json (ADR 가이드·향후 전년 동일자 비교)
+    try:
+        n = save_daily_history(result, DATA_DIR / "daily_occ_history.json")
+        logger.info(f"✓ 날짜별 재고 이력 저장: data/daily_occ_history.json (보고일 {n}개)")
+    except Exception as e:
+        logger.warning(f"날짜별 재고 이력 저장 실패(무시): {e}")
 
     # 같은 날짜의 Booking Status Report(사업장별 페이지)도 파싱 → docs/data/booking_status_detail.json
     #   (품의 페이지 '전체' 온북 ADR·매출 실제값용). 실패해도 본 파싱 결과에는 영향 없음.

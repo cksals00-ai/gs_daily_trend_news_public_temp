@@ -390,6 +390,23 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .strat-gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8a6a2e,#e6b970);border-radius:6px}
     #strat .strat-gauge .cur{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--positive)}
     #strat .glab{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-faint);font-family:var(--mono)}
+    /* ADR 가이드 (작년 같은 시점 이후 흐름 + 올해 남은 주말·주중 재고) */
+    #strat .strat-guide{border:1px dashed rgba(90,159,196,.6);border-radius:7px;padding:10px 12px;margin:2px 0 10px;background:rgba(90,159,196,.05);font-size:12.5px;line-height:1.6}
+    #strat .strat-guide .gh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+    #strat .strat-guide .gt{font-weight:800;color:var(--info);font-size:12.5px}
+    #strat .strat-guide .gs{color:var(--ink-faint);font-size:10.5px;font-family:var(--mono)}
+    #strat .strat-guide .gm{font-size:14px;font-weight:700}
+    #strat .strat-guide .gm b.mono{font-size:18px;color:var(--info)}
+    #strat .strat-guide .gw{overflow-x:auto}
+    #strat .strat-guide table{width:100%;border-collapse:collapse;margin-top:6px;font-size:11.5px;font-family:var(--mono)}
+    #strat .strat-guide th,#strat .strat-guide td{padding:3px 7px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+    #strat .strat-guide th:first-child,#strat .strat-guide td:first-child{text-align:left}
+    #strat .strat-guide th{color:var(--ink-faint);font-weight:600;font-size:10.5px}
+    #strat .strat-guide .gn{color:var(--ink-faint);font-size:10.5px;margin-top:5px;line-height:1.5}
+    #strat .strat-guide .cap{color:#ef9a9a;font-size:10px}
+    #strat .strat-slider{position:relative}
+    #strat .strat-gmark{position:absolute;width:2px;background:var(--info);pointer-events:none;border-radius:1px}
+    #strat .strat-gmark span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--info);white-space:nowrap;font-family:var(--mono);font-weight:700}
     </style>
     <div class="chart-card" id="strat">
       <div class="chart-card-header">
@@ -401,6 +418,7 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
       <div id="strat-diag"></div>
       <div class="strat-sim">
         <div class="strat-simhead"><span class="strat-lab" style="margin:0">처방 대상</span> <span id="strat-tgtlabel" style="font-family:var(--mono);font-size:13px;color:var(--gold-bright);font-weight:800">전체</span> <span style="font-size:10.5px;color:var(--ink-faint)">← 좌측 세그먼트와 연동</span></div>
+        <div class="strat-guide" id="strat-guide"></div>
         <div class="strat-slider"><span style="color:var(--ink-muted);font-size:12px">요금(ADR)</span>
           <input type="range" id="strat-adr" min="0" max="100" value="100"><span class="strat-adrv" id="strat-adrv">–</span></div>
         <div class="strat-simmode" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 2px;font-size:11px;color:var(--ink-faint)">
@@ -1413,11 +1431,129 @@ document.addEventListener('DOMContentLoaded', loadData);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
   function resetSlider(){ const t=tgtData(); if(!t)return; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); document.getElementById('strat-adr').value=Math.round((c-lo)/(hi-lo)*100); SADR=c; }
+
+  /* ── ADR 가이드 (2026-11-26 요청): 작년 같은 시점 이후 실제 판매 흐름 + 올해 남은 주말·주중 재고 ──
+     data/adr_guide.json(scripts/build_adr_guide.py, guide_calc와 동일 알고리즘)
+     1) 사업장별 작년 같은 시점(−364일) 이후 같은 세그 순증 판매를 주중/주말·연휴로 나눠 하루 평균·ADR 산출
+     2) 올해 속도(온북/작년 동기 온북)를 곱해 남은 날짜마다 배분, 그날 빈 객실(전 세그, Daily Booking Report) 한도
+     3) ADR은 올해 온북 요금 수준(작년 동기 대비, 유형별)을 곱함 → 남은 판매 ADR·예상 마감 ADR  */
+  let GUIDE=null, GUIDE_CUR=null;
+  const G_MIN=100, G_PACE=[0.5,2.0], G_PRICE=[0.85,1.2];
+  const gClamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+  const gRatio=(a,b)=>(a[0]&&b[0]&&b[1])?(a[1]/a[0])/(b[1]/b[0]):null;
+  function adrGuideCalc(node, props, segs){
+    const T=['w','e'];
+    const out={cur:[0,0],lys:[0,0],lyf:[0,0],exp_rn:0,exp_rev:0,props:0,
+      t:{w:{days:0,avail:0,onbook:0,unsold:0,pick_rn:0,pick_rev:0,exp_rn:0,exp_rev:0,capped:0},
+         e:{days:0,avail:0,onbook:0,unsold:0,pick_rn:0,pick_rev:0,exp_rn:0,exp_rev:0,capped:0}}};
+    const mk=()=>({w:[0,0],e:[0,0]});
+    const sel={cur:mk(),lys:mk(),lyf:mk()}, rows=[];
+    props.forEach(disp=>{ const pn=(node.props||{})[disp]; if(!pn) return;
+      const agg={cur:mk(),lys:mk(),lyf:mk()};
+      segs.forEach(s=>{ const sn=(pn.seg||{})[s]||{};
+        ['cur','lys','lyf'].forEach(k=>T.forEach(t=>{ const v=((sn[k]||{})[t])||[0,0];
+          agg[k][t][0]+=v[0]; agg[k][t][1]+=v[1]; sel[k][t][0]+=v[0]; sel[k][t][1]+=v[1]; })); });
+      rows.push([pn,agg]); });
+    const tot=a=>[a.w[0]+a.e[0], a.w[1]+a.e[1]];
+    const st={cur:tot(sel.cur),lys:tot(sel.lys),lyf:tot(sel.lyf)};
+    out.cur=st.cur; out.lys=st.lys; out.lyf=st.lyf;
+    const selPace=st.lys[0]?gClamp(st.cur[0]/st.lys[0],...G_PACE):1;
+    const selF=gClamp(gRatio(st.cur,st.lys)||1,...G_PRICE);
+    const selFt={}; T.forEach(t=>{ selFt[t]=(sel.cur[t][0]>=G_MIN&&sel.lys[t][0]>=G_MIN)?gClamp(gRatio(sel.cur[t],sel.lys[t]),...G_PRICE):selF; });
+    rows.forEach(([pn,agg])=>{
+      const tc=tot(agg.cur), tl=tot(agg.lys), tf=tot(agg.lyf);
+      if(tl[0]<=0||tf[0]<=0) return;
+      const pace=(tl[0]>=G_MIN&&tc[0]>=G_MIN/2)?gClamp(tc[0]/tl[0],...G_PACE):selPace;
+      const per={};
+      T.forEach(t=>{
+        let pr=agg.lyf[t][0]-agg.lys[t][0]; const pv=agg.lyf[t][1]-agg.lys[t][1];
+        const lyfA=agg.lyf[t][0]?agg.lyf[t][1]/agg.lyf[t][0]:null; let a;
+        if(pr>=30){ a=pv/pr; if(lyfA&&!(a>=0.33*lyfA&&a<=3*lyfA)) a=lyfA; } else { pr=Math.max(0,pr); a=lyfA; }
+        const f=(agg.cur[t][0]>=G_MIN&&agg.lys[t][0]>=G_MIN)?gClamp(gRatio(agg.cur[t],agg.lys[t]),...G_PRICE):selFt[t];
+        const ld=Math.max(1,((pn.ly_days||{})[t])||0);
+        per[t]={pd:pr/ld, adr:(a||0)*f};
+        out.t[t].pick_rn+=pr; out.t[t].pick_rev+=pr*(a||0);
+      });
+      out.props++;
+      if(pn.dates){
+        pn.dates.forEach(([day,t,unsold,occ,onbook])=>{
+          const dem=per[t].pd*pace, ex=Math.min(dem,unsold), o=out.t[t];
+          o.days++; o.onbook+=onbook; o.unsold+=unsold; o.avail+=onbook+unsold;
+          o.exp_rn+=ex; o.exp_rev+=ex*per[t].adr; if(dem>unsold+1e-9) o.capped++; });
+      } else {
+        T.forEach(t=>{ const ex=per[t].pd*pace*Math.max(0,((pn.ly_days||{})[t])||0); out.t[t].exp_rn+=ex; out.t[t].exp_rev+=ex*per[t].adr; });
+      }
+    });
+    T.forEach(t=>{ out.exp_rn+=out.t[t].exp_rn; out.exp_rev+=out.t[t].exp_rev; });
+    const [cr,cv]=out.cur;
+    out.cur_adr=cr?cv/cr:null; out.lys_adr=out.lys[0]?out.lys[1]/out.lys[0]:null; out.lyf_adr=out.lyf[0]?out.lyf[1]/out.lyf[0]:null;
+    out.ly_drift=(out.lys_adr&&out.lyf_adr)?out.lyf_adr/out.lys_adr-1:null;
+    const pk=out.lyf[0]-out.lys[0]; out.ly_pick_adr=pk>0?(out.lyf[1]-out.lys[1])/pk:null;
+    out.pick_adr=out.exp_rn>0?out.exp_rev/out.exp_rn:null;
+    out.close_adr=(cr+out.exp_rn)>0?(cv+out.exp_rev)/(cr+out.exp_rn):null;
+    out.close_chg=(out.close_adr&&out.cur_adr)?out.close_adr/out.cur_adr-1:null;
+    out.pick_vs_cur=(out.pick_adr&&out.cur_adr)?out.pick_adr/out.cur_adr-1:null;
+    return out;
+  }
+  const gK=v=>v?nfmt(Math.round(v/1000))+'천':'–';
+  const gP=v=>(v==null||!isFinite(v))?'–':((v>=0?'+':'')+(v*100).toFixed(1)+'%');
+  function renderGuide(){
+    const box=document.getElementById('strat-guide'); if(!box) return;
+    const node=GUIDE&&GUIDE.months&&GUIDE.months[ym()];
+    const asof=GUIDE&&GUIDE.meta?` · 기준 ${GUIDE.meta.ty_asof.slice(5).replace('-','/')} (작년 ${GUIDE.meta.ly_asof.slice(5).replace('-','/')})`:'';
+    if(!node){ GUIDE_CUR=null; box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드</span><span class="gs">당월부터 3개월 뒤 투숙월까지만 제공${asof}</span></div>`; placeGuideMark(); return; }
+    const ps=propSel(); const props=ps?[...ps]:Object.keys(node.props||{});
+    const g=adrGuideCalc(node, props, segSel());
+    if(!g.pick_adr||!g.cur_adr){ GUIDE_CUR=null; box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드</span><span class="gs">작년 같은 시점 데이터가 부족해 계산하지 않음${asof}</span></div>`; placeGuideMark(); return; }
+    GUIDE_CUR=g;
+    const n=Math.max(1,g.props), tr=t=>g.t[t];
+    const shL=t=>{ const a=g.t.w.pick_rn+g.t.e.pick_rn; return a?tr(t).pick_rn/a:0; };
+    const shT=t=>{ const a=g.exp_rn; return a?tr(t).exp_rn/a:0; };
+    const occ=t=>tr(t).avail?tr(t).onbook/tr(t).avail:null;
+    const row=(t,lab)=>`<tr><td>${lab}</td><td>${tr(t).days?Math.round(tr(t).days/n):0}일</td><td>${occ(t)!=null?(occ(t)*100).toFixed(0)+'%':'–'}</td>`
+      +`<td>${nfmt(Math.round(tr(t).unsold))}</td><td>${gK(tr(t).pick_rn?tr(t).pick_rev/tr(t).pick_rn:null)}</td>`
+      +`<td>${(shL(t)*100).toFixed(0)}% → ${(shT(t)*100).toFixed(0)}%</td>`
+      +`<td>${gK(tr(t).exp_rn?tr(t).exp_rev/tr(t).exp_rn:null)}</td></tr>`;
+    const capTxt=['w','e'].filter(t=>tr(t).capped).map(t=>`${t==='w'?'주중':'주말·연휴'} ${tr(t).capped}${n>1?'건':'일'}`).join(' · ');
+    const modeTxt=SIMMODE==='all'?'월 전체 평균':'추가 판매분';
+    box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드 · 작년 같은 시점 대비</span><span class="gs">추정${asof}</span>`
+      +`<button type="button" class="chip" id="strat-guide-apply" style="margin-left:auto">가이드 ADR 적용 (${modeTxt})</button></div>`
+      +`<div class="gm">남은 기간 판매 예상 ADR <b class="mono">${gK(g.pick_adr)}</b> <span style="font-weight:600;color:var(--ink-muted);font-size:12px">현재 온북 ${gK(g.cur_adr)} 대비 ${gP(g.pick_vs_cur)}</span></div>`
+      +`<div>예상 마감 ADR <b class="mono">${gK(g.close_adr)}</b> <span style="color:var(--ink-muted)">(온북 대비 ${gP(g.close_chg)})</span> · 작년엔 같은 시점 ${gK(g.lys_adr)} → 마감 ${gK(g.lyf_adr)} <b>${gP(g.ly_drift)}</b></div>`
+      +`<div class="gw"><table><thead><tr><th>남은 날짜</th><th>일수</th><th>올해 OCC</th><th>빈 객실</th><th>작년 판매 ADR</th><th>비중 작년→올해</th><th>예상 ADR</th></tr></thead>`
+      +`<tbody>${row('w','주중')}${row('e','주말·연휴')}</tbody></table></div>`
+      +(capTxt?`<div class="gn"><span class="cap">빈 객실 한도로 예상 판매를 줄인 날${n>1?'(사업장×날짜)':''}: ${capTxt}</span> — 그만큼 남은 판매가 주중 쪽으로 쏠립니다.</div>`:'')
+      +`<div class="gn">작년 같은 시점 이후 같은 세그로 더 팔린 객실과 ADR을 올해 남은 날짜에 대입했습니다. 날짜별 예상 판매는 그날 빈 객실(전 세그)을 넘지 않게 잡았고, ADR에는 올해 온북 요금 수준(작년 같은 시점 대비)을 반영했습니다. 슬라이더의 파란 선이 가이드 값입니다. 대외비·관리자용</div>`;
+    const btn=document.getElementById('strat-guide-apply'); if(btn) btn.onclick=applyGuide;
+    placeGuideMark();
+  }
+  function guideValue(){ return GUIDE_CUR?(SIMMODE==='all'?GUIDE_CUR.close_adr:GUIDE_CUR.pick_adr):null; }
+  function applyGuide(){
+    const v=guideValue(), t=tgtData(); if(!v||!t) return;
+    const c=curADR(t), lo=c*0.6, hi=Math.max(c*1.1,t.adr_budget||c);
+    document.getElementById('strat-adr').value=Math.max(0,Math.min(100,Math.round((v-lo)/(hi-lo)*100)));
+    SADR=v; ssim();
+  }
+  function placeGuideMark(){
+    const wrap=document.querySelector('#strat .strat-slider'), inp=document.getElementById('strat-adr'); if(!wrap||!inp) return;
+    let mk=document.getElementById('strat-gmark');
+    const v=guideValue(), t=tgtData();
+    const hide=()=>{ if(mk) mk.style.display='none'; };
+    if(!v||!t) return hide();
+    const c=curADR(t), lo=c*0.6, hi=Math.max(c*1.1,t.adr_budget||c), pct=(v-lo)/(hi-lo);
+    if(!(pct>=0&&pct<=1)) return hide();
+    if(!mk){ mk=document.createElement('div'); mk.id='strat-gmark'; mk.className='strat-gmark'; mk.innerHTML='<span></span>'; wrap.appendChild(mk); }
+    mk.style.left=(inp.offsetLeft+8+pct*(inp.offsetWidth-16))+'px';
+    mk.style.top=(inp.offsetTop-2)+'px'; mk.style.height=(inp.offsetHeight+4)+'px'; mk.style.display='';
+    mk.querySelector('span').textContent='가이드 '+gK(v);
+  }
   async function sboot(){
     try{
       OTB=await (await fetch('data/otb_data.json?t='+Date.now())).json();
       AG=await (await fetch('data/strategy_agent.json?t='+Date.now())).json();
     }catch(e){ document.getElementById('strat-verdict').innerHTML='데이터 로드 실패'; return; }
+    try{ const r=await fetch('data/adr_guide.json?t='+Date.now()); GUIDE=r.ok?await r.json():null; }catch(e){ GUIDE=null; }
+    window.addEventListener('resize', placeGuideMark);
     const bd=(OTB.meta.baseDate||'2026-11-01').split('-'); SY=bd[0]; SM=+bd[1]||11;
     document.getElementById('strat-base').textContent='기준일 '+OTB.meta.baseDate+' · 온북 vs 목표·전년';
     const umos=document.getElementById('uni-mos'); if(umos) umos.innerHTML=Array.from({length:12},(_,i)=>`<button class="chip" data-m="${i+1}">${i+1}월</button>`).join('');
@@ -1441,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', loadData);
       document.querySelectorAll('#pace-month-chips .chip').forEach(c=>c.classList.toggle('active',parseInt((c.textContent||'').replace('월',''),10)===m)); }catch(_){}
   };
   function srender(){ const d=smd();
-    if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; return; }
+    if(!d||!d.summary||!d.summary.rev_budget){ document.getElementById('strat-verdict').innerHTML='<div class="sv warn"><span class="svmain">해당 투숙월 데이터 없음</span></div>'; document.getElementById('strat-diag').innerHTML=''; renderGuide(); return; }
     const base=tgtData()||d.summary, s=base;
     const ach=s.rev_achievement||0, rnsAch=s.rns_achievement||0;
     // 전년동기 = AG(예약−취소복원, 동일 리드타임 as-of) 선택세그 합산. 객실수 기준(매출은 서브).
@@ -1473,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', loadData);
           '', (revAch!=null?(revAch>=100?'pos':revAch>=88?'neu':'neg'):((s.rev_last>0&&fv>=s.rev_last)?'pos':'neg')), 'strat-close']; })(),
     ].map(k=>`<div class="smini ${k[3]}"${k[5]?` id="${k[5]}"`:''}><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
     srenderDiag(d);
-    resetSlider(); ssim();
+    resetSlider(); ssim(); renderGuide();
   }
   // 세그별 채널 고정 묶음: OTA=놀·여기어때·스마트인피니·네이버·타이드스퀘어·기타 / GOTA=아고다·트립닷컴·트립비토즈·익스피디아·부킹닷컴·기타
   const STRAT_CH_GROUPS={
@@ -1552,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', loadData);
   }
   var SIMMODE='add';   // 'add' = 추가 판매분 ADR(온북 매출 고정) / 'all' = 월 전체 평균 ADR
   document.addEventListener('click', function(e){ const b=e.target.closest('[data-simmode]'); if(!b) return; SIMMODE=b.dataset.simmode;
-    document.querySelectorAll('[data-simmode]').forEach(x=>x.classList.toggle('active', x===b)); ssim(); });
+    document.querySelectorAll('[data-simmode]').forEach(x=>x.classList.toggle('active', x===b)); ssim(); renderGuide(); });
   function ssim(){ const t=tgtData(), av=document.getElementById('strat-adrv');
     if(!t||!t.rev_budget){ av.textContent='–'; document.getElementById('strat-action').innerHTML='대상 데이터 없음'; return; }
     const goal=t.rev_budget, curRN=t.rns_actual||0, curRev=t.rev_actual||0, cadr=curADR(t), setA=SADR||cadr;
