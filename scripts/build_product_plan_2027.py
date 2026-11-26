@@ -152,21 +152,91 @@ def weekend_yoy(cube, prop, months):
     return (cur / prev - 1) if prev else None
 
 
-def match_web(items_index, prop, camp_name, codes_series):
-    """GA4 items(사업장·정규화키) ↔ 캠페인(사업장·시리즈키 집합). 정확키 → 부분포함(≥4자)."""
+def window_months(win):
+    """{'from':YYYYMMDD,'to':YYYYMMDD} → 그 기간이 걸친 YYYYMM 집합."""
+    if not win or not win.get('from') or not win.get('to'):
+        return set()
+    a, b = win['from'][:6], win['to'][:6]
+    out, ym = set(), a
+    while ym <= b and len(out) < 60:
+        out.add(ym)
+        ym = month_add(ym, 1)
+    return out
+
+
+def match_web(items_index, prop, camp_name, codes_series, months=None):
+    """GA4 items(사업장·정규화키) ↔ 캠페인(사업장·시리즈키 집합). 정확키 → 부분포함(≥4자).
+    months(YYYYMM 집합)가 있으면 그 달 구매만 합산 — 해마다 같은 이름으로 다시 나오는 상품이 다른 해 구매까지 끌어오지 않게."""
     keys = {series_key(camp_name)} | {pn.product_key(s) for s in codes_series if s}
     keys = {k for k in keys if len(k) >= 4}
     cand = items_index.get(prop, [])
-    hit = []
+    pur = rev = 0
+    names = []
     for it in cand:
         k = it['_key']
         if not k:
             continue
         if k in keys or any((k in kk or kk in k) for kk in keys if len(k) >= 4):
-            hit.append(it)
-    if not hit:
-        return {'purchases': 0, 'revenue': 0, 'items': []}
-    return {'purchases': sum(i['purchases'] for i in hit), 'revenue': sum(i['revenue'] for i in hit), 'items': [i['name'] for i in hit[:5]]}
+            if months:
+                p = sum(v[0] for ym, v in (it.get('by_month') or {}).items() if ym in months)
+                r = sum(v[1] for ym, v in (it.get('by_month') or {}).items() if ym in months)
+            else:
+                p, r = it['purchases'], it['revenue']
+            if p or r:
+                pur += p; rev += r; names.append(it['name'])
+    return {'purchases': pur, 'revenue': rev, 'items': names[:5]}
+
+
+# ---------------------------------------------------------------- 구성 유형·구성 분석(스펙 §4.5 구성 제안)
+ROOM_ONLY = '객실만'
+COMP_ORDER = ('식음', '아쿠아', '부대', '스포츠', '기타')
+COMP_LABEL = {'식음': '식음', '아쿠아': '아쿠아', '부대': '부대시설', '스포츠': '스포츠', '기타': '기타구성'}
+
+
+def comp_type(comp_bk, auto):
+    """실제 패키지 구성 매출(예약당 구성가치·구성 비중)로 구성 유형 라벨 — 상품명 추정 없음.
+    예약당 구성가치 5천원 미만 또는 구성 없음 → 객실만. 비중 20% 이상 구성만 고정 순서로 표기, 3종 이상은 복합."""
+    if (comp_bk or 0) < 5000 or not auto:
+        return ROOM_ONLY
+    sig = [k for k in COMP_ORDER if (auto.get(k) or 0) >= 0.2]
+    if not sig or len(sig) >= 3:
+        return '복합(3종+)'
+    return '+'.join(COMP_LABEL[k] for k in sig)
+
+
+def composition_analysis(rows):
+    """사업장 × 구성 유형: 2025·26 기획 후보 실적 — 주중 RN·ADR·베이스라인 대비·객실만 대비·예약당 구성가치.
+    '_reco'[사업장] = 권장 구성(객실만 제외, 상품 2개↑·주중 200실↑·ADR이 베이스라인 −5% 이내, 주중 매출 상위 2)."""
+    acc = defaultdict(lambda: defaultdict(lambda: {'n': 0, 'rn': 0, 'wk_rn': 0.0, 'rev': 0, 'rev_b': 0, 'base_rev': 0.0,
+                                                   'comp': 0.0, 'bk': 0, 'top': []}))
+    for r in rows:
+        a, g = r['actual'], r.get('guard') or {}
+        for p in (r['prop'], '전체'):
+            c = acc[p][r['comp_type']]
+            c['n'] += 1; c['rn'] += a['rn']; c['wk_rn'] += a['rn'] * a['weekday_share']; c['rev'] += a['rev']
+            if g.get('baseline_adr'):
+                c['rev_b'] += a['rev']; c['base_rev'] += a['rn'] * g['baseline_adr']
+            c['comp'] += a['comp_bk'] * a['bk']; c['bk'] += a['bk']
+            c['top'].append((a['rn'] * a['weekday_share'], r['campaign']))
+    out, reco = {}, {}
+    for p, types in acc.items():
+        ro = types.get(ROOM_ONLY)
+        ro_adr = (ro['rev'] / ro['rn']) if ro and ro['rn'] else None
+        out[p] = {}
+        for t, c in types.items():
+            adr = c['rev'] / c['rn'] if c['rn'] else 0
+            out[p][t] = {'n': c['n'], 'rn': c['rn'], 'wk_rn': round(c['wk_rn']), 'wk_share': round(c['wk_rn'] / c['rn'], 3) if c['rn'] else 0,
+                         'adr': round(adr), 'prem': round(c['rev_b'] / c['base_rev'] - 1, 3) if c['base_rev'] else None,
+                         'vs_room': (round(adr / ro_adr - 1, 3) if (ro_adr and t != ROOM_ONLY) else None),
+                         'comp_bk': round(c['comp'] / c['bk']) if c['bk'] else 0,
+                         'top': [n for _, n in sorted(c['top'], key=lambda x: -x[0])[:3]]}
+        if p != '전체':
+            cands = [(t, v) for t, v in out[p].items() if t != ROOM_ONLY and v['n'] >= 2 and v['wk_rn'] >= 200
+                     and (v['prem'] is None or v['prem'] >= -0.05)]
+            cands.sort(key=lambda tv: -(tv[1]['wk_rn'] * tv[1]['adr']))
+            reco[p] = [t for t, _ in cands[:2]]
+    out['_reco'] = reco
+    return out
 
 
 def build(cube, actual26, budget27, ga4_items, base_ym):
@@ -213,7 +283,7 @@ def build(cube, actual26, budget27, ga4_items, base_ym):
             target_rn = int(round(m['rn'] * growth))
             target_adr = max(m['adr'], b_adr or 0)
             target_rev = target_rn * target_adr
-            web = match_web(items_index, prop, name, codes_series)
+            web = match_web(items_index, prop, name, codes_series, months=window_months(sw) or None)
             flags = []
             if not adr_ok: flags.append('ADR 베이스라인 미달')
             if cannibal: flags.append('주말 잠식 의심')
@@ -224,6 +294,7 @@ def build(cube, actual26, budget27, ga4_items, base_ym):
                 'id': f"{prop}|{series_key(name)}", 'campaign': name, 'source': camp.get('source', 'auto'), 'category': camp.get('category'),
                 'prop': prop, 'year': yr, 'composition': (camp.get('composition') or {}).get('text') or '',
                 'composition_auto': (camp.get('composition') or {}).get('auto') or {}, 'note': camp.get('note') or '',
+                'comp_type': comp_type(m['comp_bk'], (camp.get('composition') or {}).get('auto') or {}),
                 'actual': {'rn': m['rn'], 'rev': round(m['rev']), 'adr': round(m['adr']), 'bk': m['bk'], 'comp_bk': round(m['comp_bk']),
                            'comm_rate': round(m['comm_rate'], 4), 'weekday_share': round(m['weekday_share'], 3),
                            'sale': camp.get('sale_text') or (f"{sw.get('from','')}~{sw.get('to','')}" if sw else ''),
@@ -253,6 +324,32 @@ def build(cube, actual26, budget27, ga4_items, base_ym):
     return rows
 
 
+def web_by_campaign(cube, ga4_items, min_year=2024):
+    """SEC8(기획전 레벨) '웹 구매' 열: 사업장|기획전 → [구매건, 매출] — 판매기간 달의 홈페이지(GA4) 같은 이름 상품 구매. 매칭분만."""
+    idx = defaultdict(list)
+    for it in ga4_items:
+        k = pn.product_key(it.get('series') or it.get('name') or '')
+        if not k or k == pn.product_key(it.get('category') or ''):
+            continue
+        it['_key'] = k
+        idx[it.get('prop')].append(it)
+    out = {}
+    for name, camp in cube['campaigns'].items():
+        yr = camp_year(camp)
+        if not yr or yr < min_year:
+            continue
+        sw = camp.get('sale_window') or {}
+        months = window_months(sw) or None
+        series = [cube['codes'][c]['series'] for c in camp['codes'] if c in cube['codes']]
+        for prop in camp.get('props') or []:
+            if not idx.get(prop):
+                continue
+            w = match_web(idx, prop, name, series, months=months)
+            if w['purchases']:
+                out[f'{prop}|{name}'] = [w['purchases'], round(w['revenue'])]
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--cube', default=str(ROOT / 'docs' / 'data' / 'product_cube.json'))
@@ -267,13 +364,18 @@ def main():
     budget27 = load_budget27()
     ga4_items = load_ga4_items(a.ga4)
     rows = build(cube, actual26, budget27, ga4_items, base_ym)
+    comp = composition_analysis(rows)
+    webc = web_by_campaign(cube, ga4_items)
     out = {'meta': {'built': cube['meta']['built'], 'base_date': cube['meta'].get('base_date'), 'rows': len(rows),
+                    'comp_rule': '구성 유형=예약당 구성가치 5천원↑ 상품의 구성 매출 비중 20%↑ 항목(식음·아쿠아·부대시설·스포츠·기타구성), 3종↑ 복합, 그 외 객실만',
+                    'reco_rule': '권장 구성=객실만 제외, 상품 2개↑·주중 200실↑·ADR이 베이스라인 −5% 이내인 구성 중 주중 매출 상위 2',
+                    'web_rule': '홈페이지(GA4) 같은 이름 상품의 판매기간 달 구매(예약일 기준)',
                     'min_rn': MIN_RN, 'growth_rule': '예산2027/실적2026 월별 가중, 0.8~1.3 클램프, 미래월 1.0',
                     'adr_rule': '캠페인 ADR ≥ 사업장·투숙월·시즌 가중 베이스라인 ADR×0.95', 'placement': '+364/728일(요일 정렬)',
                     'budget27_props': len(budget27), 'actual26_props': len(actual26), 'ga4_items': len(ga4_items),
                     'label': '대외비·관리자용 · 목표 열은 추정'},
            'props': [p['display'] for p in cube['dims']['properties']],
-           'months': [f'2027{m:02d}' for m in range(1, 13)], 'rows': rows}
+           'months': [f'2027{m:02d}' for m in range(1, 13)], 'rows': rows, 'composition': comp, 'web_by_campaign': webc}
     Path(a.out).write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     print(f"rows={len(rows)} budget27 props={len(budget27)} actual26 props={len(actual26)} ga4 items={len(ga4_items)} → {a.out} ({os.path.getsize(a.out)/1e6:.1f}MB)")
     print('top5:', [(r['prop'], r['campaign'][:28], r['plan']['target_rn'], r['plan']['weekday_rev'] // 1_000_000) for r in rows[:5]])

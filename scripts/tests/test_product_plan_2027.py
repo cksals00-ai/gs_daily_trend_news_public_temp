@@ -38,7 +38,9 @@ class Plan(unittest.TestCase):
         cube = mini_cube()
         actual26 = {'07.델피노': {'202610': 2000, '202611': 1800}}
         budget27 = {'07.델피노': {'10': 2400, '11': 1620}}   # 10월 ×1.2, 11월 ×0.9
-        ga4 = [{'name': '델피노 온가을PKG_D_PKG', 'category': '소노벨 WEST 델피노', 'prop': '07.델피노', 'series': '델피노 온가을PKG', 'purchases': 37, 'revenue': 5000000, 'by_month': {}},
+        ga4 = [{'name': '델피노 온가을PKG_D_PKG', 'category': '소노벨 WEST 델피노', 'prop': '07.델피노', 'series': '델피노 온가을PKG', 'purchases': 40, 'revenue': 5400000,
+                'by_month': {'202610': [37, 5000000], '202510': [3, 400000]}},   # 판매기간(26.09~11) 밖 2025-10 구매는 제외
+
                {'name': '소노벨 WEST 델피노_패밀리스탠다드', 'category': '소노벨 WEST 델피노', 'prop': '07.델피노', 'series': '소노벨 WEST 델피노', 'purchases': 999, 'revenue': 1, 'by_month': {}}]
         rows = bp.build(cube, actual26, budget27, ga4, '202610')
         self.assertEqual(len(rows), 1)
@@ -81,6 +83,51 @@ class Plan(unittest.TestCase):
         self.assertEqual([r['campaign'] for r in rows], ['2026 온가을PKG'])     # RN<100 제외, 동일 시리즈는 최신 연도
         self.assertIn('이전 2025 400실', rows[0]['basis'])
         self.assertEqual(rows[0]['plan']['growth'], 1.0)                    # 예산/실적 없음 → 1.0
+
+    def test_comp_type_from_actual_components(self):
+        # 구성가치 없음/미미 → 객실만 (이름 추정 없이 실제 구성 매출로만 판정)
+        self.assertEqual(bp.comp_type(0, {}), '객실만')
+        self.assertEqual(bp.comp_type(3000, {'식음': 1.0}), '객실만')
+        # 20% 이상 구성만 표기, 고정 순서(식음→아쿠아→부대시설→스포츠→기타구성)
+        self.assertEqual(bp.comp_type(40000, {'식음': 1.0}), '식음')
+        self.assertEqual(bp.comp_type(60000, {'아쿠아': 0.4, '식음': 0.533, '부대': 0.067}), '식음+아쿠아')
+        self.assertEqual(bp.comp_type(50000, {'부대': 0.7, '식음': 0.3}), '식음+부대시설')
+        self.assertEqual(bp.comp_type(90000, {'식음': 0.4, '아쿠아': 0.3, '스포츠': 0.3}), '복합(3종+)')
+        self.assertEqual(bp.comp_type(20000, {'기타': 1.0}), '기타구성')
+
+    def test_composition_analysis_and_recommendation(self):
+        def row(prop, ctype, rn, wk, adr, base, comp_bk, bk, name):
+            return {'prop': prop, 'comp_type': ctype, 'campaign': name,
+                    'actual': {'rn': rn, 'rev': rn * adr, 'adr': adr, 'weekday_share': wk, 'comp_bk': comp_bk, 'bk': bk},
+                    'guard': {'baseline_adr': base}}
+        rows = [row('07.델피노', '객실만', 1000, 0.6, 200000, 210000, 0, 1000, '세일룸'),
+                row('07.델피노', '식음+아쿠아', 400, 0.7, 240000, 220000, 60000, 300, '조식오션A'),
+                row('07.델피노', '식음+아쿠아', 300, 0.5, 230000, 220000, 50000, 200, '조식오션B'),
+                row('07.델피노', '식음', 500, 0.8, 190000, 220000, 30000, 400, '조식C'),   # 베이스라인 −13.6% → 권장 제외
+                row('07.델피노', '식음', 200, 0.8, 195000, 220000, 30000, 150, '조식D')]
+        an = bp.composition_analysis(rows)
+        d = an['07.델피노']
+        fo = d['식음+아쿠아']
+        self.assertEqual(fo['n'], 2); self.assertEqual(fo['rn'], 700)
+        self.assertEqual(fo['wk_rn'], round(400 * 0.7 + 300 * 0.5))
+        self.assertEqual(fo['adr'], round((400 * 240000 + 300 * 230000) / 700))
+        self.assertAlmostEqual(fo['prem'], (400 * 240000 + 300 * 230000) / (700 * 220000) - 1, places=3)
+        self.assertAlmostEqual(fo['vs_room'], fo['adr'] / 200000 - 1, places=3)
+        self.assertEqual(fo['comp_bk'], round((60000 * 300 + 50000 * 200) / 500))
+        self.assertEqual(fo['top'][0], '조식오션A')
+        self.assertIsNone(d['객실만']['vs_room'])
+        self.assertIn('07.델피노', an['_reco'])
+        self.assertEqual(an['_reco']['07.델피노'], ['식음+아쿠아'])       # 객실만 제외, 식음은 ADR 가드 미달
+        self.assertEqual(an['전체']['식음+아쿠아']['rn'], 700)                # 전체 합계 포함
+
+    def test_web_match_limited_to_sale_window(self):
+        idx = {'07.델피노': [{'name': '델피노 온가을PKG', '_key': bp.pn.product_key('델피노 온가을PKG'), 'purchases': 50, 'revenue': 9,
+                              'by_month': {'202510': [30, 6], '202610': [20, 3]}}]}
+        w = bp.match_web(idx, '07.델피노', '델피노 온가을PKG (2025)', [], months={'202509', '202510', '202511'})
+        self.assertEqual(w['purchases'], 30); self.assertEqual(w['revenue'], 6)
+        w_all = bp.match_web(idx, '07.델피노', '델피노 온가을PKG (2025)', [])
+        self.assertEqual(w_all['purchases'], 50)
+        self.assertEqual(bp.window_months({'from': '20250920', 'to': '20251105'}), {'202509', '202510', '202511'})
 
     def test_shift_and_month_helpers(self):
         self.assertEqual(bp.shift_weekday_aligned('20260701', 1), '20270630')   # 수 → 수
