@@ -1724,14 +1724,17 @@ document.addEventListener('DOMContentLoaded', loadData);
       const adrTxt = SIMMODE==='add'
         ? `추가분 ADR ${nfmt(Math.round(setA/1000))}천 → 마감 평균 ${nfmt(Math.round(simADR/1000))}천`
         : `월 평균 ADR ${nfmt(Math.round(setA/1000))}천 가정`;
+      // 매출·객실을 둘 다 큰 숫자로(매출이 사라져 보인다는 피드백 반영 2026-11-26). 시뮬 = 슬라이더 ADR로 목표를 채울 때의 마감.
+      const revAch=goal>0?simRev/goal*100:null;
       card.querySelector('.l').innerHTML='예상 마감 <span style="color:var(--gold-bright);letter-spacing:0">· ADR 시뮬 연동</span>';
-      card.querySelector('.v').innerHTML=nfmt(Math.round(simRN))+'<span style="font-size:11px">실</span>'
-        +(rnAch!=null?` <span style="font-size:11px;font-weight:600;color:${kc(rnAch)}">목표 ${f1(rnAch)}%</span>`:'');
+      card.querySelector('.v').innerHTML=f1(eok(simRev))+'<span style="font-size:11px">억</span>'
+        +' <span style="font-size:15px">'+nfmt(Math.round(simRN))+'<span style="font-size:11px">실</span></span>';
       const dd=card.querySelector('.d'); dd.className='d '+fc;
       const fAdr=fr>0?fv/fr:0, fAch=goal>0?fv/goal*100:null, fRnAch=t.rns_budget>0?fr/t.rns_budget*100:null;
-      dd.innerHTML=(hit?`현 온북 객실로 목표 ${f1(eok(goal))}억 달성 · 마감 ${f1(eok(simRev))}억`:`목표 ${f1(eok(goal))}억 달성 시 · 추가 ${nfmt(Math.round(needAdd))}실`)
-        +` · ${adrTxt}`
-        +(fr>0?`<br><span style="color:var(--ink-faint)">FCST ${nfmt(fr)}실${fRnAch!=null?'('+f1(fRnAch)+'%)':''} · ADR ${nfmt(Math.round(fAdr/1000))}천 · ${f1(eok(fv))}억${fAch!=null?'(목표 '+f1(fAch)+'%)':''}</span>`:'');
+      const pill=(lab,v)=>v!=null?`<span style="font-weight:700;color:${kc(v)}">${lab} ${f1(v)}%</span>`:'';
+      dd.innerHTML=`목표 대비 ${pill('매출',revAch)} · ${pill('객실',rnAch)} · 마감 ADR ${nfmt(Math.round(simADR/1000))}천`
+        +`<br>${hit?'현 온북으로 목표 달성':`목표까지 추가 ${nfmt(Math.round(needAdd))}실`} · ${adrTxt}`
+        +(fr>0?`<br><span style="color:var(--ink-faint)">FCST ${f1(eok(fv))}억${fAch!=null?'('+f1(fAch)+'%)':''} · ${nfmt(fr)}실${fRnAch!=null?'('+f1(fRnAch)+'%)':''} · ADR ${nfmt(Math.round(fAdr/1000))}천</span>`:'');
     })();
   }
   document.addEventListener('DOMContentLoaded', sboot);
