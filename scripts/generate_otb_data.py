@@ -1585,13 +1585,47 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         rm_ach_prop = None
 
         if future_year:
-            # 미래연도(예: 2027): 동기간/AI/RM 기반이 없어 FCST=목표(budget). AI/RM 스킵.
-            rns_fcst = bud_rn
-            rev_fcst = bud_rev
-            adr_fcst = round(bud_rev * 1_000_000 / bud_rn) if bud_rn > 0 else 0
+            # 미래연도(예: 2027): RM이 다루는 달(예: 2027-01)은 RM 세그(OTA+G-OTA+Inbound) 합 — 2026 RM 경로와 동일,
+            # 매출 = RN × 전년 같은 달 실적 ADR. RM이 없는 달은 FCST=목표(자리표시, fcst_source='budget').
+            # (2026-11-26 수정: RM이 있는 2027-01까지 목표로 채워 예상마감=목표로 보이던 문제)
+            rns_fcst, rev_fcst, _prop_fcst_source = 0, 0.0, "budget"
+            rm_rn_sum = rm_bud_sum = 0
+            rm_has = False
+            for mi in ([month_idx] if month_idx > 0 else range(1, 13)):
+                if month_idx > 0:
+                    mi_bud_rn, mi_bud_rev = bud_rn, bud_rev
+                elif seg_budgets:
+                    _b = sum_seg_budget(seg_budgets, display_name, [BUDGET_MONTH_LABEL[mi - 1]])
+                    mi_bud_rn, mi_bud_rev = _b["rn"], _b["rev_m"]
+                else:
+                    _bm = budgets.get(display_name, {}).get(BUDGET_MONTH_LABEL[mi - 1], {})
+                    mi_bud_rn, mi_bud_rev = _bm.get("rn", 0), _bm.get("rev_m", 0)
+                mi_rm, mi_rm_bud = sum_rm_seg_fcst(rm_fcst_props, display_name, f"{year}-{mi:02d}")
+                if mi_rm and mi_rm > 0:
+                    rm_has = True
+                    rm_rn_sum += mi_rm
+                    rm_bud_sum += mi_rm_bud or 0
+                    ly_key = f"{year - 1}{mi:02d}"
+                    ly_f = sum_db_segments(db_bps, db_props, ly_key) if db_bps is not None else sum_db(db_bp, db_props, ly_key)
+                    if ly_f["rn"] > 0:
+                        mi_rev = mi_rm * (ly_f["rev_m"] / ly_f["rn"])
+                    elif mi_bud_rn > 0:
+                        mi_rev = mi_rm * (mi_bud_rev / mi_bud_rn)
+                    else:
+                        mi_rev = 0.0
+                    rns_fcst += mi_rm
+                    rev_fcst += mi_rev
+                    if month_idx > 0:
+                        _prop_fcst_source = "RM"
+                else:
+                    rns_fcst += mi_bud_rn
+                    rev_fcst += mi_bud_rev
+            if rm_has:
+                rm_rn_prop, rm_budget_prop = rm_rn_sum, (rm_bud_sum or None)
+                rm_ach_prop = round(rm_rn_prop / rm_budget_prop * 100, 1) if rm_budget_prop else None
+            adr_fcst = round(rev_fcst * 1_000_000 / rns_fcst) if rns_fcst > 0 else 0
             fcst_ach = round(rns_fcst / bud_rn * 100, 1) if bud_rn > 0 else 0.0
             rev_fcst_ach = round(rev_fcst / bud_rev * 100, 1) if bud_rev > 0 else 0.0
-            _prop_fcst_source = "budget"
         elif month_idx > 0:
             # OTB pickup ratio (LY 풀년 / LY 동기간 OTB) — 진행 중인 월 FCST 산출용
             pickup_ratio = _compute_ly_pickup_ratio(
@@ -1927,7 +1961,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             if not prop_data:
                 return None, None
             if month_idx > 0:
-                ym = f"2026-{month_idx:02d}"
+                ym = f"{year}-{month_idx:02d}"
                 seg_data = prop_data.get(ym, {}).get("segments", {}).get(seg, {})
                 f = seg_data.get("rm_fcst_rn")
                 b = seg_data.get("rm_budget_rn")
@@ -1936,7 +1970,7 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
             # 전체(연간): 12개월 segment 합
             f_sum = 0; b_sum = 0; has_f = False; has_b = False
             for mi in range(1, 13):
-                ym_mi = f"2026-{mi:02d}"
+                ym_mi = f"{year}-{mi:02d}"
                 seg_data = prop_data.get(ym_mi, {}).get("segments", {}).get(seg, {})
                 vf = seg_data.get("rm_fcst_rn")
                 vb = seg_data.get("rm_budget_rn")
@@ -1966,9 +2000,22 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 fcst_source = None  # debug/audit용
 
                 if future_year:
-                    # 미래연도: 세그 FCST=목표(budget)
-                    s_rns_f = s_bud_rn
-                    fcst_source = "budget"
+                    # 미래연도: RM(키인 포함) 세그 FCST가 있는 달은 그 값, 없으면 목표(자리표시 'budget').
+                    # 비율 배분 폴백(p_total_fcst)은 쓰지 않음 — 목표를 비율로 나눈 값이 FCST처럼 보이지 않게.
+                    def _fut_seg(mi, mi_bud):
+                        if seg not in BUDGET_SEGMENT_KEYS:
+                            return mi_bud, "budget"
+                        v, src = get_seg_fcst(seg_fcst_data, display_name, f"{year}-{mi:02d}", seg,
+                                              p_total_fcst=None, month_int=mi, s_bud_rn=mi_bud, s_lst_rn=s_lst_rn)
+                        return (v, src) if v is not None else (mi_bud, "budget")
+                    if month_idx > 0:
+                        s_rns_f, fcst_source = _fut_seg(month_idx, s_bud_rn)
+                    else:
+                        s_rns_f = 0
+                        for mi in range(1, 13):
+                            mi_bud = seg_budgets.get(display_name, {}).get(seg, {}).get(BUDGET_MONTH_LABEL[mi - 1], {}).get("rn", 0)
+                            s_rns_f += _fut_seg(mi, mi_bud)[0]
+                        fcst_source = "annual_aggregate"
                 elif is_past_single_month:
                     # 과거월: actual = fcst
                     s_rns_f = s_act_rn
@@ -2054,8 +2101,8 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
                 s_rev_fcst_ach = round(s_rev_f / s_bud_rev * 100, 1) if s_bud_rev > 0 else 0.0
                 s_adr_fcst = round((s_rev_f * 1_000_000) / s_rns_f) if s_rns_f > 0 else 0
 
-                # RM FCST: PDF segments 원본 셀 (해당 세그 단일값). 미래연도는 2027 RM 부재 → 스킵.
-                s_rm_rn, s_rm_bud = (None, None) if future_year else _rm_seg(display_name, seg)
+                # RM FCST: PDF segments 원본 셀 (해당 세그 단일값, 연도 키 — RM이 없는 달은 None).
+                s_rm_rn, s_rm_bud = _rm_seg(display_name, seg)
                 s_rm_ach = round(s_rm_rn / s_rm_bud * 100, 1) if (s_rm_rn is not None and s_rm_bud and s_rm_bud > 0) else None
 
                 seg_props.append({
@@ -2102,8 +2149,26 @@ def build_month_snapshot(db_bp, budgets, month_idx, db_seg=None, seg_budgets=Non
         sd["rev_fcst_achievement"] = round(sd["rev_fcst"] / sd["rev_budget"] * 100, 1) if sd.get("rev_budget", 0) > 0 else 0.0
         sd["adr_fcst"] = round(sd["rev_fcst"] / sd["rns_fcst"]) if sd["rns_fcst"] > 0 else 0
         sd["adr_fcst_achievement"] = round(sd["adr_fcst"] / sd["adr_budget"] * 100, 1) if sd.get("adr_budget", 0) > 0 else 0.0
+        if future_year:
+            # 미래연도 FCST 출처 표시: 'RM'(전 사업장 RM/키인) / 'budget'(목표 자리표시) / 'mixed' / 'annual'
+            sd["fcst_src"] = _fcst_src_of([p.get("fcst_source") for p in seg_props_list
+                                           if (p.get("rns_budget") or p.get("rns_fcst"))], month_idx)
+
+    if future_year:
+        summary["fcst_src"] = _fcst_src_of([p.get("fcst_source") for p in props
+                                            if (p.get("rns_budget") or p.get("rns_fcst"))], month_idx)
 
     return {"byProperty": props, "byPropertySegment": by_prop_seg, "summary": summary, "segmentData": seg_data}
+
+
+def _fcst_src_of(sources, month_idx):
+    """사업장(×세그) FCST 출처 목록 → 'budget' | 'RM' | 'mixed' | 'annual'(연간 합)."""
+    if month_idx == 0:
+        return "annual"
+    s = {x for x in sources if x}
+    if not s or s == {"budget"}:
+        return "budget"
+    return "RM" if "budget" not in s else "mixed"
 
 
 def build_monthly_chart(db_bp, budgets, seg_budgets=None, db_bps=None, adj_by_prop=None):
@@ -2733,7 +2798,8 @@ def main():
     )
 
     # ── 차년도(2027) 스냅샷: 예산(gs_budget_2027) + 현 온북(db_bps 2027키) + 전년(2026) ──
-    #   미래연도는 동기간/AI/RM 기반이 없어 FCST=목표. adj_*=None → 전년=2026 마감실적.
+    #   FCST: RM이 다루는 달(예: 2027-01)은 RM(세그·사업장), 그 외는 목표 자리표시(fcst_src='budget').
+    #   동기간/AI 없음. adj_*=None → 전년=2026 마감실적.
     all_months_by_year = {"2026": {**all_months, "0": all_months["summary"]}}
     budgets_27, seg_budgets_27 = load_budget_2027()
     if budgets_27 and seg_budgets_27:
@@ -2745,7 +2811,7 @@ def main():
                 adj_by_prop=None, adj_by_segment=None, adj_by_prop_seg=None,
                 holiday_factors=holiday_factors,
                 lead_time_by_prop=None, now_kst=now_kst,
-                rm_fcst_props={}, rm_trend_snapshots=[], seg_fcst_data=None,
+                rm_fcst_props=rm_fcst_props, rm_trend_snapshots=[], seg_fcst_data=seg_fcst_data,
                 year=2027,
             )
         am27 = {SUMMARY_KEY: _snap27(0)}

@@ -6,17 +6,20 @@
 입력
   data/raw_db/{2025,2026}  27/43 예약 + 28/44 취소 (온라인영업팀: 대매점·OTA·패키지) → GS 세그(OTA·G-OTA·Inbound)
   data/daily_occ_history.json   올해 날짜별 온북 RN·OCC·일 보유객실(전 세그, Daily Booking Report 최신 보고일)
+  docs/data/booking_status_detail.json  사업장 전체(전 세그) 월별: 올해 온북 · 작년 같은 날 온북 · 작년 마감 (parse_booking_status.py)
 출력 docs/data/adr_guide.json
   {meta, months: {YYYYMM: {ly_ym, props: {display: {
       seg: {OTA: {cur:{w:[rn,rev], e:[rn,rev]}, lys:{…}, lyf:{…}}, G-OTA: …, Inbound: …},
       ly_days: {w: n, e: n},                      # 작년 기준일 이후 남은 날짜 수(유형별)
       dates: [[일, 'w'|'e', 빈객실, OCC, 온북RN], …] | null   # 올해 기준일 다음날부터(전 세그, PDF)
+      whole: {cur|lys|lyf: [RN, 매출천원, 판매가능객실]} | null    # 사업장 전체(전 세그) 월 합
   }}}}}
 규칙
   - 기준일(ty_asof) = Daily Booking Report 보고일. 작년 기준일 = ty_asof − 364일(같은 요일, Booking Status 표기와 동일).
   - 전년동기(lys) = 최초입력일자 ≤ 작년 기준일 + 그때 살아있던 취소건 복원(최초입력 ≤ 기준일 < 취소일). 전년마감(lyf) = 최종 유효 예약.
   - 정본: REV = 1박객실료 × 객실수 ÷ 1.1, 거래처(회원명=이용자명, 58 제외)·매출조정 제외.
   - 유형: 요금시즌명에 '주중' → 주중(w), 그 외(주말·금요일·연휴·최성수기) → 주말·연휴(e). 날짜 유형은 그 날짜 예약의 요금시즌 최빈값, 없으면 금·토=주말.
+  - 남은 판매 물량 = 작년 같은 시점 이후 판매량 그대로(속도 배수 없음) — 과거 검증상 가장 정확(scripts/backtest_forecast.py).
 대외비·관리자용.
 """
 import json
@@ -229,6 +232,40 @@ def load_inventory(hist_path):
     return datetime.strptime(rd, '%Y-%m-%d').date(), inv
 
 
+def _cap(c):
+    """BS 셀 {rn, occ} → 그 달 판매가능 객실(OCC 역산). OCC<0.5%면 계산 불가(None)."""
+    return (c['rn'] * 100.0 / c['occ']) if (c and c.get('occ') and c['occ'] >= 0.5 and c.get('rn')) else None
+
+
+def load_whole(bs_path, ty_months):
+    """Booking Status Report(사업장 페이지, 전 세그) → (whole, report_date, ly_date)
+    whole[YYYYMM][display] = {'cur':[rn, rev_천원, 객실], 'lys':[…], 'lyf':[…]}
+      cur=올해 온북 · lys=작년 같은 날(보고일−364) 온북 · lyf=작년 마감. 객실 = 그 행 RN÷OCC(판매가능 객실).
+    parse_booking_status.py 산출물(docs/data/booking_status_detail.json)을 읽는다."""
+    p = Path(bs_path)
+    if not p.exists():
+        return {}, None, None
+    bs = json.loads(p.read_text(encoding='utf-8'))
+    out = {}
+    for v in (bs.get('properties') or {}).values():
+        disp = prop_disp(v.get('name'))
+        if not disp:
+            continue
+        for ym, mv in (v.get('months') or {}).items():
+            key = ym.replace('-', '')
+            if key not in ty_months:
+                continue
+            o, ly, la = mv.get('otb'), mv.get('ly'), mv.get('ly_act')
+            if not (o and ly and la):
+                continue
+            cap_ty = _cap(o) or _cap(mv.get('budget'))
+            cap_ly = _cap(la) or _cap(ly)
+            node = out.setdefault(key, {}).setdefault(disp, {'cur': [0, 0, 0.0], 'lys': [0, 0, 0.0], 'lyf': [0, 0, 0.0]})
+            for k, c, cp in (('cur', o, _cap(o) or cap_ty), ('lys', ly, _cap(ly) or cap_ly), ('lyf', la, _cap(la) or cap_ly)):
+                node[k][0] += c['rn']; node[k][1] += c['rev_k']; node[k][2] += round(cp or 0, 1)
+    return out, bs.get('report_date'), bs.get('ly_date')
+
+
 def avail_unsold(rn, occ, cap):
     """그날 판매가능 객실 = OCC 역산(판매중지 반영), OCC<1%면 보유객실. 빈 객실 = 가능 − 온북."""
     avail = (rn * 100.0 / occ) if (occ and occ >= 1 and rn) else float(cap or 0)
@@ -250,9 +287,12 @@ def _clamp(x, lo, hi):
     return max(lo, min(hi, x))
 
 
-MIN_N = 100          # 비율(속도·요금수준)을 사업장 단위로 쓰기 위한 최소 객실수 — 미만이면 선택 전체 값
-PACE_RANGE = (0.5, 2.0)
+MIN_N = 100          # 요금 수준 비율을 사업장 단위로 쓰기 위한 최소 객실수 — 미만이면 선택 전체 값
 PRICE_RANGE = (0.85, 1.2)
+# 남은 판매 물량 = 작년 같은 시점 이후 판매량 그대로(올해 속도 배수 없음).
+#   과거 검증(scripts/backtest_forecast.py, 2024~2026 10,288건): 속도 배수 방식 오차 14.8~21.9% vs 그대로 더하기 8.0~10.6%
+# 가격 반응(ADR 1% 변화 → 남은 판매 객실 −ε%): 과거 추정, 사업장 시뮬에서만 사용(페이지)
+ELASTICITY = {'OTA': -0.8, 'G-OTA': -0.2, 'Inbound': 0.0}
 
 
 def _ratio_adr(a, b):
@@ -262,12 +302,16 @@ def _ratio_adr(a, b):
 def guide_calc(month_node, props, segs):
     """선택 사업장·세그 → 가이드. month_node = adr_guide.json months[YYYYMM]. (booking-trend.html adrGuideCalc와 동일)"""
     T = ('w', 'e')
-    out = {'cur': [0, 0], 'lys': [0, 0], 'lyf': [0, 0], 'exp_rn': 0.0, 'exp_rev': 0.0,
+    out = {'cur': [0, 0], 'lys': [0, 0], 'lyf': [0, 0], 'exp_rn': 0.0, 'exp_rev': 0.0, 'props': 0, 'unsold': 0.0,
+           'whole': None, 'eps': None,
            't': {t: {'days': 0, 'avail': 0.0, 'onbook': 0, 'unsold': 0.0, 'pick_rn': 0, 'pick_rev': 0, 'ly_days': 0,
                      'exp_rn': 0.0, 'exp_rev': 0.0, 'capped': 0} for t in T}}
-    # 1패스: 사업장별 집계 + 선택 전체 비율(작은 사업장의 대체값)
+    # 1패스: 사업장별 집계 + 선택 전체 비율(작은 사업장의 대체값) + 사업장 전체(전 세그) 합
     rows = []
     sel = {k: {t: [0, 0] for t in T} for k in ('cur', 'lys', 'lyf')}
+    whole = {k: [0, 0, 0.0] for k in ('cur', 'lys', 'lyf')}
+    whole_n = 0
+    pick_by_seg = defaultdict(float)
     for disp in props:
         pn = (month_node.get('props') or {}).get(disp)
         if not pn:
@@ -280,21 +324,32 @@ def guide_calc(month_node, props, segs):
                     v = (sn.get(k) or {}).get(t) or [0, 0]
                     agg[k][t][0] += v[0]; agg[k][t][1] += v[1]
                     sel[k][t][0] += v[0]; sel[k][t][1] += v[1]
+            pick_by_seg[s] += sum(((sn.get('lyf') or {}).get(t) or [0, 0])[0] - ((sn.get('lys') or {}).get(t) or [0, 0])[0]
+                                  for t in T)
+        w = pn.get('whole')
+        if w:
+            whole_n += 1
+            for k in whole:
+                for i in range(3):
+                    whole[k][i] += (w.get(k) or [0, 0, 0])[i]
         rows.append((pn, agg))
     stot = {k: [sum(sel[k][t][0] for t in T), sum(sel[k][t][1] for t in T)] for k in sel}
     for k in stot:
         out[k] = list(stot[k])
-    sel_pace = _clamp(stot['cur'][0] / stot['lys'][0], *PACE_RANGE) if stot['lys'][0] else 1.0
+    if whole_n:
+        out['whole'] = whole
+    # 가격 반응: 선택 세그의 작년 남은 판매량 가중 평균
+    pw = {s: max(0.0, v) for s, v in pick_by_seg.items()}
+    out['eps'] = (sum(pw[s] * ELASTICITY.get(s, 0.0) for s in pw) / sum(pw.values())) if sum(pw.values()) > 0 else None
     sel_f = _clamp(_ratio_adr(stot['cur'], stot['lys']) or 1.0, *PRICE_RANGE)
     sel_ft = {t: (_clamp(_ratio_adr(sel['cur'][t], sel['lys'][t]), *PRICE_RANGE)
                   if (sel['cur'][t][0] >= MIN_N and sel['lys'][t][0] >= MIN_N) else sel_f) for t in T}
-    # 2패스: 사업장별 수요(작년 남은 판매 일평균 × 속도)를 날짜별 빈 객실 한도로 배분
+    # 2패스: 사업장별 수요(작년 남은 판매 일평균, 속도 배수 없음)를 날짜별 빈 객실 한도로 배분
     for pn, agg in rows:
         tot = {k: [sum(agg[k][t][0] for t in T), sum(agg[k][t][1] for t in T)] for k in agg}
         if tot['lys'][0] <= 0 or tot['lyf'][0] <= 0:
             continue
-        pace = (_clamp(tot['cur'][0] / tot['lys'][0], *PACE_RANGE)
-                if (tot['lys'][0] >= MIN_N and tot['cur'][0] >= MIN_N // 2) else sel_pace)
+        out['props'] += 1
         per = {}
         for t in T:
             pr = agg['lyf'][t][0] - agg['lys'][t][0]
@@ -315,17 +370,19 @@ def guide_calc(month_node, props, segs):
         dates = pn.get('dates')
         if dates:
             for day, t, unsold, occ, onbook in dates:
-                dem = per[t]['pd'] * pace
+                dem = per[t]['pd']
                 ex = min(dem, unsold)
                 o = out['t'][t]
                 o['days'] += 1; o['onbook'] += onbook; o['unsold'] += unsold
                 o['avail'] += onbook + unsold
                 o['exp_rn'] += ex; o['exp_rev'] += ex * per[t]['adr']
+                out['unsold'] += unsold
                 if dem > unsold + 1e-9:
                     o['capped'] += 1
         else:   # 재고 정보 없음 → 작년 남은 날짜 수 그대로, 제한 없음
+            out['inv_missing'] = out.get('inv_missing', 0) + 1
             for t in T:
-                ex = per[t]['pd'] * pace * max(0, (pn.get('ly_days') or {}).get(t, 0))
+                ex = per[t]['pd'] * max(0, (pn.get('ly_days') or {}).get(t, 0))
                 out['t'][t]['exp_rn'] += ex; out['t'][t]['exp_rev'] += ex * per[t]['adr']
     for t in T:
         out['exp_rn'] += out['t'][t]['exp_rn']; out['exp_rev'] += out['t'][t]['exp_rev']
@@ -340,16 +397,37 @@ def guide_calc(month_node, props, segs):
     out['close_adr'] = ((cur_rev + out['exp_rev']) / (cur_rn + out['exp_rn'])) if (cur_rn + out['exp_rn']) > 0 else None
     out['close_chg'] = (out['close_adr'] / out['cur_adr'] - 1) if (out['close_adr'] and out['cur_adr']) else None
     out['pick_vs_cur'] = (out['pick_adr'] / out['cur_adr'] - 1) if (out['pick_adr'] and out['cur_adr']) else None
+    w = out['whole']
+    if w:   # 사업장 전체(전 세그) OCC: 작년 같은 날·작년 마감·올해 지금 + 같은 방식 예상 마감(올해 + 작년 같은 날 이후 판매)
+        occ = lambda k: (w[k][0] / w[k][2]) if w[k][2] else None
+        w_exp = w['cur'][0] + (w['lyf'][0] - w['lys'][0])
+        out['whole_occ'] = {'lys': occ('lys'), 'lyf': occ('lyf'), 'cur': occ('cur'),
+                            'exp': min(1.0, w_exp / w['cur'][2]) if w['cur'][2] else None,
+                            'adr_lys': w['lys'][1] * 1000 / w['lys'][0] if w['lys'][0] else None,
+                            'adr_lyf': w['lyf'][1] * 1000 / w['lyf'][0] if w['lyf'][0] else None,
+                            'adr_cur': w['cur'][1] * 1000 / w['cur'][0] if w['cur'][0] else None}
     return out
 
 
+def sim_pickup(base_rn, base_adr, adr, eps, cap=None):
+    """가격 반응: 기준(가이드 ADR에서의 예상 추가 판매) → 설정 ADR에서의 예상 추가 판매. 빈 객실 한도."""
+    if not base_rn or not base_adr or not adr or base_rn <= 0:
+        return max(0.0, base_rn or 0.0)
+    rn = base_rn * (adr / base_adr) ** (eps or 0.0)
+    return max(0.0, min(rn, cap) if cap is not None else rn)
+
+
 # ------------------------------------------------------------------ 메인
-def build(daily_path, folders):
+def build(daily_path, folders, bs_path=None):
     ty_asof, inv = load_inventory(daily_path)
     if not ty_asof:
         raise SystemExit('daily_booking.json 보고일 없음')
     ly_cut = ty_asof - timedelta(days=364)
     ty_months = sorted(inv.keys())
+    whole, bs_date, bs_ly = load_whole(bs_path or (ROOT / 'docs' / 'data' / 'booking_status_detail.json'), set(ty_months))
+    # 사업장 전체 값은 같은 보고일(±2일) 것만 사용 — 작년 기준일이 어긋나면 비교가 틀어짐
+    if not bs_date or abs((datetime.strptime(bs_date, '%Y-%m-%d').date() - ty_asof).days) > 2:
+        whole = {}
     ly_of = {ym: f"{int(ym[:4]) - 1}{ym[4:]}" for ym in ty_months}
     cur, lys, lyf, votes = parse_raw(folders, ty_months, list(ly_of.values()), ty_asof, ly_cut)
     all_votes = defaultdict(Counter)
@@ -388,11 +466,13 @@ def build(daily_path, folders):
                         continue
                     _, uns = avail_unsold(rn, occ, cap)
                     dates.append([day, date_type(votes, disp, dd.strftime('%Y%m%d'), all_votes), round(uns), occ, rn])
-            props[disp] = {'seg': seg, 'ly_days': dict(ly_days), 'dates': dates}
+            props[disp] = {'seg': seg, 'ly_days': dict(ly_days), 'dates': dates,
+                           'whole': (whole.get(ym) or {}).get(disp)}
         months[ym] = {'ly_ym': lym, 'props': props}
     meta = {'built': datetime.now().strftime('%Y-%m-%d %H:%M'), 'ty_asof': ty_asof.isoformat(), 'ly_asof': ly_cut.isoformat(),
-            'months': ty_months, 'segs': list(GS),
-            'rule': '작년 같은 시점(−364일) 이후 GS 순증 판매의 유형별 일평균·ADR × 올해 온북 속도·요금 수준, 날짜별 빈 객실(전 세그) 한도',
+            'whole_asof': bs_date if whole else None, 'whole_ly_asof': bs_ly if whole else None,
+            'months': ty_months, 'segs': list(GS), 'elasticity': ELASTICITY,
+            'rule': '작년 같은 시점(−364일) 이후 GS 순증 판매량(유형별 일평균, 속도 배수 없음)·ADR × 올해 요금 수준, 날짜별 빈 객실(전 세그) 한도',
             'types': {'w': '주중', 'e': '주말·연휴'}, 'label': '대외비·관리자용 · 가이드는 추정'}
     return {'meta': meta, 'months': months}
 
