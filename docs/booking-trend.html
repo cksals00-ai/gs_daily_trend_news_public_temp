@@ -1475,6 +1475,21 @@ document.addEventListener('DOMContentLoaded', loadData);
     srenderDiag(d);
     resetSlider(); ssim();
   }
+  // 세그별 채널 고정 묶음: OTA=놀·여기어때·스마트인피니·네이버·타이드스퀘어·기타 / GOTA=아고다·트립닷컴·트립비토즈·익스피디아·부킹닷컴·기타
+  const STRAT_CH_GROUPS={
+    'OTA':[['놀',/놀유니버스|야놀자/],['여기어때',/여기어때/],['스마트인피니',/스마트인피니/],['네이버',/네이버/],['타이드스퀘어',/타이드스퀘어/]],
+    'G-OTA':[['아고다',/아고다/],['트립닷컴',/트립닷컴/],['트립비토즈',/트립비토즈/],['익스피디아',/익스피디아/],['부킹닷컴',/부킹닷컴/]]};
+  function stratChannelGroups(seg, ags){
+    const defs=STRAT_CH_GROUPS[seg]||[];
+    const mk=nm=>({nm, cur:[0,0], lys:[0,0], lyf:[0,0], members:[]});
+    const out=defs.map(([lab])=>mk(lab)), etc=mk('기타');
+    Object.entries(ags||{}).forEach(([nm,v])=>{
+      const i=defs.findIndex(([,re])=>re.test(nm)); const g=i>=0?out[i]:etc;
+      ['cur','lys','lyf'].forEach(k=>{ const a=(v&&v[k])||[0,0]; g[k][0]+=a[0]||0; g[k][1]+=a[1]||0; });
+      if(i<0) etc.members.push(nm);
+    });
+    return out.concat([etc]);
+  }
   function srenderDiag(d){
     const ps=propSel(); const pick=segSel();
     let sd, agP, hasAgents;
@@ -1520,14 +1535,16 @@ document.addEventListener('DOMContentLoaded', loadData);
         +cel(o.rns_fcst||0,o.rev_fcst||0,{})+`</tr>`;
       const ags=(A[x]&&A[x].agents)||{};
       if(hasAgents&&(x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
-        const ents=Object.entries(ags); const tot=ents.reduce((a,[,v])=>a+((v.cur&&v.cur[0])||0),0)||1;
+        // 세그별 고정 채널 묶음(송예건 CM 2026-11-26): 지정 5곳 + 나머지 전부 '기타'(숫자 포함)
+        const groups=stratChannelGroups(x, ags);
+        const tot=groups.reduce((a,g)=>a+g.cur[0],0)||1;
         const fR=o.rns_fcst||0, fV=o.rev_fcst||0;   // 거래처 예상마감 = 채널 예상마감 × 온북비중
-        ents.slice(0,5).forEach(([nm,v])=>{ const c=v.cur||[0,0],ls=v.lys||[0,0],lf=v.lyf||[0,0]; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
+        groups.forEach(g=>{ const c=g.cur,ls=g.lys,lf=g.lyf; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
           const sh=c[0]/tot; const afR=Math.round(fR*sh), afV=Math.round(fV*sh);
-          t+=`<tr class="part"><td>${nm} <span class="sh">${(sh*100).toFixed(0)}%</span></td>`
+          const tip=g.members.length?` title="${g.members.join(' · ')}"`:'';
+          t+=`<tr class="part"><td${tip}>${g.nm}${g.nm==='기타'&&g.members.length?` <span class="sh">${g.members.length}곳</span>`:''} <span class="sh">${(sh*100).toFixed(0)}%</span></td>`
             +`<td class="stcell">–</td>`
             +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+cel(afR,afV,{})+`</tr>`; });
-        if(ents.length>5) t+=`<tr class="part"><td>기타 ${ents.length-5}곳</td><td colspan="5"></td></tr>`;
       }
     });
     t+=`</tbody></table>`;
