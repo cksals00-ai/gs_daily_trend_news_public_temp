@@ -36,7 +36,8 @@ RAW_DB_DIR = PROJECT_DIR / 'data' / 'raw_db'
 OUTPUT_PATH = PROJECT_DIR / 'docs' / 'data' / 'inbound_enriched.json'
 KEYIN_PATH = PROJECT_DIR / 'docs' / 'data' / 'inbound_partner_nationality_keyin.json'
 
-YEARS = ['2022', '2023', '2024', '2025', '2026']
+# raw_db/<연도> 디렉터리 — 2022 ~ 올해+1 (없는 연도는 건너뜀)
+YEARS = [str(y) for y in range(2022, datetime.now().year + 2)]
 
 # 매핑 자체가 의미 없는 회원명 fallback (키인 JSON 의 unmappable 섹션이 비어있을 때만 사용).
 # 운영 데이터는 docs/data/inbound_partner_nationality_keyin.json 의 "unmappable" 섹션이 정답.
@@ -132,13 +133,32 @@ SPEC_43 = {
     'btype': 'booking',
     'idx_sell': 1, 'idx_prop': 3, 'idx_member_no': 5, 'idx_member_name': 6,
     'idx_user': 7, 'idx_code_num': 12, 'idx_night_rate': 26, 'idx_rooms': 28,
+    'idx_agent_name': 40,
 }
 # 44 (취소) 컬럼 인덱스 — KEY_RSV_NO 없음
 SPEC_44 = {
     'btype': 'cancel',
     'idx_sell': 0, 'idx_prop': 3, 'idx_member_no': 4, 'idx_member_name': 5,
     'idx_user': 6, 'idx_code_num': 11, 'idx_night_rate': 23, 'idx_rooms': 25,
+    'idx_agent_name': 35,
 }
+
+# 2026-12 투숙분부터 회원명이 포괄코드('인바운드(전략여행사)'·'인바운드(그룹)'·'인바운드(FIT)')로
+# 들어오고, 실제 거래처는 이용자명('더원이화여행사(홍콩)') / AGENT명('더원이화여행사') 컬럼에 있다.
+GENERIC_INBOUND_RE = re.compile(r'^인바운드\s*\(')
+
+
+def resolve_generic_member(member_name, user_name, agent_name):
+    """포괄 회원명이면 실제 거래처명으로 치환. 이용자명에 (국적) 있으면 우선, 없으면 AGENT명."""
+    if not GENERIC_INBOUND_RE.match(member_name or ''):
+        return member_name
+    user = (user_name or '').strip().lstrip('#*').strip()
+    if user and not GENERIC_INBOUND_RE.match(user) and extract_country_from_name(user):
+        return user
+    agent = (agent_name or '').strip().lstrip('#*').strip()
+    if agent:
+        return agent
+    return member_name
 
 
 def discover_files():
@@ -349,6 +369,11 @@ def iter_inbound_rows(specs):
                 stay_month = sell_date[:6]
                 year = stay_month[:4]
                 member_name = parts[spec['idx_member_name']].strip()
+                _ia, _iu = spec.get('idx_agent_name'), spec.get('idx_user')
+                member_name = resolve_generic_member(
+                    member_name,
+                    parts[_iu] if _iu is not None and _iu < len(parts) else '',
+                    parts[_ia] if _ia is not None and _ia < len(parts) else '')
                 # 이벤트/단체성 행사 제외 (code=58 이지만 여행사 거래처가 아님)
                 if EVENT_KEYWORD_RE.search(member_name):
                     n_event += 1

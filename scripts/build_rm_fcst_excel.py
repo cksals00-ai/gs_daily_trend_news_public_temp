@@ -213,6 +213,34 @@ def build_sosaup_workbook(props, target, sos, sos_meta, d, series):
 OTB_JSON = REPO / "docs" / "data" / "otb_data.json"
 
 
+def _now_kst():
+    """데몬이 UTC 로 돌아도 월 경계가 어긋나지 않게 항상 KST 기준 현재시각."""
+    from datetime import timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=9)))
+
+
+def _otb_months(year):
+    """otb_data 의 연도별 월 맵. allMonthsByYear[연도] 우선, 없으면 allMonths(기준연도)."""
+    try:
+        o = json.loads(OTB_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return (o.get("allMonthsByYear") or {}).get(str(year)) or o.get("allMonths", {})
+
+
+def _sos_block(sos_all, ym):
+    """소사업 비율 블록. 해당 월이 없으면(예: 2027-01) 가장 가까운 과거 연도의 같은 월 비율을 쓴다
+    (소사업 = 객실수 × 전년비율 정의와 동일)."""
+    if ym in sos_all:
+        return sos_all[ym]
+    y, m = int(ym[:4]), ym[5:7]
+    for py in range(y - 1, y - 4, -1):
+        blk = sos_all.get(f"{py}-{m}")
+        if blk:
+            return dict(blk, fallback_month=blk.get("fallback_month") or f"{py}-{m}")
+    return {}
+
+
 def compute_monthly_sosaup(target, sos_all, props, closed_before=None):
     """월별 소사업 누적 — 마감월=온북(rns_actual), 당월(미마감)=RM FCST.
 
@@ -227,14 +255,11 @@ def compute_monthly_sosaup(target, sos_all, props, closed_before=None):
     year, cur_m = int(target.split("-")[0]), int(target.split("-")[1])
     if closed_before is None:
         closed_before = cur_m
-    try:
-        otb = json.loads(OTB_JSON.read_text(encoding="utf-8")).get("allMonths", {})
-    except Exception:
-        otb = {}
+    otb = _otb_months(year)
     series, cum, cur = [], {s: 0.0 for s in SEGS}, {s: 0.0 for s in SEGS}
     for m in range(1, cur_m + 1):
         ym = f"{year}-{m:02d}"
-        ratios = sos_all.get(ym, {}).get("ratios", {})
+        ratios = _sos_block(sos_all, ym).get("ratios", {})
         closed = m < closed_before
         bps = otb.get(str(m), {}).get("byPropertySegment", {})
         seg_tot = {s: 0.0 for s in SEGS}
@@ -264,10 +289,7 @@ def _gs_room_rev(target, closed_before, props):
     year, cur_m = int(target.split("-")[0]), int(target.split("-")[1])
     if closed_before is None:
         closed_before = cur_m
-    try:
-        otb = json.loads(OTB_JSON.read_text(encoding="utf-8")).get("allMonths", {})
-    except Exception:
-        otb = {}
+    otb = _otb_months(year)
 
     def srev(seg, m, field):
         rows = otb.get(str(m), {}).get("byPropertySegment", {}).get(seg, [])
@@ -385,9 +407,25 @@ def main():
     regions = d.get("regions", {})
     covered = d.get("_months_covered", [])
 
-    cur = datetime.now().strftime("%Y-%m")
+    now = _now_kst()
+    cur = now.strftime("%Y-%m")
     # 누계 '마감월 컷오프'(이 달 미만만 온북). 평소엔 target월과 동일.
     closed_before = None
+
+    def _cut_for(ym):
+        # 익월 뷰: 실제 당월도 미마감 → 온북컷 = 실제 now 월. 대상월이 익년이면 마감월 없음(1).
+        return now.month if int(ym[:4]) == now.year else 1
+
+    # 월 마지막 주(말일 포함 7일)는 gs-weekly.html 과 동일하게 익월을 대상월로 자동 전환
+    # (12월 → 익년 1월). 익월 RM FCST 가 아직 없으면 당월 유지.
+    import calendar as _cal
+    if now.day >= _cal.monthrange(now.year, now.month)[1] - 6:
+        _ny, _nm = (now.year + 1, 1) if now.month == 12 else (now.year, now.month + 1)
+        _nxt = f"{_ny}-{_nm:02d}"
+        if _nxt in covered:
+            cur = _nxt
+            closed_before = _cut_for(_nxt)
+            print(f"ℹ 월 마지막 주 — 대상월 자동 전환: {_nxt} (누계 온북컷={closed_before}월 미만)")
     # [이번주 한정 토글] data/rm_fcst_view_override.txt 에 'YYYY-MM' 한 줄이 있으면
     # 그 달을 대상월로 강제(주간회의를 익월 기준으로 볼 때 사용). 파일 삭제 시 평소(now) 복귀.
     # gs-weekly.html 의 WEEK_VIEW_OVERRIDE 와 짝을 이룸. (영구 롤오버 로직은 변경하지 않음)
@@ -398,7 +436,7 @@ def main():
         _ovr = _ovr_path.read_text(encoding="utf-8").strip()
         if _ovr in covered:
             cur = _ovr
-            closed_before = datetime.now().month
+            closed_before = _cut_for(_ovr)
             print(f"⚠ [이번주 한정] 대상월 오버라이드 적용: {_ovr} "
                   f"(누계 온북컷={closed_before}월 미만 / 원복: {_ovr_path} 삭제)")
     target = cur if cur in covered else (covered[0] if covered else cur)
@@ -411,7 +449,7 @@ def main():
     if sos_path.exists():
         sj = json.loads(sos_path.read_text(encoding="utf-8"))
         sos_all = sj.get("by_month", {})
-        blk = sos_all.get(target, {})
+        blk = _sos_block(sos_all, target)
         sos = blk.get("ratios", {})
         sos_meta = {"ref": blk.get("ref_year_month", ""),
                     "fallback": blk.get("fallback_month", ""),
