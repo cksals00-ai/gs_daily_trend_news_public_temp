@@ -390,8 +390,12 @@ let YEAR_MODE = 'samePeriod'; // 'closing' = 전년 마감실적, 'samePeriod' =
 const SNAPSHOT_LS_KEY = 'gs_weekly_snapshots_v1';
 const DATA_BASE = './data/';
 
+// 캐시버스터 필수 — 없으면 브라우저가 며칠 묵은 JSON 을 써서 갱신된 수치가 화면에 안 나온다.
+// 대용량 db_aggregated(13MB gz)만 시간 단위 키, 나머지는 매번 새로 받는다.
 async function loadJSON(url) {
-  const r = await fetch(DATA_BASE + url);
+  const big = url.indexOf('db_aggregated') === 0;
+  const bust = big ? '?v=' + new Date().toISOString().slice(0, 13) : '?t=' + Date.now();
+  const r = await fetch(DATA_BASE + url + bust, big ? undefined : { cache: 'no-store' });
   if (!r.ok) throw new Error(url + ' ' + r.status);
   return r.json();
 }
