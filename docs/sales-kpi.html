@@ -1130,10 +1130,22 @@ let allPropNames = [];             // otb_data 전체 사업장명 (props:'ALL' 
 let activeYear = '2026';   // 연도 토글(allMonthsByYear 존재 시). 기본 2026.
 
 // 선택 연도의 월 스냅샷/summary/byProperty를 rawData에 스왑(allMonthsByYear는 보존 → 되돌리기 가능)
+// 목표로 채운 자리표시 예상(fcst_src·fcst_source='budget', 연간 'annual')은 예상이 아님 → 비움.
+// '예상 = 목표'로 보이지 않게 (2026-11-27). RM이 있는 달은 그대로.
+function clearBudgetFcst(snap) {
+  if (!snap || typeof snap !== 'object') return;
+  const nul = o => { ['rns_fcst','rev_fcst','adr_fcst','fcst_achievement','rev_fcst_achievement','adr_fcst_achievement'].forEach(k => { o[k] = null; }); };
+  const isPh = v => v === 'budget' || v === 'annual';
+  if (snap.summary && isPh(snap.summary.fcst_src)) nul(snap.summary);
+  Object.values(snap.segmentData || {}).forEach(sd => { if (sd && isPh(sd.fcst_src)) nul(sd); });
+  (snap.byProperty || []).forEach(p => { if (p && p.fcst_source === 'budget') nul(p); });
+  Object.values(snap.byPropertySegment || {}).forEach(list => (list || []).forEach(p => { if (p && p.fcst_source === 'budget') nul(p); }));
+}
 function setActiveYear(y) {
   if (!rawData || !rawData.allMonthsByYear || !rawData.allMonthsByYear[y]) return;
   activeYear = y;
   const ay = rawData.allMonthsByYear[y];
+  if (!ay._fcstClean) { Object.keys(ay).forEach(k => { if (k !== '_fcstClean') clearBudgetFcst(ay[k]); }); ay._fcstClean = true; }
   rawData.allMonths = ay;
   const snap = ay['summary'] || ay['0'];
   if (snap) { rawData.summary = snap.summary; rawData.byProperty = snap.byProperty; }

@@ -407,6 +407,43 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
     #strat .strat-slider{position:relative}
     #strat .strat-gmark{position:absolute;width:2px;background:var(--info);pointer-events:none;border-radius:1px}
     #strat .strat-gmark span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--info);white-space:nowrap;font-family:var(--mono);font-weight:700}
+    #strat .strat-tmark{position:absolute;width:2px;background:#cfd3da;pointer-events:none;border-radius:1px;opacity:.85}
+    #strat .strat-tmark span{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:9.5px;color:#cfd3da;white-space:nowrap;font-family:var(--mono);font-weight:700}
+    /* 예상 마감 타일·계산 상자 (2026-11-27: 흐린 글씨로 이어 쓰지 않고 숫자를 또렷하게) */
+    #strat .fc-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 8px}
+    @media (max-width:760px){#strat .fc-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    #strat .fc-tile{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:rgba(255,255,255,.025)}
+    #strat .fc-tile .k{font-size:11px;color:var(--ink-muted);font-weight:700;letter-spacing:.01em}
+    #strat .fc-tile .n{font-family:var(--mono);font-size:21px;font-weight:800;color:var(--ink);margin:3px 0 2px;line-height:1.15}
+    #strat .fc-tile .n .u{font-size:11.5px;font-weight:700;color:var(--ink-muted);margin-left:2px}
+    #strat .fc-tile .s{font-size:11.5px;color:var(--ink-muted);line-height:1.5}
+    #strat .fc-tile .s b{color:var(--ink);font-family:var(--mono)}
+    #strat .fc-tile .pos{color:#7fd8a0}#strat .fc-tile .neu{color:#e6b970}#strat .fc-tile .neg{color:#ef9a9a}
+    #strat .fc-eqs{margin:6px 0 10px;display:flex;flex-direction:column;gap:6px}
+    #strat .fc-eq{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+    #strat .fc-eq .bx{display:inline-flex;flex-direction:column;align-items:flex-start;border:1px solid var(--rule);border-radius:6px;padding:3px 9px;background:rgba(255,255,255,.02)}
+    #strat .fc-eq .bx i{font-style:normal;font-size:10.5px;color:var(--ink-muted);font-weight:600}
+    #strat .fc-eq .bx b{font-family:var(--mono);font-size:13.5px;color:var(--ink);font-weight:700}
+    #strat .fc-eq .bx.res{border-color:var(--info);background:rgba(90,159,196,.08)}
+    #strat .fc-eq .bx.res b{color:var(--info)}
+    #strat .fc-eq .op{font-family:var(--mono);font-weight:800;font-size:14px;color:var(--ink-muted)}
+    #strat .fc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:760px){#strat .fc-grid2{grid-template-columns:1fr}}
+    #strat .fc-warn{font-size:12px;color:#ef9a9a;margin-top:6px}
+    #strat .fc-sum{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:6px 0 4px}
+    #strat .fc-sum th{font-size:11px;color:var(--ink-muted);font-weight:700;text-align:right;padding:3px 10px;border-bottom:1px solid var(--rule)}
+    #strat .fc-sum td{padding:5px 10px;text-align:right;color:var(--ink);border-bottom:1px solid var(--rule)}
+    #strat .fc-sum th:first-child,#strat .fc-sum td:first-child{text-align:left;font-family:var(--sans,inherit);color:var(--ink-muted);font-weight:700;font-size:12px}
+    #strat .fc-sum tbody tr:first-child td{font-size:17px;font-weight:800}
+    #strat .fc-sum tbody tr:first-child td:first-child{color:var(--info);font-size:12.5px}
+    #strat .fc-sum .u{font-size:10.5px;color:var(--ink-muted);margin-left:1px;font-weight:600}
+    #strat .fc-sum tr.ach td{font-weight:800}
+    #strat .fc-sum .pos{color:#7fd8a0}#strat .fc-sum .neu{color:#e6b970}#strat .fc-sum .neg{color:#ef9a9a}
+    #strat .strat-tb tr.tot td{background:rgba(255,255,255,.04);border-bottom:2px solid var(--rule)}
+    #strat .strat-logic{margin-top:14px;padding:10px 12px;border:1px solid var(--rule);border-radius:7px;font-size:11.5px;line-height:1.7;color:var(--ink-muted)}
+    #strat .strat-logic b{color:var(--ink)}
+    #strat .strat-logic ul{margin:4px 0 2px;padding-left:16px}
+    #strat .strat-logic li{margin:1px 0}
     </style>
     <div class="chart-card" id="strat">
       <div class="chart-card-header">
@@ -425,12 +462,23 @@ table.pivot td.this-year{color:var(--gold-bright);font-weight:700;}
           <span>ADR 기준</span>
           <button type="button" class="chip active" data-simmode="add" id="strat-mode-add">추가 판매분</button>
           <button type="button" class="chip" data-simmode="all" id="strat-mode-all">월 전체 평균</button>
-          <span id="strat-mode-help">추가 판매분 = 이미 들어온 온북 매출은 그대로 두고, 남은 목표를 새로 들어올 예약의 ADR로 채움(현실적) · 월 전체 평균 = 온북 포함 그 달 평균 ADR을 그 값으로 가정</span>
+          <span id="strat-mode-help" style="color:var(--ink-muted)">추가 판매분 = 앞으로 들어올 예약의 ADR · 월 전체 평균 = 온북 포함 그 달 평균 ADR</span>
         </div>
         <div class="strat-action" id="strat-action"></div>
         <div class="strat-gauge" id="strat-gauge"><i id="strat-gfill"></i><div class="cur" id="strat-gcur"></div></div>
         <div class="glab"><span>현재 온북 <b id="strat-gcurl"></b></span><span>필요 <b id="strat-gneedl"></b></span></div>
         <div class="strat-feas" id="strat-feas"></div>
+        <div class="strat-logic" id="strat-logic">
+          <b>예상 마감 계산 방법</b> · 2024~2026 실적으로 검증 · 대외비·관리자용
+          <ul>
+            <li><b>예상 객실</b> = 온북 + 남은 판매. 남은 판매 = (작년 이 시점 이후 판매 + RM 기준) ÷ 2, RM이 없으면 작년 이 시점 이후 판매. 근거가 없으면 비움 — 목표를 예상으로 쓰지 않음.</li>
+            <li><b>동기간 차이</b>는 실수로 반영(이른 시점의 %를 마감 전체에 곱하지 않음). 동기간 −25% 이하였던 달도 실제 마감은 작년 대비 평균 −6%.</li>
+            <li><b>남은 판매 ADR</b> = 작년 이 시점 이후 ADR × 올해 요금 수준(1.0~1.2배). <b>예상 매출</b> = 온북 매출 + 남은 판매 × 남은 판매 ADR.</li>
+            <li>마감 ADR은 보통 온북보다 1~3만원 낮음(1~30일 전 −1.1만, 31~60일 전 −2.8만). 올해 온북 ADR이 작년보다 15%↑면 평균 −3.5만.</li>
+            <li><b>ADR을 바꾸면</b> 남은 판매가 가격 반응만큼 변함(ADR 10% 인하 시 OTA 약 +9% · GOTA +2% · 인바운드 0), 빈 객실까지만. 매출·마감 ADR도 함께 바뀜.</li>
+            <li>과거 오차: 객실 1~30일 전 약 8% · 31~60일 전 약 10%, 마감 ADR 약 5~6%.</li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -523,7 +571,95 @@ var _LY = ((new Date().getFullYear() - 1) % 100) + 'Y';
 let db = null;
 let activeYear = new Date().getFullYear().toString();
 let trendChart = null;
-let OTBD = null;   // otb_data.json — 목표·FCST 오버레이용
+let OTBD = null;   // otb_data.json — 목표·온북·RM 예상
+let AGD = null;    // strategy_agent.json — 전년동기(작년 같은 시점 온북)·전년마감
+
+/* ── 예상 마감 공용 규칙 (2026-11-27, 과거 검증 scripts/backtest_forecast.py · 정본 build_adr_guide.forecast_rule) ──
+   작년흐름 = 올해 온북 + (작년 마감 − 작년 같은 시점 온북)        ← 동기간 차이를 '실수'로 반영
+   예상 객실 = (RM + 작년흐름) ÷ 2 · RM 없으면 작년흐름 · 둘 다 없으면 없음(목표로 채우지 않음)
+   남은 판매 ADR = 작년 이 시점 이후 ADR × 요금 수준(올해 온북 ADR ÷ 작년 같은 시점 ADR, 1.0~1.2배)
+   예상 매출 = 온북 매출 + 남은 판매 객실 × 남은 판매 ADR · 예상 마감 ADR = 예상 매출 ÷ 예상 객실
+   ADR 조정 시: 남은 판매 객실 = 기준 × (설정 ADR ÷ 기준 ADR)^가격 반응, 남은 빈 객실 한도 */
+const GSN_FC = { PRICE: [1.0, 1.2], EPS: { 'OTA': -0.8, 'G-OTA': -0.2, 'Inbound': 0 } };
+function gsnFcst(cur, lys, lyf, rm) {
+  const hasLy = !!(lys && lyf && lys[0] > 0 && lyf[0] > 0);
+  const add = hasLy ? cur[0] + (lyf[0] - lys[0]) : null;
+  const rmv = (rm != null && rm > 0) ? rm : null;
+  let rn, src;
+  if (rmv != null && add != null) { rn = (rmv + add) / 2; src = 'mix'; }
+  else if (add != null) { rn = add; src = 'ly'; }
+  else if (rmv != null) { rn = rmv; src = 'rm'; }
+  else return null;
+  let lyPick = null, f = 1, pickAdr = null;
+  if (hasLy) {
+    const pr = lyf[0] - lys[0], pv = lyf[1] - lys[1], lyfAdr = lyf[1] / lyf[0];
+    lyPick = pr >= 30 ? pv / pr : lyfAdr;
+    if (!(lyPick >= 0.33 * lyfAdr && lyPick <= 3 * lyfAdr)) lyPick = lyfAdr;
+    if (cur[0] > 0 && lys[1] > 0) f = Math.max(GSN_FC.PRICE[0], Math.min(GSN_FC.PRICE[1], (cur[1] / cur[0]) / (lys[1] / lys[0])));
+    pickAdr = lyPick * f;
+  } else if (cur[0] > 0) pickAdr = cur[1] / cur[0];
+  const pick = rn - cur[0], rev = cur[1] + pick * (pickAdr || 0);
+  return { rn, rev, adr: rn > 0 ? rev / rn : null, add, rm: rmv, src, pick, pickAdr, lyPick, f };
+}
+// 선택 연·월·세그(·사업장 display Set) → 세그별 규칙 적용 후 합산. 마감월 = 실적 그대로.
+function gsnFcstFor(otb, ag, year, month, segs, props) {
+  const md = otb && otb.allMonthsByYear && (otb.allMonthsByYear[String(year)] || {})[String(month)];
+  if (!md) return null;
+  const ymk = String(year) + String(month).padStart(2, '0');
+  const base = ((otb.meta && otb.meta.baseDate) || '').replace(/-/g, '').slice(0, 6);
+  const closed = !!base && ymk < base;
+  const o = { rn: 0, rev: 0, cur: [0, 0], lys: [0, 0], lyf: [0, 0], add: 0, rm: 0, pick: 0, pickRev: 0, lyPickRn: 0, lyPickRev: 0,
+              hasAdd: true, hasRm: true, closed, srcs: new Set(), epsW: 0, epsN: 0, segs: {} };
+  for (const seg of segs) {
+    let c = [0, 0], l = [0, 0], f = [0, 0], rm = 0, rmHas = false;
+    const bps = (md.byPropertySegment || {})[seg] || [];
+    if (props) {
+      bps.forEach(x => { if (!props.has(x.name)) return; c[0] += x.rns_actual || 0; c[1] += x.rev_actual || 0; if (x.rm_fcst_rn != null) { rm += x.rm_fcst_rn; rmHas = true; } });
+      const P = (ag && ag._prop && ag._prop[ymk]) || {};
+      props.forEach(d => { const a = (P[d] || {})[seg]; if (!a) return; if (a.lys) { l[0] += a.lys[0] || 0; l[1] += a.lys[1] || 0; } if (a.lyf) { f[0] += a.lyf[0] || 0; f[1] += a.lyf[1] || 0; } });
+    } else {
+      const sd = (md.segmentData || {})[seg] || {}; c = [sd.rns_actual || 0, sd.rev_actual || 0];
+      bps.forEach(x => { if (x.rm_fcst_rn != null) { rm += x.rm_fcst_rn; rmHas = true; } });
+      const a = ((ag && ag[ymk]) || {})[seg]; if (a) { if (a.lys) l = [a.lys[0] || 0, a.lys[1] || 0]; if (a.lyf) f = [a.lyf[0] || 0, a.lyf[1] || 0]; }
+    }
+    const r = closed ? { rn: c[0], rev: c[1], add: null, rm: null, src: 'actual', pick: 0, pickAdr: null, lyPick: null, f: 1 }
+                     : gsnFcst(c, l, f, rmHas ? rm : null);
+    if (!r) return null;            // 한 세그라도 예상 불가면 합계도 없음(목표로 메우지 않음)
+    o.segs[seg] = r; o.srcs.add(r.src);
+    o.rn += r.rn; o.rev += r.rev; o.cur[0] += c[0]; o.cur[1] += c[1];
+    o.lys[0] += l[0]; o.lys[1] += l[1]; o.lyf[0] += f[0]; o.lyf[1] += f[1];
+    if (r.add != null) o.add += r.add; else o.hasAdd = false;
+    if (r.rm != null) o.rm += r.rm; else o.hasRm = false;
+    o.pick += r.pick; o.pickRev += r.pick * (r.pickAdr || 0);
+    if (f[0] - l[0] > 0) { o.lyPickRn += f[0] - l[0]; o.lyPickRev += f[1] - l[1]; }
+    const w = Math.max(0, r.pick); o.epsW += w * (GSN_FC.EPS[seg] || 0); o.epsN += w;
+  }
+  o.adr = o.rn > 0 ? o.rev / o.rn : null;
+  o.pickAdr = o.pick > 0 ? o.pickRev / o.pick : (o.cur[0] ? o.cur[1] / o.cur[0] : null);
+  o.lyPick = o.lyPickRn > 0 ? o.lyPickRev / o.lyPickRn : null;
+  o.eps = o.epsN > 0 ? o.epsW / o.epsN : 0;
+  o.src = o.closed ? 'actual' : (o.srcs.size === 1 ? [...o.srcs][0] : 'mixed');
+  if (!o.hasAdd) o.add = null; if (!o.hasRm) o.rm = null;
+  return o;
+}
+// ADR 조정 → 예상 객실·매출. mode 'add' = 설정값이 남은 판매 ADR, 'all' = 그 달 평균 ADR. cap = 남은 빈 객실(없으면 null)
+function gsnSimAt(fc, A, mode, cap) {
+  const c = fc.cur, A0 = fc.pickAdr, P0 = fc.pick, eps = fc.eps || 0;
+  if (!(P0 > 0) || !(A0 > 0)) {   // 남은 판매 없음·순감(취소) → 객실 고정, '월 전체 평균'만 평균 ADR로 매출 재평가
+    const rn = fc.rn, rev = mode === 'all' ? rn * A : fc.rev;
+    return { rn, rev, adr: rn > 0 ? rev / rn : null, pick: P0, pickAdr: A0 };
+  }
+  const P = a => { let p = a > 0 ? P0 * Math.pow(a / A0, eps) : P0; if (cap != null) p = Math.min(p, cap); return Math.max(0, p); };
+  let a = A;
+  if (mode === 'all') {
+    const avg = x => (c[1] + P(x) * x) / (c[0] + P(x));
+    let lo = A0 * 0.2, hi = A0 * 5;
+    if (avg(lo) >= A) a = lo; else if (avg(hi) <= A) a = hi;
+    else { for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (avg(m) < A) lo = m; else hi = m; } a = (lo + hi) / 2; }
+  }
+  const p = P(a), rn = c[0] + p, rev = c[1] + p * a;
+  return { rn, rev, adr: rn > 0 ? rev / rn : null, pick: p, pickAdr: a };
+}
 let activeSegment = '전체';   // (호환용) segLabelTxt()로 동기화
 // 세그먼트 멀티선택: selectedSegs = GS_SEGS 부분집합. 전체(또는 3개 전부)=전체 모드
 let selectedSegs = ['OTA', 'G-OTA', 'Inbound'];
@@ -778,14 +914,17 @@ function render() {
     for (let m = 1; m <= 12; m++) {
       const md = amy[String(m)];
       if (!md || !md.summary) { budArr.push(null); fcstArr.push(null); continue; }
-      if (all) { budArr.push(md.summary.rns_budget || null); fcstArr.push(md.summary.rns_fcst || null); }
-      else { let b = 0, f = 0; segList().forEach(sg => { const sd = (md.segmentData || {})[sg]; if (sd) { b += sd.rns_budget || 0; f += sd.rns_fcst || 0; } }); budArr.push(b || null); fcstArr.push(f || null); }
+      if (all) budArr.push(md.summary.rns_budget || null);
+      else { let b = 0; segList().forEach(sg => { const sd = (md.segmentData || {})[sg]; if (sd) b += sd.rns_budget || 0; }); budArr.push(b || null); }
+      // 예상 마감 = 공용 규칙(RM·작년흐름). 예상할 근거가 없는 달은 빈칸 — 목표를 예상으로 쓰지 않음
+      const fc = gsnFcstFor(OTBD, AGD, activeYear, m, segList(), null);
+      fcstArr.push(fc ? Math.round(fc.rn) : null);
     }
     datasets.push({ label: '목표', data: budArr, borderColor: '#cfd3da', backgroundColor: 'transparent', borderWidth: 2, borderDash: [7, 4], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
     overlayLabels.push(['목표', '#cfd3da']);
     if (fcstArr.some(v => v != null)) {
-      datasets.push({ label: '예상(FCST)', data: fcstArr, borderColor: '#5a9fc4', backgroundColor: 'transparent', borderWidth: 2, borderDash: [2, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false });
-      overlayLabels.push(['예상(FCST)', '#5a9fc4']);
+      datasets.push({ label: '예상 마감', data: fcstArr, borderColor: '#5a9fc4', backgroundColor: 'transparent', borderWidth: 2, borderDash: [2, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false, spanGaps: false });
+      overlayLabels.push(['예상 마감', '#5a9fc4']);
     }
   }
 
@@ -1084,12 +1223,12 @@ function renderPaceChart() {
     const curDs = datasets.find(ds => ds.label && ds.label.indexOf(activeYear) === 0);
     const _md = OTBD && OTBD.allMonthsByYear[activeYear] && OTBD.allMonthsByYear[activeYear][String(activePaceMonth)]; // otb 월키=비패딩
     if (curDs && curDs.data.length && _md && _md.segmentData) {
-      let fcstRN = 0;
-      segList().forEach(sg => { fcstRN += (_md.segmentData[sg] || {}).rns_fcst || 0; });
+      const _fc = gsnFcstFor(OTBD, AGD, activeYear, activePaceMonth, segList(), null);
+      const fcstRN = _fc && !_fc.closed ? Math.round(_fc.rn) : 0;   // 공용 규칙(RM·작년흐름), 근거 없으면 표시 안 함
       if (fcstRN > 0) {
         const lp = curDs.data[curDs.data.length - 1];
         const endD = new Date(parseInt(activeYear), activePaceMonth, 0).getDate() - 1;
-        datasets.push({ label: '예상 마감(FCST)', data: [{ x: lp.x, y: lp.y }, { x: endD, y: fcstRN }],
+        datasets.push({ label: '예상 마감', data: [{ x: lp.x, y: lp.y }, { x: endD, y: fcstRN }],
           borderColor: '#e6b970', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 4],
           pointRadius: c => c.dataIndex === 1 ? 4 : 0, pointBackgroundColor: '#e6b970', tension: 0, fill: false });
       }
@@ -1355,6 +1494,7 @@ async function loadData() {
     const res = await fetch('data/db_aggregated.json?t=' + Date.now());
     db = await res.json();
     try { OTBD = await (await fetch('data/otb_data.json?t=' + Date.now())).json(); } catch (_) { OTBD = null; }
+    try { AGD = await (await fetch('data/strategy_agent.json?t=' + Date.now())).json(); } catch (_) { AGD = null; }
     setText('sidebar-refresh', db.generated_at || '—');
     setText('refresh-badge', db.generated_at || '—');
     buildFilters();
@@ -1430,40 +1570,44 @@ document.addEventListener('DOMContentLoaded', loadData);
   const curADR=t=>t.rns_actual>0?t.rev_actual/t.rns_actual:(t.adr_actual||t.adr_budget||0);
   const ym=()=>SY+String(SM).padStart(2,'0');
   function sADR(v){ const t=tgtData(); if(!t)return 0; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); return lo+(hi-lo)*v/100; }
-  function resetSlider(){ const t=tgtData(); if(!t)return; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c); document.getElementById('strat-adr').value=Math.round((c-lo)/(hi-lo)*100); SADR=c; }
+  // 슬라이더 시작값 = 가이드(예상 기준 ADR) → 카드가 처음엔 기준 예상 마감을 보여줌. 가이드가 없으면 현재 온북 ADR
+  function resetSlider(){ const t=tgtData(); if(!t)return; const c=curADR(t); const lo=c*0.6,hi=Math.max(c*1.1,t.adr_budget||c);
+    const g=(typeof guideValue==='function')?guideValue():null, v=(g&&g>=lo&&g<=hi)?g:c;
+    document.getElementById('strat-adr').value=Math.round((v-lo)/(hi-lo)*100); SADR=v; }
 
-  /* ── ADR 가이드 (2026-11-26 요청): 작년 같은 시점 이후 실제 판매 흐름 + 올해 남은 주말·주중 재고 ──
-     data/adr_guide.json(scripts/build_adr_guide.py, guide_calc와 동일 알고리즘)
-     1) 사업장별 작년 같은 시점(−364일) 이후 같은 세그 순증 판매를 주중/주말·연휴로 나눠 하루 평균·ADR 산출
-     2) 올해 속도(온북/작년 동기 온북)를 곱해 남은 날짜마다 배분, 그날 빈 객실(전 세그, Daily Booking Report) 한도
-     3) ADR은 올해 온북 요금 수준(작년 동기 대비, 유형별)을 곱함 → 남은 판매 ADR·예상 마감 ADR  */
-  let GUIDE=null, GUIDE_CUR=null;
-  const G_MIN=100, G_PACE=[0.5,2.0], G_PRICE=[0.85,1.2];
+  /* ── ADR 가이드·예상 마감 (2026-11-27 개정 · 과거 2024~2026 실적 검증 기반) ──
+     · 주요 숫자(예상 객실·남은 판매 ADR·예상 마감 ADR·매출) = 공용 규칙 gsnFcstFor — 진단표·카드·차트와 같은 숫자
+     · 날짜 유형 표(주중/주말·연휴 남은 날짜·OCC·빈 객실)와 사업장 전체 OCC = data/adr_guide.json (build_adr_guide.guide_calc와 동일)
+     · 슬라이더 ADR → gsnSimAt(가격 반응 OTA −0.8·GOTA −0.2·인바운드 0, 남은 빈 객실 한도)로 예상 객실·매출 재계산 */
+  let GUIDE=null, GUIDE_CUR=null, FC_CUR=null;
+  const G_MIN=100, G_PRICE=[1.0,1.2];
   const gClamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
   const gRatio=(a,b)=>(a[0]&&b[0]&&b[1])?(a[1]/a[0])/(b[1]/b[0]):null;
   function adrGuideCalc(node, props, segs){
     const T=['w','e'];
-    const out={cur:[0,0],lys:[0,0],lyf:[0,0],exp_rn:0,exp_rev:0,props:0,
+    const out={cur:[0,0],lys:[0,0],lyf:[0,0],exp_rn:0,exp_rev:0,props:0,unsold:0,inv_missing:0,whole:null,
       t:{w:{days:0,avail:0,onbook:0,unsold:0,pick_rn:0,pick_rev:0,exp_rn:0,exp_rev:0,capped:0},
          e:{days:0,avail:0,onbook:0,unsold:0,pick_rn:0,pick_rev:0,exp_rn:0,exp_rev:0,capped:0}}};
     const mk=()=>({w:[0,0],e:[0,0]});
     const sel={cur:mk(),lys:mk(),lyf:mk()}, rows=[];
+    const whole={cur:[0,0,0],lys:[0,0,0],lyf:[0,0,0]}; let wholeN=0;
     props.forEach(disp=>{ const pn=(node.props||{})[disp]; if(!pn) return;
       const agg={cur:mk(),lys:mk(),lyf:mk()};
       segs.forEach(s=>{ const sn=(pn.seg||{})[s]||{};
         ['cur','lys','lyf'].forEach(k=>T.forEach(t=>{ const v=((sn[k]||{})[t])||[0,0];
           agg[k][t][0]+=v[0]; agg[k][t][1]+=v[1]; sel[k][t][0]+=v[0]; sel[k][t][1]+=v[1]; })); });
+      if(pn.whole){ wholeN++; ['cur','lys','lyf'].forEach(k=>{ const w=pn.whole[k]||[0,0,0]; for(let i=0;i<3;i++) whole[k][i]+=w[i]||0; }); }
       rows.push([pn,agg]); });
+    if(wholeN) out.whole=whole;
     const tot=a=>[a.w[0]+a.e[0], a.w[1]+a.e[1]];
     const st={cur:tot(sel.cur),lys:tot(sel.lys),lyf:tot(sel.lyf)};
     out.cur=st.cur; out.lys=st.lys; out.lyf=st.lyf;
-    const selPace=st.lys[0]?gClamp(st.cur[0]/st.lys[0],...G_PACE):1;
     const selF=gClamp(gRatio(st.cur,st.lys)||1,...G_PRICE);
     const selFt={}; T.forEach(t=>{ selFt[t]=(sel.cur[t][0]>=G_MIN&&sel.lys[t][0]>=G_MIN)?gClamp(gRatio(sel.cur[t],sel.lys[t]),...G_PRICE):selF; });
     rows.forEach(([pn,agg])=>{
-      const tc=tot(agg.cur), tl=tot(agg.lys), tf=tot(agg.lyf);
+      const tl=tot(agg.lys), tf=tot(agg.lyf);
       if(tl[0]<=0||tf[0]<=0) return;
-      const pace=(tl[0]>=G_MIN&&tc[0]>=G_MIN/2)?gClamp(tc[0]/tl[0],...G_PACE):selPace;
+      out.props++;
       const per={};
       T.forEach(t=>{
         let pr=agg.lyf[t][0]-agg.lys[t][0]; const pv=agg.lyf[t][1]-agg.lys[t][1];
@@ -1474,14 +1618,14 @@ document.addEventListener('DOMContentLoaded', loadData);
         per[t]={pd:pr/ld, adr:(a||0)*f};
         out.t[t].pick_rn+=pr; out.t[t].pick_rev+=pr*(a||0);
       });
-      out.props++;
       if(pn.dates){
         pn.dates.forEach(([day,t,unsold,occ,onbook])=>{
-          const dem=per[t].pd*pace, ex=Math.min(dem,unsold), o=out.t[t];
-          o.days++; o.onbook+=onbook; o.unsold+=unsold; o.avail+=onbook+unsold;
+          const dem=per[t].pd, ex=Math.min(dem,unsold), o=out.t[t];
+          o.days++; o.onbook+=onbook; o.unsold+=unsold; o.avail+=onbook+unsold; out.unsold+=unsold;
           o.exp_rn+=ex; o.exp_rev+=ex*per[t].adr; if(dem>unsold+1e-9) o.capped++; });
       } else {
-        T.forEach(t=>{ const ex=per[t].pd*pace*Math.max(0,((pn.ly_days||{})[t])||0); out.t[t].exp_rn+=ex; out.t[t].exp_rev+=ex*per[t].adr; });
+        out.inv_missing++;
+        T.forEach(t=>{ const ex=per[t].pd*Math.max(0,((pn.ly_days||{})[t])||0); out.t[t].exp_rn+=ex; out.t[t].exp_rev+=ex*per[t].adr; });
       }
     });
     T.forEach(t=>{ out.exp_rn+=out.t[t].exp_rn; out.exp_rev+=out.t[t].exp_rev; });
@@ -1493,60 +1637,135 @@ document.addEventListener('DOMContentLoaded', loadData);
     out.close_adr=(cr+out.exp_rn)>0?(cv+out.exp_rev)/(cr+out.exp_rn):null;
     out.close_chg=(out.close_adr&&out.cur_adr)?out.close_adr/out.cur_adr-1:null;
     out.pick_vs_cur=(out.pick_adr&&out.cur_adr)?out.pick_adr/out.cur_adr-1:null;
+    const w=out.whole;
+    if(w){ const occ=k=>w[k][2]?w[k][0]/w[k][2]:null, wexp=w.cur[0]+(w.lyf[0]-w.lys[0]);
+      out.whole_occ={lys:occ('lys'),lyf:occ('lyf'),cur:occ('cur'),exp:w.cur[2]?Math.min(1,wexp/w.cur[2]):null,
+        adr_lys:w.lys[0]?w.lys[1]*1000/w.lys[0]:null, adr_lyf:w.lyf[0]?w.lyf[1]*1000/w.lyf[0]:null, adr_cur:w.cur[0]?w.cur[1]*1000/w.cur[0]:null}; }
     return out;
   }
-  const gK=v=>v?nfmt(Math.round(v/1000))+'천':'–';
+  const gK=v=>(v!=null&&isFinite(v)&&v)?nfmt(Math.round(v/1000))+'천':'–';
+  const gKd=v=>(v==null||!isFinite(v))?'–':((v>=0?'+':'−')+nfmt(Math.abs(Math.round(v/1000)))+'천');
   const gP=v=>(v==null||!isFinite(v))?'–':((v>=0?'+':'')+(v*100).toFixed(1)+'%');
+  const gO=v=>(v==null||!isFinite(v))?'–':(v*100).toFixed(1)+'%';
+  // 선택(연·월·세그·사업장) 예상 마감 — 공용 규칙. 마감월·근거 없음이면 null
+  function refreshFc(){ const fc=gsnFcstFor(OTB, AG, SY, SM, segSel(), propSel()); FC_CUR=(fc&&!fc.closed&&fc.pickAdr)?fc:null; return fc; }
+  // 선택 사업장의 남은 빈 객실 합(전 세그). 한 곳이라도 재고 정보가 없으면 한도 없음
+  function unsoldCap(){ const node=GUIDE&&GUIDE.months&&GUIDE.months[ym()]; if(!node) return null;
+    const ps=propSel(); const props=ps?[...ps]:Object.keys(node.props||{}); let s=0;
+    for(const d of props){ const pn=(node.props||{})[d]; if(!pn) continue; if(!pn.dates) return null; pn.dates.forEach(x=>{ s+=x[2]||0; }); }
+    return s; }
+  const tgtAdrOf=t=>(t&&t.rns_budget>0)?t.rev_budget/t.rns_budget:null;
+  // 예상 객실 계산식(요약) — 화면 표기용
+  function fcFormula(fc){ if(!fc) return '';
+    const ly=fc.lyf[0]-fc.lys[0];
+    const addTxt=`작년흐름 ${nfmt(Math.round(fc.add||0))} = 온북 ${nfmt(fc.cur[0])} + 작년 이 시점 이후 ${nfmt(ly)}`;
+    if(fc.src==='mix') return `예상 객실 = (RM ${nfmt(Math.round(fc.rm))} + 작년흐름 ${nfmt(Math.round(fc.add))}) ÷ 2 = ${nfmt(Math.round(fc.rn))}실 · ${addTxt}`;
+    if(fc.src==='ly') return `예상 객실 = 작년흐름 ${nfmt(Math.round(fc.rn))}실 (RM 없음) · ${addTxt}`;
+    if(fc.src==='rm') return `예상 객실 = RM ${nfmt(Math.round(fc.rn))}실 (작년 같은 시점 자료 없음)`;
+    return `예상 객실 = 세그별 규칙 합산 ${nfmt(Math.round(fc.rn))}실`+(fc.rm!=null?` · RM ${nfmt(Math.round(fc.rm))}`:'')+(fc.add!=null?` · 작년흐름 ${nfmt(Math.round(fc.add))}`:''); }
   function renderGuide(){
     const box=document.getElementById('strat-guide'); if(!box) return;
     const node=GUIDE&&GUIDE.months&&GUIDE.months[ym()];
-    const asof=GUIDE&&GUIDE.meta?` · 기준 ${GUIDE.meta.ty_asof.slice(5).replace('-','/')} (작년 ${GUIDE.meta.ly_asof.slice(5).replace('-','/')})`:'';
-    if(!node){ GUIDE_CUR=null; box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드</span><span class="gs">당월부터 3개월 뒤 투숙월까지만 제공${asof}</span></div>`; placeGuideMark(); return; }
-    const ps=propSel(); const props=ps?[...ps]:Object.keys(node.props||{});
-    const g=adrGuideCalc(node, props, segSel());
-    if(!g.pick_adr||!g.cur_adr){ GUIDE_CUR=null; box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드</span><span class="gs">작년 같은 시점 데이터가 부족해 계산하지 않음${asof}</span></div>`; placeGuideMark(); return; }
+    const fc=refreshFc();
+    const asof=GUIDE&&GUIDE.meta?`기준 ${GUIDE.meta.ty_asof.slice(5).replace('-','/')}`:'';
+    if(!FC_CUR){ GUIDE_CUR=null; box.innerHTML=`<div class="gh"><span class="gt">예상 마감</span><span class="gs">${fc&&fc.closed?'마감된 달 — 표의 예상마감 칸 = 마감 실적':'예상 근거(RM·작년 같은 시점)가 있는 달만 계산'}</span></div>`; placeGuideMark(); return; }
+    const ps=propSel(); const g=node?adrGuideCalc(node, ps?[...ps]:Object.keys(node.props||{}), segSel()):null;
     GUIDE_CUR=g;
-    const n=Math.max(1,g.props), tr=t=>g.t[t];
-    const shL=t=>{ const a=g.t.w.pick_rn+g.t.e.pick_rn; return a?tr(t).pick_rn/a:0; };
-    const shT=t=>{ const a=g.exp_rn; return a?tr(t).exp_rn/a:0; };
-    const occ=t=>tr(t).avail?tr(t).onbook/tr(t).avail:null;
-    const row=(t,lab)=>`<tr><td>${lab}</td><td>${tr(t).days?Math.round(tr(t).days/n):0}일</td><td>${occ(t)!=null?(occ(t)*100).toFixed(0)+'%':'–'}</td>`
-      +`<td>${nfmt(Math.round(tr(t).unsold))}</td><td>${gK(tr(t).pick_rn?tr(t).pick_rev/tr(t).pick_rn:null)}</td>`
-      +`<td>${(shL(t)*100).toFixed(0)}% → ${(shT(t)*100).toFixed(0)}%</td>`
-      +`<td>${gK(tr(t).exp_rn?tr(t).exp_rev/tr(t).exp_rn:null)}</td></tr>`;
-    const capTxt=['w','e'].filter(t=>tr(t).capped).map(t=>`${t==='w'?'주중':'주말·연휴'} ${tr(t).capped}${n>1?'건':'일'}`).join(' · ');
-    const modeTxt=SIMMODE==='all'?'월 전체 평균':'추가 판매분';
-    box.innerHTML=`<div class="gh"><span class="gt">ADR 가이드 · 작년 같은 시점 대비</span><span class="gs">추정${asof}</span>`
-      +`<button type="button" class="chip" id="strat-guide-apply" style="margin-left:auto">가이드 ADR 적용 (${modeTxt})</button></div>`
-      +`<div class="gm">남은 기간 판매 예상 ADR <b class="mono">${gK(g.pick_adr)}</b> <span style="font-weight:600;color:var(--ink-muted);font-size:12px">현재 온북 ${gK(g.cur_adr)} 대비 ${gP(g.pick_vs_cur)}</span></div>`
-      +`<div>예상 마감 ADR <b class="mono">${gK(g.close_adr)}</b> <span style="color:var(--ink-muted)">(온북 대비 ${gP(g.close_chg)})</span> · 작년엔 같은 시점 ${gK(g.lys_adr)} → 마감 ${gK(g.lyf_adr)} <b>${gP(g.ly_drift)}</b></div>`
-      +`<div class="gw"><table><thead><tr><th>남은 날짜</th><th>일수</th><th>올해 OCC</th><th>빈 객실</th><th>작년 판매 ADR</th><th>비중 작년→올해</th><th>예상 ADR</th></tr></thead>`
-      +`<tbody>${row('w','주중')}${row('e','주말·연휴')}</tbody></table></div>`
-      +(capTxt?`<div class="gn"><span class="cap">빈 객실 한도로 예상 판매를 줄인 날${n>1?'(사업장×날짜)':''}: ${capTxt}</span> — 그만큼 남은 판매가 주중 쪽으로 쏠립니다.</div>`:'')
-      +`<div class="gn">작년 같은 시점 이후 같은 세그로 더 팔린 객실과 ADR을 올해 남은 날짜에 대입했습니다. 날짜별 예상 판매는 그날 빈 객실(전 세그)을 넘지 않게 잡았고, ADR에는 올해 온북 요금 수준(작년 같은 시점 대비)을 반영했습니다. 슬라이더의 파란 선이 가이드 값입니다. 대외비·관리자용</div>`;
+    const modeTxt=SIMMODE==='all'?'월 평균':'추가분';
+    let h=`<div class="gh"><span class="gt">예상 마감 · ADR 가이드</span><span class="gs">${asof} · 추정</span>`
+      +`<button type="button" class="chip" id="strat-guide-apply" style="margin-left:auto">가이드 ADR로 (${modeTxt})</button></div>`
+      +`<div id="strat-fc-tiles"></div><div class="fc-eqs" id="strat-fc-eqs"></div>`;
+    // 상세(접힘): 사업장 전체 OCC · 남은 주중/주말
+    const W=g&&g.whole_occ; let det='';
+    if(W) det+=`<div class="gw"><table><thead><tr><th>사업장 전체 OCC</th><th>작년 같은 날</th><th>작년 마감</th><th>올해 지금</th><th>예상 마감</th></tr></thead><tbody>`
+      +`<tr><td>OCC</td><td>${gO(W.lys)}</td><td>${gO(W.lyf)}</td><td>${gO(W.cur)}</td><td>${gO(W.exp)}</td></tr>`
+      +`<tr><td>ADR</td><td>${gK(W.adr_lys)}</td><td>${gK(W.adr_lyf)}</td><td>${gK(W.adr_cur)}</td><td>–</td></tr></tbody></table></div>`;
+    let warn='';
+    if(g){ const n=Math.max(1,g.props), tr=x=>g.t[x];
+      const shL=x=>{ const a=g.t.w.pick_rn+g.t.e.pick_rn; return a?tr(x).pick_rn/a:0; };
+      const occ=x=>tr(x).avail?tr(x).onbook/tr(x).avail:null;
+      const row=(x,lab)=>`<tr><td>${lab}</td><td>${tr(x).days?Math.round(tr(x).days/n):0}일</td><td>${occ(x)!=null?(occ(x)*100).toFixed(0)+'%':'–'}</td>`
+        +`<td>${nfmt(Math.round(tr(x).unsold))}</td><td>${gK(tr(x).pick_rn?tr(x).pick_rev/tr(x).pick_rn:null)}</td><td>${(shL(x)*100).toFixed(0)}%</td></tr>`;
+      det+=`<div class="gw"><table><thead><tr><th>남은 날짜</th><th>일수</th><th>올해 OCC</th><th>빈 객실</th><th>작년 이후 ADR</th><th>작년 이후 비중</th></tr></thead>`
+        +`<tbody>${row('w','주중')}${row('e','주말·연휴')}</tbody></table></div>`;
+      const ce=tr('e').capped; if(ce) warn=`<div class="fc-warn">⚠ 주말·연휴 ${ce}${n>1?'건(사업장×날짜)':'일'}은 빈 객실이 작년 같은 기간 판매보다 적음 — 만실 근접</div>`;
+    }
+    if(det) h+=warn+`<details style="margin-top:4px"><summary style="cursor:pointer;font-size:12px;color:var(--ink-muted)">상세 보기 — 사업장 전체 OCC · 남은 주중/주말</summary><div class="fc-grid2" style="margin-top:6px">${det}</div></details>`;
+    box.innerHTML=h;
     const btn=document.getElementById('strat-guide-apply'); if(btn) btn.onclick=applyGuide;
+    renderFcTiles();
     placeGuideMark();
   }
-  function guideValue(){ return GUIDE_CUR?(SIMMODE==='all'?GUIDE_CUR.close_adr:GUIDE_CUR.pick_adr):null; }
+  // 슬라이더 ADR → 세그별 예상 마감(같은 비율로 남은 판매 ADR 조정, 세그별 가격 반응) → 합계 = 세그 합.
+  //   'add' = 설정값이 남은 판매 ADR(선택 합계 기준), 'all' = 그 달 평균 ADR이 설정값이 되도록 비율 탐색. 빈 객실 한도는 합계에 적용.
+  function simAll(){
+    if(!FC_CUR) return null;
+    const ps=propSel(), t=tgtData();
+    const fcs=segSel().map(s=>[s,gsnFcstFor(OTB, AG, SY, SM, [s], ps)]).filter(x=>x[1]&&!x[1].closed);
+    if(!fcs.length) return null;
+    const A0=FC_CUR.pickAdr, cap=unsoldCap(), setA=SADR||(t?curADR(t):0);
+    const run=k=>{
+      let rows=fcs.map(([s,fc])=>[s,fc,gsnSimAt(fc,(fc.pickAdr||0)*k,'add',null)]);
+      const P=rows.reduce((a,[,,r])=>a+Math.max(0,r.pick),0), capHit=cap!=null&&P>cap&&P>0;
+      if(capHit){ const sc=cap/P; rows=rows.map(([s,fc,r])=>{ const p=Math.max(0,r.pick)*sc; return [s,fc,{rn:fc.cur[0]+p,rev:fc.cur[1]+p*(r.pickAdr||0),pick:p,pickAdr:r.pickAdr}]; }); }
+      const tot={rn:0,rev:0,pick:0,cur:[0,0],capHit,k};
+      rows.forEach(([s,fc,r])=>{ tot.rn+=r.rn; tot.rev+=r.rev; tot.pick+=r.pick; tot.cur[0]+=fc.cur[0]; tot.cur[1]+=fc.cur[1]; r.adr=r.rn>0?r.rev/r.rn:null; });
+      tot.adr=tot.rn>0?tot.rev/tot.rn:null; tot.pickAdr=tot.pick>0?(tot.rev-tot.cur[1])/tot.pick:null;
+      return {rows, tot, bySeg:Object.fromEntries(rows.map(([s,,r])=>[s,r]))};
+    };
+    if(SIMMODE==='all'){
+      const avg=x=>run(x).tot.adr||0; let lo=0.2, hi=5, k;
+      if(avg(lo)>=setA) k=lo; else if(avg(hi)<=setA) k=hi;
+      else { for(let i=0;i<50;i++){ const m=(lo+hi)/2; if(avg(m)<setA) lo=m; else hi=m; } k=(lo+hi)/2; }
+      return run(k);
+    }
+    return run(A0>0?setA/A0:1);
+  }
+  // 슬라이더 옆: 예상 마감 한 줄 표(진단표와 같은 형식) + 계산식 두 줄
+  function renderFcTiles(){
+    const tl=document.getElementById('strat-fc-tiles'), eq=document.getElementById('strat-fc-eqs'), fc=FC_CUR, t=tgtData();
+    if(!tl||!eq||!fc||!t) return;
+    const S=simAll(); if(!S) return; const sim=S.tot, tgtA=tgtAdrOf(t);
+    const ach=(v,b)=>b>0?v/b*100:null, cls=v=>v==null?'':v>=100?'pos':v>=88?'neu':'neg';
+    const rA=ach(sim.rn,t.rns_budget), vA=ach(sim.rev,t.rev_budget), aG=tgtA?sim.adr-tgtA:null;
+    tl.innerHTML=`<table class="fc-sum"><thead><tr><th></th><th>객실</th><th>ADR</th><th>매출</th></tr></thead><tbody>`
+      +`<tr><td>예상 마감</td><td>${nfmt(Math.round(sim.rn))}<span class="u">실</span></td><td>${nfmt(Math.round((sim.adr||0)/1000))}<span class="u">천</span></td><td>${f1(eok(sim.rev))}<span class="u">억</span></td></tr>`
+      +`<tr><td>목표</td><td>${nfmt(t.rns_budget||0)}<span class="u">실</span></td><td>${tgtA?nfmt(Math.round(tgtA/1000)):'–'}<span class="u">천</span></td><td>${f1(eok(t.rev_budget||0))}<span class="u">억</span></td></tr>`
+      +`<tr class="ach"><td>목표 대비</td><td class="${cls(rA)}">${rA!=null?f1(rA)+'%':'–'}</td><td class="${aG!=null?(aG>=0?'pos':'neg'):''}">${gKd(aG)}</td><td class="${cls(vA)}">${vA!=null?f1(vA)+'%':'–'}</td></tr></tbody></table>`;
+    const B=(lab,val,res)=>`<span class="bx${res?' res':''}"><i>${lab}</i><b>${val}</b></span>`, op=s=>`<span class="op">${s}</span>`;
+    const pickNow=Math.max(0,sim.pick);
+    let note;
+    if(fc.src==='mix') note=`남은 판매 기준 = (작년 이 시점 이후 ${nfmt(fc.lyf[0]-fc.lys[0])}실 + RM 기준 ${nfmt(Math.round(fc.rm-fc.cur[0]))}실) ÷ 2`;
+    else if(fc.src==='ly') note=`남은 판매 기준 = 작년 이 시점 이후 판매 ${nfmt(fc.lyf[0]-fc.lys[0])}실 (RM 없음)`;
+    else if(fc.src==='rm') note=`남은 판매 기준 = RM ${nfmt(Math.round(fc.rm))}실 − 온북`;
+    else note='세그별 규칙 합산';
+    if(Math.abs((sim.pickAdr||0)-(fc.pickAdr||0))>500) note+=` → 설정 ADR 반영 ${nfmt(Math.round(Math.max(0,fc.pick)))}→${nfmt(Math.round(pickNow))}실${sim.capHit?' (남은 빈 객실 한도)':''}`;
+    eq.innerHTML=`<div class="fc-eq">${B('예상 객실',nfmt(Math.round(sim.rn))+'실',1)}${op('=')}${B('온북',nfmt(fc.cur[0])+'실')}${op('+')}${B('남은 판매',nfmt(Math.round(pickNow))+'실')}</div>`
+      +`<div class="fc-eq">${B('예상 매출',f1(eok(sim.rev))+'억',1)}${op('=')}${B('온북 매출',f1(eok(fc.cur[1]))+'억')}${op('+')}${B('남은 판매 × ADR',nfmt(Math.round(pickNow))+'실 × '+gK(sim.pickAdr))}</div>`
+      +`<div style="font-size:11.5px;color:var(--ink-muted)">${note}</div>`
+      +(Object.values(fc.segs||{}).some(r=>r&&r.f>=GSN_FC.PRICE[1]-1e-9)
+        ?`<div class="fc-warn" style="color:#e6b970">요금 수준 상한(1.2배) 적용 세그 있음 — 올해 이른 예약 ADR이 작년보다 20% 넘게 높음(연휴·주말에 먼저 몰리면 높게 잡힐 수 있음)</div>`:'');
+  }
+  function guideValue(){ return FC_CUR?(SIMMODE==='all'?FC_CUR.adr:FC_CUR.pickAdr):null; }
   function applyGuide(){
     const v=guideValue(), t=tgtData(); if(!v||!t) return;
     const c=curADR(t), lo=c*0.6, hi=Math.max(c*1.1,t.adr_budget||c);
     document.getElementById('strat-adr').value=Math.max(0,Math.min(100,Math.round((v-lo)/(hi-lo)*100)));
     SADR=v; ssim();
   }
-  function placeGuideMark(){
+  function placeMark(id, cls, v, label){
     const wrap=document.querySelector('#strat .strat-slider'), inp=document.getElementById('strat-adr'); if(!wrap||!inp) return;
-    let mk=document.getElementById('strat-gmark');
-    const v=guideValue(), t=tgtData();
+    let mk=document.getElementById(id); const t=tgtData();
     const hide=()=>{ if(mk) mk.style.display='none'; };
     if(!v||!t) return hide();
     const c=curADR(t), lo=c*0.6, hi=Math.max(c*1.1,t.adr_budget||c), pct=(v-lo)/(hi-lo);
     if(!(pct>=0&&pct<=1)) return hide();
-    if(!mk){ mk=document.createElement('div'); mk.id='strat-gmark'; mk.className='strat-gmark'; mk.innerHTML='<span></span>'; wrap.appendChild(mk); }
+    if(!mk){ mk=document.createElement('div'); mk.id=id; mk.className=cls; mk.innerHTML='<span></span>'; wrap.appendChild(mk); }
     mk.style.left=(inp.offsetLeft+8+pct*(inp.offsetWidth-16))+'px';
     mk.style.top=(inp.offsetTop-2)+'px'; mk.style.height=(inp.offsetHeight+4)+'px'; mk.style.display='';
-    mk.querySelector('span').textContent='가이드 '+gK(v);
+    mk.querySelector('span').textContent=label+' '+gK(v);
   }
+  function placeGuideMark(){ placeMark('strat-gmark','strat-gmark',guideValue(),'가이드'); placeMark('strat-tmark','strat-tmark',tgtAdrOf(tgtData()),'목표'); }
   async function sboot(){
     try{
       OTB=await (await fetch('data/otb_data.json?t='+Date.now())).json();
@@ -1598,18 +1817,9 @@ document.addEventListener('DOMContentLoaded', loadData);
     document.getElementById('strat-verdict').innerHTML=`<div class="sv ${v[0]}"><span class="svtag">${v[1]}</span>`
       +`<span class="svmain">${SY}년 ${SM}월 투숙 · <b>${sgl}</b> · 목표 대비 온북 <b class="mono">${nfmt(s.rns_actual)}실</b> <span class="sh">(${f1(rnsAch)}%)</span> · ${tail}</span>`
       +`<div style="margin-top:6px;color:var(--ink-muted);font-size:12.5px">${msg}</div></div>`;
-    document.getElementById('strat-minis').innerHTML=[
-      ['온북 객실수', nfmt(s.rns_actual)+'<span style="font-size:11px">실</span>', '목표 '+nfmt(s.rns_budget)+' · '+f1(rnsAch)+'%', '', rnsAch>=100?'pos':rnsAch>=88?'neu':'neg'],
-      ['온북 매출', f1(eok(s.rev_actual))+'<span style="font-size:11px">억</span>', '목표 '+f1(eok(s.rev_budget))+'억 · '+f1(ach)+'%', 'b', ach>=100?'pos':ach>=88?'neu':'neg'],
-      ['온북 ADR', nfmt(Math.round((s.adr_actual||0)/1000))+'<span style="font-size:11px">천</span>', '전년 '+nfmt(Math.round((s.adr_last||0)/1000))+'천 · '+sg(adrYoy)+'%', 'g', adrYoy>=0?'pos':'neg'],
-      // 예상 마감: 매출 + 객실수·ADR 예상 + 목표대비 (요청: 송예건 CM 2026-11-26)
-      (function(){ const fr=s.rns_fcst||0, fv=s.rev_fcst||0, fadr=fr>0?fv/fr:0, rnAch=s.rns_budget>0?fr/s.rns_budget*100:null, revAch=s.rev_budget>0?fv/s.rev_budget*100:null;
-        return ['예상 마감', f1(eok(fv))+'<span style="font-size:11px">억</span>'+(revAch!=null?' <span style="font-size:11px;font-weight:600;color:'+(revAch>=100?'#7fd8a0':revAch>=88?'#e6b970':'#ef9a9a')+'">목표 '+f1(revAch)+'%</span>':''),
-          '객실 '+nfmt(fr)+'실'+(rnAch!=null?' ('+f1(rnAch)+'%)':'')+' · ADR '+nfmt(Math.round(fadr/1000))+'천 · 전년 '+f1(eok(s.rev_last||0))+'억 · '+sg(s.rev_last>0?(fv-s.rev_last)/s.rev_last*100:0)+'%',
-          '', (revAch!=null?(revAch>=100?'pos':revAch>=88?'neu':'neg'):((s.rev_last>0&&fv>=s.rev_last)?'pos':'neg')), 'strat-close']; })(),
-    ].map(k=>`<div class="smini ${k[3]}"${k[5]?` id="${k[5]}"`:''}><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d ${k[4]}">${k[2]}</div></div>`).join('');
+    document.getElementById('strat-minis').innerHTML='';   // 요약 카드 대신 아래 진단표 '선택 합계' 줄(같은 형식)
     srenderDiag(d);
-    resetSlider(); ssim(); renderGuide();
+    refreshFc(); resetSlider(); ssim(); renderGuide();
   }
   // 세그별 채널 고정 묶음: OTA=놀·여기어때·스마트인피니·네이버·타이드스퀘어·기타 / GOTA=아고다·트립닷컴·트립비토즈·익스피디아·부킹닷컴·기타
   const STRAT_CH_GROUPS={
@@ -1651,14 +1861,29 @@ document.addEventListener('DOMContentLoaded', loadData);
       if(!rn&&!rev) return `<td class="stcell${kc}">–</td>`;
       const adr=(rn&&rev)?Math.round(rev/rn/1000):0;
       const cl=opt.color?`style="color:${opt.color}"`:'';
-      const pill=(opt.yoy!=null)?`<span class="yoy-pill ${yoyCls(opt.yoy)}">${sg(opt.yoy)}%</span>`:'';
+      const pill=(opt.yoy!=null)?`<span class="yoy-pill ${yoyCls(opt.yoy)}">${sg(opt.yoy)}%</span>`
+        :(opt.ach!=null?`<span class="yoy-pill ${opt.ach>=100?'g':opt.ach>=88?'w':'b'}" title="목표 대비">${f1(opt.ach)}%</span>`:'');
       const subs=rev
         ? `<div class="st-sub"><span class="l">ADR</span><span>${nfmt(adr)}<span class="u">천</span></span></div>`
           +`<div class="st-sub rev"><span class="l">매출</span><span>${f1(eok(rev))}<span class="u">억</span></span></div>`
         : '';
       return `<td class="stcell${kc}"><div class="st-rn"><span ${cl}>${nfmt(rn)}</span><span class="u">실</span>${pill}</div>${subs}</td>`; };
+    // 예상마감 칸 = 공용 규칙 + 슬라이더 ADR(합계 = 세그 합). 목표 대비 % 표시, 계산 재료는 마우스를 올리면 표시. 근거 없으면 '–'
+    const SIM=FC_CUR?simAll():null;
+    const celF=(r, fc, budget, share)=>{ if(!r) return `<td class="stcell" title="RM 예상·작년 같은 시점 자료가 없어 예상하지 않음">–</td>`;
+      const k=share==null?1:share;
+      const base=cel(Math.round(r.rn*k), Math.round(r.rev*k), {ach:(share==null&&budget>0)?r.rn/budget*100:null});
+      return (fc&&!fc.closed&&share==null)?base.replace('<td class="stcell">', `<td class="stcell" title="${fcFormula(fc).replace(/"/g,'')}">`):base; };
     let t=`<table class="strat-tb"><thead><tr><th>채널 / 거래처</th><th>목표</th><th>온북</th><th class="col-key">전년동기</th><th>전년마감</th><th>예상마감</th></tr></thead><tbody>`;
-    segs.forEach(x=>{const o=sd[x]; const rach=o.rns_achievement||0;
+    // 선택 합계(요약 카드 대체) — 다른 줄과 같은 형식. 예상마감은 슬라이더 ADR 반영(= 세그 합)
+    if(segs.length>1){ const T=tgtData(); if(T){ const ly=agAgg('lys'), lf=agAgg('lyf'); const yb=ly[0]>0?(T.rns_actual-ly[0])/ly[0]*100:null;
+      const ra=T.rns_achievement||0, colT=ra>=100?'var(--positive)':ra>=88?'var(--gold)':'var(--negative)';
+      const fcT=gsnFcstFor(OTB, AG, SY, SM, segSel(), ps), rT=SIM?SIM.tot:fcT;
+      t+=`<tr class="seg tot"><td><b>${segLabel()==='전체'?'GS 전체':segLabel()} 합계</b></td>`
+        +cel(T.rns_budget||0,T.rev_budget||0,{})+cel(T.rns_actual||0,T.rev_actual||0,{color:colT})
+        +cel(ly[0],ly[1],{yoy:yb,key:1})+cel(lf[0]||T.rns_last||0,lf[1]||T.rev_last||0,{})
+        +celF(rT, FC_CUR||fcT, T.rns_budget)+`</tr>`; } }
+    segs.forEach(x=>{const o=sd[x]; const rach=o.rns_achievement||0; const fcx=gsnFcstFor(OTB, AG, SY, SM, [x], ps);
       const col=rach>=100?'var(--positive)':rach>=88?'var(--gold)':'var(--negative)';
       const lys=agP(x,'lys'), lyf=agP(x,'lyf');
       const lyfRn=lyf[0]||o.rns_last||0, lyfRev=lyf[1]||o.rev_last||0;
@@ -1668,19 +1893,19 @@ document.addEventListener('DOMContentLoaded', loadData);
         +cel(o.rns_actual||0,o.rev_actual||0,{color:col})
         +cel(lys[0],lys[1],{yoy:yb,key:1})
         +cel(lyfRn,lyfRev,{})
-        +cel(o.rns_fcst||0,o.rev_fcst||0,{})+`</tr>`;
+        +celF((SIM&&SIM.bySeg[x])||fcx, fcx, o.rns_budget)+`</tr>`;
       const ags=(A[x]&&A[x].agents)||{};
       if(hasAgents&&(x==='OTA'||x==='G-OTA')&&Object.keys(ags).length){
         // 세그별 고정 채널 묶음(송예건 CM 2026-11-26): 지정 5곳 + 나머지 전부 '기타'(숫자 포함)
         const groups=stratChannelGroups(x, ags);
         const tot=groups.reduce((a,g)=>a+g.cur[0],0)||1;
-        const fR=o.rns_fcst||0, fV=o.rev_fcst||0;   // 거래처 예상마감 = 채널 예상마감 × 온북비중
+        // 거래처 예상마감 = 채널 예상마감(공용 규칙) × 온북 비중
         groups.forEach(g=>{ const c=g.cur,ls=g.lys,lf=g.lyf; const ay=ls[0]>0?(c[0]-ls[0])/ls[0]*100:null;
-          const sh=c[0]/tot; const afR=Math.round(fR*sh), afV=Math.round(fV*sh);
+          const sh=c[0]/tot;
           const tip=g.members.length?` title="${g.members.join(' · ')}"`:'';
           t+=`<tr class="part"><td${tip}>${g.nm}${g.nm==='기타'&&g.members.length?` <span class="sh">${g.members.length}곳</span>`:''} <span class="sh">${(sh*100).toFixed(0)}%</span></td>`
             +`<td class="stcell">–</td>`
-            +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+cel(afR,afV,{})+`</tr>`; });
+            +cel(c[0],c[1],{})+cel(ls[0],ls[1],{yoy:ay,key:1})+cel(lf[0],lf[1],{})+celF((SIM&&SIM.bySeg[x])||fcx, fcx, 0, sh)+`</tr>`; });
       }
     });
     t+=`</tbody></table>`;
@@ -1688,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', loadData);
   }
   var SIMMODE='add';   // 'add' = 추가 판매분 ADR(온북 매출 고정) / 'all' = 월 전체 평균 ADR
   document.addEventListener('click', function(e){ const b=e.target.closest('[data-simmode]'); if(!b) return; SIMMODE=b.dataset.simmode;
-    document.querySelectorAll('[data-simmode]').forEach(x=>x.classList.toggle('active', x===b)); ssim(); renderGuide(); });
+    document.querySelectorAll('[data-simmode]').forEach(x=>x.classList.toggle('active', x===b)); resetSlider(); ssim(); renderGuide(); });
   function ssim(){ const t=tgtData(), av=document.getElementById('strat-adrv');
     if(!t||!t.rev_budget){ av.textContent='–'; document.getElementById('strat-action').innerHTML='대상 데이터 없음'; return; }
     const goal=t.rev_budget, curRN=t.rns_actual||0, curRev=t.rev_actual||0, cadr=curADR(t), setA=SADR||cadr;
@@ -1707,35 +1932,23 @@ document.addEventListener('DOMContentLoaded', loadData);
     document.getElementById('strat-gcur').style.left=(curRN/mx*100).toFixed(1)+'%';
     document.getElementById('strat-gcurl').textContent=nfmt(curRN)+'실';
     document.getElementById('strat-gneedl').textContent=nfmt(Math.round(needTot))+'실';
-    const ap=curRN>0?needAdd/curRN*100:0; let fe,fc;
-    if(needAdd<=0){fe='현 온북으로 충분';fc='pos';}
-    else if(ap<=15){fe=`현재 온북 대비 +${f1(ap)}% — 현실적으로 달성 가능`;fc='pos';}
-    else if(ap<=40){fe=`현재 온북 대비 +${f1(ap)}% — 집중 영업 시 가능`;fc='neu';}
-    else {fe=`현재 온북 대비 +${f1(ap)}% — 요금만으론 무리, 프로모·채널 확대 병행 필요`;fc='neg';}
+    // 실현성 = 목표에 필요한 추가 판매 vs 같은 ADR에서의 예상 추가 판매(예상 마감 규칙). 예상이 없으면 온북 대비로 판단
+    const S=FC_CUR?simAll():null, expAdd=S?Math.max(0,S.tot.pick):null; let fe,fc;
+    const fcAny=gsnFcstFor(OTB, AG, SY, SM, segSel(), propSel());
+    if(fcAny&&fcAny.closed){ const ra=t.rev_budget>0?curRev/t.rev_budget*100:null; fe=`마감된 달 — 목표 대비 매출 ${ra!=null?f1(ra)+'%':'–'}`; fc=ra==null?'neu':ra>=100?'pos':ra>=88?'neu':'neg'; }
+    else if(needAdd<=0){fe='현 온북으로 충분';fc='pos';}
+    else if(!fcAny){fe='예상 근거(RM·작년 같은 시점)가 없는 달 — 판단 보류';fc='neu';}
+    else if(expAdd!=null){ const gap=needAdd-expAdd, gp=expAdd>0?gap/expAdd*100:null;
+      if(gap<=0){fe=`예상 추가 판매 ${nfmt(Math.round(expAdd))}실로 달성 가능 (여유 ${nfmt(Math.round(-gap))}실)`;fc='pos';}
+      else if(gp!=null&&gp<=15){fe=`예상보다 ${nfmt(Math.round(gap))}실(+${f1(gp)}%) 더 팔아야 — 집중 영업 시 가능`;fc='neu';}
+      else {fe=`예상보다 ${nfmt(Math.round(gap))}실${gp!=null?`(+${f1(gp)}%)`:''} 부족 — 요금만으론 무리, 프로모·채널 확대 필요`;fc='neg';} }
+    else { const ap=curRN>0?needAdd/curRN*100:0;
+      if(ap<=15){fe=`현재 온북 대비 +${f1(ap)}% — 현실적으로 달성 가능`;fc='pos';}
+      else if(ap<=40){fe=`현재 온북 대비 +${f1(ap)}% — 집중 영업 시 가능`;fc='neu';}
+      else {fe=`현재 온북 대비 +${f1(ap)}% — 요금만으론 무리, 프로모·채널 확대 병행 필요`;fc='neg';} }
     document.getElementById('strat-feas').innerHTML=`<span class="${fc}">실현성: ${fe}</span>`;
-    // 예상 마감 카드 ↔ ADR 시뮬 연동 (요청 2026-11-26): 슬라이더 ADR·기준(추가분/월평균)이 바뀌면
-    // 예상 마감 객실수 = 온북 + 목표 달성에 필요한 추가 객실(설정 ADR 기준) 로 즉시 재계산. FCST는 참고로 병기.
-    (function(){ const card=document.getElementById('strat-close'); if(!card) return;
-      const fr=t.rns_fcst||0, fv=t.rev_fcst||0, hit=needAdd<=0;
-      // 목표 초과(hit) 시: 추가분 기준=온북 매출 그대로 / 월 평균 기준=온북 객실 전체를 설정 ADR로 재평가
-      const simRN=hit?curRN:needTot, simRev=hit?(SIMMODE==='all'?curRN*setA:curRev):goal, simADR=simRN>0?simRev/simRN:0;
-      const rnAch=t.rns_budget>0?simRN/t.rns_budget*100:null, dF=fr>0?(simRN-fr)/fr*100:null;
-      const kc = v=>v>=100?'#7fd8a0':v>=88?'#e6b970':'#ef9a9a';
-      const adrTxt = SIMMODE==='add'
-        ? `추가분 ADR ${nfmt(Math.round(setA/1000))}천 → 마감 평균 ${nfmt(Math.round(simADR/1000))}천`
-        : `월 평균 ADR ${nfmt(Math.round(setA/1000))}천 가정`;
-      // 매출·객실을 둘 다 큰 숫자로(매출이 사라져 보인다는 피드백 반영 2026-11-26). 시뮬 = 슬라이더 ADR로 목표를 채울 때의 마감.
-      const revAch=goal>0?simRev/goal*100:null;
-      card.querySelector('.l').innerHTML='예상 마감 <span style="color:var(--gold-bright);letter-spacing:0">· ADR 시뮬 연동</span>';
-      card.querySelector('.v').innerHTML=f1(eok(simRev))+'<span style="font-size:11px">억</span>'
-        +' <span style="font-size:15px">'+nfmt(Math.round(simRN))+'<span style="font-size:11px">실</span></span>';
-      const dd=card.querySelector('.d'); dd.className='d '+fc;
-      const fAdr=fr>0?fv/fr:0, fAch=goal>0?fv/goal*100:null, fRnAch=t.rns_budget>0?fr/t.rns_budget*100:null;
-      const pill=(lab,v)=>v!=null?`<span style="font-weight:700;color:${kc(v)}">${lab} ${f1(v)}%</span>`:'';
-      dd.innerHTML=`목표 대비 ${pill('매출',revAch)} · ${pill('객실',rnAch)} · 마감 ADR ${nfmt(Math.round(simADR/1000))}천`
-        +`<br>${hit?'현 온북으로 목표 달성':`목표까지 추가 ${nfmt(Math.round(needAdd))}실`} · ${adrTxt}`
-        +(fr>0?`<br><span style="color:var(--ink-faint)">FCST ${f1(eok(fv))}억${fAch!=null?'('+f1(fAch)+'%)':''} · ${nfmt(fr)}실${fRnAch!=null?'('+f1(fRnAch)+'%)':''} · ADR ${nfmt(Math.round(fAdr/1000))}천</span>`:'');
-    })();
+    const _d=smd(); if(_d) srenderDiag(_d);   // 예상마감 칸(합계·세그·거래처)도 설정 ADR로 갱신
+    renderFcTiles();
   }
   document.addEventListener('DOMContentLoaded', sboot);
 })();
