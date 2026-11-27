@@ -229,11 +229,20 @@
       if (!url || url.indexOf('http') !== 0) {
         return Promise.reject(new Error('AUTH_API_URL 이 설정되지 않았습니다. js/auth.js 의 DEFAULT_AUTH_API_URL 또는 로그인 페이지 하단 설정에서 지정하세요.'));
       }
-      return fetch(url + '?action=login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // CORS preflight 회피
-        body: JSON.stringify(params)
-      }).then(function (r) { return r.json(); }).then(function (j) {
+      var body = JSON.stringify(params);
+      // 'Failed to fetch'(크롬)·'Load failed'(사파리) = 응답을 못 받음. 서버(구글 스크립트)가 동시 요청에 밀렸거나
+      // 접속 환경이 막은 경우 → 1.5초·3초 뒤 두 번 더 시도하고, 그래도 안 되면 한국어로 안내.
+      function attempt(n) {
+        return fetch(url + '?action=login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // CORS preflight 회피
+          body: body
+        }).then(function (r) { return r.json(); }).catch(function (e) {
+          if (n < 2) return new Promise(function (res) { setTimeout(res, 1500 * (n + 1)); }).then(function () { return attempt(n + 1); });
+          throw new Error('로그인 서버가 응답하지 않습니다. 잠시 후 다시 시도해 주세요. 계속되면 크롬 시크릿 창이나 휴대폰 테더링으로 접속해 보세요.');
+        });
+      }
+      return attempt(0).then(function (j) {
         if (!j || j.status !== 'ok') throw new Error(j && j.message ? j.message : '로그인 실패');
         saveSession(j.token, j.user);
         return j;
